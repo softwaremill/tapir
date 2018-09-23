@@ -95,9 +95,9 @@ object Main extends App {
     }
 
     case class PathSegment(s: String) extends Path[HNil] with Single[HNil]
-    case class PathCapture[T]() extends Path[T :: HNil] with Single[T :: HNil]
+    case class PathCapture[T](m: TypeMapper[T]) extends Path[T :: HNil] with Single[T :: HNil]
 
-    case class Query[T](name: String) extends Single[T :: HNil]
+    case class Query[T](name: String, m: TypeMapper[T]) extends Single[T :: HNil]
 
     case class Multiple[I <: HList](inputs: Vector[Single[_]]) extends EndpointInput[I] {
       override def and[J <: HList, IJ <: HList](other: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointInput.Multiple[IJ] =
@@ -108,10 +108,10 @@ object Main extends App {
     }
   }
 
-  def pathCapture[T]: EndpointInput[T :: HNil] = EndpointInput.PathCapture()
+  def pathCapture[T: TypeMapper]: EndpointInput[T :: HNil] = EndpointInput.PathCapture(implicitly[TypeMapper[T]])
   implicit def stringToPath(s: String): EndpointInput[HNil] = EndpointInput.PathSegment(s)
 
-  def query[T](name: String): EndpointInput[T :: HNil] = EndpointInput.Query(name)
+  def query[T: TypeMapper](name: String): EndpointInput[T :: HNil] = EndpointInput.Query(name, implicitly[TypeMapper[T]])
 
   case class Endpoint[U[_], I <: HList](name: Option[String], method: U[Method], input: EndpointInput.Multiple[I]) {
     def name(s: String): Endpoint[U, I] = this.copy(name = Some(s))
@@ -169,8 +169,8 @@ object Main extends App {
 
   val e = endpoint
     .get()
-    .in("x" / pathCapture[String] / "z" / pathCapture[String]) // each endpoint must have a path and a method
-    .in(query[String]("q1").and(query[String]("q2")))
+    .in("x" / pathCapture[String] / "z" / pathCapture[Int]) // each endpoint must have a path and a method
+    .in(query[String]("q1").and(query[Int]("q2")))
 
 // TODO
 //    .in(query[Int]("x"))
@@ -203,17 +203,21 @@ object Main extends App {
               case Uri.Path.Segment(`ss`, pathTail)           => doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true)
               case _                                          => None
             }
-          case EndpointInput.PathCapture() +: inputsTail =>
+          case EndpointInput.PathCapture(m) +: inputsTail =>
             ctx.unmatchedPath match {
               case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false)
               case Uri.Path.Segment(s, pathTail) =>
-                doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true).map {
-                  case (values, ctx2) => (s +: values, ctx2)
+                m.fromString(s) match {
+                  case Some(v) =>
+                    doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true).map {
+                      case (values, ctx2) => (v +: values, ctx2)
+                    }
+                  case None => None
                 }
               case _ => None
             }
-          case EndpointInput.Query(name) +: inputsTail =>
-            ctx.request.uri.query().get(name) match {
+          case EndpointInput.Query(name, m) +: inputsTail =>
+            ctx.request.uri.query().get(name).flatMap(m.fromString) match {
               case None => None
               case Some(value) =>
                 doMatch(inputsTail, ctx, canRemoveSlash = true).map {
@@ -247,7 +251,7 @@ object Main extends App {
 
   implicit val ets = new EndpointToAkkaServer
 
-  val r: Route = e.toServer.using((i: String, s: String, p1: String, p2: String) => Future.successful(s"$i $s $p1 $p2"))
+  val r: Route = e.toServer.using((i: String, s: Int, p1: String, p2: Int) => Future.successful(s"$i $s $p1 $p2"))
 
   //
 
@@ -261,13 +265,13 @@ object Main extends App {
             e.input.inputs.foreach {
               case EndpointInput.PathSegment(p) =>
                 uri = uri.copy(path = uri.path :+ p)
-              case EndpointInput.PathCapture() =>
+              case EndpointInput.PathCapture(m) =>
                 i += 1
-                val v = HList.unsafeGet(args, i).asInstanceOf[String]
+                val v = m.toString(HList.unsafeGet(args, i))
                 uri = uri.copy(path = uri.path :+ v)
-              case EndpointInput.Query(name) =>
+              case EndpointInput.Query(name, m) =>
                 i += 1
-                val v = HList.unsafeGet(args, i).asInstanceOf[String]
+                val v = m.toString(HList.unsafeGet(args, i))
                 uri = uri.param(name, v)
             }
 
@@ -294,7 +298,7 @@ object Main extends App {
 
   type SttpReq[T] = Request[T, Nothing] // needed, unless implicit error
   implicit val etc: EndpointToClient[SttpReq] = new EndpointToSttpClient
-  val response2 = Await.result(e.toClient.using("http://localhost:8080").apply("11", "bbb", "x1", "x2").send(), 1.minute)
+  val response2 = Await.result(e.toClient.using("http://localhost:8080").apply("aa", 20, "x1", 91).send(), 1.minute)
   println("RESPONSE2: " + response2)
 
   Await.result(actorSystem.terminate(), 1.minute)
