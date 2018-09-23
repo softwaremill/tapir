@@ -80,39 +80,73 @@ object Main extends App {
   @implicitNotFound("???")
   type IsId[U[_]] = U[Unit] =:= Id[Unit]
 
-  sealed trait Segment[S <: HList]
-  case class StringSegment(s: String) extends Segment[HNil]
-  case class CaptureSegment[S]() extends Segment[S :: HNil]
-  def segment[S]: Segment[S :: HNil] = CaptureSegment[S]()
-
-  case class Path[P <: HList](segments: Vector[Segment[_]]) {
-    def /(s: String): Path[P] = /(StringSegment(s))
-    def /[S <: HList, PS <: HList](s: Segment[S])(implicit ts: Prepend.Aux[P, S, PS]): Path[PS] = Path(segments :+ s)
-  }
-  val Root = Path[HNil](Vector.empty)
-
-  trait LogicToServer[P <: HList, F[_], S] {
-    def using[I](logic: I)(implicit tt: FnToProduct.Aux[I, P => F[String]]): S
+  sealed trait EndpointInput[I <: HList] {
+    def and[J <: HList, IJ <: HList](other: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointInput[IJ]
+    def /[J <: HList, IJ <: HList](other: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
   }
 
-  trait HostToClient[P <: HList, R[_]] {
-    def using[O](host: String)(implicit tt: function.FnFromProduct.Aux[P => R[String], O]): O
+  object EndpointInput {
+    sealed trait Single[I <: HList] extends EndpointInput[I] {
+      def and[J <: HList, IJ <: HList](other: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointInput[IJ] =
+        other match {
+          case s: Single[_]     => EndpointInput.Multiple(Vector(this, s))
+          case Multiple(inputs) => EndpointInput.Multiple(this +: inputs)
+        }
+    }
+
+    case class PathSegment(s: String) extends Path[HNil] with Single[HNil]
+    case class PathCapture[T]() extends Path[T :: HNil] with Single[T :: HNil]
+
+    case class Query[T](name: String) extends Single[T :: HNil]
+
+    case class Multiple[I <: HList](inputs: Vector[Single[_]]) extends EndpointInput[I] {
+      override def and[J <: HList, IJ <: HList](other: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointInput.Multiple[IJ] =
+        other match {
+          case s: Single[_] => EndpointInput.Multiple(inputs :+ s)
+          case Multiple(m)  => EndpointInput.Multiple(inputs ++ m)
+        }
+    }
   }
 
-  case class Endpoint[U[_], P <: HList](name: Option[String], method: U[Method], path: U[Path[P]]) {
-    def name(s: String): Endpoint[U, P] = this.copy(name = Some(s))
-    def get[PP <: HList](p: Path[PP]): Endpoint[Id, PP] = this.copy[Id, PP](path = p, method = Method.GET)
+  def pathCapture[T]: EndpointInput[T :: HNil] = EndpointInput.PathCapture()
+  implicit def stringToPath(s: String): EndpointInput[HNil] = EndpointInput.PathSegment(s)
 
-    def toServer[F[_], S](implicit ets: EndpointToServer[F, S], isId: IsId[U]): LogicToServer[P, F, S] =
-      ets.toServer(this.asInstanceOf[Endpoint[Id, P]])
+  def query[T](name: String): EndpointInput[T :: HNil] = EndpointInput.Query(name)
 
-    def toClient[R[_]](implicit etc: EndpointToClient[R], isId: IsId[U]): HostToClient[P, R] =
-      etc.toClient(this.asInstanceOf[Endpoint[Id, P]])
+  case class Endpoint[U[_], I <: HList](name: Option[String], method: U[Method], input: EndpointInput.Multiple[I]) {
+    def name(s: String): Endpoint[U, I] = this.copy(name = Some(s))
+
+    def get(): Endpoint[Id, I] = this.copy[Id, I](method = Method.GET)
+
+    def in[J <: HList, IJ <: HList](i: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): Endpoint[U, IJ] =
+      this.copy[U, IJ](input = input.and(i))
+
+    def toServer[R[_], S](implicit ets: EndpointToServer[R, S], isId: IsId[U]): LogicToServer[I, R, S] =
+      ets.toServer(this.asInstanceOf[Endpoint[Id, I]])
+
+    def toClient[R[_]](implicit etc: EndpointToClient[R], isId: IsId[U]): HostToClient[I, R] =
+      etc.toClient(this.asInstanceOf[Endpoint[Id, I]])
+  }
+
+  trait EndpointToServer[R[_], S] {
+    def toServer[I <: HList](e: Endpoint[Id, I]): LogicToServer[I, R, S]
+  }
+
+  trait EndpointToClient[R[_]] {
+    def toClient[I <: HList](e: Endpoint[Id, I]): HostToClient[I, R]
+  }
+
+  trait LogicToServer[I <: HList, R[_], S] {
+    def using[F](logic: F)(implicit tt: FnToProduct.Aux[F, I => R[String]]): S
+  }
+
+  trait HostToClient[I <: HList, R[_]] {
+    def using[F](host: String)(implicit tt: function.FnFromProduct.Aux[I => R[String], F]): F
   }
 
   //
 
-  val endpoint = Endpoint[Empty, HNil](None, None, None)
+  val endpoint = Endpoint[Empty, HNil](None, None, EndpointInput.Multiple(Vector.empty))
 
 // TODO
 //  case class User()
@@ -131,9 +165,12 @@ object Main extends App {
 
   // sapi ?
 
-  val p = Root / "x" / segment[String] / "z"
+  val path = "x" / pathCapture[String] / "z"
 
-  val e = endpoint.get(Root / "x" / segment[String] / "z" / segment[String]) // each endpoint must have a path and a method
+  val e = endpoint
+    .get()
+    .in("x" / pathCapture[String] / "z" / pathCapture[String]) // each endpoint must have a path and a method
+    .in(query[String]("q1").and(query[String]("q2")))
 
 // TODO
 //    .in(query[Int]("x"))
@@ -144,12 +181,8 @@ object Main extends App {
 //    .name("xz") // name optional
 //    .description("...")
 
-  trait EndpointToServer[F[_], S] {
-    def toServer[P <: HList](e: Endpoint[Id, P]): LogicToServer[P, F, S]
-  }
-
   class EndpointToAkkaServer extends EndpointToServer[Future, Route] {
-    def toServer[P <: HList](e: Endpoint[Id, P]): LogicToServer[P, Future, Route] = new LogicToServer[P, Future, Route] {
+    def toServer[I <: HList](e: Endpoint[Id, I]): LogicToServer[I, Future, Route] = new LogicToServer[I, Future, Route] {
 
       import akka.http.scaladsl.server._
       import akka.http.scaladsl.server.Directives._
@@ -159,44 +192,52 @@ object Main extends App {
         case _          => post
       }
 
-      def doMatch(segments: Vector[Segment[_]], path: Uri.Path, canRemoveSlash: Boolean): Option[(Vector[Any], Uri.Path)] = {
-        segments match {
-          case Vector() => Some((Vector.empty, path))
-          case StringSegment(ss) +: segmentsTail =>
-            path match {
-              case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(segments, pathTail, canRemoveSlash = false)
-              case Uri.Path.Segment(`ss`, pathTail)           => doMatch(segmentsTail, pathTail, canRemoveSlash = true)
+      def doMatch(inputs: Vector[EndpointInput.Single[_]],
+                  ctx: RequestContext,
+                  canRemoveSlash: Boolean): Option[(Vector[Any], RequestContext)] = {
+        inputs match {
+          case Vector() => Some((Vector.empty, ctx))
+          case EndpointInput.PathSegment(ss) +: inputsTail =>
+            ctx.unmatchedPath match {
+              case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false)
+              case Uri.Path.Segment(`ss`, pathTail)           => doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true)
               case _                                          => None
             }
-          case CaptureSegment() +: segmentsTail =>
-            path match {
-              case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(segments, pathTail, canRemoveSlash = false)
+          case EndpointInput.PathCapture() +: inputsTail =>
+            ctx.unmatchedPath match {
+              case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false)
               case Uri.Path.Segment(s, pathTail) =>
-                doMatch(segmentsTail, pathTail, canRemoveSlash = true).map {
-                  case (values, remainingPath) =>
-                    (s +: values, remainingPath)
+                doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true).map {
+                  case (values, ctx2) => (s +: values, ctx2)
                 }
               case _ => None
             }
+          case EndpointInput.Query(name) +: inputsTail =>
+            ctx.request.uri.query().get(name) match {
+              case None => None
+              case Some(value) =>
+                doMatch(inputsTail, ctx, canRemoveSlash = true).map {
+                  case (values, ctx2) => (value +: values, ctx2)
+                }
+            }
         }
       }
 
-      val pathDirectives: Directive1[Vector[Any]] = extractRequestContext.flatMap { ctx =>
-        doMatch(e.path.segments, ctx.request.uri.path, canRemoveSlash = true) match {
-          case Some((values, remainingPath)) =>
-            provide(values: Vector[Any]) & mapRequestContext(_.withUnmatchedPath(remainingPath))
-          case None => reject
+      val inputDirectives: Directive1[Vector[Any]] = extractRequestContext.flatMap { ctx =>
+        doMatch(e.input.inputs, ctx, canRemoveSlash = true) match {
+          case Some((values, ctx2)) => provide(values: Vector[Any]) & mapRequestContext(_ => ctx2)
+          case None                 => reject
         }
       }
 
-      override def using[I](logic: I)(implicit tt: function.FnToProduct.Aux[I, P => Future[String]]): Route = {
-        (methodDirective & pathDirectives) { values =>
+      override def using[F](logic: F)(implicit tt: function.FnToProduct.Aux[F, I => Future[String]]): Route = {
+        (methodDirective & inputDirectives) { values =>
           val params = values.foldRight(HNil: HList) {
             case (el, hlist) =>
               el :: hlist
           }
 
-          onComplete(tt(logic)(params.asInstanceOf[P])) { x =>
+          onComplete(tt(logic)(params.asInstanceOf[I])) { x =>
             complete(x)
           }
         }
@@ -206,30 +247,32 @@ object Main extends App {
 
   implicit val ets = new EndpointToAkkaServer
 
-  val r: Route = e.toServer.using((i: String, s: String) => Future.successful(s"$i $s"))
+  val r: Route = e.toServer.using((i: String, s: String, p1: String, p2: String) => Future.successful(s"$i $s $p1 $p2"))
 
   //
 
-  trait EndpointToClient[R[_]] {
-    def toClient[P <: HList](e: Endpoint[Id, P]): HostToClient[P, R]
-  }
-
   class EndpointToSttpClient extends EndpointToClient[Request[?, Nothing]] {
-    override def toClient[P <: HList](e: Endpoint[Id, P]): HostToClient[P, Request[?, Nothing]] = {
-      new HostToClient[P, Request[?, Nothing]] {
-        override def using[O](host: String)(implicit tt: function.FnFromProduct.Aux[P => Request[String, Nothing], O]): O = {
+    override def toClient[I <: HList](e: Endpoint[Id, I]): HostToClient[I, Request[?, Nothing]] = {
+      new HostToClient[I, Request[?, Nothing]] {
+        override def using[F](host: String)(implicit tt: function.FnFromProduct.Aux[I => Request[String, Nothing], F]): F = {
           tt(args => {
+            var uri = uri"$host"
             var i = -1
-            val path = e.path.segments.map {
-              case StringSegment(s) => s
-              case CaptureSegment() =>
+            e.input.inputs.foreach {
+              case EndpointInput.PathSegment(p) =>
+                uri = uri.copy(path = uri.path :+ p)
+              case EndpointInput.PathCapture() =>
                 i += 1
-                HList.unsafeGet(args, i).asInstanceOf[String]
+                val v = HList.unsafeGet(args, i).asInstanceOf[String]
+                uri = uri.copy(path = uri.path :+ v)
+              case EndpointInput.Query(name) =>
+                i += 1
+                val v = HList.unsafeGet(args, i).asInstanceOf[String]
+                uri = uri.param(name, v)
             }
 
             e.method match {
-              case com.softwaremill.swagger.Method.GET =>
-                sttp.get(uri"${host + "/" + path.mkString("/")}")
+              case com.softwaremill.swagger.Method.GET => sttp.get(uri)
             }
           })
         }
@@ -251,8 +294,10 @@ object Main extends App {
 
   type SttpReq[T] = Request[T, Nothing] // needed, unless implicit error
   implicit val etc: EndpointToClient[SttpReq] = new EndpointToSttpClient
-  val response2 = Await.result(e.toClient.using("http://localhost:8080").apply("11", "bbb").send(), 1.minute)
+  val response2 = Await.result(e.toClient.using("http://localhost:8080").apply("11", "bbb", "x1", "x2").send(), 1.minute)
   println("RESPONSE2: " + response2)
 
   Await.result(actorSystem.terminate(), 1.minute)
+
+  // types, that you are not afraid to write down
 }
