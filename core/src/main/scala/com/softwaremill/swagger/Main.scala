@@ -165,6 +165,11 @@ object Main extends App {
 
   // sapi ?
 
+//  def json[T]: TypeMapper[T]
+//
+//  case class User(name: String, age: Int)
+//  implicit val userType: TypeMapper[User] = json[User]  // TODO.sample(User("x"))
+
   val path = "x" / pathCapture[String] / "z"
 
   val e = endpoint
