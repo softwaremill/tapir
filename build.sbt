@@ -5,11 +5,12 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 )
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+val circeVersion = "0.10.0"
 
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
   .settings(publishArtifact := false, name := "scala-swagger")
-  .aggregate(core, typedSchema, typedapi)
+  .aggregate(core, openapiModel, openapiDocs, akkaHttpServer, sttpClient)
 
 lazy val core: Project = (project in file("core"))
   .settings(commonSettings: _*)
@@ -19,24 +20,43 @@ lazy val core: Project = (project in file("core"))
       "com.chuusai" %% "shapeless" % "2.3.3",
       "com.softwaremill.sttp" %% "akka-http-backend" % "1.3.1",
       "com.typesafe.akka" %% "akka-stream" % "2.5.16",
+      "io.circe" %% "circe-core" % circeVersion,
+      "io.circe" %% "circe-generic" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion,
+      "com.propensive" %% "magnolia" % "0.7.1",
       scalaTest
     )
   )
 
-lazy val typedSchema: Project = (project in file("typed-schema"))
+lazy val openapiModel: Project = (project in file("openapi-model"))
   .settings(commonSettings: _*)
   .settings(
-    name := "typed-schema",
-    libraryDependencies ++= Seq(
-      "ru.tinkoff" %% "typed-schema" % "0.10.5"
-    )
+    name := "openapi-model"
   )
 
-lazy val typedapi: Project = (project in file("typedapi"))
+lazy val openapiDocs: Project = (project in file("openapi-docs"))
   .settings(commonSettings: _*)
   .settings(
-    name := "typedapi",
+    name := "openapi-docs"
+  )
+  .dependsOn(openapiModel, core)
+
+lazy val akkaHttpServer: Project = (project in file("akka-http-server"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "akka-http-server",
     libraryDependencies ++= Seq(
-      "com.github.pheymann" %% "typedapi-http4s-server" % "0.1.0" exclude ("org.ensime", "sbt-ensime")
+      "com.typesafe.akka" %% "akka-http" % "10.1.5"
     )
   )
+  .dependsOn(core)
+
+lazy val sttpClient: Project = (project in file("sttp-client"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "sttp-client",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp" %% "core" % "1.3.5"
+    )
+  )
+  .dependsOn(core)
