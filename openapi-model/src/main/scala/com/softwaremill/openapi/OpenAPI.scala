@@ -3,12 +3,7 @@ package com.softwaremill.openapi
 import OpenAPI.ReferenceOr
 
 // todo security, tags, externaldocs
-case class OpenAPI(
-    openapi: String = "3.0.1",
-    info: Info,
-    server: List[Server],
-    paths: Map[String, PathItem],
-    component: Components)
+case class OpenAPI(openapi: String = "3.0.1", info: Info, server: List[Server], paths: Map[String, PathItem], component: Components)
 
 object OpenAPI {
   type ReferenceOr[T] = Either[Reference, T]
@@ -20,18 +15,18 @@ case class Info(
     description: Option[String],
     termsOfService: Option[String],
     version: String
-               )
+)
 
 // todo: variables
 case class Server(
     url: String,
     description: Option[String],
-    )
+)
 
 // todo: responses, parameters, examples, requestBodies, headers, securitySchemas, links, callbacks
 case class Components(
     schemas: Map[String, ReferenceOr[Schema]]
-                     )
+)
 
 // todo: $ref
 case class PathItem(
@@ -47,7 +42,7 @@ case class PathItem(
     trace: Option[Operation],
     servers: Option[List[Server]],
     parameters: List[ReferenceOr[Parameter]]
-                )
+)
 
 // todo: external docs, callbacks, security
 case class Operation(
@@ -60,7 +55,7 @@ case class Operation(
     responses: Map[ResponsesKey, ReferenceOr[Response]],
     deprecated: Boolean,
     server: Option[List[Server]]
-                    )
+)
 
 case class Parameter(
     name: String,
@@ -76,7 +71,7 @@ case class Parameter(
     example: Option[ExampleValue],
     examples: Map[String, ReferenceOr[Example]],
     content: Map[String, MediaType]
-                    )
+)
 
 object ParameterIn extends Enumeration {
   type ParameterIn = Value
@@ -99,17 +94,14 @@ object ParameterStyle extends Enumeration {
   val DeepObject = Value("deepObject")
 }
 
-case class RequestBody(
-    description: Option[String],
-    content: Map[String, MediaType],
-    required: Option[Boolean])
+case class RequestBody(description: Option[String], content: Map[String, MediaType], required: Option[Boolean])
 
 case class MediaType(
     schema: ReferenceOr[Schema],
     example: Option[Example],
     examples: Map[String, ReferenceOr[Example]],
     encoding: Map[String, Encoding]
-                    )
+)
 
 case class Encoding(
     contentType: Option[String],
@@ -117,33 +109,28 @@ case class Encoding(
     style: Option[ParameterStyle.ParameterStyle],
     explode: Option[Boolean],
     allowReserved: Option[Boolean]
-                   )
+)
 
 sealed trait ResponsesKey
 case object ResponsesDefaultKey extends ResponsesKey
 case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
-case class Response(description: String, headers: Map[String, ReferenceOr[Header]],
-                    content: Map[String, MediaType])
+case class Response(description: String, headers: Map[String, ReferenceOr[Header]], content: Map[String, MediaType])
 
-case class Example(summary: Option[String],
-                   description: Option[String],
-                   value: Option[ExampleValue],
-                   externalValue: Option[String])
+case class Example(summary: Option[String], description: Option[String], value: Option[ExampleValue], externalValue: Option[String])
 
 case class Header(description: Option[String],
-                   required: Option[Boolean],
-                   deprecated: Option[Boolean],
-                   allowEmptyValue: Option[Boolean],
-                   style: Option[ParameterStyle.ParameterStyle],
-                   explode: Option[Boolean],
-                   allowReserved: Option[Boolean],
-                   schema: Option[ReferenceOr[Schema]],
-                   example: Option[ExampleValue],
-                   examples: Map[String, ReferenceOr[Example]],
-                   content: Map[String, MediaType]
-                 )
+                  required: Option[Boolean],
+                  deprecated: Option[Boolean],
+                  allowEmptyValue: Option[Boolean],
+                  style: Option[ParameterStyle.ParameterStyle],
+                  explode: Option[Boolean],
+                  allowReserved: Option[Boolean],
+                  schema: Option[ReferenceOr[Schema]],
+                  example: Option[ExampleValue],
+                  examples: Map[String, ReferenceOr[Example]],
+                  content: Map[String, MediaType])
 
 case class Reference($ref: String)
 

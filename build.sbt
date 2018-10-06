@@ -1,6 +1,6 @@
 lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.swagger",
-  scalaVersion := "2.12.6",
+  scalaVersion := "2.12.7",
   scalafmtOnCompile := true
 )
 
@@ -18,12 +18,12 @@ lazy val core: Project = (project in file("core"))
     name := "core",
     libraryDependencies ++= Seq(
       "com.chuusai" %% "shapeless" % "2.3.3",
-      "com.softwaremill.sttp" %% "akka-http-backend" % "1.3.1",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.16",
+      "com.softwaremill.sttp" %% "akka-http-backend" % "1.3.5",
+      "com.typesafe.akka" %% "akka-stream" % "2.5.17",
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
-      "com.propensive" %% "magnolia" % "0.7.1",
+      "com.propensive" %% "magnolia" % "0.10.0",
       scalaTest
     )
   )
@@ -47,6 +47,16 @@ lazy val akkaHttpServer: Project = (project in file("akka-http-server"))
     name := "akka-http-server",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % "10.1.5"
+    )
+  )
+  .dependsOn(core)
+
+lazy val http4sServer: Project = (project in file("http4s-server"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "http4s-server",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-client" % "0.18.18"
     )
   )
   .dependsOn(core)
