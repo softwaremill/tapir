@@ -1,5 +1,5 @@
 lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-  organization := "com.softwaremill.swagger",
+  organization := "com.softwaremill.sapi",
   scalaVersion := "2.12.7",
   scalafmtOnCompile := true
 )
@@ -9,8 +9,8 @@ val circeVersion = "0.10.0"
 
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
-  .settings(publishArtifact := false, name := "scala-swagger")
-  .aggregate(core, openapiModel, openapiDocs, akkaHttpServer, sttpClient)
+  .settings(publishArtifact := false, name := "sapi")
+  .aggregate(core, openapiModel, openapiDocs, akkaHttpServer, http4sServer, sttpClient)
 
 lazy val core: Project = (project in file("core"))
   .settings(commonSettings: _*)
@@ -34,14 +34,14 @@ lazy val openapiModel: Project = (project in file("openapi-model"))
     name := "openapi-model"
   )
 
-lazy val openapiDocs: Project = (project in file("openapi-docs"))
+lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   .settings(commonSettings: _*)
   .settings(
     name := "openapi-docs"
   )
   .dependsOn(openapiModel, core)
 
-lazy val akkaHttpServer: Project = (project in file("akka-http-server"))
+lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(commonSettings: _*)
   .settings(
     name := "akka-http-server",
@@ -51,7 +51,7 @@ lazy val akkaHttpServer: Project = (project in file("akka-http-server"))
   )
   .dependsOn(core)
 
-lazy val http4sServer: Project = (project in file("http4s-server"))
+lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings: _*)
   .settings(
     name := "http4s-server",
@@ -61,7 +61,7 @@ lazy val http4sServer: Project = (project in file("http4s-server"))
   )
   .dependsOn(core)
 
-lazy val sttpClient: Project = (project in file("sttp-client"))
+lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings: _*)
   .settings(
     name := "sttp-client",
@@ -70,3 +70,10 @@ lazy val sttpClient: Project = (project in file("sttp-client"))
     )
   )
   .dependsOn(core)
+
+lazy val tests: Project = (project in file("tests"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tests"
+  )
+  .dependsOn(akkaHttpServer, sttpClient)

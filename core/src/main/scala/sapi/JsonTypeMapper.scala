@@ -1,4 +1,4 @@
-package com.softwaremill.swagger
+package sapi
 
 import io.circe.{Decoder, Encoder}
 import io.circe._, io.circe.parser._, io.circe.syntax._
