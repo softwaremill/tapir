@@ -1,4 +1,4 @@
-package com.softwaremill.swagger
+package sapi
 
 case class Method(m: String) extends AnyVal
 object Method {

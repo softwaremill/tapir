@@ -1,4 +1,5 @@
-package com.softwaremill.swagger
+package sapi
+
 import scala.util.Try
 
 trait TypeMapper[T] {
