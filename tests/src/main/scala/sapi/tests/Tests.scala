@@ -5,17 +5,15 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import com.softwaremill.sttp.akkahttp.AkkaHttpBackend
-import sapi._
 import sapi.server.akkahttp._
 import sapi.client.sttp._
+import sapi._
 import shapeless.HNil
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 object Tests extends App {
-  val sapi = Endpoint[Empty, HNil](None, None, EndpointInput.Multiple(Vector.empty))
-
   // TODO
   //  case class User()
   //
@@ -31,8 +29,6 @@ object Tests extends App {
   //  // verify that there's only one body + that query params aren't repeated?
   //  val inputs = qp.and(hp).and(bp) // andUsing(combineFn)
 
-  // sapi ?
-
   //  def json[T]: TypeMapper[T]
   //
   //  case class User(name: String, age: Int)
@@ -40,10 +36,11 @@ object Tests extends App {
 
   val path = "x" / pathCapture[String] / "z"
 
-  val e = sapi
+  val e = endpoint
     .get()
     .in("x" / pathCapture[String] / "z" / pathCapture[Int]) // each endpoint must have a path and a method
     .in(query[String]("q1").and(query[Int]("q2")))
+    .out[String]
 
   // TODO
   //    .in(query[Int]("x"))

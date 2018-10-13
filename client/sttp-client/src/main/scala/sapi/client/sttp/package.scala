@@ -6,11 +6,11 @@ import shapeless.HList
 import shapeless.ops.function
 
 package object sttp {
-  implicit class RichEndpoint[I <: HList](e: Endpoint[Id, I]) {
-    def toSttpClient: HostToClient[I, Request[?, Nothing]] = EndpointToSttpClient.toClient(e)
+  implicit class RichEndpoint[I <: HList, O](e: Endpoint[Id, I, O]) {
+    def toSttpClient: HostToClient[I, O, Request[?, Nothing]] = EndpointToSttpClient.toClient(e)
   }
 
-  trait HostToClient[I <: HList, R[_]] {
-    def using[F](host: String)(implicit tt: function.FnFromProduct.Aux[I => R[String], F]): F
+  trait HostToClient[I <: HList, O, R[_]] {
+    def using[F](host: String)(implicit tt: function.FnFromProduct.Aux[I => R[O], F]): F
   }
 }

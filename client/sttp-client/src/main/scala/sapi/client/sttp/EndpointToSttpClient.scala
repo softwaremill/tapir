@@ -6,9 +6,9 @@ import shapeless.HList
 import shapeless.ops.function
 
 object EndpointToSttpClient {
-  def toClient[I <: HList](e: Endpoint[Id, I]): HostToClient[I, Request[?, Nothing]] = {
-    new HostToClient[I, Request[?, Nothing]] {
-      override def using[F](host: String)(implicit tt: function.FnFromProduct.Aux[I => Request[String, Nothing], F]): F = {
+  def toClient[I <: HList, O](e: Endpoint[Id, I, O]): HostToClient[I, O, Request[?, Nothing]] = {
+    new HostToClient[I, O, Request[?, Nothing]] {
+      override def using[F](host: String)(implicit tt: function.FnFromProduct.Aux[I => Request[O, Nothing], F]): F = {
         tt(args => {
           var uri = uri"$host"
           var i = -1
@@ -26,7 +26,7 @@ object EndpointToSttpClient {
           }
 
           e.method match {
-            case _root_.sapi.Method.GET => sttp.get(uri)
+            case _root_.sapi.Method.GET => sttp.get(uri).response(asString.map(s => e.output.fromString(s).get))
           }
         })
       }

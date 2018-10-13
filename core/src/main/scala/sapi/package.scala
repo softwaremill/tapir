@@ -61,6 +61,7 @@ package object sapi {
   // extend the path for an endpoint?
   //
   // types, that you are not afraid to write down
+  // Human comprehensible types
 
   //
 
@@ -103,12 +104,19 @@ package object sapi {
 
   def query[T: TypeMapper](name: String): EndpointInput[T :: HNil] = EndpointInput.Query(name, implicitly[TypeMapper[T]])
 
-  case class Endpoint[U[_], I <: HList](name: Option[String], method: U[Method], input: EndpointInput.Multiple[I]) {
-    def name(s: String): Endpoint[U, I] = this.copy(name = Some(s))
+  case class Endpoint[U[_], I <: HList, O](name: Option[String],
+                                           method: U[Method],
+                                           input: EndpointInput.Multiple[I],
+                                           output: TypeMapper[O]) {
+    def name(s: String): Endpoint[U, I, O] = this.copy(name = Some(s))
 
-    def get(): Endpoint[Id, I] = this.copy[Id, I](method = Method.GET)
+    def get(): Endpoint[Id, I, O] = this.copy[Id, I, O](method = Method.GET)
 
-    def in[J <: HList, IJ <: HList](i: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): Endpoint[U, IJ] =
-      this.copy[U, IJ](input = input.and(i))
+    def in[J <: HList, IJ <: HList](i: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): Endpoint[U, IJ, O] =
+      this.copy[U, IJ, O](input = input.and(i))
+
+    def out[T: TypeMapper]: Endpoint[U, I, T] = copy[U, I, T](output = implicitly)
   }
+
+  val endpoint = Endpoint[Empty, HNil, Unit](None, None, EndpointInput.Multiple(Vector.empty), implicitly)
 }
