@@ -1,10 +1,14 @@
 package sapi
 
 import io.circe.{Decoder, Encoder}
-import io.circe._, io.circe.parser._, io.circe.syntax._
+import io.circe._
+import io.circe.parser._
+import io.circe.syntax._
 
 import language.experimental.macros
 import magnolia._
+
+import scala.util.Try
 
 object JsonTypeMapper extends App {
 
@@ -16,7 +20,7 @@ object JsonTypeMapper extends App {
 
   def json[T: TypeInfo: Encoder: Decoder]: TypeMapper[T] = new TypeMapper[T] {
     override def toString(t: T): String = t.asJson.noSpaces
-    override def fromString(s: String): Option[T] = decode[T](s).toOption
+    override def fromString(s: String): Try[T] = decode[T](s).toTry
   }
 
   //implicit val userType: TypeMapper[User] = json[User]  // TODO.sample(User("x"))

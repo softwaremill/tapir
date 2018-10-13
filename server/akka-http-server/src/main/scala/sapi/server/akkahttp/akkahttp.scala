@@ -10,10 +10,10 @@ import shapeless.ops.hlist.Tupler
 import scala.concurrent.Future
 
 package object akkahttp {
-  implicit class RichAkkaHttpEndpoint[I <: HList](e: Endpoint[Id, I]) {
+  implicit class RichAkkaHttpEndpoint[I <: HList, O](e: Endpoint[Id, I, O]) {
     def toDirective[T](implicit t: Tupler.Aux[I, T]): Directive[T] = EndpointToAkkaServer.toDirective(e)
 
-    def toRoute[T, F](logic: F)(implicit tt: FnToProduct.Aux[F, I => Future[String]]): Route =
+    def toRoute[T, F](logic: F)(implicit tt: FnToProduct.Aux[F, I => Future[O]]): Route =
       EndpointToAkkaServer.toRoute(e)(logic)
   }
 }

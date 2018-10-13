@@ -56,7 +56,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(
     name := "http4s-server",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-blaze-client" % "0.18.18"
+      "org.http4s" %% "http4s-blaze-client" % "0.19.0"
     )
   )
   .dependsOn(core)
@@ -66,7 +66,7 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(
     name := "sttp-client",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "core" % "1.3.5"
+      "com.softwaremill.sttp" %% "core" % "1.3.8"
     )
   )
   .dependsOn(core)
