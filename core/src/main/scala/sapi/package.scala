@@ -1,5 +1,4 @@
 import shapeless.{::, HList, HNil, Path}
-import shapeless.ops.function
 import shapeless.ops.hlist.Prepend
 
 import scala.annotation.implicitNotFound
@@ -86,9 +85,17 @@ package object sapi {
     }
 
     case class PathSegment(s: String) extends Path[HNil] with Single[HNil]
-    case class PathCapture[T](m: TypeMapper[T]) extends Path[T :: HNil] with Single[T :: HNil]
+    case class PathCapture[T](name: String, m: RequiredTypeMapper[T], description: Option[String], example: Option[T])
+        extends Path[T :: HNil]
+        with Single[T :: HNil] {
+      def description(d: String): EndpointInput.PathCapture[T] = copy(description = Some(d))
+      def example(t: T): EndpointInput.PathCapture[T] = copy(example = Some(t))
+    }
 
-    case class Query[T](name: String, m: TypeMapper[T]) extends Single[T :: HNil]
+    case class Query[T](name: String, m: TypeMapper[T], description: Option[String], example: Option[T]) extends Single[T :: HNil] {
+      def description(d: String): EndpointInput.Query[T] = copy(description = Some(d))
+      def example(t: T): EndpointInput.Query[T] = copy(example = Some(t))
+    }
 
     case class Multiple[I <: HList](inputs: Vector[Single[_]]) extends EndpointInput[I] {
       override def and[J <: HList, IJ <: HList](other: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointInput.Multiple[IJ] =
@@ -99,24 +106,38 @@ package object sapi {
     }
   }
 
-  def pathCapture[T: TypeMapper]: EndpointInput[T :: HNil] = EndpointInput.PathCapture(implicitly[TypeMapper[T]])
+  def pathCapture[T: RequiredTypeMapper](name: String): EndpointInput[T :: HNil] =
+    EndpointInput.PathCapture(name, implicitly[RequiredTypeMapper[T]], None, None)
   implicit def stringToPath(s: String): EndpointInput[HNil] = EndpointInput.PathSegment(s)
 
-  def query[T: TypeMapper](name: String): EndpointInput[T :: HNil] = EndpointInput.Query(name, implicitly[TypeMapper[T]])
+  def query[T: TypeMapper](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TypeMapper[T]], None, None)
 
   case class Endpoint[U[_], I <: HList, O](name: Option[String],
                                            method: U[Method],
                                            input: EndpointInput.Multiple[I],
-                                           output: TypeMapper[O]) {
+                                           output: TypeMapper[O],
+                                           summary: Option[String],
+                                           description: Option[String],
+                                           tags: List[String]) {
     def name(s: String): Endpoint[U, I, O] = this.copy(name = Some(s))
 
     def get(): Endpoint[Id, I, O] = this.copy[Id, I, O](method = Method.GET)
+    def post(): Endpoint[Id, I, O] = this.copy[Id, I, O](method = Method.POST)
 
     def in[J <: HList, IJ <: HList](i: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): Endpoint[U, IJ, O] =
       this.copy[U, IJ, O](input = input.and(i))
 
     def out[T: TypeMapper]: Endpoint[U, I, T] = copy[U, I, T](output = implicitly)
+
+    def summary(s: String): Endpoint[U, I, O] = copy(summary = Some(s))
+    def description(d: String): Endpoint[U, I, O] = copy(description = Some(d))
+    def tags(ts: List[String]): Endpoint[U, I, O] = copy(tags = ts)
+    def tag(t: String): Endpoint[U, I, O] = copy(tags = t :: tags)
   }
 
-  val endpoint = Endpoint[Empty, HNil, Unit](None, None, EndpointInput.Multiple(Vector.empty), implicitly)
+  case class InvalidOutput(reason: TypeMapper.Result[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull)
+//  case class InvalidInput(input: EndpointInput.Single[_], reason: TypeMapper.Result[Nothing], cause: Option[Throwable])
+//      extends Exception(cause.orNull)
+
+  val endpoint = Endpoint[Empty, HNil, Unit](None, None, EndpointInput.Multiple(Vector.empty), implicitly, None, None, Nil)
 }

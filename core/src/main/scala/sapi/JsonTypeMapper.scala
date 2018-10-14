@@ -18,10 +18,10 @@ object JsonTypeMapper extends App {
   val genUser = TypeInfoDerivation.gen[User]
   println(genUser)
 
-  def json[T: TypeInfo: Encoder: Decoder]: TypeMapper[T] = new TypeMapper[T] {
-    override def toString(t: T): String = t.asJson.noSpaces
-    override def fromString(s: String): Try[T] = decode[T](s).toTry
-  }
+//  def json[T: TypeInfo: Encoder: Decoder]: TypeMapper[T] = new TypeMapper[T] {
+//    override def toString(t: T): String = t.asJson.noSpaces
+//    override def fromString(s: String): Try[T] = decode[T](s).toTry
+//  }
 
   //implicit val userType: TypeMapper[User] = json[User]  // TODO.sample(User("x"))
 

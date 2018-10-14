@@ -8,7 +8,6 @@ import com.softwaremill.sttp.akkahttp.AkkaHttpBackend
 import sapi.server.akkahttp._
 import sapi.client.sttp._
 import sapi._
-import shapeless.HNil
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -34,12 +33,13 @@ object Tests extends App {
   //  case class User(name: String, age: Int)
   //  implicit val userType: TypeMapper[User] = json[User]  // TODO.sample(User("x"))
 
-  val path = "x" / pathCapture[String] / "z"
+  val path = "x" / pathCapture[String]("p1") / "z"
 
   val e = endpoint
     .get()
-    .in("x" / pathCapture[String] / "z" / pathCapture[Int]) // each endpoint must have a path and a method
-    .in(query[String]("q1").and(query[Int]("q2")))
+    .in("x" / pathCapture[String]("p1") / "z" / pathCapture[Int]("p2")) // each endpoint must have a path and a method
+    .in(query[String]("q1").description("A q1").and(query[Int]("q2").example(99)))
+    .in(query[Option[String]]("q3"))
     .out[String]
 
   // TODO
@@ -51,7 +51,8 @@ object Tests extends App {
   //    .name("xz") // name optional
   //    .description("...")
 
-  val r: Route = e.toRoute((i: String, s: Int, p1: String, p2: Int) => Future.successful(s"$i $s $p1 $p2"))
+  val r: Route = e.toRoute((i: String, s: Int, p1: String, p2: Int, p3: Option[String]) =>
+    Future.successful(s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")}"))
 
   //
 
@@ -64,13 +65,19 @@ object Tests extends App {
   import com.softwaremill.sttp._
   implicit val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
 
-  val response = Await.result(sttp.get(uri"http://localhost:8080/x/aa/z/20?q1=x1&q2=91").send(), 1.minute)
-  println("RESPONSE1: " + response)
+  val response1 = Await.result(sttp.get(uri"http://localhost:8080/x/aa/z/20?q1=x1&q2=91").send(), 1.minute)
+  println("RESPONSE1: " + response1)
+
+  val response2 = Await.result(sttp.get(uri"http://localhost:8080/x/aa/z/20?q1=x1&q2=91&q3=kkk").send(), 1.minute)
+  println("RESPONSE2: " + response2)
 
 //  type SttpReq[T] = Request[T, Nothing] // needed, unless implicit error
 //  implicit val etc: EndpointToClient[SttpReq] = new EndpointToSttpClient
-  val response2 = Await.result(e.toSttpClient.using("http://localhost:8080").apply("aa", 20, "x1", 91).send(), 1.minute)
-  println("RESPONSE2: " + response2)
+  val response3 = Await.result(e.toSttpClient.using("http://localhost:8080").apply("aa", 20, "x1", 91, None).send(), 1.minute)
+  println("RESPONSE3: " + response3)
+
+  val response4 = Await.result(e.toSttpClient.using("http://localhost:8080").apply("aa", 20, "x1", 91, Some("kkk")).send(), 1.minute)
+  println("RESPONSE4: " + response4)
 
   Await.result(actorSystem.terminate(), 1.minute)
 }
