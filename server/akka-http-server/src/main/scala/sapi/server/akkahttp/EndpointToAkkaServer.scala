@@ -10,7 +10,6 @@ import shapeless.ops.hlist.Tupler
 import shapeless.{HList, HNil}
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success}
 
 object EndpointToAkkaServer {
 
@@ -31,7 +30,7 @@ object EndpointToAkkaServer {
   def toRoute[T, I <: HList, O, F](e: Endpoint[Id, I, O])(logic: F)(implicit tt: FnToProduct.Aux[F, I => Future[O]]): Route = {
     toDirective1(e) { values =>
       onSuccess(tt(logic)(values.asInstanceOf[I])) { x =>
-        complete(e.output.toString(x))
+        complete(e.output.toOptionalString(x))
       }
     }
   }
@@ -58,24 +57,26 @@ object EndpointToAkkaServer {
             case Uri.Path.Segment(`ss`, pathTail)           => doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true)
             case _                                          => None
           }
-        case EndpointInput.PathCapture(m) +: inputsTail =>
+        case EndpointInput.PathCapture(_, m, _, _) +: inputsTail =>
           ctx.unmatchedPath match {
             case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false)
             case Uri.Path.Segment(s, pathTail) =>
               m.fromString(s) match {
-                case Success(v) =>
+                case TypeMapper.Value(v) =>
                   doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true).map {
                     case (values, ctx2) => (v :: values, ctx2)
                   }
-                case Failure(_) => None
+                case _ => None
               }
             case _ => None
           }
-        case EndpointInput.Query(name, m) +: inputsTail =>
-          ctx.request.uri.query().get(name).flatMap((m.fromString _).andThen(_.toOption)).flatMap { value =>
-            doMatch(inputsTail, ctx, canRemoveSlash = true).map {
-              case (values, ctx2) => (value :: values, ctx2)
-            }
+        case EndpointInput.Query(name, m, _, _) +: inputsTail =>
+          m.fromOptionalString(ctx.request.uri.query().get(name)) match {
+            case TypeMapper.Value(v) =>
+              doMatch(inputsTail, ctx, canRemoveSlash = true).map {
+                case (values, ctx2) => (v :: values, ctx2)
+              }
+            case _ => None
           }
       }
     }

@@ -1,9 +1,9 @@
-package com.softwaremill.openapi
+package sapi.openapi
 
 import OpenAPI.ReferenceOr
 
 // todo security, tags, externaldocs
-case class OpenAPI(openapi: String = "3.0.1", info: Info, server: List[Server], paths: Map[String, PathItem], component: Components)
+case class OpenAPI(openapi: String = "3.0.1", info: Info, server: List[Server], paths: Map[String, PathItem], components: Components)
 
 object OpenAPI {
   type ReferenceOr[T] = Either[Reference, T]
@@ -40,7 +40,7 @@ case class PathItem(
     head: Option[Operation],
     patch: Option[Operation],
     trace: Option[Operation],
-    servers: Option[List[Server]],
+    servers: List[Server],
     parameters: List[ReferenceOr[Parameter]]
 )
 
@@ -54,7 +54,7 @@ case class Operation(
     requestBody: Option[ReferenceOr[RequestBody]],
     responses: Map[ResponsesKey, ReferenceOr[Response]],
     deprecated: Boolean,
-    server: Option[List[Server]]
+    server: List[Server]
 )
 
 case class Parameter(
