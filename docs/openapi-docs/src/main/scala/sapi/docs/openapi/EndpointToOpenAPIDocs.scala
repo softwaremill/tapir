@@ -33,8 +33,8 @@ class EndpointToOpenAPIDocs {
       None,
       None,
       get = if (e.method == GET) Some(operation(defaultId, e)) else None,
-      post = if (e.method == POST) Some(operation(defaultId, e)) else None,
       put = if (e.method == PUT) Some(operation(defaultId, e)) else None,
+      post = if (e.method == POST) Some(operation(defaultId, e)) else None,
       delete = if (e.method == DELETE) Some(operation(defaultId, e)) else None,
       options = if (e.method == OPTIONS) Some(operation(defaultId, e)) else None,
       head = if (e.method == HEAD) Some(operation(defaultId, e)) else None,
@@ -51,16 +51,16 @@ class EndpointToOpenAPIDocs {
     PathItem(
       None,
       None,
-      p1.get.orElse(p2.get),
-      p1.post.orElse(p2.post),
-      p1.put.orElse(p2.put),
-      p1.delete.orElse(p2.delete),
-      p1.options.orElse(p2.options),
-      p1.head.orElse(p2.head),
-      p1.patch.orElse(p2.patch),
-      p1.trace.orElse(p2.trace),
-      Nil,
-      Nil
+      get = p1.get.orElse(p2.get),
+      put = p1.put.orElse(p2.put),
+      post = p1.post.orElse(p2.post),
+      delete = p1.delete.orElse(p2.delete),
+      options = p1.options.orElse(p2.options),
+      head = p1.head.orElse(p2.head),
+      patch = p1.patch.orElse(p2.patch),
+      trace = p1.trace.orElse(p2.trace),
+      servers = Nil,
+      parameters = Nil
     )
   }
 
