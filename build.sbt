@@ -18,8 +18,6 @@ lazy val core: Project = (project in file("core"))
     name := "core",
     libraryDependencies ++= Seq(
       "com.chuusai" %% "shapeless" % "2.3.3",
-      "com.softwaremill.sttp" %% "akka-http-backend" % "1.3.5",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.17",
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
@@ -46,7 +44,8 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(
     name := "akka-http-server",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % "10.1.5"
+      "com.typesafe.akka" %% "akka-http" % "10.1.5",
+      "com.typesafe.akka" %% "akka-stream" % "2.5.17"
     )
   )
   .dependsOn(core)
@@ -74,6 +73,9 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
 lazy val tests: Project = (project in file("tests"))
   .settings(commonSettings: _*)
   .settings(
-    name := "tests"
+    name := "tests",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp" %% "akka-http-backend" % "1.3.8"
+    )
   )
   .dependsOn(akkaHttpServer, sttpClient)

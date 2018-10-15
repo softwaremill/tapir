@@ -85,6 +85,7 @@ package object sapi {
     }
 
     case class PathSegment(s: String) extends Path[HNil] with Single[HNil]
+
     case class PathCapture[T](name: String, m: RequiredTypeMapper[T], description: Option[String], example: Option[T])
         extends Path[T :: HNil]
         with Single[T :: HNil] {
@@ -118,6 +119,8 @@ package object sapi {
                                            output: TypeMapper[O],
                                            summary: Option[String],
                                            description: Option[String],
+                                           okResponseDescription: Option[String],
+                                           errorResponseDescription: Option[String],
                                            tags: List[String]) {
     def name(s: String): Endpoint[U, I, O] = this.copy(name = Some(s))
 
@@ -131,6 +134,8 @@ package object sapi {
 
     def summary(s: String): Endpoint[U, I, O] = copy(summary = Some(s))
     def description(d: String): Endpoint[U, I, O] = copy(description = Some(d))
+    def okResponseDescription(d: String): Endpoint[U, I, O] = copy(okResponseDescription = Some(d))
+    def errorResponseDescription(d: String): Endpoint[U, I, O] = copy(errorResponseDescription = Some(d))
     def tags(ts: List[String]): Endpoint[U, I, O] = copy(tags = ts)
     def tag(t: String): Endpoint[U, I, O] = copy(tags = t :: tags)
   }
@@ -139,5 +144,6 @@ package object sapi {
 //  case class InvalidInput(input: EndpointInput.Single[_], reason: TypeMapper.Result[Nothing], cause: Option[Throwable])
 //      extends Exception(cause.orNull)
 
-  val endpoint = Endpoint[Empty, HNil, Unit](None, None, EndpointInput.Multiple(Vector.empty), implicitly, None, None, Nil)
+  val endpoint: Endpoint[Empty, HNil, Unit] =
+    Endpoint[Empty, HNil, Unit](None, None, EndpointInput.Multiple(Vector.empty), implicitly, None, None, None, None, Nil)
 }
