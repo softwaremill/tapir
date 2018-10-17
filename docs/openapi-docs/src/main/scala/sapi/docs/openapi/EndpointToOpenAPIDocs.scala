@@ -4,8 +4,9 @@ import sapi._
 import sapi.openapi.OpenAPI.ReferenceOr
 import sapi.openapi._
 import sapi.{Endpoint, Id}
+import shapeless.HList
 
-class EndpointToOpenAPIDocs {
+object EndpointToOpenAPIDocs {
   def toOpenAPI(title: String, version: String, es: Seq[Endpoint[Id, _, _]]): OpenAPI = {
     OpenAPI(
       info = Info(title, None, None, version),
@@ -22,9 +23,10 @@ class EndpointToOpenAPIDocs {
   private def pathItem(e: Endpoint[Id, _, _]): (String, PathItem) = {
     import Method._
 
-    val pathComponents = e.input.inputs.toList.collect {
-      case EndpointInput.PathCapture(name, _, _, _) => s"{$name}"
-      case EndpointInput.PathSegment(s)             => s
+    val pathComponents = e.input.inputs.flatMap {
+      case EndpointInput.PathCapture(name, _, _, _) => Some(s"{$name}")
+      case EndpointInput.PathSegment(s)             => Some(s)
+      case _                                        => None
     }
     // TODO parametrize the class with customizable id generation
     val defaultId = s"${pathComponents.mkString("-")}-${e.method.m.toLowerCase}"
@@ -66,23 +68,26 @@ class EndpointToOpenAPIDocs {
 
   private def operation(defaultId: String, e: Endpoint[Id, _, _]): Operation = {
 
-    val parameters = e.input.inputs.collect {
+    val parameters = e.input.inputs.flatMap {
       case EndpointInput.Query(n, tm, d, ex) =>
-        Parameter(n,
-                  ParameterIn.Query,
-                  d,
-                  Some(!tm.isOptional),
-                  None,
-                  None,
-                  None,
-                  None,
-                  None,
-                  None,
-                  ex.flatMap(exampleValue(tm, _)),
-                  Map(),
-                  Map())
+        Some(
+          Parameter(n,
+                    ParameterIn.Query,
+                    d,
+                    Some(!tm.isOptional),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    ex.flatMap(exampleValue(tm, _)),
+                    Map(),
+                    Map()))
       case EndpointInput.PathCapture(n, tm, d, ex) =>
-        Parameter(n, ParameterIn.Path, d, Some(true), None, None, None, None, None, None, ex.flatMap(exampleValue(tm, _)), Map(), Map())
+        Some(
+          Parameter(n, ParameterIn.Path, d, Some(true), None, None, None, None, None, None, ex.flatMap(exampleValue(tm, _)), Map(), Map()))
+      case _ => None
     }
 
     val responses: Map[ResponsesKey, ReferenceOr[Response]] = Map(

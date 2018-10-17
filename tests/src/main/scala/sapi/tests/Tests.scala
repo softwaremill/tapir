@@ -5,9 +5,10 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import com.softwaremill.sttp.akkahttp.AkkaHttpBackend
+import sapi._
 import sapi.server.akkahttp._
 import sapi.client.sttp._
-import sapi._
+import sapi.docs.openapi._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -55,6 +56,13 @@ object Tests extends App {
     Future.successful(s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")}"))
 
   //
+
+  import sapi.openapi.circe.yaml._
+
+  val docs = e.toOpenAPI("Example 1", "1.0")
+  println("XXX")
+  println(docs.toYaml)
+  println("YYY")
 
   // TEST
 

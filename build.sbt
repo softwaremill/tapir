@@ -10,7 +10,7 @@ val circeVersion = "0.10.0"
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
   .settings(publishArtifact := false, name := "sapi")
-  .aggregate(core, openapiModel, openapiDocs, akkaHttpServer, http4sServer, sttpClient)
+  .aggregate(core, openapiModel, openapiCirce, openapiCirceYaml, openapiDocs, akkaHttpServer, http4sServer, sttpClient)
 
 lazy val core: Project = (project in file("core"))
   .settings(commonSettings: _*)
@@ -26,11 +26,32 @@ lazy val core: Project = (project in file("core"))
     )
   )
 
-lazy val openapiModel: Project = (project in file("openapi-model"))
+lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
   .settings(commonSettings: _*)
   .settings(
     name := "openapi-model"
   )
+
+lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
+  .settings(commonSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % "0.10.0",
+      "io.circe" %% "circe-magnolia-derivation" % "0.3.0"
+    ),
+    name := "openapi-circe"
+  )
+  .dependsOn(openapiModel)
+
+lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yaml"))
+  .settings(commonSettings: _*)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-yaml" % "0.9.0"
+    ),
+    name := "openapi-circe-yaml"
+  )
+  .dependsOn(openapiCirce)
 
 lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   .settings(commonSettings: _*)
@@ -78,4 +99,4 @@ lazy val tests: Project = (project in file("tests"))
       "com.softwaremill.sttp" %% "akka-http-backend" % "1.3.8"
     )
   )
-  .dependsOn(akkaHttpServer, sttpClient)
+  .dependsOn(akkaHttpServer, sttpClient, openapiCirceYaml, openapiDocs)
