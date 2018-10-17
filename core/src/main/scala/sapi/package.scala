@@ -1,4 +1,4 @@
-import shapeless.{::, HList, HNil, Path}
+import shapeless.{::, HList, HNil}
 import shapeless.ops.hlist.Prepend
 
 import scala.annotation.implicitNotFound
@@ -84,11 +84,10 @@ package object sapi {
         }
     }
 
-    case class PathSegment(s: String) extends Path[HNil] with Single[HNil]
+    case class PathSegment(s: String) extends Single[HNil]
 
     case class PathCapture[T](name: String, m: RequiredTypeMapper[T], description: Option[String], example: Option[T])
-        extends Path[T :: HNil]
-        with Single[T :: HNil] {
+        extends Single[T :: HNil] {
       def description(d: String): EndpointInput.PathCapture[T] = copy(description = Some(d))
       def example(t: T): EndpointInput.PathCapture[T] = copy(example = Some(t))
     }
