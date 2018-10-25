@@ -6,6 +6,6 @@ import io.circe.yaml.Printer
 
 package object yaml {
   implicit class RichOpenAPI(val openAPI: OpenAPI) extends AnyVal {
-    def toYaml: String = Printer(dropNullKeys = true).pretty(openAPI.asJson)
+    def toYaml: String = Printer(dropNullKeys = true, preserveOrder = true).pretty(openAPI.asJson)
   }
 }

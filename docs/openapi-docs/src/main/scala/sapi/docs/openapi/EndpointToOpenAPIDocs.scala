@@ -3,14 +3,12 @@ package sapi.docs.openapi
 import sapi._
 import sapi.openapi.OpenAPI.ReferenceOr
 import sapi.openapi._
-import sapi.{Endpoint, Id}
-import shapeless.HList
 
 object EndpointToOpenAPIDocs {
   def toOpenAPI(title: String, version: String, es: Seq[Endpoint[Id, _, _]]): OpenAPI = {
     OpenAPI(
       info = Info(title, None, None, version),
-      server = Nil,
+      servers = None,
       paths = paths(es),
       components = components(es)
     )
@@ -42,11 +40,11 @@ object EndpointToOpenAPIDocs {
       head = if (e.method == HEAD) Some(operation(defaultId, e)) else None,
       patch = if (e.method == PATCH) Some(operation(defaultId, e)) else None,
       trace = if (e.method == TRACE) Some(operation(defaultId, e)) else None,
-      servers = Nil,
-      parameters = Nil
+      servers = None,
+      parameters = None
     )
 
-    (pathComponents.mkString("/"), pathItem)
+    ("/" + pathComponents.mkString("/"), pathItem)
   }
 
   private def mergePathItems(p1: PathItem, p2: PathItem): PathItem = {
@@ -61,8 +59,8 @@ object EndpointToOpenAPIDocs {
       head = p1.head.orElse(p2.head),
       patch = p1.patch.orElse(p2.patch),
       trace = p1.trace.orElse(p2.trace),
-      servers = Nil,
-      parameters = Nil
+      servers = None,
+      parameters = None
     )
   }
 
@@ -82,23 +80,32 @@ object EndpointToOpenAPIDocs {
                     None,
                     None,
                     ex.flatMap(exampleValue(tm, _)),
-                    Map(),
-                    Map()))
+                    None,
+                    None))
       case EndpointInput.PathCapture(n, tm, d, ex) =>
-        Some(
-          Parameter(n, ParameterIn.Path, d, Some(true), None, None, None, None, None, None, ex.flatMap(exampleValue(tm, _)), Map(), Map()))
+        Some(Parameter(n, ParameterIn.Path, d, Some(true), None, None, None, None, None, None, ex.flatMap(exampleValue(tm, _)), None, None))
       case _ => None
     }
 
     val responses: Map[ResponsesKey, ReferenceOr[Response]] = Map(
-      ResponsesCodeKey(200) -> Right(Response(endpoint.okResponseDescription.getOrElse(""), Map.empty, Map.empty)),
-      ResponsesDefaultKey -> Right(Response(endpoint.errorResponseDescription.getOrElse(""), Map.empty, Map.empty)),
+      ResponsesCodeKey(200) -> Right(Response(endpoint.okResponseDescription.getOrElse(""), None, None)),
+      ResponsesDefaultKey -> Right(Response(endpoint.errorResponseDescription.getOrElse(""), None, None)),
     )
 
-    Operation(e.tags, e.summary, e.description, defaultId, parameters.toList.map(Right(_)), None, responses, deprecated = false, Nil)
+    Operation(noneIfEmpty(e.tags),
+              e.summary,
+              e.description,
+              defaultId,
+              noneIfEmpty(parameters.toList.map(Right(_))),
+              None,
+              responses,
+              None,
+              None)
   }
 
   private def exampleValue[T](tm: TypeMapper[T], e: T): Option[ExampleValue] = tm.toOptionalString(e).map(ExampleValue) // TODO
 
-  private def components(es: Seq[Endpoint[Id, _, _]]): Components = Components(Map())
+  private def components(es: Seq[Endpoint[Id, _, _]]): Option[Components] = None
+
+  private def noneIfEmpty[T](l: List[T]): Option[List[T]] = if (l.isEmpty) None else Some(l)
 }
