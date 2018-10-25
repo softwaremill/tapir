@@ -3,7 +3,11 @@ package sapi.openapi
 import OpenAPI.ReferenceOr
 
 // todo security, tags, externaldocs
-case class OpenAPI(openapi: String = "3.0.1", info: Info, server: List[Server], paths: Map[String, PathItem], components: Components)
+case class OpenAPI(openapi: String = "3.0.1",
+                   info: Info,
+                   servers: Option[List[Server]],
+                   paths: Map[String, PathItem],
+                   components: Option[Components])
 
 object OpenAPI {
   type ReferenceOr[T] = Either[Reference, T]
@@ -20,12 +24,12 @@ case class Info(
 // todo: variables
 case class Server(
     url: String,
-    description: Option[String],
+    description: Option[String]
 )
 
 // todo: responses, parameters, examples, requestBodies, headers, securitySchemas, links, callbacks
 case class Components(
-    schemas: Map[String, ReferenceOr[Schema]]
+    schemas: Option[Map[String, ReferenceOr[Schema]]]
 )
 
 // todo: $ref
@@ -40,21 +44,21 @@ case class PathItem(
     head: Option[Operation],
     patch: Option[Operation],
     trace: Option[Operation],
-    servers: List[Server],
-    parameters: List[ReferenceOr[Parameter]]
+    servers: Option[List[Server]],
+    parameters: Option[List[ReferenceOr[Parameter]]]
 )
 
 // todo: external docs, callbacks, security
 case class Operation(
-    tags: List[String],
+    tags: Option[List[String]],
     summary: Option[String],
     description: Option[String],
     operationId: String,
-    parameters: List[ReferenceOr[Parameter]],
+    parameters: Option[List[ReferenceOr[Parameter]]],
     requestBody: Option[ReferenceOr[RequestBody]],
     responses: Map[ResponsesKey, ReferenceOr[Response]],
-    deprecated: Boolean,
-    server: List[Server]
+    deprecated: Option[Boolean],
+    servers: Option[List[Server]]
 )
 
 case class Parameter(
@@ -69,8 +73,8 @@ case class Parameter(
     allowReserved: Option[Boolean],
     schema: Option[ReferenceOr[Schema]],
     example: Option[ExampleValue],
-    examples: Map[String, ReferenceOr[Example]],
-    content: Map[String, MediaType]
+    examples: Option[Map[String, ReferenceOr[Example]]],
+    content: Option[Map[String, MediaType]]
 )
 
 object ParameterIn extends Enumeration {
@@ -97,15 +101,15 @@ object ParameterStyle extends Enumeration {
 case class RequestBody(description: Option[String], content: Map[String, MediaType], required: Option[Boolean])
 
 case class MediaType(
-    schema: ReferenceOr[Schema],
+    schema: Option[ReferenceOr[Schema]],
     example: Option[Example],
-    examples: Map[String, ReferenceOr[Example]],
-    encoding: Map[String, Encoding]
+    examples: Option[Map[String, ReferenceOr[Example]]],
+    encoding: Option[Map[String, Encoding]]
 )
 
 case class Encoding(
     contentType: Option[String],
-    headers: Map[String, ReferenceOr[Header]],
+    headers: Option[Map[String, ReferenceOr[Header]]],
     style: Option[ParameterStyle.ParameterStyle],
     explode: Option[Boolean],
     allowReserved: Option[Boolean]
@@ -116,7 +120,7 @@ case object ResponsesDefaultKey extends ResponsesKey
 case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
-case class Response(description: String, headers: Map[String, ReferenceOr[Header]], content: Map[String, MediaType])
+case class Response(description: String, headers: Option[Map[String, ReferenceOr[Header]]], content: Option[Map[String, MediaType]])
 
 case class Example(summary: Option[String], description: Option[String], value: Option[ExampleValue], externalValue: Option[String])
 
@@ -129,8 +133,8 @@ case class Header(description: Option[String],
                   allowReserved: Option[Boolean],
                   schema: Option[ReferenceOr[Schema]],
                   example: Option[ExampleValue],
-                  examples: Map[String, ReferenceOr[Example]],
-                  content: Map[String, MediaType])
+                  examples: Option[Map[String, ReferenceOr[Example]]],
+                  content: Option[Map[String, MediaType]])
 
 case class Reference($ref: String)
 
@@ -139,14 +143,14 @@ case class Schema(title: String,
                   required: Option[Boolean],
                   `type`: SchemaType.SchemaType,
                   items: Option[Schema],
-                  properties: Map[String, Schema],
+                  properties: Option[Map[String, Schema]],
                   description: Option[String],
                   format: SchemaFormat.SchemaFormat,
                   default: Option[ExampleValue],
                   nullable: Option[Boolean],
                   readOnly: Option[Boolean],
                   writeOnly: Option[Boolean],
-                  example: ExampleValue,
+                  example: Option[ExampleValue],
                   deprecated: Option[Boolean])
 
 object SchemaType extends Enumeration {
