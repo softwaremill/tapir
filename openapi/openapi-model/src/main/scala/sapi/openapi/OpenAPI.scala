@@ -71,7 +71,7 @@ case class Parameter(
     style: Option[ParameterStyle.ParameterStyle],
     explode: Option[Boolean],
     allowReserved: Option[Boolean],
-    schema: Option[ReferenceOr[Schema]],
+    schema: ReferenceOr[Schema],
     example: Option[ExampleValue],
     examples: Option[Map[String, ReferenceOr[Example]]],
     content: Option[Map[String, MediaType]]

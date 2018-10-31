@@ -139,7 +139,7 @@ package object sapi {
     def tag(t: String): Endpoint[U, I, O] = copy(tags = t :: tags)
   }
 
-  case class InvalidOutput(reason: TypeMapper.Result[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull)
+  case class InvalidOutput(reason: DecodeResult[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull)
 //  case class InvalidInput(input: EndpointInput.Single[_], reason: TypeMapper.Result[Nothing], cause: Option[Throwable])
 //      extends Exception(cause.orNull)
 
