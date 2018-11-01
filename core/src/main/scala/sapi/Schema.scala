@@ -6,6 +6,8 @@ import magnolia._
 
 sealed trait Schema
 
+// TODO: configuration; camel-case/normal case
+// TODO: test recurrence
 object Schema {
   case object SEmpty extends Schema {
     override def toString: String = "-"

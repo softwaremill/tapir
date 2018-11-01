@@ -62,7 +62,7 @@ object EndpointToAkkaServer {
             case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false)
             case Uri.Path.Segment(s, pathTail) =>
               m.fromString(s) match {
-                case TypeMapper.Value(v) =>
+                case DecodeResult.Value(v) =>
                   doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true).map {
                     case (values, ctx2) => (v :: values, ctx2)
                   }
@@ -72,7 +72,7 @@ object EndpointToAkkaServer {
           }
         case EndpointInput.Query(name, m, _, _) +: inputsTail =>
           m.fromOptionalString(ctx.request.uri.query().get(name)) match {
-            case TypeMapper.Value(v) =>
+            case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true).map {
                 case (values, ctx2) => (v :: values, ctx2)
               }

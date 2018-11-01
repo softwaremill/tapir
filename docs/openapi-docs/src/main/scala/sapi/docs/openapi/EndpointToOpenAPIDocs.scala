@@ -1,8 +1,8 @@
 package sapi.docs.openapi
 
-import sapi._
+import sapi.{Schema => SSchema, _}
 import sapi.openapi.OpenAPI.ReferenceOr
-import sapi.openapi._
+import sapi.openapi.{Schema => OSchema, _}
 
 object EndpointToOpenAPIDocs {
   def toOpenAPI(title: String, version: String, es: Seq[Endpoint[Id, _, _]]): OpenAPI = {
@@ -78,12 +78,25 @@ object EndpointToOpenAPIDocs {
                     None,
                     None,
                     None,
-                    None,
+                    Right(schemaToSchema(tm.schema)),
                     ex.flatMap(exampleValue(tm, _)),
                     None,
                     None))
       case EndpointInput.PathCapture(n, tm, d, ex) =>
-        Some(Parameter(n, ParameterIn.Path, d, Some(true), None, None, None, None, None, None, ex.flatMap(exampleValue(tm, _)), None, None))
+        Some(
+          Parameter(n,
+                    ParameterIn.Path,
+                    d,
+                    Some(true),
+                    None,
+                    None,
+                    None,
+                    None,
+                    None,
+                    Right(schemaToSchema(tm.schema)),
+                    ex.flatMap(exampleValue(tm, _)),
+                    None,
+                    None))
       case _ => None
     }
 
@@ -103,9 +116,29 @@ object EndpointToOpenAPIDocs {
               None)
   }
 
-  private def exampleValue[T](tm: TypeMapper[T], e: T): Option[ExampleValue] = tm.toOptionalString(e).map(ExampleValue) // TODO
+  private def exampleValue[T](tm: TypeMapper[T, _], e: T): Option[ExampleValue] = tm.toOptionalString(e).map(ExampleValue) // TODO
 
   private def components(es: Seq[Endpoint[Id, _, _]]): Option[Components] = None
 
   private def noneIfEmpty[T](l: List[T]): Option[List[T]] = if (l.isEmpty) None else Some(l)
+
+  private def schemaToSchema(schema: SSchema): OSchema = {
+    schema match {
+      case SSchema.SEmpty => ??? // TODO
+      case SSchema.SInt =>
+        OSchema(SchemaType.Integer)
+      case SSchema.SString =>
+        OSchema(SchemaType.String)
+      case SSchema.SObject(fields) =>
+        OSchema(SchemaType.Object).copy(
+          required = Some(fields.map(_._1).toList), // TODO
+          properties = Some(
+            fields.map {
+              case (fieldName, fieldSchema) =>
+                fieldName -> schemaToSchema(fieldSchema)
+            }.toMap
+          )
+        )
+    }
+  }
 }
