@@ -139,19 +139,23 @@ case class Header(description: Option[String],
 case class Reference($ref: String)
 
 // todo: discriminator, xml, json-schema properties
-case class Schema(title: String,
-                  required: Option[Boolean],
+case class Schema(title: Option[String],
+                  required: Option[List[String]],
                   `type`: SchemaType.SchemaType,
                   items: Option[Schema],
                   properties: Option[Map[String, Schema]],
                   description: Option[String],
-                  format: SchemaFormat.SchemaFormat,
+                  format: Option[SchemaFormat.SchemaFormat],
                   default: Option[ExampleValue],
                   nullable: Option[Boolean],
                   readOnly: Option[Boolean],
                   writeOnly: Option[Boolean],
                   example: Option[ExampleValue],
                   deprecated: Option[Boolean])
+
+object Schema {
+  def apply(`type`: SchemaType.SchemaType): Schema = Schema(None, None, `type`, None, None, None, None, None, None, None, None, None, None)
+}
 
 object SchemaType extends Enumeration {
   type SchemaType = Value

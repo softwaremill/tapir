@@ -1,3 +1,4 @@
+import sapi.TypeMapper.{RequiredTextTypeMapper, TextTypeMapper}
 import shapeless.{::, HList, HNil}
 import shapeless.ops.hlist.Prepend
 
@@ -86,13 +87,13 @@ package object sapi {
 
     case class PathSegment(s: String) extends Single[HNil]
 
-    case class PathCapture[T](name: String, m: RequiredTypeMapper[T], description: Option[String], example: Option[T])
+    case class PathCapture[T](name: String, m: RequiredTextTypeMapper[T], description: Option[String], example: Option[T])
         extends Single[T :: HNil] {
       def description(d: String): EndpointInput.PathCapture[T] = copy(description = Some(d))
       def example(t: T): EndpointInput.PathCapture[T] = copy(example = Some(t))
     }
 
-    case class Query[T](name: String, m: TypeMapper[T], description: Option[String], example: Option[T]) extends Single[T :: HNil] {
+    case class Query[T](name: String, m: TextTypeMapper[T], description: Option[String], example: Option[T]) extends Single[T :: HNil] {
       def description(d: String): EndpointInput.Query[T] = copy(description = Some(d))
       def example(t: T): EndpointInput.Query[T] = copy(example = Some(t))
     }
@@ -106,16 +107,16 @@ package object sapi {
     }
   }
 
-  def pathCapture[T: RequiredTypeMapper](name: String): EndpointInput[T :: HNil] =
-    EndpointInput.PathCapture(name, implicitly[RequiredTypeMapper[T]], None, None)
+  def pathCapture[T: RequiredTextTypeMapper](name: String): EndpointInput[T :: HNil] =
+    EndpointInput.PathCapture(name, implicitly[RequiredTextTypeMapper[T]], None, None)
   implicit def stringToPath(s: String): EndpointInput[HNil] = EndpointInput.PathSegment(s)
 
-  def query[T: TypeMapper](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TypeMapper[T]], None, None)
+  def query[T: TextTypeMapper](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TextTypeMapper[T]], None, None)
 
   case class Endpoint[U[_], I <: HList, O](name: Option[String],
                                            method: U[Method],
                                            input: EndpointInput.Multiple[I],
-                                           output: TypeMapper[O],
+                                           output: TypeMapper[O, Nothing],
                                            summary: Option[String],
                                            description: Option[String],
                                            okResponseDescription: Option[String],
@@ -129,7 +130,7 @@ package object sapi {
     def in[J <: HList, IJ <: HList](i: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): Endpoint[U, IJ, O] =
       this.copy[U, IJ, O](input = input.and(i))
 
-    def out[T: TypeMapper]: Endpoint[U, I, T] = copy[U, I, T](output = implicitly)
+    def out[T, M <: MediaType](implicit tm: TypeMapper[T, M]): Endpoint[U, I, T] = copy[U, I, T](output = tm)
 
     def summary(s: String): Endpoint[U, I, O] = copy(summary = Some(s))
     def description(d: String): Endpoint[U, I, O] = copy(description = Some(d))
