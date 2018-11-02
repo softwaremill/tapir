@@ -5,7 +5,7 @@ import shapeless.ops.hlist.Prepend
 case class Endpoint[U[_], I <: HList, O](name: Option[String],
                                          method: U[Method],
                                          input: EndpointInput.Multiple[I],
-                                         output: TypeMapper[O, Nothing],
+                                         output: Option[TypeMapper[O, Nothing]],
                                          summary: Option[String],
                                          description: Option[String],
                                          okResponseDescription: Option[String],
@@ -19,7 +19,7 @@ case class Endpoint[U[_], I <: HList, O](name: Option[String],
   def in[J <: HList, IJ <: HList](i: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): Endpoint[U, IJ, O] =
     this.copy[U, IJ, O](input = input.and(i))
 
-  def out[T, M <: MediaType](implicit tm: TypeMapper[T, M]): Endpoint[U, I, T] = copy[U, I, T](output = tm)
+  def out[T, M <: MediaType](implicit tm: TypeMapper[T, M]): Endpoint[U, I, T] = copy[U, I, T](output = Some(tm))
 
   def summary(s: String): Endpoint[U, I, O] = copy(summary = Some(s))
   def description(d: String): Endpoint[U, I, O] = copy(description = Some(d))

@@ -82,5 +82,5 @@ package object sapi {
 //      extends Exception(cause.orNull)
 
   val endpoint: Endpoint[Empty, HNil, Unit] =
-    Endpoint[Empty, HNil, Unit](None, None, EndpointInput.Multiple(Vector.empty), implicitly, None, None, None, None, Nil)
+    Endpoint[Empty, HNil, Unit](None, None, EndpointInput.Multiple(Vector.empty), None, None, None, None, None, Nil)
 }
