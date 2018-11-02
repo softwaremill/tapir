@@ -34,7 +34,7 @@ object Tests extends App {
   //  case class User(name: String, age: Int)
   //  implicit val userType: TypeMapper[User] = json[User]  // TODO.sample(User("x"))
 
-  val path = "x" / path[String]("p1") / "z"
+  val p = "x" / path[String]("p1") / "z"
 
   val e = endpoint
     .get()
