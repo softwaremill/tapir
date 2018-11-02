@@ -71,7 +71,7 @@ package object sapi {
   @implicitNotFound("???")
   type IsId[U[_]] = U[Unit] =:= Id[Unit]
 
-  def pathCapture[T: RequiredTextTypeMapper](name: String): EndpointInput[T :: HNil] =
+  def path[T: RequiredTextTypeMapper](name: String): EndpointInput[T :: HNil] =
     EndpointInput.PathCapture(name, implicitly[RequiredTextTypeMapper[T]], None, None)
   implicit def stringToPath(s: String): EndpointInput[HNil] = EndpointInput.PathSegment(s)
 
