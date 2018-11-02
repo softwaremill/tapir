@@ -129,9 +129,9 @@ object EndpointToOpenAPIDocs {
         OSchema(SchemaType.Integer)
       case SSchema.SString =>
         OSchema(SchemaType.String)
-      case SSchema.SObject(fields) =>
+      case SSchema.SObject(fields, required) =>
         OSchema(SchemaType.Object).copy(
-          required = Some(fields.map(_._1).toList), // TODO
+          required = Some(required.toList),
           properties = Some(
             fields.map {
               case (fieldName, fieldSchema) =>
