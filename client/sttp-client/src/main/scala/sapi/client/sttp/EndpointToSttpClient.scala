@@ -37,10 +37,14 @@ object EndpointToSttpClient {
             case m                          => sttp.copy[Id, String, Nothing](method = com.softwaremill.sttp.Method(m.m), uri = uri)
           }
 
-          base.response(asString.map { s =>
-            val so = if (e.output.isOptional && s == "") None else Some(s)
-            e.output.fromOptionalString(so).getOrThrow(InvalidOutput)
-          })
+          e.output match {
+            case None => base.response(ignore.asInstanceOf[ResponseAs[O, Nothing]])
+            case Some(o) =>
+              base.response(asString.map { s =>
+                val so = if (o.isOptional && s == "") None else Some(s)
+                o.fromOptionalString(so).getOrThrow(InvalidOutput)
+              })
+          }
         })
       }
     }

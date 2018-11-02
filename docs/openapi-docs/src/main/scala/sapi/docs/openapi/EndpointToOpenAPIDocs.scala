@@ -124,7 +124,6 @@ object EndpointToOpenAPIDocs {
 
   private def schemaToSchema(schema: SSchema): OSchema = {
     schema match {
-      case SSchema.SEmpty => ??? // TODO
       case SSchema.SInt =>
         OSchema(SchemaType.Integer)
       case SSchema.SString =>

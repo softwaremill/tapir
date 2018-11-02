@@ -46,13 +46,6 @@ object TypeMapper {
     override def schema: Schema = Schema.SInt
   }
 
-  implicit val unitTextTypeMapper: TextTypeMapper[Unit] = new TypeMapper[Unit, MediaType.Text] {
-    override def toOptionalString(t: Unit): Option[String] = None
-    override def fromOptionalString(s: Option[String]): DecodeResult[Unit] = DecodeResult.Value(())
-    override def isOptional: Boolean = true
-    override def schema: Schema = Schema.SEmpty
-  }
-
   implicit def optionalTypeMapper[T, M <: MediaType](implicit tm: RequiredTypeMapper[T, M]): TypeMapper[Option[T], M] =
     new TypeMapper[Option[T], M] {
       override def toOptionalString(t: Option[T]): Option[String] = t.map(tm.toString)

@@ -30,7 +30,10 @@ object EndpointToAkkaServer {
   def toRoute[T, I <: HList, O, F](e: Endpoint[Id, I, O])(logic: F)(implicit tt: FnToProduct.Aux[F, I => Future[O]]): Route = {
     toDirective1(e) { values =>
       onSuccess(tt(logic)(values.asInstanceOf[I])) { x =>
-        complete(e.output.toOptionalString(x))
+        e.output match {
+          case None    => complete("")
+          case Some(o) => complete(o.toOptionalString(x))
+        }
       }
     }
   }
