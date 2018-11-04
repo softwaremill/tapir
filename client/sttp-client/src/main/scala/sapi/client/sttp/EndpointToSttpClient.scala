@@ -6,47 +6,48 @@ import shapeless.HList
 import shapeless.ops.function
 
 object EndpointToSttpClient {
-  def toClient[I <: HList, O](e: Endpoint[Id, I, O]): HostToClient[I, O, Request[?, Nothing]] = {
-    new HostToClient[I, O, Request[?, Nothing]] {
-      override def using[F](host: String)(implicit tt: function.FnFromProduct.Aux[I => Request[O, Nothing], F]): F = {
-        tt(args => {
-          var uri = uri"$host"
-          var i = -1
-          e.input.inputs.foreach {
-            case EndpointInput.PathSegment(p) =>
-              uri = uri.copy(path = uri.path :+ p)
-            case EndpointInput.PathCapture(_, m, _, _) =>
-              i += 1
-              val v = m.toString(HList.unsafeGet(args, i))
-              uri = uri.copy(path = uri.path :+ v)
-            case EndpointInput.Query(name, m, _, _) =>
-              i += 1
-              m.toOptionalString(HList.unsafeGet(args, i)).foreach { v =>
-                uri = uri.param(name, v)
-              }
-          }
+  def toSttpRequest[I <: HList, O <: HList, OE <: HList, TO, TOE, F](e: Endpoint[I, O, OE], host: String)(
+      implicit oToTuple: HListToResult.Aux[O, TO],
+      oeToTuple: HListToResult.Aux[OE, TOE],
+      tt: function.FnFromProduct.Aux[I => Request[Either[TOE, TO], Nothing], F]): F = {
 
-          val base = e.method match {
-            case _root_.sapi.Method.GET     => sttp.get(uri)
-            case _root_.sapi.Method.HEAD    => sttp.head(uri)
-            case _root_.sapi.Method.POST    => sttp.post(uri)
-            case _root_.sapi.Method.PUT     => sttp.put(uri)
-            case _root_.sapi.Method.DELETE  => sttp.delete(uri)
-            case _root_.sapi.Method.OPTIONS => sttp.options(uri)
-            case _root_.sapi.Method.PATCH   => sttp.patch(uri)
-            case m                          => sttp.copy[Id, String, Nothing](method = com.softwaremill.sttp.Method(m.m), uri = uri)
-          }
+    tt(args => {
+      var uri = uri"$host"
+      var req1 = sttp
+        .response(ignore)
+        .mapResponse(Right(_): Either[Any, Any])
 
-          e.output match {
-            case None => base.response(ignore.asInstanceOf[ResponseAs[O, Nothing]])
-            case Some(o) =>
-              base.response(asString.map { s =>
-                val so = if (o.isOptional && s == "") None else Some(s)
-                o.fromOptionalString(so).getOrThrow(InvalidOutput)
-              })
+      var i = -1
+      e.input.inputs.foreach {
+        case EndpointInput.PathSegment(p) =>
+          uri = uri.copy(path = uri.path :+ p)
+        case EndpointInput.PathCapture(_, m, _, _) =>
+          i += 1
+          val v = m.toString(HList.unsafeGet(args, i))
+          uri = uri.copy(path = uri.path :+ v)
+        case EndpointInput.Query(name, m, _, _) =>
+          i += 1
+          m.toOptionalString(HList.unsafeGet(args, i)).foreach { v =>
+            uri = uri.param(name, v)
           }
-        })
+        case EndpointIO.Body(m, _, _) =>
+          i += 1
+          m.toOptionalString(HList.unsafeGet(args, i)).foreach { v =>
+            req1 = req1.body(v)
+          }
       }
-    }
+
+      var req2 = req1.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
+
+      e.output.outputs.foreach {
+        case EndpointIO.Body(m, _, _) =>
+          req2 = req2.response(asString.map { s =>
+            val so = if (m.isOptional && s == "") None else Some(s)
+            Right(m.fromOptionalString(so).getOrThrow(InvalidOutput))
+          })
+      }
+
+      req2.asInstanceOf[Request[Either[TOE, TO], Nothing]]
+    })
   }
 }

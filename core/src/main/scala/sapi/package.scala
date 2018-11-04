@@ -77,10 +77,23 @@ package object sapi {
 
   def query[T: TextTypeMapper](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TextTypeMapper[T]], None, None)
 
+  def body[T, M <: MediaType](implicit tm: TypeMapper[T, M]): EndpointIO.Body[T, M] = EndpointIO.Body(tm, None, None)
+  def textBody[T](implicit tm: TypeMapper[T, MediaType.Text]): EndpointIO.Body[T, MediaType.Text] = EndpointIO.Body(tm, None, None)
+  def jsonBody[T](implicit tm: TypeMapper[T, MediaType.Json]): EndpointIO.Body[T, MediaType.Json] = EndpointIO.Body(tm, None, None)
+
   case class InvalidOutput(reason: DecodeResult[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull)
 //  case class InvalidInput(input: EndpointInput.Single[_], reason: TypeMapper.Result[Nothing], cause: Option[Throwable])
 //      extends Exception(cause.orNull)
 
-  val endpoint: Endpoint[Empty, HNil, Unit] =
-    Endpoint[Empty, HNil, Unit](None, None, EndpointInput.Multiple(Vector.empty), None, None, None, None, None, Nil)
+  val endpoint: Endpoint[HNil, HNil, HNil] =
+    Endpoint[HNil, HNil, HNil](
+      None,
+      Method.GET,
+      EndpointInput.Multiple(Vector.empty),
+      EndpointOutput.Multiple(Vector.empty),
+      EndpointOutput.Multiple(Vector.empty),
+      None,
+      None,
+      Vector.empty
+    )
 }

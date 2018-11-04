@@ -4,11 +4,12 @@ import io.circe.syntax._
 import io.circe.{Decoder, Encoder}
 import sapi.DecodeResult._
 
-trait TypeMapper[T, -M <: MediaType] {
+trait TypeMapper[T, M <: MediaType] {
   def toOptionalString(t: T): Option[String]
   def fromOptionalString(s: Option[String]): DecodeResult[T]
   def isOptional: Boolean
   def schema: Schema
+  def mediaType: M
 }
 
 trait RequiredTypeMapper[T, M <: MediaType] extends TypeMapper[T, M] { // type mapper can provide restrictions on what kind of formats it might use? Basic/Extended
@@ -31,12 +32,13 @@ object TypeMapper {
   type JsonTypeMapper[T] = TypeMapper[T, MediaType.Json]
   type RequiredJsonTypeMapper[T] = RequiredTypeMapper[T, MediaType.Json]
 
-  implicit val stringTextTypeMapper: RequiredTextTypeMapper[String] = new RequiredTypeMapper[String, MediaType.Text] {
+  implicit val stringTextTypeMapper: RequiredTextTypeMapper[String] = new RequiredTextTypeMapper[String] {
     override def toString(t: String): String = t
     override def fromString(s: String): DecodeResult[String] = Value(s)
     override def schema: Schema = Schema.SString
+    override def mediaType = MediaType.Text()
   }
-  implicit val intTextTypeMapper: RequiredTextTypeMapper[Int] = new RequiredTypeMapper[Int, MediaType.Text] {
+  implicit val intTextTypeMapper: RequiredTextTypeMapper[Int] = new RequiredTextTypeMapper[Int] {
     override def toString(t: Int): String = t.toString
     override def fromString(s: String): DecodeResult[Int] =
       try Value(s.toInt)
@@ -44,6 +46,7 @@ object TypeMapper {
         case e: Exception => Error(s, e, "Cannot parse integer")
       }
     override def schema: Schema = Schema.SInt
+    override def mediaType = MediaType.Text()
   }
 
   implicit def optionalTypeMapper[T, M <: MediaType](implicit tm: RequiredTypeMapper[T, M]): TypeMapper[Option[T], M] =
@@ -60,14 +63,16 @@ object TypeMapper {
       }
       override def isOptional: Boolean = true
       override def schema: Schema = tm.schema
+      override def mediaType: M = tm.mediaType
     }
 
-  implicit val stringJsonTypeMapper: RequiredJsonTypeMapper[String] = new RequiredTypeMapper[String, MediaType.Json] {
+  implicit val stringJsonTypeMapper: RequiredJsonTypeMapper[String] = new RequiredJsonTypeMapper[String] {
     override def toString(t: String): String = t.asJson.noSpaces
     override def fromString(s: String): DecodeResult[String] = Value(s)
     override def schema: Schema = Schema.SString
+    override def mediaType = MediaType.Json()
   }
-  implicit val intJsonTypeMapper: RequiredJsonTypeMapper[Int] = new RequiredTypeMapper[Int, MediaType.Json] {
+  implicit val intJsonTypeMapper: RequiredJsonTypeMapper[Int] = new RequiredJsonTypeMapper[Int] {
     override def toString(t: Int): String = t.asJson.noSpaces
     override def fromString(s: String): DecodeResult[Int] =
       try Value(s.toInt)
@@ -75,14 +80,16 @@ object TypeMapper {
         case e: Exception => Error(s, e, "Cannot parse integer")
       }
     override def schema: Schema = Schema.SInt
+    override def mediaType = MediaType.Json()
   }
-  implicit def objectTypeMapper[T: Encoder: Decoder: SchemaFor]: RequiredJsonTypeMapper[T] = new RequiredTypeMapper[T, MediaType.Json] {
+  implicit def objectTypeMapper[T: Encoder: Decoder: SchemaFor]: RequiredJsonTypeMapper[T] = new RequiredJsonTypeMapper[T] {
     override def toString(t: T): String = t.asJson.noSpaces
     override def fromString(s: String): DecodeResult[T] = io.circe.parser.decode[T](s) match {
       case Left(error) => Error(s, error, error.getMessage)
       case Right(v)    => Value(v)
     }
     override def schema: Schema = implicitly[SchemaFor[T]].schema
+    override def mediaType = MediaType.Json()
   }
 }
 

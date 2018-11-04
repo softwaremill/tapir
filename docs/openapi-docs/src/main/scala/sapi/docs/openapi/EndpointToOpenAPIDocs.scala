@@ -1,11 +1,11 @@
 package sapi.docs.openapi
 
-import sapi.{Schema => SSchema, _}
+import sapi.{Schema => SSchema, MediaType => SMediaType, _}
 import sapi.openapi.OpenAPI.ReferenceOr
-import sapi.openapi.{Schema => OSchema, _}
+import sapi.openapi.{Schema => OSchema, MediaType => OMediaType, _}
 
 object EndpointToOpenAPIDocs {
-  def toOpenAPI(title: String, version: String, es: Seq[Endpoint[Id, _, _]]): OpenAPI = {
+  def toOpenAPI(title: String, version: String, es: Seq[Endpoint[_, _, _]]): OpenAPI = {
     OpenAPI(
       info = Info(title, None, None, version),
       servers = None,
@@ -14,11 +14,11 @@ object EndpointToOpenAPIDocs {
     )
   }
 
-  private def paths(es: Seq[Endpoint[Id, _, _]]): Map[String, PathItem] = {
+  private def paths(es: Seq[Endpoint[_, _, _]]): Map[String, PathItem] = {
     es.map(pathItem).groupBy(_._1).mapValues(_.map(_._2).reduce(mergePathItems))
   }
 
-  private def pathItem(e: Endpoint[Id, _, _]): (String, PathItem) = {
+  private def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
     import Method._
 
     val pathComponents = e.input.inputs.flatMap {
@@ -64,7 +64,7 @@ object EndpointToOpenAPIDocs {
     )
   }
 
-  private def operation(defaultId: String, e: Endpoint[Id, _, _]): Operation = {
+  private def operation(defaultId: String, e: Endpoint[_, _, _]): Operation = {
 
     val parameters = e.input.inputs.flatMap {
       case EndpointInput.Query(n, tm, d, ex) =>
@@ -100,12 +100,17 @@ object EndpointToOpenAPIDocs {
       case _ => None
     }
 
-    val responses: Map[ResponsesKey, ReferenceOr[Response]] = Map(
-      ResponsesCodeKey(200) -> Right(Response(endpoint.okResponseDescription.getOrElse(""), None, None)),
-      ResponsesDefaultKey -> Right(Response(endpoint.errorResponseDescription.getOrElse(""), None, None)),
-    )
+    val responses: Map[ResponsesKey, ReferenceOr[Response]] =
+      List(
+        outputToResponse(e.output).map { r =>
+          ResponsesCodeKey(200) -> Right(r)
+        },
+        outputToResponse(e.errorOutput).map { r =>
+          ResponsesDefaultKey -> Right(r)
+        }
+      ).flatten.toMap
 
-    Operation(noneIfEmpty(e.tags),
+    Operation(noneIfEmpty(e.tags.toList),
               e.summary,
               e.description,
               defaultId,
@@ -116,9 +121,20 @@ object EndpointToOpenAPIDocs {
               None)
   }
 
+  private def outputToResponse(o: EndpointOutput.Multiple[_]): Option[Response] = {
+    o.outputs.headOption.map {
+      case EndpointIO.Body(m, d, _) => Response(d.getOrElse(""), None, Some(typeMapperToMediaType(m)))
+      case _                        => Response("", None, None)
+    }
+  }
+
+  private def typeMapperToMediaType[M <: SMediaType](o: TypeMapper[_, M]): Map[String, OMediaType] = {
+    Map(o.mediaType.mediaType -> OMediaType(Some(Right(schemaToSchema(o.schema))), None, None, None))
+  }
+
   private def exampleValue[T](tm: TypeMapper[T, _], e: T): Option[ExampleValue] = tm.toOptionalString(e).map(ExampleValue) // TODO
 
-  private def components(es: Seq[Endpoint[Id, _, _]]): Option[Components] = None
+  private def components(es: Seq[Endpoint[_, _, _]]): Option[Components] = None
 
   private def noneIfEmpty[T](l: List[T]): Option[List[T]] = if (l.isEmpty) None else Some(l)
 
