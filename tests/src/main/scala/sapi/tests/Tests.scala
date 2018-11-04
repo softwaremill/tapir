@@ -41,7 +41,7 @@ object Tests extends App {
     .in("x" / path[String]("p1") / "z" / path[Int]("p2")) // each endpoint must have a path and a method
     .in(query[String]("q1").description("A q1").and(query[Int]("q2").example(99)))
     .in(query[Option[String]]("q3"))
-    .out[String, MediaType.Text]
+    .out(textBody[String])
 
   // TODO
   //    .in(query[Int]("x"))
@@ -53,7 +53,7 @@ object Tests extends App {
   //    .description("...")
 
   val r: Route = e.toRoute((i: String, s: Int, p1: String, p2: Int, p3: Option[String]) =>
-    Future.successful(s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")}"))
+    Future.successful(Right(s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")}")))
 
   //
 
@@ -81,10 +81,10 @@ object Tests extends App {
 
 //  type SttpReq[T] = Request[T, Nothing] // needed, unless implicit error
 //  implicit val etc: EndpointToClient[SttpReq] = new EndpointToSttpClient
-  val response3 = Await.result(e.toSttpClient.using("http://localhost:8080").apply("aa", 20, "x1", 91, None).send(), 1.minute)
+  val response3 = Await.result(e.toSttpRequest("http://localhost:8080").apply("aa", 20, "x1", 91, None).send(), 1.minute)
   println("RESPONSE3: " + response3)
 
-  val response4 = Await.result(e.toSttpClient.using("http://localhost:8080").apply("aa", 20, "x1", 91, Some("kkk")).send(), 1.minute)
+  val response4 = Await.result(e.toSttpRequest("http://localhost:8080").apply("aa", 20, "x1", 91, Some("kkk")).send(), 1.minute)
   println("RESPONSE4: " + response4)
 
   Await.result(actorSystem.terminate(), 1.minute)

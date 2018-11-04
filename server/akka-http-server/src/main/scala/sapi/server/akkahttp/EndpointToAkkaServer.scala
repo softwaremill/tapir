@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
-import sapi.{Id, _}
+import sapi._
 import shapeless.ops.function.FnToProduct
 import shapeless.ops.hlist.Tupler
 import shapeless.{HList, HNil}
@@ -13,32 +13,34 @@ import scala.concurrent.Future
 
 object EndpointToAkkaServer {
 
-  /*
-  val params = values.foldRight(HNil: HList) {
-        case (el, hlist) =>
-          el :: hlist
-      }
-   */
-
-  def toDirective[T, I <: HList](e: Endpoint[Id, I, _])(implicit t: Tupler.Aux[I, T]): Directive[T] = {
+  def toDirective[T, I <: HList, O <: HList, OE <: HList](e: Endpoint[I, O, OE])(implicit t: Tupler.Aux[I, T]): Directive[T] = {
     implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
     toDirective1(e).flatMap { values =>
       tprovide(t(values.asInstanceOf[I]))
     }
   }
 
-  def toRoute[T, I <: HList, O, F](e: Endpoint[Id, I, O])(logic: F)(implicit tt: FnToProduct.Aux[F, I => Future[O]]): Route = {
+  def toRoute[T, I <: HList, O <: HList, OE <: HList, TO, TOE, F](e: Endpoint[I, O, OE])(logic: F)(
+      implicit oToTuple: HListToResult.Aux[O, TO],
+      oeToTuple: HListToResult.Aux[OE, TOE],
+      tt: FnToProduct.Aux[F, I => Future[Either[TOE, TO]]]): Route = {
     toDirective1(e) { values =>
-      onSuccess(tt(logic)(values.asInstanceOf[I])) { x =>
-        e.output match {
-          case None    => complete("")
-          case Some(o) => complete(o.toOptionalString(x))
-        }
+      onSuccess(tt(logic)(values.asInstanceOf[I])) {
+        case Left(v)  => outputToRoute(e.errorOutput, v)
+        case Right(v) => outputToRoute(e.output, v)
       }
     }
   }
 
-  private def toDirective1(e: Endpoint[Id, _, _]): Directive1[HList] = {
+  private def outputToRoute[O <: HList, TO](output: EndpointOutput.Multiple[O], v: TO)(
+      implicit oToTuple: HListToResult.Aux[O, TO]): Route = {
+    output.outputs.headOption match {
+      case None                           => complete("")
+      case Some(EndpointIO.Body(m, _, _)) => complete(m.toOptionalString(v))
+    }
+  }
+
+  private def toDirective1(e: Endpoint[_, _, _]): Directive1[HList] = {
 
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._

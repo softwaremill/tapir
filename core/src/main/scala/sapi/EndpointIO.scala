@@ -38,3 +38,34 @@ object EndpointInput {
       }
   }
 }
+
+sealed trait EndpointOutput[I <: HList] {
+  def and[J <: HList, IJ <: HList](other: EndpointOutput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointOutput[IJ]
+}
+
+object EndpointOutput {
+  sealed trait Single[I <: HList] extends EndpointOutput[I] {
+    def and[J <: HList, IJ <: HList](other: EndpointOutput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointOutput[IJ] =
+      other match {
+        case s: Single[_]      => EndpointOutput.Multiple(Vector(this, s))
+        case Multiple(outputs) => EndpointOutput.Multiple(this +: outputs)
+      }
+  }
+
+  case class Multiple[I <: HList](outputs: Vector[Single[_]]) extends EndpointOutput[I] {
+    override def and[J <: HList, IJ <: HList](other: EndpointOutput[J])(implicit ts: Prepend.Aux[I, J, IJ]): EndpointOutput.Multiple[IJ] =
+      other match {
+        case s: Single[_] => EndpointOutput.Multiple(outputs :+ s)
+        case Multiple(m)  => EndpointOutput.Multiple(outputs ++ m)
+      }
+  }
+}
+
+object EndpointIO {
+  case class Body[T, M <: MediaType](m: TypeMapper[T, M], description: Option[String], example: Option[T])
+      extends EndpointInput.Single[T :: HNil]
+      with EndpointOutput.Single[T :: HNil] {
+    def description(d: String): Body[T, M] = copy(description = Some(d))
+    def example(t: T): Body[T, M] = copy(example = Some(t))
+  }
+}
