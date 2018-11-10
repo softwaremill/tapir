@@ -1,8 +1,9 @@
 package sapi.client.sttp
 
 import com.softwaremill.sttp._
+import sapi.internal.SeqToHList
 import sapi.{Id, _}
-import shapeless.HList
+import shapeless._
 import shapeless.ops.function
 
 object EndpointToSttpClient {
@@ -44,12 +45,26 @@ object EndpointToSttpClient {
 
       var req2 = req1.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
 
-      e.output.outputs.foreach {
-        case EndpointIO.Body(m, _, _) =>
-          req2 = req2.response(asString.map { s =>
-            val so = if (m.isOptional && s == "") None else Some(s)
-            Right(m.fromOptionalString(so).getOrThrow(InvalidOutput))
-          })
+      if (e.output.outputs.nonEmpty || e.errorOutput.outputs.nonEmpty) {
+        val responseAs = asString.mapWithMetadata {
+          (body, meta) =>
+            val (outputs, toTuple: HListToResult[HList]) =
+              if (meta.isSuccess) (e.output.outputs, oToTuple) else (e.errorOutput.outputs, oeToTuple)
+
+            val values = outputs
+              .map {
+                case EndpointIO.Body(m, _, _) =>
+                  val so = if (m.isOptional && body == "") None else Some(body)
+                  m.fromOptionalString(so).getOrThrow(InvalidOutput)
+
+                case EndpointIO.Header(name, m, _, _) =>
+                  m.fromOptionalString(meta.header(name)).getOrThrow(InvalidOutput)
+              }
+
+            toTuple(SeqToHList(values))
+        }
+
+        req2 = req2.response(responseAs.asInstanceOf[ResponseAs[Either[Any, Any], Nothing]]).parseResponseIf(_ => true)
       }
 
       req2.asInstanceOf[Request[Either[TOE, TO], Nothing]]

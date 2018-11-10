@@ -1,6 +1,7 @@
 package sapi.server.akkahttp
 
-import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.model.HttpHeader.ParsingResult
+import akka.http.scaladsl.model.{HttpHeader, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
@@ -34,9 +35,32 @@ object EndpointToAkkaServer {
 
   private def outputToRoute[O <: HList, TO](output: EndpointOutput.Multiple[O], v: TO)(
       implicit oToTuple: HListToResult.Aux[O, TO]): Route = {
-    output.outputs.headOption match {
-      case None                           => complete("")
-      case Some(EndpointIO.Body(m, _, _)) => complete(m.toOptionalString(v))
+    val withIndex = output.outputs.zipWithIndex
+    def vAt(i: Int) = v match {
+      case p: Product => p.productElement(i)
+      case _          => v
+    }
+
+    val body = withIndex.collectFirst {
+      case (EndpointIO.Body(m, _, _), i) => m.toOptionalString(vAt(i))
+    }.flatten
+
+    val headers = withIndex
+      .flatMap {
+        case (EndpointIO.Header(name, m, _, _), i) => m.toOptionalString(vAt(i)).map(HttpHeader.parse(name, _))
+        case _                                     => None
+      }
+      .collect {
+        case ParsingResult.Ok(h, _) => h
+        // TODO error on parse error?
+      }
+
+    val completeRoute = body.map(complete(_)).getOrElse(complete(""))
+
+    if (headers.nonEmpty) {
+      respondWithHeaders(headers: _*)(completeRoute)
+    } else {
+      completeRoute
     }
   }
 
