@@ -27,7 +27,7 @@ TODO:
  * object schemas grouped in components (object labels)
  * in/out object schemas
  * body as input
- * headers as input/output (sttp!)
+ * -> headers as input/output (sttp!)
  * mapped input
  * multiple outputs (headers)
  */

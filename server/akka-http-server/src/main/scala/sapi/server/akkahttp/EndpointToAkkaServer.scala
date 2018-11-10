@@ -83,6 +83,14 @@ object EndpointToAkkaServer {
               }
             case _ => None
           }
+        case EndpointIO.Header(name, m, _, _) +: inputsTail =>
+          m.fromOptionalString(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
+            case DecodeResult.Value(v) =>
+              doMatch(inputsTail, ctx, canRemoveSlash = true).map {
+                case (values, ctx2) => (v :: values, ctx2)
+              }
+            case _ => None
+          }
       }
     }
 

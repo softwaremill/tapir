@@ -35,6 +35,11 @@ object EndpointToSttpClient {
           m.toOptionalString(HList.unsafeGet(args, i)).foreach { v =>
             req1 = req1.body(v)
           }
+        case EndpointIO.Header(name, m, _, _) =>
+          i += 1
+          m.toOptionalString(HList.unsafeGet(args, i)).foreach { v =>
+            req1 = req1.header(name, v)
+          }
       }
 
       var req2 = req1.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
