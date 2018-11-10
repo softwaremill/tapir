@@ -43,6 +43,7 @@ object Tests extends App {
     .in(query[Option[String]]("q3"))
     .in(header[Int]("zzz"))
     .out(textBody[String])
+    .out(header[Int]("yyy"))
 
   // TODO
   //    .in(query[Int]("x"))
@@ -54,7 +55,7 @@ object Tests extends App {
   //    .description("...")
 
   val r: Route = e.toRoute((i: String, s: Int, p1: String, p2: Int, p3: Option[String], h1: Int) =>
-    Future.successful(Right(s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1")))
+    Future.successful(Right((s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1", 192))))
 
   //
 

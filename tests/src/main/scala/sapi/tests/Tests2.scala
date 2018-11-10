@@ -29,5 +29,5 @@ TODO:
  * body as input
  * -> headers as input/output (sttp!)
  * mapped input
- * multiple outputs (headers)
+ * human-friendly type errors
  */
