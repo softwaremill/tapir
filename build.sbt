@@ -5,7 +5,8 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 )
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
-val circeVersion = "0.10.0"
+val circeVersion = "0.10.1"
+val sttpVersion = "1.5.0-SNAPSHOT"
 
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
@@ -36,7 +37,7 @@ lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % "0.10.0",
+      "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-magnolia-derivation" % "0.3.0"
     ),
     name := "openapi-circe"
@@ -76,7 +77,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(
     name := "http4s-server",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-blaze-client" % "0.19.0"
+      "org.http4s" %% "http4s-blaze-client" % "0.18.21"
     )
   )
   .dependsOn(core)
@@ -86,7 +87,7 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(
     name := "sttp-client",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "core" % "1.3.8"
+      "com.softwaremill.sttp" %% "core" % sttpVersion
     )
   )
   .dependsOn(core)
@@ -96,7 +97,7 @@ lazy val tests: Project = (project in file("tests"))
   .settings(
     name := "tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "akka-http-backend" % "1.3.8"
+      "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion
     )
   )
   .dependsOn(akkaHttpServer, sttpClient, openapiCirceYaml, openapiDocs)

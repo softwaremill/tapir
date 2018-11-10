@@ -63,6 +63,8 @@ package object sapi {
   // types, that you are not afraid to write down
   // Human comprehensible types
 
+  // name: descriptions? recipies?
+
   //
 
   type Id[X] = X
@@ -80,6 +82,8 @@ package object sapi {
   def body[T, M <: MediaType](implicit tm: TypeMapper[T, M]): EndpointIO.Body[T, M] = EndpointIO.Body(tm, None, None)
   def textBody[T](implicit tm: TypeMapper[T, MediaType.Text]): EndpointIO.Body[T, MediaType.Text] = EndpointIO.Body(tm, None, None)
   def jsonBody[T](implicit tm: TypeMapper[T, MediaType.Json]): EndpointIO.Body[T, MediaType.Json] = EndpointIO.Body(tm, None, None)
+
+  def header[T: TextTypeMapper](name: String): EndpointIO.Header[T] = EndpointIO.Header(name, implicitly[TextTypeMapper[T]], None, None)
 
   case class InvalidOutput(reason: DecodeResult[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull)
 //  case class InvalidInput(input: EndpointInput.Single[_], reason: TypeMapper.Result[Nothing], cause: Option[Throwable])
