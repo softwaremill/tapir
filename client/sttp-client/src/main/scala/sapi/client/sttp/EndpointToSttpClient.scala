@@ -4,15 +4,12 @@ import com.softwaremill.sttp._
 import sapi.internal.SeqToHList
 import sapi.{Id, _}
 import shapeless._
-import shapeless.ops.function
 
 object EndpointToSttpClient {
-  def toSttpRequest[I <: HList, O <: HList, OE <: HList, TO, TOE, F](e: Endpoint[I, O, OE], host: String)(
-      implicit oToTuple: HListToResult.Aux[O, TO],
-      oeToTuple: HListToResult.Aux[OE, TOE],
-      tt: function.FnFromProduct.Aux[I => Request[Either[TOE, TO], Nothing], F]): F = {
+  def toSttpRequest[I <: HList, O <: HList, E <: HList, S, FN](e: Endpoint[I, O, E], host: String)(
+      implicit endpointLogicFn: EndpointLogicFn[I, E, O, Request[?, S], FN]): FN = {
 
-    tt(args => {
+    endpointLogicFn.fnFromProduct(args => {
       var uri = uri"$host"
       var req1 = sttp
         .response(ignore)
@@ -49,7 +46,7 @@ object EndpointToSttpClient {
         val responseAs = asString.mapWithMetadata {
           (body, meta) =>
             val (outputs, toTuple: HListToResult[HList]) =
-              if (meta.isSuccess) (e.output.outputs, oToTuple) else (e.errorOutput.outputs, oeToTuple)
+              if (meta.isSuccess) (e.output.outputs, endpointLogicFn.oToResult) else (e.errorOutput.outputs, endpointLogicFn.eToResult)
 
             val values = outputs
               .map {
@@ -67,7 +64,7 @@ object EndpointToSttpClient {
         req2 = req2.response(responseAs.asInstanceOf[ResponseAs[Either[Any, Any], Nothing]]).parseResponseIf(_ => true)
       }
 
-      req2.asInstanceOf[Request[Either[TOE, TO], Nothing]]
+      req2.asInstanceOf[Request[Either[endpointLogicFn.TE, endpointLogicFn.TO], Nothing]]
     })
   }
 }

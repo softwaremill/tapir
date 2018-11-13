@@ -13,7 +13,7 @@ trait HListToResultInstances {
   type Aux[L <: HList, Out0] = HListToResult[L] {
     type Out = Out0
   }
-  implicit val hnilResult: Aux[HNil, Unit] =
+  implicit val hnilResult: Aux[HNil, Unit] = // TODO: not nothing?
     new HListToResult[HNil] {
       type Out = Unit
       def apply(l: HNil): Out = ()

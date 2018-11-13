@@ -1,15 +1,13 @@
 package sapi.client
 
 import com.softwaremill.sttp.Request
-import sapi.{Endpoint, HListToResult}
+import sapi.{Endpoint, EndpointLogicFn}
 import shapeless.HList
-import shapeless.ops.function
 
 package object sttp {
-  implicit class RichEndpoint[I <: HList, O <: HList, OE <: HList](val e: Endpoint[I, O, OE]) extends AnyVal {
-    def toSttpRequest[F, TO, TOE](host: String)(implicit oToTuple: HListToResult.Aux[O, TO],
-                                                oeToTuple: HListToResult.Aux[OE, TOE],
-                                                tt: function.FnFromProduct.Aux[I => Request[Either[TOE, TO], Nothing], F]): F =
+  type RR[X] = Request[X, Nothing]
+  implicit class RichEndpoint[I <: HList, E <: HList, O <: HList](val e: Endpoint[I, O, E]) extends AnyVal {
+    def toSttpRequest[FN](host: String)(implicit endpointLogicFn: EndpointLogicFn[I, E, O, RR, FN]): FN =
       EndpointToSttpClient.toSttpRequest(e, host)
   }
 }
