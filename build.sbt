@@ -4,14 +4,16 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalafmtOnCompile := true
 )
 
-val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5" % "test"
+val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
 val circeVersion = "0.10.1"
 val sttpVersion = "1.5.0-SNAPSHOT"
+
+val sttp = "com.softwaremill.sttp" %% "core" % sttpVersion
 
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
   .settings(publishArtifact := false, name := "sapi")
-  .aggregate(core, openapiModel, openapiCirce, openapiCirceYaml, openapiDocs, akkaHttpServer, http4sServer, sttpClient)
+  .aggregate(core, openapiModel, openapiCirce, openapiCirceYaml, openapiDocs, serverTests, akkaHttpServer, http4sServer, sttpClient, tests)
 
 lazy val core: Project = (project in file("core"))
   .settings(commonSettings: _*)
@@ -23,7 +25,7 @@ lazy val core: Project = (project in file("core"))
       "io.circe" %% "circe-generic" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
       "com.propensive" %% "magnolia" % "0.10.0",
-      scalaTest
+      scalaTest % "test"
     )
   )
 
@@ -61,6 +63,15 @@ lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   )
   .dependsOn(openapiModel, core)
 
+lazy val serverTests: Project = (project in file("server/tests"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "server-tests",
+    publishArtifact := false,
+    libraryDependencies ++= Seq(sttp, scalaTest)
+  )
+  .dependsOn(core)
+
 lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(commonSettings: _*)
   .settings(
@@ -70,7 +81,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
       "com.typesafe.akka" %% "akka-stream" % "2.5.18"
     )
   )
-  .dependsOn(core)
+  .dependsOn(core, serverTests % "test")
 
 lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings: _*)
@@ -80,15 +91,13 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
       "org.http4s" %% "http4s-blaze-client" % "0.18.21"
     )
   )
-  .dependsOn(core)
+  .dependsOn(core, serverTests % "test")
 
 lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings: _*)
   .settings(
     name := "sttp-client",
-    libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "core" % sttpVersion
-    )
+    libraryDependencies ++= Seq(sttp)
   )
   .dependsOn(core)
 

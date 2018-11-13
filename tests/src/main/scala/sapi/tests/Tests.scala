@@ -4,11 +4,13 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
+import com.softwaremill.sttp.{Request, RequestT}
 import com.softwaremill.sttp.akkahttp.AkkaHttpBackend
 import sapi._
 import sapi.server.akkahttp._
 import sapi.client.sttp._
 import sapi.docs.openapi._
+import shapeless._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -67,6 +69,14 @@ object Tests extends App {
   println("YYY")
 
   // TEST
+
+  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, Future, String => Future[Either[Unit, Int]]]]
+
+  case class RX[T, S]()
+//  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, RX[?, Unit], String => RX[Either[Unit, Int], Unit]]]
+
+  type RR[X] = Request[X, Nothing]
+  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, RR, String => RR[Either[Unit, Int]]]]
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
