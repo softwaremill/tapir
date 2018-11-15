@@ -1,6 +1,4 @@
 import sapi.TypeMapper.{RequiredTextTypeMapper, TextTypeMapper}
-import shapeless.{::, HList, HNil}
-import shapeless.ops.hlist.Prepend
 
 import scala.annotation.implicitNotFound
 
@@ -73,9 +71,9 @@ package object sapi {
   @implicitNotFound("???")
   type IsId[U[_]] = U[Unit] =:= Id[Unit]
 
-  def path[T: RequiredTextTypeMapper](name: String): EndpointInput[T :: HNil] =
+  def path[T: RequiredTextTypeMapper](name: String): EndpointInput[T] =
     EndpointInput.PathCapture(name, implicitly[RequiredTextTypeMapper[T]], None, None)
-  implicit def stringToPath(s: String): EndpointInput[HNil] = EndpointInput.PathSegment(s)
+  implicit def stringToPath(s: String): EndpointInput[Nothing] = EndpointInput.PathSegment(s)
 
   def query[T: TextTypeMapper](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TextTypeMapper[T]], None, None)
 
@@ -89,8 +87,8 @@ package object sapi {
 //  case class InvalidInput(input: EndpointInput.Single[_], reason: TypeMapper.Result[Nothing], cause: Option[Throwable])
 //      extends Exception(cause.orNull)
 
-  val endpoint: Endpoint[HNil, HNil, HNil] =
-    Endpoint[HNil, HNil, HNil](
+  val endpoint: Endpoint[Nothing, Nothing, Nothing] =
+    Endpoint[Nothing, Nothing, Nothing](
       None,
       Method.GET,
       EndpointInput.Multiple(Vector.empty),

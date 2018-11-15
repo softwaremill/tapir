@@ -1,31 +1,36 @@
 package sapi
-import shapeless.HList
-import shapeless.ops.hlist.Prepend
 
-case class Endpoint[I <: HList, O <: HList, E <: HList](name: Option[String], // TODO: swap O and E
-                                                        method: Method,
-                                                        input: EndpointInput.Multiple[I],
-                                                        output: EndpointOutput.Multiple[O],
-                                                        errorOutput: EndpointOutput.Multiple[E],
-                                                        summary: Option[String],
-                                                        description: Option[String],
-                                                        tags: Vector[String]) {
-  def name(s: String): Endpoint[I, O, E] = this.copy(name = Some(s))
+import sapi.typelevel.ParamConcat
 
-  def get(): Endpoint[I, O, E] = this.copy[I, O, E](method = Method.GET)
-  def post(): Endpoint[I, O, E] = this.copy[I, O, E](method = Method.POST)
+/**
+  * @tparam I Input parameter types.
+  * @tparam E Error output parameter types.
+  * @tparam O Output parameter types.
+  */
+case class Endpoint[I, E, O](name: Option[String],
+                             method: Method,
+                             input: EndpointInput.Multiple[I],
+                             errorOutput: EndpointOutput.Multiple[E],
+                             output: EndpointOutput.Multiple[O],
+                             summary: Option[String],
+                             description: Option[String],
+                             tags: Vector[String]) {
+  def name(s: String): Endpoint[I, E, O] = this.copy(name = Some(s))
 
-  def in[J <: HList, IJ <: HList](i: EndpointInput[J])(implicit ts: Prepend.Aux[I, J, IJ]): Endpoint[IJ, O, E] =
-    this.copy[IJ, O, E](input = input.and(i))
+  def get(): Endpoint[I, E, O] = this.copy[I, E, O](method = Method.GET)
+  def post(): Endpoint[I, E, O] = this.copy[I, E, O](method = Method.POST)
 
-  def out[P <: HList, OP <: HList](i: EndpointOutput[P])(implicit ts: Prepend.Aux[O, P, OP]): Endpoint[I, OP, E] =
-    this.copy[I, OP, E](output = output.and(i))
+  def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O] =
+    this.copy[IJ, E, O](input = input.and(i))
 
-  def errorOut[F <: HList, EF <: HList](i: EndpointOutput[F])(implicit ts: Prepend.Aux[E, F, EF]): Endpoint[I, O, EF] =
-    this.copy[I, O, EF](errorOutput = errorOutput.and(i))
+  def out[P, OP](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[O, P, OP]): Endpoint[I, E, OP] =
+    this.copy[I, E, OP](output = output.and(i))
 
-  def summary(s: String): Endpoint[I, O, E] = copy(summary = Some(s))
-  def description(d: String): Endpoint[I, O, E] = copy(description = Some(d))
-  def tags(ts: List[String]): Endpoint[I, O, E] = copy(tags = tags ++ ts)
-  def tag(t: String): Endpoint[I, O, E] = copy(tags = tags :+ t)
+  def errorOut[F, EF](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): Endpoint[I, EF, O] =
+    this.copy[I, EF, O](errorOutput = errorOutput.and(i))
+
+  def summary(s: String): Endpoint[I, E, O] = copy(summary = Some(s))
+  def description(d: String): Endpoint[I, E, O] = copy(description = Some(d))
+  def tags(ts: List[String]): Endpoint[I, E, O] = copy(tags = tags ++ ts)
+  def tag(t: String): Endpoint[I, E, O] = copy(tags = tags :+ t)
 }
