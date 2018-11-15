@@ -1,15 +1,17 @@
 package sapi.client.sttp
 
 import com.softwaremill.sttp._
+import sapi.EndpointLogicFn.FnFromHList
 import sapi.internal.SeqToHList
 import sapi.{Id, _}
 import shapeless._
 
 object EndpointToSttpClient {
-  def toSttpRequest[I <: HList, O <: HList, E <: HList, S, FN](e: Endpoint[I, O, E], host: String)(
-      implicit endpointLogicFn: EndpointLogicFn[I, E, O, Request[?, S], FN]): FN = {
+  def toSttpRequest[I <: HList, O <: HList, E <: HList, S, FN[_]](e: Endpoint[I, O, E], host: String)(
+      implicit endpointLogicFn: EndpointLogicFn[I, E, O],
+      fnFromHList: FnFromHList[I, FN]): FN[Request[Either[endpointLogicFn.TE, endpointLogicFn.TO], Nothing]] = {
 
-    endpointLogicFn.fnFromProduct(args => {
+    fnFromHList(args => {
       var uri = uri"$host"
       var req1 = sttp
         .response(ignore)

@@ -22,7 +22,7 @@ trait HListToResultInstances {
     type Out = A
     def apply(l: A :: HNil): Out = l.head
   }
-  implicit def hlistToResultOver2[A, B, T <: HList](implicit tupler: Tupler[A :: B :: T]): Aux[A :: B :: T, tupler.Out] =
+  implicit def hlistToResultOver1[A, B, T <: HList](implicit tupler: Tupler[A :: B :: T]): Aux[A :: B :: T, tupler.Out] =
     new HListToResult[A :: B :: T] {
       type Out = tupler.Out
       def apply(l: A :: B :: T): Out = tupler(l)

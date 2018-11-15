@@ -70,13 +70,13 @@ object Tests extends App {
 
   // TEST
 
-  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, Future, String => Future[Either[Unit, Int]]]]
+//  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, Future, String => Future[Either[Unit, Int]]]]
 
   case class RX[T, S]()
 //  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, RX[?, Unit], String => RX[Either[Unit, Int], Unit]]]
 
   type RR[X] = Request[X, Nothing]
-  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, RR, String => RR[Either[Unit, Int]]]]
+  //implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, RR, String => RR[Either[Unit, Int]]]]
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
