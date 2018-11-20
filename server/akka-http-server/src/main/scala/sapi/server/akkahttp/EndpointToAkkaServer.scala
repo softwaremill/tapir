@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
 import sapi._
 import sapi.internal.SeqToParams
-import sapi.typelevel.{ParamsToFn, ParamsToTuple}
+import sapi.typelevel.{ParamsAsFnArgs, ParamsToTuple}
 
 import scala.concurrent.Future
 
@@ -16,20 +16,21 @@ object EndpointToAkkaServer {
   def toDirective[I, E, O, T](e: Endpoint[I, E, O])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
     implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
     toDirective1(e).flatMap { values =>
-      tprovide(paramsToTuple(values))
+      tprovide(paramsToTuple.toTuple(values))
     }
   }
 
-  def toRoute[I, E, O, FN[_]](e: Endpoint[I, E, O])(logic: FN[Future[Either[E, O]]])(implicit fnFromParams: ParamsToFn[I, FN]): Route = {
+  def toRoute[I, E, O, FN[_]](e: Endpoint[I, E, O])(logic: FN[Future[Either[E, O]]])(
+      implicit paramsAsFnArgs: ParamsAsFnArgs[I, FN]): Route = {
     toDirective1(e) { values =>
-      onSuccess(logic(values)) {
+      onSuccess(paramsAsFnArgs.applyFn(logic, values)) {
         case Left(v)  => outputToRoute(e.errorOutput, v)
         case Right(v) => outputToRoute(e.output, v)
       }
     }
   }
 
-  private def outputToRoute[O](output: EndpointOutput.Multiple[O], v: O)(): Route = {
+  private def outputToRoute[O](output: EndpointOutput.Multiple[O], v: O): Route = {
     val withIndex = output.outputs.zipWithIndex
     def vAt(i: Int) = v match {
       case p: Product => p.productElement(i)
@@ -72,7 +73,9 @@ object EndpointToAkkaServer {
     // TODO: when parsing a query parameter/header/body/path fragment fails, provide an option to return a nice
     // error to the user (instead of a 404).
 
-    def doMatch(inputs: Vector[EndpointInput.Single[_]], ctx: RequestContext, canRemoveSlash: Boolean): Option[(List[Any], RequestContext)] = {
+    def doMatch(inputs: Vector[EndpointInput.Single[_]],
+                ctx: RequestContext,
+                canRemoveSlash: Boolean): Option[(List[Any], RequestContext)] = {
       inputs match {
         case Vector() => Some((Nil, ctx))
         case EndpointInput.PathSegment(ss) +: inputsTail =>

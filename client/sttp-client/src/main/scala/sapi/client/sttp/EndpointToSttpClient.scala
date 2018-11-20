@@ -3,14 +3,14 @@ package sapi.client.sttp
 import com.softwaremill.sttp._
 import sapi.TypeMapper.{RequiredTextTypeMapper, TextTypeMapper}
 import sapi.internal.SeqToParams
-import sapi.typelevel.ParamsToFn
+import sapi.typelevel.ParamsAsFnArgs
 import sapi.{Id, _}
 
 object EndpointToSttpClient {
   def toSttpRequest[I, E, O, S, FN[_]](e: Endpoint[I, E, O], host: String)(
-      implicit paramsToFn: ParamsToFn[I, FN]): FN[Request[Either[E, O], Nothing]] = {
+      implicit paramsAsFnArgs: ParamsAsFnArgs[I, FN]): FN[Request[Either[E, O], Nothing]] = {
 
-    paramsToFn(args => {
+    paramsAsFnArgs.toFn(args => {
       var uri = uri"$host"
       var req1 = sttp
         .response(ignore)
@@ -22,19 +22,22 @@ object EndpointToSttpClient {
           uri = uri.copy(path = uri.path :+ p)
         case EndpointInput.PathCapture(_, m, _, _) =>
           i += 1
-          val v = m.asInstanceOf[RequiredTextTypeMapper[Any]].toString(paramsToFn.arg(args, i): Any)
+          val v = m.asInstanceOf[RequiredTextTypeMapper[Any]].toString(paramsAsFnArgs.argAt(args, i): Any)
           uri = uri.copy(path = uri.path :+ v)
         case EndpointInput.Query(name, m, _, _) =>
           i += 1
-          m.asInstanceOf[TextTypeMapper[Any]].toOptionalString(paramsToFn.arg(args, i)).foreach { v => uri = uri.param(name, v)
+          m.asInstanceOf[TextTypeMapper[Any]].toOptionalString(paramsAsFnArgs.argAt(args, i)).foreach { v =>
+            uri = uri.param(name, v)
           }
         case EndpointIO.Body(m, _, _) =>
           i += 1
-          m.asInstanceOf[TypeMapper[Any, _]].toOptionalString(paramsToFn.arg(args, i)).foreach { v => req1 = req1.body(v)
+          m.asInstanceOf[TypeMapper[Any, _]].toOptionalString(paramsAsFnArgs.argAt(args, i)).foreach { v =>
+            req1 = req1.body(v)
           }
         case EndpointIO.Header(name, m, _, _) =>
           i += 1
-          m.asInstanceOf[TextTypeMapper[Any]].toOptionalString(paramsToFn.arg(args, i)).foreach { v => req1 = req1.header(name, v)
+          m.asInstanceOf[TextTypeMapper[Any]].toOptionalString(paramsAsFnArgs.argAt(args, i)).foreach { v =>
+            req1 = req1.header(name, v)
           }
       }
 
