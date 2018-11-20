@@ -30,4 +30,5 @@ TODO:
  * -> headers as input/output (sttp!)
  * mapped input
  * human-friendly type errors
+ * better type inference in idea
  */

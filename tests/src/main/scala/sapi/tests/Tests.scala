@@ -4,6 +4,8 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import com.softwaremill.sttp.{Request, RequestT}
 import com.softwaremill.sttp.akkahttp.AkkaHttpBackend
 import sapi._
@@ -38,7 +40,7 @@ object Tests extends App {
 
   val p = "x" / path[String]("p1") / "z"
 
-  val e = endpoint
+  val e: Endpoint[(String, Int, String, Int, Option[String], Int), NoParams, (String, Int)] = endpoint
     .get()
     .in("x" / path[String]("p1") / "z" / path[Int]("p2")) // each endpoint must have a path and a method
     .in(query[String]("q1").description("A q1").and(query[Int]("q2").example(99)))
@@ -56,9 +58,10 @@ object Tests extends App {
   //    .name("xz") // name optional
   //    .description("...")
 
-  val r: Route = e.toRoute((i: String, s: Int, p1: String, p2: Int, p3: Option[String], h1: Int) =>
-    Future.successful(Right((s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1", 192))))
-    //Future.successful(Right((s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1", 192)): Either[Void, (String, Int)]))
+  val r: Route = e.toRoute(
+    (i: String, s: Int, p1: String, p2: Int, p3: Option[String], h1: Int) =>
+      //Future.successful(Right((s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1", 192))))
+      Future.successful(Right((s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1", 192)): Either[NoParams, (String, Int)]))
 
   //
 
@@ -79,12 +82,12 @@ object Tests extends App {
   type RR[X] = Request[X, Nothing]
   //implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, RR, String => RR[Either[Unit, Int]]]]
 
-  implicit val actorSystem = ActorSystem()
-  implicit val materializer = ActorMaterializer()
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
   val server = Await.result(Http().bindAndHandle(r, "localhost", 8080), 1.minute)
 
   import com.softwaremill.sttp._
-  implicit val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
+  implicit val backend: SttpBackend[Future, Source[ByteString, Any]] = AkkaHttpBackend.usingActorSystem(actorSystem)
 
   val response1 = Await.result(sttp.get(uri"http://localhost:8080/x/aa/z/20?q1=x1&q2=91").header("zzz", "44").send(), 1.minute)
   println("RESPONSE1: " + response1)

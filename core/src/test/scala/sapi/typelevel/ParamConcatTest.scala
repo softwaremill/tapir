@@ -1,6 +1,6 @@
 package sapi.typelevel
 
-import sapi.Void
+import sapi.NoParams
 
 class ParamConcatTest {
   // should compile
@@ -21,17 +21,17 @@ class ParamConcatTest {
   implicitly[ParamConcat.Aux[String, Long, (String, Long)]]
 
   // nothing & tuple
-  implicitly[ParamConcat.Aux[Void, (Long, Double), (Long, Double)]]
-  implicitly[ParamConcat.Aux[(Long, Double), Void, (Long, Double)]]
+  implicitly[ParamConcat.Aux[NoParams, (Long, Double), (Long, Double)]]
+  implicitly[ParamConcat.Aux[(Long, Double), NoParams, (Long, Double)]]
 
   // nothing & single
-  implicitly[ParamConcat.Aux[Void, Int, Int]]
-  implicitly[ParamConcat.Aux[Int, Void, Int]]
+  implicitly[ParamConcat.Aux[NoParams, Int, Int]]
+  implicitly[ParamConcat.Aux[Int, NoParams, Int]]
 
   // without aux
   implicitly[ParamConcat[Tuple1[String], (Long, Double)]]
   implicitly[ParamConcat[(String, Int), (Long, Double)]]
   implicitly[ParamConcat[String, (Long, Double)]]
-  implicitly[ParamConcat[Void, (Long, Double)]]
-  implicitly[ParamConcat[Void, Int]]
+  implicitly[ParamConcat[NoParams, (Long, Double)]]
+  implicitly[ParamConcat[NoParams, Int]]
 }

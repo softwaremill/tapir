@@ -17,7 +17,7 @@ object EndpointInput {
       }
   }
 
-  case class PathSegment(s: String) extends Single[Void]
+  case class PathSegment(s: String) extends Single[NoParams]
 
   case class PathCapture[T](name: String, m: RequiredTextTypeMapper[T], description: Option[String], example: Option[T]) extends Single[T] {
     def description(d: String): PathCapture[T] = copy(description = Some(d))
