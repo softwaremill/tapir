@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
 import sapi._
 import sapi.internal.SeqToParams
-import sapi.typelevel.{ParamsAsFnArgs, ParamsToTuple}
+import sapi.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.Future
 
@@ -21,9 +21,9 @@ object EndpointToAkkaServer {
   }
 
   def toRoute[I, E, O, FN[_]](e: Endpoint[I, E, O])(logic: FN[Future[Either[E, O]]])(
-      implicit paramsAsFnArgs: ParamsAsFnArgs[I, FN]): Route = {
+      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
     toDirective1(e) { values =>
-      onSuccess(paramsAsFnArgs.applyFn(logic, values)) {
+      onSuccess(paramsAsArgs.applyFn(logic, values)) {
         case Left(v)  => outputToRoute(e.errorOutput, v)
         case Right(v) => outputToRoute(e.output, v)
       }

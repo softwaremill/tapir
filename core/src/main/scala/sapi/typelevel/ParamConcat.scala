@@ -1,6 +1,6 @@
 package sapi.typelevel
 
-import sapi.Void
+import sapi.NoParams
 import shapeless.ops.tuple.Prepend
 
 /**
@@ -15,8 +15,8 @@ object ParamConcat extends LowPriorityTupleConcat2 {
 }
 
 trait LowPriorityTupleConcat2 extends LowPriorityTupleConcat1 {
-  implicit def concatVoidLeft[U]: Aux[Void, U, U] = null
-  implicit def concatVoidRight[U]: Aux[U, Void, U] = null
+  implicit def concatVoidLeft[U]: Aux[NoParams, U, U] = null
+  implicit def concatVoidRight[U]: Aux[U, NoParams, U] = null
 }
 
 trait LowPriorityTupleConcat1 extends LowPriorityTupleConcat0 {
