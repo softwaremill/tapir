@@ -15,13 +15,22 @@ import scala.util.Random
 
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
-  type Port = Int
+  doTest(endpoint.in(query[String]("param1")).out(textBody[String]), "value1", Right("param1: value1"))
+
+  doTest(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]), ("v1", 10), Right("v1 10"))
+
+  //
 
   private object param1 extends QueryParamDecoderMatcher[String]("param1")
 
   private val service = HttpService[IO] {
-    case GET -> Root :? param1(v) => Ok(s"param1: $v")
+    case GET -> Root :? param1(v)               => Ok(s"param1: $v")
+    case GET -> Root / "api" / v1 / "user" / v2 => Ok(s"$v1 $v2")
   }
+
+  //
+
+  type Port = Int
 
   def send[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Port, args: I)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): IO[Either[E, O]]
 
@@ -30,8 +39,6 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
     test(e.show)(send(e, port, args).unsafeRunSync() shouldBe expectedResult)
   }
-
-  doTest(endpoint.in(query[String]("param1")).out(textBody[String]), "value1", Right("param1: value1"))
 
   private var port: Port = _
   private var server: Server[IO] = _
@@ -50,6 +57,8 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
     server.shutdownNow()
     super.afterAll()
   }
+
+  //
 
   private val random = new Random()
   private def randomPort(): Port = random.nextInt(29232) + 32768
