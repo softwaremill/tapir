@@ -18,6 +18,9 @@ class ParamConcatTest {
   // single & single
   implicitly[ParamConcat.Aux[String, Long, (String, Long)]]
 
+  // unit & unit
+  implicitly[ParamConcat.Aux[Unit, Unit, Unit]]
+
   // unit & tuple
   implicitly[ParamConcat.Aux[Unit, (Long, Double), (Long, Double)]]
   implicitly[ParamConcat.Aux[(Long, Double), Unit, (Long, Double)]]

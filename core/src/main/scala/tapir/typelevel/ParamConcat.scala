@@ -9,8 +9,11 @@ trait ParamConcat[T, U] {
   type Out
 }
 
-object ParamConcat extends LowPriorityTupleConcat2 {
+object ParamConcat extends LowPriorityTupleConcat3 {
   implicit def concatUnitLeft[U]: Aux[Unit, U, U] = null
+}
+
+trait LowPriorityTupleConcat3 extends LowPriorityTupleConcat2 {
   implicit def concatUnitRight[U]: Aux[U, Unit, U] = null
 }
 

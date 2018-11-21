@@ -7,6 +7,8 @@ import tapir.typelevel.ParamsAsArgs
 import tapir.{Id, _}
 
 object EndpointToSttpClient {
+  // don't look. The code is ugly.
+
   def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O], baseUri: Uri)(
       implicit paramsAsArgs: ParamsAsArgs[I]): paramsAsArgs.FN[Request[Either[E, O], Nothing]] = {
     paramsAsArgs.toFn(args => {
