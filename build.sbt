@@ -5,15 +5,17 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 )
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
+val http4s = "org.http4s" %% "http4s-blaze-client" % "0.18.21"
+
 val circeVersion = "0.10.1"
 val sttpVersion = "1.5.0-SNAPSHOT"
-
-val sttp = "com.softwaremill.sttp" %% "core" % sttpVersion
 
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
   .settings(publishArtifact := false, name := "sapi")
   .aggregate(core, openapiModel, openapiCirce, openapiCirceYaml, openapiDocs, serverTests, akkaHttpServer, http4sServer, sttpClient, tests)
+
+// core
 
 lazy val core: Project = (project in file("core"))
   .settings(commonSettings: _*)
@@ -28,6 +30,8 @@ lazy val core: Project = (project in file("core"))
       scalaTest % "test"
     )
   )
+
+// openapi
 
 lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
   .settings(commonSettings: _*)
@@ -56,12 +60,16 @@ lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yam
   )
   .dependsOn(openapiCirce)
 
+// docs
+
 lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   .settings(commonSettings: _*)
   .settings(
     name := "openapi-docs"
   )
   .dependsOn(openapiModel, core)
+
+// server
 
 lazy val serverTests: Project = (project in file("server/tests"))
   .settings(commonSettings: _*)
@@ -89,19 +97,30 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings: _*)
   .settings(
     name := "http4s-server",
-    libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-blaze-client" % "0.18.21"
-    )
+    libraryDependencies ++= Seq(http4s)
   )
   .dependsOn(core, serverTests % "test")
+
+// client
+
+lazy val clientTests: Project = (project in file("client/tests"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "client-tests",
+    publishArtifact := false,
+    libraryDependencies ++= Seq(http4s, scalaTest)
+  )
+  .dependsOn(core)
 
 lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings: _*)
   .settings(
     name := "sttp-client",
-    libraryDependencies ++= Seq(sttp)
+    libraryDependencies ++= Seq("com.softwaremill.sttp" %% "core" % sttpVersion)
   )
-  .dependsOn(core)
+  .dependsOn(core, clientTests % "test")
+
+// other
 
 lazy val tests: Project = (project in file("tests"))
   .settings(commonSettings: _*)
