@@ -3,6 +3,7 @@ package tapir.internal
 private[tapir] object SeqToParams {
   def apply[T](seq: Seq[T]): Any = {
     seq match {
+      case Seq()                       => ()
       case Seq(v)                      => v
       case Seq(v1, v2)                 => (v1, v2)
       case Seq(v1, v2, v3)             => (v1, v2, v3)

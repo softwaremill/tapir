@@ -12,6 +12,10 @@ import scala.util.Random
 
 trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
+  testServer(endpoint, () => pureResult(().asRight[Unit])) { baseUri =>
+    sttp.get(baseUri).send().map(_.body shouldBe Right(""))
+  }
+
   testServer(endpoint.in(query[String]("param1")).out(textBody[String]), (p1: String) => pureResult(s"param1: $p1".asRight[Unit])) {
     baseUri =>
       sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("param1: value1"))

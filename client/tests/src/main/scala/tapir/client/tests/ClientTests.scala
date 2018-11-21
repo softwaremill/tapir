@@ -15,6 +15,8 @@ import scala.util.Random
 
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
+  testClient(endpoint, (), Right(()))
+
   testClient(endpoint.in(query[String]("param1")).out(textBody[String]), "value1", Right("param1: value1"))
 
   testClient(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]), ("v1", 10), Right("v1 10"))
@@ -26,6 +28,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   private val service = HttpService[IO] {
     case GET -> Root :? param1(v)               => Ok(s"param1: $v")
     case GET -> Root / "api" / v1 / "user" / v2 => Ok(s"$v1 $v2")
+    case GET -> Root                            => Ok()
   }
 
   //
