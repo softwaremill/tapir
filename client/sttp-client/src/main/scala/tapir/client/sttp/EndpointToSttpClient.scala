@@ -7,10 +7,10 @@ import tapir.typelevel.ParamsAsArgs
 import tapir.{Id, _}
 
 object EndpointToSttpClient {
-  def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O], host: String)(
+  def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O], baseUri: Uri)(
       implicit paramsAsArgs: ParamsAsArgs[I]): paramsAsArgs.FN[Request[Either[E, O], Nothing]] = {
     paramsAsArgs.toFn(args => {
-      var uri = uri"$host"
+      var uri = baseUri
       var req1 = sttp
         .response(ignore)
         .mapResponse(Right(_): Either[Any, Any])

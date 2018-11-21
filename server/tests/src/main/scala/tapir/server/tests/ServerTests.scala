@@ -18,7 +18,7 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   def pureResult[T](t: T): R[T]
 
-  def server[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Int, fn: FN[R[Either[E, O]]])(
+  def server[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Port, fn: FN[R[Either[E, O]]])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Resource[IO, Unit]
 
   def doTest[I, E, O, FN[_]](e: Endpoint[I, E, O], fn: FN[R[Either[E, O]]])(runTest: Uri => IO[Unit])(
@@ -61,8 +61,4 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   private val random = new Random()
   private def randomPort(): Port = random.nextInt(29232) + 32768
-
-  def doTest(name: String)(io: IO[Unit]): Unit = {
-    test(name)(io.unsafeRunSync())
-  }
 }

@@ -5,8 +5,8 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 )
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
-val http4s = "org.http4s" %% "http4s-blaze-client" % "0.18.21"
 
+val http4sVersion = "0.18.21"
 val circeVersion = "0.10.1"
 val sttpVersion = "1.5.0-SNAPSHOT"
 
@@ -76,9 +76,7 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .settings(
     name := "server-tests",
     publishArtifact := false,
-    libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpVersion,
-      scalaTest)
+    libraryDependencies ++= Seq("com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpVersion, scalaTest)
   )
   .dependsOn(core)
 
@@ -97,7 +95,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings: _*)
   .settings(
     name := "http4s-server",
-    libraryDependencies ++= Seq(http4s)
+    libraryDependencies ++= Seq("org.http4s" %% "http4s-blaze-server" % http4sVersion)
   )
   .dependsOn(core, serverTests % "test")
 
@@ -108,7 +106,12 @@ lazy val clientTests: Project = (project in file("client/tests"))
   .settings(
     name := "client-tests",
     publishArtifact := false,
-    libraryDependencies ++= Seq(http4s, scalaTest)
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-dsl" % http4sVersion,
+      "org.http4s" %% "http4s-blaze-server" % http4sVersion,
+      "org.http4s" %% "http4s-circe" % http4sVersion,
+      scalaTest
+    )
   )
   .dependsOn(core)
 

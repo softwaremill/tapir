@@ -31,4 +31,6 @@ TODO:
  * mapped input
  * human-friendly type errors
  * better type inference in idea
+ * empty endpoint tests
+ * 404 test
  */

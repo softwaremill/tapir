@@ -97,10 +97,10 @@ object Tests extends App {
 
 //  type SttpReq[T] = Request[T, Nothing] // needed, unless implicit error
 //  implicit val etc: EndpointToClient[SttpReq] = new EndpointToSttpClient
-  val response3 = Await.result(e.toSttpRequest("http://localhost:8080").apply("aa", 20, "x1", 91, None, 44).send(), 1.minute)
+  val response3 = Await.result(e.toSttpRequest(uri"http://localhost:8080").apply("aa", 20, "x1", 91, None, 44).send(), 1.minute)
   println("RESPONSE3: " + response3)
 
-  val response4 = Await.result(e.toSttpRequest("http://localhost:8080").apply("aa", 20, "x1", 91, Some("kkk"), 44).send(), 1.minute)
+  val response4 = Await.result(e.toSttpRequest(uri"http://localhost:8080").apply("aa", 20, "x1", 91, Some("kkk"), 44).send(), 1.minute)
   println("RESPONSE4: " + response4)
 
   Await.result(actorSystem.terminate(), 1.minute)
