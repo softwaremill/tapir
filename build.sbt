@@ -1,5 +1,5 @@
 lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-  organization := "com.softwaremill.sapi",
+  organization := "com.softwaremill.tapir",
   scalaVersion := "2.12.7",
   scalafmtOnCompile := true
 )
@@ -12,7 +12,7 @@ val sttpVersion = "1.5.0-SNAPSHOT"
 
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
-  .settings(publishArtifact := false, name := "sapi")
+  .settings(publishArtifact := false, name := "tapir")
   .aggregate(core, openapiModel, openapiCirce, openapiCirceYaml, openapiDocs, serverTests, akkaHttpServer, http4sServer, sttpClient, tests)
 
 // core
