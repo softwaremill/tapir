@@ -82,21 +82,23 @@ object EndpointToOpenAPIDocs {
                     ex.flatMap(exampleValue(tm, _)),
                     None,
                     None))
-      case EndpointInput.PathCapture(n, tm, d, ex) =>
+      case EndpointInput.PathCapture(tm, n, d, ex) =>
         Some(
-          Parameter(n,
-                    ParameterIn.Path,
-                    d,
-                    Some(true),
-                    None,
-                    None,
-                    None,
-                    None,
-                    None,
-                    Right(schemaToSchema(tm.schema)),
-                    ex.flatMap(exampleValue(tm, _)),
-                    None,
-                    None))
+          Parameter(
+            n.getOrElse("?"), // TODO
+            ParameterIn.Path,
+            d,
+            Some(true),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Right(schemaToSchema(tm.schema)),
+            ex.flatMap(exampleValue(tm, _)),
+            None,
+            None
+          ))
       case _ => None
     }
 
