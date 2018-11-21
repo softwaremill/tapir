@@ -21,6 +21,8 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testClient(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]), ("v1", 10), Right("v1 10"))
 
+  testClient(endpoint.post.in("echo" / "body").in(textBody[String]).out(textBody[String]), "test", Right("test"))
+
   //
 
   private object param1 extends QueryParamDecoderMatcher[String]("param1")
@@ -28,6 +30,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   private val service = HttpService[IO] {
     case GET -> Root :? param1(v)               => Ok(s"param1: $v")
     case GET -> Root / "api" / v1 / "user" / v2 => Ok(s"$v1 $v2")
+    case r @ POST -> Root / "echo" / "body"     => r.as[String].flatMap(Ok(_))
     case GET -> Root                            => Ok()
   }
 

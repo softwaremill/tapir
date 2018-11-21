@@ -17,8 +17,8 @@ case class Endpoint[I, E, O](method: Method,
                              tags: Vector[String]) {
   def name(s: String): Endpoint[I, E, O] = this.copy(name = Some(s))
 
-  def get(): Endpoint[I, E, O] = this.copy[I, E, O](method = Method.GET)
-  def post(): Endpoint[I, E, O] = this.copy[I, E, O](method = Method.POST)
+  def get: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.GET)
+  def post: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.POST)
 
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O] =
     this.copy[IJ, E, O](input = input.and(i))
@@ -35,5 +35,5 @@ case class Endpoint[I, E, O](method: Method,
   def tag(t: String): Endpoint[I, E, O] = copy(tags = tags :+ t)
 
   def show: String =
-    s"Endpoint${name.map("[" + _ + "]").getOrElse("")}(${method.m}, inputs: ${input.show}, error outputs: ${errorOutput.show}, outputs: ${output.show})"
+    s"Endpoint${name.map("[" + _ + "]").getOrElse("")}(${method.m}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
 }

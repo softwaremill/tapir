@@ -30,6 +30,8 @@ object EndpointToAkkaServer {
     }
   }
 
+  // don't look below. The code is ugly.
+
   private def outputToRoute[O](output: EndpointOutput.Multiple[O], v: O): Route = {
     val withIndex = output.outputs.zipWithIndex
     def vAt(i: Int) = v match {
@@ -73,24 +75,30 @@ object EndpointToAkkaServer {
     // TODO: when parsing a query parameter/header/body/path fragment fails, provide an option to return a nice
     // error to the user (instead of a 404).
 
+    var bodyIndex: Option[Int] = None
+
     def doMatch(inputs: Vector[EndpointInput.Single[_]],
                 ctx: RequestContext,
-                canRemoveSlash: Boolean): Option[(List[Any], RequestContext)] = {
+                canRemoveSlash: Boolean,
+                nextValueIndex: Int): Option[(List[Any], RequestContext)] = {
       inputs match {
         case Vector() => Some((Nil, ctx))
         case EndpointInput.PathSegment(ss) +: inputsTail =>
           ctx.unmatchedPath match {
-            case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false)
-            case Uri.Path.Segment(`ss`, pathTail)           => doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true)
-            case _                                          => None
+            case Uri.Path.Slash(pathTail) if canRemoveSlash =>
+              doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false, nextValueIndex)
+            case Uri.Path.Segment(`ss`, pathTail) =>
+              doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, nextValueIndex)
+            case _ => None
           }
         case EndpointInput.PathCapture(m, _, _, _) +: inputsTail =>
           ctx.unmatchedPath match {
-            case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false)
+            case Uri.Path.Slash(pathTail) if canRemoveSlash =>
+              doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false, nextValueIndex)
             case Uri.Path.Segment(s, pathTail) =>
               m.fromString(s) match {
                 case DecodeResult.Value(v) =>
-                  doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true).map {
+                  doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, nextValueIndex + 1).map {
                     case (values, ctx2) => (v :: values, ctx2)
                   }
                 case _ => None
@@ -100,7 +108,7 @@ object EndpointToAkkaServer {
         case EndpointInput.Query(name, m, _, _) +: inputsTail =>
           m.fromOptionalString(ctx.request.uri.query().get(name)) match {
             case DecodeResult.Value(v) =>
-              doMatch(inputsTail, ctx, canRemoveSlash = true).map {
+              doMatch(inputsTail, ctx, canRemoveSlash = true, nextValueIndex + 1).map {
                 case (values, ctx2) => (v :: values, ctx2)
               }
             case _ => None
@@ -108,18 +116,32 @@ object EndpointToAkkaServer {
         case EndpointIO.Header(name, m, _, _) +: inputsTail =>
           m.fromOptionalString(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
             case DecodeResult.Value(v) =>
-              doMatch(inputsTail, ctx, canRemoveSlash = true).map {
+              doMatch(inputsTail, ctx, canRemoveSlash = true, nextValueIndex + 1).map {
                 case (values, ctx2) => (v :: values, ctx2)
               }
             case _ => None
+          }
+        case EndpointIO.Body(m, _, _) +: inputsTail =>
+          bodyIndex = Some(nextValueIndex)
+          doMatch(inputsTail, ctx, canRemoveSlash = true, nextValueIndex + 1).map {
+            case (values, ctx2) => (null :: values, ctx2)
           }
       }
     }
 
     val inputDirectives: Directive1[I] = extractRequestContext.flatMap { ctx =>
-      doMatch(e.input.inputs, ctx, canRemoveSlash = true) match {
-        case Some((values, ctx2)) => provide(SeqToParams(values).asInstanceOf[I]) & mapRequestContext(_ => ctx2)
-        case None                 => reject
+      doMatch(e.input.inputs, ctx, canRemoveSlash = true, 0) match {
+        case Some((values, ctx2)) =>
+          def provideValues(v: Seq[Any]) = provide(SeqToParams(v).asInstanceOf[I]) & mapRequestContext(_ => ctx2)
+
+          bodyIndex match {
+            case None => provideValues(values)
+            case Some(i) =>
+              entity(as[String]).flatMap { body =>
+                provideValues(values.updated(i, body))
+              }
+          }
+        case None => reject
       }
     }
 

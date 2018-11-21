@@ -39,6 +39,11 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(uri"$baseUri/api/p1/user/20").send().map(_.body shouldBe Right("p1 20"))
   }
 
+  testServer(endpoint.post.in("echo" / "body").in(textBody[String]).out(textBody[String]), (b: String) => pureResult(b.asRight[Unit])) {
+    baseUri =>
+      sttp.post(uri"$baseUri/echo/body").body("test").send().map(_.body shouldBe Right("test"))
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()
