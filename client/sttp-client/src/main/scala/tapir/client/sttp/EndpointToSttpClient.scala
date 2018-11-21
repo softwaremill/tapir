@@ -19,7 +19,7 @@ object EndpointToSttpClient {
       e.input.inputs.foreach {
         case EndpointInput.PathSegment(p) =>
           uri = uri.copy(path = uri.path :+ p)
-        case EndpointInput.PathCapture(_, m, _, _) =>
+        case EndpointInput.PathCapture(m, _, _, _) =>
           i += 1
           val v = m.asInstanceOf[RequiredTextTypeMapper[Any]].toString(paramsAsArgs.argAt(args, i): Any)
           uri = uri.copy(path = uri.path :+ v)
