@@ -12,26 +12,26 @@ import scala.util.Random
 
 trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
-  testServer(endpoint.in(query[String]("param1")).out(textBody[String]), (p1: String) => pureResult(s"param1: $p1".asRight[NoParams])) {
+  testServer(endpoint.in(query[String]("param1")).out(textBody[String]), (p1: String) => pureResult(s"param1: $p1".asRight[Unit])) {
     baseUri =>
       sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("param1: value1"))
   }
 
   testServer(
     endpoint.in(query[String]("param1")).in(query[Option[Int]]("param2")).out(textBody[String]),
-    (p1: String, p2: Option[Int]) => pureResult(s"$p1 $p2".asRight[NoParams])
+    (p1: String, p2: Option[Int]) => pureResult(s"$p1 $p2".asRight[Unit])
   ) { baseUri =>
     sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("value1 None")) *>
       sttp.get(uri"$baseUri?param1=value1&param2=10").send().map(_.body shouldBe Right("value1 Some(10)"))
   }
 
-  testServer(endpoint.in(header[String]("test-header")).out(textBody[String]), (p1: String) => pureResult(s"$p1".asRight[NoParams])) {
+  testServer(endpoint.in(header[String]("test-header")).out(textBody[String]), (p1: String) => pureResult(s"$p1".asRight[Unit])) {
     baseUri =>
       sttp.get(uri"$baseUri").header("test-header", "test-value").send().map(_.body shouldBe Right("test-value"))
   }
 
   testServer(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]),
-             (p1: String, p2: Int) => pureResult(s"$p1 $p2".asRight[NoParams])) { baseUri =>
+             (p1: String, p2: Int) => pureResult(s"$p1 $p2".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri/api/p1/user/20").send().map(_.body shouldBe Right("p1 20"))
   }
 

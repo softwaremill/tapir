@@ -75,7 +75,7 @@ package object tapir {
     EndpointInput.PathCapture(implicitly[RequiredTextTypeMapper[T]], None, None, None)
   def path[T: RequiredTextTypeMapper](name: String): EndpointInput[T] =
     EndpointInput.PathCapture(implicitly[RequiredTextTypeMapper[T]], Some(name), None, None)
-  implicit def stringToPath(s: String): EndpointInput[NoParams] = EndpointInput.PathSegment(s)
+  implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
 
   def query[T: TextTypeMapper](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TextTypeMapper[T]], None, None)
 
@@ -89,8 +89,8 @@ package object tapir {
 //  case class InvalidInput(input: EndpointInput.Single[_], reason: TypeMapper.Result[Nothing], cause: Option[Throwable])
 //      extends Exception(cause.orNull)
 
-  val endpoint: Endpoint[NoParams, NoParams, NoParams] =
-    Endpoint[NoParams, NoParams, NoParams](
+  val endpoint: Endpoint[Unit, Unit, Unit] =
+    Endpoint[Unit, Unit, Unit](
       Method.GET,
       EndpointInput.Multiple(Vector.empty),
       EndpointOutput.Multiple(Vector.empty),
@@ -100,6 +100,4 @@ package object tapir {
       None,
       Vector.empty
     )
-
-  trait NoParams
 }

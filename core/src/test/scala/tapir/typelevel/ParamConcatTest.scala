@@ -1,7 +1,5 @@
 package tapir.typelevel
 
-import tapir.NoParams
-
 class ParamConcatTest {
   // should compile
 
@@ -20,18 +18,18 @@ class ParamConcatTest {
   // single & single
   implicitly[ParamConcat.Aux[String, Long, (String, Long)]]
 
-  // nothing & tuple
-  implicitly[ParamConcat.Aux[NoParams, (Long, Double), (Long, Double)]]
-  implicitly[ParamConcat.Aux[(Long, Double), NoParams, (Long, Double)]]
+  // unit & tuple
+  implicitly[ParamConcat.Aux[Unit, (Long, Double), (Long, Double)]]
+  implicitly[ParamConcat.Aux[(Long, Double), Unit, (Long, Double)]]
 
-  // nothing & single
-  implicitly[ParamConcat.Aux[NoParams, Int, Int]]
-  implicitly[ParamConcat.Aux[Int, NoParams, Int]]
+  // unit & single
+  implicitly[ParamConcat.Aux[Unit, Int, Int]]
+  implicitly[ParamConcat.Aux[Int, Unit, Int]]
 
   // without aux
   implicitly[ParamConcat[Tuple1[String], (Long, Double)]]
   implicitly[ParamConcat[(String, Int), (Long, Double)]]
   implicitly[ParamConcat[String, (Long, Double)]]
-  implicitly[ParamConcat[NoParams, (Long, Double)]]
-  implicitly[ParamConcat[NoParams, Int]]
+  implicitly[ParamConcat[Unit, (Long, Double)]]
+  implicitly[ParamConcat[Unit, Int]]
 }

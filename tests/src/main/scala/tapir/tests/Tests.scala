@@ -40,7 +40,7 @@ object Tests extends App {
 
   val p = "x" / path[String]("p1") / "z"
 
-  val e: Endpoint[(String, Int, String, Int, Option[String], Int), NoParams, (String, Int)] = endpoint
+  val e: Endpoint[(String, Int, String, Int, Option[String], Int), Unit, (String, Int)] = endpoint
     .get()
     .in("x" / path[String]("p1") / "z" / path[Int]("p2")) // each endpoint must have a path and a method
     .in(query[String]("q1").description("A q1").and(query[Int]("q2").example(99)))
@@ -61,7 +61,7 @@ object Tests extends App {
   val r: Route = e.toRoute(
     (i: String, s: Int, p1: String, p2: Int, p3: Option[String], h1: Int) =>
       //Future.successful(Right((s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1", 192))))
-      Future.successful(Right((s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1", 192)): Either[NoParams, (String, Int)]))
+      Future.successful(Right((s"$i $s $p1 $p2${p3.map(" " + _).getOrElse("")} $h1", 192)): Either[Unit, (String, Int)]))
 
   //
 
