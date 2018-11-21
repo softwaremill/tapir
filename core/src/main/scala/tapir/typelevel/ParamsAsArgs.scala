@@ -37,6 +37,13 @@ trait LowPriorityParamsToArgs {
   @implicitNotFound(msg = "Expected arguments: ${I}")
   type Aux[I, _FN[_]] = ParamsAsArgs[I] { type FN[O] = _FN[O] }
 
+  implicit def unitToFn: Aux[Unit, Function0] = new ParamsAsArgs[Unit] {
+    type FN[O] = () => O
+    override def toFn[O](f: Unit => O): () => O = () => f(())
+    override def argAt(args: Unit, i: Int): Any = throw new IndexOutOfBoundsException(i.toString)
+    override def applyFn[R](f: () => R, args: Unit): R = f()
+  }
+
   implicit def singleToFn[A1]: Aux[A1, A1 => ?] = new ParamsAsArgs[A1] {
     type FN[O] = A1 => O
     override def toFn[R](f: A1 => R): A1 => R = a1 => f(a1)

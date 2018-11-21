@@ -15,9 +15,9 @@ import scala.util.Random
 
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
-  doTest(endpoint.in(query[String]("param1")).out(textBody[String]), "value1", Right("param1: value1"))
+  testClient(endpoint.in(query[String]("param1")).out(textBody[String]), "value1", Right("param1: value1"))
 
-  doTest(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]), ("v1", 10), Right("v1 10"))
+  testClient(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]), ("v1", 10), Right("v1 10"))
 
   //
 
@@ -34,7 +34,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   def send[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Port, args: I)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): IO[Either[E, O]]
 
-  def doTest[I, E, O, FN[_]](e: Endpoint[I, E, O], args: I, expectedResult: Either[E, O])(
+  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O], args: I, expectedResult: Either[E, O])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
 
     test(e.show)(send(e, port, args).unsafeRunSync() shouldBe expectedResult)

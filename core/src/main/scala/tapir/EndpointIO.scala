@@ -18,7 +18,7 @@ object EndpointInput {
       }
   }
 
-  case class PathSegment(s: String) extends Single[NoParams] {
+  case class PathSegment(s: String) extends Single[Unit] {
     def show = s"/$s"
   }
 

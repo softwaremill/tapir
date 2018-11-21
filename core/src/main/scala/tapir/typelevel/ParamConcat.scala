@@ -1,6 +1,5 @@
 package tapir.typelevel
 
-import tapir.NoParams
 import shapeless.ops.tuple.Prepend
 
 /**
@@ -11,12 +10,12 @@ trait ParamConcat[T, U] {
 }
 
 object ParamConcat extends LowPriorityTupleConcat2 {
-  implicit def concatTuples[T, U, TU](implicit tc: Prepend.Aux[T, U, TU]): Aux[T, U, TU] = null
+  implicit def concatUnitLeft[U]: Aux[Unit, U, U] = null
+  implicit def concatUnitRight[U]: Aux[U, Unit, U] = null
 }
 
 trait LowPriorityTupleConcat2 extends LowPriorityTupleConcat1 {
-  implicit def concatVoidLeft[U]: Aux[NoParams, U, U] = null
-  implicit def concatVoidRight[U]: Aux[U, NoParams, U] = null
+  implicit def concatTuples[T, U, TU](implicit tc: Prepend.Aux[T, U, TU]): Aux[T, U, TU] = null
 }
 
 trait LowPriorityTupleConcat1 extends LowPriorityTupleConcat0 {
