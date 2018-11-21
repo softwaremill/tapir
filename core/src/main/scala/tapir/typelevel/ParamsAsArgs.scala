@@ -13,7 +13,7 @@ trait ParamsAsArgs[I] {
   def applyFn[R](f: FN[R], args: I): R
 }
 
-object ParamsAsArgs extends LowPriorityParamsToArgs {
+object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
 
   implicit def tuple2ToFn[A1, A2]: Aux[(A1, A2), (A1, A2) => ?] = new ParamsAsArgs[(A1, A2)] {
     type FN[O] = (A1, A2) => O
@@ -33,16 +33,18 @@ object ParamsAsArgs extends LowPriorityParamsToArgs {
     }
 }
 
-trait LowPriorityParamsToArgs {
-  @implicitNotFound(msg = "Expected arguments: ${I}")
-  type Aux[I, _FN[_]] = ParamsAsArgs[I] { type FN[O] = _FN[O] }
-
+trait LowPriorityParamsAsArgs1 extends LowPriorityParamsAsArgs0 {
   implicit def unitToFn: Aux[Unit, Function0] = new ParamsAsArgs[Unit] {
     type FN[O] = () => O
     override def toFn[O](f: Unit => O): () => O = () => f(())
     override def argAt(args: Unit, i: Int): Any = throw new IndexOutOfBoundsException(i.toString)
     override def applyFn[R](f: () => R, args: Unit): R = f()
   }
+}
+
+trait LowPriorityParamsAsArgs0 {
+  @implicitNotFound(msg = "Expected arguments: ${I}")
+  type Aux[I, _FN[_]] = ParamsAsArgs[I] { type FN[O] = _FN[O] }
 
   implicit def singleToFn[A1]: Aux[A1, A1 => ?] = new ParamsAsArgs[A1] {
     type FN[O] = A1 => O
