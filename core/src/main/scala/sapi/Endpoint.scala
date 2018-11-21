@@ -7,11 +7,11 @@ import sapi.typelevel.ParamConcat
   * @tparam E Error output parameter types.
   * @tparam O Output parameter types.
   */
-case class Endpoint[I, E, O](name: Option[String],
-                             method: Method,
+case class Endpoint[I, E, O](method: Method,
                              input: EndpointInput.Multiple[I],
                              errorOutput: EndpointOutput.Multiple[E],
                              output: EndpointOutput.Multiple[O],
+                             name: Option[String],
                              summary: Option[String],
                              description: Option[String],
                              tags: Vector[String]) {
@@ -33,4 +33,7 @@ case class Endpoint[I, E, O](name: Option[String],
   def description(d: String): Endpoint[I, E, O] = copy(description = Some(d))
   def tags(ts: List[String]): Endpoint[I, E, O] = copy(tags = tags ++ ts)
   def tag(t: String): Endpoint[I, E, O] = copy(tags = tags :+ t)
+
+  def show: String =
+    s"Endpoint${name.map("[" + _ + "]").getOrElse("")}(${method.m}, inputs: ${input.show}, error outputs: ${errorOutput.show}, outputs: ${output.show})"
 }

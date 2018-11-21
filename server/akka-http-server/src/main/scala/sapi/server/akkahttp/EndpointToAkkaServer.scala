@@ -84,7 +84,7 @@ object EndpointToAkkaServer {
             case Uri.Path.Segment(`ss`, pathTail)           => doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true)
             case _                                          => None
           }
-        case EndpointInput.PathCapture(_, m, _, _) +: inputsTail =>
+        case EndpointInput.PathCapture(m, _, _, _) +: inputsTail =>
           ctx.unmatchedPath match {
             case Uri.Path.Slash(pathTail) if canRemoveSlash => doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false)
             case Uri.Path.Segment(s, pathTail) =>

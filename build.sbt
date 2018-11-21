@@ -68,7 +68,9 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .settings(
     name := "server-tests",
     publishArtifact := false,
-    libraryDependencies ++= Seq(sttp, scalaTest)
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpVersion,
+      scalaTest)
   )
   .dependsOn(core)
 

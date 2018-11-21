@@ -71,8 +71,10 @@ package object sapi {
   @implicitNotFound("???")
   type IsId[U[_]] = U[Unit] =:= Id[Unit]
 
+  def path[T: RequiredTextTypeMapper]: EndpointInput[T] =
+    EndpointInput.PathCapture(implicitly[RequiredTextTypeMapper[T]], None, None, None)
   def path[T: RequiredTextTypeMapper](name: String): EndpointInput[T] =
-    EndpointInput.PathCapture(name, implicitly[RequiredTextTypeMapper[T]], None, None)
+    EndpointInput.PathCapture(implicitly[RequiredTextTypeMapper[T]], Some(name), None, None)
   implicit def stringToPath(s: String): EndpointInput[NoParams] = EndpointInput.PathSegment(s)
 
   def query[T: TextTypeMapper](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TextTypeMapper[T]], None, None)
@@ -89,11 +91,11 @@ package object sapi {
 
   val endpoint: Endpoint[NoParams, NoParams, NoParams] =
     Endpoint[NoParams, NoParams, NoParams](
-      None,
       Method.GET,
       EndpointInput.Multiple(Vector.empty),
       EndpointOutput.Multiple(Vector.empty),
       EndpointOutput.Multiple(Vector.empty),
+      None,
       None,
       None,
       Vector.empty
