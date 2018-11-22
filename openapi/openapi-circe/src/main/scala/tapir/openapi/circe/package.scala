@@ -2,6 +2,7 @@ package tapir.openapi
 
 import io.circe.{Encoder, Json}
 import io.circe.syntax._
+import io.circe.parser._
 import io.circe.magnolia.derivation.encoder.semiauto._
 import tapir.openapi.OpenAPI.ReferenceOr
 
@@ -15,7 +16,9 @@ trait Encoders {
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
-  implicit val encoderExampleValue: Encoder[ExampleValue] = (_: ExampleValue) => Json.fromString("TODO")
+  implicit val encoderExampleValue: Encoder[ExampleValue] = { ev: ExampleValue =>
+    parse(ev.value).toOption.getOrElse(Json.fromString(ev.value))
+  }
   implicit val encoderSchemaFormat: Encoder[SchemaFormat.SchemaFormat] = Encoder.enumEncoder(SchemaFormat)
   implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.enumEncoder(SchemaType)
   implicit val encoderSchema: Encoder[Schema] = deriveMagnoliaEncoder[Schema]

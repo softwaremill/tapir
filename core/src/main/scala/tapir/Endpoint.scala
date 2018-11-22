@@ -19,6 +19,7 @@ case class Endpoint[I, E, O](method: Method,
 
   def get: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.GET)
   def post: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.POST)
+  def method(m: String): Endpoint[I, E, O] = this.copy[I, E, O](method = Method(m))
 
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O] =
     this.copy[IJ, E, O](input = input.and(i))

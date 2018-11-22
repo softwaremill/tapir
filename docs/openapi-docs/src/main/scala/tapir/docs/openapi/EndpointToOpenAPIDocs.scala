@@ -22,7 +22,7 @@ object EndpointToOpenAPIDocs {
     import Method._
 
     val pathComponents = e.input.inputs.flatMap {
-      case EndpointInput.PathCapture(name, _, _, _) => Some(s"{$name}")
+      case EndpointInput.PathCapture(_, name, _, _) => Some(s"{${name.getOrElse("-")}}")
       case EndpointInput.PathSegment(s)             => Some(s)
       case _                                        => None
     }
@@ -125,16 +125,16 @@ object EndpointToOpenAPIDocs {
 
   private def outputToResponse(o: EndpointOutput.Multiple[_]): Option[Response] = {
     o.outputs.headOption.map {
-      case EndpointIO.Body(m, d, _) => Response(d.getOrElse(""), None, Some(typeMapperToMediaType(m)))
+      case EndpointIO.Body(m, d, e) => Response(d.getOrElse(""), None, Some(typeMapperToMediaType(m, e)))
       case _                        => Response("", None, None)
     }
   }
 
-  private def typeMapperToMediaType[M <: SMediaType](o: TypeMapper[_, M]): Map[String, OMediaType] = {
-    Map(o.mediaType.mediaType -> OMediaType(Some(Right(schemaToSchema(o.schema))), None, None, None))
+  private def typeMapperToMediaType[T, M <: SMediaType](o: TypeMapper[T, M], example: Option[T]): Map[String, OMediaType] = {
+    Map(o.mediaType.mediaType -> OMediaType(Some(Right(schemaToSchema(o.schema))), example.flatMap(exampleValue(o, _)), None, None))
   }
 
-  private def exampleValue[T](tm: TypeMapper[T, _], e: T): Option[ExampleValue] = tm.toOptionalString(e).map(ExampleValue) // TODO
+  private def exampleValue[T](tm: TypeMapper[T, _], e: T): Option[ExampleValue] = tm.toOptionalString(e).map(ExampleValue)
 
   private def components(es: Seq[Endpoint[_, _, _]]): Option[Components] = None
 
