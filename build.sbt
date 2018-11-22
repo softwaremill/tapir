@@ -8,7 +8,7 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
 
 val http4sVersion = "0.18.21"
 val circeVersion = "0.10.1"
-val sttpVersion = "1.5.0-SNAPSHOT"
+val sttpVersion = "1.5.0"
 
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
@@ -44,6 +44,7 @@ lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
   .settings(
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion,
       "io.circe" %% "circe-magnolia-derivation" % "0.3.0"
     ),
     name := "openapi-circe"

@@ -102,7 +102,7 @@ case class RequestBody(description: Option[String], content: Map[String, MediaTy
 
 case class MediaType(
     schema: Option[ReferenceOr[Schema]],
-    example: Option[Example],
+    example: Option[ExampleValue],
     examples: Option[Map[String, ReferenceOr[Example]]],
     encoding: Option[Map[String, Encoding]]
 )
@@ -182,4 +182,4 @@ object SchemaFormat extends Enumeration {
   val Password = Value("password")
 }
 
-case class ExampleValue(value: Any)
+case class ExampleValue(value: String)
