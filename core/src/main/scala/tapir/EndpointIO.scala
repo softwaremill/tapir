@@ -1,12 +1,14 @@
 package tapir
 
 import tapir.TypeMapper.{RequiredTextTypeMapper, TextTypeMapper}
-import tapir.typelevel.ParamConcat
+import tapir.typelevel.{ParamConcat, ParamsAsArgs}
 
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
   def /[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
   def show: String
+  def map[T](f: I => T)(g: T => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[T] =
+    EndpointInput.Mapped(this, f, g, paramsAsArgs)
 }
 
 object EndpointInput {
@@ -34,6 +36,10 @@ object EndpointInput {
     def description(d: String): Query[T] = copy(description = Some(d))
     def example(t: T): Query[T] = copy(example = Some(t))
     def show = s"?$name"
+  }
+
+  case class Mapped[I, T](wrapped: EndpointInput[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
+    override def show: String = s"map(${wrapped.show})"
   }
 
   case class Multiple[I](inputs: Vector[Single[_]]) extends EndpointInput[I] {

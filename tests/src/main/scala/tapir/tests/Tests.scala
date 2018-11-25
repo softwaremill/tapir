@@ -40,8 +40,7 @@ object Tests extends App {
 
   val p = "x" / path[String]("p1") / "z"
 
-  val e: Endpoint[(String, Int, String, Int, Option[String], Int), Unit, (String, Int)] = endpoint
-    .get
+  val e: Endpoint[(String, Int, String, Int, Option[String], Int), Unit, (String, Int)] = endpoint.get
     .in("x" / path[String]("p1") / "z" / path[Int]("p2")) // each endpoint must have a path and a method
     .in(query[String]("q1").description("A q1").and(query[Int]("q2").example(99)))
     .in(query[Option[String]]("q3"))
