@@ -30,7 +30,7 @@ object EndpointToAkkaServer {
     }
   }
 
-  // don't look below. The code is ugly.
+  // don't look below. The code is really, really ugly. Even worse than in EndpointToSttpClient
 
   private def outputToRoute[O](output: EndpointOutput.Multiple[O], v: O): Route = {
     val withIndex = output.outputs.zipWithIndex

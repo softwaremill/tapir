@@ -4,34 +4,63 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import cats.effect._
 import org.http4s._
 import org.http4s.dsl.io._
-import org.http4s.implicits._
 import org.http4s.server.Server
 import org.http4s.server.blaze.BlazeBuilder
 import tapir._
 import tapir.typelevel.ParamsAsArgs
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.util.Random
 
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
+  // empty endpoint
   testClient(endpoint, (), Right(()))
 
+  // single query param
   testClient(endpoint.in(query[String]("param1")).out(textBody[String]), "value1", Right("param1: value1"))
 
-  testClient(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]), ("v1", 10), Right("v1 10"))
+  // two path params
+  testClient(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]), ("v1", 10), Right("v1 10 None"))
 
+  // single input - body
   testClient(endpoint.post.in("echo" / "body").in(textBody[String]).out(textBody[String]), "test", Right("test"))
+
+  // single mapped value
+  testClient(endpoint.in(query[String]("param1").map(_.toList)(_.mkString(""))).out(textBody[String]),
+             "value1".toList,
+             Right("param1: value1"))
+
+  // two mapped values
+  testClient(
+    endpoint.in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i))).out(textBody[String]),
+    StringInt("v1", 10),
+    Right("v1 10 None")
+  )
+
+  // two mapped values + unmapped TODO
+//  testClient(
+//    endpoint
+//      .in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i)))
+//      .in(query[String]("param1"))
+//      .out(textBody[String]),
+//    (StringInt("v1", 10), "p1"),
+//    Right("v1 10 Some(p1)")
+//  )
+
+  //
+
+  case class StringInt(s: String, i: Int)
 
   //
 
   private object param1 extends QueryParamDecoderMatcher[String]("param1")
+  private object param1Opt extends OptionalQueryParamDecoderMatcher[String]("param1")
 
   private val service = HttpService[IO] {
-    case GET -> Root :? param1(v)               => Ok(s"param1: $v")
-    case GET -> Root / "api" / v1 / "user" / v2 => Ok(s"$v1 $v2")
-    case r @ POST -> Root / "echo" / "body"     => r.as[String].flatMap(Ok(_))
-    case GET -> Root                            => Ok()
+    case GET -> Root :? param1(v)                                => Ok(s"param1: $v")
+    case GET -> Root / "api" / v1 / "user" / v2 :? param1Opt(p1) => Ok(s"$v1 $v2 $p1")
+    case r @ POST -> Root / "echo" / "body"                      => r.as[String].flatMap(Ok(_))
+    case GET -> Root                                             => Ok()
   }
 
   //
