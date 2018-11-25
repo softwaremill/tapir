@@ -1,6 +1,6 @@
 package tapir
 
-import tapir.typelevel.ParamConcat
+import tapir.typelevel.{ParamConcat, ParamsAsArgs}
 
 /**
   * @tparam I Input parameter types.
@@ -29,6 +29,9 @@ case class Endpoint[I, E, O](method: Method,
 
   def errorOut[F, EF](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): Endpoint[I, EF, O] =
     this.copy[I, EF, O](errorOutput = errorOutput.and(i))
+
+  def mapIn[T](f: I => T)(g: T => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[T, E, O] =
+    this.copy[T, E, O](input = EndpointInput.Multiple(input.map(f)(g)))
 
   def summary(s: String): Endpoint[I, E, O] = copy(summary = Some(s))
   def description(d: String): Endpoint[I, E, O] = copy(description = Some(d))

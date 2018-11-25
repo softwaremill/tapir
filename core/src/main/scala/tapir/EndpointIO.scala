@@ -50,6 +50,12 @@ object EndpointInput {
       }
     def show: String = if (inputs.isEmpty) "-" else inputs.map(_.show).mkString(" ")
   }
+  object Multiple {
+    def apply[I](input: EndpointInput[I]): EndpointInput.Multiple[I] = input match {
+      case s: Single[I] => Multiple(Vector(s))
+      case m: Multiple[_] => m
+    }
+  }
 }
 
 sealed trait EndpointOutput[I] {

@@ -37,15 +37,15 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
     Right("v1 10 None")
   )
 
-  // two mapped values + unmapped TODO
-//  testClient(
-//    endpoint
-//      .in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i)))
-//      .in(query[String]("param1"))
-//      .out(textBody[String]),
-//    (StringInt("v1", 10), "p1"),
-//    Right("v1 10 Some(p1)")
-//  )
+  // two mapped values + unmapped
+  testClient(
+    endpoint
+      .in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i)))
+      .in(query[String]("param1"))
+      .out(textBody[String]),
+    (StringInt("v1", 10), "p1"),
+    Right("v1 10 Some(p1)")
+  )
 
   //
 
