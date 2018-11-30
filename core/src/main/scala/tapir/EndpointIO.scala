@@ -9,6 +9,11 @@ sealed trait EndpointInput[I] {
   def show: String
   def map[T](f: I => T)(g: T => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[T] =
     EndpointInput.Mapped(this, f, g, paramsAsArgs)
+
+  private[tapir] def asVectorOfSingle: Vector[EndpointInput.Single[_]] = this match {
+    case s: EndpointInput.Single[_]   => Vector(s)
+    case m: EndpointInput.Multiple[_] => m.inputs
+  }
 }
 
 object EndpointInput {
@@ -52,7 +57,7 @@ object EndpointInput {
   }
   object Multiple {
     def apply[I](input: EndpointInput[I]): EndpointInput.Multiple[I] = input match {
-      case s: Single[I] => Multiple(Vector(s))
+      case s: Single[I]   => Multiple(Vector(s))
       case m: Multiple[_] => m
     }
   }
