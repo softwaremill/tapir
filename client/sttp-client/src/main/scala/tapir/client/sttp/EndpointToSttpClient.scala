@@ -81,10 +81,7 @@ object EndpointToSttpClient {
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointInput.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
         val (uri2, req2) = setInputParams(
-          wrapped match {
-            case s: EndpointInput.Single[_]   => Vector(s)
-            case m: EndpointInput.Multiple[_] => m.inputs
-          },
+          wrapped.asVectorOfSingle,
           g(paramsAsArgs.paramAt(params, paramIndex)),
           wrappedParamsAsArgs,
           0,

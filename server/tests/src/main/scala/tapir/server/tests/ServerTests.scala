@@ -12,15 +12,18 @@ import scala.util.Random
 
 trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
+  // empty endpoint
   testServer(endpoint, () => pureResult(().asRight[Unit])) { baseUri =>
     sttp.get(baseUri).send().map(_.body shouldBe Right(""))
   }
 
+  // single query param
   testServer(endpoint.in(query[String]("param1")).out(textBody[String]), (p1: String) => pureResult(s"param1: $p1".asRight[Unit])) {
     baseUri =>
       sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("param1: value1"))
   }
 
+  // two query params
   testServer(
     endpoint.in(query[String]("param1")).in(query[Option[Int]]("param2")).out(textBody[String]),
     (p1: String, p2: Option[Int]) => pureResult(s"$p1 $p2".asRight[Unit])
@@ -29,20 +32,54 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
       sttp.get(uri"$baseUri?param1=value1&param2=10").send().map(_.body shouldBe Right("value1 Some(10)"))
   }
 
+  // header
   testServer(endpoint.in(header[String]("test-header")).out(textBody[String]), (p1: String) => pureResult(s"$p1".asRight[Unit])) {
     baseUri =>
       sttp.get(uri"$baseUri").header("test-header", "test-value").send().map(_.body shouldBe Right("test-value"))
   }
 
+  // two path params
   testServer(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]),
              (p1: String, p2: Int) => pureResult(s"$p1 $p2".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri/api/p1/user/20").send().map(_.body shouldBe Right("p1 20"))
   }
 
+  // body
   testServer(endpoint.post.in("echo" / "body").in(textBody[String]).out(textBody[String]), (b: String) => pureResult(b.asRight[Unit])) {
     baseUri =>
       sttp.post(uri"$baseUri/echo/body").body("test").send().map(_.body shouldBe Right("test"))
   }
+
+  // single mapped value
+  testServer(
+    endpoint.in(query[String]("param1").map(_.toList)(_.mkString(""))).out(textBody[String]),
+    (p1: List[Char]) => pureResult(s"param1 count: ${p1.length}".asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("param1 count: 6"))
+  }
+
+  // two mapped values
+  testServer(
+    endpoint.in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i))).out(textBody[String]),
+    (p1: StringInt) => pureResult(s"p1: $p1".asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/api/v1/user/10").send().map(_.body shouldBe Right("p1: StringInt(v1,10)"))
+  }
+
+  // two mapped values + unmapped
+  testServer(
+    endpoint
+      .in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i)))
+      .in(query[String]("param1"))
+      .out(textBody[String]),
+    (p1: StringInt, p2: String) => pureResult(s"p1: $p1 p2: $p2".asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/api/v1/user/10?param1=v1").send().map(_.body shouldBe Right("p1: StringInt(v1,10) p2: v1"))
+  }
+
+  //
+
+  case class StringInt(s: String, i: Int)
 
   //
 
