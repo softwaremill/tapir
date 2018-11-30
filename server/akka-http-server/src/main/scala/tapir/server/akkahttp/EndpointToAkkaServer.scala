@@ -81,12 +81,16 @@ object EndpointToAkkaServer {
     // TODO: when parsing a query parameter/header/body/path fragment fails, provide an option to return a nice
     // error to the user (instead of a 404).
 
+    case class MatchResult(values: List[Any], ctx: RequestContext, canRemoveSlash: Boolean) {
+      def prependValue(v: Any): MatchResult = copy(values = v :: values)
+    }
+
     def doMatch(inputs: Vector[EndpointInput.Single[_]],
                 ctx: RequestContext,
                 canRemoveSlash: Boolean,
-                body: String): Option[(List[Any], RequestContext, Boolean)] = {
+                body: String): Option[MatchResult] = {
       inputs match {
-        case Vector() => Some((Nil, ctx, canRemoveSlash))
+        case Vector() => Some(MatchResult(Nil, ctx, canRemoveSlash))
         case EndpointInput.PathSegment(ss) +: inputsTail =>
           ctx.unmatchedPath match {
             case Uri.Path.Slash(pathTail) if canRemoveSlash =>
@@ -103,7 +107,7 @@ object EndpointToAkkaServer {
               m.fromString(s) match {
                 case DecodeResult.Value(v) =>
                   doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body).map {
-                    case (values, ctx2, crs) => (v :: values, ctx2, crs)
+                    _.prependValue(v)
                   }
                 case _ => None
               }
@@ -113,7 +117,7 @@ object EndpointToAkkaServer {
           m.fromOptionalString(ctx.request.uri.query().get(name)) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
-                case (values, ctx2, crs) => (v :: values, ctx2, crs)
+                _.prependValue(v)
               }
             case _ => None
           }
@@ -121,7 +125,7 @@ object EndpointToAkkaServer {
           m.fromOptionalString(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
-                case (values, ctx2, crs) => (v :: values, ctx2, crs)
+                _.prependValue(v)
               }
             case _ => None
           }
@@ -129,16 +133,15 @@ object EndpointToAkkaServer {
           m.fromOptionalString(Some(body)) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
-                case (values, ctx2, crs) => (v :: values, ctx2, crs)
+                _.prependValue(v)
               }
             case _ => None
           }
         case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
-          doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap {
-            case (values, ctx2, crs) =>
-              doMatch(inputsTail, ctx2, crs, body).map {
-                case (values3, ctx3, crs3) => (f.asInstanceOf[Any => Any].apply(SeqToParams(values)) :: values3, ctx3, crs3)
-              }
+          doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap { result =>
+            doMatch(inputsTail, result.ctx, result.canRemoveSlash, body).map {
+              _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
+            }
           }
       }
     }
@@ -148,8 +151,8 @@ object EndpointToAkkaServer {
       bodyDirective.flatMap { body =>
         extractRequestContext.flatMap { ctx =>
           doMatch(e.input.inputs, ctx, canRemoveSlash = true, body) match {
-            case Some((values, ctx2, _)) =>
-              provide(SeqToParams(values).asInstanceOf[I]) & mapRequestContext(_ => ctx2)
+            case Some(result) =>
+              provide(SeqToParams(result.values).asInstanceOf[I]) & mapRequestContext(_ => result.ctx)
             case None => reject
           }
         }
