@@ -50,8 +50,8 @@ object EndpointToAkkaServer {
     }
   }
 
-  private def outputToRoute[O](output: EndpointIO.Multiple[O], v: O): Route = {
-    val outputsWithValues = singleOutputsWithValues(output.ios, v)
+  private def outputToRoute[O](output: EndpointIO[O], v: O): Route = {
+    val outputsWithValues = singleOutputsWithValues(output.asVectorOfSingle, v)
 
     val body = outputsWithValues.collectFirst { case Left(b) => b }
     val headers = outputsWithValues.collect { case Right(h)  => h }
