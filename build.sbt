@@ -35,7 +35,7 @@ lazy val tests: Project = (project in file("tests"))
   .settings(
     name := "tests",
     publishArtifact := false,
-    libraryDependencies += scalaTest
+    libraryDependencies ++= Seq(scalaTest, "ch.qos.logback" % "logback-classic" % "1.2.3")
   )
   .dependsOn(core)
 
