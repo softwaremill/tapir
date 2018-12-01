@@ -30,8 +30,14 @@ case class Endpoint[I, E, O](method: Method,
   def errorOut[F, EF](i: EndpointIO[F])(implicit ts: ParamConcat.Aux[E, F, EF]): Endpoint[I, EF, O] =
     this.copy[I, EF, O](errorOutput = errorOutput.and(i))
 
-  def mapIn[T](f: I => T)(g: T => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[T, E, O] =
-    this.copy[T, E, O](input = EndpointInput.Multiple(input.map(f)(g)))
+  def mapIn[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[II, E, O] =
+    this.copy[II, E, O](input = EndpointInput.Multiple(input.map(f)(g)))
+
+  def mapErrorOut[EE](f: E => EE)(g: EE => E)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[I, EE, O] =
+    this.copy[I, EE, O](errorOutput = EndpointIO.Multiple(errorOutput.map(f)(g)))
+
+  def mapOut[OO](f: O => OO)(g: OO => O)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[I, E, OO] =
+    this.copy[I, E, OO](output = EndpointIO.Multiple(output.map(f)(g)))
 
   def summary(s: String): Endpoint[I, E, O] = copy(summary = Some(s))
   def description(d: String): Endpoint[I, E, O] = copy(description = Some(d))
