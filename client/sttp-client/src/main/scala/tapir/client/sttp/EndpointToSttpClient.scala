@@ -20,10 +20,10 @@ object EndpointToSttpClient {
 
       var req2 = req.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
 
-      if (e.output.ios.nonEmpty || e.errorOutput.ios.nonEmpty) {
+      if (e.output.asVectorOfSingle.nonEmpty || e.errorOutput.asVectorOfSingle.nonEmpty) {
         val baseResponseAs: ResponseAs[String, Nothing] = if (hasBody(e.output) || hasBody(e.errorOutput)) asString else ignore.map(_ => "")
         val responseAs = baseResponseAs.mapWithMetadata { (body, meta) =>
-          val outputs = if (meta.isSuccess) e.output.ios else e.errorOutput.ios
+          val outputs = if (meta.isSuccess) e.output.asVectorOfSingle else e.errorOutput.asVectorOfSingle
           val params = getOutputParams(outputs, body, meta)
           if (meta.isSuccess) Right(params) else Left(params)
         }
@@ -35,7 +35,7 @@ object EndpointToSttpClient {
     })
   }
 
-  private def getOutputParams(outputs: Vector[EndpointIO[_]], body: String, meta: ResponseMetadata): Any = {
+  private def getOutputParams(outputs: Vector[EndpointIO.Single[_]], body: String, meta: ResponseMetadata): Any = {
     val values = outputs
       .map {
         case EndpointIO.Body(m, _, _) =>
@@ -45,7 +45,7 @@ object EndpointToSttpClient {
         case EndpointIO.Header(name, m, _, _) =>
           m.fromOptionalString(meta.header(name)).getOrThrow(InvalidOutput)
 
-        case EndpointIO.Mapped(wrapped, f, g, _) =>
+        case EndpointIO.Mapped(wrapped, f, _, _) =>
           f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingle, body, meta))
       }
 
