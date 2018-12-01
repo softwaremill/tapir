@@ -80,7 +80,8 @@ package object tapir {
   def query[T: TextTypeMapper](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TextTypeMapper[T]], None, None)
 
   def body[T, M <: MediaType](implicit tm: TypeMapper[T, M]): EndpointIO.Body[T, M] = EndpointIO.Body(tm, None, None)
-  def textBody[T](implicit tm: TypeMapper[T, MediaType.Text]): EndpointIO.Body[T, MediaType.Text] = EndpointIO.Body(tm, None, None)
+  def textBody[T](implicit tm: TypeMapper[T, MediaType.Text]): EndpointIO.Body[T, MediaType.Text] =
+    EndpointIO.Body(tm, None, None) // TODO: string body?
   def jsonBody[T](implicit tm: TypeMapper[T, MediaType.Json]): EndpointIO.Body[T, MediaType.Json] = EndpointIO.Body(tm, None, None)
 
   def header[T: TextTypeMapper](name: String): EndpointIO.Header[T] = EndpointIO.Header(name, implicitly[TextTypeMapper[T]], None, None)

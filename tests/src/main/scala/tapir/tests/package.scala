@@ -1,5 +1,7 @@
 package tapir
 
+import io.circe.generic.auto._
+
 package object tests {
 
   val in_query_out_text: Endpoint[String, Unit, String] = endpoint.in(query[String]("fruit")).out(textBody[String])
@@ -31,4 +33,7 @@ package object tests {
   val in_query_out_mapped_text_header: Endpoint[String, Unit, FruitAmount] = endpoint
     .in(query[String]("fruit"))
     .out(textBody[String].and(header[Int]("X-Role")).map(FruitAmount.tupled)(FruitAmount.unapply(_).get))
+
+  val in_json_out_text: Endpoint[FruitAmount, Unit, String] =
+    endpoint.post.in("fruit" / "info").in(jsonBody[FruitAmount]).out(textBody[String])
 }
