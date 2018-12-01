@@ -30,6 +30,15 @@ lazy val core: Project = (project in file("core"))
     )
   )
 
+lazy val tests: Project = (project in file("tests"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tests",
+    publishArtifact := false,
+    libraryDependencies += scalaTest
+  )
+  .dependsOn(core)
+
 // openapi
 
 lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
@@ -76,9 +85,9 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .settings(
     name := "server-tests",
     publishArtifact := false,
-    libraryDependencies ++= Seq("com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpVersion, scalaTest)
+    libraryDependencies ++= Seq("com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpVersion)
   )
-  .dependsOn(core)
+  .dependsOn(tests)
 
 lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(commonSettings: _*)
@@ -109,11 +118,10 @@ lazy val clientTests: Project = (project in file("client/tests"))
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % http4sVersion,
       "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-      "org.http4s" %% "http4s-circe" % http4sVersion,
-      scalaTest
+      "org.http4s" %% "http4s-circe" % http4sVersion
     )
   )
-  .dependsOn(core)
+  .dependsOn(tests)
 
 lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings: _*)
@@ -125,7 +133,7 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
 
 // other
 
-lazy val tests: Project = (project in file("tests"))
+lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings: _*)
   .settings(
     name := "tests",

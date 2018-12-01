@@ -7,63 +7,22 @@ import org.http4s.dsl.io._
 import org.http4s.server.Server
 import org.http4s.server.blaze.BlazeBuilder
 import tapir._
+import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
 
 import scala.util.Random
 
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
-  // empty endpoint
   testClient(endpoint, (), Right(()))
-
-  // single query param
-  testClient(endpoint.in(query[String]("param1")).out(textBody[String]), "value1", Right("param1: value1"))
-
-  // two path params
-  testClient(endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String]), ("v1", 10), Right("v1 10 None"))
-
-  // single input - body
-  testClient(endpoint.post.in("echo" / "body").in(textBody[String]).out(textBody[String]), "test", Right("test"))
-
-  // single mapped value
-  testClient(endpoint.in(query[String]("param1").map(_.toList)(_.mkString(""))).out(textBody[String]),
-             "value1".toList,
-             Right("param1: value1"))
-
-  // two mapped values
-  testClient(
-    endpoint.in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i))).out(textBody[String]),
-    StringInt("v1", 10),
-    Right("v1 10 None")
-  )
-
-  // two mapped values + unmapped
-  testClient(
-    endpoint
-      .in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i)))
-      .in(query[String]("param1"))
-      .out(textBody[String]),
-    (StringInt("v1", 10), "p1"),
-    Right("v1 10 Some(p1)")
-  )
-
-  // single out mapped value
-  testClient(endpoint.in(query[String]("param1")).out(textBody[String].map(_.toList)(_.mkString(""))),
-             "value1",
-             Right("param1: value1".toList))
-
-  // two out mapped value
-  testClient(
-    endpoint
-      .in(query[String]("param1"))
-      .out(textBody[String].and(header[Int]("test-header")).map(StringInt.tupled)(StringInt.unapply(_).get)),
-    "value1",
-    Right(StringInt("param1: value1", 6))
-  )
-
-  //
-
-  case class StringInt(s: String, i: Int)
+  testClient(singleQueryParam, "value1", Right("param1: value1"))
+  testClient(twoPathParams, ("v1", 10), Right("v1 10 None"))
+  testClient(singleBody, "test", Right("test"))
+  testClient(singleMappedValue, "value1".toList, Right("param1: value1"))
+  testClient(twoMappedValues, StringInt("v1", 10), Right("v1 10 None"))
+  testClient(twoMappedValuesAndUnmapped, (StringInt("v1", 10), "p1"), Right("v1 10 Some(p1)"))
+  testClient(singleOutMappedValue, "value1", Right("param1: value1".toList))
+  testClient(twoOutMappedValues, "value1", Right(StringInt("param1: value1", 6)))
 
   //
 
