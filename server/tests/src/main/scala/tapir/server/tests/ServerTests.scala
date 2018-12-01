@@ -65,6 +65,10 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     }
   }
 
+  testServer(in_json_out_text, (fa: FruitAmount) => pureResult(s"${fa.fruit} ${fa.amount}".asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/fruit/info").body("""{"fruit":"apple","amount":10}""").send().map(_.body shouldBe Right("apple 10"))
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()

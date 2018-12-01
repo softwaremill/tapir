@@ -16,7 +16,7 @@ object Schema {
     override def toString: String = "int"
   }
   case class SObject(fields: Iterable[(String, Schema)], required: Iterable[String]) extends Schema {
-    override def toString: String = s"object(${fields.map(f => s"${f._1}->${f._2}").mkString(",")},required:${required.mkString(",")})"
+    override def toString: String = s"object(${fields.map(f => s"${f._1}->${f._2}").mkString(",")};required:${required.mkString(",")})"
   }
 }
 
@@ -25,7 +25,7 @@ trait SchemaFor[T] {
   def isOptional: Boolean = false
   override def toString: String = s"schema is $schema"
 }
-object SchemaFor {
+object SchemaFor extends SchemaForMagnoliaDerivation {
   implicit case object SchemaForString extends SchemaFor[String] {
     override val schema: Schema = SString
   }
@@ -37,11 +37,10 @@ object SchemaFor {
   }
 }
 
-object CaseClassSchemaDerivation {
+trait SchemaForMagnoliaDerivation {
   type Typeclass[T] = SchemaFor[T]
 
   def combine[T](ctx: CaseClass[SchemaFor, T]): SchemaFor[T] = {
-    println("COMBINE " + ctx)
     new SchemaFor[T] {
       override val schema: Schema = SObject(
         ctx.parameters.map(p => (p.label, p.typeclass.schema)).toList,
@@ -51,21 +50,8 @@ object CaseClassSchemaDerivation {
   }
 
   def dispatch[T](ctx: SealedTrait[SchemaFor, T]): SchemaFor[T] = {
-    println("DISPATCH " + ctx)
-    null
+    throw new RuntimeException("Sealed trait hierarchies are not yet supported")
   }
 
-  implicit def gen[T]: SchemaFor[T] = macro Magnolia.gen[T]
-}
-
-object TestX extends App {
-
-  class First(f: String)
-  case class Name(first: First, middle: Option[String], last: String)
-  case class User(name: Name, age: Int)
-
-  implicit val schemaForFirst: SchemaFor[First] = new SchemaFor[First] { override def schema: Schema = SString }
-
-  val genUser = CaseClassSchemaDerivation.gen[User]
-  println(genUser)
+  implicit def schemaForCaseClass[T]: SchemaFor[T] = macro Magnolia.gen[T]
 }
