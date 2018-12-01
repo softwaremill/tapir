@@ -7,7 +7,7 @@ sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
   def /[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
   def show: String
-  def map[T](f: I => T)(g: T => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[T] =
+  def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[II] =
     EndpointInput.Mapped(this, f, g, paramsAsArgs)
 
   private[tapir] def asVectorOfSingle: Vector[EndpointInput.Single[_]] = this match {
@@ -64,7 +64,7 @@ object EndpointInput {
 sealed trait EndpointIO[I] extends EndpointInput[I] {
   def and[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ]
   def show: String
-  override def map[T](f: I => T)(g: T => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[T] =
+  override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
     EndpointIO.Mapped(this, f, g, paramsAsArgs)
 
   private[tapir] override def asVectorOfSingle: Vector[EndpointIO.Single[_]] = this match {
