@@ -8,8 +8,8 @@ import tapir.typelevel.{ParamConcat, ParamsAsArgs}
   * @tparam O Output parameter types.
   */
 case class Endpoint[I, E, O](method: Method,
-                             input: EndpointInput.Multiple[I], // TODO: remove multiple
-                             errorOutput: EndpointIO.Multiple[E],
+                             input: EndpointInput[I],
+                             errorOutput: EndpointIO.Multiple[E], // TODO: remove multiple
                              output: EndpointIO.Multiple[O],
                              name: Option[String],
                              summary: Option[String],

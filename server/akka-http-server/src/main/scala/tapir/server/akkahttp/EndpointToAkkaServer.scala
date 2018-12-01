@@ -160,7 +160,7 @@ object EndpointToAkkaServer {
       val bodyDirective: Directive1[String] = if (hasBody(e.input)) entity(as[String]) else provide(null)
       bodyDirective.flatMap { body =>
         extractRequestContext.flatMap { ctx =>
-          doMatch(e.input.inputs, ctx, canRemoveSlash = true, body) match {
+          doMatch(e.input.asVectorOfSingle, ctx, canRemoveSlash = true, body) match {
             case Some(result) =>
               provide(SeqToParams(result.values).asInstanceOf[I]) & mapRequestContext(_ => result.ctx)
             case None => reject

@@ -16,7 +16,7 @@ object EndpointToSttpClient {
         .response(ignore)
         .mapResponse(Right(_): Either[Any, Any])
 
-      val (uri, req) = setInputParams(e.input.inputs, params, paramsAsArgs, 0, baseUri, baseReq)
+      val (uri, req) = setInputParams(e.input.asVectorOfSingle, params, paramsAsArgs, 0, baseUri, baseReq)
 
       var req2 = req.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
 
@@ -52,7 +52,7 @@ object EndpointToSttpClient {
     SeqToParams(values)
   }
 
-  private def setInputParams[I](inputs: Vector[EndpointInput[_]],
+  private def setInputParams[I](inputs: Vector[EndpointInput.Single[_]],
                                 params: I,
                                 paramsAsArgs: ParamsAsArgs[I],
                                 paramIndex: Int,
