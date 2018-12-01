@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
 import tapir._
-import tapir.internal.SeqToParams
+import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.Future
@@ -32,26 +32,29 @@ object EndpointToAkkaServer {
 
   // don't look below. The code is really, really ugly. Even worse than in EndpointToSttpClient
 
-  private def outputToRoute[O](output: EndpointOutput.Multiple[O], v: O): Route = {
-    val withIndex = output.outputs.zipWithIndex
-    def vAt(i: Int) = v match {
-      case p: Product => p.productElement(i)
-      case _          => v
+  private def singleOutputsWithValues(outputs: Vector[EndpointIO.Single[_]], v: Any): Vector[Either[String, HttpHeader]] = {
+    val vs = ParamsToSeq(v)
+
+    outputs.zipWithIndex.flatMap {
+      case (EndpointIO.Body(m, _, _), i) => m.toOptionalString(vs(i)).map(Left(_))
+      case (EndpointIO.Header(name, m, _, _), i) =>
+        m.toOptionalString(vs(i))
+          .map(HttpHeader.parse(name, _))
+          .collect {
+            case ParsingResult.Ok(h, _) => h
+            // TODO error on parse error?
+          }
+          .map(Right(_))
+      case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
+        singleOutputsWithValues(wrapped.asVectorOfSingle, g(vs(i)))
     }
+  }
 
-    val body = withIndex.collectFirst {
-      case (EndpointIO.Body(m, _, _), i) => m.toOptionalString(vAt(i))
-    }.flatten
+  private def outputToRoute[O](output: EndpointIO.Multiple[O], v: O): Route = {
+    val outputsWithValues = singleOutputsWithValues(output.ios, v)
 
-    val headers = withIndex
-      .flatMap {
-        case (EndpointIO.Header(name, m, _, _), i) => m.toOptionalString(vAt(i)).map(HttpHeader.parse(name, _))
-        case _                                     => None
-      }
-      .collect {
-        case ParsingResult.Ok(h, _) => h
-        // TODO error on parse error?
-      }
+    val body = outputsWithValues.collectFirst { case Left(b) => b }
+    val headers = outputsWithValues.collect { case Right(h)  => h }
 
     val completeRoute = body.map(complete(_)).getOrElse(complete(""))
 
@@ -143,6 +146,13 @@ object EndpointToAkkaServer {
               _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
             }
           }
+        // TODO
+//        case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
+//          doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap { result =>
+//            doMatch(inputsTail, result.ctx, result.canRemoveSlash, body).map {
+//              _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
+//            }
+//          }
       }
     }
 

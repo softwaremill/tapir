@@ -93,8 +93,8 @@ package object tapir {
     Endpoint[Unit, Unit, Unit](
       Method.GET,
       EndpointInput.Multiple(Vector.empty),
-      EndpointOutput.Multiple(Vector.empty),
-      EndpointOutput.Multiple(Vector.empty),
+      EndpointIO.Multiple(Vector.empty),
+      EndpointIO.Multiple(Vector.empty),
       None,
       None,
       None,

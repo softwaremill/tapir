@@ -123,8 +123,8 @@ object EndpointToOpenAPIDocs {
               None)
   }
 
-  private def outputToResponse(o: EndpointOutput.Multiple[_]): Option[Response] = {
-    o.outputs.headOption.map {
+  private def outputToResponse(o: EndpointIO.Multiple[_]): Option[Response] = {
+    o.ios.headOption.map {
       case EndpointIO.Body(m, d, e) => Response(d.getOrElse(""), None, Some(typeMapperToMediaType(m, e)))
       case _                        => Response("", None, None)
     }

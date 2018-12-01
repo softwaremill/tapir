@@ -20,9 +20,9 @@ object EndpointToSttpClient {
 
       var req2 = req.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
 
-      if (e.output.outputs.nonEmpty || e.errorOutput.outputs.nonEmpty) {
+      if (e.output.ios.nonEmpty || e.errorOutput.ios.nonEmpty) {
         val responseAs = asString.mapWithMetadata { (body, meta) =>
-          val outputs = if (meta.isSuccess) e.output.outputs else e.errorOutput.outputs
+          val outputs = if (meta.isSuccess) e.output.ios else e.errorOutput.ios
 
           val values = outputs
             .map {

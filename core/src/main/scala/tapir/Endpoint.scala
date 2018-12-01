@@ -8,9 +8,9 @@ import tapir.typelevel.{ParamConcat, ParamsAsArgs}
   * @tparam O Output parameter types.
   */
 case class Endpoint[I, E, O](method: Method,
-                             input: EndpointInput.Multiple[I],
-                             errorOutput: EndpointOutput.Multiple[E],
-                             output: EndpointOutput.Multiple[O],
+                             input: EndpointInput.Multiple[I], // TODO: remove multiple
+                             errorOutput: EndpointIO.Multiple[E],
+                             output: EndpointIO.Multiple[O],
                              name: Option[String],
                              summary: Option[String],
                              description: Option[String],
@@ -24,10 +24,10 @@ case class Endpoint[I, E, O](method: Method,
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O] =
     this.copy[IJ, E, O](input = input.and(i))
 
-  def out[P, OP](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[O, P, OP]): Endpoint[I, E, OP] =
+  def out[P, OP](i: EndpointIO[P])(implicit ts: ParamConcat.Aux[O, P, OP]): Endpoint[I, E, OP] =
     this.copy[I, E, OP](output = output.and(i))
 
-  def errorOut[F, EF](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): Endpoint[I, EF, O] =
+  def errorOut[F, EF](i: EndpointIO[F])(implicit ts: ParamConcat.Aux[E, F, EF]): Endpoint[I, EF, O] =
     this.copy[I, EF, O](errorOutput = errorOutput.and(i))
 
   def mapIn[T](f: I => T)(g: T => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[T, E, O] =

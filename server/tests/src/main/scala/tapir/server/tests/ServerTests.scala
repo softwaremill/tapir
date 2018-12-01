@@ -77,6 +77,27 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(uri"$baseUri/api/v1/user/10?param1=v1").send().map(_.body shouldBe Right("p1: StringInt(v1,10) p2: v1"))
   }
 
+  // single out mapped value
+  testServer(
+    endpoint.in(query[String]("param1")).out(textBody[String].map(_.toList)(_.mkString(""))),
+    (p1: String) => pureResult(p1.toList.asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("value1"))
+  }
+
+  // two out mapped value
+  testServer(
+    endpoint
+      .in(query[String]("param1"))
+      .out(textBody[String].and(header[Int]("test-header")).map(StringInt.tupled)(StringInt.unapply(_).get)),
+    (p1: String) => pureResult(StringInt(p1, p1.length).asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri?param1=value1").send().map { r =>
+      r.body shouldBe Right("value1")
+      r.header("test-header") shouldBe Some("6")
+    }
+  }
+
   //
 
   case class StringInt(s: String, i: Int)
