@@ -65,12 +65,6 @@ package object tapir {
 
   //
 
-  type Id[X] = X
-  type Empty[X] = None.type
-
-  @implicitNotFound("???")
-  type IsId[U[_]] = U[Unit] =:= Id[Unit]
-
   def path[T: RequiredTextTypeMapper]: EndpointInput[T] =
     EndpointInput.PathCapture(implicitly[RequiredTextTypeMapper[T]], None, None, None)
   def path[T: RequiredTextTypeMapper](name: String): EndpointInput[T] =

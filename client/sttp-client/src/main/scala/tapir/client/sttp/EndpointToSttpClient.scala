@@ -4,7 +4,7 @@ import com.softwaremill.sttp._
 import tapir.TypeMapper.{RequiredTextTypeMapper, TextTypeMapper}
 import tapir.internal.SeqToParams
 import tapir.typelevel.ParamsAsArgs
-import tapir.{Id, _}
+import tapir._
 
 object EndpointToSttpClient {
   // don't look. The code is really, really ugly.
