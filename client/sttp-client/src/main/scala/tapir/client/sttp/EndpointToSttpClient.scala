@@ -21,20 +21,10 @@ object EndpointToSttpClient {
       var req2 = req.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
 
       if (e.output.ios.nonEmpty || e.errorOutput.ios.nonEmpty) {
-        val responseAs = asString.mapWithMetadata { (body, meta) =>
+        val baseResponseAs: ResponseAs[String, Nothing] = if (hasBody(e.output) || hasBody(e.errorOutput)) asString else ignore.map(_ => "")
+        val responseAs = baseResponseAs.mapWithMetadata { (body, meta) =>
           val outputs = if (meta.isSuccess) e.output.ios else e.errorOutput.ios
-
-          val values = outputs
-            .map {
-              case EndpointIO.Body(m, _, _) =>
-                val so = if (m.isOptional && body == "") None else Some(body)
-                m.fromOptionalString(so).getOrThrow(InvalidOutput)
-
-              case EndpointIO.Header(name, m, _, _) =>
-                m.fromOptionalString(meta.header(name)).getOrThrow(InvalidOutput)
-            }
-
-          val params = SeqToParams(values)
+          val params = getOutputParams(outputs, body, meta)
           if (meta.isSuccess) Right(params) else Left(params)
         }
 
@@ -43,6 +33,23 @@ object EndpointToSttpClient {
 
       req2.asInstanceOf[Request[Either[E, O], Nothing]]
     })
+  }
+
+  private def getOutputParams(outputs: Vector[EndpointIO[_]], body: String, meta: ResponseMetadata): Any = {
+    val values = outputs
+      .map {
+        case EndpointIO.Body(m, _, _) =>
+          val so = if (m.isOptional && body == "") None else Some(body)
+          m.fromOptionalString(so).getOrThrow(InvalidOutput)
+
+        case EndpointIO.Header(name, m, _, _) =>
+          m.fromOptionalString(meta.header(name)).getOrThrow(InvalidOutput)
+
+        case EndpointIO.Mapped(wrapped, f, g, _) =>
+          f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingle, body, meta))
+      }
+
+    SeqToParams(values)
   }
 
   private def setInputParams[I](inputs: Vector[EndpointInput[_]],
@@ -90,6 +97,15 @@ object EndpointToSttpClient {
         )
 
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req2)
+    }
+  }
+
+  private def hasBody[O](io: EndpointIO[O]): Boolean = {
+    io match {
+      case _: EndpointIO.Body[_, _]            => true
+      case EndpointIO.Multiple(ios)            => ios.exists(hasBody(_))
+      case EndpointIO.Mapped(wrapped, _, _, _) => hasBody(wrapped)
+      case _                                   => false
     }
   }
 }
