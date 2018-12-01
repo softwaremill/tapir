@@ -18,7 +18,14 @@ case class Endpoint[I, E, O](method: Method,
   def name(s: String): Endpoint[I, E, O] = this.copy(name = Some(s))
 
   def get: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.GET)
+  def head: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.HEAD)
   def post: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.POST)
+  def put: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.PUT)
+  def delete: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.DELETE)
+  def options: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.OPTIONS)
+  def patch: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.PATCH)
+  def connect: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.CONNECT)
+  def trace: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.TRACE)
   def method(m: String): Endpoint[I, E, O] = this.copy[I, E, O](method = Method(m))
 
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O] =
