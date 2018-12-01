@@ -16,18 +16,18 @@ import scala.util.Random
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testClient(endpoint, (), Right(()))
-  testClient(in_query_out_text, "apple", Right("fruit: apple"))
-  testClient(in_query_query_out_text, ("apple", Some(10)), Right("fruit: apple 10"))
-  testClient(in_header_out_text, "Admin", Right("Role: Admin"))
-  testClient(in_path_path_out_text, ("apple", 10), Right("apple 10 None"))
-  testClient(in_text_out_text, "delicious", Right("delicious"))
-  testClient(in_mapped_query_out_text, "apple".toList, Right("fruit: apple"))
-  testClient(in_mapped_path_path_out_text, FruitAmount("apple", 10), Right("apple 10 None"))
-  testClient(in_query_mapped_path_path_out_text, (FruitAmount("apple", 10), "red"), Right("apple 10 Some(red)"))
-  testClient(in_query_out_mapped_text, "apple", Right("fruit: apple".toList))
-  testClient(in_query_out_mapped_text_header, "apple", Right(FruitAmount("fruit: apple", 5)))
-  testClient(in_json_out_text, FruitAmount("orange", 11), Right("""{"fruit":"orange","amount":11}"""))
-  testClient(in_text_out_json, """{"fruit":"banana","amount":12}""", Right(FruitAmount("banana", 12)))
+  testClient(in_query_out_string, "apple", Right("fruit: apple"))
+  testClient(in_query_query_out_string, ("apple", Some(10)), Right("fruit: apple 10"))
+  testClient(in_header_out_string, "Admin", Right("Role: Admin"))
+  testClient(in_path_path_out_string, ("apple", 10), Right("apple 10 None"))
+  testClient(in_string_out_string, "delicious", Right("delicious"))
+  testClient(in_mapped_query_out_string, "apple".toList, Right("fruit: apple"))
+  testClient(in_mapped_path_path_out_string, FruitAmount("apple", 10), Right("apple 10 None"))
+  testClient(in_query_mapped_path_path_out_string, (FruitAmount("apple", 10), "red"), Right("apple 10 Some(red)"))
+  testClient(in_query_out_mapped_string, "apple", Right("fruit: apple".toList))
+  testClient(in_query_out_mapped_string_header, "apple", Right(FruitAmount("fruit: apple", 5)))
+  testClient(in_json_out_string, FruitAmount("orange", 11), Right("""{"fruit":"orange","amount":11}"""))
+  testClient(in_string_out_json, """{"fruit":"banana","amount":12}""", Right(FruitAmount("banana", 12)))
 
   //
 

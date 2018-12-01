@@ -45,7 +45,7 @@ object Tests extends App {
     .in(query[String]("q1").description("A q1").and(query[Int]("q2").example(99)))
     .in(query[Option[String]]("q3"))
     .in(header[Int]("zzz"))
-    .out(textBody[String])
+    .out(stringBody)
     .out(header[Int]("yyy"))
 
   // TODO
