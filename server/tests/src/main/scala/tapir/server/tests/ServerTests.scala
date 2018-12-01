@@ -66,7 +66,11 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   testServer(in_json_out_text, (fa: FruitAmount) => pureResult(s"${fa.fruit} ${fa.amount}".asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/fruit/info").body("""{"fruit":"apple","amount":10}""").send().map(_.body shouldBe Right("apple 10"))
+    sttp.post(uri"$baseUri/fruit/info").body("""{"fruit":"orange","amount":11}""").send().map(_.body shouldBe Right("orange 11"))
+  }
+
+  testServer(in_text_out_json, (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/fruit/info").body("""banana 12""").send().map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
 
   //

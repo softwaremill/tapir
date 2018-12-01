@@ -36,4 +36,7 @@ package object tests {
 
   val in_json_out_text: Endpoint[FruitAmount, Unit, String] =
     endpoint.post.in("fruit" / "info").in(jsonBody[FruitAmount]).out(textBody[String])
+
+  val in_text_out_json: Endpoint[String, Unit, FruitAmount] =
+    endpoint.post.in("fruit" / "info").in(textBody[String]).out(jsonBody[FruitAmount])
 }
