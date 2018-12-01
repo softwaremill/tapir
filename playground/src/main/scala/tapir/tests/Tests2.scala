@@ -18,3 +18,14 @@ object Tests2 extends App {
   val docs = e.toOpenAPI("Example 1", "1.0")
   println(docs.toYaml)
 }
+
+/*
+TODO:
+ * object schemas grouped in components (object labels)
+ * in/out object schemas
+ * mapped type mappers
+ * human-friendly type errors
+ * better type inference in idea
+ * 404 test
+ * map input/output to a case class
+ */
