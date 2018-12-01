@@ -4,39 +4,39 @@ import io.circe.generic.auto._
 
 package object tests {
 
-  val in_query_out_text: Endpoint[String, Unit, String] = endpoint.in(query[String]("fruit")).out(textBody[String])
+  val in_query_out_string: Endpoint[String, Unit, String] = endpoint.in(query[String]("fruit")).out(stringBody)
 
-  val in_query_query_out_text: Endpoint[(String, Option[Int]), Unit, String] =
-    endpoint.in(query[String]("fruit")).in(query[Option[Int]]("amount")).out(textBody[String])
+  val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String] =
+    endpoint.in(query[String]("fruit")).in(query[Option[Int]]("amount")).out(stringBody)
 
-  val in_header_out_text: Endpoint[String, Unit, String] = endpoint.in(header[String]("X-Role")).out(textBody[String])
+  val in_header_out_string: Endpoint[String, Unit, String] = endpoint.in(header[String]("X-Role")).out(stringBody)
 
-  val in_path_path_out_text: Endpoint[(String, Int), Unit, String] =
-    endpoint.in("fruit" / path[String] / "amount" / path[Int]).out(textBody[String])
+  val in_path_path_out_string: Endpoint[(String, Int), Unit, String] =
+    endpoint.in("fruit" / path[String] / "amount" / path[Int]).out(stringBody)
 
-  val in_text_out_text: Endpoint[String, Unit, String] = endpoint.post.in("fruit" / "info").in(textBody[String]).out(textBody[String])
+  val in_string_out_string: Endpoint[String, Unit, String] = endpoint.post.in("fruit" / "info").in(stringBody).out(stringBody)
 
-  val in_mapped_query_out_text: Endpoint[List[Char], Unit, String] =
-    endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(textBody[String])
+  val in_mapped_query_out_string: Endpoint[List[Char], Unit, String] =
+    endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody)
 
-  val in_mapped_path_path_out_text: Endpoint[FruitAmount, Unit, String] =
-    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).map(FruitAmount.tupled)(fa => (fa.fruit, fa.amount))).out(textBody[String])
+  val in_mapped_path_path_out_string: Endpoint[FruitAmount, Unit, String] =
+    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).map(FruitAmount.tupled)(fa => (fa.fruit, fa.amount))).out(stringBody)
 
-  val in_query_mapped_path_path_out_text: Endpoint[(FruitAmount, String), Unit, String] = endpoint
+  val in_query_mapped_path_path_out_string: Endpoint[(FruitAmount, String), Unit, String] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).map(FruitAmount.tupled)(fa => (fa.fruit, fa.amount)))
     .in(query[String]("color"))
-    .out(textBody[String])
+    .out(stringBody)
 
-  val in_query_out_mapped_text: Endpoint[String, Unit, List[Char]] =
-    endpoint.in(query[String]("fruit")).out(textBody[String].map(_.toList)(_.mkString("")))
+  val in_query_out_mapped_string: Endpoint[String, Unit, List[Char]] =
+    endpoint.in(query[String]("fruit")).out(stringBody.map(_.toList)(_.mkString("")))
 
-  val in_query_out_mapped_text_header: Endpoint[String, Unit, FruitAmount] = endpoint
+  val in_query_out_mapped_string_header: Endpoint[String, Unit, FruitAmount] = endpoint
     .in(query[String]("fruit"))
-    .out(textBody[String].and(header[Int]("X-Role")).map(FruitAmount.tupled)(FruitAmount.unapply(_).get))
+    .out(stringBody.and(header[Int]("X-Role")).map(FruitAmount.tupled)(FruitAmount.unapply(_).get))
 
-  val in_json_out_text: Endpoint[FruitAmount, Unit, String] =
-    endpoint.post.in("fruit" / "info").in(jsonBody[FruitAmount]).out(textBody[String])
+  val in_json_out_string: Endpoint[FruitAmount, Unit, String] =
+    endpoint.post.in("fruit" / "info").in(jsonBody[FruitAmount]).out(stringBody)
 
-  val in_text_out_json: Endpoint[String, Unit, FruitAmount] =
-    endpoint.post.in("fruit" / "info").in(textBody[String]).out(jsonBody[FruitAmount])
+  val in_string_out_json: Endpoint[String, Unit, FruitAmount] =
+    endpoint.post.in("fruit" / "info").in(stringBody).out(jsonBody[FruitAmount])
 }

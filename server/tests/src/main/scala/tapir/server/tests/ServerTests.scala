@@ -17,36 +17,36 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(baseUri).send().map(_.body shouldBe Right(""))
   }
 
-  testServer(in_query_out_text, (fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
+  testServer(in_query_out_string, (fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("fruit: orange"))
   }
 
-  testServer(in_query_query_out_text, (fruit: String, amount: Option[Int]) => pureResult(s"$fruit $amount".asRight[Unit])) { baseUri =>
+  testServer(in_query_query_out_string, (fruit: String, amount: Option[Int]) => pureResult(s"$fruit $amount".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("orange None")) *>
       sttp.get(uri"$baseUri?fruit=orange&amount=10").send().map(_.body shouldBe Right("orange Some(10)"))
   }
 
-  testServer(in_header_out_text, (p1: String) => pureResult(s"$p1".asRight[Unit])) { baseUri =>
+  testServer(in_header_out_string, (p1: String) => pureResult(s"$p1".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri").header("X-Role", "Admin").send().map(_.body shouldBe Right("Admin"))
   }
 
-  testServer(in_path_path_out_text, (fruit: String, amount: Int) => pureResult(s"$fruit $amount".asRight[Unit])) { baseUri =>
+  testServer(in_path_path_out_string, (fruit: String, amount: Int) => pureResult(s"$fruit $amount".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri/fruit/orange/amount/20").send().map(_.body shouldBe Right("orange 20"))
   }
 
-  testServer(in_text_out_text, (b: String) => pureResult(b.asRight[Unit])) { baseUri =>
+  testServer(in_string_out_string, (b: String) => pureResult(b.asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/fruit/info").body("Sweet").send().map(_.body shouldBe Right("Sweet"))
   }
 
-  testServer(in_mapped_query_out_text, (fruit: List[Char]) => pureResult(s"fruit length: ${fruit.length}".asRight[Unit])) { baseUri =>
+  testServer(in_mapped_query_out_string, (fruit: List[Char]) => pureResult(s"fruit length: ${fruit.length}".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("fruit length: 6"))
   }
 
-  testServer(in_mapped_path_path_out_text, (p1: FruitAmount) => pureResult(s"FA: $p1".asRight[Unit])) { baseUri =>
+  testServer(in_mapped_path_path_out_string, (p1: FruitAmount) => pureResult(s"FA: $p1".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri/fruit/orange/amount/10").send().map(_.body shouldBe Right("FA: FruitAmount(orange,10)"))
   }
 
-  testServer(in_query_mapped_path_path_out_text, (fa: FruitAmount, color: String) => pureResult(s"FA: $fa color: $color".asRight[Unit])) {
+  testServer(in_query_mapped_path_path_out_string, (fa: FruitAmount, color: String) => pureResult(s"FA: $fa color: $color".asRight[Unit])) {
     baseUri =>
       sttp
         .get(uri"$baseUri/fruit/orange/amount/10?color=yellow")
@@ -54,22 +54,22 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
         .map(_.body shouldBe Right("FA: FruitAmount(orange,10) color: yellow"))
   }
 
-  testServer(in_query_out_mapped_text, (p1: String) => pureResult(p1.toList.asRight[Unit])) { baseUri =>
+  testServer(in_query_out_mapped_string, (p1: String) => pureResult(p1.toList.asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("orange"))
   }
 
-  testServer(in_query_out_mapped_text_header, (p1: String) => pureResult(FruitAmount(p1, p1.length).asRight[Unit])) { baseUri =>
+  testServer(in_query_out_mapped_string_header, (p1: String) => pureResult(FruitAmount(p1, p1.length).asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri?fruit=orange").send().map { r =>
       r.body shouldBe Right("orange")
       r.header("X-Role") shouldBe Some("6")
     }
   }
 
-  testServer(in_json_out_text, (fa: FruitAmount) => pureResult(s"${fa.fruit} ${fa.amount}".asRight[Unit])) { baseUri =>
+  testServer(in_json_out_string, (fa: FruitAmount) => pureResult(s"${fa.fruit} ${fa.amount}".asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/fruit/info").body("""{"fruit":"orange","amount":11}""").send().map(_.body shouldBe Right("orange 11"))
   }
 
-  testServer(in_text_out_json, (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit])) { baseUri =>
+  testServer(in_string_out_json, (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/fruit/info").body("""banana 12""").send().map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
 
