@@ -6,6 +6,7 @@ import org.http4s._
 import org.http4s.dsl.io._
 import org.http4s.server.Server
 import org.http4s.server.blaze.BlazeBuilder
+import org.http4s.util.CaseInsensitiveString
 import tapir._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
@@ -16,8 +17,8 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testClient(endpoint, (), Right(()))
   testClient(in_query_out_text, "apple", Right("fruit: apple"))
-  // TODO: in_query_query_out_text
-  // TODO: in_header_out_text
+  testClient(in_query_query_out_text, ("apple", Some(10)), Right("fruit: apple 10"))
+  testClient(in_header_out_text, "Admin", Right("Role: Admin"))
   testClient(in_path_path_out_text, ("apple", 10), Right("apple 10 None"))
   testClient(in_text_out_text, "delicious", Right("delicious"))
   testClient(in_mapped_query_out_text, "apple".toList, Right("fruit: apple"))
@@ -29,13 +30,19 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   //
 
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
+  private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
 
   private val service = HttpService[IO] {
-    case GET -> Root :? fruitParam(v)                                    => Ok(s"fruit: $v", Header("X-Role", v.length.toString))
-    case GET -> Root / "fruit" / v1 / "amount" / v2 :? colorOptParam(p1) => Ok(s"$v1 $v2 $p1")
-    case r @ POST -> Root / "fruit" / "info"                             => r.as[String].flatMap(Ok(_))
-    case GET -> Root                                                     => Ok()
+    case GET -> Root :? fruitParam(f) +& amountOptParam(a) =>
+      Ok(s"fruit: $f${a.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
+    case GET -> Root / "fruit" / f / "amount" / a :? colorOptParam(c) => Ok(s"$f $a $c")
+    case r @ POST -> Root / "fruit" / "info"                          => r.as[String].flatMap(Ok(_))
+    case r @ GET -> Root =>
+      r.headers.get(CaseInsensitiveString("X-Role")) match {
+        case None    => Ok()
+        case Some(h) => Ok("Role: " + h.value)
+      }
   }
 
   //
