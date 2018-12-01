@@ -17,47 +17,51 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(baseUri).send().map(_.body shouldBe Right(""))
   }
 
-  testServer(singleQueryParam, (p1: String) => pureResult(s"param1: $p1".asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("param1: value1"))
+  testServer(in_query_out_text, (fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("fruit: orange"))
   }
 
-  testServer(twoQueryParams, (p1: String, p2: Option[Int]) => pureResult(s"$p1 $p2".asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("value1 None")) *>
-      sttp.get(uri"$baseUri?param1=value1&param2=10").send().map(_.body shouldBe Right("value1 Some(10)"))
+  testServer(in_query_query_out_text, (fruit: String, amount: Option[Int]) => pureResult(s"$fruit $amount".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("orange None")) *>
+      sttp.get(uri"$baseUri?fruit=orange&amount=10").send().map(_.body shouldBe Right("orange Some(10)"))
   }
 
-  testServer(singleHeader, (p1: String) => pureResult(s"$p1".asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri").header("test-header", "test-value").send().map(_.body shouldBe Right("test-value"))
+  testServer(in_header_out_text, (p1: String) => pureResult(s"$p1".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri").header("X-Role", "Admin").send().map(_.body shouldBe Right("Admin"))
   }
 
-  testServer(twoPathParams, (p1: String, p2: Int) => pureResult(s"$p1 $p2".asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri/api/p1/user/20").send().map(_.body shouldBe Right("p1 20"))
+  testServer(in_path_path_out_text, (fruit: String, amount: Int) => pureResult(s"$fruit $amount".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/fruit/orange/amount/20").send().map(_.body shouldBe Right("orange 20"))
   }
 
-  testServer(singleBody, (b: String) => pureResult(b.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/echo/body").body("test").send().map(_.body shouldBe Right("test"))
+  testServer(in_text_out_text, (b: String) => pureResult(b.asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/fruit/info").body("Sweet").send().map(_.body shouldBe Right("Sweet"))
   }
 
-  testServer(singleMappedValue, (p1: List[Char]) => pureResult(s"param1 count: ${p1.length}".asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("param1 count: 6"))
+  testServer(in_mapped_query_out_text, (fruit: List[Char]) => pureResult(s"fruit length: ${fruit.length}".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("fruit length: 6"))
   }
 
-  testServer(twoMappedValues, (p1: StringInt) => pureResult(s"p1: $p1".asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri/api/v1/user/10").send().map(_.body shouldBe Right("p1: StringInt(v1,10)"))
+  testServer(in_mapped_path_path_out_text, (p1: FruitAmount) => pureResult(s"FA: $p1".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/fruit/orange/amount/10").send().map(_.body shouldBe Right("FA: FruitAmount(orange,10)"))
   }
 
-  testServer(twoMappedValuesAndUnmapped, (p1: StringInt, p2: String) => pureResult(s"p1: $p1 p2: $p2".asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri/api/v1/user/10?param1=v1").send().map(_.body shouldBe Right("p1: StringInt(v1,10) p2: v1"))
+  testServer(in_query_mapped_path_path_out_text, (fa: FruitAmount, color: String) => pureResult(s"FA: $fa color: $color".asRight[Unit])) {
+    baseUri =>
+      sttp
+        .get(uri"$baseUri/fruit/orange/amount/10?color=yellow")
+        .send()
+        .map(_.body shouldBe Right("FA: FruitAmount(orange,10) color: yellow"))
   }
 
-  testServer(singleOutMappedValue, (p1: String) => pureResult(p1.toList.asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri?param1=value1").send().map(_.body shouldBe Right("value1"))
+  testServer(in_query_out_mapped_text, (p1: String) => pureResult(p1.toList.asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("orange"))
   }
 
-  testServer(twoOutMappedValues, (p1: String) => pureResult(StringInt(p1, p1.length).asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri?param1=value1").send().map { r =>
-      r.body shouldBe Right("value1")
-      r.header("test-header") shouldBe Some("6")
+  testServer(in_query_out_mapped_text_header, (p1: String) => pureResult(FruitAmount(p1, p1.length).asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri?fruit=orange").send().map { r =>
+      r.body shouldBe Right("orange")
+      r.header("X-Role") shouldBe Some("6")
     }
   }
 

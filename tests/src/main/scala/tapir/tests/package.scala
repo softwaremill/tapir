@@ -2,32 +2,33 @@ package tapir
 
 package object tests {
 
-  val singleQueryParam: Endpoint[String, Unit, String] = endpoint.in(query[String]("param1")).out(textBody[String])
+  val in_query_out_text: Endpoint[String, Unit, String] = endpoint.in(query[String]("fruit")).out(textBody[String])
 
-  val twoQueryParams: Endpoint[(String, Option[Int]), Unit, String] =
-    endpoint.in(query[String]("param1")).in(query[Option[Int]]("param2")).out(textBody[String])
+  val in_query_query_out_text: Endpoint[(String, Option[Int]), Unit, String] =
+    endpoint.in(query[String]("fruit")).in(query[Option[Int]]("amount")).out(textBody[String])
 
-  val singleHeader: Endpoint[String, Unit, String] = endpoint.in(header[String]("test-header")).out(textBody[String])
+  val in_header_out_text: Endpoint[String, Unit, String] = endpoint.in(header[String]("X-Role")).out(textBody[String])
 
-  val twoPathParams: Endpoint[(String, Int), Unit, String] = endpoint.in("api" / path[String] / "user" / path[Int]).out(textBody[String])
+  val in_path_path_out_text: Endpoint[(String, Int), Unit, String] =
+    endpoint.in("fruit" / path[String] / "amount" / path[Int]).out(textBody[String])
 
-  val singleBody: Endpoint[String, Unit, String] = endpoint.post.in("echo" / "body").in(textBody[String]).out(textBody[String])
+  val in_text_out_text: Endpoint[String, Unit, String] = endpoint.post.in("fruit" / "info").in(textBody[String]).out(textBody[String])
 
-  val singleMappedValue: Endpoint[List[Char], Unit, String] =
-    endpoint.in(query[String]("param1").map(_.toList)(_.mkString(""))).out(textBody[String])
+  val in_mapped_query_out_text: Endpoint[List[Char], Unit, String] =
+    endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(textBody[String])
 
-  val twoMappedValues: Endpoint[StringInt, Unit, String] =
-    endpoint.in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i))).out(textBody[String])
+  val in_mapped_path_path_out_text: Endpoint[FruitAmount, Unit, String] =
+    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).map(FruitAmount.tupled)(fa => (fa.fruit, fa.amount))).out(textBody[String])
 
-  val twoMappedValuesAndUnmapped: Endpoint[(StringInt, String), Unit, String] = endpoint
-    .in(("api" / path[String] / "user" / path[Int]).map(StringInt.tupled)(si => (si.s, si.i)))
-    .in(query[String]("param1"))
+  val in_query_mapped_path_path_out_text: Endpoint[(FruitAmount, String), Unit, String] = endpoint
+    .in(("fruit" / path[String] / "amount" / path[Int]).map(FruitAmount.tupled)(fa => (fa.fruit, fa.amount)))
+    .in(query[String]("color"))
     .out(textBody[String])
 
-  val singleOutMappedValue: Endpoint[String, Unit, List[Char]] =
-    endpoint.in(query[String]("param1")).out(textBody[String].map(_.toList)(_.mkString("")))
+  val in_query_out_mapped_text: Endpoint[String, Unit, List[Char]] =
+    endpoint.in(query[String]("fruit")).out(textBody[String].map(_.toList)(_.mkString("")))
 
-  val twoOutMappedValues: Endpoint[String, Unit, StringInt] = endpoint
-    .in(query[String]("param1"))
-    .out(textBody[String].and(header[Int]("test-header")).map(StringInt.tupled)(StringInt.unapply(_).get))
+  val in_query_out_mapped_text_header: Endpoint[String, Unit, FruitAmount] = endpoint
+    .in(query[String]("fruit"))
+    .out(textBody[String].and(header[Int]("X-Role")).map(FruitAmount.tupled)(FruitAmount.unapply(_).get))
 }
