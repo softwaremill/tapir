@@ -59,12 +59,6 @@ object EndpointInput {
       }
     def show: String = if (inputs.isEmpty) "-" else inputs.map(_.show).mkString(" ")
   }
-  object Multiple { // TODO remove?
-    def apply[I](input: EndpointInput[I]): Multiple[I] = input match {
-      case s: Single[I]   => Multiple(Vector(s))
-      case m: Multiple[_] => m
-    }
-  }
 }
 
 sealed trait EndpointIO[I] extends EndpointInput[I] {
@@ -120,11 +114,5 @@ object EndpointIO {
         case Multiple(m)  => Multiple(ios ++ m)
       }
     def show: String = if (ios.isEmpty) "-" else ios.map(_.show).mkString(" ")
-  }
-  object Multiple {
-    def apply[I](io: EndpointIO[I]): Multiple[I] = io match {
-      case s: Single[I]   => Multiple(Vector(s))
-      case m: Multiple[_] => m
-    }
   }
 }
