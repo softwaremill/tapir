@@ -15,25 +15,27 @@ import scala.util.Random
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testClient(endpoint, (), Right(()))
-  testClient(singleQueryParam, "value1", Right("param1: value1"))
-  testClient(twoPathParams, ("v1", 10), Right("v1 10 None"))
-  testClient(singleBody, "test", Right("test"))
-  testClient(singleMappedValue, "value1".toList, Right("param1: value1"))
-  testClient(twoMappedValues, StringInt("v1", 10), Right("v1 10 None"))
-  testClient(twoMappedValuesAndUnmapped, (StringInt("v1", 10), "p1"), Right("v1 10 Some(p1)"))
-  testClient(singleOutMappedValue, "value1", Right("param1: value1".toList))
-  testClient(twoOutMappedValues, "value1", Right(StringInt("param1: value1", 6)))
+  testClient(in_query_out_text, "apple", Right("fruit: apple"))
+  // TODO: in_query_query_out_text
+  // TODO: in_header_out_text
+  testClient(in_path_path_out_text, ("apple", 10), Right("apple 10 None"))
+  testClient(in_text_out_text, "delicious", Right("delicious"))
+  testClient(in_mapped_query_out_text, "apple".toList, Right("fruit: apple"))
+  testClient(in_mapped_path_path_out_text, FruitAmount("apple", 10), Right("apple 10 None"))
+  testClient(in_query_mapped_path_path_out_text, (FruitAmount("apple", 10), "red"), Right("apple 10 Some(red)"))
+  testClient(in_query_out_mapped_text, "apple", Right("fruit: apple".toList))
+  testClient(in_query_out_mapped_text_header, "apple", Right(FruitAmount("fruit: apple", 5)))
 
   //
 
-  private object param1 extends QueryParamDecoderMatcher[String]("param1")
-  private object param1Opt extends OptionalQueryParamDecoderMatcher[String]("param1")
+  private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
+  private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
 
   private val service = HttpService[IO] {
-    case GET -> Root :? param1(v)                                => Ok(s"param1: $v", Header("test-header", v.length.toString))
-    case GET -> Root / "api" / v1 / "user" / v2 :? param1Opt(p1) => Ok(s"$v1 $v2 $p1")
-    case r @ POST -> Root / "echo" / "body"                      => r.as[String].flatMap(Ok(_))
-    case GET -> Root                                             => Ok()
+    case GET -> Root :? fruitParam(v)                                    => Ok(s"fruit: $v", Header("X-Role", v.length.toString))
+    case GET -> Root / "fruit" / v1 / "amount" / v2 :? colorOptParam(p1) => Ok(s"$v1 $v2 $p1")
+    case r @ POST -> Root / "fruit" / "info"                             => r.as[String].flatMap(Ok(_))
+    case GET -> Root                                                     => Ok()
   }
 
   //
