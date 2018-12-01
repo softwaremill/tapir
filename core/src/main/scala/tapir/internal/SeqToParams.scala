@@ -10,7 +10,7 @@ private[tapir] object SeqToParams {
       case Seq(v1, v2, v3, v4)         => (v1, v2, v3, v4)
       case Seq(v1, v2, v3, v4, v5)     => (v1, v2, v3, v4, v5)
       case Seq(v1, v2, v3, v4, v5, v6) => (v1, v2, v3, v4, v5, v6)
-      case _                           => throw new IllegalArgumentException(s"Cannot convert $seq to a tuple!")
+      case _                           => throw new IllegalArgumentException(s"Cannot convert $seq to params!")
     }
   }
 }
