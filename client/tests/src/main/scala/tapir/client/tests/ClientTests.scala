@@ -26,7 +26,8 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_query_mapped_path_path_out_text, (FruitAmount("apple", 10), "red"), Right("apple 10 Some(red)"))
   testClient(in_query_out_mapped_text, "apple", Right("fruit: apple".toList))
   testClient(in_query_out_mapped_text_header, "apple", Right(FruitAmount("fruit: apple", 5)))
-  testClient(in_json_out_text, FruitAmount("apple", 10), Right("""{"fruit":"apple","amount":10}"""))
+  testClient(in_json_out_text, FruitAmount("orange", 11), Right("""{"fruit":"orange","amount":11}"""))
+  testClient(in_text_out_json, """{"fruit":"banana","amount":12}""", Right(FruitAmount("banana", 12)))
 
   //
 
