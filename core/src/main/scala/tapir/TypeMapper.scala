@@ -10,6 +10,16 @@ trait TypeMapper[T, M <: MediaType] {
   def isOptional: Boolean
   def schema: Schema
   def mediaType: M
+
+  def map[TT](f: T => TT)(g: TT => T): TypeMapper[TT, M] = new MappedTypeMapper[T, TT, M](this, f, g)
+}
+
+class MappedTypeMapper[T, TT, M <: MediaType](nested: TypeMapper[T, M], f: T => TT, g: TT => T) extends TypeMapper[TT, M] {
+  override def toOptionalString(t: TT): Option[String] = nested.toOptionalString(g(t))
+  override def fromOptionalString(s: Option[String]): DecodeResult[TT] = nested.fromOptionalString(s).map(f)
+  override def isOptional: Boolean = nested.isOptional
+  override def schema: Schema = nested.schema
+  override def mediaType: M = nested.mediaType
 }
 
 trait RequiredTypeMapper[T, M <: MediaType] extends TypeMapper[T, M] { // type mapper can provide restrictions on what kind of formats it might use? Basic/Extended
