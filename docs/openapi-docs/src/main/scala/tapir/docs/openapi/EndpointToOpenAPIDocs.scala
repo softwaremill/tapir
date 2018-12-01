@@ -21,7 +21,7 @@ object EndpointToOpenAPIDocs {
   private def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
     import Method._
 
-    val pathComponents = e.input.inputs.flatMap {
+    val pathComponents = e.input.asVectorOfSingle.flatMap {
       case EndpointInput.PathCapture(_, name, _, _) => Some(s"{${name.getOrElse("-")}}")
       case EndpointInput.PathSegment(s)             => Some(s)
       case _                                        => None
@@ -66,7 +66,7 @@ object EndpointToOpenAPIDocs {
 
   private def operation(defaultId: String, e: Endpoint[_, _, _]): Operation = {
 
-    val parameters = e.input.inputs.flatMap {
+    val parameters = e.input.asVectorOfSingle.flatMap {
       case EndpointInput.Query(n, tm, d, ex) =>
         Some(
           Parameter(n,
