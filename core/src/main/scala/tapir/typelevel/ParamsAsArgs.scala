@@ -6,6 +6,7 @@ import scala.annotation.implicitNotFound
   * View parameters (single type or a tuple) as arguments of a function of the appropriate arity.
   */
 trait ParamsAsArgs[I] {
+  // FN[R] = (I as args) => R
   type FN[_]
 
   def toFn[O](f: I => O): FN[O]

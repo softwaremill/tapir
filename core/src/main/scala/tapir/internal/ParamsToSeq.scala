@@ -8,9 +8,8 @@ private[tapir] object ParamsToSeq {
       case (v1, v2, v3, v4)         => Seq(v1, v2, v3, v4)
       case (v1, v2, v3)             => Seq(v1, v2, v3)
       case (v1, v2)                 => Seq(v1, v2)
-      case v1                       => Seq(v1)
       case ()                       => Seq()
-      case _                        => throw new IllegalArgumentException(s"Cannot convert $a to a sequence!")
+      case v1                       => Seq(v1) // single value is a catch-all so must be last
     }
   }
 }
