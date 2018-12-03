@@ -1,14 +1,21 @@
 package tapir
 
 import tapir.TypeMapper.{RequiredTextTypeMapper, TextTypeMapper}
-import tapir.typelevel.{ParamConcat, ParamsAsArgs}
+import tapir.internal.ProductToParams
+import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
   def /[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
   def show: String
+
   def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[II] =
     EndpointInput.Mapped(this, f, g, paramsAsArgs)
+
+  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
+                                                            paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
+    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
+  }
 
   private[tapir] def asVectorOfSingle: Vector[EndpointInput.Single[_]] = this match {
     case s: EndpointInput.Single[_]   => Vector(s)
@@ -66,6 +73,11 @@ sealed trait EndpointIO[I] extends EndpointInput[I] {
   def show: String
   override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
     EndpointIO.Mapped(this, f, g, paramsAsArgs)
+
+  override def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
+                                                                     paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
+    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
+  }
 
   private[tapir] override def asVectorOfSingle: Vector[EndpointIO.Single[_]] = this match {
     case s: EndpointIO.Single[_]   => Vector(s)

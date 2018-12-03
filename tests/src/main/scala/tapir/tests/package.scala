@@ -19,11 +19,14 @@ package object tests {
   val in_mapped_query_out_string: Endpoint[List[Char], Unit, String] =
     endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody)
 
+  val in_mapped_path_out_string: Endpoint[Fruit, Unit, String] =
+    endpoint.in(("fruit" / path[String]).mapTo(Fruit)).out(stringBody)
+
   val in_mapped_path_path_out_string: Endpoint[FruitAmount, Unit, String] =
-    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).map(FruitAmount.tupled)(fa => (fa.fruit, fa.amount))).out(stringBody)
+    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount)).out(stringBody)
 
   val in_query_mapped_path_path_out_string: Endpoint[(FruitAmount, String), Unit, String] = endpoint
-    .in(("fruit" / path[String] / "amount" / path[Int]).map(FruitAmount.tupled)(fa => (fa.fruit, fa.amount)))
+    .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))
     .out(stringBody)
 
@@ -32,7 +35,7 @@ package object tests {
 
   val in_query_out_mapped_string_header: Endpoint[String, Unit, FruitAmount] = endpoint
     .in(query[String]("fruit"))
-    .out(stringBody.and(header[Int]("X-Role")).map(FruitAmount.tupled)(FruitAmount.unapply(_).get))
+    .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
 
   val in_json_out_string: Endpoint[FruitAmount, Unit, String] =
     endpoint.post.in("fruit" / "info").in(jsonBody[FruitAmount]).out(stringBody)

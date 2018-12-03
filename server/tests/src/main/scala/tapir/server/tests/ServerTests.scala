@@ -42,6 +42,10 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("fruit length: 6"))
   }
 
+  testServer(in_mapped_path_out_string, (fruit: Fruit) => pureResult(s"$fruit".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/fruit/kiwi").send().map(_.body shouldBe Right("Fruit(kiwi)"))
+  }
+
   testServer(in_mapped_path_path_out_string, (p1: FruitAmount) => pureResult(s"FA: $p1".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri/fruit/orange/amount/10").send().map(_.body shouldBe Right("FA: FruitAmount(orange,10)"))
   }

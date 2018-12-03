@@ -22,6 +22,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_path_path_out_string, ("apple", 10), Right("apple 10 None"))
   testClient(in_string_out_string, "delicious", Right("delicious"))
   testClient(in_mapped_query_out_string, "apple".toList, Right("fruit: apple"))
+  testClient(in_mapped_path_out_string, Fruit("kiwi"), Right("kiwi"))
   testClient(in_mapped_path_path_out_string, FruitAmount("apple", 10), Right("apple 10 None"))
   testClient(in_query_mapped_path_path_out_string, (FruitAmount("apple", 10), "red"), Right("apple 10 Some(red)"))
   testClient(in_query_out_mapped_string, "apple", Right("fruit: apple".toList))
@@ -38,6 +39,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   private val service = HttpService[IO] {
     case GET -> Root :? fruitParam(f) +& amountOptParam(a) =>
       Ok(s"fruit: $f${a.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
+    case GET -> Root / "fruit" / f                                    => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / a :? colorOptParam(c) => Ok(s"$f $a $c")
     case r @ POST -> Root / "fruit" / "info"                          => r.as[String].flatMap(Ok(_))
     case r @ GET -> Root =>
