@@ -11,11 +11,7 @@ case class Endpoint[I, E, O](method: Method,
                              input: EndpointInput[I],
                              errorOutput: EndpointIO[E],
                              output: EndpointIO[O],
-                             name: Option[String],
-                             summary: Option[String],
-                             description: Option[String],
-                             tags: Vector[String]) {
-  def name(s: String): Endpoint[I, E, O] = this.copy(name = Some(s))
+                             info: EndpointInfo) {
 
   def get: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.GET)
   def head: Endpoint[I, E, O] = this.copy[I, E, O](method = Method.HEAD)
@@ -55,11 +51,22 @@ case class Endpoint[I, E, O](method: Method,
                                                                paramsAsArgs: ParamsAsArgs[O]): Endpoint[I, E, CASE_CLASS] =
     this.copy[I, E, CASE_CLASS](output = output.mapTo(c)(fc, paramsAsArgs))
 
-  def summary(s: String): Endpoint[I, E, O] = copy(summary = Some(s))
-  def description(d: String): Endpoint[I, E, O] = copy(description = Some(d))
-  def tags(ts: List[String]): Endpoint[I, E, O] = copy(tags = tags ++ ts)
-  def tag(t: String): Endpoint[I, E, O] = copy(tags = tags :+ t)
+  def name(n: String): Endpoint[I, E, O] = copy(info = info.name(n))
+  def summary(s: String): Endpoint[I, E, O] = copy(info = info.summary(s))
+  def description(d: String): Endpoint[I, E, O] = copy(info = info.description(d))
+  def tags(ts: List[String]): Endpoint[I, E, O] = copy(info = info.tags(ts))
+  def tag(t: String): Endpoint[I, E, O] = copy(info = info.tag(t))
+
+  def info(i: EndpointInfo): Endpoint[I, E, O] = copy(info = i)
 
   def show: String =
-    s"Endpoint${name.map("[" + _ + "]").getOrElse("")}(${method.m}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
+    s"Endpoint${info.name.map("[" + _ + "]").getOrElse("")}(${method.m}, in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
+}
+
+case class EndpointInfo(name: Option[String], summary: Option[String], description: Option[String], tags: Vector[String]) {
+  def name(n: String): EndpointInfo = this.copy(name = Some(n))
+  def summary(s: String): EndpointInfo = copy(summary = Some(s))
+  def description(d: String): EndpointInfo = copy(description = Some(d))
+  def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
+  def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
 }
