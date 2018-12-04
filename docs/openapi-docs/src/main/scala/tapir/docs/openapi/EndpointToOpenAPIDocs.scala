@@ -112,9 +112,9 @@ object EndpointToOpenAPIDocs {
         }
       ).flatten.toMap
 
-    Operation(noneIfEmpty(e.tags.toList),
-              e.summary,
-              e.description,
+    Operation(noneIfEmpty(e.info.tags.toList),
+              e.info.summary,
+              e.info.description,
               defaultId,
               noneIfEmpty(parameters.toList.map(Right(_))),
               None,

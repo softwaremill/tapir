@@ -33,11 +33,6 @@ object Tests extends App {
   //  // verify that there's only one body + that query params aren't repeated?
   //  val inputs = qp.and(hp).and(bp) // andUsing(combineFn)
 
-  //  def json[T]: TypeMapper[T]
-  //
-  //  case class User(name: String, age: Int)
-  //  implicit val userType: TypeMapper[User] = json[User]  // TODO.sample(User("x"))
-
   val p = "x" / path[String]("p1") / "z"
 
   val e: Endpoint[(String, Int, String, Int, Option[String], Int), Unit, (String, Int)] = endpoint.get
@@ -47,15 +42,6 @@ object Tests extends App {
     .in(header[Int]("zzz"))
     .out(stringBody)
     .out(header[Int]("yyy"))
-
-  // TODO
-  //    .in(query[Int]("x"))
-  //    .in(inputs)
-  //    .in(header("Cookie"))
-  //    .out[String]
-  //    .outError[ProductError] // for 4xx status codes
-  //    .name("xz") // name optional
-  //    .description("...")
 
   val r: Route = e.toRoute(
     (i: String, s: Int, p1: String, p2: Int, p3: Option[String], h1: Int) =>
@@ -72,14 +58,6 @@ object Tests extends App {
   println("YYY")
 
   // TEST
-
-//  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, Future, String => Future[Either[Unit, Int]]]]
-
-  case class RX[T, S]()
-//  implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, RX[?, Unit], String => RX[Either[Unit, Int], Unit]]]
-
-  type RR[X] = Request[X, Nothing]
-  //implicitly[EndpointLogicFn[String :: HNil, HNil, Int :: HNil, RR, String => RR[Either[Unit, Int]]]]
 
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val materializer: ActorMaterializer = ActorMaterializer()

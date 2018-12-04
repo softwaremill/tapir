@@ -29,9 +29,6 @@ package object tapir {
       EndpointInput.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),
-      None,
-      None,
-      None,
-      Vector.empty
+      EndpointInfo(None, None, None, Vector.empty)
     )
 }
