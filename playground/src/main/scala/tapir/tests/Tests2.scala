@@ -26,5 +26,4 @@ TODO:
  * human-friendly type errors
  * better type inference in idea
  * 404 test
- * map input/output to a case class
  */

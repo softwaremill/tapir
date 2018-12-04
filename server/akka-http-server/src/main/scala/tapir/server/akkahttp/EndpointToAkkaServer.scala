@@ -92,6 +92,15 @@ object EndpointToAkkaServer {
                 ctx: RequestContext,
                 canRemoveSlash: Boolean,
                 body: String): Option[MatchResult] = {
+
+      def handleMapped[II, T](wrapped: EndpointInput[II], f: II => T, inputsTail: Vector[EndpointInput.Single[_]]): Option[MatchResult] = {
+        doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap { result =>
+          doMatch(inputsTail, result.ctx, result.canRemoveSlash, body).map {
+            _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
+          }
+        }
+      }
+
       inputs match {
         case Vector() => Some(MatchResult(Nil, ctx, canRemoveSlash))
         case EndpointInput.PathSegment(ss) +: inputsTail =>
@@ -141,19 +150,11 @@ object EndpointToAkkaServer {
             case _ => None
           }
         case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
-          doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap { result =>
-            doMatch(inputsTail, result.ctx, result.canRemoveSlash, body).map {
-              _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
-            }
-          }
-        // TODO
-//        case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
-//          doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap { result =>
-//            doMatch(inputsTail, result.ctx, result.canRemoveSlash, body).map {
-//              _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
-//            }
-//          }
+          handleMapped(wrapped, f, inputsTail)
+        case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
+          handleMapped(wrapped, f, inputsTail)
       }
+
     }
 
     val inputDirectives: Directive1[I] = {
@@ -177,6 +178,7 @@ object EndpointToAkkaServer {
       case _: EndpointIO.Body[_, _]               => true
       case EndpointInput.Multiple(inputs)         => inputs.exists(hasBody(_))
       case EndpointInput.Mapped(wrapped, _, _, _) => hasBody(wrapped)
+      case EndpointIO.Mapped(wrapped, _, _, _)    => hasBody(wrapped)
       case _                                      => false
     }
   }
