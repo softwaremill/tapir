@@ -42,4 +42,20 @@ package object tests {
 
   val in_string_out_json: Endpoint[String, Unit, FruitAmount] =
     endpoint.post.in("fruit" / "info").in(stringBody).out(jsonBody[FruitAmount])
+
+  val allTestEndpoints = List(
+    in_query_out_string,
+    in_query_query_out_string,
+    in_header_out_string,
+    in_path_path_out_string,
+    in_string_out_string,
+    in_mapped_query_out_string,
+    in_mapped_path_out_string,
+    in_mapped_path_path_out_string,
+    in_query_mapped_path_path_out_string,
+    in_query_out_mapped_string,
+    in_query_out_mapped_string_header,
+    in_json_out_string,
+    in_string_out_json
+  )
 }

@@ -58,6 +58,23 @@ object EndpointToSttpClient {
                                 paramIndex: Int,
                                 uri: Uri,
                                 req: PartialRequest[Either[Any, Any], Nothing]): (Uri, PartialRequest[Either[Any, Any], Nothing]) = {
+
+    def handleMapped[II, T](wrapped: EndpointInput[II],
+                            g: T => II,
+                            wrappedParamsAsArgs: ParamsAsArgs[II],
+                            tail: Vector[EndpointInput.Single[_]]): (Uri, PartialRequest[Either[Any, Any], Nothing]) = {
+      val (uri2, req2) = setInputParams(
+        wrapped.asVectorOfSingle,
+        g(paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[T]),
+        wrappedParamsAsArgs,
+        0,
+        uri,
+        req
+      )
+
+      setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req2)
+    }
+
     inputs match {
       case Vector() => (uri, req)
       case EndpointInput.PathSegment(p) +: tail =>
@@ -87,16 +104,9 @@ object EndpointToSttpClient {
           .getOrElse(req)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointInput.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
-        val (uri2, req2) = setInputParams(
-          wrapped.asVectorOfSingle,
-          g(paramsAsArgs.paramAt(params, paramIndex)),
-          wrappedParamsAsArgs,
-          0,
-          uri,
-          req
-        )
-
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req2)
+        handleMapped(wrapped, g, wrappedParamsAsArgs, tail)
+      case EndpointIO.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
+        handleMapped(wrapped, g, wrappedParamsAsArgs, tail)
     }
   }
 
