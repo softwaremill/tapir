@@ -4,6 +4,7 @@ import tapir._
 import tapir.docs.openapi._
 import tapir.openapi.circe.yaml._
 import io.circe.generic.auto._
+import tapir.json.circe._
 
 object Tests2 extends App {
   case class Address(street: String, number: Option[Int])

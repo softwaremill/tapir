@@ -1,6 +1,7 @@
 package tapir
 
 import io.circe.generic.auto._
+import tapir.json.circe._
 
 package object tests {
 
