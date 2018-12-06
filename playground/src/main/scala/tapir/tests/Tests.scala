@@ -6,13 +6,11 @@ import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import com.softwaremill.sttp.{Request, RequestT}
 import com.softwaremill.sttp.akkahttp.AkkaHttpBackend
 import tapir._
 import tapir.server.akkahttp._
 import tapir.client.sttp._
 import tapir.docs.openapi._
-import shapeless._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._

@@ -22,9 +22,6 @@ lazy val core: Project = (project in file("core"))
   .settings(
     name := "core",
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % circeVersion,
-      "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
       "com.propensive" %% "magnolia" % "0.10.0",
       scalaTest % "test"
     )
@@ -36,6 +33,21 @@ lazy val tests: Project = (project in file("tests"))
     name := "tests",
     publishArtifact := false,
     libraryDependencies ++= Seq(scalaTest, "ch.qos.logback" % "logback-classic" % "1.2.3")
+  )
+  .dependsOn(core, circeJson)
+
+// json
+
+lazy val circeJson: Project = (project in file("json/circe"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "json-circe",
+    publishArtifact := false,
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % circeVersion,
+      "io.circe" %% "circe-generic" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion,
+    )
   )
   .dependsOn(core)
 
@@ -141,4 +153,4 @@ lazy val playground: Project = (project in file("playground"))
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion
     )
   )
-  .dependsOn(akkaHttpServer, sttpClient, openapiCirceYaml, openapiDocs)
+  .dependsOn(akkaHttpServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)
