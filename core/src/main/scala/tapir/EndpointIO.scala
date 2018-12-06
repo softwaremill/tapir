@@ -20,6 +20,7 @@ sealed trait EndpointInput[I] {
   private[tapir] def asVectorOfSingle: Vector[EndpointInput.Single[_]] = this match {
     case s: EndpointInput.Single[_]   => Vector(s)
     case m: EndpointInput.Multiple[_] => m.inputs
+    case m: EndpointIO.Multiple[_]    => m.ios
   }
 }
 
@@ -27,8 +28,9 @@ object EndpointInput {
   sealed trait Single[I] extends EndpointInput[I] {
     def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] =
       other match {
-        case s: Single[_]     => Multiple(Vector(this, s))
-        case Multiple(inputs) => Multiple(this +: inputs)
+        case s: Single[_]             => Multiple(Vector(this, s))
+        case Multiple(inputs)         => Multiple(this +: inputs)
+        case EndpointIO.Multiple(ios) => Multiple(this +: ios)
       }
   }
 
@@ -61,8 +63,9 @@ object EndpointInput {
   case class Multiple[I](inputs: Vector[Single[_]]) extends EndpointInput[I] {
     override def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput.Multiple[IJ] =
       other match {
-        case s: Single[_] => Multiple(inputs :+ s)
-        case Multiple(m)  => Multiple(inputs ++ m)
+        case s: Single[_]           => Multiple(inputs :+ s)
+        case Multiple(m)            => Multiple(inputs ++ m)
+        case EndpointIO.Multiple(m) => Multiple(inputs ++ m)
       }
     def show: String = if (inputs.isEmpty) "-" else inputs.map(_.show).mkString(" ")
   }
@@ -119,6 +122,7 @@ object EndpointIO {
       other match {
         case s: EndpointInput.Single[_] => EndpointInput.Multiple((ios: Vector[EndpointInput.Single[_]]) :+ s)
         case EndpointInput.Multiple(m)  => EndpointInput.Multiple((ios: Vector[EndpointInput.Single[_]]) ++ m)
+        case EndpointIO.Multiple(m)     => EndpointInput.Multiple((ios: Vector[EndpointInput.Single[_]]) ++ m)
       }
     override def and[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Multiple[IJ] =
       other match {
