@@ -79,3 +79,19 @@ There's a number of similar projects from which Tapir draws inspiration:
 * coproducts/sealed trait families/discriminators in object hierarchies
 * support for OpenAPI's formats (base64, binary, email, ...)
 * ... and much more :)
+
+## Creating your own Tapir
+
+Tapir uses a number of packages which contain either the data classes for describing endpoints or interpreters
+of this data (turning endpoints into a server or a client). Importing these packages every time you want to use Tapir
+may be tedious, that's why each package object inherits all of its functionality from a trait.
+
+Hence, it is possible to create your own object which combines all of the required functionalities and provides
+a single-import whenever you want to use Tapir. For example:
+
+```
+object MyTapir extends AkkaHttpServer
+  with SttpClient
+  with CirceJson
+  with OpenAPICirceYaml
+```
