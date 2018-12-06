@@ -22,7 +22,7 @@ class MappedTypeMapper[T, TT, M <: MediaType](nested: TypeMapper[T, M], f: T => 
   override def mediaType: M = nested.mediaType
 }
 
-trait RequiredTypeMapper[T, M <: MediaType] extends TypeMapper[T, M] { // type mapper can provide restrictions on what kind of formats it might use? Basic/Extended
+trait RequiredTypeMapper[T, M <: MediaType] extends TypeMapper[T, M] {
   def toString(t: T): String
   def fromString(s: String): DecodeResult[T]
 
@@ -102,42 +102,3 @@ object TypeMapper {
     override def mediaType = MediaType.Json()
   }
 }
-
-/*
-Format[U]: data serialization format - how data is represented as text, with U as the intermediate format
-TypeMapper[T]: how a T maps to a given format's internal representation
- */
-
-/*
-case class User(age: Int, address: Address)
-
-# ShapelessObjectMapper -> implements encode/decode given:
-
-Fields = Int :: Address
-FieldNames: Fields ~> String ('age :: 'address)
-FieldTMs: Fields ~> TypeMapper[_] (TM[Int] :: TM[Address])
-
-get: T -> Fields
-set: Fields -> T
-
- */
-
-/*
-
-Basic type mappers: ONLY string, int, double, boolean, object, sequence
-Derived type mappers: by bi-mapping
-
-For each parameter, body we need to know:
-- the schema: how it maps to a string/number/boolean/object/array combination + is optional
-- how to serialize:
-  - if content type text -> string
-  - if content type json -> json ...
-  - string/numbers/booleans serialized directly
-  - objects (schema: map field name -> field value schema)
-    for each field a getter T -> U, serializing recursively & combining using the content type
-- how to deserialize from a string:
-  - string/numbers/booleans deserialized directly
-  - objects:
-    deserialize each field, reconstruct object given a List[Any] -> T
-
- */

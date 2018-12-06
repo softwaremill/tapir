@@ -37,7 +37,7 @@ object EndpointInput {
   }
 
   case class PathCapture[T](m: RequiredTextTypeMapper[T], name: Option[String], description: Option[String], example: Option[T])
-      extends Single[T] { // TODO rename "name" as it's only needed for docs
+      extends Single[T] {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
     def description(d: String): PathCapture[T] = copy(description = Some(d))
     def example(t: T): PathCapture[T] = copy(example = Some(t))
