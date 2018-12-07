@@ -15,9 +15,11 @@ object Schema {
   case object SInt extends Schema {
     override def toString: String = "int"
   }
-  case class SObject(fields: Iterable[(String, Schema)], required: Iterable[String]) extends Schema {
+  case class SObject(info: SObjectInfo, fields: Iterable[(String, Schema)], required: Iterable[String]) extends Schema {
     override def toString: String = s"object(${fields.map(f => s"${f._1}->${f._2}").mkString(",")};required:${required.mkString(",")})"
   }
+
+  case class SObjectInfo(shortName: String, fullName: String)
 }
 
 trait SchemaFor[T] {
@@ -43,6 +45,7 @@ trait SchemaForMagnoliaDerivation {
   def combine[T](ctx: CaseClass[SchemaFor, T]): SchemaFor[T] = {
     new SchemaFor[T] {
       override val schema: Schema = SObject(
+        SObjectInfo(ctx.typeName.short, ctx.typeName.full),
         ctx.parameters.map(p => (p.label, p.typeclass.schema)).toList,
         ctx.parameters.filter(!_.typeclass.isOptional).map(_.label)
       )
