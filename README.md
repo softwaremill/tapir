@@ -1,6 +1,6 @@
 # tapir, or Typed API descRiptions
 
-Tapir allows you to describe your HTTP API endpoints as immutable Scala values. Each endpoint has a number of: input parameters, error-output parameters, and  normal-output parameters. Such an endpoint specification can then be translated to:
+With tapir you can describe your HTTP API endpoints as immutable Scala values. Each endpoint has a number of input parameters, error-output parameters, and  normal-output parameters. Such an endpoint specification can then be translated to:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. Currently supported: [Akka HTTP](https://doc.akka.io/docs/akka-http/current/) routes/directives.
 * a client, which is a function from the input parameters, to the output parameters. Currently supported: [sttp](https://github.com/softwaremill/sttp).
@@ -38,6 +38,7 @@ println(docs.toYaml)
 
 import tapir.server.akkahttp._
 import akka.http.scaladsl.server.Route
+import scala.concurrent.Future
 
 def bookListingLogic(bfy: BooksFromYear, limit: Limit, at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
@@ -55,13 +56,13 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 
 ## Goals of the project
 
-* programmer-friendly types (also in IntelliJ)
-* as simple as possible to generate a server, client & docs
-* first-class OpenAPI support. Provide as much or as little detail as needed.
-* human-comprehensible types; types, that you are not afraid to explicitly write down
-* reasonably type safe: only, and as much types to safely generate the server/client/docs
+* programmer-friendly, human-comprehensible types, that you are not afraid to write down
+** also inferencable by IntelliJ
 * discoverable API through standard auto-complete
 * separate "business logic" from endpoint definition & documentation
+* as simple as possible to generate a server, client & docs
+* first-class OpenAPI support. Provide as much or as little detail as needed.
+* reasonably type safe: only, and as much types to safely generate the server/client/docs
 
 ## Working with tapir
 
