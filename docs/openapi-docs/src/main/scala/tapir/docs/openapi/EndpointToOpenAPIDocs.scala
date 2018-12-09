@@ -7,32 +7,32 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{MediaType => OMediaType, Schema => OSchema, _}
 
 object EndpointToOpenAPIDocs {
-  def toOpenAPI(title: String, version: String, es: Seq[Endpoint[_, _, _]]): OpenAPI = {
-    val withSchemaKeys = new WithSchemaKeys(ObjectSchemasForEndpoints(es))
+  def toOpenAPI(title: String, version: String, es: Iterable[Endpoint[_, _, _]]): OpenAPI = {
+    val es2 = es.map(nameAllPathCapturesInEndpoint)
+    val withSchemaKeys = new WithSchemaKeys(ObjectSchemasForEndpoints(es2))
 
     OpenAPI(
       info = Info(title, None, None, version),
       servers = None,
-      paths = withSchemaKeys.paths(es),
+      paths = withSchemaKeys.paths(es2),
       components = withSchemaKeys.components
     )
   }
 
   private class WithSchemaKeys(schemaKeys: SchemaKeys) {
-    def paths(es: Seq[Endpoint[_, _, _]]): Map[String, PathItem] = {
+    def paths(es: Iterable[Endpoint[_, _, _]]): Map[String, PathItem] = {
       es.map(pathItem).groupBy(_._1).mapValues(_.map(_._2).reduce(mergePathItems))
     }
 
     private def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
       import Method._
 
-      val pathComponents = e.input.asVectorOfSingle.flatMap {
-        case EndpointInput.PathCapture(_, name, _, _) => Some(s"{${name.getOrElse("-")}}")
-        case EndpointInput.PathSegment(s)             => Some(s)
-        case _                                        => None
-      }
-      // TODO parametrize the class with customizable id generation
-      val defaultId = s"${pathComponents.mkString("-")}-${e.method.m.toLowerCase}"
+      val pathComponents = foldInputToVector(e.input, {
+        case EndpointInput.PathCapture(_, name, _, _) => Vector(s"{${name.getOrElse("-")}}")
+        case EndpointInput.PathSegment(s)             => Vector(s)
+      })
+
+      val defaultId = operationId(pathComponents, e.method)
 
       val pathItem = PathItem(
         None,
@@ -69,43 +69,55 @@ object EndpointToOpenAPIDocs {
       )
     }
 
+    private def operationId(pathComponents: Vector[String], method: Method): String = {
+      val pathComponentsOrRoot = if (pathComponents.isEmpty) {
+        Vector("root")
+      } else {
+        pathComponents
+      }
+
+      // TODO parametrize the class with customizable id generation
+      s"${pathComponentsOrRoot.mkString("-")}-${method.m.toLowerCase}"
+    }
+
     private def operation(defaultId: String, e: Endpoint[_, _, _]): Operation = {
 
-      val parameters = e.input.asVectorOfSingle.flatMap {
-        case EndpointInput.Query(n, tm, d, ex) =>
-          Some(
-            Parameter(n,
-                      ParameterIn.Query,
-                      d,
-                      Some(!tm.isOptional),
-                      None,
-                      None,
-                      None,
-                      None,
-                      None,
-                      sschemaToReferenceOrOSchema(tm.schema),
-                      ex.flatMap(exampleValue(tm, _)),
-                      None,
-                      None))
-        case EndpointInput.PathCapture(tm, n, d, ex) =>
-          Some(
-            Parameter(
-              n.getOrElse("?"), // TODO
-              ParameterIn.Path,
-              d,
-              Some(true),
-              None,
-              None,
-              None,
-              None,
-              None,
-              sschemaToReferenceOrOSchema(tm.schema),
-              ex.flatMap(exampleValue(tm, _)),
-              None,
-              None
-            ))
-        case _ => None
-      }
+      val parameters = foldInputToVector(
+        e.input, {
+          case EndpointInput.Query(n, tm, d, ex) =>
+            Vector(
+              Parameter(n,
+                        ParameterIn.Query,
+                        d,
+                        Some(!tm.isOptional),
+                        None,
+                        None,
+                        None,
+                        None,
+                        None,
+                        sschemaToReferenceOrOSchema(tm.schema),
+                        ex.flatMap(exampleValue(tm, _)),
+                        None,
+                        None))
+          case EndpointInput.PathCapture(tm, n, d, ex) =>
+            Vector(
+              Parameter(
+                n.getOrElse("?"), // TODO
+                ParameterIn.Path,
+                d,
+                Some(true),
+                None,
+                None,
+                None,
+                None,
+                None,
+                sschemaToReferenceOrOSchema(tm.schema),
+                ex.flatMap(exampleValue(tm, _)),
+                None,
+                None
+              ))
+        }
+      )
 
       val responses: Map[ResponsesKey, ReferenceOr[Response]] =
         List(
@@ -128,10 +140,38 @@ object EndpointToOpenAPIDocs {
                 None)
     }
 
-    private def outputToResponse(o: EndpointIO[_]): Option[Response] = {
-      o.asVectorOfSingle.headOption.map {
-        case EndpointIO.Body(m, d, e) => Response(d.getOrElse(""), None, Some(typeMapperToMediaType(m, e)))
-        case _                        => Response("", None, None)
+    private def outputToResponse(io: EndpointIO[_]): Option[Response] = {
+      val headers = foldIOToVector(
+        io, {
+          case EndpointIO.Header(name, tm, d, ex) =>
+            Vector(
+              name -> Right(
+                Header(d,
+                       Some(!tm.isOptional),
+                       None,
+                       None,
+                       None,
+                       None,
+                       None,
+                       Some(sschemaToReferenceOrOSchema(tm.schema)),
+                       ex.flatMap(exampleValue(tm, _)),
+                       None,
+                       None)))
+        }
+      )
+
+      val bodies = foldIOToVector(io, {
+        case EndpointIO.Body(m, d, e) => Vector((d, typeMapperToMediaType(m, e)))
+      })
+      val body = bodies.headOption
+
+      val description = body.flatMap(_._1).getOrElse("")
+      val content = body.map(_._2)
+
+      if (body.isDefined || headers.nonEmpty) {
+        Some(Response(description, Some(headers.toMap), content))
+      } else {
+        None
       }
     }
 
@@ -163,4 +203,36 @@ object EndpointToOpenAPIDocs {
   }
 
   private def noneIfEmpty[T](l: List[T]): Option[List[T]] = if (l.isEmpty) None else Some(l)
+
+  private def foldInputToVector[T](i: EndpointInput[_], f: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] = {
+    i match {
+      case _ if f.isDefinedAt(i)                  => f(i)
+      case EndpointInput.Mapped(wrapped, _, _, _) => foldInputToVector(wrapped, f)
+      case EndpointIO.Mapped(wrapped, _, _, _)    => foldInputToVector(wrapped, f)
+      case EndpointInput.Multiple(inputs)         => inputs.flatMap(foldInputToVector(_, f))
+      case EndpointIO.Multiple(inputs)            => inputs.flatMap(foldInputToVector(_, f))
+      case _                                      => Vector.empty
+    }
+  }
+
+  private def foldIOToVector[T](io: EndpointIO[_], f: PartialFunction[EndpointIO[_], Vector[T]]): Vector[T] = {
+    io match {
+      case _ if f.isDefinedAt(io)              => f(io)
+      case EndpointIO.Mapped(wrapped, _, _, _) => foldIOToVector(wrapped, f)
+      case EndpointIO.Multiple(inputs)         => inputs.flatMap(foldIOToVector(_, f))
+      case _                                   => Vector.empty
+    }
+  }
+
+  private def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _]): Endpoint[_, _, _] = {
+    val (input2, _) = new EndpointInputMapper[Int](
+      {
+        case (EndpointInput.PathCapture(tm, None, description, example), i) =>
+          (EndpointInput.PathCapture(tm, Some(s"p$i"), description, example), i + 1)
+      },
+      PartialFunction.empty
+    ).mapInput(e.input, 1)
+
+    e.copy(input = input2)
+  }
 }

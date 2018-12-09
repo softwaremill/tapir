@@ -88,7 +88,7 @@ lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   .settings(
     name := "openapi-docs"
   )
-  .dependsOn(openapiModel, core, tests % "test")
+  .dependsOn(openapiModel, core, tests % "test", openapiCirceYaml % "test")
 
 // server
 

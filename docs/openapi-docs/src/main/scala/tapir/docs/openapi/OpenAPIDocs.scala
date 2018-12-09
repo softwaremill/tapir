@@ -8,7 +8,7 @@ trait OpenAPIDocs {
       EndpointToOpenAPIDocs.toOpenAPI(title, version, Seq(e))
   }
 
-  implicit class RichOpenAPIEndpoints[I, E, O](es: Seq[Endpoint[I, E, O]]) {
+  implicit class RichOpenAPIEndpoints(es: Iterable[Endpoint[_, _, _]]) {
     def toOpenAPI(title: String, version: String): OpenAPI = EndpointToOpenAPIDocs.toOpenAPI(title, version, es)
   }
 }

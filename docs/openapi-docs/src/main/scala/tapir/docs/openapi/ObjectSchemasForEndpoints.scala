@@ -8,7 +8,7 @@ object ObjectSchemasForEndpoints {
   type SchemaKey = String
   type SchemaKeys = Map[SObjectInfo, (SchemaKey, OSchema)]
 
-  def apply(es: Seq[Endpoint[_, _, _]]): SchemaKeys = {
+  def apply(es: Iterable[Endpoint[_, _, _]]): SchemaKeys = {
     val infosToSchema = foldMaps(es.map(e => forInput(e.input) ++ forIO(e.errorOutput) ++ forIO(e.output)))
 
     // avoiding name clashes if two schemas

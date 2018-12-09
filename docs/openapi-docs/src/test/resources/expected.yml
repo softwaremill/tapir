@@ -1,0 +1,58 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: root-get
+      parameters:
+        - name: fruit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: amount
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ''
+          headers: {}
+          content:
+            text/plain:
+              schema:
+                type: string
+  /fruit/{p1}/amount/{p2}:
+    get:
+      operationId: fruit-{p1}-amount-{p2}-get
+      parameters:
+        - name: p1
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: p2
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: color
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          headers:
+            X-Role:
+              required: true
+              schema:
+                type: integer
+          content:
+            text/plain:
+              schema:
+                type: string
