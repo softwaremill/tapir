@@ -22,9 +22,6 @@ object Tests2 extends App {
 
 /*
 TODO:
- * object schemas grouped in components (object labels)
- * in/out object schemas
  * human-friendly type errors
- * better type inference in idea
  * 404 test
  */
