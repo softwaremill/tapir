@@ -57,7 +57,7 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 ## Goals of the project
 
 * programmer-friendly, human-comprehensible types, that you are not afraid to write down
-** also inferencable by IntelliJ
+* (also inferencable by IntelliJ)
 * discoverable API through standard auto-complete
 * separate "business logic" from endpoint definition & documentation
 * as simple as possible to generate a server, client & docs
