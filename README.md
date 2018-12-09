@@ -10,6 +10,8 @@ Tapir allows you to describe your HTTP API endpoints as immutable Scala values. 
 
 ```scala
 import tapir._
+import tapir.json.circe._
+import io.circe.generic.auto._
 
 type Limit = Int
 type AuthToken = String
@@ -27,8 +29,8 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 //
 
 import tapir.docs.openapi._
+import tapir.openapi.circe._
 import tapir.openapi.circe.yaml._
-import io.circe.generic.auto._
 
 val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
 println(docs.toYaml)
@@ -70,7 +72,7 @@ TODO
 
 This will import only the core case classes. To generate a server or a client, you will need to add further dependencies.
 
-Most of tapir functionalities use package objects, hence it's easiest to work with tapir if you import whole packages, e.g.:
+Most of tapir functionalities use package objects which provide builder and extensions methods, hence it's easiest to work with tapir if you import whole packages, e.g.:
 
 ```
 import tapir._
@@ -135,15 +137,63 @@ Hence, it is possible to have a `TypeMapper[MyCaseClass, Text]` which specified 
 
 A type mapper also contains the schema of the mapped type. This schema information is used when generating documentation. For primitive types, the schema values are built-in. For complex types, it is possible to define the schema by hand (by creating a value of type `Schema`), however usually this will be automatically derived for case classes using [Magnolia](https://propensive.com/opensource/magnolia/).
 
+#### Working with json
+
+The package:
+
+```
+import tapir.json.circe._
+```
+
+contains type mappers which, given a circe `Encoder`/`Decoder` in scope, will generate a type mapper using the json media type.
+
 ## Running as an akka-http server
 
-To expose an endpoint as an akka-http server, import the package:
+To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/current/) server, import the package:
 
 ```
 import tapir.server.akkahttp._
 ```
 
+This adds two extension methods to the `Endpoint` type: `toDirective` and `toRoute`. Both require the logic of the endpoint to be given as a function of type:
 
+```
+[I as function arguments] => Future[Either[E, O]]
+```
+
+Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the appropriate arity.
+
+## Using as an sttp server
+
+To make requests using an endpoint definition using [sttp](https://sttp.readthedocs.io), import:
+
+```
+import tapir.client.sttp._
+```
+
+This adds the `toRequest(Uri)` extension method to any `Endpoint` instance which, given the given base URI returns a function:
+
+```[I as function arguments] => Request[Either[E, O], Nothing]```
+
+After providing the input parameters, the result is a description of the request to be made, which can be further customised and sent using any sttp backend.
+
+## Generating documentation
+
+Tapir contains a case class-based model of the openapi data structure in the `openapi/openapi-model` subproject. An endpoint can be converted to the model by importing the package and calling an extension method:
+
+```
+import tapir.docs.openapi._
+val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
+```
+
+The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
+
+```
+import tapir.openapi.circe._
+import tapir.openapi.circe.yaml._
+
+println(docs.toYaml)
+```
 
 ## Similar projects
 
