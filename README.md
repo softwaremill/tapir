@@ -79,7 +79,7 @@ Most of tapir functionalities use package objects which provide builder and exte
 import tapir._
 ```
 
-## Anatomy an en endpoint
+## Anatomy an endpoint
 
 An endpoint is represented as a value of type `Endpoint[I, E, O]`, where:
 
