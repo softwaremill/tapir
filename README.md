@@ -205,6 +205,7 @@ There's a number of similar projects from which Tapir draws inspiration:
 * [typedapi](https://github.com/pheymann/typedapi~)
 * [rho](https://github.com/http4s/rho)
 * [typed-schema](https://github.com/TinkoffCreditSystems/typed-schema)
+* [guardrail](https://github.com/twilio/guardrail)
 
 ## What's missing
 
