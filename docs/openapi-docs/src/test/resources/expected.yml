@@ -53,6 +53,18 @@ paths:
               schema:
                 type: integer
           content:
-            text/plain:
+            application/json:
               schema:
-                type: string
+                $ref: '#/components/schemas/FruitAmount'
+components:
+  schemas:
+    FruitAmount:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
