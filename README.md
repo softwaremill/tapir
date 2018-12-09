@@ -61,6 +61,7 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * discoverable API through standard auto-complete
 * separate "business logic" from endpoint definition & documentation
 * as simple as possible to generate a server, client & docs
+* based purely on case class-based datastructures
 * first-class OpenAPI support. Provide as much or as little detail as needed.
 * reasonably type safe: only, and as much types to safely generate the server/client/docs
 
