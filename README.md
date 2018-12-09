@@ -226,11 +226,14 @@ Hence, it is possible to create your own object which combines all of the requir
 a single-import whenever you want to use Tapir. For example:
 
 ```scala
-object MyTapir extends AkkaHttpServer
+object MyTapir extends Tapir
+  with AkkaHttpServer
   with SttpClient
   with CirceJson
   with OpenAPICirceYaml
 ```
+
+Then, a single `import MyTapir._` and all Tapir data types and extensions methods will be in scope!
 
 ## Acknowledgments
 
