@@ -1,4 +1,4 @@
-# TAPIR, or Typed API descRiptions
+# tapir, or Typed API descRiptions
 
 Tapir allows you to describe your HTTP API endpoints as immutable Scala values. Each endpoint has a number of: input parameters, error-output parameters, and  normal-output parameters. Such an endpoint specification can then be translated to:
 
