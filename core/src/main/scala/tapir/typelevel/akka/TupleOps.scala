@@ -2,6 +2,9 @@ package tapir.typelevel.akka
 import tapir.typelevel.akka.BinaryPolyFunc.Case
 import tapir.typelevel.akka.TupleOps.{AppendOne, FoldLeft}
 
+// copied from akka-http:
+// https://github.com/akka/akka-http/blob/master/akka-http/src/main/scala/akka/http/scaladsl/server/util/TupleOps.scala
+
 object TupleOps {
   trait AppendOne[P, S] {
     type Out

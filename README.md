@@ -29,7 +29,6 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 //
 
 import tapir.docs.openapi._
-import tapir.openapi.circe._
 import tapir.openapi.circe.yaml._
 
 val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
@@ -40,9 +39,9 @@ println(docs.toYaml)
 import tapir.server.akkahttp._
 import akka.http.scaladsl.server.Route
 
-val booksListingRoute: Route = booksListing.toRoute { (bfy: BooksFromYear, limit: Limit, at: AuthToken) =>
-  Future.successful(List(Book("The Sorrows of Young Werther")))
-}
+def bookListingLogic(bfy: BooksFromYear, limit: Limit, at: AuthToken): Future[Either[String, List[Book]]] =
+  Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
+val booksListingRoute: Route = booksListing.toRoute(bookListingLogic _)
 
 //
 
@@ -161,7 +160,7 @@ This adds two extension methods to the `Endpoint` type: `toDirective` and `toRou
 [I as function arguments] => Future[Either[E, O]]
 ```
 
-Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the appropriate arity.
+Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the appropriate arity. The created `Route`/`Directive` can then be further combined with other akka-http directives.
 
 ## Using as an sttp server
 
@@ -189,7 +188,6 @@ val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
 The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
 ```
-import tapir.openapi.circe._
 import tapir.openapi.circe.yaml._
 
 println(docs.toYaml)
@@ -228,3 +226,11 @@ object MyTapir extends AkkaHttpServer
   with CirceJson
   with OpenAPICirceYaml
 ```
+
+## Acknowledgments
+
+Tuple-concatenating code is copied from [akka-http](https://github.com/akka/akka-http/blob/master/akka-http/src/main/scala/akka/http/scaladsl/server/util/TupleOps.scala)
+
+## Developing Tapir
+
+Tapir is an early stage project. Everything might change. Be warned: the code is often ugly, uses mutable state, imperative loops and type casts. Luckily, there's no reflection. All suggestions welcome :)
