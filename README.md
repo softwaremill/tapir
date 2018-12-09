@@ -75,7 +75,7 @@ This will import only the core case classes. To generate a server or a client, y
 
 Most of tapir functionalities use package objects which provide builder and extensions methods, hence it's easiest to work with tapir if you import whole packages, e.g.:
 
-```
+```scala
 import tapir._
 ```
 
@@ -142,7 +142,7 @@ A type mapper also contains the schema of the mapped type. This schema informati
 
 The package:
 
-```
+```scala
 import tapir.json.circe._
 ```
 
@@ -152,13 +152,13 @@ contains type mappers which, given a circe `Encoder`/`Decoder` in scope, will ge
 
 To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/current/) server, import the package:
 
-```
+```scala
 import tapir.server.akkahttp._
 ```
 
 This adds two extension methods to the `Endpoint` type: `toDirective` and `toRoute`. Both require the logic of the endpoint to be given as a function of type:
 
-```
+```scala
 [I as function arguments] => Future[Either[E, O]]
 ```
 
@@ -168,13 +168,15 @@ Note that the function doesn't take the tuple `I` directly as input, but instead
 
 To make requests using an endpoint definition using [sttp](https://sttp.readthedocs.io), import:
 
-```
+```scala
 import tapir.client.sttp._
 ```
 
 This adds the `toRequest(Uri)` extension method to any `Endpoint` instance which, given the given base URI returns a function:
 
-```[I as function arguments] => Request[Either[E, O], Nothing]```
+```scala
+[I as function arguments] => Request[Either[E, O], Nothing]
+```
 
 After providing the input parameters, the result is a description of the request to be made, which can be further customised and sent using any sttp backend.
 
@@ -182,14 +184,14 @@ After providing the input parameters, the result is a description of the request
 
 Tapir contains a case class-based model of the openapi data structure in the `openapi/openapi-model` subproject. An endpoint can be converted to the model by importing the package and calling an extension method:
 
-```
+```scala
 import tapir.docs.openapi._
 val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
 ```
 
 The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
-```
+```scala
 import tapir.openapi.circe.yaml._
 
 println(docs.toYaml)
@@ -222,7 +224,7 @@ may be tedious, that's why each package object inherits all of its functionality
 Hence, it is possible to create your own object which combines all of the required functionalities and provides
 a single-import whenever you want to use Tapir. For example:
 
-```
+```scala
 object MyTapir extends AkkaHttpServer
   with SttpClient
   with CirceJson
