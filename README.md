@@ -164,7 +164,7 @@ This adds two extension methods to the `Endpoint` type: `toDirective` and `toRou
 
 Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the appropriate arity. The created `Route`/`Directive` can then be further combined with other akka-http directives.
 
-## Using as an sttp server
+## Using as a sttp client
 
 To make requests using an endpoint definition using [sttp](https://sttp.readthedocs.io), import:
 
@@ -172,7 +172,7 @@ To make requests using an endpoint definition using [sttp](https://sttp.readthed
 import tapir.client.sttp._
 ```
 
-This adds the `toRequest(Uri)` extension method to any `Endpoint` instance which, given the given base URI returns a function:
+This adds the `toRequest(Uri)` extension method to any `Endpoint` instance which, given the base URI, returns a function:
 
 ```scala
 [I as function arguments] => Request[Either[E, O], Nothing]
