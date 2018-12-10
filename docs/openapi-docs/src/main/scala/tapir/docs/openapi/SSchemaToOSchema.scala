@@ -6,8 +6,12 @@ import tapir.{Schema => SSchema}
 object SSchemaToOSchema {
   def apply(schema: SSchema): OSchema = {
     schema match {
-      case SSchema.SInt =>
+      case SSchema.SInteger =>
         OSchema(SchemaType.Integer)
+      case SSchema.SNumber =>
+        OSchema(SchemaType.Number)
+      case SSchema.SBoolean =>
+        OSchema(SchemaType.Boolean)
       case SSchema.SString =>
         OSchema(SchemaType.String)
       case SSchema.SObject(_, fields, required) =>
@@ -19,6 +23,10 @@ object SSchemaToOSchema {
                 fieldName -> apply(fieldSchema)
             }.toMap
           )
+        )
+      case SSchema.SArray(el) =>
+        OSchema(SchemaType.Array).copy(
+          items = Some(apply(el))
         )
     }
   }

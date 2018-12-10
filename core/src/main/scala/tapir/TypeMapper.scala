@@ -40,22 +40,25 @@ object TypeMapper {
   type JsonTypeMapper[T] = TypeMapper[T, MediaType.Json]
   type RequiredJsonTypeMapper[T] = RequiredTypeMapper[T, MediaType.Json]
 
-  implicit val stringTextTypeMapper: RequiredTextTypeMapper[String] = new RequiredTextTypeMapper[String] {
-    override def toString(t: String): String = t
-    override def fromString(s: String): DecodeResult[String] = Value(s)
-    override def schema: Schema = Schema.SString
-    override def mediaType = MediaType.Text()
-  }
-  implicit val intTextTypeMapper: RequiredTextTypeMapper[Int] = new RequiredTextTypeMapper[Int] {
-    override def toString(t: Int): String = t.toString
-    override def fromString(s: String): DecodeResult[Int] =
-      try Value(s.toInt)
-      catch {
-        case e: Exception => Error(s, e, "Cannot parse integer")
-      }
-    override def schema: Schema = Schema.SInt
-    override def mediaType = MediaType.Text()
-  }
+  implicit val stringTextTypeMapper: RequiredTextTypeMapper[String] = textTypeMapper[String](identity, Schema.SString)
+  implicit val shortTextTypeMapper: RequiredTextTypeMapper[Short] = textTypeMapper[Short](_.toShort, Schema.SInteger)
+  implicit val intTextTypeMapper: RequiredTextTypeMapper[Int] = textTypeMapper[Int](_.toInt, Schema.SInteger)
+  implicit val longTextTypeMapper: RequiredTextTypeMapper[Long] = textTypeMapper[Long](_.toLong, Schema.SInteger)
+  implicit val floatTextTypeMapper: RequiredTextTypeMapper[Float] = textTypeMapper[Float](_.toFloat, Schema.SNumber)
+  implicit val doubleTextTypeMapper: RequiredTextTypeMapper[Double] = textTypeMapper[Double](_.toDouble, Schema.SNumber)
+  implicit val booleanTextTypeMapper: RequiredTextTypeMapper[Boolean] = textTypeMapper[Boolean](_.toBoolean, Schema.SBoolean)
+
+  private def textTypeMapper[T](parse: String => T, _schema: Schema): RequiredTypeMapper[T, MediaType.Text] =
+    new RequiredTextTypeMapper[T] {
+      override def toString(t: T): String = t.toString
+      override def fromString(s: String): DecodeResult[T] =
+        try Value(parse(s))
+        catch {
+          case e: Exception => Error(s, e, "Cannot parse")
+        }
+      override def schema: Schema = _schema
+      override def mediaType = MediaType.Text()
+    }
 
   implicit def optionalTypeMapper[T, M <: MediaType](implicit tm: RequiredTypeMapper[T, M]): TypeMapper[Option[T], M] =
     new TypeMapper[Option[T], M] {
