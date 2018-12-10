@@ -102,7 +102,7 @@ object EndpointToOpenAPIDocs {
           case EndpointInput.PathCapture(tm, n, d, ex) =>
             Vector(
               Parameter(
-                n.getOrElse("?"), // TODO
+                n.getOrElse("?"),
                 ParameterIn.Path,
                 d,
                 Some(true),
