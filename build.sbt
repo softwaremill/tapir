@@ -1,6 +1,6 @@
 lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.tapir",
-  scalaVersion := "2.12.7",
+  scalaVersion := "2.12.8",
   scalafmtOnCompile := true
 )
 
