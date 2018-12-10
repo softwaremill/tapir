@@ -10,13 +10,13 @@ sealed trait Schema
 // TODO: test recurrence
 object Schema {
   case object SString extends Schema {
-    override def toString: String = "string"
+    def show: String = "string"
   }
   case object SInt extends Schema {
-    override def toString: String = "int"
+    def show: String = "int"
   }
   case class SObject(info: SObjectInfo, fields: Iterable[(String, Schema)], required: Iterable[String]) extends Schema {
-    override def toString: String = s"object(${fields.map(f => s"${f._1}->${f._2}").mkString(",")};required:${required.mkString(",")})"
+    def show: String = s"object(${fields.map(f => s"${f._1}->${f._2}").mkString(",")};required:${required.mkString(",")})"
   }
 
   case class SObjectInfo(shortName: String, fullName: String)
@@ -25,7 +25,7 @@ object Schema {
 trait SchemaFor[T] {
   def schema: Schema
   def isOptional: Boolean = false
-  override def toString: String = s"schema is $schema"
+  def show: String = s"schema is $schema"
 }
 object SchemaFor extends SchemaForMagnoliaDerivation {
   implicit case object SchemaForString extends SchemaFor[String] {
@@ -36,6 +36,7 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   }
   implicit def schemaForOption[T: SchemaFor]: SchemaFor[Option[T]] = new SchemaFor[Option[T]] {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
+    override def isOptional: Boolean = true
   }
 }
 
