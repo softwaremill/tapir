@@ -1,6 +1,8 @@
 # tapir, or Typed API descRiptions
 
+[![Join the chat at https://gitter.im/softwaremill/tapir](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/softwaremill/tapir?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/softwaremill/tapir.svg?branch=master)](https://travis-ci.org/softwaremill/tapir)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/core_2.12)
 
 With tapir you can describe your HTTP API endpoints as immutable Scala values. Each endpoint has a number of input parameters, error-output parameters, and  normal-output parameters. Such an endpoint specification can then be translated to:
 
