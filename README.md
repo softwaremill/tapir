@@ -4,10 +4,10 @@
 [![Build Status](https://travis-ci.org/softwaremill/tapir.svg?branch=master)](https://travis-ci.org/softwaremill/tapir)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/core_2.12)
 
-With tapir you can describe your HTTP API endpoints as immutable Scala values. Each endpoint has a number of input parameters, error-output parameters, and  normal-output parameters. Such an endpoint specification can then be translated to:
+With tapir you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of input parameters, error-output parameters, and normal-output parameters. An endpoint specification can then be translated to:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. Currently supported: [Akka HTTP](https://doc.akka.io/docs/akka-http/current/) routes/directives.
-* a client, which is a function from the input parameters, to the output parameters. Currently supported: [sttp](https://github.com/softwaremill/sttp).
+* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](https://github.com/softwaremill/sttp).
 * documentation. Currently supported: [OpenAPI](https://www.openapis.org).
 
 ## Teaser
@@ -44,7 +44,9 @@ import tapir.server.akkahttp._
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
-def bookListingLogic(bfy: BooksFromYear, limit: Limit, at: AuthToken): Future[Either[String, List[Book]]] =
+def bookListingLogic(bfy: BooksFromYear, 
+                     limit: Limit,  
+                     at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
 val booksListingRoute: Route = booksListing.toRoute(bookListingLogic _)
 
@@ -65,7 +67,7 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * discoverable API through standard auto-complete
 * separate "business logic" from endpoint definition & documentation
 * as simple as possible to generate a server, client & docs
-* based purely on case class-based datastructures
+* based purely on case class-based, immutable and reusable data structures
 * first-class OpenAPI support. Provide as much or as little detail as needed.
 * reasonably type safe: only, and as much types to safely generate the server/client/docs
 
@@ -77,7 +79,7 @@ To use tapir, add the following dependency to your project:
 "com.softwaremill.tapir" %% "core" % "0.0.1"
 ```
 
-This will import only the core case classes. To generate a server or a client, you will need to add further dependencies.
+This will import only the core classes. To generate a server or a client, you will need to add further dependencies.
 
 Most of tapir functionalities use package objects which provide builder and extensions methods, hence it's easiest to work with tapir if you import whole packages, e.g.:
 
@@ -97,7 +99,7 @@ Output parameters can be:
 
 * of type `Unit`, when there's no input/ouput of the given type
 * a single type
-* a tuple of tupes
+* a tuple of types
 
 You can think of an endpoint as a function, which takes input parameters of type `I` and returns a result of type `Either[E, O]`.
 
@@ -106,15 +108,15 @@ You can think of an endpoint as a function, which takes input parameters of type
 The description of an endpoint is an immutable case class, which includes a number of methods:
 
 * the `name`, `description`, etc. methods allow modifying the endpoint information, which will then be included in the endpoint documentation
-* the `get`, `post` etc. methods specify the method which the endpoint uses
+* the `get`, `post` etc. methods specify the method using which the endpoint should support
 * the `in`, `errorOut` and `out` methods allow adding a new input/output parameter
-* `mapIn`, `mapInTo`, ... methods allow mapping the current input/output parameters to another value or two a case class
+* `mapIn`, `mapInTo`, ... methods allow mapping the current input/output parameters to another value or to a case class
 
-> An important note on mapping: in tapir, all mappings are bi-directional (they specify in fact an isomorphism between two values). That's because each mapping can be used to generate a server or a client, as well as in many cases can be used both for input and for output.
+> An important note on mapping: in tapir, all mappings are bi-directional (they specify an isomorphism between two values). That's because each mapping can be used to generate a server or a client, as well as in many cases can be used both for input and for output.
 
 ### Defining an endpoint input/output
 
-The `tapir` package contains a number of methods to define an input or an output for an endpoint. For inputs, these are:
+An input is represented as an instance of the `EndpointInput` trait, and an output as an instance of the `EndpointIO` trait (all outputs can also be used as inputs). The `tapir` package contains a number of convenience methods to define an input or an output for an endpoint. For inputs, these are:
 
 * `path[T]`, which captures a path segment as an input parameter
 * any string, which will be implicitly converted to a constant path segment. Path segments can be combined with the `/` method
@@ -124,11 +126,11 @@ The `tapir` package contains a number of methods to define an input or an output
 
 For outputs, you can use the `header` and `body` family of methods.
 
-Endpoint input/outputs can be combined using the `.and` method. Such a combination specified a parameter which contains a tuple of the given types. Inputs/outputs can also be mapped over, either using the `.map` method and providing mappings in both directions, or the convenience `.mapTo` method for mapping into a case class.
+Endpoint inputs/outputs can be combined using the `.and` method. Such a combination results in an input/output represented as a tuple of the given types. Inputs/outputs can also be mapped over, either using the `.map` method and providing mappings in both directions, or the `.mapTo` method for mapping into a case class.
 
 ### Type mappers
 
-A type mapper specifies how to map from and to raw textual value that are sent over the network. There are some built-in type mappers for most common types such as `String`, `Int` etc. Type mappers are usually defined as implicit values and resolved implicitly when they are referenced.
+A type mapper specifies how to map from and to raw textual values that are sent over the network. There are some built-in type mappers for most common types such as `String`, `Int` etc. Type mappers are usually defined as implicit values and resolved implicitly when they are referenced.
 
 For example, a `query[Int]("quantity")` specifies an input parameter which will be read from the `quantity` query parameter and mapped into an `Int`. If the value cannot be parsed to an int, the endpoint won't match the request.
 
@@ -136,13 +138,15 @@ Optional parameters are represented as `Option` values, e.g. `header[Option[Stri
 
 #### Media types
 
-Type mappers carry an additional type parameter, which specified the media type. There are two built-in media types for now: `text/plain` and `application/json`.
+Type mappers carry an additional type parameter, which specifies the media type. There are two built-in media types for now: `text/plain` and `application/json`.
 
 Hence, it is possible to have a `TypeMapper[MyCaseClass, Text]` which specified how to serialize a case class to plain text, and a different `TypeMapper[MyCaseClass, Json]`, which specifies how to serialize a case class to json.
 
+When defining a path, query or header parameter, only a type mapper with the `Text` media type can be used.
+
 #### Schemas
 
-A type mapper also contains the schema of the mapped type. This schema information is used when generating documentation. For primitive types, the schema values are built-in. For complex types, it is possible to define the schema by hand (by creating a value of type `Schema`), however usually this will be automatically derived for case classes using [Magnolia](https://propensive.com/opensource/magnolia/).
+A type mapper also contains the schema of the mapped type. This schema information is used when generating documentation. For primitive types, the schema values are built-in. For complex types, it is possible to define the schema by hand (by creating an implicit value of type `SchemaFor[T]`), however usually this will be automatically derived for case classes using [Magnolia](https://propensive.com/opensource/magnolia/).
 
 #### Working with json
 
@@ -178,7 +182,7 @@ This adds two extension methods to the `Endpoint` type: `toDirective` and `toRou
 
 Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the appropriate arity. The created `Route`/`Directive` can then be further combined with other akka-http directives.
 
-## Using as an sttp server
+## Using as an sttp client
 
 ```scala
 "com.softwaremill.tapir" %% "sttp-client" % "0.0.1"
@@ -205,7 +209,7 @@ After providing the input parameters, the result is a description of the request
 "com.softwaremill.tapir" %% "openapi-circe-yaml" % "0.0.1"
 ```
 
-Tapir contains a case class-based model of the openapi data structure in the `openapi/openapi-model` subproject. An endpoint can be converted to the model by importing the package and calling an extension method:
+Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject. An endpoint can be converted to the model by importing the package and calling an extension method:
 
 ```scala
 import tapir.docs.openapi._
