@@ -146,6 +146,10 @@ A type mapper also contains the schema of the mapped type. This schema informati
 
 #### Working with json
 
+```scala
+"com.softwaremill.tapir" %% "json-circe" % "0.0.1"
+```
+
 The package:
 
 ```scala
@@ -155,6 +159,10 @@ import tapir.json.circe._
 contains type mappers which, given a circe `Encoder`/`Decoder` in scope, will generate a type mapper using the json media type.
 
 ## Running as an akka-http server
+
+```scala
+"com.softwaremill.tapir" %% "akka-http-server" % "0.0.1"
+```
 
 To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/current/) server, import the package:
 
@@ -172,6 +180,10 @@ Note that the function doesn't take the tuple `I` directly as input, but instead
 
 ## Using as an sttp server
 
+```scala
+"com.softwaremill.tapir" %% "sttp-client" % "0.0.1"
+```
+
 To make requests using an endpoint definition using [sttp](https://sttp.readthedocs.io), import:
 
 ```scala
@@ -187,6 +199,11 @@ This adds the `toRequest(Uri)` extension method to any `Endpoint` instance which
 After providing the input parameters, the result is a description of the request to be made, which can be further customised and sent using any sttp backend.
 
 ## Generating documentation
+
+```scala
+"com.softwaremill.tapir" %% "openapi-docs" % "0.0.1"
+"com.softwaremill.tapir" %% "openapi-circe-yaml" % "0.0.1"
+```
 
 Tapir contains a case class-based model of the openapi data structure in the `openapi/openapi-model` subproject. An endpoint can be converted to the model by importing the package and calling an extension method:
 
