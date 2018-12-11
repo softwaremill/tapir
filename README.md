@@ -71,7 +71,9 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 
 To use tapir, add the following dependency to your project:
 
-TODO
+```scala
+"com.softwaremill.tapir" %% "core" % "0.1-SNAPSHOT"
+```
 
 This will import only the core case classes. To generate a server or a client, you will need to add further dependencies.
 
