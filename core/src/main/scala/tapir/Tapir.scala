@@ -20,8 +20,6 @@ trait Tapir {
   def header[T: TextTypeMapper](name: String): EndpointIO.Header[T] = EndpointIO.Header(name, implicitly[TextTypeMapper[T]], None, None)
 
   case class InvalidOutput(reason: DecodeResult[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull) // TODO
-  //  case class InvalidInput(input: EndpointInput.Single[_], reason: TypeMapper.Result[Nothing], cause: Option[Throwable])
-  //      extends Exception(cause.orNull)
 
   val endpoint: Endpoint[Unit, Unit, Unit] =
     Endpoint[Unit, Unit, Unit](
