@@ -49,7 +49,6 @@ lazy val circeJson: Project = (project in file("json/circe"))
   .settings(commonSettings: _*)
   .settings(
     name := "json-circe",
-    publishArtifact := false,
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
