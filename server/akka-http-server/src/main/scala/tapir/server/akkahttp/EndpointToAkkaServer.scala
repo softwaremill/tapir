@@ -1,7 +1,7 @@
 package tapir.server.akkahttp
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
-import akka.http.scaladsl.model.{HttpHeader, HttpMethod, Uri}
+import akka.http.scaladsl.model.{MediaType => _, _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
@@ -24,19 +24,19 @@ object EndpointToAkkaServer {
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
     toDirective1(e) { values =>
       onSuccess(paramsAsArgs.applyFn(logic, values)) {
-        case Left(v)  => outputToRoute(e.errorOutput, v)
-        case Right(v) => outputToRoute(e.output, v)
+        case Left(v)  => outputToRoute(StatusCodes.BadRequest, e.errorOutput, v)
+        case Right(v) => outputToRoute(StatusCodes.OK, e.output, v)
       }
     }
   }
 
   // don't look below. The code is really, really ugly. Even worse than in EndpointToSttpClient
 
-  private def singleOutputsWithValues(outputs: Vector[EndpointIO.Single[_]], v: Any): Vector[Either[String, HttpHeader]] = {
+  private def singleOutputsWithValues(outputs: Vector[EndpointIO.Single[_]], v: Any): Vector[Either[HttpEntity.Strict, HttpHeader]] = {
     val vs = ParamsToSeq(v)
 
     outputs.zipWithIndex.flatMap {
-      case (EndpointIO.Body(m, _, _), i) => m.toOptionalString(vs(i)).map(Left(_))
+      case (EndpointIO.Body(m, _, _), i) => m.toOptionalString(vs(i)).map(b => Left(HttpEntity(mediaTypeToContentType(m.mediaType), b)))
       case (EndpointIO.Header(name, m, _, _), i) =>
         m.toOptionalString(vs(i))
           .map(HttpHeader.parse(name, _))
@@ -50,13 +50,13 @@ object EndpointToAkkaServer {
     }
   }
 
-  private def outputToRoute[O](output: EndpointIO[O], v: O): Route = {
+  private def outputToRoute[O](statusCode: StatusCode, output: EndpointIO[O], v: O): Route = {
     val outputsWithValues = singleOutputsWithValues(output.asVectorOfSingle, v)
 
     val body = outputsWithValues.collectFirst { case Left(b) => b }
     val headers = outputsWithValues.collect { case Right(h)  => h }
 
-    val completeRoute = body.map(complete(_)).getOrElse(complete(""))
+    val completeRoute = body.map(entity => complete(HttpResponse(entity = entity, status = statusCode))).getOrElse(complete(""))
 
     if (headers.nonEmpty) {
       respondWithHeaders(headers: _*)(completeRoute)
@@ -180,6 +180,13 @@ object EndpointToAkkaServer {
       case EndpointInput.Mapped(wrapped, _, _, _) => hasBody(wrapped)
       case EndpointIO.Mapped(wrapped, _, _, _)    => hasBody(wrapped)
       case _                                      => false
+    }
+  }
+
+  private def mediaTypeToContentType(mediaType: MediaType): ContentType.NonBinary = {
+    mediaType match {
+      case MediaType.Json() => ContentTypes.`application/json`
+      case MediaType.Text() => ContentTypes.`text/plain(UTF-8)`
     }
   }
 }

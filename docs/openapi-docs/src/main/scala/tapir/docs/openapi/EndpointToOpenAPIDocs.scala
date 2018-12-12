@@ -116,6 +116,30 @@ object EndpointToOpenAPIDocs {
                 None,
                 None
               ))
+          case EndpointIO.Header(n, tm, d, ex) =>
+            Vector(
+              Parameter(
+                n,
+                ParameterIn.Header,
+                d,
+                Some(!tm.isOptional),
+                None,
+                None,
+                None,
+                None,
+                None,
+                sschemaToReferenceOrOSchema(tm.schema),
+                ex.flatMap(exampleValue(tm, _)),
+                None,
+                None
+              ))
+        }
+      )
+
+      val body: Vector[ReferenceOr[RequestBody]] = foldInputToVector(
+        e.input, {
+          case EndpointIO.Body(tm, d, ex) =>
+            Vector(Right(RequestBody(d, typeMapperToMediaType(tm, ex), Some(!tm.isOptional))))
         }
       )
 
@@ -129,15 +153,17 @@ object EndpointToOpenAPIDocs {
           }
         ).flatten.toMap
 
-      Operation(noneIfEmpty(e.info.tags.toList),
-                e.info.summary,
-                e.info.description,
-                defaultId,
-                noneIfEmpty(parameters.toList.map(Right(_))),
-                None,
-                responses,
-                None,
-                None)
+      Operation(
+        noneIfEmpty(e.info.tags.toList),
+        e.info.summary,
+        e.info.description,
+        defaultId,
+        noneIfEmpty(parameters.toList.map(Right(_))),
+        body.headOption,
+        responses,
+        None,
+        None
+      )
     }
 
     private def outputToResponse(io: EndpointIO[_]): Option[Response] = {

@@ -24,4 +24,7 @@ object Tests2 extends App {
 TODO:
  * human-friendly type errors
  * 404 test
+ * UTF-8?
+ * status codes
+ * error-result tests
  */

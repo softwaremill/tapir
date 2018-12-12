@@ -77,6 +77,17 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.post(uri"$baseUri/fruit/info").body("""banana 12""").send().map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
 
+  testServer(in_string_out_json,
+             (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit]),
+             " with accept header") { baseUri =>
+    sttp
+      .post(uri"$baseUri/fruit/info")
+      .body("""banana 12""")
+      .header(HeaderNames.Accept, MediaTypes.Json)
+      .send()
+      .map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()
@@ -95,14 +106,14 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
   def server[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Port, fn: FN[R[Either[E, O]]])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Resource[IO, Unit]
 
-  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O], fn: FN[R[Either[E, O]]])(runTest: Uri => IO[Unit])(
+  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O], fn: FN[R[Either[E, O]]], testNameSuffix: String = "")(runTest: Uri => IO[Unit])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
     val resources = for {
       port <- Resource.liftF(IO(randomPort()))
       _ <- server(e, port, fn)
     } yield uri"http://localhost:$port"
 
-    test(e.show)(resources.use(runTest).unsafeRunSync())
+    test(e.show + testNameSuffix)(resources.use(runTest).unsafeRunSync())
   }
 
   //

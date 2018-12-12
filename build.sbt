@@ -8,7 +8,13 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
 
 val http4sVersion = "0.18.21"
 val circeVersion = "0.10.1"
-val sttpVersion = "1.5.0"
+val sttpVersion = "1.5.1"
+
+lazy val loggerDependencies = Seq(
+  "ch.qos.logback" % "logback-classic" % "1.2.3",
+  "ch.qos.logback" % "logback-core" % "1.2.3",
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
+)
 
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
@@ -32,7 +38,8 @@ lazy val tests: Project = (project in file("tests"))
   .settings(
     name := "tests",
     publishArtifact := false,
-    libraryDependencies ++= Seq(scalaTest, "ch.qos.logback" % "logback-classic" % "1.2.3")
+    libraryDependencies ++= Seq(scalaTest),
+    libraryDependencies ++= loggerDependencies
   )
   .dependsOn(core, circeJson)
 
@@ -150,7 +157,9 @@ lazy val playground: Project = (project in file("playground"))
   .settings(
     name := "tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion
-    )
+      "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
+      "org.webjars" % "swagger-ui" % "3.20.0"
+    ),
+    libraryDependencies ++= loggerDependencies
   )
   .dependsOn(akkaHttpServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)

@@ -25,7 +25,7 @@ case class Book(title: String)
 val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]] = endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
-    .in(query[Int]("limit").description("Maximum number of products to retrieve"))
+    .in(query[Int]("limit").description("Maximum number of books to retrieve"))
     .in(header[String]("X-Auth-Token"))
     .errorOut(stringBody)
     .out(jsonBody[List[Book]])
@@ -59,6 +59,8 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
   .toSttpRequest(uri"http://localhost:8080")
   .apply(BooksFromYear("SF", 2016), 20, "xyz-abc-123")
 ```
+
+Also check out the [runnable example](/softwaremill/tapir/tree/master/playground/src/main/scala/tapir/example/BooksExample.scala) available in the repository.
 
 ## Goals of the project
 
