@@ -60,7 +60,7 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
   .apply(BooksFromYear("SF", 2016), 20, "xyz-abc-123")
 ```
 
-Also check out the [runnable example](/softwaremill/tapir/tree/master/playground/src/main/scala/tapir/example/BooksExample.scala) available in the repository.
+Also check out the [runnable example](https://github.com/softwaremill/tapir/blob/master/playground/src/main/scala/tapir/example/BooksExample.scala) available in the repository.
 
 ## Goals of the project
 
