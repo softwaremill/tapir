@@ -139,7 +139,7 @@ object EndpointToOpenAPIDocs {
       val body: Vector[ReferenceOr[RequestBody]] = foldInputToVector(
         e.input, {
           case EndpointIO.Body(tm, d, ex) =>
-            Vector(Right(RequestBody(d, typeMapperToMediaType(tm, ex), Some(!tm.isOptional))))
+            Vector(Right(RequestBody(d, codecToMediaType(tm, ex), Some(!tm.isOptional))))
         }
       )
 
@@ -187,7 +187,7 @@ object EndpointToOpenAPIDocs {
       )
 
       val bodies = foldIOToVector(io, {
-        case EndpointIO.Body(m, d, e) => Vector((d, typeMapperToMediaType(m, e)))
+        case EndpointIO.Body(m, d, e) => Vector((d, codecToMediaType(m, e)))
       })
       val body = bodies.headOption
 
@@ -201,7 +201,7 @@ object EndpointToOpenAPIDocs {
       }
     }
 
-    private def typeMapperToMediaType[T, M <: SMediaType](o: TypeMapper[T, M], example: Option[T]): Map[String, OMediaType] = {
+    private def codecToMediaType[T, M <: SMediaType](o: Codec[T, M], example: Option[T]): Map[String, OMediaType] = {
       Map(o.mediaType.mediaType -> OMediaType(Some(sschemaToReferenceOrOSchema(o.schema)), example.flatMap(exampleValue(o, _)), None, None))
     }
 
@@ -225,7 +225,7 @@ object EndpointToOpenAPIDocs {
       } else None
     }
 
-    private def exampleValue[T](tm: TypeMapper[T, _], e: T): Option[ExampleValue] = tm.toOptionalString(e).map(ExampleValue)
+    private def exampleValue[T](tm: Codec[T, _], e: T): Option[ExampleValue] = tm.encodeOptional(e).map(ExampleValue)
   }
 
   private def noneIfEmpty[T](l: List[T]): Option[List[T]] = if (l.isEmpty) None else Some(l)

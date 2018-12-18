@@ -36,9 +36,9 @@ object EndpointToAkkaServer {
     val vs = ParamsToSeq(v)
 
     outputs.zipWithIndex.flatMap {
-      case (EndpointIO.Body(m, _, _), i) => m.toOptionalString(vs(i)).map(b => Left(HttpEntity(mediaTypeToContentType(m.mediaType), b)))
+      case (EndpointIO.Body(m, _, _), i) => m.encodeOptional(vs(i)).map(b => Left(HttpEntity(mediaTypeToContentType(m.mediaType), b)))
       case (EndpointIO.Header(name, m, _, _), i) =>
-        m.toOptionalString(vs(i))
+        m.encodeOptional(vs(i))
           .map(HttpHeader.parse(name, _))
           .collect {
             case ParsingResult.Ok(h, _) => h
@@ -116,7 +116,7 @@ object EndpointToAkkaServer {
             case Uri.Path.Slash(pathTail) if canRemoveSlash =>
               doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false, body)
             case Uri.Path.Segment(s, pathTail) =>
-              m.fromString(s) match {
+              m.decode(s) match {
                 case DecodeResult.Value(v) =>
                   doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body).map {
                     _.prependValue(v)
@@ -126,7 +126,7 @@ object EndpointToAkkaServer {
             case _ => None
           }
         case EndpointInput.Query(name, m, _, _) +: inputsTail =>
-          m.fromOptionalString(ctx.request.uri.query().get(name)) match {
+          m.decodeOptional(ctx.request.uri.query().get(name)) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
                 _.prependValue(v)
@@ -134,7 +134,7 @@ object EndpointToAkkaServer {
             case _ => None
           }
         case EndpointIO.Header(name, m, _, _) +: inputsTail =>
-          m.fromOptionalString(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
+          m.decodeOptional(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
                 _.prependValue(v)
@@ -142,7 +142,7 @@ object EndpointToAkkaServer {
             case _ => None
           }
         case EndpointIO.Body(m, _, _) +: inputsTail =>
-          m.fromOptionalString(Some(body)) match {
+          m.decodeOptional(Some(body)) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
                 _.prependValue(v)

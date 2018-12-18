@@ -1,7 +1,7 @@
 package tapir.client.sttp
 
 import com.softwaremill.sttp._
-import tapir.TypeMapper.{RequiredTextTypeMapper, TextTypeMapper}
+import tapir.Codec.{RequiredTextCodec, TextCodec}
 import tapir.internal.SeqToParams
 import tapir.typelevel.ParamsAsArgs
 import tapir._
@@ -40,10 +40,10 @@ object EndpointToSttpClient {
       .map {
         case EndpointIO.Body(m, _, _) =>
           val so = if (m.isOptional && body == "") None else Some(body)
-          m.fromOptionalString(so).getOrThrow(InvalidOutput)
+          m.decodeOptional(so).getOrThrow(InvalidOutput)
 
         case EndpointIO.Header(name, m, _, _) =>
-          m.fromOptionalString(meta.header(name)).getOrThrow(InvalidOutput)
+          m.decodeOptional(meta.header(name)).getOrThrow(InvalidOutput)
 
         case EndpointIO.Mapped(wrapped, f, _, _) =>
           f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingle, body, meta))
@@ -80,26 +80,26 @@ object EndpointToSttpClient {
       case EndpointInput.PathSegment(p) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri.copy(path = uri.path :+ p), req)
       case EndpointInput.PathCapture(m, _, _, _) +: tail =>
-        val v = m.asInstanceOf[RequiredTextTypeMapper[Any]].toString(paramsAsArgs.paramAt(params, paramIndex): Any)
+        val v = m.asInstanceOf[RequiredTextCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path :+ v), req)
       case EndpointInput.Query(name, m, _, _) +: tail =>
         val uri2 = m
-          .asInstanceOf[TextTypeMapper[Any]]
-          .toOptionalString(paramsAsArgs.paramAt(params, paramIndex))
+          .asInstanceOf[TextCodec[Any]]
+          .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
           .map(v => uri.param(name, v))
           .getOrElse(uri)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
       case EndpointIO.Body(m, _, _) +: tail =>
         val req2 = m
-          .asInstanceOf[TypeMapper[Any, _]]
-          .toOptionalString(paramsAsArgs.paramAt(params, paramIndex))
+          .asInstanceOf[Codec[Any, _]]
+          .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
           .map(v => req.body(v))
           .getOrElse(req)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointIO.Header(name, m, _, _) +: tail =>
         val req2 = m
-          .asInstanceOf[TypeMapper[Any, _]]
-          .toOptionalString(paramsAsArgs.paramAt(params, paramIndex))
+          .asInstanceOf[Codec[Any, _]]
+          .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
           .map(v => req.header(name, v))
           .getOrElse(req)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)

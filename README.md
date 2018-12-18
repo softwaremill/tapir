@@ -136,25 +136,25 @@ For outputs, you can use the `header` and `body` family of methods.
 
 Endpoint inputs/outputs can be combined using the `.and` method. Such a combination results in an input/output represented as a tuple of the given types. Inputs/outputs can also be mapped over, either using the `.map` method and providing mappings in both directions, or the `.mapTo` method for mapping into a case class.
 
-### Type mappers
+### Codecs
 
-A type mapper specifies how to map from and to raw textual values that are sent over the network. There are some built-in type mappers for most common types such as `String`, `Int` etc. Type mappers are usually defined as implicit values and resolved implicitly when they are referenced.
+A codec specifies how to map from and to raw textual values that are sent over the network. There are some built-in codecs for most common types such as `String`, `Int` etc. Codecs are usually defined as implicit values and resolved implicitly when they are referenced.
 
-For example, a `query[Int]("quantity")` specifies an input parameter which will be read from the `quantity` query parameter and mapped into an `Int`. If the value cannot be parsed to an int, the endpoint won't match the request.
+For example, a `query[Int]("quantity")` specifies an input parameter which will be read from the `quantity` query parameter and decoded into an `Int`. If the value cannot be parsed to an int, the endpoint won't match the request.
 
 Optional parameters are represented as `Option` values, e.g. `header[Option[String]]("X-Auth-Token")`.
 
 #### Media types
 
-Type mappers carry an additional type parameter, which specifies the media type. There are two built-in media types for now: `text/plain` and `application/json`.
+Codecs carry an additional type parameter, which specifies the media type. There are two built-in media types for now: `text/plain` and `application/json`.
 
-Hence, it is possible to have a `TypeMapper[MyCaseClass, Text]` which specified how to serialize a case class to plain text, and a different `TypeMapper[MyCaseClass, Json]`, which specifies how to serialize a case class to json.
+Hence, it is possible to have a `Codec[MyCaseClass, Text]` which specified how to serialize a case class to plain text, and a different `Codec[MyCaseClass, Json]`, which specifies how to serialize a case class to json.
 
-When defining a path, query or header parameter, only a type mapper with the `Text` media type can be used.
+When defining a path, query or header parameter, only a codec with the `Text` media type can be used.
 
 #### Schemas
 
-A type mapper also contains the schema of the mapped type. This schema information is used when generating documentation. For primitive types, the schema values are built-in. For complex types, it is possible to define the schema by hand (by creating an implicit value of type `SchemaFor[T]`), however usually this will be automatically derived for case classes using [Magnolia](https://propensive.com/opensource/magnolia/).
+A codec also contains the schema of the mapped type. This schema information is used when generating documentation. For primitive types, the schema values are built-in. For complex types, it is possible to define the schema by hand (by creating an implicit value of type `SchemaFor[T]`), however usually this will be automatically derived for case classes using [Magnolia](https://propensive.com/opensource/magnolia/).
 
 #### Working with json
 
@@ -168,7 +168,7 @@ The package:
 import tapir.json.circe._
 ```
 
-contains type mappers which, given a circe `Encoder`/`Decoder` in scope, will generate a type mapper using the json media type.
+contains codecs which, given a circe `Encoder`/`Decoder` in scope, will generate a codec using the json media type.
 
 ## Running as an akka-http server
 

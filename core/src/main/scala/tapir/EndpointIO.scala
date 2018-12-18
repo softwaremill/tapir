@@ -1,6 +1,6 @@
 package tapir
 
-import tapir.TypeMapper.{RequiredTextTypeMapper, TextTypeMapper}
+import tapir.Codec.{RequiredTextCodec, TextCodec}
 import tapir.internal.ProductToParams
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
@@ -38,7 +38,7 @@ object EndpointInput {
     def show = s"/$s"
   }
 
-  case class PathCapture[T](m: RequiredTextTypeMapper[T], name: Option[String], description: Option[String], example: Option[T])
+  case class PathCapture[T](m: RequiredTextCodec[T], name: Option[String], description: Option[String], example: Option[T])
       extends Single[T] {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
     def description(d: String): PathCapture[T] = copy(description = Some(d))
@@ -46,7 +46,7 @@ object EndpointInput {
     def show = s"/[${name.getOrElse("")}]"
   }
 
-  case class Query[T](name: String, m: TextTypeMapper[T], description: Option[String], example: Option[T]) extends Single[T] {
+  case class Query[T](name: String, m: TextCodec[T], description: Option[String], example: Option[T]) extends Single[T] {
     def description(d: String): Query[T] = copy(description = Some(d))
     def example(t: T): Query[T] = copy(example = Some(t))
     def show = s"?$name"
@@ -97,13 +97,13 @@ object EndpointIO {
       }
   }
 
-  case class Body[T, M <: MediaType](m: TypeMapper[T, M], description: Option[String], example: Option[T]) extends Single[T] {
+  case class Body[T, M <: MediaType](m: Codec[T, M], description: Option[String], example: Option[T]) extends Single[T] {
     def description(d: String): Body[T, M] = copy(description = Some(d))
     def example(t: T): Body[T, M] = copy(example = Some(t))
     def show = s"{body as ${m.mediaType.mediaType}}"
   }
 
-  case class Header[T](name: String, m: TextTypeMapper[T], description: Option[String], example: Option[T]) extends Single[T] {
+  case class Header[T](name: String, m: TextCodec[T], description: Option[String], example: Option[T]) extends Single[T] {
     def description(d: String): Header[T] = copy(description = Some(d))
     def example(t: T): Header[T] = copy(example = Some(t))
     def show = s"{header $name}"

@@ -18,5 +18,5 @@ object DecodeResult {
     override def map[TT](f: Nothing => TT): DecodeResult[TT] = this
   }
 
-  // TODO: to reduce allocations, maybe replace with exceptions (which would all be handled by formats / type mappers?)
+  // TODO: to reduce allocations, maybe replace with exceptions (which would all be handled by formats / codecs?)
 }
