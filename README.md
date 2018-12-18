@@ -89,6 +89,12 @@ Most of tapir functionalities use package objects which provide builder and exte
 import tapir._
 ```
 
+If you don't have it already, you'll also need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases). In sbt, this is:
+
+```scala
+scalacOptions += "-Ypartial-unification"
+```
+
 ## Anatomy an endpoint
 
 An endpoint is represented as a value of type `Endpoint[I, E, O]`, where:
