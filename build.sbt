@@ -26,7 +26,7 @@ lazy val rootProject = (project in file("."))
 lazy val core: Project = (project in file("core"))
   .settings(commonSettings: _*)
   .settings(
-    name := "core",
+    name := "tapir-core",
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.10.0",
       scalaTest % "test"
@@ -36,7 +36,7 @@ lazy val core: Project = (project in file("core"))
 lazy val tests: Project = (project in file("tests"))
   .settings(commonSettings: _*)
   .settings(
-    name := "tests",
+    name := "tapir-tests",
     publishArtifact := false,
     libraryDependencies ++= Seq(scalaTest),
     libraryDependencies ++= loggerDependencies
@@ -48,7 +48,7 @@ lazy val tests: Project = (project in file("tests"))
 lazy val circeJson: Project = (project in file("json/circe"))
   .settings(commonSettings: _*)
   .settings(
-    name := "json-circe",
+    name := "tapir-json-circe",
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
@@ -62,7 +62,7 @@ lazy val circeJson: Project = (project in file("json/circe"))
 lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
   .settings(commonSettings: _*)
   .settings(
-    name := "openapi-model"
+    name := "tapir-openapi-model"
   )
 
 lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
@@ -73,7 +73,7 @@ lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
       "io.circe" %% "circe-parser" % circeVersion,
       "io.circe" %% "circe-magnolia-derivation" % "0.3.0"
     ),
-    name := "openapi-circe"
+    name := "tapir-openapi-circe"
   )
   .dependsOn(openapiModel)
 
@@ -83,7 +83,7 @@ lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yam
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-yaml" % "0.9.0"
     ),
-    name := "openapi-circe-yaml"
+    name := "tapir-openapi-circe-yaml"
   )
   .dependsOn(openapiCirce)
 
@@ -92,7 +92,7 @@ lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yam
 lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   .settings(commonSettings: _*)
   .settings(
-    name := "openapi-docs"
+    name := "tapir-openapi-docs"
   )
   .dependsOn(openapiModel, core, tests % "test", openapiCirceYaml % "test")
 
@@ -101,7 +101,7 @@ lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
 lazy val serverTests: Project = (project in file("server/tests"))
   .settings(commonSettings: _*)
   .settings(
-    name := "server-tests",
+    name := "tapir-server-tests",
     publishArtifact := false,
     libraryDependencies ++= Seq("com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpVersion)
   )
@@ -110,7 +110,7 @@ lazy val serverTests: Project = (project in file("server/tests"))
 lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(commonSettings: _*)
   .settings(
-    name := "akka-http-server",
+    name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % "10.1.5",
       "com.typesafe.akka" %% "akka-stream" % "2.5.19"
@@ -121,7 +121,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
 lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings: _*)
   .settings(
-    name := "http4s-server",
+    name := "tapir-http4s-server",
     libraryDependencies ++= Seq("org.http4s" %% "http4s-blaze-server" % http4sVersion)
   )
   .dependsOn(core, serverTests % "test")
@@ -131,7 +131,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
 lazy val clientTests: Project = (project in file("client/tests"))
   .settings(commonSettings: _*)
   .settings(
-    name := "client-tests",
+    name := "tapir-client-tests",
     publishArtifact := false,
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % http4sVersion,
@@ -144,7 +144,7 @@ lazy val clientTests: Project = (project in file("client/tests"))
 lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings: _*)
   .settings(
-    name := "sttp-client",
+    name := "tapir-sttp-client",
     libraryDependencies ++= Seq("com.softwaremill.sttp" %% "core" % sttpVersion)
   )
   .dependsOn(core, clientTests % "test")
@@ -154,11 +154,12 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings: _*)
   .settings(
-    name := "tests",
+    name := "tapir-tests",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
       "org.webjars" % "swagger-ui" % "3.20.0"
     ),
-    libraryDependencies ++= loggerDependencies
+    libraryDependencies ++= loggerDependencies,
+    publishArtifact := false
   )
   .dependsOn(akkaHttpServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)
