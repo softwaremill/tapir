@@ -15,7 +15,7 @@ package object tests {
   val in_path_path_out_string: Endpoint[(String, Int), Unit, String] =
     endpoint.in("fruit" / path[String] / "amount" / path[Int]).out(stringBody)
 
-  val in_string_out_string: Endpoint[String, Unit, String] = endpoint.post.in("fruit" / "info").in(stringBody).out(stringBody)
+  val in_string_out_string: Endpoint[String, Unit, String] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
 
   val in_mapped_query_out_string: Endpoint[List[Char], Unit, String] =
     endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody)
@@ -39,10 +39,16 @@ package object tests {
     .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
 
   val in_json_out_string: Endpoint[FruitAmount, Unit, String] =
-    endpoint.post.in("fruit" / "info").in(jsonBody[FruitAmount]).out(stringBody)
+    endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(stringBody)
 
   val in_string_out_json: Endpoint[String, Unit, FruitAmount] =
-    endpoint.post.in("fruit" / "info").in(stringBody).out(jsonBody[FruitAmount])
+    endpoint.post.in("api" / "echo").in(stringBody).out(jsonBody[FruitAmount])
+
+  val in_byte_array_out_int: Endpoint[Array[Byte], Unit, Int] =
+    endpoint.post.in("api" / "length").in(byteArrayBody).out(plainBody[Int])
+
+  val in_string_out_byte_list: Endpoint[String, Unit, List[Byte]] =
+    endpoint.post.in("api" / "echo").in(stringBody).out(byteArrayBody.map(_.toList)(_.toArray))
 
   val allTestEndpoints = List(
     in_query_out_string,
@@ -57,6 +63,7 @@ package object tests {
     in_query_out_mapped_string,
     in_query_out_mapped_string_header,
     in_json_out_string,
-    in_string_out_json
+    in_string_out_json,
+    in_byte_array_out_int
   )
 }

@@ -28,6 +28,8 @@ object SSchemaToOSchema {
         OSchema(SchemaType.Array).copy(
           items = Some(apply(el))
         )
+      case SSchema.SBinary() =>
+        OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary))
     }
   }
 }

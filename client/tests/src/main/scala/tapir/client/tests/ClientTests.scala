@@ -29,6 +29,8 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_query_out_mapped_string_header, "apple", Right(FruitAmount("fruit: apple", 5)))
   testClient(in_json_out_string, FruitAmount("orange", 11), Right("""{"fruit":"orange","amount":11}"""))
   testClient(in_string_out_json, """{"fruit":"banana","amount":12}""", Right(FruitAmount("banana", 12)))
+  testClient(in_byte_array_out_int, "banana kiwi".getBytes(), Right(11))
+  testClient(in_string_out_byte_list, "mango", Right("mango".getBytes.toList))
 
   //
 
@@ -41,7 +43,8 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
       Ok(s"fruit: $f${a.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
     case GET -> Root / "fruit" / f                                    => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / a :? colorOptParam(c) => Ok(s"$f $a $c")
-    case r @ POST -> Root / "fruit" / "info"                          => r.as[String].flatMap(Ok(_))
+    case r @ POST -> Root / "api" / "echo"                            => r.as[String].flatMap(Ok(_))
+    case r @ POST -> Root / "api" / "length"                          => r.as[String].flatMap(s => Ok(s.length.toString))
     case r @ GET -> Root =>
       r.headers.get(CaseInsensitiveString("X-Role")) match {
         case None    => Ok()

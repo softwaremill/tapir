@@ -1,23 +1,28 @@
 package tapir
 
-import tapir.Codec.{RequiredTextCodec, TextCodec}
+import tapir.Codec.{RequiredPlainCodec, PlainCodec}
 
 trait Tapir {
-  def path[T: RequiredTextCodec]: EndpointInput[T] =
-    EndpointInput.PathCapture(implicitly[RequiredTextCodec[T]], None, None, None)
-  def path[T: RequiredTextCodec](name: String): EndpointInput[T] =
-    EndpointInput.PathCapture(implicitly[RequiredTextCodec[T]], Some(name), None, None)
+  def path[T: RequiredPlainCodec]: EndpointInput[T] =
+    EndpointInput.PathCapture(implicitly[RequiredPlainCodec[T]], None, None, None)
+  def path[T: RequiredPlainCodec](name: String): EndpointInput[T] =
+    EndpointInput.PathCapture(implicitly[RequiredPlainCodec[T]], Some(name), None, None)
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
 
-  def query[T: TextCodec](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[TextCodec[T]], None, None)
+  def query[T: PlainCodec](name: String): EndpointInput.Query[T] = EndpointInput.Query(name, implicitly[PlainCodec[T]], None, None)
 
-  def body[T, M <: MediaType](implicit tm: Codec[T, M]): EndpointIO.Body[T, M] = EndpointIO.Body(tm, None, None)
-  def stringBody: EndpointIO.Body[String, MediaType.Text] = EndpointIO.Body(implicitly[Codec[String, MediaType.Text]], None, None)
-  def textBody[T](implicit tm: Codec[T, MediaType.Text]): EndpointIO.Body[T, MediaType.Text] =
-    EndpointIO.Body(tm, None, None)
-  def jsonBody[T](implicit tm: Codec[T, MediaType.Json]): EndpointIO.Body[T, MediaType.Json] = EndpointIO.Body(tm, None, None)
+  def body[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): EndpointIO.Body[T, M, R] = EndpointIO.Body(tm, None, None)
+  def stringBody: EndpointIO.Body[String, MediaType.TextPlain, String] =
+    EndpointIO.Body(implicitly[Codec[String, MediaType.TextPlain, String]], None, None)
+  def plainBody[T](implicit codec: Codec[T, MediaType.TextPlain, String]): EndpointIO.Body[T, MediaType.TextPlain, String] =
+    EndpointIO.Body(codec, None, None)
+  def jsonBody[T](implicit codec: Codec[T, MediaType.Json, String]): EndpointIO.Body[T, MediaType.Json, String] =
+    EndpointIO.Body(codec, None, None)
 
-  def header[T: TextCodec](name: String): EndpointIO.Header[T] = EndpointIO.Header(name, implicitly[TextCodec[T]], None, None)
+  def byteArrayBody: EndpointIO.Body[Array[Byte], MediaType.OctetStream, Array[Byte]] =
+    EndpointIO.Body(implicitly[Codec[Array[Byte], MediaType.OctetStream, Array[Byte]]], None, None)
+
+  def header[T: PlainCodec](name: String): EndpointIO.Header[T] = EndpointIO.Header(name, implicitly[PlainCodec[T]], None, None)
 
   case class InvalidOutput(reason: DecodeResult[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull) // TODO
 

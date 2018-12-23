@@ -1,7 +1,7 @@
 package tapir.client.sttp
 
 import com.softwaremill.sttp._
-import tapir.Codec.{RequiredTextCodec, TextCodec}
+import tapir.Codec.RequiredPlainCodec
 import tapir.internal.SeqToParams
 import tapir.typelevel.ParamsAsArgs
 import tapir._
@@ -9,7 +9,7 @@ import tapir._
 object EndpointToSttpClient {
   // don't look. The code is really, really ugly.
 
-  def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O], baseUri: Uri)(
+  def toSttpRequest[I, E, O](e: Endpoint[I, E, O], baseUri: Uri)(
       implicit paramsAsArgs: ParamsAsArgs[I]): paramsAsArgs.FN[Request[Either[E, O], Nothing]] = {
     paramsAsArgs.toFn(params => {
       val baseReq = sttp
@@ -21,11 +21,30 @@ object EndpointToSttpClient {
       var req2 = req.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
 
       if (e.output.asVectorOfSingle.nonEmpty || e.errorOutput.asVectorOfSingle.nonEmpty) {
-        val baseResponseAs: ResponseAs[String, Nothing] = if (hasBody(e.output) || hasBody(e.errorOutput)) asString else ignore.map(_ => "")
-        val responseAs = baseResponseAs.mapWithMetadata { (body, meta) =>
-          val outputs = if (meta.isSuccess) e.output.asVectorOfSingle else e.errorOutput.asVectorOfSingle
-          val params = getOutputParams(outputs, body, meta)
-          if (meta.isSuccess) Right(params) else Left(params)
+        // by default, reading the body as specified by the output, and optionally adjusting to the error output
+        // if there's no body in the output, reading the body as specified by the error output
+        // otherwise, ignoring
+        val outputBodyType = bodyType(e.output)
+        val errorOutputBodyType = bodyType(e.errorOutput)
+        val baseResponseAs = outputBodyType
+          .orElse(errorOutputBodyType)
+          .map {
+            case StringValueType    => asString
+            case ByteArrayValueType => asByteArray
+          }
+          .getOrElse(ignore)
+
+        val responseAs = baseResponseAs.mapWithMetadata {
+          (body, meta) =>
+            val outputs = if (meta.isSuccess) e.output.asVectorOfSingle else e.errorOutput.asVectorOfSingle
+
+            // the body type of the success output takes priority; that's why it might not match
+            val adjustedBody =
+              if (meta.isSuccess || outputBodyType.isEmpty || outputBodyType == errorOutputBodyType) body
+              else errorOutputBodyType.map(adjustBody(body, _)).getOrElse(body)
+
+            val params = getOutputParams(outputs, adjustedBody, meta)
+            if (meta.isSuccess) Right(params) else Left(params)
         }
 
         req2 = req2.response(responseAs.asInstanceOf[ResponseAs[Either[Any, Any], Nothing]]).parseResponseIf(_ => true)
@@ -35,15 +54,15 @@ object EndpointToSttpClient {
     })
   }
 
-  private def getOutputParams(outputs: Vector[EndpointIO.Single[_]], body: String, meta: ResponseMetadata): Any = {
+  private def getOutputParams(outputs: Vector[EndpointIO.Single[_]], body: Any, meta: ResponseMetadata): Any = {
     val values = outputs
       .map {
-        case EndpointIO.Body(m, _, _) =>
-          val so = if (m.isOptional && body == "") None else Some(body)
-          m.decodeOptional(so).getOrThrow(InvalidOutput)
+        case EndpointIO.Body(codec, _, _) =>
+          val so = if (codec.isOptional && body == "") None else Some(body)
+          codec.decodeOptional(so).getOrThrow(InvalidOutput)
 
-        case EndpointIO.Header(name, m, _, _) =>
-          m.decodeOptional(meta.header(name)).getOrThrow(InvalidOutput)
+        case EndpointIO.Header(name, codec, _, _) =>
+          codec.decodeOptional(meta.header(name)).getOrThrow(InvalidOutput)
 
         case EndpointIO.Mapped(wrapped, f, _, _) =>
           f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingle, body, meta))
@@ -52,17 +71,19 @@ object EndpointToSttpClient {
     SeqToParams(values)
   }
 
+  private type PartialAnyRequest = PartialRequest[Either[Any, Any], Nothing]
+
   private def setInputParams[I](inputs: Vector[EndpointInput.Single[_]],
                                 params: I,
                                 paramsAsArgs: ParamsAsArgs[I],
                                 paramIndex: Int,
                                 uri: Uri,
-                                req: PartialRequest[Either[Any, Any], Nothing]): (Uri, PartialRequest[Either[Any, Any], Nothing]) = {
+                                req: PartialAnyRequest): (Uri, PartialAnyRequest) = {
 
     def handleMapped[II, T](wrapped: EndpointInput[II],
                             g: T => II,
                             wrappedParamsAsArgs: ParamsAsArgs[II],
-                            tail: Vector[EndpointInput.Single[_]]): (Uri, PartialRequest[Either[Any, Any], Nothing]) = {
+                            tail: Vector[EndpointInput.Single[_]]): (Uri, PartialAnyRequest) = {
       val (uri2, req2) = setInputParams(
         wrapped.asVectorOfSingle,
         g(paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[T]),
@@ -79,26 +100,20 @@ object EndpointToSttpClient {
       case Vector() => (uri, req)
       case EndpointInput.PathSegment(p) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri.copy(path = uri.path :+ p), req)
-      case EndpointInput.PathCapture(m, _, _, _) +: tail =>
-        val v = m.asInstanceOf[RequiredTextCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
+      case EndpointInput.PathCapture(codec, _, _, _) +: tail =>
+        val v = codec.asInstanceOf[RequiredPlainCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path :+ v), req)
-      case EndpointInput.Query(name, m, _, _) +: tail =>
-        val uri2 = m
-          .asInstanceOf[TextCodec[Any]]
+      case EndpointInput.Query(name, codec, _, _) +: tail =>
+        val uri2 = codec
           .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
           .map(v => uri.param(name, v))
           .getOrElse(uri)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
-      case EndpointIO.Body(m, _, _) +: tail =>
-        val req2 = m
-          .asInstanceOf[Codec[Any, _]]
-          .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
-          .map(v => req.body(v))
-          .getOrElse(req)
+      case EndpointIO.Body(codec, _, _) +: tail =>
+        val req2 = setBody(paramsAsArgs.paramAt(params, paramIndex), codec, req)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
-      case EndpointIO.Header(name, m, _, _) +: tail =>
-        val req2 = m
-          .asInstanceOf[Codec[Any, _]]
+      case EndpointIO.Header(name, codec, _, _) +: tail =>
+        val req2 = codec
           .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
           .map(v => req.header(name, v))
           .getOrElse(req)
@@ -110,12 +125,32 @@ object EndpointToSttpClient {
     }
   }
 
-  private def hasBody[O](io: EndpointIO[O]): Boolean = {
-    io match {
-      case _: EndpointIO.Body[_, _]            => true
-      case EndpointIO.Multiple(ios)            => ios.exists(hasBody(_))
-      case EndpointIO.Mapped(wrapped, _, _, _) => hasBody(wrapped)
-      case _                                   => false
+  private def setBody[T, M <: MediaType, R](v: T, codec: Codec[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
+    codec
+      .encodeOptional(v)
+      .map(t => codec.rawValueType.fold(t)(req.body(_), req.body(_)))
+      .getOrElse(req)
+  }
+
+  private def bodyType[I](in: EndpointInput[I]): Option[RawValueType[_]] = {
+    in match {
+      case b: EndpointIO.Body[_, _, _]         => Some(b.codec.rawValueType)
+      case EndpointIO.Multiple(inputs)         => inputs.flatMap(bodyType(_)).headOption
+      case EndpointIO.Mapped(wrapped, _, _, _) => bodyType(wrapped)
+      case _                                   => None
+    }
+  }
+
+  // TODO: rework
+  private def adjustBody(b: Any, bodyType: RawValueType[_]): Any = {
+    val asByteArray = b match {
+      case s: String      => s.getBytes
+      case b: Array[Byte] => b
+    }
+
+    bodyType match {
+      case StringValueType    => new String(asByteArray)
+      case ByteArrayValueType => asByteArray
     }
   }
 }

@@ -29,6 +29,9 @@ object Schema {
   case class SArray(element: Schema) extends Schema {
     def show: String = s"array(${element.show})"
   }
+  case class SBinary() extends Schema {
+    def show: String = "binary"
+  }
 
   case class SObjectInfo(shortName: String, fullName: String)
 }

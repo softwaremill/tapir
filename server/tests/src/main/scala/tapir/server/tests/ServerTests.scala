@@ -4,7 +4,7 @@ import cats.implicits._
 import cats.effect.{IO, Resource}
 import tapir._
 import tapir.tests._
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
+import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import tapir.typelevel.ParamsAsArgs
@@ -35,7 +35,7 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   testServer(in_string_out_string, (b: String) => pureResult(b.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/fruit/info").body("Sweet").send().map(_.body shouldBe Right("Sweet"))
+    sttp.post(uri"$baseUri/api/echo").body("Sweet").send().map(_.body shouldBe Right("Sweet"))
   }
 
   testServer(in_mapped_query_out_string, (fruit: List[Char]) => pureResult(s"fruit length: ${fruit.length}".asRight[Unit])) { baseUri =>
@@ -70,22 +70,30 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   testServer(in_json_out_string, (fa: FruitAmount) => pureResult(s"${fa.fruit} ${fa.amount}".asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/fruit/info").body("""{"fruit":"orange","amount":11}""").send().map(_.body shouldBe Right("orange 11"))
+    sttp.post(uri"$baseUri/api/echo").body("""{"fruit":"orange","amount":11}""").send().map(_.body shouldBe Right("orange 11"))
   }
 
   testServer(in_string_out_json, (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/fruit/info").body("""banana 12""").send().map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
+    sttp.post(uri"$baseUri/api/echo").body("""banana 12""").send().map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
 
   testServer(in_string_out_json,
              (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit]),
              " with accept header") { baseUri =>
     sttp
-      .post(uri"$baseUri/fruit/info")
+      .post(uri"$baseUri/api/echo")
       .body("""banana 12""")
       .header(HeaderNames.Accept, MediaTypes.Json)
       .send()
       .map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
+  }
+
+  testServer(in_byte_array_out_int, (b: Array[Byte]) => pureResult(b.length.asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/api/length").body("banana kiwi".getBytes).send().map(_.body shouldBe Right("11"))
+  }
+
+  testServer(in_string_out_byte_list, (s: String) => pureResult(s.getBytes.toList.asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/api/echo").body("mango").response(asByteArray).send().map(_.body.map(new String(_)) shouldBe Right("mango"))
   }
 
   //
@@ -106,7 +114,7 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
   def server[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Port, fn: FN[R[Either[E, O]]])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Resource[IO, Unit]
 
-  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O], fn: FN[R[Either[E, O]]], testNameSuffix: String = "")(runTest: Uri => IO[Unit])(
+  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O], fn: FN[R[Either[E, O]]], testNameSuffix: String = "")(runTest: Uri => IO[Assertion])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
     val resources = for {
       port <- Resource.liftF(IO(randomPort()))

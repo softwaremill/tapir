@@ -32,13 +32,15 @@ object EndpointToAkkaServer {
 
   // don't look below. The code is really, really ugly. Even worse than in EndpointToSttpClient
 
-  private def singleOutputsWithValues(outputs: Vector[EndpointIO.Single[_]], v: Any): Vector[Either[HttpEntity.Strict, HttpHeader]] = {
+  private def singleOutputsWithValues(outputs: Vector[EndpointIO.Single[_]], v: Any): Vector[Either[ResponseEntity, HttpHeader]] = {
     val vs = ParamsToSeq(v)
 
     outputs.zipWithIndex.flatMap {
-      case (EndpointIO.Body(m, _, _), i) => m.encodeOptional(vs(i)).map(b => Left(HttpEntity(mediaTypeToContentType(m.mediaType), b)))
-      case (EndpointIO.Header(name, m, _, _), i) =>
-        m.encodeOptional(vs(i))
+      case (EndpointIO.Body(codec, _, _), i) =>
+        encodeBody(vs(i), codec).map(Left(_))
+      case (EndpointIO.Header(name, codec, _, _), i) =>
+        codec
+          .encodeOptional(vs(i))
           .map(HttpHeader.parse(name, _))
           .collect {
             case ParsingResult.Ok(h, _) => h
@@ -88,10 +90,7 @@ object EndpointToAkkaServer {
       def prependValue(v: Any): MatchResult = copy(values = v :: values)
     }
 
-    def doMatch(inputs: Vector[EndpointInput.Single[_]],
-                ctx: RequestContext,
-                canRemoveSlash: Boolean,
-                body: String): Option[MatchResult] = {
+    def doMatch(inputs: Vector[EndpointInput.Single[_]], ctx: RequestContext, canRemoveSlash: Boolean, body: Any): Option[MatchResult] = {
 
       def handleMapped[II, T](wrapped: EndpointInput[II], f: II => T, inputsTail: Vector[EndpointInput.Single[_]]): Option[MatchResult] = {
         doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap { result =>
@@ -111,12 +110,12 @@ object EndpointToAkkaServer {
               doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body)
             case _ => None
           }
-        case EndpointInput.PathCapture(m, _, _, _) +: inputsTail =>
+        case EndpointInput.PathCapture(codec, _, _, _) +: inputsTail =>
           ctx.unmatchedPath match {
             case Uri.Path.Slash(pathTail) if canRemoveSlash =>
               doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false, body)
             case Uri.Path.Segment(s, pathTail) =>
-              m.decode(s) match {
+              codec.decode(s) match {
                 case DecodeResult.Value(v) =>
                   doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body).map {
                     _.prependValue(v)
@@ -125,24 +124,24 @@ object EndpointToAkkaServer {
               }
             case _ => None
           }
-        case EndpointInput.Query(name, m, _, _) +: inputsTail =>
-          m.decodeOptional(ctx.request.uri.query().get(name)) match {
+        case EndpointInput.Query(name, codec, _, _) +: inputsTail =>
+          codec.decodeOptional(ctx.request.uri.query().get(name)) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
                 _.prependValue(v)
               }
             case _ => None
           }
-        case EndpointIO.Header(name, m, _, _) +: inputsTail =>
-          m.decodeOptional(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
+        case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
+          codec.decodeOptional(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
                 _.prependValue(v)
               }
             case _ => None
           }
-        case EndpointIO.Body(m, _, _) +: inputsTail =>
-          m.decodeOptional(Some(body)) match {
+        case EndpointIO.Body(codec, _, _) +: inputsTail =>
+          codec.decodeOptional(Some(body)) match {
             case DecodeResult.Value(v) =>
               doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
                 _.prependValue(v)
@@ -158,7 +157,11 @@ object EndpointToAkkaServer {
     }
 
     val inputDirectives: Directive1[I] = {
-      val bodyDirective: Directive1[String] = if (hasBody(e.input)) entity(as[String]) else provide(null)
+      val bodyDirective: Directive1[Any] = bodyType(e.input) match {
+        case Some(StringValueType)    => entity(as[String]).asInstanceOf[Directive1[Any]]
+        case Some(ByteArrayValueType) => entity(as[Array[Byte]]).asInstanceOf[Directive1[Any]]
+        case _                        => provide(null)
+      }
       bodyDirective.flatMap { body =>
         extractRequestContext.flatMap { ctx =>
           doMatch(e.input.asVectorOfSingle, ctx, canRemoveSlash = true, body) match {
@@ -173,20 +176,35 @@ object EndpointToAkkaServer {
     methodDirective & inputDirectives
   }
 
-  private def hasBody[I](in: EndpointInput[I]): Boolean = {
+  private def bodyType[I](in: EndpointInput[I]): Option[RawValueType[_]] = {
     in match {
-      case _: EndpointIO.Body[_, _]               => true
-      case EndpointInput.Multiple(inputs)         => inputs.exists(hasBody(_))
-      case EndpointInput.Mapped(wrapped, _, _, _) => hasBody(wrapped)
-      case EndpointIO.Mapped(wrapped, _, _, _)    => hasBody(wrapped)
-      case _                                      => false
+      case b: EndpointIO.Body[_, _, _]            => Some(b.codec.rawValueType)
+      case EndpointInput.Multiple(inputs)         => inputs.flatMap(bodyType(_)).headOption
+      case EndpointIO.Multiple(inputs)            => inputs.flatMap(bodyType(_)).headOption
+      case EndpointInput.Mapped(wrapped, _, _, _) => bodyType(wrapped)
+      case EndpointIO.Mapped(wrapped, _, _, _)    => bodyType(wrapped)
+      case _                                      => None
     }
   }
 
-  private def mediaTypeToContentType(mediaType: MediaType): ContentType.NonBinary = {
+  private def encodeBody[T, M <: MediaType, R](v: T, codec: Codec[T, M, R]): Option[ResponseEntity] = {
+    val ct = mediaTypeToContentType(codec.mediaType)
+    codec.encodeOptional(v).map { r =>
+      codec.rawValueType.fold(r)(s =>
+                                   ct match {
+                                     case nonBinary: ContentType.NonBinary => HttpEntity(nonBinary, s)
+                                     case _                                => HttpEntity(ct, s.getBytes("UTF-8")) // TODO
+                                 },
+                                 b => HttpEntity(ct, b))
+    }
+  }
+
+  private def mediaTypeToContentType(mediaType: MediaType): ContentType = {
     mediaType match {
-      case MediaType.Json() => ContentTypes.`application/json`
-      case MediaType.Text() => ContentTypes.`text/plain(UTF-8)`
+      case MediaType.Json()        => ContentTypes.`application/json`
+      case MediaType.TextPlain()   => ContentTypes.`text/plain(UTF-8)`
+      case MediaType.OctetStream() => ContentTypes.`application/octet-stream`
+      case mt                      => ContentType.parse(mt.mediaType).right.get
     }
   }
 }
