@@ -78,7 +78,7 @@ Also check out the [runnable example](https://github.com/softwaremill/tapir/blob
 To use tapir, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "core" % "0.0.4"
+"com.softwaremill.tapir" %% "core" % "0.0.5"
 ```
 
 This will import only the core classes. To generate a server or a client, you will need to add further dependencies.
@@ -159,7 +159,7 @@ A codec also contains the schema of the mapped type. This schema information is 
 #### Working with json
 
 ```scala
-"com.softwaremill.tapir" %% "json-circe" % "0.0.4"
+"com.softwaremill.tapir" %% "json-circe" % "0.0.5"
 ```
 
 The package:
@@ -173,7 +173,7 @@ contains codecs which, given a circe `Encoder`/`Decoder` in scope, will generate
 ## Running as an akka-http server
 
 ```scala
-"com.softwaremill.tapir" %% "akka-http-server" % "0.0.4"
+"com.softwaremill.tapir" %% "akka-http-server" % "0.0.5"
 ```
 
 To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/current/) server, import the package:
@@ -193,7 +193,7 @@ Note that the function doesn't take the tuple `I` directly as input, but instead
 ## Using as an sttp client
 
 ```scala
-"com.softwaremill.tapir" %% "sttp-client" % "0.0.4"
+"com.softwaremill.tapir" %% "sttp-client" % "0.0.5"
 ```
 
 To make requests using an endpoint definition using [sttp](https://sttp.readthedocs.io), import:
@@ -213,8 +213,8 @@ After providing the input parameters, the result is a description of the request
 ## Generating documentation
 
 ```scala
-"com.softwaremill.tapir" %% "openapi-docs" % "0.0.4"
-"com.softwaremill.tapir" %% "openapi-circe-yaml" % "0.0.4"
+"com.softwaremill.tapir" %% "openapi-docs" % "0.0.5"
+"com.softwaremill.tapir" %% "openapi-circe-yaml" % "0.0.5"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject. An endpoint can be converted to the model by importing the package and calling an extension method:
