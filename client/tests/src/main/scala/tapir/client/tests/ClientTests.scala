@@ -1,19 +1,31 @@
 package tapir.client.tests
 
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import cats.effect._
+import cats.effect.concurrent.Ref
+import cats.implicits._
+import fs2.Stream
+import fs2.concurrent.SignallingRef
 import org.http4s._
 import org.http4s.dsl.io._
-import org.http4s.server.Server
-import org.http4s.server.blaze.BlazeBuilder
+import org.http4s.server.Router
+import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
+import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import tapir._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
-
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 import scala.util.Random
 
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
+
+  private val logger = org.log4s.getLogger
+
+  implicit val ec = scala.concurrent.ExecutionContext.Implicits.global // Is this the one we want?
+  implicit val contextShift = IO.contextShift(ec)
+  implicit val timer = IO.timer(ec)
 
   testClient(endpoint, (), Right(()))
   testClient(in_query_out_string, "apple", Right("fruit: apple"))
@@ -52,6 +64,8 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
       }
   }
 
+  private val app: HttpApp[IO] = Router("/" -> service).orNotFound
+
   //
 
   type Port = Int
@@ -65,21 +79,34 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   }
 
   private var port: Port = _
-  private var server: Server[IO] = _
+  private var exitSignal: SignallingRef[IO, Boolean] = _
+  private var serverExitCode: Future[Option[ExitCode]] = _
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     port = randomPort()
-    server = BlazeBuilder[IO]
+
+    exitSignal = SignallingRef.apply[IO, Boolean](false).unsafeRunSync()
+
+    serverExitCode = BlazeServerBuilder[IO]
       .bindHttp(port)
-      .mountService(service)
-      .start
-      .unsafeRunSync()
+      .withHttpApp(app)
+      .serveWhile(exitSignal, Ref.unsafe(ExitCode.Success))
+      .compile
+      .last
+      .unsafeToFuture()
+
   }
 
   override protected def afterAll(): Unit = {
-    server.shutdownNow()
     super.afterAll()
+
+    val status = for {
+      _ <- exitSignal.set(true).unsafeToFuture()
+      exitCode <- serverExitCode
+    } yield exitCode
+
+    logger.debug(s"Server exited with code: ${Await.result(status, 2.seconds)}")
   }
 
   //
