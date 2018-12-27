@@ -1,5 +1,7 @@
 package tapir.server.akkahttp
 
+import java.nio.charset.Charset
+
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
 import akka.http.scaladsl.model.{MediaType => _, _}
 import akka.http.scaladsl.server.Directives._
@@ -158,7 +160,7 @@ object EndpointToAkkaServer {
 
     val inputDirectives: Directive1[I] = {
       val bodyDirective: Directive1[Any] = bodyType(e.input) match {
-        case Some(StringValueType)    => entity(as[String]).asInstanceOf[Directive1[Any]]
+        case Some(StringValueType(_)) => entity(as[String]).asInstanceOf[Directive1[Any]]
         case Some(ByteArrayValueType) => entity(as[Array[Byte]]).asInstanceOf[Directive1[Any]]
         case _                        => provide(null)
       }
@@ -190,10 +192,10 @@ object EndpointToAkkaServer {
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[ResponseEntity] = {
     val ct = mediaTypeToContentType(codec.mediaType)
     codec.encodeOptional(v).map { r =>
-      codec.rawValueType.fold(r)(s =>
+      codec.rawValueType.fold(r)((s, charset) =>
                                    ct match {
                                      case nonBinary: ContentType.NonBinary => HttpEntity(nonBinary, s)
-                                     case _                                => HttpEntity(ct, s.getBytes("UTF-8")) // TODO
+                                     case _                                => HttpEntity(ct, s.getBytes(charset))
                                  },
                                  b => HttpEntity(ct, b))
     }
@@ -201,10 +203,12 @@ object EndpointToAkkaServer {
 
   private def mediaTypeToContentType(mediaType: MediaType): ContentType = {
     mediaType match {
-      case MediaType.Json()        => ContentTypes.`application/json`
-      case MediaType.TextPlain()   => ContentTypes.`text/plain(UTF-8)`
-      case MediaType.OctetStream() => ContentTypes.`application/octet-stream`
-      case mt                      => ContentType.parse(mt.mediaType).right.get
+      case MediaType.Json()             => ContentTypes.`application/json`
+      case MediaType.TextPlain(charset) => MediaTypes.`text/plain`.withCharset(charsetToHttpCharset(charset))
+      case MediaType.OctetStream()      => ContentTypes.`application/octet-stream`
+      case mt                           => ContentType.parse(mt.mediaType).right.get
     }
   }
+
+  private def charsetToHttpCharset(charset: Charset): HttpCharset = HttpCharset.custom(charset.name())
 }

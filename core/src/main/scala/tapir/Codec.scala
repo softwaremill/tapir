@@ -1,5 +1,7 @@
 package tapir
 
+import java.nio.charset.{Charset, StandardCharsets}
+
 import tapir.DecodeResult._
 
 /**
@@ -54,7 +56,7 @@ object GeneralCodec {
   type GeneralJsonCodec[T] = GeneralCodec[T, MediaType.Json, String]
   type JsonCodec[T] = Codec[T, MediaType.Json, String]
 
-  implicit val stringPlainCodec: PlainCodec[String] = plainCodec[String](identity, Schema.SString)
+  implicit val stringPlainCodecUtf8: PlainCodec[String] = stringCodec(StandardCharsets.UTF_8)
   implicit val shortPlainCodec: PlainCodec[Short] = plainCodec[Short](_.toShort, Schema.SInteger)
   implicit val intPlainCodec: PlainCodec[Int] = plainCodec[Int](_.toInt, Schema.SInteger)
   implicit val longPlainCodec: PlainCodec[Long] = plainCodec[Long](_.toLong, Schema.SInteger)
@@ -62,9 +64,11 @@ object GeneralCodec {
   implicit val doublePlainCodec: PlainCodec[Double] = plainCodec[Double](_.toDouble, Schema.SNumber)
   implicit val booleanPlainCodec: PlainCodec[Boolean] = plainCodec[Boolean](_.toBoolean, Schema.SBoolean)
 
-  private def plainCodec[T](parse: String => T, _schema: Schema): PlainCodec[T] =
+  def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, Schema.SString, charset)
+
+  private def plainCodec[T](parse: String => T, _schema: Schema, charset: Charset = StandardCharsets.UTF_8): PlainCodec[T] =
     new PlainCodec[T] {
-      override val rawValueType: RawValueType[String] = StringValueType
+      override val rawValueType: RawValueType[String] = StringValueType(charset)
 
       override def encode(t: T): String = t.toString
       override def decode(s: String): DecodeResult[T] =
@@ -73,7 +77,7 @@ object GeneralCodec {
           case e: Exception => Error(s, e, "Cannot parse")
         }
       override def schema: Schema = _schema
-      override def mediaType = MediaType.TextPlain()
+      override def mediaType = MediaType.TextPlain(charset)
     }
 
   implicit def optionalCodec[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): GeneralCodec[Option[T], M, R] =
@@ -109,11 +113,11 @@ object GeneralCodec {
 
 // string, byte array, input stream, file, form values (?), stream
 sealed trait RawValueType[R] {
-  def fold[T](r: R)(fs: String => T, fb: Array[Byte] => T): T
+  def fold[T](r: R)(fs: (String, Charset) => T, fb: Array[Byte] => T): T
 }
-case object StringValueType extends RawValueType[String] {
-  override def fold[T](r: String)(fs: String => T, fb: Array[Byte] => T): T = fs(r)
+case class StringValueType(charset: Charset) extends RawValueType[String] {
+  override def fold[T](r: String)(fs: (String, Charset) => T, fb: Array[Byte] => T): T = fs(r, charset)
 }
 case object ByteArrayValueType extends RawValueType[Array[Byte]] {
-  override def fold[T](r: Array[Byte])(fs: String => T, fb: Array[Byte] => T): T = fb(r)
+  override def fold[T](r: Array[Byte])(fs: (String, Charset) => T, fb: Array[Byte] => T): T = fb(r)
 }

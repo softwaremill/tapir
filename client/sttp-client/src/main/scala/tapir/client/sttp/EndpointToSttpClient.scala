@@ -29,8 +29,8 @@ object EndpointToSttpClient {
         val baseResponseAs = outputBodyType
           .orElse(errorOutputBodyType)
           .map {
-            case StringValueType    => asString
-            case ByteArrayValueType => asByteArray
+            case StringValueType(charset) => asString(charset.name())
+            case ByteArrayValueType       => asByteArray
           }
           .getOrElse(ignore)
 
@@ -128,7 +128,7 @@ object EndpointToSttpClient {
   private def setBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
     codec
       .encodeOptional(v)
-      .map(t => codec.rawValueType.fold(t)(req.body(_), req.body(_)))
+      .map(t => codec.rawValueType.fold(t)((s, charset) => req.body(s, charset.name()), req.body(_)))
       .getOrElse(req)
   }
 
@@ -149,8 +149,8 @@ object EndpointToSttpClient {
     }
 
     bodyType match {
-      case StringValueType    => new String(asByteArray)
-      case ByteArrayValueType => asByteArray
+      case StringValueType(charset) => new String(asByteArray, charset)
+      case ByteArrayValueType       => asByteArray
     }
   }
 }

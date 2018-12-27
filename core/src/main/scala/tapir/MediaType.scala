@@ -1,19 +1,23 @@
 package tapir
 
+import java.nio.charset.Charset
+
 trait MediaType {
-  def mediaType: String
+  def mediaTypeNoParams: String
+  def mediaType: String = mediaTypeNoParams
 }
 
 object MediaType {
   case class Json() extends MediaType {
-    override def mediaType: String = "application/json"
+    override val mediaTypeNoParams: String = "application/json"
   }
 
-  case class TextPlain() extends MediaType {
-    override def mediaType: String = "text/plain"
+  case class TextPlain(charset: Charset) extends MediaType {
+    override val mediaTypeNoParams: String = s"text/plain"
+    override val mediaType: String = s"$mediaTypeNoParams; charset=${charset.name()}"
   }
 
   case class OctetStream() extends MediaType {
-    override def mediaType: String = "application/octet-stream"
+    override val mediaTypeNoParams: String = "application/octet-stream"
   }
 }

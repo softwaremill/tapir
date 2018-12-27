@@ -204,7 +204,11 @@ object EndpointToOpenAPIDocs {
     }
 
     private def codecToMediaType[T, M <: SMediaType](o: GeneralCodec[T, M, _], example: Option[T]): Map[String, OMediaType] = {
-      Map(o.mediaType.mediaType -> OMediaType(Some(sschemaToReferenceOrOSchema(o.schema)), example.flatMap(exampleValue(o, _)), None, None))
+      Map(
+        o.mediaType.mediaTypeNoParams -> OMediaType(Some(sschemaToReferenceOrOSchema(o.schema)),
+                                                    example.flatMap(exampleValue(o, _)),
+                                                    None,
+                                                    None))
     }
 
     private def sschemaToReferenceOrOSchema(schema: SSchema): ReferenceOr[OSchema] = {

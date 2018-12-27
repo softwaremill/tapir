@@ -7,10 +7,11 @@ import cats.implicits._
 import org.http4s
 import org.http4s.headers.`Content-Type`
 import org.http4s.util.CaseInsensitiveString
-import org.http4s.{EntityBody, Header, Headers, HttpRoutes, Request, Response, Status}
+import org.http4s.{Charset, EntityBody, Header, Headers, HttpRoutes, Request, Response, Status}
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.ParamsAsArgs
-import tapir.{GeneralCodec, DecodeResult, Endpoint, EndpointIO, EndpointInput, MediaType}
+import tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, GeneralCodec, MediaType}
+import java.nio.charset.{Charset => NioCharset}
 
 import scala.language.higherKinds
 
@@ -19,7 +20,6 @@ trait Http4sServer {
   implicit class RichHttp4sHttpEndpoint[I, E, O](e: Endpoint[I, E, O]) {
 
     private val logger = org.log4s.getLogger
-    private val encoding = java.nio.charset.StandardCharsets.UTF_8
 
     case class MatchResult[F[_]](values: List[Any], ctx: Context[F]) {
       def prependValue(v: Any): MatchResult[F] = copy(values = v :: values)
@@ -29,17 +29,17 @@ trait Http4sServer {
 
     private def mediaTypeToContentType(mediaType: MediaType): `Content-Type` =
       mediaType match {
-        case MediaType.Json()        => `Content-Type`(http4s.MediaType.application.json)
-        case MediaType.TextPlain()   => `Content-Type`(http4s.MediaType.text.plain)
-        case MediaType.OctetStream() => `Content-Type`(http4s.MediaType.application.`octet-stream`)
+        case MediaType.Json()             => `Content-Type`(http4s.MediaType.application.json)
+        case MediaType.TextPlain(charset) => `Content-Type`(http4s.MediaType.text.plain, Charset.fromNioCharset(charset))
+        case MediaType.OctetStream()      => `Content-Type`(http4s.MediaType.application.`octet-stream`)
       }
 
     private def encodeBody[T, M <: MediaType, R, F[_]: Sync](v: T, codec: GeneralCodec[T, M, R]): Option[(EntityBody[F], Header)] = {
       val ct: `Content-Type` = mediaTypeToContentType(codec.mediaType)
       codec.encodeOptional(v).map { r: R =>
         codec.rawValueType.fold(r)(
-          (s: String) => {
-            val byteIterator = s.toString.getBytes(encoding).iterator
+          (s: String, c: NioCharset) => {
+            val byteIterator = s.toString.getBytes(c).iterator
             fs2.Stream.fromIterator[F, Byte](byteIterator) -> ct
           },
           b => fs2.Stream.fromIterator[F, Byte](b.toIterator) -> ct
@@ -80,14 +80,23 @@ trait Http4sServer {
         val isOctet: Boolean = req.contentType.exists(_.mediaType == org.http4s.MediaType.application.`octet-stream`)
         val byteBody: F[Option[Array[Byte]]] =
           req.body.compile.toList.map(bytes => if (bytes.isEmpty) None else Option(bytes.toArray))
+
+        req.charset
         val context: F[Context[F]] =
           for {
             bytes <- byteBody
           } yield
-            Context(queryParams = req.params,
-                    headers = req.headers,
-                    body = if (isOctet) bytes else bytes.map(bs => new String(bs, encoding)),
-                    unmatchedPath = req.uri.renderString)
+            Context(
+              queryParams = req.params,
+              headers = req.headers,
+              body =
+                if (isOctet) bytes
+                else
+                  bytes.map { bs =>
+                    req.charset.fold(new String(bs))(c => new String(bs, c.nioCharset))
+                  },
+              unmatchedPath = req.uri.renderString
+            )
 
         val response: ContextState[F] = matchInputs[F](inputs)
 
@@ -243,7 +252,5 @@ trait Http4sServer {
       case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
         handleMapped(wrapped, f, inputsTail)
     }
-
   }
-
 }

@@ -1,5 +1,7 @@
 package tapir.json.circe
 
+import java.nio.charset.StandardCharsets
+
 import tapir.DecodeResult.{Error, Value}
 import tapir.{DecodeResult, MediaType, RawValueType, Schema, SchemaFor, StringValueType}
 import tapir.GeneralCodec.JsonCodec
@@ -8,7 +10,7 @@ import io.circe.{Decoder, Encoder}
 
 trait JsonCirce {
   implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
-    override val rawValueType: RawValueType[String] = StringValueType
+    override val rawValueType: RawValueType[String] = StringValueType(StandardCharsets.UTF_8)
 
     override def encode(t: T): String = t.asJson.noSpaces
     override def decode(s: String): DecodeResult[T] = io.circe.parser.decode[T](s) match {
