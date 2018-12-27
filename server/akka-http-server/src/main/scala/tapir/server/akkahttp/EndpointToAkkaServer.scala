@@ -187,7 +187,7 @@ object EndpointToAkkaServer {
     }
   }
 
-  private def encodeBody[T, M <: MediaType, R](v: T, codec: Codec[T, M, R]): Option[ResponseEntity] = {
+  private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[ResponseEntity] = {
     val ct = mediaTypeToContentType(codec.mediaType)
     codec.encodeOptional(v).map { r =>
       codec.rawValueType.fold(r)(s =>

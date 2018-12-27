@@ -1,7 +1,7 @@
 package tapir.client.sttp
 
 import com.softwaremill.sttp._
-import tapir.Codec.RequiredPlainCodec
+import tapir.GeneralCodec.PlainCodec
 import tapir.internal.SeqToParams
 import tapir.typelevel.ParamsAsArgs
 import tapir._
@@ -101,7 +101,7 @@ object EndpointToSttpClient {
       case EndpointInput.PathSegment(p) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri.copy(path = uri.path :+ p), req)
       case EndpointInput.PathCapture(codec, _, _, _) +: tail =>
-        val v = codec.asInstanceOf[RequiredPlainCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
+        val v = codec.asInstanceOf[PlainCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path :+ v), req)
       case EndpointInput.Query(name, codec, _, _) +: tail =>
         val uri2 = codec
@@ -125,7 +125,7 @@ object EndpointToSttpClient {
     }
   }
 
-  private def setBody[T, M <: MediaType, R](v: T, codec: Codec[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
+  private def setBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
     codec
       .encodeOptional(v)
       .map(t => codec.rawValueType.fold(t)(req.body(_), req.body(_)))

@@ -2,7 +2,11 @@ package tapir
 
 import tapir.DecodeResult._
 
-trait Codec[T, M <: MediaType, R] {
+/**
+  * A codec which can encode/decode both optional and non-optional values.
+  * Base trait for all codecs.
+  */
+trait GeneralCodec[T, M <: MediaType, R] { outer =>
   val rawValueType: RawValueType[R]
 
   def encodeOptional(t: T): Option[R]
@@ -11,20 +15,26 @@ trait Codec[T, M <: MediaType, R] {
   def schema: Schema
   def mediaType: M
 
-  def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = new MappedCodec[T, TT, M, R](this, f, g)
+  def map[TT](f: T => TT)(g: TT => T): GeneralCodec[TT, M, R] = new GeneralCodec[TT, M, R] {
+    override val rawValueType: RawValueType[R] = outer.rawValueType
+
+    override def encodeOptional(t: TT): Option[R] = outer.encodeOptional(g(t))
+    override def decodeOptional(s: Option[R]): DecodeResult[TT] = outer.decodeOptional(s).map(f)
+    override def isOptional: Boolean = outer.isOptional
+    override def schema: Schema = outer.schema
+    override def mediaType: M = outer.mediaType
+  }
 }
 
-class MappedCodec[T, TT, M <: MediaType, R](val nested: Codec[T, M, R], f: T => TT, g: TT => T) extends Codec[TT, M, R] {
-  override val rawValueType: RawValueType[R] = nested.rawValueType
-
-  override def encodeOptional(t: TT): Option[R] = nested.encodeOptional(g(t))
-  override def decodeOptional(s: Option[R]): DecodeResult[TT] = nested.decodeOptional(s).map(f)
-  override def isOptional: Boolean = nested.isOptional
-  override def schema: Schema = nested.schema
-  override def mediaType: M = nested.mediaType
-}
-
-trait RequiredCodec[T, M <: MediaType, R] extends Codec[T, M, R] {
+/**
+  * A pair of functions, one to encode a non-optional value to a raw value, and another one to decode.
+  * Also contains the schema of the value, as well as the meta-data on the media and the raw value type.
+  *
+  * @tparam T Type of the values which can be encoded / to which raw values can be decoded.
+  * @tparam M The media type of encoded values.
+  * @tparam R Type of the raw value to which values are encoded.
+  */
+trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] {
   def encode(t: T): R
   def decode(s: R): DecodeResult[T]
 
@@ -37,23 +47,23 @@ trait RequiredCodec[T, M <: MediaType, R] extends Codec[T, M, R] {
   def isOptional: Boolean = false
 }
 
-object Codec {
+object GeneralCodec {
+  type GeneralPlainCodec[T] = GeneralCodec[T, MediaType.TextPlain, String]
   type PlainCodec[T] = Codec[T, MediaType.TextPlain, String]
-  type RequiredPlainCodec[T] = RequiredCodec[T, MediaType.TextPlain, String]
 
+  type GeneralJsonCodec[T] = GeneralCodec[T, MediaType.Json, String]
   type JsonCodec[T] = Codec[T, MediaType.Json, String]
-  type RequiredJsonCodec[T] = RequiredCodec[T, MediaType.Json, String]
 
-  implicit val stringPlainCodec: RequiredPlainCodec[String] = plainCodec[String](identity, Schema.SString)
-  implicit val shortPlainCodec: RequiredPlainCodec[Short] = plainCodec[Short](_.toShort, Schema.SInteger)
-  implicit val intPlainCodec: RequiredPlainCodec[Int] = plainCodec[Int](_.toInt, Schema.SInteger)
-  implicit val longPlainCodec: RequiredPlainCodec[Long] = plainCodec[Long](_.toLong, Schema.SInteger)
-  implicit val floatPlainCodec: RequiredPlainCodec[Float] = plainCodec[Float](_.toFloat, Schema.SNumber)
-  implicit val doublePlainCodec: RequiredPlainCodec[Double] = plainCodec[Double](_.toDouble, Schema.SNumber)
-  implicit val booleanPlainCodec: RequiredPlainCodec[Boolean] = plainCodec[Boolean](_.toBoolean, Schema.SBoolean)
+  implicit val stringPlainCodec: PlainCodec[String] = plainCodec[String](identity, Schema.SString)
+  implicit val shortPlainCodec: PlainCodec[Short] = plainCodec[Short](_.toShort, Schema.SInteger)
+  implicit val intPlainCodec: PlainCodec[Int] = plainCodec[Int](_.toInt, Schema.SInteger)
+  implicit val longPlainCodec: PlainCodec[Long] = plainCodec[Long](_.toLong, Schema.SInteger)
+  implicit val floatPlainCodec: PlainCodec[Float] = plainCodec[Float](_.toFloat, Schema.SNumber)
+  implicit val doublePlainCodec: PlainCodec[Double] = plainCodec[Double](_.toDouble, Schema.SNumber)
+  implicit val booleanPlainCodec: PlainCodec[Boolean] = plainCodec[Boolean](_.toBoolean, Schema.SBoolean)
 
-  private def plainCodec[T](parse: String => T, _schema: Schema): RequiredPlainCodec[T] =
-    new RequiredPlainCodec[T] {
+  private def plainCodec[T](parse: String => T, _schema: Schema): PlainCodec[T] =
+    new PlainCodec[T] {
       override val rawValueType: RawValueType[String] = StringValueType
 
       override def encode(t: T): String = t.toString
@@ -66,8 +76,8 @@ object Codec {
       override def mediaType = MediaType.TextPlain()
     }
 
-  implicit def optionalCodec[T, M <: MediaType, R](implicit tm: RequiredCodec[T, M, R]): Codec[Option[T], M, R] =
-    new Codec[Option[T], M, R] {
+  implicit def optionalCodec[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): GeneralCodec[Option[T], M, R] =
+    new GeneralCodec[Option[T], M, R] {
       override val rawValueType: RawValueType[R] = tm.rawValueType
 
       override def encodeOptional(t: Option[T]): Option[R] = t.map(v => tm.encode(v))
@@ -86,8 +96,8 @@ object Codec {
     }
 
   // TODO: codec == map functions; others (R, schema, media type) added as implicits?
-  implicit val byteArrayCodec: RequiredCodec[Array[Byte], MediaType.OctetStream, Array[Byte]] =
-    new RequiredCodec[Array[Byte], MediaType.OctetStream, Array[Byte]] {
+  implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] =
+    new Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] {
       override val rawValueType: RawValueType[Array[Byte]] = ByteArrayValueType
 
       override def encode(b: Array[Byte]): Array[Byte] = b

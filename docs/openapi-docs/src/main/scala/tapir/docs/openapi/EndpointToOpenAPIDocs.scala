@@ -203,7 +203,7 @@ object EndpointToOpenAPIDocs {
       }
     }
 
-    private def codecToMediaType[T, M <: SMediaType](o: Codec[T, M, _], example: Option[T]): Map[String, OMediaType] = {
+    private def codecToMediaType[T, M <: SMediaType](o: GeneralCodec[T, M, _], example: Option[T]): Map[String, OMediaType] = {
       Map(o.mediaType.mediaType -> OMediaType(Some(sschemaToReferenceOrOSchema(o.schema)), example.flatMap(exampleValue(o, _)), None, None))
     }
 
@@ -227,7 +227,7 @@ object EndpointToOpenAPIDocs {
       } else None
     }
 
-    private def exampleValue[T](codec: Codec[T, _, _], e: T): Option[ExampleValue] =
+    private def exampleValue[T](codec: GeneralCodec[T, _, _], e: T): Option[ExampleValue] =
       codec.encodeOptional(e).map(v => ExampleValue(v.toString))
   }
 

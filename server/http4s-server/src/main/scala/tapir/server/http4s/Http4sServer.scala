@@ -10,7 +10,7 @@ import org.http4s.util.CaseInsensitiveString
 import org.http4s.{EntityBody, Header, Headers, HttpRoutes, Request, Response, Status}
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.ParamsAsArgs
-import tapir.{Codec, DecodeResult, Endpoint, EndpointIO, EndpointInput, MediaType}
+import tapir.{GeneralCodec, DecodeResult, Endpoint, EndpointIO, EndpointInput, MediaType}
 
 import scala.language.higherKinds
 
@@ -34,7 +34,7 @@ trait Http4sServer {
         case MediaType.OctetStream() => `Content-Type`(http4s.MediaType.application.`octet-stream`)
       }
 
-    private def encodeBody[T, M <: MediaType, R, F[_]: Sync](v: T, codec: Codec[T, M, R]): Option[(EntityBody[F], Header)] = {
+    private def encodeBody[T, M <: MediaType, R, F[_]: Sync](v: T, codec: GeneralCodec[T, M, R]): Option[(EntityBody[F], Header)] = {
       val ct: `Content-Type` = mediaTypeToContentType(codec.mediaType)
       codec.encodeOptional(v).map { r: R =>
         codec.rawValueType.fold(r)(
