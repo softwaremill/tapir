@@ -1,16 +1,13 @@
 package tapir.server.http4s
 
-import java.nio.charset.StandardCharsets.UTF_8
-
 import cats.Applicative
 import cats.data._
 import cats.effect.Sync
 import cats.implicits._
 import org.http4s
 import org.http4s.headers.`Content-Type`
-import org.http4s.parser.HttpHeaderParser
 import org.http4s.util.CaseInsensitiveString
-import org.http4s.{EntityBody, Header, Headers, HttpRoutes, ParseResult, Request, Response, Status}
+import org.http4s.{EntityBody, Header, Headers, HttpRoutes, Request, Response, Status}
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{Codec, DecodeResult, Endpoint, EndpointIO, EndpointInput, MediaType}
@@ -73,14 +70,14 @@ trait Http4sServer {
       }
     }
 
-    def toHttp4sService[F[_]: Sync, FN[_]](logic: FN[F[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
+    def toHttp4sRoutes[F[_]: Sync, FN[_]](logic: FN[F[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
 
       val inputs: Vector[EndpointInput.Single[_]] = e.input.asVectorOfSingle
       logger.debug(s"Inputs: ")
       logger.debug(inputs.mkString("\n"))
 
       val service: HttpRoutes[F] = HttpRoutes[F] { req: Request[F] =>
-        val isOctet: Boolean = req.contentType.map(_.mediaType == org.http4s.MediaType.application.`octet-stream`).getOrElse(false)
+        val isOctet: Boolean = req.contentType.exists(_.mediaType == org.http4s.MediaType.application.`octet-stream`)
         val byteBody: F[Option[Array[Byte]]] =
           req.body.compile.toList.map(bytes => if (bytes.isEmpty) None else Option(bytes.toArray))
         val context: F[Context[F]] =
@@ -96,12 +93,12 @@ trait Http4sServer {
 
         val value: F[Either[Error, (Context[F], MatchResult[F])]] = context.map(response.run)
 
-        logger.debug(s"Result of binding: ${value}")
+        logger.debug(s"Result of binding: $value")
 
         val maybeMatch: OptionT[F, I] = OptionT(value.map(_.toOption.map {
-          case (context, result) =>
+          case (context2, result) =>
             logger.debug(s"Result of binding: ${result.values}")
-            logger.debug(context.toString)
+            logger.debug(context2.toString)
             SeqToParams(result.values).asInstanceOf[I]
         }))
 
@@ -124,12 +121,12 @@ trait Http4sServer {
       val outputsWithValues: Vector[Either[(EntityBody[F], Header), Header]] =
         singleOutputsWithValues[F](output.asVectorOfSingle, v)
 
-      val body: Option[(EntityBody[F], Header)] = outputsWithValues.collectFirst {
+      val bodyOpt: Option[(EntityBody[F], Header)] = outputsWithValues.collectFirst {
         case Left((b, contentType)) => (b, contentType)
       }
       val responseHeaders = outputsWithValues.collect { case Right(h) => h }.toList
 
-      body match {
+      bodyOpt match {
         case Some((body, contentType)) =>
           val parsedHeaders = Headers(contentType :: responseHeaders)
           Response(status = statusCode, headers = parsedHeaders, body = body)
@@ -171,7 +168,7 @@ trait Http4sServer {
     private def continueMatch[F[_]: Sync](decodeResult: DecodeResult[Any], inputsTail: Vector[EndpointInput.Single[_]]): ContextState[F] =
       decodeResult match {
         case DecodeResult.Value(v) =>
-          logger.debug(s"Continuing match: ${v}")
+          logger.debug(s"Continuing match: $v")
           matchInputs[F](inputsTail).map(_.prependValue(v))
         case err =>
           StateT.inspectF((ctx: Context[F]) => Either.left(s"${err.toString}, ${ctx.unmatchedPath}"))
@@ -190,12 +187,12 @@ trait Http4sServer {
           ctx <- getState[F]
           _ <- modifyState[F](_.dropPath(ss.length + 1))
           doesMatch = ctx.unmatchedPath.drop(1).startsWith(ss)
-          _ = logger.debug(s"${doesMatch}, ${ctx.unmatchedPath}, ${ss}")
+          _ = logger.debug(s"$doesMatch, ${ctx.unmatchedPath}, $ss")
           r <- if (ctx.unmatchedPath.drop(1).startsWith(ss)) {
             val value: ContextState[F] = matchInputs[F](inputsTail)
             value
           } else {
-            val value: ContextState[F] = StateT.liftF(Either.left(s"Unmatched path segment: ${ss}, ${ctx}"))
+            val value: ContextState[F] = StateT.liftF(Either.left(s"Unmatched path segment: $ss, $ctx"))
             value
           }
         } yield r
@@ -205,13 +202,13 @@ trait Http4sServer {
             nextSegment(ctx.unmatchedPath)
               .map {
                 case (segment, remaining) =>
-                  logger.debug(s"Capturing path: ${segment}, remaining: ${remaining}, ${name}")
+                  logger.debug(s"Capturing path: $segment, remaining: $remaining, $name")
                   (ctx.copy(unmatchedPath = remaining), m.decode(segment))
             })
 
         decodeResult.flatMap {
           case DecodeResult.Value(v) =>
-            logger.debug(s"Decoded path: ${v}")
+            logger.debug(s"Decoded path: $v")
             matchInputs[F](inputsTail).map(_.prependValue(v))
           case decodingFailure => StateT.liftF(Either.left(s"Decoding path failed: $decodingFailure"))
         }
@@ -219,27 +216,27 @@ trait Http4sServer {
         for {
           ctx <- getState[F]
           query = m.decodeOptional(ctx.getQueryParam(name))
-          _ = logger.debug(s"Found query: ${query}, ${name}, ${ctx.headers}")
+          _ = logger.debug(s"Found query: $query, $name, ${ctx.headers}")
           res <- continueMatch(query, inputsTail)
         } yield res
       case EndpointIO.Header(name, m, _, _) +: inputsTail =>
         for {
           ctx <- getState[F]
           header = m.decodeOptional(ctx.getHeader(name))
-          _ = logger.debug(s"Found header: ${header}")
+          _ = logger.debug(s"Found header: $header")
           res <- continueMatch(header, inputsTail)
         } yield res
       case EndpointIO.Body(codec, _, _) +: inputsTail =>
         for {
           ctx <- getState[F]
           decoded: DecodeResult[Any] = codec.decodeOptional(ctx.body)
-          res <- (decoded match {
-            case DecodeResult.Value(v) =>
+          res <- decoded match {
+            case DecodeResult.Value(_) =>
               val r: ContextState[F] = continueMatch(decoded, inputsTail)
               r
             case _ =>
               matchInputs(inputsTail)
-          })
+          }
         } yield res
       case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
         handleMapped(wrapped, f, inputsTail)

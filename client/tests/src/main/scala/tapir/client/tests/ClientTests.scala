@@ -2,8 +2,6 @@ package tapir.client.tests
 
 import cats.effect._
 import cats.effect.concurrent.Ref
-import cats.implicits._
-import fs2.Stream
 import fs2.concurrent.SignallingRef
 import org.http4s._
 import org.http4s.dsl.io._
@@ -15,17 +13,18 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import tapir._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
+
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.util.Random
 
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   private val logger = org.log4s.getLogger
 
-  implicit val ec = scala.concurrent.ExecutionContext.Implicits.global // Is this the one we want?
-  implicit val contextShift = IO.contextShift(ec)
-  implicit val timer = IO.timer(ec)
+  implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
+  implicit private val timer: Timer[IO] = IO.timer(ec)
 
   testClient(endpoint, (), Right(()))
   testClient(in_query_out_string, "apple", Right("fruit: apple"))
@@ -50,13 +49,13 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
 
-  private val service = HttpService[IO] {
-    case GET -> Root :? fruitParam(f) +& amountOptParam(a) =>
-      Ok(s"fruit: $f${a.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
-    case GET -> Root / "fruit" / f                                    => Ok(s"$f")
-    case GET -> Root / "fruit" / f / "amount" / a :? colorOptParam(c) => Ok(s"$f $a $c")
-    case r @ POST -> Root / "api" / "echo"                            => r.as[String].flatMap(Ok(_))
-    case r @ POST -> Root / "api" / "length"                          => r.as[String].flatMap(s => Ok(s.length.toString))
+  private val service = HttpRoutes.of[IO] {
+    case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
+      Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
+    case GET -> Root / "fruit" / f                                         => Ok(s"$f")
+    case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
+    case r @ POST -> Root / "api" / "echo"                                 => r.as[String].flatMap(Ok(_))
+    case r @ POST -> Root / "api" / "length"                               => r.as[String].flatMap(s => Ok(s.length.toString))
     case r @ GET -> Root =>
       r.headers.get(CaseInsensitiveString("X-Role")) match {
         case None    => Ok()
