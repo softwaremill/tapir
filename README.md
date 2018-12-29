@@ -6,7 +6,9 @@
 
 With tapir you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of input parameters, error-output parameters, and normal-output parameters. An endpoint specification can then be translated to:
 
-* a server, given the "business logic": a function, which computes output parameters based on input parameters. Currently supported: [Akka HTTP](https://doc.akka.io/docs/akka-http/current/) routes/directives.
+* a server, given the "business logic": a function, which computes output parameters based on input parameters. Currently supported: 
+  * [Akka HTTP](https://doc.akka.io/docs/akka-http/current/) routes/directives.
+  * [Http4s](https://http4s.org/) `HttpRoutes[F[_]]` (=`Kleisli[OptionT,Request[F],Response[F]]`)
 * a client, which is a function from input parameters to output parameters. Currently supported: [sttp](https://github.com/softwaremill/sttp).
 * documentation. Currently supported: [OpenAPI](https://www.openapis.org).
 
