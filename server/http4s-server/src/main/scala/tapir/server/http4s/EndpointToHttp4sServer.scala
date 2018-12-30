@@ -16,7 +16,6 @@ import tapir.typelevel.ParamsAsArgs
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
-  DecodeResult,
   Endpoint,
   EndpointIO,
   EndpointInput,
@@ -45,12 +44,6 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
       CONNECT -> Method.CONNECT
     )
   }
-
-  private case class MatchResult(values: List[Any], ctx: Context) {
-    def prependValue(v: Any): MatchResult = copy(values = v :: values)
-  }
-
-  private type Error = String
 
   private def mediaTypeToContentType(mediaType: MediaType): `Content-Type` =
     mediaType match {
@@ -105,7 +98,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
     logger.debug(inputs.mkString("\n"))
 
     val service: HttpRoutes[F] = HttpRoutes[F] { req: Request[F] =>
-      val context: F[Context] = (e.input.bodyType match {
+      val context: F[Context[F]] = (e.input.bodyType match {
         case None     => None.pure[F]
         case Some(bt) => requestBody(req, bt).map(_.some)
       }).map { body =>
@@ -117,7 +110,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
         )
       }
 
-      val response: ContextState = matchInputs(inputs)
+      val response: ContextState[F] = new Http4sInputMatcher().matchInputs(inputs)
 
       val methodMatches: Either[Error, String] =
         Either.cond(http4sMethodToTapirMethodMap
@@ -126,7 +119,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
                     "",
                     s"Method mismatch: got ${req.method}, expected: ${e.method}")
 
-      val value: F[Either[Error, (Context, MatchResult)]] =
+      val value: F[Either[Error, (Context[F], MatchResult[F])]] =
         EitherT
           .fromEither[F](methodMatches)
           .flatMap(_ =>
@@ -186,113 +179,5 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
         Response(status = statusCode, headers = Headers(responseHeaders))
     }
 
-  }
-
-  private def nextSegment(unmatchedPath: String): Either[Error, (String, String)] =
-    if (unmatchedPath.startsWith("/")) {
-      val noSlash = unmatchedPath.drop(1)
-      val lastIndex =
-        if (noSlash.contains("/")) noSlash.indexOf("/")
-        else if (noSlash.contains("?")) noSlash.indexOf("?")
-        else
-          noSlash.length
-      val (segment, remaining) = noSlash.splitAt(lastIndex)
-      Either.right((segment, remaining))
-    } else {
-      Either.left("path doesn't start with \"/\"")
-    }
-
-  private case class Context(queryParams: Map[String, String], headers: Headers, body: Option[Any], unmatchedPath: String) {
-    def getHeader(key: String): Option[String] = headers.get(CaseInsensitiveString.apply(key)).map(_.value)
-    def getQueryParam(name: String): Option[String] = queryParams.get(name)
-    def dropPath(n: Int): Context = copy(unmatchedPath = unmatchedPath.drop(n))
-  }
-
-  private def handleMapped[II, T](wrapped: EndpointInput[II], f: II => T, inputsTail: Vector[EndpointInput.Single[_]]): ContextState =
-    for {
-      r1 <- matchInputs(wrapped.asVectorOfSingle)
-      r2 <- matchInputs(inputsTail)
-        .map(_.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(r1.values))))
-    } yield r2
-
-  private def continueMatch(decodeResult: DecodeResult[Any], inputsTail: Vector[EndpointInput.Single[_]]): ContextState =
-    decodeResult match {
-      case DecodeResult.Value(v) =>
-        logger.debug(s"Continuing match: $v")
-        matchInputs(inputsTail).map(_.prependValue(v))
-      case err =>
-        StateT.inspectF((ctx: Context) => Either.left(s"${err.toString}, ${ctx.unmatchedPath}"))
-    }
-
-  private type ContextState = StateT[Either[Error, ?], Context, MatchResult]
-  private def getState: StateT[Either[Error, ?], Context, Context] = StateT.get
-  private def modifyState(f: Context => Context): StateT[Either[Error, ?], Context, Unit] =
-    StateT.modify[Either[Error, ?], Context](f)
-
-  private def matchInputs(inputs: Vector[EndpointInput.Single[_]]): ContextState = inputs match {
-    case Vector() =>
-      StateT(context => Either.right((context, MatchResult(Nil, context))))
-    case EndpointInput.PathSegment(ss: String) +: inputsTail =>
-      for {
-        ctx <- getState
-        _ <- modifyState(_.dropPath(ss.length + 1))
-        doesMatch = ctx.unmatchedPath.drop(1).startsWith(ss)
-        _ = logger.debug(s"$doesMatch, ${ctx.unmatchedPath}, $ss")
-        r <- if (ctx.unmatchedPath.drop(1).startsWith(ss)) {
-          val value: ContextState = matchInputs(inputsTail)
-          value
-        } else {
-          val value: ContextState = StateT.liftF(Either.left(s"Unmatched path segment: $ss, $ctx"))
-          value
-        }
-      } yield r
-    case EndpointInput.PathCapture(m, name, _, _) +: inputsTail =>
-      val decodeResult: StateT[Either[Error, ?], Context, DecodeResult[Any]] = StateT(
-        (ctx: Context) =>
-          nextSegment(ctx.unmatchedPath)
-            .map {
-              case (segment, remaining) =>
-                logger.debug(s"Capturing path: $segment, remaining: $remaining, $name")
-                (ctx.copy(unmatchedPath = remaining), m.decode(segment))
-          })
-
-      decodeResult.flatMap {
-        case DecodeResult.Value(v) =>
-          logger.debug(s"Decoded path: $v")
-          matchInputs(inputsTail).map(_.prependValue(v))
-        case decodingFailure => StateT.liftF(Either.left(s"Decoding path failed: $decodingFailure"))
-      }
-    case EndpointInput.Query(name, m, _, _) +: inputsTail =>
-      for {
-        ctx <- getState
-        query = m.decodeOptional(ctx.getQueryParam(name))
-        _ = logger.debug(s"Found query: $query, $name, ${ctx.headers}")
-        res <- continueMatch(query, inputsTail)
-      } yield res
-    case EndpointIO.Header(name, m, _, _) +: inputsTail =>
-      for {
-        ctx <- getState
-        header = m.decodeOptional(ctx.getHeader(name))
-        _ = logger.debug(s"Found header: $header")
-        res <- continueMatch(header, inputsTail)
-      } yield res
-    case EndpointIO.Body(codec, _, _) +: inputsTail =>
-      for {
-        ctx <- getState
-        decoded: DecodeResult[Any] = {
-          codec.decodeOptional(ctx.body)
-        }
-        res <- decoded match {
-          case DecodeResult.Value(_) =>
-            val r: ContextState = continueMatch(decoded, inputsTail)
-            r
-          case _ =>
-            matchInputs(inputsTail)
-        }
-      } yield res
-    case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
-      handleMapped(wrapped, f, inputsTail)
-    case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
-      handleMapped(wrapped, f, inputsTail)
   }
 }
