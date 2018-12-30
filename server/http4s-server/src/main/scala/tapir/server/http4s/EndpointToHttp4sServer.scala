@@ -88,7 +88,7 @@ object EndpointToHttp4sServer {
             unmatchedPath = req.uri.renderString
           )
 
-      val response: ContextState[F] = new Http4sInputMatcher().matchInputs[F](inputs)
+      val response: ContextState[F] = Http4sInputMatcher.matchInputs[F](inputs)
 
       val value: F[Either[Error, (Context[F], MatchResult[F])]] = context.map(response.run)
 
@@ -113,7 +113,6 @@ object EndpointToHttp4sServer {
     }
 
     service
-
   }
 
   private def statusCodeToStatus(code: tapir.StatusCode): Status = {

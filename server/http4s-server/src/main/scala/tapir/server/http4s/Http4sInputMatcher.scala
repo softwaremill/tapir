@@ -6,7 +6,7 @@ import cats.implicits._
 import tapir.internal.SeqToParams
 import tapir.{DecodeResult, EndpointIO, EndpointInput}
 
-private[http4s] class Http4sInputMatcher {
+private[http4s] object Http4sInputMatcher {
   private val logger = org.log4s.getLogger
 
   def matchInputs[F[_]: Sync](inputs: Vector[EndpointInput.Single[_]]): ContextState[F] = inputs match {
