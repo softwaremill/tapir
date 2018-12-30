@@ -11,20 +11,21 @@ object EndpointToOpenAPIDocs {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
     val withSchemaKeys = new WithSchemaKeys(ObjectSchemasForEndpoints(es2))
 
-    OpenAPI(
+    val base = OpenAPI(
       info = Info(title, None, None, version),
       servers = None,
-      paths = withSchemaKeys.paths(es2),
+      paths = Map.empty,
       components = withSchemaKeys.components
     )
+
+    es2.map(withSchemaKeys.pathItem).foldLeft(base) {
+      case (current, (path, pathItem)) =>
+        current.addPathItem(path, pathItem)
+    }
   }
 
   private class WithSchemaKeys(schemaKeys: SchemaKeys) {
-    def paths(es: Iterable[Endpoint[_, _, _]]): Map[String, PathItem] = {
-      es.map(pathItem).groupBy(_._1).mapValues(_.map(_._2).reduce(mergePathItems))
-    }
-
-    private def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
+    def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
       import Method._
 
       val pathComponents = foldInputToVector(e.input, {
@@ -50,23 +51,6 @@ object EndpointToOpenAPIDocs {
       )
 
       ("/" + pathComponents.mkString("/"), pathItem)
-    }
-
-    private def mergePathItems(p1: PathItem, p2: PathItem): PathItem = {
-      PathItem(
-        None,
-        None,
-        get = p1.get.orElse(p2.get),
-        put = p1.put.orElse(p2.put),
-        post = p1.post.orElse(p2.post),
-        delete = p1.delete.orElse(p2.delete),
-        options = p1.options.orElse(p2.options),
-        head = p1.head.orElse(p2.head),
-        patch = p1.patch.orElse(p2.patch),
-        trace = p1.trace.orElse(p2.trace),
-        servers = None,
-        parameters = None
-      )
     }
 
     private def operationId(pathComponents: Vector[String], method: Method): String = {
