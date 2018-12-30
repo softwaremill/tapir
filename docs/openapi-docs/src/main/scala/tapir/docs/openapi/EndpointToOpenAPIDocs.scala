@@ -8,7 +8,7 @@ import tapir.openapi.{MediaType => OMediaType, Schema => OSchema, _}
 
 object EndpointToOpenAPIDocs {
   def toOpenAPI(title: String, version: String, es: Iterable[Endpoint[_, _, _]]): OpenAPI = {
-    val es2 = es.map(nameAllPathCapturesInEndpoint)
+    val es2 = es.map(e => nameAllPathCapturesInEndpoint(e))
     val withSchemaKeys = new WithSchemaKeys(ObjectSchemasForEndpoints(es2))
 
     OpenAPI(
@@ -257,7 +257,7 @@ object EndpointToOpenAPIDocs {
     }
   }
 
-  private def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _]): Endpoint[_, _, _] = {
+  private def nameAllPathCapturesInEndpoint[E, O](e: Endpoint[_, E, O]): Endpoint[_, E, O] = {
     val (input2, _) = new EndpointInputMapper[Int](
       {
         case (EndpointInput.PathCapture(codec, None, description, example), i) =>
