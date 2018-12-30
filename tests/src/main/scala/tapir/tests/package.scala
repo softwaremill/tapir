@@ -50,6 +50,32 @@ package object tests {
   val in_string_out_byte_list: Endpoint[String, Unit, List[Byte]] =
     endpoint.post.in("api" / "echo").in(stringBody).out(byteArrayBody.map(_.toList)(_.toArray))
 
+  val endpoint_with_path: Endpoint[Unit, Unit, String] =
+    endpoint.in("fruit" / "amount").out(stringBody)
+
+  val endpoint_with_status_mapping_no_body: Endpoint[Unit, Unit, Unit] =
+    endpoint
+      .in("api")
+      .mapStatusTo { _: Unit =>
+        StatusCodes.AlreadyReported
+      }
+
+  val endpoint_with_status_mapping: Endpoint[Unit, Unit, String] =
+    endpoint
+      .in("api")
+      .out(stringBody)
+      .mapStatusTo { _: String =>
+        StatusCodes.AlreadyReported
+      }
+
+  val endpoint_with_error_status_mapping: Endpoint[Unit, String, Unit] =
+    endpoint
+      .in("api")
+      .errorOut(stringBody)
+      .mapErrorStatusTo { _: String =>
+        StatusCodes.TooManyRequests
+      }
+
   val allTestEndpoints = List(
     in_query_out_string,
     in_query_query_out_string,

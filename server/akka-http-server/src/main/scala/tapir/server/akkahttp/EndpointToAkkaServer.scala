@@ -6,7 +6,7 @@ import akka.http.scaladsl.model.HttpHeader.ParsingResult
 import akka.http.scaladsl.model.{MediaType => _, _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
-import akka.http.scaladsl.server.{Directive, Directive1, RequestContext, Route}
+import akka.http.scaladsl.server.{Directive, Directive1, Route}
 import tapir._
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
@@ -26,8 +26,8 @@ object EndpointToAkkaServer {
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
     toDirective1(e) { values =>
       onSuccess(paramsAsArgs.applyFn(logic, values)) {
-        case Left(v)  => outputToRoute(StatusCodes.BadRequest, e.errorOutput, v)
-        case Right(v) => outputToRoute(StatusCodes.OK, e.output, v)
+        case Left(v)  => outputToRoute(e.errorStatusMapper(v), e.errorOutput, v)
+        case Right(v) => outputToRoute(e.statusMapper(v), e.output, v)
       }
     }
   }
@@ -54,13 +54,15 @@ object EndpointToAkkaServer {
     }
   }
 
-  private def outputToRoute[O](statusCode: StatusCode, output: EndpointIO[O], v: O): Route = {
+  private def outputToRoute[O](statusCode: akka.http.scaladsl.model.StatusCode, output: EndpointIO[O], v: O): Route = {
     val outputsWithValues = singleOutputsWithValues(output.asVectorOfSingle, v)
 
     val body = outputsWithValues.collectFirst { case Left(b) => b }
     val headers = outputsWithValues.collect { case Right(h)  => h }
 
-    val completeRoute = body.map(entity => complete(HttpResponse(entity = entity, status = statusCode))).getOrElse(complete(""))
+    val completeRoute = body
+      .map(entity => complete(HttpResponse(entity = entity, status = statusCode)))
+      .getOrElse(complete(HttpResponse(status = statusCode)))
 
     if (headers.nonEmpty) {
       respondWithHeaders(headers: _*)(completeRoute)

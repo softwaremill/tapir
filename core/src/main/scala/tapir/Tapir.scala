@@ -1,6 +1,7 @@
 package tapir
 
-import tapir.GeneralCodec.{PlainCodec, GeneralPlainCodec}
+import tapir.GeneralCodec.{GeneralPlainCodec, PlainCodec}
+import tapir.internal.DefaultStatusMappers
 
 trait Tapir {
   def path[T: PlainCodec]: EndpointInput[T] =
@@ -34,6 +35,8 @@ trait Tapir {
       EndpointInput.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),
-      EndpointInfo(None, None, None, Vector.empty)
+      EndpointInfo(None, None, None, Vector.empty),
+      DefaultStatusMappers.out,
+      DefaultStatusMappers.error
     )
 }

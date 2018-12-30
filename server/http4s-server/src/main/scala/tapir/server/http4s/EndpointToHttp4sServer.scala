@@ -1,5 +1,7 @@
 package tapir.server.http4s
 
+import java.nio.charset.{Charset => NioCharset}
+
 import cats.Applicative
 import cats.data._
 import cats.effect.Sync
@@ -11,7 +13,6 @@ import org.http4s.{Charset, EntityBody, Header, Headers, HttpRoutes, Request, Re
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, GeneralCodec, MediaType}
-import java.nio.charset.{Charset => NioCharset}
 
 object EndpointToHttp4sServer {
   private val logger = org.log4s.getLogger
@@ -111,15 +112,22 @@ object EndpointToHttp4sServer {
 
       res.flatMapF(_.map {
         case Right(result) =>
-          Option(makeResponse(Status.Ok, e.output, result))
+          Option(makeResponse(statusCodeToStatus(e.statusMapper(result)), e.output, result))
         case Left(err) =>
           logger.error(err.toString)
-          None
+          Option(makeResponse(statusCodeToStatus(e.errorStatusMapper(err)), e.errorOutput, err))
       })
     }
 
     service
 
+  }
+
+  private def statusCodeToStatus(code: tapir.StatusCode): Status = {
+    Status.fromInt(code) match {
+      case Right(v) => v
+      case _        => ???
+    }
   }
 
   private def makeResponse[O, F[_]: Sync](statusCode: org.http4s.Status, output: EndpointIO[O], v: O): Response[F] = {

@@ -1,12 +1,12 @@
 package tapir.server.tests
 
-import cats.implicits._
 import cats.effect.{IO, Resource}
-import tapir._
-import tapir.tests._
-import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
+import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import tapir._
+import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
 
 import scala.util.Random
@@ -94,6 +94,22 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testServer(in_string_out_byte_list, (s: String) => pureResult(s.getBytes.toList.asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/api/echo").body("mango").response(asByteArray).send().map(_.body.map(new String(_)) shouldBe Right("mango"))
+  }
+
+  testServer(endpoint_with_path, () => pureResult("".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/not-existing-path").send().map(_.code shouldBe tapir.StatusCodes.NotFound)
+  }
+
+  testServer(endpoint_with_status_mapping_no_body, () => pureResult(().asRight[Unit]), "status mapping") { baseUri =>
+    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe tapir.StatusCodes.AlreadyReported)
+  }
+
+  testServer(endpoint_with_status_mapping, () => pureResult("".asRight[Unit]), "status mapping") { baseUri =>
+    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe tapir.StatusCodes.AlreadyReported)
+  }
+
+  testServer(endpoint_with_error_status_mapping, () => pureResult("".asLeft[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe tapir.StatusCodes.TooManyRequests)
   }
 
   //
