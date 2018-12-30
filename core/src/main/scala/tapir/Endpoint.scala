@@ -1,5 +1,6 @@
 package tapir
 
+import tapir.internal.DefaultStatusMappers
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 /**
@@ -35,18 +36,21 @@ case class Endpoint[I, E, O](method: Method,
 
   def mapIn[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[II, E, O] =
     this.copy[II, E, O](input = input.map(f)(g))
+
   def mapInTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
                                                               paramsAsArgs: ParamsAsArgs[I]): Endpoint[CASE_CLASS, E, O] =
     this.copy[CASE_CLASS, E, O](input = input.mapTo(c)(fc, paramsAsArgs))
 
   def mapErrorOut[EE](f: E => EE)(g: EE => E)(implicit paramsAsArgs: ParamsAsArgs[E]): Endpoint[I, EE, O] =
     this.copy[I, EE, O](errorOutput = errorOutput.map(f)(g))
+
   def mapErrorOutTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, E, CASE_CLASS],
                                                                     paramsAsArgs: ParamsAsArgs[E]): Endpoint[I, CASE_CLASS, O] =
     this.copy[I, CASE_CLASS, O](errorOutput = errorOutput.mapTo(c)(fc, paramsAsArgs))
 
   def mapOut[OO](f: O => OO)(g: OO => O)(implicit paramsAsArgs: ParamsAsArgs[O]): Endpoint[I, E, OO] =
     this.copy[I, E, OO](output = output.map(f)(g))
+
   def mapOutTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, O, CASE_CLASS],
                                                                paramsAsArgs: ParamsAsArgs[O]): Endpoint[I, E, CASE_CLASS] =
     this.copy[I, E, CASE_CLASS](output = output.mapTo(c)(fc, paramsAsArgs))
