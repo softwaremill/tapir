@@ -191,7 +191,9 @@ This adds two extension methods to the `Endpoint` type: `toDirective` and `toRou
 ```
 
 Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the appropriate arity. The created `Route`/`Directive` can then be further combined with other akka-http directives.
-
+ 
+> As an endpoint can be interpreted to an akka-http directive or route, it is possible to nest and combine it with other routes. It's completely feasible that some part of the input is read using akka-http directives, and the rest using Tapir endpoint descriptions; or, that the Tapir-generated route is wrapped in e.g. a metrics route. Moreover, "edge-case endpoints", which require some special logic not expressible using Tapir, can be always implemented directly using akka-http.
+  
 ## Using as an sttp client
 
 ```scala
@@ -252,6 +254,8 @@ There's a number of similar projects from which Tapir draws inspiration:
 * coproducts/sealed trait families/discriminators in object hierarchies
 * support for OpenAPI's formats (base64, binary, email, ...)
 * ... and much more :)
+
+See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick one!
 
 ## Creating your own Tapir
 
