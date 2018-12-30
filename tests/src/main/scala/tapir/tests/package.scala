@@ -64,6 +64,7 @@ package object tests {
     in_query_out_mapped_string_header,
     in_json_out_string,
     in_string_out_json,
-    in_byte_array_out_int
+    in_byte_array_out_int,
+    in_string_out_byte_list
   )
 }
