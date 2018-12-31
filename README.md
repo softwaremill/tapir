@@ -221,12 +221,14 @@ After providing the input parameters, the result is a description of the request
 "com.softwaremill.tapir" %% "openapi-circe-yaml" % "0.0.5"
 ```
 
-Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject. An endpoint can be converted to the model by importing the package and calling an extension method:
+Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject. An endpoint can be converted to an instance of the model by importing the package and calling an extension method:
 
 ```scala
 import tapir.docs.openapi._
 val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
 ```
+
+Such a model can then be refined, by adding details which are not auto-generated, or by adding whole new endpoints which are exposed by the service not through Tapir, but e.g. using a hand-written akka-http route. Working with a deeply nested case class structure such as the `OpenAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
 
 The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
