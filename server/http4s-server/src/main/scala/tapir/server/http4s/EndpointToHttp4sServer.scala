@@ -80,7 +80,7 @@ object EndpointToHttp4sServer {
     }
   }
 
-  def toHttp4sRoutes[I, E, O, F[_]: Sync, FN[_]](e: Endpoint[I, E, O])(logic: FN[F[Either[E, O]]])(
+  def toRoutes[I, E, O, F[_]: Sync, FN[_]](e: Endpoint[I, E, O])(logic: FN[F[Either[E, O]]])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
 
     val inputs: Vector[EndpointInput.Single[_]] = e.input.asVectorOfSingle
@@ -110,14 +110,14 @@ object EndpointToHttp4sServer {
 
       val response: ContextState[F] = matchInputs[F](inputs)
 
-      val methodMatches: Either[String, Error] =
+      val methodMatches: Either[Error, String] =
         Either.cond(http4sMethodToTapirMethodMap
                       .get(req.method)
                       .contains(e.method),
                     "",
                     s"Method mismatch: got ${req.method}, expected: ${e.method}")
 
-      val value: F[Either[String, (Context[F], MatchResult[F])]] =
+      val value: F[Either[Error, (Context[F], MatchResult[F])]] =
         EitherT
           .fromEither[F](methodMatches)
           .flatMap(_ =>

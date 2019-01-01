@@ -16,7 +16,7 @@ import java.nio.charset.{Charset => NioCharset}
 trait Http4sServer {
   implicit class RichHttp4sHttpEndpoint[I, E, O](e: Endpoint[I, E, O]) {
     def toHttp4sRoutes[F[_]: Sync, FN[_]](logic: FN[F[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
-      EndpointToHttp4sServer.toHttp4sRoutes(e)(logic)
+      EndpointToHttp4sServer.toRoutes(e)(logic)
     }
   }
 }
