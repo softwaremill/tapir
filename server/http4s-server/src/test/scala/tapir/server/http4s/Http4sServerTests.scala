@@ -11,6 +11,7 @@ import tapir.server.tests.ServerTests
 import tapir.typelevel.ParamsAsArgs
 import cats.implicits._
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 class Http4sServerTests extends ServerTests[IO] {
 
@@ -35,6 +36,7 @@ class Http4sServerTests extends ServerTests[IO] {
           .compile
           .lastOrError
           .start
+        _ <- timer.sleep(100.millis) //TODO: Find a way to get a signal when server is online
       } yield (exitSignal, exitCodeFiber)
 
     val serverResource: Resource[IO, (SignallingRef[IO, Boolean], Fiber[IO, ExitCode])] = Resource.make(server) {
