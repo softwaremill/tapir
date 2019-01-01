@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/softwaremill/tapir](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/softwaremill/tapir?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/softwaremill/tapir.svg?branch=master)](https://travis-ci.org/softwaremill/tapir)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/core_2.12)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/tapir-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/core_2.12)
 
 With tapir you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of input parameters, error-output parameters, and normal-output parameters. An endpoint specification can then be translated to:
 
@@ -80,7 +80,7 @@ Also check out the [runnable example](https://github.com/softwaremill/tapir/blob
 To use tapir, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "core" % "0.0.5"
+"com.softwaremill.tapir" %% "tapir-core" % "0.0.5"
 ```
 
 This will import only the core classes. To generate a server or a client, you will need to add further dependencies.
