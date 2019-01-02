@@ -17,6 +17,10 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(baseUri).send().map(_.body shouldBe Right(""))
   }
 
+  testServer(endpoint, () => pureResult(().asRight[Unit]), "with post method") { baseUri =>
+    sttp.post(baseUri).send().map(_.body shouldBe 'left)
+  }
+
   testServer(in_query_out_string, (fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("fruit: orange"))
   }
@@ -36,6 +40,10 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testServer(in_string_out_string, (b: String) => pureResult(b.asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/api/echo").body("Sweet").send().map(_.body shouldBe Right("Sweet"))
+  }
+
+  testServer(in_string_out_string, (b: String) => pureResult(b.asRight[Unit]), "with get method") { baseUri =>
+    sttp.get(uri"$baseUri/api/echo").body("Sweet").send().map(_.body shouldBe 'left)
   }
 
   testServer(in_mapped_query_out_string, (fruit: List[Char]) => pureResult(s"fruit length: ${fruit.length}".asRight[Unit])) { baseUri =>
@@ -79,7 +87,7 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testServer(in_string_out_json,
              (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit]),
-             " with accept header") { baseUri =>
+             "with accept header") { baseUri =>
     sttp
       .post(uri"$baseUri/api/echo")
       .body("""banana 12""")
@@ -121,7 +129,7 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
       _ <- server(e, port, fn)
     } yield uri"http://localhost:$port"
 
-    test(e.show + testNameSuffix)(resources.use(runTest).unsafeRunSync())
+    test(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix))(resources.use(runTest).unsafeRunSync())
   }
 
   //
