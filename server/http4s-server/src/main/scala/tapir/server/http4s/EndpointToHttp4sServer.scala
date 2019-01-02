@@ -1,5 +1,7 @@
 package tapir.server.http4s
 
+import java.nio.charset.{Charset => NioCharset}
+
 import cats.Applicative
 import cats.data._
 import cats.effect.Sync
@@ -11,10 +13,23 @@ import org.http4s.{Charset, EntityBody, Header, Headers, HttpRoutes, Request, Re
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, GeneralCodec, MediaType}
-import java.nio.charset.{Charset => NioCharset}
 
 object EndpointToHttp4sServer {
+
   private val logger = org.log4s.getLogger
+  private val http4sMethodToTapirMethodMap: Map[org.http4s.Method, tapir.Method] = {
+    import org.http4s.Method._
+    import tapir.Method
+    Map(
+      GET -> Method.GET,
+      POST -> Method.POST,
+      DELETE -> Method.DELETE,
+      PUT -> Method.PUT,
+      OPTIONS -> Method.OPTIONS,
+      PATCH -> Method.PATCH,
+      CONNECT -> Method.CONNECT
+    )
+  }
 
   private case class MatchResult[F[_]](values: List[Any], ctx: Context[F]) {
     def prependValue(v: Any): MatchResult[F] = copy(values = v :: values)
@@ -65,7 +80,7 @@ object EndpointToHttp4sServer {
     }
   }
 
-  def toHttp4sRoutes[I, E, O, F[_]: Sync, FN[_]](e: Endpoint[I, E, O])(logic: FN[F[Either[E, O]]])(
+  def toRoutes[I, E, O, F[_]: Sync, FN[_]](e: Endpoint[I, E, O])(logic: FN[F[Either[E, O]]])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
 
     val inputs: Vector[EndpointInput.Single[_]] = e.input.asVectorOfSingle
@@ -77,7 +92,6 @@ object EndpointToHttp4sServer {
       val byteBody: F[Option[Array[Byte]]] =
         req.body.compile.toList.map(bytes => if (bytes.isEmpty) None else Option(bytes.toArray))
 
-      req.charset
       val context: F[Context[F]] =
         for {
           bytes <- byteBody
@@ -96,7 +110,20 @@ object EndpointToHttp4sServer {
 
       val response: ContextState[F] = matchInputs[F](inputs)
 
-      val value: F[Either[Error, (Context[F], MatchResult[F])]] = context.map(response.run)
+      val methodMatches: Either[Error, String] =
+        Either.cond(http4sMethodToTapirMethodMap
+                      .get(req.method)
+                      .contains(e.method),
+                    "",
+                    s"Method mismatch: got ${req.method}, expected: ${e.method}")
+
+      val value: F[Either[Error, (Context[F], MatchResult[F])]] =
+        EitherT
+          .fromEither[F](methodMatches)
+          .flatMap(_ =>
+            EitherT(context
+              .map(response.run)))
+          .value
 
       logger.debug(s"Result of binding: $value")
 

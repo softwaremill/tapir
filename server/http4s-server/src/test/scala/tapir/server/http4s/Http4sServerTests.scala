@@ -1,15 +1,14 @@
 package tapir.server.http4s
 import cats.data.Kleisli
-import cats.effect.concurrent.Ref
 import cats.effect._
-import fs2.concurrent.SignallingRef
+import cats.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{Request, Response}
 import tapir.Endpoint
 import tapir.server.tests.ServerTests
 import tapir.typelevel.ParamsAsArgs
-import cats.implicits._
+
 import scala.concurrent.ExecutionContext
 
 class Http4sServerTests extends ServerTests[IO] {
@@ -25,23 +24,11 @@ class Http4sServerTests extends ServerTests[IO] {
 
     val service: Kleisli[IO, Request[IO], Response[IO]] = e.toHttp4sRoutes(fn).orNotFound
 
-    val server: IO[(SignallingRef[IO, Boolean], Fiber[IO, ExitCode])] =
-      for {
-        exitSignal <- SignallingRef[IO, Boolean](initial = false)
-        exitCodeFiber <- BlazeServerBuilder[IO]
-          .bindHttp(port, "localhost")
-          .withHttpApp(service)
-          .serveWhile(exitSignal, Ref.unsafe(ExitCode.Success))
-          .compile
-          .lastOrError
-          .start
-      } yield (exitSignal, exitCodeFiber)
-
-    val serverResource: Resource[IO, (SignallingRef[IO, Boolean], Fiber[IO, ExitCode])] = Resource.make(server) {
-      case (signallingRef, _) => signallingRef.set(true)
-    }
-
-    serverResource.map(_ => ())
+    BlazeServerBuilder[IO]
+      .bindHttp(port, "localhost")
+      .withHttpApp(service)
+      .resource
+      .map(_ => ())
   }
 
 }
