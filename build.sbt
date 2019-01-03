@@ -7,13 +7,13 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
 
 val http4sVersion = "0.20.0-M4"
-val circeVersion = "0.10.1"
-val sttpVersion = "1.5.1"
+val circeVersion = "0.11.0"
+val sttpVersion = "1.5.2"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
 )
 
 lazy val rootProject = (project in file("."))
@@ -112,7 +112,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % "10.1.5",
+      "com.typesafe.akka" %% "akka-http" % "10.1.6",
       "com.typesafe.akka" %% "akka-stream" % "2.5.19"
     )
   )
