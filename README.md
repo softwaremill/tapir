@@ -97,6 +97,10 @@ If you don't have it already, you'll also need partial unification enabled in th
 scalacOptions += "-Ypartial-unification"
 ```
 
+### Example Project
+
+To see an example project using Tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) using Tapir and Http4s.
+
 ## Anatomy an endpoint
 
 An endpoint is represented as a value of type `Endpoint[I, E, O]`, where:
