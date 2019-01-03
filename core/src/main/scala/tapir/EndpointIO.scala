@@ -22,6 +22,15 @@ sealed trait EndpointInput[I] {
     case m: EndpointInput.Multiple[_] => m.inputs
     case m: EndpointIO.Multiple[_]    => m.ios
   }
+
+  private[tapir] def bodyType: Option[RawValueType[_]] = this match {
+    case b: EndpointIO.Body[_, _, _]            => Some(b.codec.rawValueType)
+    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.bodyType).headOption
+    case EndpointIO.Multiple(inputs)            => inputs.flatMap(_.bodyType).headOption
+    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.bodyType
+    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.bodyType
+    case _                                      => None
+  }
 }
 
 object EndpointInput {

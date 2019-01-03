@@ -1,5 +1,8 @@
 package tapir.client.sttp
 
+import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
+
 import com.softwaremill.sttp._
 import tapir.GeneralCodec.PlainCodec
 import tapir.internal.SeqToParams
@@ -31,6 +34,8 @@ object EndpointToSttpClient {
           .map {
             case StringValueType(charset) => asString(charset.name())
             case ByteArrayValueType       => asByteArray
+            case ByteBufferValueType      => asByteArray.map(ByteBuffer.wrap)
+            case InputStreamValueType     => asByteArray.map(new ByteArrayInputStream(_))
           }
           .getOrElse(ignore)
 
@@ -128,7 +133,7 @@ object EndpointToSttpClient {
   private def setBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
     codec
       .encodeOptional(v)
-      .map(t => codec.rawValueType.fold(t)((s, charset) => req.body(s, charset.name()), req.body(_)))
+      .map(t => codec.rawValueType.fold(t)((s, charset) => req.body(s, charset.name()), req.body(_), req.body(_), req.body(_)))
       .getOrElse(req)
   }
 

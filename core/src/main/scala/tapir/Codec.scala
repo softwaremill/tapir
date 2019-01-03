@@ -1,11 +1,13 @@
 package tapir
 
+import java.io.InputStream
+import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 
 import tapir.DecodeResult._
 
 /**
-  * A codec which can encode/decode both optional and non-optional values.
+  * A codec which can encode/decode both optional and non-optional values of type `T` to raw values of type `R`.
   * Base trait for all codecs.
   */
 trait GeneralCodec[T, M <: MediaType, R] { outer =>
@@ -29,8 +31,10 @@ trait GeneralCodec[T, M <: MediaType, R] { outer =>
 }
 
 /**
-  * A pair of functions, one to encode a non-optional value to a raw value, and another one to decode.
-  * Also contains the schema of the value, as well as the meta-data on the media and the raw value type.
+  * A pair of functions, one to encode a non-optional value of type `T` to a raw value of type `R`,
+  * and another one to decode.
+  *
+  * Also contains the `schema` of the value, as well as the meta-data on the media and the raw value type.
   *
   * @tparam T Type of the values which can be encoded / to which raw values can be decoded.
   * @tparam M The media type of encoded values.
@@ -99,25 +103,37 @@ object GeneralCodec {
       override def mediaType: M = tm.mediaType
     }
 
-  // TODO: codec == map functions; others (R, schema, media type) added as implicits?
-  implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] =
-    new Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] {
-      override val rawValueType: RawValueType[Array[Byte]] = ByteArrayValueType
+  implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] = binaryCodec(ByteArrayValueType)
+  implicit val byteBufferCodec: Codec[ByteBuffer, MediaType.OctetStream, ByteBuffer] = binaryCodec(ByteBufferValueType)
+  implicit val inputStreamCodec: Codec[InputStream, MediaType.OctetStream, InputStream] = binaryCodec(InputStreamValueType)
 
-      override def encode(b: Array[Byte]): Array[Byte] = b
-      override def decode(b: Array[Byte]): DecodeResult[Array[Byte]] = Value(b)
-      override def schema: Schema = Schema.SBinary()
-      override def mediaType = MediaType.OctetStream()
-    }
+  def binaryCodec[T](_rawValueType: RawValueType[T]): Codec[T, MediaType.OctetStream, T] = new Codec[T, MediaType.OctetStream, T] {
+    override val rawValueType: RawValueType[T] = _rawValueType
+
+    override def encode(b: T): T = b
+    override def decode(b: T): DecodeResult[T] = Value(b)
+    override def schema: Schema = Schema.SBinary()
+    override def mediaType = MediaType.OctetStream()
+  }
 }
 
 // string, byte array, input stream, file, form values (?), stream
 sealed trait RawValueType[R] {
-  def fold[T](r: R)(fs: (String, Charset) => T, fb: Array[Byte] => T): T
+  def fold[T](r: R)(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T
 }
 case class StringValueType(charset: Charset) extends RawValueType[String] {
-  override def fold[T](r: String)(fs: (String, Charset) => T, fb: Array[Byte] => T): T = fs(r, charset)
+  override def fold[T](r: String)(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T =
+    f1(r, charset)
 }
 case object ByteArrayValueType extends RawValueType[Array[Byte]] {
-  override def fold[T](r: Array[Byte])(fs: (String, Charset) => T, fb: Array[Byte] => T): T = fb(r)
+  override def fold[T](r: Array[Byte])(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T =
+    f2(r)
+}
+case object ByteBufferValueType extends RawValueType[ByteBuffer] {
+  override def fold[T](r: ByteBuffer)(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T =
+    f3(r)
+}
+case object InputStreamValueType extends RawValueType[InputStream] {
+  override def fold[T](r: InputStream)(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T =
+    f4(r)
 }

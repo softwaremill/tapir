@@ -1,6 +1,9 @@
 package tapir
 
-import tapir.GeneralCodec.{PlainCodec, GeneralPlainCodec}
+import java.io.InputStream
+import java.nio.ByteBuffer
+
+import tapir.GeneralCodec.{GeneralPlainCodec, PlainCodec}
 
 trait Tapir {
   def path[T: PlainCodec]: EndpointInput[T] =
@@ -22,6 +25,10 @@ trait Tapir {
 
   def byteArrayBody: EndpointIO.Body[Array[Byte], MediaType.OctetStream, Array[Byte]] =
     EndpointIO.Body(implicitly[GeneralCodec[Array[Byte], MediaType.OctetStream, Array[Byte]]], None, None)
+  def byteBufferBody: EndpointIO.Body[ByteBuffer, MediaType.OctetStream, ByteBuffer] =
+    EndpointIO.Body(implicitly[GeneralCodec[ByteBuffer, MediaType.OctetStream, ByteBuffer]], None, None)
+  def inputStreamBody: EndpointIO.Body[InputStream, MediaType.OctetStream, InputStream] =
+    EndpointIO.Body(implicitly[GeneralCodec[InputStream, MediaType.OctetStream, InputStream]], None, None)
 
   def header[T: GeneralPlainCodec](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[GeneralPlainCodec[T]], None, None)

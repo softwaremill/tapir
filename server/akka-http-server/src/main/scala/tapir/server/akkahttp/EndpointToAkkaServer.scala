@@ -1,5 +1,6 @@
 package tapir.server.akkahttp
 
+import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
@@ -7,6 +8,8 @@ import akka.http.scaladsl.model.{MediaType => _, _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
+import akka.stream.scaladsl.StreamConverters
+import akka.util.ByteString
 import tapir._
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
@@ -159,10 +162,12 @@ object EndpointToAkkaServer {
     }
 
     val inputDirectives: Directive1[I] = {
-      val bodyDirective: Directive1[Any] = bodyType(e.input) match {
-        case Some(StringValueType(_)) => entity(as[String]).asInstanceOf[Directive1[Any]]
-        case Some(ByteArrayValueType) => entity(as[Array[Byte]]).asInstanceOf[Directive1[Any]]
-        case _                        => provide(null)
+      val bodyDirective: Directive1[Any] = e.input.bodyType match {
+        case Some(StringValueType(_))   => entity(as[String]).asInstanceOf[Directive1[Any]]
+        case Some(ByteArrayValueType)   => entity(as[Array[Byte]]).asInstanceOf[Directive1[Any]]
+        case Some(ByteBufferValueType)  => entity(as[ByteString]).map(_.asByteBuffer).asInstanceOf[Directive1[Any]]
+        case Some(InputStreamValueType) => entity(as[Array[Byte]]).map(new ByteArrayInputStream(_)).asInstanceOf[Directive1[Any]]
+        case None                       => provide(null)
       }
       bodyDirective.flatMap { body =>
         extractRequestContext.flatMap { ctx =>
@@ -178,26 +183,19 @@ object EndpointToAkkaServer {
     methodDirective & inputDirectives
   }
 
-  private def bodyType[I](in: EndpointInput[I]): Option[RawValueType[_]] = {
-    in match {
-      case b: EndpointIO.Body[_, _, _]            => Some(b.codec.rawValueType)
-      case EndpointInput.Multiple(inputs)         => inputs.flatMap(bodyType(_)).headOption
-      case EndpointIO.Multiple(inputs)            => inputs.flatMap(bodyType(_)).headOption
-      case EndpointInput.Mapped(wrapped, _, _, _) => bodyType(wrapped)
-      case EndpointIO.Mapped(wrapped, _, _, _)    => bodyType(wrapped)
-      case _                                      => None
-    }
-  }
-
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[ResponseEntity] = {
     val ct = mediaTypeToContentType(codec.mediaType)
     codec.encodeOptional(v).map { r =>
-      codec.rawValueType.fold(r)((s, charset) =>
-                                   ct match {
-                                     case nonBinary: ContentType.NonBinary => HttpEntity(nonBinary, s)
-                                     case _                                => HttpEntity(ct, s.getBytes(charset))
-                                 },
-                                 b => HttpEntity(ct, b))
+      codec.rawValueType.fold(r)(
+        (s, charset) =>
+          ct match {
+            case nonBinary: ContentType.NonBinary => HttpEntity(nonBinary, s)
+            case _                                => HttpEntity(ct, s.getBytes(charset))
+        },
+        b => HttpEntity(ct, b),
+        b => HttpEntity(ct, ByteString(b)),
+        b => HttpEntity(ct, StreamConverters.fromInputStream(() => b))
+      )
     }
   }
 

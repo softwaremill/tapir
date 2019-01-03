@@ -1,5 +1,8 @@
 package tapir.server.tests
 
+import java.io.{ByteArrayInputStream, InputStream}
+import java.nio.ByteBuffer
+
 import cats.implicits._
 import cats.effect.{IO, Resource}
 import tapir._
@@ -8,6 +11,7 @@ import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import tapir.typelevel.ParamsAsArgs
+import TestUtil._
 
 import scala.util.Random
 
@@ -102,6 +106,16 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testServer(in_string_out_byte_list, (s: String) => pureResult(s.getBytes.toList.asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/api/echo").body("mango").response(asByteArray).send().map(_.body.map(new String(_)) shouldBe Right("mango"))
+  }
+
+  testServer(in_byte_buffer_out_byte_buffer, (b: ByteBuffer) => pureResult(b.asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/api/echo").body("mango").response(asString).send().map(_.body shouldBe Right("mango"))
+  }
+
+  testServer(in_input_stream_out_input_stream,
+             (is: InputStream) => pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])) {
+    baseUri =>
+      sttp.post(uri"$baseUri/api/echo").body("mango").response(asString).send().map(_.body shouldBe Right("mango"))
   }
 
   //

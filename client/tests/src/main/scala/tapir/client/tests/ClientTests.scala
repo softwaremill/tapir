@@ -1,5 +1,8 @@
 package tapir.client.tests
 
+import java.io.{ByteArrayInputStream, InputStream}
+import java.nio.ByteBuffer
+
 import cats.effect._
 import cats.effect.concurrent.Ref
 import fs2.concurrent.SignallingRef
@@ -13,6 +16,7 @@ import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import tapir._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
+import TestUtil._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -42,6 +46,10 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_string_out_json, """{"fruit":"banana","amount":12}""", Right(FruitAmount("banana", 12)))
   testClient(in_byte_array_out_int, "banana kiwi".getBytes(), Right(11))
   testClient(in_string_out_byte_list, "mango", Right("mango".getBytes.toList))
+  testClient(in_byte_buffer_out_byte_buffer, ByteBuffer.wrap("mango".getBytes), Right(ByteBuffer.wrap("mango".getBytes)))
+  testClient(in_input_stream_out_input_stream,
+             new ByteArrayInputStream("mango".getBytes),
+             Right(new ByteArrayInputStream("mango".getBytes)))
 
   //
 
@@ -74,7 +82,18 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O], args: I, expectedResult: Either[E, O])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
 
-    test(e.show)(send(e, port, args).unsafeRunSync() shouldBe expectedResult)
+    test(e.show) {
+      // adjust test result values to a form that is comparable by scalatest
+      def adjust(r: Either[Any, Any]): Either[Any, Any] = r match {
+        case Left(is: InputStream)  => Left(inputStreamToByteArray(is).toList)
+        case Right(is: InputStream) => Right(inputStreamToByteArray(is).toList)
+        case Left(a: Array[Byte])   => Left(a.toList)
+        case Right(a: Array[Byte])  => Right(a.toList)
+        case _                      => r
+      }
+
+      adjust(send(e, port, args).unsafeRunSync()) shouldBe adjust(expectedResult)
+    }
   }
 
   private var port: Port = _

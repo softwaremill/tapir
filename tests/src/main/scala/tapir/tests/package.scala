@@ -1,5 +1,8 @@
 package tapir
 
+import java.io.InputStream
+import java.nio.ByteBuffer
+
 import io.circe.generic.auto._
 import tapir.json.circe._
 
@@ -49,6 +52,12 @@ package object tests {
 
   val in_string_out_byte_list: Endpoint[String, Unit, List[Byte]] =
     endpoint.post.in("api" / "echo").in(stringBody).out(byteArrayBody.map(_.toList)(_.toArray))
+
+  val in_byte_buffer_out_byte_buffer: Endpoint[ByteBuffer, Unit, ByteBuffer] =
+    endpoint.post.in("api" / "echo").in(byteBufferBody).out(byteBufferBody).name("byte buffer")
+
+  val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream] =
+    endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("input stream")
 
   val allTestEndpoints = List(
     in_query_out_string,
