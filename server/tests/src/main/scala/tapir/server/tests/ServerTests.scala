@@ -81,41 +81,35 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     }
   }
 
-  testServer(in_json_out_string, (fa: FruitAmount) => pureResult(s"${fa.fruit} ${fa.amount}".asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/api/echo").body("""{"fruit":"orange","amount":11}""").send().map(_.body shouldBe Right("orange 11"))
-  }
-
-  testServer(in_string_out_json, (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/api/echo").body("""banana 12""").send().map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
-  }
-
-  testServer(in_string_out_json,
-             (s: String) => pureResult(FruitAmount(s.split(" ")(0), s.split(" ")(1).toInt).asRight[Unit]),
-             "with accept header") { baseUri =>
+  testServer(in_json_out_json, (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " banana", fa.amount * 2).asRight[Unit])) { baseUri =>
     sttp
       .post(uri"$baseUri/api/echo")
-      .body("""banana 12""")
+      .body("""{"fruit":"orange","amount":11}""")
+      .send()
+      .map(_.body shouldBe Right("""{"fruit":"orange banana","amount":22}"""))
+  }
+
+  testServer(in_json_out_json, (fa: FruitAmount) => pureResult(fa.asRight[Unit]), "with accept header") { baseUri =>
+    sttp
+      .post(uri"$baseUri/api/echo")
+      .body("""{"fruit":"banana","amount":12}""")
       .header(HeaderNames.Accept, MediaTypes.Json)
       .send()
       .map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
 
-  testServer(in_byte_array_out_int, (b: Array[Byte]) => pureResult(b.length.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/api/length").body("banana kiwi".getBytes).send().map(_.body shouldBe Right("11"))
-  }
-
-  testServer(in_string_out_byte_list, (s: String) => pureResult(s.getBytes.toList.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/api/echo").body("mango").response(asByteArray).send().map(_.body.map(new String(_)) shouldBe Right("mango"))
+  testServer(in_byte_array_out_byte_array, (b: Array[Byte]) => pureResult(b.asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/api/echo").body("banana kiwi".getBytes).send().map(_.body shouldBe Right("banana kiwi"))
   }
 
   testServer(in_byte_buffer_out_byte_buffer, (b: ByteBuffer) => pureResult(b.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/api/echo").body("mango").response(asString).send().map(_.body shouldBe Right("mango"))
+    sttp.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
   testServer(in_input_stream_out_input_stream,
              (is: InputStream) => pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])) {
     baseUri =>
-      sttp.post(uri"$baseUri/api/echo").body("mango").response(asString).send().map(_.body shouldBe Right("mango"))
+      sttp.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
   //

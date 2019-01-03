@@ -42,10 +42,8 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_query_mapped_path_path_out_string, (FruitAmount("apple", 10), "red"), Right("apple 10 Some(red)"))
   testClient(in_query_out_mapped_string, "apple", Right("fruit: apple".toList))
   testClient(in_query_out_mapped_string_header, "apple", Right(FruitAmount("fruit: apple", 5)))
-  testClient(in_json_out_string, FruitAmount("orange", 11), Right("""{"fruit":"orange","amount":11}"""))
-  testClient(in_string_out_json, """{"fruit":"banana","amount":12}""", Right(FruitAmount("banana", 12)))
-  testClient(in_byte_array_out_int, "banana kiwi".getBytes(), Right(11))
-  testClient(in_string_out_byte_list, "mango", Right("mango".getBytes.toList))
+  testClient(in_json_out_json, FruitAmount("orange", 11), Right(FruitAmount("orange", 11)))
+  testClient(in_byte_array_out_byte_array, "banana kiwi".getBytes(), Right("banana kiwi".getBytes()))
   testClient(in_byte_buffer_out_byte_buffer, ByteBuffer.wrap("mango".getBytes), Right(ByteBuffer.wrap("mango".getBytes)))
   testClient(in_input_stream_out_input_stream,
              new ByteArrayInputStream("mango".getBytes),
@@ -63,7 +61,6 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
     case r @ POST -> Root / "api" / "echo"                                 => r.as[String].flatMap(Ok(_))
-    case r @ POST -> Root / "api" / "length"                               => r.as[String].flatMap(s => Ok(s.length.toString))
     case r @ GET -> Root =>
       r.headers.get(CaseInsensitiveString("X-Role")) match {
         case None    => Ok()

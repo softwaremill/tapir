@@ -41,23 +41,17 @@ package object tests {
     .in(query[String]("fruit"))
     .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
 
-  val in_json_out_string: Endpoint[FruitAmount, Unit, String] =
-    endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(stringBody)
+  val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount] =
+    endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
 
-  val in_string_out_json: Endpoint[String, Unit, FruitAmount] =
-    endpoint.post.in("api" / "echo").in(stringBody).out(jsonBody[FruitAmount])
-
-  val in_byte_array_out_int: Endpoint[Array[Byte], Unit, Int] =
-    endpoint.post.in("api" / "length").in(byteArrayBody).out(plainBody[Int])
-
-  val in_string_out_byte_list: Endpoint[String, Unit, List[Byte]] =
-    endpoint.post.in("api" / "echo").in(stringBody).out(byteArrayBody.map(_.toList)(_.toArray))
+  val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte]] =
+    endpoint.post.in("api" / "echo").in(byteArrayBody).out(byteArrayBody).name("echo byte array")
 
   val in_byte_buffer_out_byte_buffer: Endpoint[ByteBuffer, Unit, ByteBuffer] =
-    endpoint.post.in("api" / "echo").in(byteBufferBody).out(byteBufferBody).name("byte buffer")
+    endpoint.post.in("api" / "echo").in(byteBufferBody).out(byteBufferBody).name("echo byte buffer")
 
   val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream] =
-    endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("input stream")
+    endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("echo input stream")
 
   val allTestEndpoints = List(
     in_query_out_string,
@@ -71,9 +65,9 @@ package object tests {
     in_query_mapped_path_path_out_string,
     in_query_out_mapped_string,
     in_query_out_mapped_string_header,
-    in_json_out_string,
-    in_string_out_json,
-    in_byte_array_out_int,
-    in_string_out_byte_list
+    in_json_out_json,
+    in_byte_array_out_byte_array,
+    in_byte_buffer_out_byte_buffer,
+    in_input_stream_out_input_stream
   )
 }
