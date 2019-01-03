@@ -77,7 +77,7 @@ object EndpointToAkkaServer {
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._
 
-    val methodDirective = methodDirectiveType(e)
+    val methodDirective = methodToAkkaDirective(e)
 
     // TODO: when parsing a query parameter/header/body/path fragment fails, provide an option to return a nice
     // error to the user (instead of a 404).
@@ -104,7 +104,7 @@ object EndpointToAkkaServer {
     methodDirective & inputDirectives
   }
 
-  private def methodDirectiveType[O, E, I](e: Endpoint[I, E, O]) = {
+  private def methodToAkkaDirective[O, E, I](e: Endpoint[I, E, O]) = {
     e.method match {
       case Method.GET     => get
       case Method.HEAD    => head
