@@ -22,7 +22,7 @@ class Http4sServerTests extends ServerTests[IO] {
   override def server[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Port, fn: FN[IO[Either[E, O]]])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Resource[IO, Unit] = {
 
-    val service: Kleisli[IO, Request[IO], Response[IO]] = e.toHttp4sRoutes(fn).orNotFound
+    val service: Kleisli[IO, Request[IO], Response[IO]] = e.toRoutes(fn).orNotFound
 
     BlazeServerBuilder[IO]
       .bindHttp(port, "localhost")
