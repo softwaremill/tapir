@@ -147,7 +147,7 @@ object EndpointToSttpClient {
   }
 
   // TODO: rework
-  private def adjustBody(b: Any, bodyType: RawValueType[_]): Any = {
+  private def adjustBody[R](b: Any, bodyType: RawValueType[R]): R = {
     val asByteArray = b match {
       case s: String      => s.getBytes
       case b: Array[Byte] => b
@@ -156,6 +156,8 @@ object EndpointToSttpClient {
     bodyType match {
       case StringValueType(charset) => new String(asByteArray, charset)
       case ByteArrayValueType       => asByteArray
+      case ByteBufferValueType      => ByteBuffer.wrap(asByteArray)
+      case InputStreamValueType     => new ByteArrayInputStream(asByteArray)
     }
   }
 }
