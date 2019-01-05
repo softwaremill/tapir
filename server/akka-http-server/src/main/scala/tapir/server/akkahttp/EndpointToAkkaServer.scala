@@ -132,17 +132,6 @@ object EndpointToAkkaServer {
     }
   }
 
-  private def bodyType[I](in: EndpointInput[I]): Option[RawValueType[_]] = {
-    in match {
-      case b: EndpointIO.Body[_, _, _]            => Some(b.codec.rawValueType)
-      case EndpointInput.Multiple(inputs)         => inputs.flatMap(bodyType(_)).headOption
-      case EndpointIO.Multiple(inputs)            => inputs.flatMap(bodyType(_)).headOption
-      case EndpointInput.Mapped(wrapped, _, _, _) => bodyType(wrapped)
-      case EndpointIO.Mapped(wrapped, _, _, _)    => bodyType(wrapped)
-      case _                                      => None
-    }
-  }
-
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[ResponseEntity] = {
     val ct = mediaTypeToContentType(codec.mediaType)
     codec.encodeOptional(v).map { r =>
