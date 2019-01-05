@@ -27,9 +27,7 @@ import tapir.{
   StringValueType
 }
 
-import scala.concurrent.ExecutionContext
-
-class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext: ExecutionContext) {
+class EndpointToHttp4sServer[F[_]: Sync: ContextShift](http4sServerOptions: Http4sServerOptions) {
 
   private val logger = org.log4s.getLogger
   private val http4sMethodToTapirMethodMap: Map[org.http4s.Method, tapir.Method] = {
@@ -64,7 +62,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
         },
         b => fs2.Stream.chunk(Chunk.bytes(b)) -> ct,
         b => fs2.Stream.chunk(Chunk.byteBuffer(b)) -> ct,
-        b => fs2.io.readInputStream(b.pure[F], 8192, blockingExecutionContext) -> ct
+        b => fs2.io.readInputStream(b.pure[F], 8192, http4sServerOptions.blockingExecutionContext) -> ct
       )
     }
   }
