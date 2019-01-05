@@ -20,7 +20,7 @@ import akka.http.scaladsl.model.{
 }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
-import akka.http.scaladsl.server.{Directive, Directive1, Route}
+import akka.http.scaladsl.server.{Directive, Directive1, RequestContext, Route}
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
 import tapir.{StatusCode, _}
@@ -92,89 +92,10 @@ object EndpointToAkkaServer {
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._
 
-    val methodDirective = e.method match {
-      case Method.GET     => get
-      case Method.HEAD    => head
-      case Method.POST    => post
-      case Method.PUT     => put
-      case Method.DELETE  => delete
-      case Method.OPTIONS => options
-      case Method.PATCH   => patch
-      case m              => method(HttpMethod.custom(m.m))
-    }
+    val methodDirective = methodToAkkaDirective(e)
 
     // TODO: when parsing a query parameter/header/body/path fragment fails, provide an option to return a nice
     // error to the user (instead of a 404).
-
-    case class MatchResult(values: List[Any], ctx: RequestContext, canRemoveSlash: Boolean) {
-      def prependValue(v: Any): MatchResult = copy(values = v :: values)
-    }
-
-    def doMatch(inputs: Vector[EndpointInput.Single[_]], ctx: RequestContext, canRemoveSlash: Boolean, body: Any): Option[MatchResult] = {
-
-      def handleMapped[II, T](wrapped: EndpointInput[II], f: II => T, inputsTail: Vector[EndpointInput.Single[_]]): Option[MatchResult] = {
-        doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap { result =>
-          doMatch(inputsTail, result.ctx, result.canRemoveSlash, body).map {
-            _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
-          }
-        }
-      }
-
-      inputs match {
-        case Vector() => Some(MatchResult(Nil, ctx, canRemoveSlash))
-        case EndpointInput.PathSegment(ss) +: inputsTail =>
-          ctx.unmatchedPath match {
-            case Uri.Path.Slash(pathTail) if canRemoveSlash =>
-              doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false, body)
-            case Uri.Path.Segment(`ss`, pathTail) =>
-              doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body)
-            case _ => None
-          }
-        case EndpointInput.PathCapture(codec, _, _, _) +: inputsTail =>
-          ctx.unmatchedPath match {
-            case Uri.Path.Slash(pathTail) if canRemoveSlash =>
-              doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false, body)
-            case Uri.Path.Segment(s, pathTail) =>
-              codec.decode(s) match {
-                case DecodeResult.Value(v) =>
-                  doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body).map {
-                    _.prependValue(v)
-                  }
-                case _ => None
-              }
-            case _ => None
-          }
-        case EndpointInput.Query(name, codec, _, _) +: inputsTail =>
-          codec.decodeOptional(ctx.request.uri.query().get(name)) match {
-            case DecodeResult.Value(v) =>
-              doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
-                _.prependValue(v)
-              }
-            case _ => None
-          }
-        case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
-          codec.decodeOptional(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
-            case DecodeResult.Value(v) =>
-              doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
-                _.prependValue(v)
-              }
-            case _ => None
-          }
-        case EndpointIO.Body(codec, _, _) +: inputsTail =>
-          codec.decodeOptional(Some(body)) match {
-            case DecodeResult.Value(v) =>
-              doMatch(inputsTail, ctx, canRemoveSlash = true, body).map {
-                _.prependValue(v)
-              }
-            case _ => None
-          }
-        case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
-          handleMapped(wrapped, f, inputsTail)
-        case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
-          handleMapped(wrapped, f, inputsTail)
-      }
-
-    }
 
     val inputDirectives: Directive1[I] = {
       val bodyDirective: Directive1[Any] = e.input.bodyType match {
@@ -186,7 +107,7 @@ object EndpointToAkkaServer {
       }
       bodyDirective.flatMap { body =>
         extractRequestContext.flatMap { ctx =>
-          doMatch(e.input.asVectorOfSingle, ctx, canRemoveSlash = true, body) match {
+          AkkaHttpInputMatcher.doMatch(e.input.asVectorOfSingle, ctx, body) match {
             case Some(result) =>
               provide(SeqToParams(result.values).asInstanceOf[I]) & mapRequestContext(_ => result.ctx)
             case None => reject
@@ -196,6 +117,30 @@ object EndpointToAkkaServer {
     }
 
     methodDirective & inputDirectives
+  }
+
+  private def methodToAkkaDirective[O, E, I](e: Endpoint[I, E, O]) = {
+    e.method match {
+      case Method.GET     => get
+      case Method.HEAD    => head
+      case Method.POST    => post
+      case Method.PUT     => put
+      case Method.DELETE  => delete
+      case Method.OPTIONS => options
+      case Method.PATCH   => patch
+      case m              => method(HttpMethod.custom(m.m))
+    }
+  }
+
+  private def bodyType[I](in: EndpointInput[I]): Option[RawValueType[_]] = {
+    in match {
+      case b: EndpointIO.Body[_, _, _]            => Some(b.codec.rawValueType)
+      case EndpointInput.Multiple(inputs)         => inputs.flatMap(bodyType(_)).headOption
+      case EndpointIO.Multiple(inputs)            => inputs.flatMap(bodyType(_)).headOption
+      case EndpointInput.Mapped(wrapped, _, _, _) => bodyType(wrapped)
+      case EndpointIO.Mapped(wrapped, _, _, _)    => bodyType(wrapped)
+      case _                                      => None
+    }
   }
 
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[ResponseEntity] = {
