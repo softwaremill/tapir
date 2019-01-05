@@ -1,5 +1,4 @@
-package tapir.internal
-import tapir.{StatusCode, StatusCodes}
+package tapir
 
 object DefaultStatusMappers {
   def out[O]: O => StatusCode = _ => StatusCodes.Ok

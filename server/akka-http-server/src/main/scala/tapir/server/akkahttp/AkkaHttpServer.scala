@@ -1,9 +1,8 @@
 package tapir.server.akkahttp
 
 import akka.http.scaladsl.server.{Directive, Route}
-import tapir.internal.DefaultStatusMappers
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
-import tapir.{Endpoint, StatusCode}
+import tapir.{DefaultStatusMappers, Endpoint, StatusCode}
 
 import scala.concurrent.Future
 

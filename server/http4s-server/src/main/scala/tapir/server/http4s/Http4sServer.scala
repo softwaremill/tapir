@@ -2,9 +2,8 @@ package tapir.server.http4s
 
 import cats.effect.{ContextShift, Sync}
 import org.http4s.HttpRoutes
-import tapir.internal.DefaultStatusMappers
 import tapir.typelevel.ParamsAsArgs
-import tapir.{Endpoint, StatusCode}
+import tapir.{DefaultStatusMappers, Endpoint, StatusCode}
 
 import scala.concurrent.ExecutionContext
 

@@ -1,6 +1,5 @@
 package tapir
 
-import tapir.internal.DefaultStatusMappers
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 /**

@@ -8,11 +8,10 @@ import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
-import tapir.internal.DefaultStatusMappers
 import tapir.tests.TestUtil._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
-import tapir.{StatusCodes, _}
+import tapir.{DefaultStatusMappers, StatusCodes, _}
 
 import scala.util.Random
 
