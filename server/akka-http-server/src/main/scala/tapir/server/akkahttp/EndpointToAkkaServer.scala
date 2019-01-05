@@ -134,16 +134,16 @@ object EndpointToAkkaServer {
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[ResponseEntity] = {
     val ct = mediaTypeToContentType(codec.mediaType)
     codec.encodeOptional(v).map { r =>
-      codec.rawValueType.fold(r)(
-        (s, charset) =>
+      codec.rawValueType match {
+        case StringValueType(charset) =>
           ct match {
-            case nonBinary: ContentType.NonBinary => HttpEntity(nonBinary, s)
-            case _                                => HttpEntity(ct, s.getBytes(charset))
-        },
-        b => HttpEntity(ct, b),
-        b => HttpEntity(ct, ByteString(b)),
-        b => HttpEntity(ct, StreamConverters.fromInputStream(() => b))
-      )
+            case nonBinary: ContentType.NonBinary => HttpEntity(nonBinary, r)
+            case _                                => HttpEntity(ct, r.getBytes(charset))
+          }
+        case ByteArrayValueType   => HttpEntity(ct, r)
+        case ByteBufferValueType  => HttpEntity(ct, ByteString(r))
+        case InputStreamValueType => HttpEntity(ct, StreamConverters.fromInputStream(() => r))
+      }
     }
   }
 

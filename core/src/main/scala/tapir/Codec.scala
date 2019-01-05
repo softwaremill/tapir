@@ -118,22 +118,8 @@ object GeneralCodec {
 }
 
 // string, byte array, input stream, file, form values (?), stream
-sealed trait RawValueType[R] {
-  def fold[T](r: R)(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T
-}
-case class StringValueType(charset: Charset) extends RawValueType[String] {
-  override def fold[T](r: String)(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T =
-    f1(r, charset)
-}
-case object ByteArrayValueType extends RawValueType[Array[Byte]] {
-  override def fold[T](r: Array[Byte])(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T =
-    f2(r)
-}
-case object ByteBufferValueType extends RawValueType[ByteBuffer] {
-  override def fold[T](r: ByteBuffer)(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T =
-    f3(r)
-}
-case object InputStreamValueType extends RawValueType[InputStream] {
-  override def fold[T](r: InputStream)(f1: (String, Charset) => T, f2: Array[Byte] => T, f3: ByteBuffer => T, f4: InputStream => T): T =
-    f4(r)
-}
+sealed trait RawValueType[R]
+case class StringValueType(charset: Charset) extends RawValueType[String]
+case object ByteArrayValueType extends RawValueType[Array[Byte]]
+case object ByteBufferValueType extends RawValueType[ByteBuffer]
+case object InputStreamValueType extends RawValueType[InputStream]

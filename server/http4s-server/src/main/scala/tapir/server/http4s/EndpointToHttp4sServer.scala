@@ -1,7 +1,6 @@
 package tapir.server.http4s
 
 import java.io.ByteArrayInputStream
-import java.nio.charset.{Charset => NioCharset}
 
 import cats.data._
 import cats.effect.{ContextShift, Sync}
@@ -55,15 +54,14 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](http4sServerOptions: Http
     val ct: `Content-Type` = mediaTypeToContentType(codec.mediaType)
 
     codec.encodeOptional(v).map { r: R =>
-      codec.rawValueType.fold(r)(
-        (s: String, c: NioCharset) => {
-          val bytes = s.toString.getBytes(c)
+      codec.rawValueType match {
+        case StringValueType(charset) =>
+          val bytes = r.toString.getBytes(charset)
           fs2.Stream.chunk(Chunk.bytes(bytes)) -> ct
-        },
-        b => fs2.Stream.chunk(Chunk.bytes(b)) -> ct,
-        b => fs2.Stream.chunk(Chunk.byteBuffer(b)) -> ct,
-        b => fs2.io.readInputStream(b.pure[F], 8192, http4sServerOptions.blockingExecutionContext) -> ct
-      )
+        case ByteArrayValueType   => fs2.Stream.chunk(Chunk.bytes(r)) -> ct
+        case ByteBufferValueType  => fs2.Stream.chunk(Chunk.byteBuffer(r)) -> ct
+        case InputStreamValueType => fs2.io.readInputStream(r.pure[F], 8192, http4sServerOptions.blockingExecutionContext) -> ct
+      }
     }
   }
 

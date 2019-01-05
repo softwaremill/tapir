@@ -1,6 +1,6 @@
 package tapir
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 
 import tapir.GeneralCodec.{GeneralPlainCodec, PlainCodec}
