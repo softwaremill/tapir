@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 
 import io.circe.generic.auto._
 import tapir.json.circe._
+import com.softwaremill.macwire._
 
 package object tests {
 
@@ -70,21 +71,5 @@ package object tests {
       .in("api")
       .errorOut(stringBody)
 
-  val allTestEndpoints = List(
-    in_query_out_string,
-    in_query_query_out_string,
-    in_header_out_string,
-    in_path_path_out_string,
-    in_string_out_string,
-    in_mapped_query_out_string,
-    in_mapped_path_out_string,
-    in_mapped_path_path_out_string,
-    in_query_mapped_path_path_out_string,
-    in_query_out_mapped_string,
-    in_query_out_mapped_string_header,
-    in_json_out_json,
-    in_byte_array_out_byte_array,
-    in_byte_buffer_out_byte_buffer,
-    in_input_stream_out_input_stream
-  )
+  val allTestEndpoints: Set[Endpoint[_, _, _]] = wireSet[Endpoint[_, _, _]]
 }

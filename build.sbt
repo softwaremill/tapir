@@ -38,7 +38,10 @@ lazy val tests: Project = (project in file("tests"))
   .settings(
     name := "tapir-tests",
     publishArtifact := false,
-    libraryDependencies ++= Seq(scalaTest),
+    libraryDependencies ++= Seq(
+      scalaTest,
+      "com.softwaremill.macwire" %% "macros" % "2.3.1" % "provided"
+    ),
     libraryDependencies ++= loggerDependencies
   )
   .dependsOn(core, circeJson)
