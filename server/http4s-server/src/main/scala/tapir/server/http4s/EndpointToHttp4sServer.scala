@@ -113,7 +113,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
         )
       }
 
-      val response: ContextState[F] = new Http4sInputMatcher().matchInputs(inputs)
+      val inputMatch: ContextState[F] = new Http4sInputMatcher().matchInputs(inputs)
 
       val methodMatches: Either[Error, String] =
         Either.cond(http4sMethodToTapirMethodMap
@@ -127,7 +127,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
           .fromEither[F](methodMatches)
           .flatMap(_ =>
             EitherT(context
-              .map(response.run)))
+              .map(inputMatch.run)))
           .value
 
       logger.debug(s"Result of binding: $value")
