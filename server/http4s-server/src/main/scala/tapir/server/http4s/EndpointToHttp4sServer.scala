@@ -24,6 +24,7 @@ import tapir.{
   InputStreamValueType,
   MediaType,
   RawValueType,
+  StatusCode,
   StringValueType
 }
 
@@ -97,8 +98,10 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
     }
   }
 
-  def toRoutes[I, E, O, FN[_]](e: Endpoint[I, E, O])(logic: FN[F[Either[E, O]]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
+  def toRoutes[I, E, O, FN[_]](e: Endpoint[I, E, O])(
+      logic: FN[F[Either[E, O]]],
+      statusMapper: O => StatusCode,
+      errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
 
     val inputs: Vector[EndpointInput.Single[_]] = e.input.asVectorOfSingle
     logger.debug(s"Inputs: ")
@@ -147,14 +150,21 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
 
       res.flatMapF(_.map {
         case Right(result) =>
-          Option(makeResponse(Status.Ok, e.output, result))
+          Option(makeResponse(statusCodeToHttp4sStatus(statusMapper(result)), e.output, result))
         case Left(err) =>
           logger.error(err.toString)
-          None
+          Option(makeResponse(statusCodeToHttp4sStatus(errorStatusMapper(err)), e.errorOutput, err))
       })
     }
 
     service
+  }
+
+  private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status = {
+    Status.fromInt(code) match {
+      case Right(v) => v
+      case _        => ???
+    }
   }
 
   private def requestBody[R](req: Request[F], rawBodyType: RawValueType[R]): F[R] = {

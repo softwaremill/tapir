@@ -4,20 +4,32 @@ import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
-import akka.http.scaladsl.model.{MediaType => _, _}
+import akka.http.scaladsl.model.{
+  ContentType,
+  ContentTypes,
+  HttpCharset,
+  HttpEntity,
+  HttpHeader,
+  HttpMethod,
+  HttpResponse,
+  MediaTypes,
+  ResponseEntity,
+  Uri,
+  StatusCode => AkkaStatusCode,
+  MediaType => _
+}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
-import tapir._
+import tapir.{StatusCode, _}
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.Future
 
 object EndpointToAkkaServer {
-
   def toDirective[I, E, O, T](e: Endpoint[I, E, O])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
     implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
     toDirective1(e).flatMap { values =>
@@ -25,12 +37,14 @@ object EndpointToAkkaServer {
     }
   }
 
-  def toRoute[I, E, O, FN[_]](e: Endpoint[I, E, O])(logic: FN[Future[Either[E, O]]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
+  def toRoute[I, E, O, FN[_]](e: Endpoint[I, E, O])(
+      logic: FN[Future[Either[E, O]]],
+      statusMapper: O => StatusCode,
+      errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
     toDirective1(e) { values =>
       onSuccess(paramsAsArgs.applyFn(logic, values)) {
-        case Left(v)  => outputToRoute(StatusCodes.BadRequest, e.errorOutput, v)
-        case Right(v) => outputToRoute(StatusCodes.OK, e.output, v)
+        case Left(v)  => outputToRoute(errorStatusMapper(v), e.errorOutput, v)
+        case Right(v) => outputToRoute(statusMapper(v), e.output, v)
       }
     }
   }
@@ -57,13 +71,14 @@ object EndpointToAkkaServer {
     }
   }
 
-  private def outputToRoute[O](statusCode: StatusCode, output: EndpointIO[O], v: O): Route = {
+  private def outputToRoute[O](statusCode: AkkaStatusCode, output: EndpointIO[O], v: O): Route = {
     val outputsWithValues = singleOutputsWithValues(output.asVectorOfSingle, v)
 
     val body = outputsWithValues.collectFirst { case Left(b) => b }
     val headers = outputsWithValues.collect { case Right(h)  => h }
 
-    val completeRoute = body.map(entity => complete(HttpResponse(entity = entity, status = statusCode))).getOrElse(complete(""))
+    val completeRoute =
+      body.map(entity => complete(HttpResponse(entity = entity, status = statusCode))).getOrElse(complete(HttpResponse(statusCode)))
 
     if (headers.nonEmpty) {
       respondWithHeaders(headers: _*)(completeRoute)

@@ -3,15 +3,16 @@ package tapir.server.tests
 import java.io.{ByteArrayInputStream, InputStream}
 import java.nio.ByteBuffer
 
-import cats.implicits._
 import cats.effect.{IO, Resource}
-import tapir._
-import tapir.tests._
-import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
+import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import tapir.internal.DefaultStatusMappers
+import tapir.tests.TestUtil._
+import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
-import TestUtil._
+import tapir.{StatusCodes, _}
 
 import scala.util.Random
 
@@ -112,6 +113,28 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
       sttp.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
+  testServer(endpoint_with_path, () => pureResult("".asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/not-existing-path").send().map(_.code shouldBe StatusCodes.NotFound)
+  }
+
+  testServer(endpoint_with_status_mapping_no_body, () => pureResult(().asRight[Unit]), "status mapping no body", { _: Unit =>
+    StatusCodes.AlreadyReported
+  }) { baseUri =>
+    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.AlreadyReported)
+  }
+
+  testServer(endpoint_with_status_mapping, () => pureResult("".asRight[Unit]), "status mapping", { _: String =>
+    StatusCodes.AlreadyReported
+  }) { baseUri =>
+    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.AlreadyReported)
+  }
+
+  testServer(endpoint_with_error_status_mapping, () => pureResult("".asLeft[Unit]), errorStatusMapper = { _: String =>
+    StatusCodes.TooManyRequests
+  }) { baseUri =>
+    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.TooManyRequests)
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()
@@ -127,14 +150,21 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   def pureResult[T](t: T): R[T]
 
-  def server[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Port, fn: FN[R[Either[E, O]]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Resource[IO, Unit]
+  def server[I, E, O, FN[_]](e: Endpoint[I, E, O],
+                             port: Port,
+                             fn: FN[R[Either[E, O]]],
+                             statusMapper: O => StatusCode,
+                             errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Resource[IO, Unit]
 
-  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O], fn: FN[R[Either[E, O]]], testNameSuffix: String = "")(runTest: Uri => IO[Assertion])(
+  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O],
+                                 fn: FN[R[Either[E, O]]],
+                                 testNameSuffix: String = "",
+                                 statusMapper: O => StatusCode = DefaultStatusMappers.out,
+                                 errorStatusMapper: E => StatusCode = DefaultStatusMappers.error)(runTest: Uri => IO[Assertion])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
     val resources = for {
       port <- Resource.liftF(IO(randomPort()))
-      _ <- server(e, port, fn)
+      _ <- server(e, port, fn, statusMapper, errorStatusMapper)
     } yield uri"http://localhost:$port"
 
     test(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix))(resources.use(runTest).unsafeRunSync())
