@@ -14,13 +14,12 @@ import akka.http.scaladsl.model.{
   HttpResponse,
   MediaTypes,
   ResponseEntity,
-  Uri,
   StatusCode => AkkaStatusCode,
   MediaType => _
 }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
-import akka.http.scaladsl.server.{Directive, Directive1, RequestContext, Route}
+import akka.http.scaladsl.server.{Directive, Directive1, Route}
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
 import tapir.{StatusCode, _}

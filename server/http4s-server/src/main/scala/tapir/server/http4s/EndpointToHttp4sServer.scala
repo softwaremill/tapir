@@ -153,12 +153,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](blockingExecutionContext:
     service
   }
 
-  private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status = {
-    Status.fromInt(code) match {
-      case Right(v) => v
-      case _        => ???
-    }
-  }
+  private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status = Status.fromInt(code).right.get
 
   private def requestBody[R](req: Request[F], rawBodyType: RawValueType[R]): F[R] = {
     req.body.compile.toChunk.map { body =>
