@@ -112,25 +112,23 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
       sttp.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
-  testServer(endpoint_with_path, () => pureResult("".asRight[Unit])) { baseUri =>
+  testServer(in_unit_out_string, () => pureResult("".asRight[Unit]), "default status mapper") { baseUri =>
     sttp.get(uri"$baseUri/not-existing-path").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
-  testServer(endpoint_with_status_mapping_no_body, () => pureResult(().asRight[Unit]), "status mapping no body", { _: Unit =>
-    StatusCodes.AlreadyReported
-  }) { baseUri =>
-    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.AlreadyReported)
+  testServer(in_unit_out_string, () => pureResult("".asRight[Unit]), "custom status mapper", (_: String) => StatusCodes.AlreadyReported) {
+    baseUri =>
+      sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.AlreadyReported)
   }
 
-  testServer(endpoint_with_status_mapping, () => pureResult("".asRight[Unit]), "status mapping", { _: String =>
-    StatusCodes.AlreadyReported
-  }) { baseUri =>
-    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.AlreadyReported)
+  testServer(in_unit_error_out_string, () => pureResult("".asLeft[Unit]), "default error status mapper") { baseUri =>
+    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.BadRequest)
   }
 
-  testServer(endpoint_with_error_status_mapping, () => pureResult("".asLeft[Unit]), errorStatusMapper = { _: String =>
-    StatusCodes.TooManyRequests
-  }) { baseUri =>
+  testServer(in_unit_error_out_string,
+             () => pureResult("".asLeft[Unit]),
+             "custom error status mapper",
+             errorStatusMapper = (_: String) => StatusCodes.TooManyRequests) { baseUri =>
     sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.TooManyRequests)
   }
 

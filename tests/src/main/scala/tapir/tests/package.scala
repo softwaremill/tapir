@@ -54,22 +54,11 @@ package object tests {
   val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream] =
     endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("echo input stream")
 
-  val endpoint_with_path: Endpoint[Unit, Unit, String] =
-    endpoint.in("fruit" / "amount").out(stringBody)
+  val in_unit_out_string: Endpoint[Unit, Unit, String] =
+    endpoint.in("api").out(stringBody)
 
-  val endpoint_with_status_mapping_no_body: Endpoint[Unit, Unit, Unit] =
-    endpoint
-      .in("api")
-
-  val endpoint_with_status_mapping: Endpoint[Unit, Unit, String] =
-    endpoint
-      .in("api")
-      .out(stringBody)
-
-  val endpoint_with_error_status_mapping: Endpoint[Unit, String, Unit] =
-    endpoint
-      .in("api")
-      .errorOut(stringBody)
+  val in_unit_error_out_string: Endpoint[Unit, String, Unit] =
+    endpoint.in("api").errorOut(stringBody)
 
   val allTestEndpoints: Set[Endpoint[_, _, _]] = wireSet[Endpoint[_, _, _]]
 }
