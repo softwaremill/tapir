@@ -1,7 +1,6 @@
 package tapir.server.akkahttp
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.RequestContext
-import cats.implicits._
 import tapir.internal.SeqToParams
 import tapir.{DecodeResult, EndpointIO, EndpointInput}
 
@@ -33,7 +32,7 @@ private[akkahttp] object AkkaHttpInputMatcher {
           case Uri.Path.Segment(s, pathTail) =>
             codec.decode(s) match {
               case DecodeResult.Value(v) =>
-                Option(List[Any](v)) |+| doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body)
+                doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body).map(v :: _)
               case _ => None
             }
           case _ => None
@@ -41,19 +40,19 @@ private[akkahttp] object AkkaHttpInputMatcher {
       case EndpointInput.Query(name, codec, _, _) +: inputsTail =>
         codec.decodeOptional(ctx.request.uri.query().get(name)) match {
           case DecodeResult.Value(v) =>
-            Option(List[Any](v)) |+| doMatch(inputsTail, ctx, canRemoveSlash = true, body)
+            doMatch(inputsTail, ctx, canRemoveSlash = true, body).map(v :: _)
           case _ => None
         }
       case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
         codec.decodeOptional(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
           case DecodeResult.Value(v) =>
-            Option(List[Any](v)) |+| doMatch(inputsTail, ctx, canRemoveSlash = true, body)
+            doMatch(inputsTail, ctx, canRemoveSlash = true, body).map(v :: _)
           case _ => None
         }
       case EndpointIO.Body(codec, _, _) +: inputsTail =>
         codec.decodeOptional(Some(body)) match {
           case DecodeResult.Value(v) =>
-            Option(List[Any](v)) |+| doMatch(inputsTail, ctx, canRemoveSlash = true, body)
+            doMatch(inputsTail, ctx, canRemoveSlash = true, body).map(v :: _)
           case _ => None
         }
       case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
@@ -70,7 +69,8 @@ private[akkahttp] object AkkaHttpInputMatcher {
                                   body: Any): Option[List[Any]] = {
     doMatch(wrapped.asVectorOfSingle, requestContext, canRemoveSlash, body)
       .flatMap { result =>
-        Option(List(f.asInstanceOf[Any => Any].apply(SeqToParams(result)))) |+| doMatch(inputsTail, requestContext, canRemoveSlash, body)
+        doMatch(inputsTail, requestContext, canRemoveSlash, body)
+          .map(f.asInstanceOf[Any => Any].apply(SeqToParams(result)) :: _)
       }
   }
 }
