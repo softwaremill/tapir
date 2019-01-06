@@ -6,7 +6,7 @@ import tapir.{DecodeResult, EndpointIO, EndpointInput}
 
 private[akkahttp] object AkkaHttpInputMatcher {
 
-  case class MatchResult(values: List[Any], ctx: RequestContext, canRemoveSlash: Boolean) {
+  case class MatchResult(values: List[Any]) {
     def prependValue(v: Any): MatchResult = copy(values = v :: values)
   }
 
@@ -19,16 +19,8 @@ private[akkahttp] object AkkaHttpInputMatcher {
                       canRemoveSlash: Boolean,
                       body: Any): Option[MatchResult] = {
 
-    def handleMapped[II, T](wrapped: EndpointInput[II], f: II => T, inputsTail: Vector[EndpointInput.Single[_]]): Option[MatchResult] = {
-      doMatch(wrapped.asVectorOfSingle, ctx, canRemoveSlash, body).flatMap { result =>
-        doMatch(inputsTail, result.ctx, result.canRemoveSlash, body).map {
-          _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
-        }
-      }
-    }
-
     inputs match {
-      case Vector() => Some(MatchResult(Nil, ctx, canRemoveSlash))
+      case Vector() => Some(MatchResult(Nil))
       case EndpointInput.PathSegment(ss) +: inputsTail =>
         ctx.unmatchedPath match {
           case Uri.Path.Slash(pathTail) if canRemoveSlash =>
@@ -76,9 +68,23 @@ private[akkahttp] object AkkaHttpInputMatcher {
           case _ => None
         }
       case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
-        handleMapped(wrapped, f, inputsTail)
+        handleMapped(wrapped, f, inputsTail, ctx, canRemoveSlash, body)
       case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
-        handleMapped(wrapped, f, inputsTail)
+        handleMapped(wrapped, f, inputsTail, ctx, canRemoveSlash, body)
     }
+  }
+  private def handleMapped[II, T](wrapped: EndpointInput[II],
+                                  f: II => T,
+                                  inputsTail: Vector[EndpointInput.Single[_]],
+                                  requestContext: RequestContext,
+                                  canRemoveSlash: Boolean,
+                                  body: Any): Option[MatchResult] = {
+    doMatch(wrapped.asVectorOfSingle, requestContext, canRemoveSlash, body)
+      .flatMap { result =>
+        doMatch(inputsTail, requestContext, canRemoveSlash, body)
+          .map {
+            _.prependValue(f.asInstanceOf[Any => Any].apply(SeqToParams(result.values)))
+          }
+      }
   }
 }
