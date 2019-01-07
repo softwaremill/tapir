@@ -32,6 +32,7 @@ lazy val core: Project = (project in file("core"))
       scalaTest % "test"
     )
   )
+  .enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
 lazy val tests: Project = (project in file("tests"))
   .settings(commonSettings: _*)

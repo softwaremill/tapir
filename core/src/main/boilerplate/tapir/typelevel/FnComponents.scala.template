@@ -1,0 +1,29 @@
+package tapir.typelevel;
+
+/*
+ * FN.tupled = TUPLE => RESULT
+ */
+trait FnComponents[-FN, TUPLE, RESULT] {
+  def tupled(f: FN): TUPLE => RESULT
+  def arity: Int
+}
+
+object FnComponents {
+
+  private implicit class HackAddTupledMethodToFunction1[-T1, +R](f: T1 => R) {
+    def tupled: Tuple1[T1] => R = {
+      case Tuple1(x1) => f.apply(x1)
+    }
+  }
+
+  implicit def fn1_[T1, R]: FnComponents[T1 => R, T1, R] = new FnComponents[T1 => R, T1, R] {
+    override def tupled(f: T1 => R): T1 => R = f
+    override def arity: Int = 1
+  }
+
+  [#implicit def fn1[[#T1#], R]: FnComponents[([#T1#]) => R, Tuple1[[#T1#]], R] = new FnComponents[([#T1#]) => R, Tuple1[[#T1#]], R] {
+    override def tupled(f: ([#T1#]) => R): Tuple1[[#T1#]] => R = f.tupled
+    override def arity: Int = 1
+  }#
+  ]
+}
