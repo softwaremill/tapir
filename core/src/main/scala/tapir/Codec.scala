@@ -40,7 +40,7 @@ trait GeneralCodec[T, M <: MediaType, R] { outer =>
   * @tparam M The media type of encoded values.
   * @tparam R Type of the raw value to which values are encoded.
   */
-trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] {
+trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
   def encode(t: T): R
   def decode(s: R): DecodeResult[T]
 
@@ -51,6 +51,16 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] {
   }
 
   def isOptional: Boolean = false
+
+  override def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = new Codec[TT, M, R] {
+    override val rawValueType: RawValueType[R] = outer.rawValueType
+
+    override def encode(t: TT): R = outer.encode(g(t))
+    override def decode(s: R): DecodeResult[TT] = outer.decode(s).map(f)
+    override def isOptional: Boolean = outer.isOptional
+    override def schema: Schema = outer.schema
+    override def mediaType: M = outer.mediaType
+  }
 }
 
 object GeneralCodec {
