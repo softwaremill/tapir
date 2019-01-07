@@ -108,7 +108,7 @@ object EndpointToAkkaServer {
         extractRequestContext.flatMap { ctx =>
           AkkaHttpInputMatcher.doMatch(e.input.asVectorOfSingle, ctx, body) match {
             case Some(result) =>
-              provide(SeqToParams(result.values).asInstanceOf[I]) & mapRequestContext(_ => result.ctx)
+              provide(SeqToParams(result).asInstanceOf[I]) & mapRequestContext(_ => ctx)
             case None => reject
           }
         }
