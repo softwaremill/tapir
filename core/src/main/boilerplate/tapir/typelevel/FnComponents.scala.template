@@ -10,18 +10,12 @@ trait FnComponents[-FN, TUPLE, RESULT] {
 
 object FnComponents {
 
-  private implicit class HackAddTupledMethodToFunction1[-T1, +R](f: T1 => R) {
-    def tupled: Tuple1[T1] => R = {
-      case Tuple1(x1) => f.apply(x1)
-    }
-  }
-
-  implicit def fn1_[T1, R]: FnComponents[T1 => R, T1, R] = new FnComponents[T1 => R, T1, R] {
+  implicit def fn1[T1, R]: FnComponents[T1 => R, T1, R] = new FnComponents[T1 => R, T1, R] {
     override def tupled(f: T1 => R): T1 => R = f
     override def arity: Int = 1
   }
 
-  [#implicit def fn1[[#T1#], R]: FnComponents[([#T1#]) => R, Tuple1[[#T1#]], R] = new FnComponents[([#T1#]) => R, Tuple1[[#T1#]], R] {
+  [2..#implicit def fn1[[#T1#], R]: FnComponents[([#T1#]) => R, Tuple1[[#T1#]], R] = new FnComponents[([#T1#]) => R, Tuple1[[#T1#]], R] {
     override def tupled(f: ([#T1#]) => R): Tuple1[[#T1#]] => R = f.tupled
     override def arity: Int = 1
   }#

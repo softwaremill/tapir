@@ -7,7 +7,7 @@ trait ParamsToTuple[I] {
 
 object ParamsToTuple extends LowPriorityParamsToTuple {
 
-  [#implicit def tuple1toTuple[[#A1#]]: Aux[Tuple1[[#A1#]], Tuple1[[#A1#]]] = new ParamsToTuple[Tuple1[[#A1#]]] {
+  [2..#implicit def tuple1toTuple[[#A1#]]: Aux[Tuple1[[#A1#]], Tuple1[[#A1#]]] = new ParamsToTuple[Tuple1[[#A1#]]] {
     override type Out = Tuple1[[#A1#]]
     override def toTuple(i: Tuple1[[#A1#]]): Tuple1[[#A1#]] = i
   }#
