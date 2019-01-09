@@ -18,6 +18,7 @@ import tapir.{
   Endpoint,
   EndpointIO,
   EndpointInput,
+  FileValueType,
   GeneralCodec,
   InputStreamValueType,
   MediaType,
@@ -26,7 +27,7 @@ import tapir.{
   StringValueType
 }
 
-class EndpointToHttp4sServer[F[_]: Sync: ContextShift](http4sServerOptions: Http4sServerOptions) {
+class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
 
   private val logger = org.log4s.getLogger
   private val http4sMethodToTapirMethodMap: Map[org.http4s.Method, tapir.Method] = {
@@ -58,9 +59,11 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](http4sServerOptions: Http
         case StringValueType(charset) =>
           val bytes = r.toString.getBytes(charset)
           fs2.Stream.chunk(Chunk.bytes(bytes)) -> ct
-        case ByteArrayValueType   => fs2.Stream.chunk(Chunk.bytes(r)) -> ct
-        case ByteBufferValueType  => fs2.Stream.chunk(Chunk.byteBuffer(r)) -> ct
-        case InputStreamValueType => fs2.io.readInputStream(r.pure[F], 8192, http4sServerOptions.blockingExecutionContext) -> ct
+        case ByteArrayValueType  => fs2.Stream.chunk(Chunk.bytes(r)) -> ct
+        case ByteBufferValueType => fs2.Stream.chunk(Chunk.byteBuffer(r)) -> ct
+        case InputStreamValueType =>
+          fs2.io.readInputStream(r.pure[F], serverOptions.ioChunkSize, serverOptions.blockingExecutionContext) -> ct
+        case FileValueType => fs2.io.file.readAll(r.toPath, serverOptions.blockingExecutionContext, serverOptions.ioChunkSize) -> ct
       }
     }
   }
@@ -152,14 +155,19 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](http4sServerOptions: Http
   private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status = Status.fromInt(code).right.get
 
   private def requestBody[R](req: Request[F], rawBodyType: RawValueType[R]): F[R] = {
-    req.body.compile.toChunk.map { body =>
-      def asByteArray = body.toByteBuffer.array()
-      rawBodyType match {
-        case StringValueType(charset) => new String(asByteArray, req.charset.map(_.nioCharset).getOrElse(charset))
-        case ByteArrayValueType       => asByteArray
-        case ByteBufferValueType      => body.toByteBuffer
-        case InputStreamValueType     => new ByteArrayInputStream(asByteArray)
-      }
+    def asChunk: F[Chunk[Byte]] = req.body.compile.toChunk
+    def asByteArray: F[Array[Byte]] = req.body.compile.toChunk.map(_.toByteBuffer.array())
+
+    rawBodyType match {
+      case StringValueType(charset) => asByteArray.map(new String(_, req.charset.map(_.nioCharset).getOrElse(charset)))
+      case ByteArrayValueType       => asByteArray
+      case ByteBufferValueType      => asChunk.map(_.toByteBuffer)
+      case InputStreamValueType     => asByteArray.map(new ByteArrayInputStream(_))
+      case FileValueType =>
+        serverOptions.createFile(serverOptions.blockingExecutionContext, req).flatMap { file =>
+          val fileSink = fs2.io.file.writeAll(file.toPath, serverOptions.blockingExecutionContext)
+          req.body.through(fileSink).compile.drain.map(_ => file)
+        }
     }
   }
 

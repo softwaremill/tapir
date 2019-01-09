@@ -1,6 +1,6 @@
 package tapir.client.tests
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.{ByteArrayInputStream, File, InputStream, PrintWriter}
 import java.nio.ByteBuffer
 
 import cats.effect._
@@ -20,6 +20,7 @@ import TestUtil._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.io.Source
 import scala.util.Random
 
 trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
@@ -29,6 +30,12 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit private val timer: Timer[IO] = IO.timer(ec)
+
+  private val testFile = {
+    val f = File.createTempFile("test", "tapir")
+    new PrintWriter(f) { write("pen pineapple apple pen"); close() }
+    f
+  }
 
   testClient(endpoint, (), Right(()))
   testClient(in_query_out_string, "apple", Right("fruit: apple"))
@@ -48,6 +55,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_input_stream_out_input_stream,
              new ByteArrayInputStream("mango".getBytes),
              Right(new ByteArrayInputStream("mango".getBytes)))
+  testClient(in_file_out_file, testFile, Right(testFile))
 
   //
 
@@ -81,12 +89,15 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
     test(e.show) {
       // adjust test result values to a form that is comparable by scalatest
-      def adjust(r: Either[Any, Any]): Either[Any, Any] = r match {
-        case Left(is: InputStream)  => Left(inputStreamToByteArray(is).toList)
-        case Right(is: InputStream) => Right(inputStreamToByteArray(is).toList)
-        case Left(a: Array[Byte])   => Left(a.toList)
-        case Right(a: Array[Byte])  => Right(a.toList)
-        case _                      => r
+      def adjust(r: Either[Any, Any]): Either[Any, Any] = {
+        def doAdjust(v: Any) = v match {
+          case is: InputStream => inputStreamToByteArray(is).toList
+          case a: Array[Byte]  => a.toList
+          case f: File         => Source.fromFile(f).mkString
+          case _               => v
+        }
+
+        r.map(doAdjust).left.map(doAdjust)
       }
 
       adjust(send(e, port, args).unsafeRunSync()) shouldBe adjust(expectedResult)

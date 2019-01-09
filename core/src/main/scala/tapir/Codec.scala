@@ -1,8 +1,9 @@
 package tapir
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.file.Path
 
 import tapir.DecodeResult._
 
@@ -116,6 +117,8 @@ object GeneralCodec {
   implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] = binaryCodec(ByteArrayValueType)
   implicit val byteBufferCodec: Codec[ByteBuffer, MediaType.OctetStream, ByteBuffer] = binaryCodec(ByteBufferValueType)
   implicit val inputStreamCodec: Codec[InputStream, MediaType.OctetStream, InputStream] = binaryCodec(InputStreamValueType)
+  implicit val fileCodec: Codec[File, MediaType.OctetStream, File] = binaryCodec(FileValueType)
+  implicit val pathCodec: Codec[Path, MediaType.OctetStream, File] = binaryCodec(FileValueType).map(_.toPath)(_.toFile)
 
   def binaryCodec[T](_rawValueType: RawValueType[T]): Codec[T, MediaType.OctetStream, T] = new Codec[T, MediaType.OctetStream, T] {
     override val rawValueType: RawValueType[T] = _rawValueType
@@ -133,3 +136,4 @@ case class StringValueType(charset: Charset) extends RawValueType[String]
 case object ByteArrayValueType extends RawValueType[Array[Byte]]
 case object ByteBufferValueType extends RawValueType[ByteBuffer]
 case object InputStreamValueType extends RawValueType[InputStream]
+case object FileValueType extends RawValueType[File]

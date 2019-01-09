@@ -2,6 +2,7 @@ package tapir
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
+import java.nio.file.Path
 
 import tapir.GeneralCodec.{GeneralPlainCodec, PlainCodec}
 
@@ -23,12 +24,12 @@ trait Tapir {
   def jsonBody[T](implicit codec: GeneralCodec[T, MediaType.Json, String]): EndpointIO.Body[T, MediaType.Json, String] =
     EndpointIO.Body(codec, None, None)
 
-  def byteArrayBody: EndpointIO.Body[Array[Byte], MediaType.OctetStream, Array[Byte]] =
-    EndpointIO.Body(implicitly[GeneralCodec[Array[Byte], MediaType.OctetStream, Array[Byte]]], None, None)
-  def byteBufferBody: EndpointIO.Body[ByteBuffer, MediaType.OctetStream, ByteBuffer] =
-    EndpointIO.Body(implicitly[GeneralCodec[ByteBuffer, MediaType.OctetStream, ByteBuffer]], None, None)
-  def inputStreamBody: EndpointIO.Body[InputStream, MediaType.OctetStream, InputStream] =
-    EndpointIO.Body(implicitly[GeneralCodec[InputStream, MediaType.OctetStream, InputStream]], None, None)
+  def byteArrayBody: EndpointIO.Body[Array[Byte], MediaType.OctetStream, Array[Byte]] = EndpointIO.Body(implicitly, None, None)
+  def byteBufferBody: EndpointIO.Body[ByteBuffer, MediaType.OctetStream, ByteBuffer] = EndpointIO.Body(implicitly, None, None)
+  def inputStreamBody: EndpointIO.Body[InputStream, MediaType.OctetStream, InputStream] = EndpointIO.Body(implicitly, None, None)
+
+  def fileBody: EndpointIO.Body[File, MediaType.OctetStream, File] = EndpointIO.Body(implicitly, None, None)
+  def pathBody: EndpointIO.Body[Path, MediaType.OctetStream, File] = EndpointIO.Body(implicitly, None, None)
 
   def header[T: GeneralPlainCodec](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[GeneralPlainCodec[T]], None, None)

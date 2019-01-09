@@ -19,7 +19,7 @@ lazy val loggerDependencies = Seq(
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
   .settings(publishArtifact := false, name := "tapir")
-  .aggregate(core, circeJson, openapiModel, openapiCirce, openapiCirceYaml, openapiDocs, serverTests, akkaHttpServer, http4sServer, sttpClient, tests)
+  .aggregate(core, circeJson, openapiModel, openapiCirce, openapiCirceYaml, openapiDocs, serverTests, akkaHttpServer, http4sServer, sttpClient, tests, playground)
 
 // core
 

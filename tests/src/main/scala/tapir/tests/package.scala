@@ -1,6 +1,6 @@
 package tapir
 
-import java.io.InputStream
+import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 
 import io.circe.generic.auto._
@@ -53,6 +53,9 @@ package object tests {
 
   val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream] =
     endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("echo input stream")
+
+  val in_file_out_file: Endpoint[File, Unit, File] =
+    endpoint.post.in("api" / "echo").in(fileBody).out(fileBody).name("echo file")
 
   val in_unit_out_string: Endpoint[Unit, Unit, String] =
     endpoint.in("api").out(stringBody)

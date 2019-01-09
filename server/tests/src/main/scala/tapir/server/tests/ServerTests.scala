@@ -1,6 +1,6 @@
 package tapir.server.tests
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
 
 import cats.effect.{IO, Resource}
@@ -11,7 +11,7 @@ import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
 import tapir.tests.TestUtil._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
-import tapir.{DefaultStatusMappers, StatusCodes, _}
+import tapir.{StatusCodes, _}
 
 import scala.util.Random
 
@@ -132,6 +132,10 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.TooManyRequests)
   }
 
+  testServer(in_file_out_file, (file: File) => pureResult(file.asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()
@@ -156,8 +160,8 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
   def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O],
                                  fn: FN[R[Either[E, O]]],
                                  testNameSuffix: String = "",
-                                 statusMapper: O => StatusCode = DefaultStatusMappers.out,
-                                 errorStatusMapper: E => StatusCode = DefaultStatusMappers.error)(runTest: Uri => IO[Assertion])(
+                                 statusMapper: O => StatusCode = Defaults.statusMapper,
+                                 errorStatusMapper: E => StatusCode = Defaults.errorStatusMapper)(runTest: Uri => IO[Assertion])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
     val resources = for {
       port <- Resource.liftF(IO(randomPort()))

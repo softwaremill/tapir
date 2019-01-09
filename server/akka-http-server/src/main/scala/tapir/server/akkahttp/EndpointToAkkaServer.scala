@@ -1,6 +1,6 @@
 package tapir.server.akkahttp
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, File}
 import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
@@ -20,15 +20,17 @@ import akka.http.scaladsl.model.{
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import akka.http.scaladsl.server.{Directive, Directive1, Route}
-import akka.stream.scaladsl.StreamConverters
+import akka.stream._
+import akka.stream.scaladsl._
 import akka.util.ByteString
-import tapir.{StatusCode, _}
+import tapir._
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.Future
+import scala.util.Failure
 
-object EndpointToAkkaServer {
+class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   def toDirective[I, E, O, T](e: Endpoint[I, E, O])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
     implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
     toDirective1(e).flatMap { values =>
@@ -102,6 +104,7 @@ object EndpointToAkkaServer {
         case Some(ByteArrayValueType)   => entity(as[Array[Byte]]).asInstanceOf[Directive1[Any]]
         case Some(ByteBufferValueType)  => entity(as[ByteString]).map(_.asByteBuffer).asInstanceOf[Directive1[Any]]
         case Some(InputStreamValueType) => entity(as[Array[Byte]]).map(new ByteArrayInputStream(_)).asInstanceOf[Directive1[Any]]
+        case Some(FileValueType)        => saveRequestBodyToFile.asInstanceOf[Directive1[Any]]
         case None                       => provide(null)
       }
       bodyDirective.flatMap { body =>
@@ -116,6 +119,23 @@ object EndpointToAkkaServer {
     }
 
     methodDirective & inputDirectives
+  }
+
+  private def saveRequestBodyToFile: Directive1[File] = {
+    extractRequestContext.flatMap { r =>
+      onSuccess(serverOptions.createFile(r)).flatMap { file =>
+        extractMaterializer.flatMap { implicit materializer =>
+          val runResult: Future[IOResult] = r.request.entity.dataBytes.runWith(FileIO.toPath(file.toPath))
+          onSuccess(runResult).map { ioResult =>
+            ioResult.status match {
+              case Failure(t) => throw t
+              case _          => // do nothing
+            }
+            file
+          }
+        }
+      }
+    }
   }
 
   private def methodToAkkaDirective[O, E, I](e: Endpoint[I, E, O]) = {
@@ -143,6 +163,7 @@ object EndpointToAkkaServer {
         case ByteArrayValueType   => HttpEntity(ct, r)
         case ByteBufferValueType  => HttpEntity(ct, ByteString(r))
         case InputStreamValueType => HttpEntity(ct, StreamConverters.fromInputStream(() => r))
+        case FileValueType        => HttpEntity(ct, FileIO.fromPath(r.toPath))
       }
     }
   }

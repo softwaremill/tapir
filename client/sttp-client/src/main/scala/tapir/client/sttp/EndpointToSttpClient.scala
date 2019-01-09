@@ -1,6 +1,6 @@
 package tapir.client.sttp
 
-import java.io.ByteArrayInputStream
+import java.io.{BufferedOutputStream, ByteArrayInputStream, FileOutputStream}
 import java.nio.ByteBuffer
 
 import com.softwaremill.sttp._
@@ -9,7 +9,7 @@ import tapir.internal.SeqToParams
 import tapir.typelevel.ParamsAsArgs
 import tapir._
 
-object EndpointToSttpClient {
+class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   // don't look. The code is really, really ugly.
 
   def toSttpRequest[I, E, O](e: Endpoint[I, E, O], baseUri: Uri)(
@@ -36,6 +36,8 @@ object EndpointToSttpClient {
             case ByteArrayValueType       => asByteArray
             case ByteBufferValueType      => asByteArray.map(ByteBuffer.wrap)
             case InputStreamValueType     => asByteArray.map(new ByteArrayInputStream(_))
+            case FileValueType =>
+              asFile(clientOptions.createFile(), overwrite = true) // TODO: use factory ResponseMetadata => File once available
           }
           .getOrElse(ignore)
 
@@ -139,6 +141,7 @@ object EndpointToSttpClient {
           case ByteArrayValueType       => req.body(t)
           case ByteBufferValueType      => req.body(t)
           case InputStreamValueType     => req.body(t)
+          case FileValueType            => req.body(t)
         }
       }
       .getOrElse(req)
@@ -165,6 +168,13 @@ object EndpointToSttpClient {
       case ByteArrayValueType       => asByteArray
       case ByteBufferValueType      => ByteBuffer.wrap(asByteArray)
       case InputStreamValueType     => new ByteArrayInputStream(asByteArray)
+      case FileValueType =>
+        val f = clientOptions.createFile()
+        val target = new BufferedOutputStream(new FileOutputStream(f))
+        val bytes = asByteArray
+        try target.write(bytes, 0, bytes.length - 1)
+        finally target.close()
+        f
     }
   }
 }
