@@ -116,7 +116,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % "10.1.6",
+      "com.typesafe.akka" %% "akka-http" % "10.1.7",
       "com.typesafe.akka" %% "akka-stream" % "2.5.19"
     )
   )
@@ -161,7 +161,7 @@ lazy val playground: Project = (project in file("playground"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
-      "org.webjars" % "swagger-ui" % "3.20.0"
+      "org.webjars" % "swagger-ui" % "3.20.3"
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
