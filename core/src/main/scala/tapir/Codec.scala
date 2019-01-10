@@ -6,8 +6,6 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 import tapir.DecodeResult._
-import tapir.GeneralCodec.PlainCodec
-import tapir.MediaType.TextPlain
 
 /**
   * A codec which can encode/decode both optional and non-optional values of type `T` to raw values of type `R`.
@@ -70,8 +68,6 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
 object GeneralCodec {
   type GeneralPlainCodec[T] = GeneralCodec[T, MediaType.TextPlain, String]
   type PlainCodec[T] = Codec[T, MediaType.TextPlain, String]
-
-  type GeneralJsonCodec[T] = GeneralCodec[T, MediaType.Json, String]
   type JsonCodec[T] = Codec[T, MediaType.Json, String]
 
   implicit val stringPlainCodecUtf8: PlainCodec[String] = stringCodec(StandardCharsets.UTF_8)
