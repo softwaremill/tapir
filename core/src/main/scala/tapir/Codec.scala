@@ -6,6 +6,8 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 import tapir.DecodeResult._
+import tapir.GeneralCodec.PlainCodec
+import tapir.MediaType.TextPlain
 
 /**
   * A codec which can encode/decode both optional and non-optional values of type `T` to raw values of type `R`.
@@ -53,15 +55,16 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
 
   def isOptional: Boolean = false
 
-  override def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = new Codec[TT, M, R] {
-    override val rawValueType: RawValueType[R] = outer.rawValueType
+  def codecMap[TT](f: T => DecodeResult[TT])(g: TT => T): Codec[TT, M, R] =
+    new Codec[TT, M, R] {
+      override def encode(t: TT): R = outer.encode(g(t))
+      override def decode(s: R): DecodeResult[TT] = outer.decode(s).flatMap(f)
+      override val rawValueType: RawValueType[R] = outer.rawValueType
+      override def schema: Schema = outer.schema
+      override def mediaType: M = outer.mediaType
+    }
 
-    override def encode(t: TT): R = outer.encode(g(t))
-    override def decode(s: R): DecodeResult[TT] = outer.decode(s).map(f)
-    override def isOptional: Boolean = outer.isOptional
-    override def schema: Schema = outer.schema
-    override def mediaType: M = outer.mediaType
-  }
+  override def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = codecMap[TT](f.andThen(Value.apply))(g)
 }
 
 object GeneralCodec {
