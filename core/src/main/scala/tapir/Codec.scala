@@ -55,7 +55,7 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
 
   def isOptional: Boolean = false
 
-  def codecMap[TT](f: T => DecodeResult[TT])(g: TT => T): Codec[TT, M, R] =
+  def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): Codec[TT, M, R] =
     new Codec[TT, M, R] {
       override def encode(t: TT): R = outer.encode(g(t))
       override def decode(s: R): DecodeResult[TT] = outer.decode(s).flatMap(f)
@@ -64,7 +64,7 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
       override def mediaType: M = outer.mediaType
     }
 
-  override def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = codecMap[TT](f.andThen(Value.apply))(g)
+  override def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
 }
 
 object GeneralCodec {
