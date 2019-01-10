@@ -2,6 +2,7 @@ package tapir
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
+import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 import tapir.GeneralCodec.{GeneralPlainCodec, PlainCodec}
@@ -17,8 +18,10 @@ trait Tapir {
     EndpointInput.Query(name, implicitly[GeneralPlainCodec[T]], None, None)
 
   def body[T, M <: MediaType, R](implicit tm: GeneralCodec[T, M, R]): EndpointIO.Body[T, M, R] = EndpointIO.Body(tm, None, None)
-  def stringBody: EndpointIO.Body[String, MediaType.TextPlain, String] =
-    EndpointIO.Body(implicitly[GeneralCodec[String, MediaType.TextPlain, String]], None, None)
+  def stringBody: EndpointIO.Body[String, MediaType.TextPlain, String] = stringBody(StandardCharsets.UTF_8)
+  def stringBody(charset: String): EndpointIO.Body[String, MediaType.TextPlain, String] = stringBody(Charset.forName(charset))
+  def stringBody(charset: Charset): EndpointIO.Body[String, MediaType.TextPlain, String] =
+    EndpointIO.Body(GeneralCodec.stringCodec(charset), None, None)
   def plainBody[T](implicit codec: GeneralCodec[T, MediaType.TextPlain, String]): EndpointIO.Body[T, MediaType.TextPlain, String] =
     EndpointIO.Body(codec, None, None)
   def jsonBody[T](implicit codec: GeneralCodec[T, MediaType.Json, String]): EndpointIO.Body[T, MediaType.Json, String] =
