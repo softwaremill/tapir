@@ -6,6 +6,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 import tapir.DecodeResult._
+import tapir.internal.UrlencodedData
 
 /**
   * A codec which can encode/decode both optional and non-optional values of type `T` to raw values of type `R`.
@@ -22,12 +23,20 @@ trait GeneralCodec[T, M <: MediaType, R] { outer =>
 
   def map[TT](f: T => TT)(g: TT => T): GeneralCodec[TT, M, R] = new GeneralCodec[TT, M, R] {
     override val rawValueType: RawValueType[R] = outer.rawValueType
-
     override def encodeOptional(t: TT): Option[R] = outer.encodeOptional(g(t))
     override def decodeOptional(s: Option[R]): DecodeResult[TT] = outer.decodeOptional(s).map(f)
     override def isOptional: Boolean = outer.isOptional
     override def schema: Schema = outer.schema
     override def mediaType: M = outer.mediaType
+  }
+
+  def mediaType[M2 <: MediaType](m2: M2): GeneralCodec[T, M2, R] = new GeneralCodec[T, M2, R] {
+    override val rawValueType: RawValueType[R] = outer.rawValueType
+    override def encodeOptional(t: T): Option[R] = outer.encodeOptional(t)
+    override def decodeOptional(s: Option[R]): DecodeResult[T] = outer.decodeOptional(s)
+    override def isOptional: Boolean = outer.isOptional
+    override def schema: Schema = outer.schema
+    override def mediaType: M2 = m2
   }
 }
 
@@ -63,6 +72,14 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
     }
 
   override def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
+
+  override def mediaType[M2 <: MediaType](m2: M2): Codec[T, M2, R] = new Codec[T, M2, R] {
+    override def encode(t: T): R = outer.encode(t)
+    override def decode(s: R): DecodeResult[T] = outer.decode(s)
+    override val rawValueType: RawValueType[R] = outer.rawValueType
+    override def schema: Schema = outer.schema
+    override def mediaType: M2 = m2
+  }
 }
 
 object GeneralCodec {
@@ -127,6 +144,16 @@ object GeneralCodec {
     override def schema: Schema = Schema.SBinary()
     override def mediaType = MediaType.OctetStream()
   }
+
+  implicit val formDataSeqCodecUtf8: Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] = formDataSeqCodec(
+    StandardCharsets.UTF_8)
+  implicit val formDataMapCodecUtf8: Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] = formDataMapCodec(
+    StandardCharsets.UTF_8)
+
+  def formDataSeqCodec(charset: Charset): Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] =
+    stringCodec(charset).map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset)).mediaType(MediaType.XWwwFormUrlencoded())
+  def formDataMapCodec(charset: Charset): Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] =
+    formDataSeqCodec(charset).map(_.toMap)(_.toSeq)
 }
 
 // string, byte array, input stream, file, form values (?), stream

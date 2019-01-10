@@ -20,4 +20,8 @@ object MediaType {
   case class OctetStream() extends MediaType {
     override val mediaTypeNoParams: String = "application/octet-stream"
   }
+
+  case class XWwwFormUrlencoded() extends MediaType {
+    override def mediaTypeNoParams: String = "application/x-www-form-urlencoded"
+  }
 }

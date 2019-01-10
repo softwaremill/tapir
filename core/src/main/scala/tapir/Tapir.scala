@@ -28,6 +28,10 @@ trait Tapir {
   def binaryBody[T](implicit codec: GeneralCodec[T, MediaType.OctetStream, _]): EndpointIO.Body[T, MediaType.OctetStream, _] =
     EndpointIO.Body(codec, None, None)
 
+  def formDataBody[T](
+      implicit codec: GeneralCodec[T, MediaType.XWwwFormUrlencoded, _]): EndpointIO.Body[T, MediaType.XWwwFormUrlencoded, _] =
+    EndpointIO.Body(codec, None, None)
+
   def header[T: GeneralPlainCodec](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[GeneralPlainCodec[T]], None, None)
 
