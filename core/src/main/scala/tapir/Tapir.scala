@@ -14,6 +14,12 @@ trait Tapir {
   def query[T: GeneralPlainCodec](name: String): EndpointInput.Query[T] =
     EndpointInput.Query(name, implicitly[GeneralPlainCodec[T]], None, None)
 
+  def header[T: GeneralPlainCodec](name: String): EndpointIO.Header[T] =
+    EndpointIO.Header(name, implicitly[GeneralPlainCodec[T]], None, None)
+
+  def form[T: GeneralPlainCodec](name: String): EndpointIO.Form[T] =
+    EndpointIO.Form(name, implicitly[GeneralPlainCodec[T]], None, None)
+
   def body[T, M <: MediaType, R](implicit tm: GeneralCodec[T, M, R]): EndpointIO.Body[T, M, R] = EndpointIO.Body(tm, None, None)
 
   def stringBody: EndpointIO.Body[String, MediaType.TextPlain, String] = stringBody(StandardCharsets.UTF_8)
@@ -31,9 +37,6 @@ trait Tapir {
   def formDataBody[T](
       implicit codec: GeneralCodec[T, MediaType.XWwwFormUrlencoded, _]): EndpointIO.Body[T, MediaType.XWwwFormUrlencoded, _] =
     EndpointIO.Body(codec, None, None)
-
-  def header[T: GeneralPlainCodec](name: String): EndpointIO.Header[T] =
-    EndpointIO.Header(name, implicitly[GeneralPlainCodec[T]], None, None)
 
   case class InvalidOutput(reason: DecodeResult[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull) // TODO
 

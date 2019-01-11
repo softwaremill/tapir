@@ -6,70 +6,74 @@ import tapir.{DecodeResult, EndpointIO, EndpointInput}
 
 private[akkahttp] object AkkaHttpInputMatcher {
 
-  def doMatch(inputs: Vector[EndpointInput.Single[_]], ctx: RequestContext, body: Any): Option[List[Any]] = {
-    doMatch(inputs, ctx, canRemoveSlash = true, body)
+  def doMatch(inputs: Vector[EndpointInput.Single[_]], req: RequestContext, body: Any, form: Seq[(String, String)]): Option[List[Any]] = {
+    doMatch(inputs, MatchContext(req, canRemoveSlash = true, body, form))
   }
 
-  private def doMatch(inputs: Vector[EndpointInput.Single[_]],
-                      ctx: RequestContext,
-                      canRemoveSlash: Boolean,
-                      body: Any): Option[List[Any]] = {
+  private case class MatchContext(req: RequestContext, canRemoveSlash: Boolean, body: Any, form: Seq[(String, String)])
+
+  private def doMatch(inputs: Vector[EndpointInput.Single[_]], ctx: MatchContext): Option[List[Any]] = {
 
     inputs match {
       case Vector() => Some(Nil)
       case EndpointInput.PathSegment(ss) +: inputsTail =>
-        ctx.unmatchedPath match {
-          case Uri.Path.Slash(pathTail) if canRemoveSlash =>
-            doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false, body)
+        ctx.req.unmatchedPath match {
+          case Uri.Path.Slash(pathTail) if ctx.canRemoveSlash =>
+            doMatch(inputs, ctx.copy(req = ctx.req.withUnmatchedPath(pathTail), canRemoveSlash = false)) // TODO: handle slash here?
           case Uri.Path.Segment(`ss`, pathTail) =>
-            doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body)
+            doMatch(inputsTail, ctx.copy(req = ctx.req.withUnmatchedPath(pathTail), canRemoveSlash = true))
           case _ => None
         }
       case EndpointInput.PathCapture(codec, _, _, _) +: inputsTail =>
-        ctx.unmatchedPath match {
-          case Uri.Path.Slash(pathTail) if canRemoveSlash =>
-            doMatch(inputs, ctx.withUnmatchedPath(pathTail), canRemoveSlash = false, body)
+        ctx.req.unmatchedPath match {
+          case Uri.Path.Slash(pathTail) if ctx.canRemoveSlash =>
+            doMatch(inputs, ctx.copy(req = ctx.req.withUnmatchedPath(pathTail), canRemoveSlash = false))
           case Uri.Path.Segment(s, pathTail) =>
             codec.decode(s) match {
               case DecodeResult.Value(v) =>
-                doMatch(inputsTail, ctx.withUnmatchedPath(pathTail), canRemoveSlash = true, body).map(v :: _)
+                doMatch(inputsTail, ctx.copy(req = ctx.req.withUnmatchedPath(pathTail), canRemoveSlash = true)).map(v :: _)
               case _ => None
             }
           case _ => None
         }
       case EndpointInput.Query(name, codec, _, _) +: inputsTail =>
-        codec.decodeOptional(ctx.request.uri.query().get(name)) match {
+        codec.decodeOptional(ctx.req.request.uri.query().get(name)) match {
           case DecodeResult.Value(v) =>
-            doMatch(inputsTail, ctx, canRemoveSlash = true, body).map(v :: _)
+            doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
         }
       case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
-        codec.decodeOptional(ctx.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
+        codec.decodeOptional(ctx.req.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
           case DecodeResult.Value(v) =>
-            doMatch(inputsTail, ctx, canRemoveSlash = true, body).map(v :: _)
+            doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
+          case _ => None
+        }
+      case EndpointIO.Form(name, codec, _, _) +: inputsTail =>
+        codec.decodeOptional(ctx.form.find(_._1 == name).map(_._2)) match {
+          case DecodeResult.Value(v) =>
+            doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
         }
       case EndpointIO.Body(codec, _, _) +: inputsTail =>
-        codec.decodeOptional(Some(body)) match {
+        codec.decodeOptional(Some(ctx.body)) match {
           case DecodeResult.Value(v) =>
-            doMatch(inputsTail, ctx, canRemoveSlash = true, body).map(v :: _)
+            doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
         }
       case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
-        handleMapped(wrapped, f, inputsTail, ctx, canRemoveSlash, body)
+        handleMapped(wrapped, f, inputsTail, ctx)
       case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
-        handleMapped(wrapped, f, inputsTail, ctx, canRemoveSlash, body)
+        handleMapped(wrapped, f, inputsTail, ctx)
     }
   }
+
   private def handleMapped[II, T](wrapped: EndpointInput[II],
                                   f: II => T,
                                   inputsTail: Vector[EndpointInput.Single[_]],
-                                  requestContext: RequestContext,
-                                  canRemoveSlash: Boolean,
-                                  body: Any): Option[List[Any]] = {
-    doMatch(wrapped.asVectorOfSingle, requestContext, canRemoveSlash, body)
+                                  ctx: MatchContext): Option[List[Any]] = {
+    doMatch(wrapped.asVectorOfSingle, ctx)
       .flatMap { result =>
-        doMatch(inputsTail, requestContext, canRemoveSlash, body)
+        doMatch(inputsTail, ctx)
           .map(f.asInstanceOf[Any => Any].apply(SeqToParams(result)) :: _)
       }
   }

@@ -7,6 +7,8 @@ import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
   def /[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
+  def &[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
+
   def show: String
 
   def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[II] =
@@ -30,6 +32,13 @@ sealed trait EndpointInput[I] {
     case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.bodyType
     case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.bodyType
     case _                                      => None
+  }
+
+  private[tapir] def hasForm: Boolean = this match {
+    case _: EndpointIO.Form[_]        => true
+    case m: EndpointIO.Multiple[_]    => m.ios.exists(_.hasForm)
+    case m: EndpointInput.Multiple[_] => m.inputs.exists(_.hasForm)
+    case _                            => false
   }
 }
 
@@ -81,6 +90,8 @@ object EndpointInput {
 
 sealed trait EndpointIO[I] extends EndpointInput[I] {
   def and[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ]
+  def &[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ] = and(other)
+
   def show: String
   override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
     EndpointIO.Mapped(this, f, g, paramsAsArgs)
@@ -115,6 +126,12 @@ object EndpointIO {
     def description(d: String): Header[T] = copy(description = Some(d))
     def example(t: T): Header[T] = copy(example = Some(t))
     def show = s"{header $name}"
+  }
+
+  case class Form[T](name: String, codec: GeneralPlainCodec[T], description: Option[String], example: Option[T]) extends Single[T] {
+    def description(d: String): Form[T] = copy(description = Some(d))
+    def example(t: T): Form[T] = copy(example = Some(t))
+    def show = s"{form $name}"
   }
 
   //
