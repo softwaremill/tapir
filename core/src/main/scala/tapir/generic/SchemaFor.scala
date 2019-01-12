@@ -1,0 +1,67 @@
+package tapir.generic
+
+import magnolia._
+import tapir.Schema
+import tapir.Schema._
+
+import scala.language.experimental.macros
+
+trait SchemaFor[T] {
+  def schema: Schema
+  def isOptional: Boolean = false
+  def show: String = s"schema is $schema"
+}
+object SchemaFor extends SchemaForMagnoliaDerivation {
+  implicit case object SchemaForString extends SchemaFor[String] {
+    override val schema: Schema = SString
+  }
+  implicit case object SchemaForShort extends SchemaFor[Short] {
+    override val schema: Schema = SInteger
+  }
+  implicit case object SchemaForInt extends SchemaFor[Int] {
+    override val schema: Schema = SInteger
+  }
+  implicit case object SchemaForLong extends SchemaFor[Long] {
+    override val schema: Schema = SInteger
+  }
+  implicit case object SchemaForFloat extends SchemaFor[Float] {
+    override val schema: Schema = SNumber
+  }
+  implicit case object SchemaForDouble extends SchemaFor[Double] {
+    override val schema: Schema = SNumber
+  }
+  implicit case object SchemaForBoolean extends SchemaFor[Boolean] {
+    override val schema: Schema = SBoolean
+  }
+  implicit def schemaForOption[T: SchemaFor]: SchemaFor[Option[T]] = new SchemaFor[Option[T]] {
+    override def schema: Schema = implicitly[SchemaFor[T]].schema
+    override def isOptional: Boolean = true
+  }
+
+  implicit def schemaForArray[T: SchemaFor]: SchemaFor[Array[T]] = new SchemaFor[Array[T]] {
+    override def schema: Schema = SArray(implicitly[SchemaFor[T]].schema)
+  }
+  implicit def schemaForIterable[T: SchemaFor, C[_] <: Iterable[_]]: SchemaFor[C[T]] = new SchemaFor[C[T]] {
+    override def schema: Schema = SArray(implicitly[SchemaFor[T]].schema)
+  }
+}
+
+trait SchemaForMagnoliaDerivation {
+  type Typeclass[T] = SchemaFor[T]
+
+  def combine[T](ctx: CaseClass[SchemaFor, T])(implicit genericDerivationConfig: Configuration): SchemaFor[T] = {
+    new SchemaFor[T] {
+      override val schema: Schema = SObject(
+        SObjectInfo(ctx.typeName.short, ctx.typeName.full),
+        ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
+        ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
+      )
+    }
+  }
+
+  def dispatch[T](ctx: SealedTrait[SchemaFor, T]): SchemaFor[T] = {
+    throw new RuntimeException("Sealed trait hierarchies are not yet supported")
+  }
+
+  implicit def schemaForCaseClass[T]: SchemaFor[T] = macro Magnolia.gen[T]
+}

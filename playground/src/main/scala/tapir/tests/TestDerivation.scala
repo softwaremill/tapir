@@ -1,7 +1,9 @@
 package tapir.tests
 
 import tapir.Schema.SString
-import tapir.{Schema, SchemaFor}
+import tapir.Schema
+import tapir.generic.SchemaFor
+import tapir._
 
 object TestDerivation extends App {
 
