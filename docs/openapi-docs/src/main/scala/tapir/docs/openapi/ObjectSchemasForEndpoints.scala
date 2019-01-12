@@ -58,6 +58,7 @@ object ObjectSchemasForEndpoints {
         objectSchemaToOSchema(tm.schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
+      case EndpointIO.Form(_, _, _, _) => Map.empty
     }
   }
 
