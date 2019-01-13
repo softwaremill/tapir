@@ -286,6 +286,8 @@ Then, a single `import MyTapir._` and all Tapir data types and extensions method
 
 Tuple-concatenating code is copied from [akka-http](https://github.com/akka/akka-http/blob/master/akka-http/src/main/scala/akka/http/scaladsl/server/util/TupleOps.scala)
 
+Generic derivation configuration is copied from [circe](https://github.com/circe/circe/blob/master/modules/generic-extras/src/main/scala/io/circe/generic/extras/Configuration.scala)
+
 ## Developing Tapir
 
 Tapir is an early stage project. Everything might change. Be warned: the code is often ugly, uses mutable state, imperative loops and type casts. Luckily, there's no reflection. All suggestions welcome :)
