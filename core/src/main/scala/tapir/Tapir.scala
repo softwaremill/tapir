@@ -20,7 +20,7 @@ trait Tapir {
   def form[T: GeneralPlainCodec](name: String): EndpointIO.Form[T] =
     EndpointIO.Form(name, implicitly[GeneralPlainCodec[T]], None, None)
 
-  def body[T, M <: MediaType, R](implicit tm: GeneralCodec[T, M, R]): EndpointIO.Body[T, M, R] = EndpointIO.Body(tm, None, None)
+  def body[T, M <: MediaType](implicit tm: GeneralCodec[T, M, _]): EndpointIO.Body[T, M, _] = EndpointIO.Body(tm, None, None)
 
   def stringBody: EndpointIO.Body[String, MediaType.TextPlain, String] = stringBody(StandardCharsets.UTF_8)
   def stringBody(charset: String): EndpointIO.Body[String, MediaType.TextPlain, String] = stringBody(Charset.forName(charset))
