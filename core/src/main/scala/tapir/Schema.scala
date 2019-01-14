@@ -28,6 +28,9 @@ object Schema {
   case class SBinary() extends Schema {
     def show: String = "binary"
   }
-
   case class SObjectInfo(shortName: String, fullName: String)
+
+  case class SRef(uuid: String) extends Schema {
+    def show: String = s"ref:$uuid"
+  }
 }
