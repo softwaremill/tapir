@@ -56,13 +56,6 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
         _ = logger.debug(s"Found header: $header")
         res <- continueMatch(header, inputsTail)
       } yield res
-    case EndpointIO.Form(name, codec, _, _) +: inputsTail =>
-      for {
-        ctx <- getState
-        formParam = codec.decodeOptional(ctx.formParam(name))
-        _ = logger.debug(s"Found form param: $formParam, $name, ${ctx.formParams}")
-        res <- continueMatch(formParam, inputsTail)
-      } yield res
     case EndpointIO.Body(codec, _, _) +: inputsTail =>
       for {
         ctx <- getState

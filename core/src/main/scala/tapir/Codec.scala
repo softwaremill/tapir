@@ -163,15 +163,13 @@ object GeneralCodec extends FormCodecDerivation {
     override def mediaType = MediaType.OctetStream()
   }
 
-  implicit val formDataSeqCodecUtf8: Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] = formDataSeqCodec(
-    StandardCharsets.UTF_8)
-  implicit val formDataMapCodecUtf8: Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] = formDataMapCodec(
-    StandardCharsets.UTF_8)
+  implicit val formSeqCodecUtf8: Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] = formSeqCodec(StandardCharsets.UTF_8)
+  implicit val formMapCodecUtf8: Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] = formMapCodec(StandardCharsets.UTF_8)
 
-  def formDataSeqCodec(charset: Charset): Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] =
+  def formSeqCodec(charset: Charset): Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] =
     stringCodec(charset).map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset)).mediaType(MediaType.XWwwFormUrlencoded())
-  def formDataMapCodec(charset: Charset): Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] =
-    formDataSeqCodec(charset).map(_.toMap)(_.toSeq)
+  def formMapCodec(charset: Charset): Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] =
+    formSeqCodec(charset).map(_.toMap)(_.toSeq)
 }
 
 // string, byte array, input stream, file, form values (?), stream

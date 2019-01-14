@@ -56,6 +56,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
              new ByteArrayInputStream("mango".getBytes),
              Right(new ByteArrayInputStream("mango".getBytes)))
   testClient(in_file_out_file, testFile, Right(testFile))
+  testClient(in_form_out_form, FruitAmount("plum", 10), Right(FruitAmount("plum", 10)))
 
   //
 

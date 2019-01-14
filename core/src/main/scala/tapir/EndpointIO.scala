@@ -35,7 +35,6 @@ sealed trait EndpointInput[I] {
   }
 
   private[tapir] def hasForm: Boolean = this match {
-    case _: EndpointIO.Form[_]        => true
     case m: EndpointIO.Multiple[_]    => m.ios.exists(_.hasForm)
     case m: EndpointInput.Multiple[_] => m.inputs.exists(_.hasForm)
     case _                            => false
@@ -126,12 +125,6 @@ object EndpointIO {
     def description(d: String): Header[T] = copy(description = Some(d))
     def example(t: T): Header[T] = copy(example = Some(t))
     def show = s"{header $name}"
-  }
-
-  case class Form[T](name: String, codec: GeneralPlainCodec[T], description: Option[String], example: Option[T]) extends Single[T] {
-    def description(d: String): Form[T] = copy(description = Some(d))
-    def example(t: T): Form[T] = copy(example = Some(t))
-    def show = s"{form $name}"
   }
 
   //

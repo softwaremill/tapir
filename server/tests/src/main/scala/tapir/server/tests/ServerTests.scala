@@ -136,12 +136,13 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
   }
 
-  testServer(in_form_out_form, (s: String) => pureResult(s.reverse.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri").body(Map("i1" -> "plum")).send().map(_.body shouldBe Right("o1=mulp"))
-  }
-
-  testServer(in_form_form_out_form_form, (s: String, i: Int) => pureResult((s.reverse, i + 1).asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri").body(Map("i2" -> "19", "i1" -> "plum")).send().map(_.body shouldBe Right("o1=mulp&o2=20"))
+  testServer(in_form_out_form, (fa: FruitAmount) => pureResult(fa.copy(fruit = fa.fruit.reverse, amount = fa.amount + 1).asRight[Unit])) {
+    baseUri =>
+      sttp
+        .post(uri"$baseUri/api/echo")
+        .body(Map("fruit" -> "plum", "amount" -> "10"))
+        .send()
+        .map(_.body shouldBe Right("fruit=mulp&amount=11"))
   }
 
   //

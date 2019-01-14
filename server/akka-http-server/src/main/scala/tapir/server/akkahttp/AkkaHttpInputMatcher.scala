@@ -6,11 +6,11 @@ import tapir.{DecodeResult, EndpointIO, EndpointInput}
 
 private[akkahttp] object AkkaHttpInputMatcher {
 
-  def doMatch(inputs: Vector[EndpointInput.Single[_]], req: RequestContext, body: Any, form: Seq[(String, String)]): Option[List[Any]] = {
-    doMatch(inputs, MatchContext(req, canRemoveSlash = true, body, form))
+  def doMatch(inputs: Vector[EndpointInput.Single[_]], req: RequestContext, body: Any): Option[List[Any]] = {
+    doMatch(inputs, MatchContext(req, canRemoveSlash = true, body))
   }
 
-  private case class MatchContext(req: RequestContext, canRemoveSlash: Boolean, body: Any, form: Seq[(String, String)])
+  private case class MatchContext(req: RequestContext, canRemoveSlash: Boolean, body: Any)
 
   private def doMatch(inputs: Vector[EndpointInput.Single[_]], ctx: MatchContext): Option[List[Any]] = {
 
@@ -44,12 +44,6 @@ private[akkahttp] object AkkaHttpInputMatcher {
         }
       case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
         codec.decodeOptional(ctx.req.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
-          case DecodeResult.Value(v) =>
-            doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
-          case _ => None
-        }
-      case EndpointIO.Form(name, codec, _, _) +: inputsTail =>
-        codec.decodeOptional(ctx.form.find(_._1 == name).map(_._2)) match {
           case DecodeResult.Value(v) =>
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None

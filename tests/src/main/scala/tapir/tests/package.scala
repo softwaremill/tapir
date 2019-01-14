@@ -63,11 +63,8 @@ package object tests {
   val in_unit_error_out_string: Endpoint[Unit, String, Unit] =
     endpoint.in("api").errorOut(stringBody)
 
-  val in_form_out_form: Endpoint[String, Unit, String] =
-    endpoint.post.in(form[String]("i1")).out(form[String]("o1"))
-
-  val in_form_form_out_form_form: Endpoint[(String, Int), Unit, (String, Int)] =
-    endpoint.post.in(form[String]("i1") & form[Int]("i2")).out(form[String]("o1") & form[Int]("o2"))
+  val in_form_out_form: Endpoint[FruitAmount, Unit, FruitAmount] =
+    endpoint.post.in("api" / "echo").in(formBody[FruitAmount]).out(formBody[FruitAmount])
 
   val allTestEndpoints: Set[Endpoint[_, _, _]] = wireSet[Endpoint[_, _, _]]
 }

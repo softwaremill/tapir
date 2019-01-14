@@ -1,13 +1,12 @@
 package tapir.server.akkahttp
 
 import java.io.{ByteArrayInputStream, File}
-import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
 import akka.http.scaladsl.model.{
   ContentType,
   ContentTypes,
-  FormData,
   HttpCharset,
   HttpEntity,
   HttpHeader,
@@ -25,7 +24,7 @@ import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import tapir._
-import tapir.internal.{ParamsToSeq, SeqToParams, UrlencodedData}
+import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.Future
@@ -54,14 +53,11 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   // don't look below. The code is really, really ugly. Even worse than in EndpointToSttpClient
 
   private def outputToRoute[O](statusCode: AkkaStatusCode, output: EndpointIO[O], v: O): Route = {
-    val outputValues = singleOutputsWithValues(output.asVectorOfSingle, v, OutputValues(None, Vector.empty, Vector.empty))
+    val outputValues = singleOutputsWithValues(output.asVectorOfSingle, v, OutputValues(None, Vector.empty))
 
-    val completeRoute = (outputValues.body, outputValues.formParams) match {
-      case (Some(_), form) if form.nonEmpty =>
-        throw new IllegalStateException("endpoint can't have both form data parameters and a body output")
-      case (None, form) if form.nonEmpty => complete(HttpResponse(entity = FormData(form: _*).toEntity, status = statusCode))
-      case (Some(entity), _)             => complete(HttpResponse(entity = entity, status = statusCode))
-      case _                             => complete(HttpResponse(statusCode))
+    val completeRoute = outputValues.body match {
+      case Some(entity) => complete(HttpResponse(entity = entity, status = statusCode))
+      case None         => complete(HttpResponse(statusCode))
     }
 
     if (outputValues.headers.nonEmpty) {
@@ -71,7 +67,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     }
   }
 
-  private case class OutputValues(body: Option[ResponseEntity], headers: Vector[HttpHeader], formParams: Vector[(String, String)])
+  private case class OutputValues(body: Option[ResponseEntity], headers: Vector[HttpHeader])
 
   private def singleOutputsWithValues(outputs: Vector[EndpointIO.Single[_]], v: Any, initialOutputValues: OutputValues): OutputValues = {
     val vs = ParamsToSeq(v)
@@ -90,11 +86,6 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
             // TODO error on parse error?
           }
           .foreach(hh => ov = ov.copy(headers = ov.headers :+ hh))
-      case (EndpointIO.Form(name, codec, _, _), i) =>
-        codec
-          .encodeOptional(vs(i))
-          .map(name -> _)
-          .foreach(d => ov = ov.copy(formParams = ov.formParams :+ d))
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
         ov = singleOutputsWithValues(wrapped.asVectorOfSingle, g(vs(i)), ov)
     }
@@ -122,37 +113,18 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
         case Some(FileValueType)        => saveRequestBodyToFile.asInstanceOf[Directive1[Any]]
         case None                       => provide(null)
       }
-      val formDataDirective = formData(e, bodyType, bodyDirective)
       bodyDirective.flatMap { body =>
-        formDataDirective.flatMap { formData =>
-          extractRequestContext.flatMap { ctx =>
-            AkkaHttpInputMatcher.doMatch(e.input.asVectorOfSingle, ctx, body, formData) match {
-              case Some(result) =>
-                provide(SeqToParams(result).asInstanceOf[I]) & mapRequestContext(_ => ctx)
-              case None => reject
-            }
+        extractRequestContext.flatMap { ctx =>
+          AkkaHttpInputMatcher.doMatch(e.input.asVectorOfSingle, ctx, body) match {
+            case Some(result) =>
+              provide(SeqToParams(result).asInstanceOf[I]) & mapRequestContext(_ => ctx)
+            case None => reject
           }
         }
       }
     }
 
     methodDirective & inputDirectives
-  }
-
-  private def formData[I, E, O](e: Endpoint[I, E, O],
-                                bodyType: Option[RawValueType[_]],
-                                bodyDirective: Directive1[Any]): Directive1[Seq[(String, String)]] = {
-    if (e.input.hasForm) {
-      val bodyAsStringDirective = bodyType match {
-        case Some(StringValueType(_)) =>
-          bodyDirective.asInstanceOf[Directive1[String]]
-        case Some(_) => throw new IllegalStateException("form data parameters can only be read if the body is read as a string")
-        case None =>
-          entity(as[String])
-      }
-
-      bodyAsStringDirective.map(UrlencodedData.decode(_, StandardCharsets.UTF_8)) // TODO
-    } else provide(Nil)
   }
 
   private def saveRequestBodyToFile: Directive1[File] = {

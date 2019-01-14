@@ -64,7 +64,7 @@ object FormCodecMacros {
         }
         def encode(o: $t): Seq[(String, String)] = List(..$encodeParams).flatten
 
-        tapir.GeneralCodec.formDataSeqCodecUtf8
+        tapir.GeneralCodec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
           .schema($schema.schema)
       }

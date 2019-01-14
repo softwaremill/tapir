@@ -1,7 +1,6 @@
 package tapir.server.http4s
 
 import java.io.ByteArrayInputStream
-import java.nio.charset.StandardCharsets
 
 import cats.data._
 import cats.effect.{ContextShift, Sync}
@@ -11,7 +10,7 @@ import org.http4s
 import org.http4s.headers.`Content-Type`
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.{Charset, EntityBody, Header, Headers, HttpRoutes, Request, Response, Status}
-import tapir.internal.{ParamsToSeq, SeqToParams, UrlencodedData}
+import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{
   ByteArrayValueType,
@@ -71,7 +70,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  private case class OutputValues(body: Option[EntityBody[F]], headers: Vector[Header], formParams: Vector[(String, String)])
+  private case class OutputValues(body: Option[EntityBody[F]], headers: Vector[Header])
 
   private def singleOutputsWithValues(outputs: Vector[EndpointIO.Single[_]], v: Any): State[OutputValues, Unit] = {
     val vs = ParamsToSeq(v)
@@ -90,12 +89,6 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           .map((headerValue: String) => Header.Raw(CaseInsensitiveString(name), headerValue)) match {
           case Some(header) => State.modify[OutputValues](ov => ov.copy(headers = ov.headers :+ header))
           case None         => State.pure[OutputValues, Unit](())
-        }
-
-      case (EndpointIO.Form(name, codec, _, _), i) =>
-        codec.encodeOptional(vs(i)) match {
-          case Some(formParam) => State.modify[OutputValues](ov => ov.copy(formParams = ov.formParams :+ (name -> formParam)))
-          case None            => State.pure[OutputValues, Unit](())
         }
 
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
@@ -160,24 +153,18 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status = Status.fromInt(code).right.get
 
   private def createContext[I, E, O](e: Endpoint[I, E, O], req: Request[F]): F[Context[F]] = {
-    val formAndBody: F[(Option[Any], Seq[(String, String)])] = e.input.bodyType match {
-      case None => formParams(req, e.input.hasForm, None, None).map((None, _))
-      case Some(bt) =>
-        for {
-          body <- requestBody(req, bt)
-          formParams <- formParams(req, e.input.hasForm, bt.some.asInstanceOf[Option[RawValueType[Any]]], body.some)
-        } yield (Some(body), formParams)
+    val formAndBody: F[Option[Any]] = e.input.bodyType match {
+      case None     => none[Any].pure[F]
+      case Some(bt) => requestBody(req, bt).map(_.some)
     }
 
-    formAndBody.map {
-      case (body, formParams) =>
-        Context(
-          queryParams = req.params,
-          formParams = formParams,
-          headers = req.headers,
-          body = body,
-          unmatchedPath = req.uri.renderString
-        )
+    formAndBody.map { body =>
+      Context(
+        queryParams = req.params,
+        headers = req.headers,
+        body = body,
+        unmatchedPath = req.uri.renderString
+      )
     }
   }
 
@@ -198,38 +185,14 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  def formParams[R](req: Request[F], hasForm: Boolean, bodyType: Option[RawValueType[R]], body: Option[R]): F[Seq[(String, String)]] = {
-    if (hasForm) {
-      val charset = req.charset.map(_.nioCharset).getOrElse(StandardCharsets.UTF_8)
-      val bodyAsString: F[String] = bodyType match {
-        case Some(StringValueType(_)) => body.getOrElse("").pure[F]
-        case Some(_)                  => throw new IllegalStateException("form data parameters can only be read if the body is read as a string")
-        case None =>
-          val charset = req.charset.map(_.nioCharset).getOrElse(StandardCharsets.UTF_8)
-          requestBody(req, StringValueType(charset))
-      }
-
-      bodyAsString.map(UrlencodedData.decode(_, charset))
-    } else {
-      (Nil: Seq[(String, String)]).pure[F]
-    }
-  }
-
   private def makeResponse[O](statusCode: org.http4s.Status, output: EndpointIO[O], v: O): Response[F] = {
     val outputValues: OutputValues =
-      singleOutputsWithValues(output.asVectorOfSingle, v).runS(OutputValues(None, Vector.empty, Vector.empty)).value
+      singleOutputsWithValues(output.asVectorOfSingle, v).runS(OutputValues(None, Vector.empty)).value
 
     val headers = Headers(outputValues.headers: _*)
-    (outputValues.body, outputValues.formParams) match {
-      case (Some(_), form) if form.nonEmpty =>
-        throw new IllegalStateException("endpoint can't have both form data parameters and a body output")
-      case (None, form) if form.nonEmpty =>
-        val ctHeader = mediaTypeToContentType(MediaType.XWwwFormUrlencoded())
-        val body: EntityBody[F] =
-          fs2.Stream.chunk(Chunk.bytes(UrlencodedData.encode(form, StandardCharsets.UTF_8).getBytes(StandardCharsets.UTF_8)))
-        Response(status = statusCode, headers = headers.put(ctHeader), body = body)
-      case (Some(entity), _) => Response(status = statusCode, headers = headers, body = entity)
-      case _                 => Response(status = statusCode, headers = headers)
+    outputValues.body match {
+      case Some(entity) => Response(status = statusCode, headers = headers, body = entity)
+      case None         => Response(status = statusCode, headers = headers)
     }
 
   }
