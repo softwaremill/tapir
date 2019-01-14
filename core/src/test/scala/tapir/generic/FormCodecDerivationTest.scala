@@ -1,6 +1,7 @@
 package tapir.generic
 
 import org.scalatest.{FlatSpec, Matchers}
+import tapir.Schema.{SInteger, SObject, SObjectInfo, SString}
 import tapir.util.CompileUtil
 import tapir.{DecodeResult, GeneralCodec, MediaType}
 
@@ -62,5 +63,18 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
 
     error.message should include("could not find implicit value")
     error.message should include("GeneralPlainCodec[NoCodecForThisTrait]")
+  }
+
+  it should "use the right schema for a two-arg case class" in {
+    // given
+    case class Test6(f1: String, f2: Int)
+    val codec = implicitly[GeneralCodec[Test6, MediaType.XWwwFormUrlencoded, String]]
+
+    // when
+    codec.schema shouldBe SObject(
+      SObjectInfo("Test6", "tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
+      List(("f1", SString), ("f2", SInteger)),
+      List("f1", "f2")
+    )
   }
 }

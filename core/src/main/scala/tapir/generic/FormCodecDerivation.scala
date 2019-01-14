@@ -30,6 +30,8 @@ object FormCodecMacros {
       (field, c.typecheck(q"implicitly[tapir.GeneralCodec.GeneralPlainCodec[${field.typeSignature}]]"))
     }
 
+    val schema = c.typecheck(q"implicitly[tapir.SchemaFor[$t]]")
+
     val encodeParams: Iterable[Tree] = fieldsWithCodecs.map {
       case (field, codec) =>
         val fieldName = field.name.asInstanceOf[TermName]
@@ -62,7 +64,9 @@ object FormCodecMacros {
         }
         def encode(o: $t): Seq[(String, String)] = List(..$encodeParams).flatten
 
-        tapir.GeneralCodec.formDataSeqCodecUtf8.mapDecode(decode _)(encode _)
+        tapir.GeneralCodec.formDataSeqCodecUtf8
+          .mapDecode(decode _)(encode _)
+          .schema($schema.schema)
       }
      """)
   }

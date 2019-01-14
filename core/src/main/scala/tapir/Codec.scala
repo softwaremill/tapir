@@ -39,6 +39,15 @@ trait GeneralCodec[T, M <: MediaType, R] { outer =>
     override def schema: Schema = outer.schema
     override def mediaType: M2 = m2
   }
+
+  def schema(s2: Schema): GeneralCodec[T, M, R] = new GeneralCodec[T, M, R] {
+    override val rawValueType: RawValueType[R] = outer.rawValueType
+    override def encodeOptional(t: T): Option[R] = outer.encodeOptional(t)
+    override def decodeOptional(s: Option[R]): DecodeResult[T] = outer.decodeOptional(s)
+    override def isOptional: Boolean = outer.isOptional
+    override def schema: Schema = s2
+    override def mediaType: M = outer.mediaType
+  }
 }
 
 /**
@@ -80,6 +89,14 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
     override val rawValueType: RawValueType[R] = outer.rawValueType
     override def schema: Schema = outer.schema
     override def mediaType: M2 = m2
+  }
+
+  override def schema(s2: Schema): Codec[T, M, R] = new Codec[T, M, R] {
+    override def encode(t: T): R = outer.encode(t)
+    override def decode(s: R): DecodeResult[T] = outer.decode(s)
+    override val rawValueType: RawValueType[R] = outer.rawValueType
+    override def schema: Schema = s2
+    override def mediaType: M = outer.mediaType
   }
 }
 
