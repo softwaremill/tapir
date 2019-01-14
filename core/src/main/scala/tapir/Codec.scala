@@ -6,6 +6,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 import tapir.DecodeResult._
+import tapir.generic.FormCodecDerivation
 import tapir.internal.UrlencodedData
 
 /**
@@ -82,7 +83,7 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
   }
 }
 
-object GeneralCodec {
+object GeneralCodec extends FormCodecDerivation {
   type GeneralPlainCodec[T] = GeneralCodec[T, MediaType.TextPlain, String]
   type PlainCodec[T] = Codec[T, MediaType.TextPlain, String]
   type JsonCodec[T] = Codec[T, MediaType.Json, String]
