@@ -7,7 +7,7 @@ import tapir.{CodecMeta, DecodeResult, MediaType, RawValueType, StringValueType}
 import tapir.GeneralCodec.JsonCodec
 import io.circe.syntax._
 import io.circe.{Decoder, Encoder}
-import tapir.generic.SchemaFor
+import tapir.SchemaFor
 
 trait JsonCirce {
   implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {

@@ -2,6 +2,7 @@ package tapir.generic
 
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
+import tapir.SchemaFor
 
 class SchemaForTest extends FlatSpec with Matchers {
 
