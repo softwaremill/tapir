@@ -161,6 +161,11 @@ When defining a path, query or header parameter, only a codec with the `Text` me
 #### Schemas
 
 A codec also contains the schema of the mapped type. This schema information is used when generating documentation. For primitive types, the schema values are built-in. For complex types, it is possible to define the schema by hand (by creating an implicit value of type `SchemaFor[T]`), however usually this will be automatically derived for case classes using [Magnolia](https://propensive.com/opensource/magnolia/).
+It is possible to configure generic derivation to use snake-case, kebab-case or custom field naming policy.
+
+```scala
+implicit val customConfiguration = Configuration.defaults.snakeCaseTransformation
+```
 
 #### Working with json
 
