@@ -54,7 +54,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
 
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[(EntityBody[F], Header)] = {
-    val ct: `Content-Type` = mediaTypeToContentType(codec.mediaType)
+    val ct: `Content-Type` = mediaTypeToContentType(codec.meta.mediaType)
 
     codec.encodeOptional(v).map { r: R =>
       codec.rawValueType match {

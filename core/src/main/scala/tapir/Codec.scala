@@ -18,43 +18,31 @@ trait GeneralCodec[T, M <: MediaType, R] { outer =>
 
   def encodeOptional(t: T): Option[R]
   def decodeOptional(s: Option[R]): DecodeResult[T]
-  def isOptional: Boolean
-  def schema: Schema
-  def mediaType: M
+  def meta: CodecMeta[M]
 
   def map[TT](f: T => TT)(g: TT => T): GeneralCodec[TT, M, R] = new GeneralCodec[TT, M, R] {
     override val rawValueType: RawValueType[R] = outer.rawValueType
     override def encodeOptional(t: TT): Option[R] = outer.encodeOptional(g(t))
     override def decodeOptional(s: Option[R]): DecodeResult[TT] = outer.decodeOptional(s).map(f)
-    override def isOptional: Boolean = outer.isOptional
-    override def schema: Schema = outer.schema
-    override def mediaType: M = outer.mediaType
+    override def meta: CodecMeta[M] = outer.meta
   }
 
-  def mediaType[M2 <: MediaType](m2: M2): GeneralCodec[T, M2, R] = new GeneralCodec[T, M2, R] {
+  private def withMeta[M2 <: MediaType](meta2: CodecMeta[M2]): GeneralCodec[T, M2, R] = new GeneralCodec[T, M2, R] {
     override val rawValueType: RawValueType[R] = outer.rawValueType
     override def encodeOptional(t: T): Option[R] = outer.encodeOptional(t)
     override def decodeOptional(s: Option[R]): DecodeResult[T] = outer.decodeOptional(s)
-    override def isOptional: Boolean = outer.isOptional
-    override def schema: Schema = outer.schema
-    override def mediaType: M2 = m2
+    override def meta: CodecMeta[M2] = meta2
   }
 
-  def schema(s2: Schema): GeneralCodec[T, M, R] = new GeneralCodec[T, M, R] {
-    override val rawValueType: RawValueType[R] = outer.rawValueType
-    override def encodeOptional(t: T): Option[R] = outer.encodeOptional(t)
-    override def decodeOptional(s: Option[R]): DecodeResult[T] = outer.decodeOptional(s)
-    override def isOptional: Boolean = outer.isOptional
-    override def schema: Schema = s2
-    override def mediaType: M = outer.mediaType
-  }
+  def mediaType[M2 <: MediaType](m2: M2): GeneralCodec[T, M2, R] = withMeta(meta.copy[M2](mediaType = m2))
+  def schema(s2: Schema): GeneralCodec[T, M, R] = withMeta(meta.copy(schema = s2))
 }
 
 /**
   * A pair of functions, one to encode a non-optional value of type `T` to a raw value of type `R`,
   * and another one to decode.
   *
-  * Also contains the `schema` of the value, as well as the meta-data on the media and the raw value type.
+  * Also contains meta-data on the `schema` of the value, the media type and the raw value type.
   *
   * @tparam T Type of the values which can be encoded / to which raw values can be decoded.
   * @tparam M The media type of encoded values.
@@ -70,34 +58,25 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
     case Some(ss) => decode(ss)
   }
 
-  def isOptional: Boolean = false
-
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): Codec[TT, M, R] =
     new Codec[TT, M, R] {
       override def encode(t: TT): R = outer.encode(g(t))
       override def decode(s: R): DecodeResult[TT] = outer.decode(s).flatMap(f)
       override val rawValueType: RawValueType[R] = outer.rawValueType
-      override def schema: Schema = outer.schema
-      override def mediaType: M = outer.mediaType
+      override def meta: CodecMeta[M] = outer.meta
     }
 
   override def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
 
-  override def mediaType[M2 <: MediaType](m2: M2): Codec[T, M2, R] = new Codec[T, M2, R] {
+  private def withMeta[M2 <: MediaType](meta2: CodecMeta[M2]): Codec[T, M2, R] = new Codec[T, M2, R] {
     override def encode(t: T): R = outer.encode(t)
     override def decode(s: R): DecodeResult[T] = outer.decode(s)
     override val rawValueType: RawValueType[R] = outer.rawValueType
-    override def schema: Schema = outer.schema
-    override def mediaType: M2 = m2
+    override def meta: CodecMeta[M2] = meta2
   }
 
-  override def schema(s2: Schema): Codec[T, M, R] = new Codec[T, M, R] {
-    override def encode(t: T): R = outer.encode(t)
-    override def decode(s: R): DecodeResult[T] = outer.decode(s)
-    override val rawValueType: RawValueType[R] = outer.rawValueType
-    override def schema: Schema = s2
-    override def mediaType: M = outer.mediaType
-  }
+  override def mediaType[M2 <: MediaType](m2: M2): Codec[T, M2, R] = withMeta[M2](meta.copy[M2](mediaType = m2))
+  override def schema(s2: Schema): Codec[T, M, R] = withMeta(meta.copy(schema = s2))
 }
 
 object GeneralCodec extends FormCodecDerivation {
@@ -125,8 +104,7 @@ object GeneralCodec extends FormCodecDerivation {
         catch {
           case e: Exception => Error(s, e, "Cannot parse")
         }
-      override def schema: Schema = _schema
-      override def mediaType = MediaType.TextPlain(charset)
+      override def meta: CodecMeta[MediaType.TextPlain] = CodecMeta(_schema, MediaType.TextPlain(charset))
     }
 
   implicit def optionalCodec[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): GeneralCodec[Option[T], M, R] =
@@ -143,9 +121,7 @@ object GeneralCodec extends FormCodecDerivation {
             case de: DecodeResult.Error => de
           }
       }
-      override def isOptional: Boolean = true
-      override def schema: Schema = tm.schema
-      override def mediaType: M = tm.mediaType
+      override def meta: CodecMeta[M] = tm.meta.copy(isOptional = true)
     }
 
   implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] = binaryCodec(ByteArrayValueType)
@@ -159,8 +135,7 @@ object GeneralCodec extends FormCodecDerivation {
 
     override def encode(b: T): T = b
     override def decode(b: T): DecodeResult[T] = Value(b)
-    override def schema: Schema = Schema.SBinary()
-    override def mediaType = MediaType.OctetStream()
+    override def meta: CodecMeta[MediaType.OctetStream] = CodecMeta(Schema.SBinary(), MediaType.OctetStream())
   }
 
   implicit val formSeqCodecUtf8: Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] = formSeqCodec(StandardCharsets.UTF_8)
@@ -170,6 +145,11 @@ object GeneralCodec extends FormCodecDerivation {
     stringCodec(charset).map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset)).mediaType(MediaType.XWwwFormUrlencoded())
   def formMapCodec(charset: Charset): Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] =
     formSeqCodec(charset).map(_.toMap)(_.toSeq)
+}
+
+case class CodecMeta[M <: MediaType] private (isOptional: Boolean, schema: Schema, mediaType: M)
+object CodecMeta {
+  def apply[M <: MediaType](schema: Schema, mediaType: M): CodecMeta[M] = CodecMeta(isOptional = false, schema, mediaType)
 }
 
 // string, byte array, input stream, file, form values (?), stream

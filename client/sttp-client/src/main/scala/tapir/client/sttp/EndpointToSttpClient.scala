@@ -65,7 +65,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     val values = outputs
       .map {
         case EndpointIO.Body(codec, _, _) =>
-          val so = if (codec.isOptional && body == "") None else Some(body)
+          val so = if (codec.meta.isOptional && body == "") None else Some(body)
           codec.decodeOptional(so).getOrThrow(InvalidOutput)
 
         case EndpointIO.Header(name, codec, _, _) =>

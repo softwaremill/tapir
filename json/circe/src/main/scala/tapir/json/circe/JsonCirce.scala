@@ -3,7 +3,7 @@ package tapir.json.circe
 import java.nio.charset.StandardCharsets
 
 import tapir.DecodeResult.{Error, Value}
-import tapir.{DecodeResult, MediaType, RawValueType, Schema, SchemaFor, StringValueType}
+import tapir.{CodecMeta, DecodeResult, MediaType, RawValueType, SchemaFor, StringValueType}
 import tapir.GeneralCodec.JsonCodec
 import io.circe.syntax._
 import io.circe.{Decoder, Encoder}
@@ -17,7 +17,6 @@ trait JsonCirce {
       case Left(error) => Error(s, error, error.getMessage)
       case Right(v)    => Value(v)
     }
-    override def schema: Schema = implicitly[SchemaFor[T]].schema
-    override def mediaType = MediaType.Json()
+    override def meta: CodecMeta[MediaType.Json] = CodecMeta(implicitly[SchemaFor[T]].schema, MediaType.Json())
   }
 }

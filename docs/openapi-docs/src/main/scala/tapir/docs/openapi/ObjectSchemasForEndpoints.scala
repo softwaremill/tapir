@@ -37,9 +37,9 @@ object ObjectSchemasForEndpoints {
       case EndpointInput.PathSegment(_) =>
         Map.empty
       case EndpointInput.PathCapture(tm, _, _, _) =>
-        objectSchemaToOSchema(tm.schema)
+        objectSchemaToOSchema(tm.meta.schema)
       case EndpointInput.Query(_, tm, _, _) =>
-        objectSchemaToOSchema(tm.schema)
+        objectSchemaToOSchema(tm.meta.schema)
       case EndpointInput.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
       case EndpointInput.Multiple(inputs) =>
@@ -53,9 +53,9 @@ object ObjectSchemasForEndpoints {
       case EndpointIO.Multiple(inputs) =>
         foldMaps(inputs.map(forInput))
       case EndpointIO.Header(_, tm, _, _) =>
-        objectSchemaToOSchema(tm.schema)
+        objectSchemaToOSchema(tm.meta.schema)
       case EndpointIO.Body(tm, _, _) =>
-        objectSchemaToOSchema(tm.schema)
+        objectSchemaToOSchema(tm.meta.schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
     }

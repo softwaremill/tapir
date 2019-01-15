@@ -158,7 +158,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   }
 
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[ResponseEntity] = {
-    val ct = mediaTypeToContentType(codec.mediaType)
+    val ct = mediaTypeToContentType(codec.meta.mediaType)
     codec.encodeOptional(v).map { r =>
       codec.rawValueType match {
         case StringValueType(charset) =>

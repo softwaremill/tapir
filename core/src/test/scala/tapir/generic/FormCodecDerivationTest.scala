@@ -71,7 +71,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
     val codec = implicitly[GeneralCodec[Test6, MediaType.XWwwFormUrlencoded, String]]
 
     // when
-    codec.schema shouldBe SObject(
+    codec.meta.schema shouldBe SObject(
       SObjectInfo("Test6", "tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
       List(("f1", SString), ("f2", SInteger)),
       List("f1", "f2")

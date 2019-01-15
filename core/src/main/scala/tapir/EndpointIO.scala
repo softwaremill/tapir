@@ -118,7 +118,7 @@ object EndpointIO {
   case class Body[T, M <: MediaType, R](codec: GeneralCodec[T, M, R], description: Option[String], example: Option[T]) extends Single[T] {
     def description(d: String): Body[T, M, R] = copy(description = Some(d))
     def example(t: T): Body[T, M, R] = copy(example = Some(t))
-    def show = s"{body as ${codec.mediaType.mediaType}}"
+    def show = s"{body as ${codec.meta.mediaType.mediaType}}"
   }
 
   case class Header[T](name: String, codec: GeneralPlainCodec[T], description: Option[String], example: Option[T]) extends Single[T] {
