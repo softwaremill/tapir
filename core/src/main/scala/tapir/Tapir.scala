@@ -22,6 +22,7 @@ trait Tapir {
 
   def header[T: GeneralPlainCodec](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[GeneralPlainCodec[T]], None, None)
+  def headers: EndpointIO.Headers = EndpointIO.Headers(None, None)
 
   def body[T, M <: MediaType](implicit tm: GeneralCodec[T, M, _]): EndpointIO.Body[T, M, _] = EndpointIO.Body(tm, None, None)
 

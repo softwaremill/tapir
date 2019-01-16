@@ -155,6 +155,15 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
         .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
   }
 
+  testServer(in_headers_out_headers, (hs: Seq[(String, String)]) => pureResult(hs.map(h => h.copy(_2 = h._2.reverse)).asRight[Unit])) {
+    baseUri =>
+      sttp
+        .get(uri"$baseUri/api/echo/headers")
+        .headers(("X-Fruit", "apple"), ("Y-Fruit", "Orange"))
+        .send()
+        .map(_.headers should contain allOf (("X-Fruit", "elppa"), ("Y-Fruit", "egnarO")))
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()

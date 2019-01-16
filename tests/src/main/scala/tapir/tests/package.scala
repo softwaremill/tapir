@@ -69,5 +69,8 @@ package object tests {
   val in_query_params_out_string: Endpoint[MultiQueryParams, Unit, String] =
     endpoint.get.in("api" / "echo" / "params").in(queryParams).out(stringBody)
 
+  val in_headers_out_headers: Endpoint[Seq[(String, String)], Unit, Seq[(String, String)]] =
+    endpoint.get.in("api" / "echo" / "headers").in(headers).out(headers)
+
   val allTestEndpoints: Set[Endpoint[_, _, _]] = wireSet[Endpoint[_, _, _]]
 }

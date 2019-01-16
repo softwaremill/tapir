@@ -91,6 +91,10 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           case None         => State.pure[OutputValues, Unit](())
         }
 
+      case (EndpointIO.Headers(_, _), i) =>
+        val headers = vs(i).asInstanceOf[Seq[(String, String)]].map(h => Header.Raw(CaseInsensitiveString(h._1), h._2))
+        State.modify[OutputValues](ov => ov.copy(headers = ov.headers ++ headers))
+
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
         singleOutputsWithValues(wrapped.asVectorOfSingle, g(vs(i)))
     }

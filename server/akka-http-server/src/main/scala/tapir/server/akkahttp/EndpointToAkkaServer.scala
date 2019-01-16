@@ -86,6 +86,15 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
             // TODO error on parse error?
           }
           .foreach(hh => ov = ov.copy(headers = ov.headers :+ hh))
+      case (EndpointIO.Headers(_, _), i) =>
+        vs(i)
+          .asInstanceOf[Seq[(String, String)]]
+          .map(h => HttpHeader.parse(h._1, h._2))
+          .collect {
+            case ParsingResult.Ok(h, _) => h
+            // TODO error on parse error?
+          }
+          .foreach(h => ov = ov.copy(headers = ov.headers :+ h))
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
         ov = singleOutputsWithValues(wrapped.asVectorOfSingle, g(vs(i)), ov)
     }

@@ -65,6 +65,15 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   //
 
+  test(in_headers_out_headers.show) {
+    send(in_headers_out_headers, port, List(("X-Fruit", "apple"), ("Y-Fruit", "Orange")))
+      .unsafeRunSync()
+      .right
+      .get should contain allOf (("X-Fruit", "elppa"), ("Y-Fruit", "egnarO"))
+  }
+
+  //
+
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
   private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
@@ -75,6 +84,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
+    case r @ GET -> Root / "api" / "echo" / "headers"                      => Ok(headers = r.headers.map(h => Header(h.name.value, h.value.reverse)).toSeq: _*)
     case r @ POST -> Root / "api" / "echo"                                 => r.as[String].flatMap(Ok(_))
     case r @ GET -> Root =>
       r.headers.get(CaseInsensitiveString("X-Role")) match {

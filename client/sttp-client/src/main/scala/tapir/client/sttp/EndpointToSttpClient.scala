@@ -71,6 +71,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         case EndpointIO.Header(name, codec, _, _) =>
           codec.decodeOptional(meta.header(name)).getOrThrow(InvalidOutput)
 
+        case EndpointIO.Headers(_, _) =>
+          meta.headers
+
         case EndpointIO.Mapped(wrapped, f, _, _) =>
           f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingle, body, meta))
       }
@@ -128,6 +131,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
           .map(v => req.header(name, v))
           .getOrElse(req)
+        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+      case EndpointIO.Headers(_, _) +: tail =>
+        val headers = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[Seq[(String, String)]]
+        val req2 = headers.foldLeft(req) { case (r, (k, v)) => r.header(k, v) }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointInput.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
         handleMapped(wrapped, g, wrappedParamsAsArgs, tail)

@@ -56,6 +56,8 @@ object ObjectSchemasForEndpoints {
         foldMaps(inputs.map(forInput))
       case EndpointIO.Header(_, tm, _, _) =>
         objectSchemaToOSchema(tm.meta.schema)
+      case EndpointIO.Headers(_, _) =>
+        Map.empty
       case EndpointIO.Body(tm, _, _) =>
         objectSchemaToOSchema(tm.meta.schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>

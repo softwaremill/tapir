@@ -51,6 +51,9 @@ private[akkahttp] object AkkaHttpInputMatcher {
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
         }
+      case EndpointIO.Headers(_, _) +: inputsTail =>
+        val headers = ctx.req.request.headers.map(h => (h.name(), h.value()))
+        doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(headers :: _)
       case EndpointIO.Body(codec, _, _) +: inputsTail =>
         codec.decodeOptional(Some(ctx.body)) match {
           case DecodeResult.Value(v) =>

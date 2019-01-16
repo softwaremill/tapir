@@ -68,6 +68,7 @@ object EndpointInput {
     def show = s"?$name"
   }
 
+  // TODO: add an info class w/ description+example?
   case class QueryParams(description: Option[String], example: Option[MultiQueryParams]) extends Single[MultiQueryParams] {
     def description(d: String): QueryParams = copy(description = Some(d))
     def example(t: MultiQueryParams): QueryParams = copy(example = Some(t))
@@ -131,6 +132,12 @@ object EndpointIO {
     def description(d: String): Header[T] = copy(description = Some(d))
     def example(t: T): Header[T] = copy(example = Some(t))
     def show = s"{header $name}"
+  }
+
+  case class Headers(description: Option[String], example: Option[Seq[(String, String)]]) extends Single[Seq[(String, String)]] {
+    def description(d: String): Headers = copy(description = Some(d))
+    def example(t: Seq[(String, String)]): Headers = copy(example = Some(t))
+    def show = s"{multiple headers}"
   }
 
   //

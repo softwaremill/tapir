@@ -63,6 +63,13 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
         _ = logger.debug(s"Found header: $header")
         res <- continueMatch(header, inputsTail)
       } yield res
+    case EndpointIO.Headers(_, _) +: inputsTail =>
+      for {
+        ctx <- getState
+        headers = ctx.headers.map(h => (h.name.value, h.value)).toSeq
+        _ = logger.debug(s"Found headers: $headers")
+        res <- continueMatch(DecodeResult.Value(headers), inputsTail)
+      } yield res
     case EndpointIO.Body(codec, _, _) +: inputsTail =>
       for {
         ctx <- getState
