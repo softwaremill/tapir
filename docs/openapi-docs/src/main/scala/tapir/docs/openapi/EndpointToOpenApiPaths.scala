@@ -16,17 +16,18 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
 
     val defaultId = operationId(pathComponents, e.method)
 
+    val operation = Some(endpointToOperation(defaultId, e))
     val pathItem = PathItem(
       None,
       None,
-      get = if (e.method == GET) Some(operation(defaultId, e)) else None,
-      put = if (e.method == PUT) Some(operation(defaultId, e)) else None,
-      post = if (e.method == POST) Some(operation(defaultId, e)) else None,
-      delete = if (e.method == DELETE) Some(operation(defaultId, e)) else None,
-      options = if (e.method == OPTIONS) Some(operation(defaultId, e)) else None,
-      head = if (e.method == HEAD) Some(operation(defaultId, e)) else None,
-      patch = if (e.method == PATCH) Some(operation(defaultId, e)) else None,
-      trace = if (e.method == TRACE) Some(operation(defaultId, e)) else None,
+      get = if (e.method == GET) operation else None,
+      put = if (e.method == PUT) operation else None,
+      post = if (e.method == POST) operation else None,
+      delete = if (e.method == DELETE) operation else None,
+      options = if (e.method == OPTIONS) operation else None,
+      head = if (e.method == HEAD) operation else None,
+      patch = if (e.method == PATCH) operation else None,
+      trace = if (e.method == TRACE) operation else None,
       servers = None,
       parameters = None
     )
@@ -45,7 +46,7 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
     s"${pathComponentsOrRoot.mkString("-")}-${method.m.toLowerCase}"
   }
 
-  private def operation(defaultId: String, e: Endpoint[_, _, _]): Operation = {
+  private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _]): Operation = {
     val parameters = operationParameters(e)
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(e)
     val responses: Map[ResponsesKey, ReferenceOr[Response]] = operationResponse(e)
