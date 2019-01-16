@@ -57,6 +57,11 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
              Right(new ByteArrayInputStream("mango".getBytes)))
   testClient(in_file_out_file, testFile, Right(testFile))
   testClient(in_form_out_form, FruitAmount("plum", 10), Right(FruitAmount("plum", 10)))
+  testClient(
+    in_query_params_out_string,
+    MultiQueryParams.fromMap(Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")),
+    Right("kind=very good&name=apple&weight=42")
+  )
 
   //
 
@@ -69,6 +74,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
       Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
+    case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ POST -> Root / "api" / "echo"                                 => r.as[String].flatMap(Ok(_))
     case r @ GET -> Root =>
       r.headers.get(CaseInsensitiveString("X-Role")) match {

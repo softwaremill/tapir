@@ -116,6 +116,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           .map(v => uri.param(name, v))
           .getOrElse(uri)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
+      case EndpointInput.QueryParams(_, _) +: tail =>
+        val mqp = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[MultiQueryParams]
+        val uri2 = uri.params(mqp.toSeq: _*)
+        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
       case EndpointIO.Body(codec, _, _) +: tail =>
         val req2 = setBody(paramsAsArgs.paramAt(params, paramIndex), codec, req)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)

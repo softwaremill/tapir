@@ -66,5 +66,8 @@ package object tests {
   val in_form_out_form: Endpoint[FruitAmount, Unit, FruitAmount] =
     endpoint.post.in("api" / "echo").in(formBody[FruitAmount]).out(formBody[FruitAmount])
 
+  val in_query_params_out_string: Endpoint[MultiQueryParams, Unit, String] =
+    endpoint.get.in("api" / "echo" / "params").in(queryParams).out(stringBody)
+
   val allTestEndpoints: Set[Endpoint[_, _, _]] = wireSet[Endpoint[_, _, _]]
 }

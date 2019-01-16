@@ -18,6 +18,7 @@ trait Tapir {
 
   def query[T: GeneralPlainCodec](name: String): EndpointInput.Query[T] =
     EndpointInput.Query(name, implicitly[GeneralPlainCodec[T]], None, None)
+  def queryParams: EndpointInput.QueryParams = EndpointInput.QueryParams(None, None)
 
   def header[T: GeneralPlainCodec](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[GeneralPlainCodec[T]], None, None)
@@ -35,7 +36,6 @@ trait Tapir {
     EndpointIO.Body(codec, None, None)
   def binaryBody[T](implicit codec: GeneralCodec[T, MediaType.OctetStream, _]): EndpointIO.Body[T, MediaType.OctetStream, _] =
     EndpointIO.Body(codec, None, None)
-
   def formBody[T](implicit codec: GeneralCodec[T, MediaType.XWwwFormUrlencoded, _]): EndpointIO.Body[T, MediaType.XWwwFormUrlencoded, _] =
     EndpointIO.Body(codec, None, None)
 

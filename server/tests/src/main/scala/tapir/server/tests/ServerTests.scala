@@ -145,6 +145,16 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
         .map(_.body shouldBe Right("fruit=mulp&amount=11"))
   }
 
+  testServer(in_query_params_out_string,
+             (mqp: MultiQueryParams) => pureResult(mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&").asRight[Unit])) {
+    baseUri =>
+      val params = Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")
+      sttp
+        .get(uri"$baseUri/api/echo/params?$params")
+        .send()
+        .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()

@@ -40,6 +40,8 @@ object ObjectSchemasForEndpoints {
         objectSchemaToOSchema(tm.meta.schema)
       case EndpointInput.Query(_, tm, _, _) =>
         objectSchemaToOSchema(tm.meta.schema)
+      case EndpointInput.QueryParams(_, _) =>
+        Map.empty
       case EndpointInput.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
       case EndpointInput.Multiple(inputs) =>

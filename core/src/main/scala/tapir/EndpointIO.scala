@@ -68,6 +68,12 @@ object EndpointInput {
     def show = s"?$name"
   }
 
+  case class QueryParams(description: Option[String], example: Option[MultiQueryParams]) extends Single[MultiQueryParams] {
+    def description(d: String): QueryParams = copy(description = Some(d))
+    def example(t: MultiQueryParams): QueryParams = copy(example = Some(t))
+    def show = s"?{multiple params}"
+  }
+
   //
 
   case class Mapped[I, T](wrapped: EndpointInput[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
@@ -149,4 +155,19 @@ object EndpointIO {
       }
     def show: String = if (ios.isEmpty) "-" else ios.map(_.show).mkString(" ")
   }
+}
+
+class MultiQueryParams(ps: Map[String, Seq[String]]) {
+  def toMap: Map[String, String] = toSeq.toMap
+  def toMultiMap: Map[String, Seq[String]] = ps
+  def toSeq: Seq[(String, String)] = ps.toSeq.flatMap { case (k, vs) => vs.map((k, _)) }
+
+  def get(s: String): Option[String] = ps.get(s).flatMap(_.headOption)
+  def getMulti(s: String): Option[Seq[String]] = ps.get(s)
+}
+
+object MultiQueryParams {
+  def fromMap(m: Map[String, String]): MultiQueryParams = new MultiQueryParams(m.mapValues(List(_)))
+  def fromSeq(s: Seq[(String, String)]): MultiQueryParams = new MultiQueryParams(s.groupBy(_._1).mapValues(_.map(_._2)))
+  def fromMultiMap(m: Map[String, Seq[String]]): MultiQueryParams = new MultiQueryParams(m)
 }

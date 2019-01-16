@@ -2,7 +2,7 @@ package tapir.server.akkahttp
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.RequestContext
 import tapir.internal.SeqToParams
-import tapir.{DecodeResult, EndpointIO, EndpointInput}
+import tapir.{DecodeResult, EndpointIO, EndpointInput, MultiQueryParams}
 
 private[akkahttp] object AkkaHttpInputMatcher {
 
@@ -42,6 +42,9 @@ private[akkahttp] object AkkaHttpInputMatcher {
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
         }
+      case EndpointInput.QueryParams(_, _) +: inputsTail =>
+        val params = MultiQueryParams.fromSeq(ctx.req.request.uri.query())
+        doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(params :: _)
       case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
         codec.decodeOptional(ctx.req.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
           case DecodeResult.Value(v) =>

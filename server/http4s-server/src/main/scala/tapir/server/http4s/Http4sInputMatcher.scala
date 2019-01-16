@@ -4,7 +4,7 @@ import cats.data.StateT
 import cats.effect.Sync
 import cats.implicits._
 import tapir.internal.SeqToParams
-import tapir.{DecodeResult, EndpointIO, EndpointInput}
+import tapir.{DecodeResult, EndpointIO, EndpointInput, MultiQueryParams}
 
 private[http4s] class Http4sInputMatcher[F[_]: Sync] {
   private val logger = org.log4s.getLogger
@@ -46,8 +46,15 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
       for {
         ctx <- getState
         query = codec.decodeOptional(ctx.queryParam(name))
-        _ = logger.debug(s"Found query: $query, $name, ${ctx.headers}")
+        _ = logger.debug(s"Found query: $query, $name, ${ctx.queryParams}")
         res <- continueMatch(query, inputsTail)
+      } yield res
+    case EndpointInput.QueryParams(_, _) +: inputsTail =>
+      for {
+        ctx <- getState
+        queryParams = MultiQueryParams.fromSeq(ctx.queryParams.toSeq)
+        _ = logger.debug(s"Found query params: $queryParams")
+        res <- continueMatch(DecodeResult.Value(queryParams), inputsTail)
       } yield res
     case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
       for {
