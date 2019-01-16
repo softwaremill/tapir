@@ -26,7 +26,7 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
           value
         }
       } yield r
-    case EndpointInput.PathCapture(codec, name, _, _) +: inputsTail =>
+    case EndpointInput.PathCapture(codec, name, _) +: inputsTail =>
       val decodeResult: StateT[Either[Error, ?], Context[F], DecodeResult[Any]] = StateT(
         (ctx: Context[F]) =>
           nextSegment(ctx.unmatchedPath)
@@ -42,35 +42,35 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
           matchInputs(inputsTail).map(_.prependValue(v))
         case decodingFailure => StateT.liftF(Either.left(s"Decoding path failed: $decodingFailure"))
       }
-    case EndpointInput.Query(name, codec, _, _) +: inputsTail =>
+    case EndpointInput.Query(name, codec, _) +: inputsTail =>
       for {
         ctx <- getState
         query = codec.decodeOptional(ctx.queryParam(name))
         _ = logger.debug(s"Found query: $query, $name, ${ctx.queryParams}")
         res <- continueMatch(query, inputsTail)
       } yield res
-    case EndpointInput.QueryParams(_, _) +: inputsTail =>
+    case EndpointInput.QueryParams(_) +: inputsTail =>
       for {
         ctx <- getState
         queryParams = MultiQueryParams.fromSeq(ctx.queryParams.toSeq)
         _ = logger.debug(s"Found query params: $queryParams")
         res <- continueMatch(DecodeResult.Value(queryParams), inputsTail)
       } yield res
-    case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
+    case EndpointIO.Header(name, codec, _) +: inputsTail =>
       for {
         ctx <- getState
         header = codec.decodeOptional(ctx.header(name))
         _ = logger.debug(s"Found header: $header")
         res <- continueMatch(header, inputsTail)
       } yield res
-    case EndpointIO.Headers(_, _) +: inputsTail =>
+    case EndpointIO.Headers(_) +: inputsTail =>
       for {
         ctx <- getState
         headers = ctx.headers.map(h => (h.name.value, h.value)).toSeq
         _ = logger.debug(s"Found headers: $headers")
         res <- continueMatch(DecodeResult.Value(headers), inputsTail)
       } yield res
-    case EndpointIO.Body(codec, _, _) +: inputsTail =>
+    case EndpointIO.Body(codec, _) +: inputsTail =>
       for {
         ctx <- getState
         decoded: DecodeResult[Any] = codec.decodeOptional(ctx.body)

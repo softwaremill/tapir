@@ -76,14 +76,14 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     val vs = ParamsToSeq(v)
 
     val states = outputs.zipWithIndex.map {
-      case (EndpointIO.Body(codec, _, _), i) =>
+      case (EndpointIO.Body(codec, _), i) =>
         encodeBody(vs(i), codec) match {
           // TODO: check if body isn't already set
           case Some((entity, header)) => State.modify[OutputValues](ov => ov.copy(body = Some(entity), headers = ov.headers :+ header))
           case None                   => State.pure[OutputValues, Unit](())
         }
 
-      case (EndpointIO.Header(name, codec, _, _), i) =>
+      case (EndpointIO.Header(name, codec, _), i) =>
         codec
           .encodeOptional(vs(i))
           .map((headerValue: String) => Header.Raw(CaseInsensitiveString(name), headerValue)) match {
@@ -91,7 +91,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           case None         => State.pure[OutputValues, Unit](())
         }
 
-      case (EndpointIO.Headers(_, _), i) =>
+      case (EndpointIO.Headers(_), i) =>
         val headers = vs(i).asInstanceOf[Seq[(String, String)]].map(h => Header.Raw(CaseInsensitiveString(h._1), h._2))
         State.modify[OutputValues](ov => ov.copy(headers = ov.headers ++ headers))
 

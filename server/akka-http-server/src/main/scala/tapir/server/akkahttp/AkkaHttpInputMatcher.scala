@@ -24,7 +24,7 @@ private[akkahttp] object AkkaHttpInputMatcher {
             doMatch(inputsTail, ctx.copy(req = ctx.req.withUnmatchedPath(pathTail), canRemoveSlash = true))
           case _ => None
         }
-      case EndpointInput.PathCapture(codec, _, _, _) +: inputsTail =>
+      case EndpointInput.PathCapture(codec, _, _) +: inputsTail =>
         ctx.req.unmatchedPath match {
           case Uri.Path.Slash(pathTail) if ctx.canRemoveSlash =>
             doMatch(inputs, ctx.copy(req = ctx.req.withUnmatchedPath(pathTail), canRemoveSlash = false))
@@ -36,25 +36,25 @@ private[akkahttp] object AkkaHttpInputMatcher {
             }
           case _ => None
         }
-      case EndpointInput.Query(name, codec, _, _) +: inputsTail =>
+      case EndpointInput.Query(name, codec, _) +: inputsTail =>
         codec.decodeOptional(ctx.req.request.uri.query().get(name)) match {
           case DecodeResult.Value(v) =>
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
         }
-      case EndpointInput.QueryParams(_, _) +: inputsTail =>
+      case EndpointInput.QueryParams(_) +: inputsTail =>
         val params = MultiQueryParams.fromSeq(ctx.req.request.uri.query())
         doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(params :: _)
-      case EndpointIO.Header(name, codec, _, _) +: inputsTail =>
+      case EndpointIO.Header(name, codec, _) +: inputsTail =>
         codec.decodeOptional(ctx.req.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
           case DecodeResult.Value(v) =>
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
         }
-      case EndpointIO.Headers(_, _) +: inputsTail =>
+      case EndpointIO.Headers(_) +: inputsTail =>
         val headers = ctx.req.request.headers.map(h => (h.name(), h.value()))
         doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(headers :: _)
-      case EndpointIO.Body(codec, _, _) +: inputsTail =>
+      case EndpointIO.Body(codec, _) +: inputsTail =>
         codec.decodeOptional(Some(ctx.body)) match {
           case DecodeResult.Value(v) =>
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)

@@ -1,6 +1,6 @@
 package tapir
 
-import tapir.GeneralCodec.{PlainCodec, GeneralPlainCodec}
+import tapir.GeneralCodec.{GeneralPlainCodec, PlainCodec}
 import tapir.internal.ProductToParams
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
@@ -55,23 +55,22 @@ object EndpointInput {
     def show = s"/$s"
   }
 
-  case class PathCapture[T](codec: PlainCodec[T], name: Option[String], description: Option[String], example: Option[T]) extends Single[T] {
+  case class PathCapture[T](codec: PlainCodec[T], name: Option[String], info: EndpointIO.Info[T]) extends Single[T] {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
-    def description(d: String): PathCapture[T] = copy(description = Some(d))
-    def example(t: T): PathCapture[T] = copy(example = Some(t))
+    def description(d: String): PathCapture[T] = copy(info = info.description(d))
+    def example(t: T): PathCapture[T] = copy(info = info.example(t))
     def show = s"/[${name.getOrElse("")}]"
   }
 
-  case class Query[T](name: String, codec: GeneralPlainCodec[T], description: Option[String], example: Option[T]) extends Single[T] {
-    def description(d: String): Query[T] = copy(description = Some(d))
-    def example(t: T): Query[T] = copy(example = Some(t))
+  case class Query[T](name: String, codec: GeneralPlainCodec[T], info: EndpointIO.Info[T]) extends Single[T] {
+    def description(d: String): Query[T] = copy(info = info.description(d))
+    def example(t: T): Query[T] = copy(info = info.example(t))
     def show = s"?$name"
   }
 
-  // TODO: add an info class w/ description+example?
-  case class QueryParams(description: Option[String], example: Option[MultiQueryParams]) extends Single[MultiQueryParams] {
-    def description(d: String): QueryParams = copy(description = Some(d))
-    def example(t: MultiQueryParams): QueryParams = copy(example = Some(t))
+  case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Single[MultiQueryParams] {
+    def description(d: String): QueryParams = copy(info = info.description(d))
+    def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
     def show = s"?{multiple params}"
   }
 
@@ -122,21 +121,21 @@ object EndpointIO {
       }
   }
 
-  case class Body[T, M <: MediaType, R](codec: GeneralCodec[T, M, R], description: Option[String], example: Option[T]) extends Single[T] {
-    def description(d: String): Body[T, M, R] = copy(description = Some(d))
-    def example(t: T): Body[T, M, R] = copy(example = Some(t))
+  case class Body[T, M <: MediaType, R](codec: GeneralCodec[T, M, R], info: Info[T]) extends Single[T] {
+    def description(d: String): Body[T, M, R] = copy(info = info.description(d))
+    def example(t: T): Body[T, M, R] = copy(info = info.example(t))
     def show = s"{body as ${codec.meta.mediaType.mediaType}}"
   }
 
-  case class Header[T](name: String, codec: GeneralPlainCodec[T], description: Option[String], example: Option[T]) extends Single[T] {
-    def description(d: String): Header[T] = copy(description = Some(d))
-    def example(t: T): Header[T] = copy(example = Some(t))
+  case class Header[T](name: String, codec: GeneralPlainCodec[T], info: Info[T]) extends Single[T] {
+    def description(d: String): Header[T] = copy(info = info.description(d))
+    def example(t: T): Header[T] = copy(info = info.example(t))
     def show = s"{header $name}"
   }
 
-  case class Headers(description: Option[String], example: Option[Seq[(String, String)]]) extends Single[Seq[(String, String)]] {
-    def description(d: String): Headers = copy(description = Some(d))
-    def example(t: Seq[(String, String)]): Headers = copy(example = Some(t))
+  case class Headers(info: Info[Seq[(String, String)]]) extends Single[Seq[(String, String)]] {
+    def description(d: String): Headers = copy(info = info.description(d))
+    def example(t: Seq[(String, String)]): Headers = copy(info = info.example(t))
     def show = s"{multiple headers}"
   }
 
@@ -161,6 +160,16 @@ object EndpointIO {
         case Multiple(m)  => Multiple(ios ++ m)
       }
     def show: String = if (ios.isEmpty) "-" else ios.map(_.show).mkString(" ")
+  }
+
+  //
+
+  case class Info[T](description: Option[String], example: Option[T]) {
+    def description(d: String): Info[T] = copy(description = Some(d))
+    def example(t: T): Info[T] = copy(example = Some(t))
+  }
+  object Info {
+    def empty[T]: Info[T] = Info[T](None, None)
   }
 }
 

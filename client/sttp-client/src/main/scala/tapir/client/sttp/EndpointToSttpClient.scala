@@ -64,14 +64,14 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   private def getOutputParams(outputs: Vector[EndpointIO.Single[_]], body: Any, meta: ResponseMetadata): Any = {
     val values = outputs
       .map {
-        case EndpointIO.Body(codec, _, _) =>
+        case EndpointIO.Body(codec, _) =>
           val so = if (codec.meta.isOptional && body == "") None else Some(body)
           codec.decodeOptional(so).getOrThrow(InvalidOutput)
 
-        case EndpointIO.Header(name, codec, _, _) =>
+        case EndpointIO.Header(name, codec, _) =>
           codec.decodeOptional(meta.header(name)).getOrThrow(InvalidOutput)
 
-        case EndpointIO.Headers(_, _) =>
+        case EndpointIO.Headers(_) =>
           meta.headers
 
         case EndpointIO.Mapped(wrapped, f, _, _) =>
@@ -110,29 +110,29 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case Vector() => (uri, req)
       case EndpointInput.PathSegment(p) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri.copy(path = uri.path :+ p), req)
-      case EndpointInput.PathCapture(codec, _, _, _) +: tail =>
+      case EndpointInput.PathCapture(codec, _, _) +: tail =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path :+ v), req)
-      case EndpointInput.Query(name, codec, _, _) +: tail =>
+      case EndpointInput.Query(name, codec, _) +: tail =>
         val uri2 = codec
           .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
           .map(v => uri.param(name, v))
           .getOrElse(uri)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
-      case EndpointInput.QueryParams(_, _) +: tail =>
+      case EndpointInput.QueryParams(_) +: tail =>
         val mqp = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[MultiQueryParams]
         val uri2 = uri.params(mqp.toSeq: _*)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
-      case EndpointIO.Body(codec, _, _) +: tail =>
+      case EndpointIO.Body(codec, _) +: tail =>
         val req2 = setBody(paramsAsArgs.paramAt(params, paramIndex), codec, req)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
-      case EndpointIO.Header(name, codec, _, _) +: tail =>
+      case EndpointIO.Header(name, codec, _) +: tail =>
         val req2 = codec
           .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
           .map(v => req.header(name, v))
           .getOrElse(req)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
-      case EndpointIO.Headers(_, _) +: tail =>
+      case EndpointIO.Headers(_) +: tail =>
         val headers = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[Seq[(String, String)]]
         val req2 = headers.foldLeft(req) { case (r, (k, v)) => r.header(k, v) }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)

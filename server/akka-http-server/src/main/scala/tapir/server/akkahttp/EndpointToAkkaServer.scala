@@ -74,10 +74,10 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     var ov = initialOutputValues
 
     outputs.zipWithIndex.foreach {
-      case (EndpointIO.Body(codec, _, _), i) =>
+      case (EndpointIO.Body(codec, _), i) =>
         // TODO: check if body isn't already set
         encodeBody(vs(i), codec).foreach(re => ov = ov.copy(body = Some(re)))
-      case (EndpointIO.Header(name, codec, _, _), i) =>
+      case (EndpointIO.Header(name, codec, _), i) =>
         codec
           .encodeOptional(vs(i))
           .map(HttpHeader.parse(name, _))
@@ -86,7 +86,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
             // TODO error on parse error?
           }
           .foreach(hh => ov = ov.copy(headers = ov.headers :+ hh))
-      case (EndpointIO.Headers(_, _), i) =>
+      case (EndpointIO.Headers(_), i) =>
         vs(i)
           .asInstanceOf[Seq[(String, String)]]
           .map(h => HttpHeader.parse(h._1, h._2))

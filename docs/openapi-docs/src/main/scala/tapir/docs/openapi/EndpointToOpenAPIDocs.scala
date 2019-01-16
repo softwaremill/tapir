@@ -29,8 +29,8 @@ object EndpointToOpenAPIDocs {
       import Method._
 
       val pathComponents = foldInputToVector(e.input, {
-        case EndpointInput.PathCapture(_, name, _, _) => Vector(s"{${name.getOrElse("-")}}")
-        case EndpointInput.PathSegment(s)             => Vector(s)
+        case EndpointInput.PathCapture(_, name, _) => Vector(s"{${name.getOrElse("-")}}")
+        case EndpointInput.PathSegment(s)          => Vector(s)
       })
 
       val defaultId = operationId(pathComponents, e.method)
@@ -68,12 +68,12 @@ object EndpointToOpenAPIDocs {
 
       val parameters = foldInputToVector(
         e.input, {
-          case EndpointInput.Query(n, codec, d, ex) =>
+          case EndpointInput.Query(n, codec, info) =>
             Vector(
               Parameter(
                 n,
                 ParameterIn.Query,
-                d,
+                info.description,
                 Some(!codec.meta.isOptional),
                 None,
                 None,
@@ -81,16 +81,16 @@ object EndpointToOpenAPIDocs {
                 None,
                 None,
                 sschemaToReferenceOrOSchema(codec.meta.schema),
-                ex.flatMap(exampleValue(codec, _)),
+                info.example.flatMap(exampleValue(codec, _)),
                 None,
                 None
               ))
-          case EndpointInput.PathCapture(codec, n, d, ex) =>
+          case EndpointInput.PathCapture(codec, n, info) =>
             Vector(
               Parameter(
                 n.getOrElse("?"),
                 ParameterIn.Path,
-                d,
+                info.description,
                 Some(true),
                 None,
                 None,
@@ -98,16 +98,16 @@ object EndpointToOpenAPIDocs {
                 None,
                 None,
                 sschemaToReferenceOrOSchema(codec.meta.schema),
-                ex.flatMap(exampleValue(codec, _)),
+                info.example.flatMap(exampleValue(codec, _)),
                 None,
                 None
               ))
-          case EndpointIO.Header(n, codec, d, ex) =>
+          case EndpointIO.Header(n, codec, info) =>
             Vector(
               Parameter(
                 n,
                 ParameterIn.Header,
-                d,
+                info.description,
                 Some(!codec.meta.isOptional),
                 None,
                 None,
@@ -115,7 +115,7 @@ object EndpointToOpenAPIDocs {
                 None,
                 None,
                 sschemaToReferenceOrOSchema(codec.meta.schema),
-                ex.flatMap(exampleValue(codec, _)),
+                info.example.flatMap(exampleValue(codec, _)),
                 None,
                 None
               ))
@@ -124,8 +124,8 @@ object EndpointToOpenAPIDocs {
 
       val body: Vector[ReferenceOr[RequestBody]] = foldInputToVector(
         e.input, {
-          case EndpointIO.Body(codec, d, ex) =>
-            Vector(Right(RequestBody(d, codecToMediaType(codec, ex), Some(!codec.meta.isOptional))))
+          case EndpointIO.Body(codec, info) =>
+            Vector(Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional))))
         }
       )
 
@@ -155,10 +155,10 @@ object EndpointToOpenAPIDocs {
     private def outputToResponse(io: EndpointIO[_]): Option[Response] = {
       val headers = foldIOToVector(
         io, {
-          case EndpointIO.Header(name, codec, d, ex) =>
+          case EndpointIO.Header(name, codec, info) =>
             Vector(
               name -> Right(Header(
-                d,
+                info.description,
                 Some(!codec.meta.isOptional),
                 None,
                 None,
@@ -166,7 +166,7 @@ object EndpointToOpenAPIDocs {
                 None,
                 None,
                 Some(sschemaToReferenceOrOSchema(codec.meta.schema)),
-                ex.flatMap(exampleValue(codec, _)),
+                info.example.flatMap(exampleValue(codec, _)),
                 None,
                 None
               )))
@@ -174,7 +174,7 @@ object EndpointToOpenAPIDocs {
       )
 
       val bodies = foldIOToVector(io, {
-        case EndpointIO.Body(m, d, e) => Vector((d, codecToMediaType(m, e)))
+        case EndpointIO.Body(m, info) => Vector((info.description, codecToMediaType(m, info.example)))
       })
       val body = bodies.headOption
 
@@ -245,8 +245,8 @@ object EndpointToOpenAPIDocs {
   private def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _]): Endpoint[_, _, _] = {
     val (input2, _) = new EndpointInputMapper[Int](
       {
-        case (EndpointInput.PathCapture(codec, None, description, example), i) =>
-          (EndpointInput.PathCapture(codec, Some(s"p$i"), description, example), i + 1)
+        case (EndpointInput.PathCapture(codec, None, info), i) =>
+          (EndpointInput.PathCapture(codec, Some(s"p$i"), info), i + 1)
       },
       PartialFunction.empty
     ).mapInput(e.input, 1)
