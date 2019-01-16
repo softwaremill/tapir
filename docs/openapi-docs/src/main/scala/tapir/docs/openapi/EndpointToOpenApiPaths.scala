@@ -6,6 +6,9 @@ import tapir.openapi.{MediaType => OMediaType, Schema => OSchema, _}
 import tapir.{EndpointInput, MediaType => SMediaType, Schema => SSchema, _}
 
 private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
+
+  private lazy val sschemaToOSchema = new SSchemaToOSchema(schemaKeys.map { case (k, v) => k.fullName -> v._1 })
+
   def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
     import Method._
 
@@ -155,9 +158,9 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
       case SObject(info, _, _) =>
         schemaKeys.get(info) match {
           case Some((key, _)) => Left(Reference("#/components/schemas/" + key))
-          case None           => Right(SSchemaToOSchema(schema))
+          case None           => sschemaToOSchema(schema)
         }
-      case _ => Right(SSchemaToOSchema(schema))
+      case _ => sschemaToOSchema(schema)
     }
   }
 
