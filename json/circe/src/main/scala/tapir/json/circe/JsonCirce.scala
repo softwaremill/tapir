@@ -3,10 +3,11 @@ package tapir.json.circe
 import java.nio.charset.StandardCharsets
 
 import tapir.DecodeResult.{Error, Value}
-import tapir.{CodecMeta, DecodeResult, MediaType, RawValueType, SchemaFor, StringValueType}
+import tapir.{CodecMeta, DecodeResult, MediaType, RawValueType, StringValueType}
 import tapir.GeneralCodec.JsonCodec
 import io.circe.syntax._
 import io.circe.{Decoder, Encoder}
+import tapir.SchemaFor
 
 trait JsonCirce {
   implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {

@@ -1,9 +1,11 @@
-package tapir
+package tapir.generic
 
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
+import tapir.SchemaFor
 
 class SchemaForTest extends FlatSpec with Matchers {
+
   it should "find schema for simple types" in {
     implicitly[SchemaFor[String]].schema shouldBe SString
     implicitly[SchemaFor[String]].isOptional shouldBe false
@@ -31,7 +33,8 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[Set[String]]].schema shouldBe SArray(SString)
   }
 
-  val expectedASchema = SObject(SObjectInfo("A", "tapir.A"), List(("f1", SString), ("f2", SInteger), ("f3", SString)), List("f1", "f2"))
+  val expectedASchema =
+    SObject(SObjectInfo("A", "tapir.generic.A"), List(("f1", SString), ("f2", SInteger), ("f3", SString)), List("f1", "f2"))
 
   it should "find schema for collections of case classes" in {
     implicitly[SchemaFor[List[A]]].schema shouldBe SArray(expectedASchema)
@@ -41,14 +44,32 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[A]].schema shouldBe expectedASchema
   }
 
+  val expectedDSchema: SObject = SObject(SObjectInfo("D", "tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName"))
+
+  it should "find schema for a simple case class and use identity naming transformation" in {
+    implicitly[SchemaFor[D]].schema shouldBe expectedDSchema
+  }
+
+  it should "find schema for a simple case class and use snake case naming transformation" in {
+    val expectedSnakCaseNaming = expectedDSchema.copy(fields = List(("some_field_name", SString)), required = List("some_field_name"))
+    implicit val customConf = Configuration.default.withSnakeCaseMemberNames
+    implicitly[SchemaFor[D]].schema shouldBe expectedSnakCaseNaming
+  }
+
+  it should "find schema for a simple case class and use kebab case naming transformation" in {
+    val expectedKebabCaseNaming = expectedDSchema.copy(fields = List(("some-field-name", SString)), required = List("some-field-name"))
+    implicit val customConf = Configuration.default.withKebabCaseMemberNames
+    implicitly[SchemaFor[D]].schema shouldBe expectedKebabCaseNaming
+  }
+
   it should "find schema for a nested case class" in {
-    implicitly[SchemaFor[B]].schema shouldBe SObject(SObjectInfo("B", "tapir.B"),
+    implicitly[SchemaFor[B]].schema shouldBe SObject(SObjectInfo("B", "tapir.generic.B"),
                                                      List(("g1", SString), ("g2", expectedASchema)),
                                                      List("g1", "g2"))
   }
 
   it should "find schema for case classes with collections" in {
-    implicitly[SchemaFor[C]].schema shouldBe SObject(SObjectInfo("C", "tapir.C"),
+    implicitly[SchemaFor[C]].schema shouldBe SObject(SObjectInfo("C", "tapir.generic.C"),
                                                      List(("h1", SArray(SString)), ("h2", SInteger)),
                                                      List("h1"))
   }
@@ -57,3 +78,4 @@ class SchemaForTest extends FlatSpec with Matchers {
 case class A(f1: String, f2: Int, f3: Option[String])
 case class B(g1: String, g2: A)
 case class C(h1: List[String], h2: Option[Int])
+case class D(someFieldName: String)
