@@ -74,7 +74,7 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
   private def operationParameters(e: Endpoint[_, _, _]) = {
     foldInputToVector(
       e.input, {
-        case q: EndpointInput.Query[_]       => queryToParamter(q)
+        case q: EndpointInput.Query[_]       => queryToParameter(q)
         case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
         case h: EndpointIO.Header[_]         => headerToParameter(h)
       }
@@ -82,56 +82,20 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
   }
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
-    Parameter(
-      header.name,
-      ParameterIn.Header,
-      header.info.description,
-      Some(!header.codec.meta.isOptional),
-      None,
-      None,
-      None,
-      None,
-      None,
-      sschemaToReferenceOrOSchema(header.codec.meta.schema),
-      header.info.example.flatMap(exampleValue(header.codec, _)),
-      None,
-      None
-    )
+    EndpointInputToParameterConverter.from(header,
+                                           sschemaToReferenceOrOSchema(header.codec.meta.schema),
+                                           header.info.example.flatMap(exampleValue(header.codec, _)))
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    Parameter(
-      p.name.getOrElse("?"),
-      ParameterIn.Path,
-      p.info.description,
-      Some(true),
-      None,
-      None,
-      None,
-      None,
-      None,
-      sschemaToReferenceOrOSchema(p.codec.meta.schema),
-      p.info.example.flatMap(exampleValue(p.codec, _)),
-      None,
-      None
-    )
+    EndpointInputToParameterConverter.from(p, sschemaToReferenceOrOSchema(p.codec.meta.schema), p.info.example.flatMap(exampleValue(p.codec, _)))
   }
-  private def queryToParamter[T](query: EndpointInput.Query[T]) = {
-    Parameter(
-      query.name,
-      ParameterIn.Query,
-      query.info.description,
-      Some(!query.codec.meta.isOptional),
-      None,
-      None,
-      None,
-      None,
-      None,
-      sschemaToReferenceOrOSchema(query.codec.meta.schema),
-      query.info.example.flatMap(exampleValue(query.codec, _)),
-      None,
-      None
-    )
+
+  private def queryToParameter[T](query: EndpointInput.Query[T]) = {
+    EndpointInputToParameterConverter.from(query,
+                                           sschemaToReferenceOrOSchema(query.codec.meta.schema),
+                                           query.info.example.flatMap(exampleValue(query.codec, _)))
   }
+
   private def operationResponse(e: Endpoint[_, _, _]): Map[ResponsesKey, Right[Nothing, Response]] = {
     List(
       outputToResponse(e.output).map { r =>
