@@ -10,8 +10,8 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
     import Method._
 
     val pathComponents = foldInputToVector(e.input, {
-      case EndpointInput.PathCapture(_, name, _) => Vector(s"{${name.getOrElse("-")}}")
-      case EndpointInput.PathSegment(s)             => Vector(s)
+      case EndpointInput.PathCapture(_, name, _) => s"{${name.getOrElse("-")}}"
+      case EndpointInput.PathSegment(s)             => s
     })
 
     val defaultId = operationId(pathComponents, e.method)
@@ -66,7 +66,7 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
     foldInputToVector(
       e.input, {
         case EndpointIO.Body(codec, info) =>
-          Vector(Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional))))
+          Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional)))
       }
     )
   }
@@ -74,69 +74,63 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
   private def operationParameters(e: Endpoint[_, _, _]) = {
     foldInputToVector(
       e.input, {
-        case q: EndpointInput.Query[_] =>
-          queryToParamter(q)
-        case p: EndpointInput.PathCapture[_] =>
-          pathCaptureToParameter(p)
-        case h: EndpointIO.Header[_] =>
-          headerToParameter(h)
+        case q: EndpointInput.Query[_]       => queryToParamter(q)
+        case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
+        case h: EndpointIO.Header[_]         => headerToParameter(h)
       }
     )
   }
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
-    Vector(
-      Parameter(
-        header.name,
-        ParameterIn.Header,
-        header.info.description,
-        Some(!header.codec.meta.isOptional),
-        None,
-        None,
-        None,
-        None,
-        None,
-        sschemaToReferenceOrOSchema(header.codec.meta.schema),
-        header.info.example.flatMap(exampleValue(header.codec, _)),
-        None,
-        None
-      ))
+    Parameter(
+      header.name,
+      ParameterIn.Header,
+      header.info.description,
+      Some(!header.codec.meta.isOptional),
+      None,
+      None,
+      None,
+      None,
+      None,
+      sschemaToReferenceOrOSchema(header.codec.meta.schema),
+      header.info.example.flatMap(exampleValue(header.codec, _)),
+      None,
+      None
+    )
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    Vector(
-      Parameter(
-        p.name.getOrElse("?"),
-        ParameterIn.Path,
-        p.info.description,
-        Some(true),
-        None,
-        None,
-        None,
-        None,
-        None,
-        sschemaToReferenceOrOSchema(p.codec.meta.schema),
-        p.info.example.flatMap(exampleValue(p.codec, _)),
-        None,
-        None
-      ))
+    Parameter(
+      p.name.getOrElse("?"),
+      ParameterIn.Path,
+      p.info.description,
+      Some(true),
+      None,
+      None,
+      None,
+      None,
+      None,
+      sschemaToReferenceOrOSchema(p.codec.meta.schema),
+      p.info.example.flatMap(exampleValue(p.codec, _)),
+      None,
+      None
+    )
   }
   private def queryToParamter[T](query: EndpointInput.Query[T]) = {
-    Vector(
-      Parameter(
-        query.name,
-        ParameterIn.Query,
-        query.info.description,
-        Some(!query.codec.meta.isOptional),
-        None,
-        None,
-        None,
-        None,
-        None,
-        sschemaToReferenceOrOSchema(query.codec.meta.schema),
-        query.info.example.flatMap(exampleValue(query.codec, _)),
-        None,
-        None
-      ))
+    Parameter(
+      query.name,
+      ParameterIn.Query,
+      query.info.description,
+      Some(!query.codec.meta.isOptional),
+      None,
+      None,
+      None,
+      None,
+      None,
+      sschemaToReferenceOrOSchema(query.codec.meta.schema),
+      query.info.example.flatMap(exampleValue(query.codec, _)),
+      None,
+      None
+    )
   }
   private def operationResponse(e: Endpoint[_, _, _]): Map[ResponsesKey, Right[Nothing, Response]] = {
     List(
@@ -153,24 +147,23 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
     val headers = foldIOToVector(
       io, {
         case EndpointIO.Header(name, codec, info) =>
-          Vector(
-            name -> Right(
-              Header(info.description,
-                     Some(!codec.meta.isOptional),
-                     None,
-                     None,
-                     None,
-                     None,
-                     None,
-                     Some(sschemaToReferenceOrOSchema(codec.meta.schema)),
-                     info.example.flatMap(exampleValue(codec, _)),
-                     None,
-                     None)))
+          name -> Right(
+            Header(info.description,
+                   Some(!codec.meta.isOptional),
+                   None,
+                   None,
+                   None,
+                   None,
+                   None,
+                   Some(sschemaToReferenceOrOSchema(codec.meta.schema)),
+                   info.example.flatMap(exampleValue(codec, _)),
+                   None,
+                   None))
       }
     )
 
     val bodies = foldIOToVector(io, {
-      case EndpointIO.Body(m, info) => Vector((info.description, codecToMediaType(m, info.example)))
+      case EndpointIO.Body(m, info) => (info.description, codecToMediaType(m, info.example))
     })
     val body = bodies.headOption
 
@@ -217,9 +210,9 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
 
   private def noneIfEmpty[T](l: List[T]): Option[List[T]] = if (l.isEmpty) None else Some(l)
 
-  private def foldInputToVector[T](i: EndpointInput[_], f: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] = {
+  private def foldInputToVector[T](i: EndpointInput[_], f: PartialFunction[EndpointInput[_], T]): Vector[T] = {
     i match {
-      case _ if f.isDefinedAt(i)                  => f(i)
+      case _ if f.isDefinedAt(i)                  => Vector(f(i))
       case EndpointInput.Mapped(wrapped, _, _, _) => foldInputToVector(wrapped, f)
       case EndpointIO.Mapped(wrapped, _, _, _)    => foldInputToVector(wrapped, f)
       case EndpointInput.Multiple(inputs)         => inputs.flatMap(foldInputToVector(_, f))
@@ -228,9 +221,9 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
     }
   }
 
-  private def foldIOToVector[T](io: EndpointIO[_], f: PartialFunction[EndpointIO[_], Vector[T]]): Vector[T] = {
+  private def foldIOToVector[T](io: EndpointIO[_], f: PartialFunction[EndpointIO[_], T]): Vector[T] = {
     io match {
-      case _ if f.isDefinedAt(io)              => f(io)
+      case _ if f.isDefinedAt(io)              => Vector(f(io))
       case EndpointIO.Mapped(wrapped, _, _, _) => foldIOToVector(wrapped, f)
       case EndpointIO.Multiple(inputs)         => inputs.flatMap(foldIOToVector(_, f))
       case _                                   => Vector.empty
