@@ -6,16 +6,18 @@ import tapir.{EndpointInput, _}
 object EndpointToOpenAPIDocs {
   def toOpenAPI(title: String, version: String, es: Iterable[Endpoint[_, _, _]]): OpenAPI = {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
-    val withSchemaKeys = new WithSchemaKeys(ObjectSchemasForEndpoints(es2))
+    val schemaKeys = ObjectSchemasForEndpoints(es2)
+    val pathCreator = new EndpointToOpenApiPaths(schemaKeys)
+    val componentsCreator = new EndpointToOpenApiComponents(schemaKeys)
 
     val base = OpenAPI(
       info = Info(title, None, None, version),
       servers = None,
       paths = Map.empty,
-      components = withSchemaKeys.components
+      components = componentsCreator.components
     )
 
-    es2.map(withSchemaKeys.pathItem).foldLeft(base) {
+    es2.map(pathCreator.pathItem).foldLeft(base) {
       case (current, (path, pathItem)) =>
         current.addPathItem(path, pathItem)
     }

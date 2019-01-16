@@ -5,7 +5,7 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{MediaType => OMediaType, Schema => OSchema, _}
 import tapir.{EndpointInput, MediaType => SMediaType, Schema => SSchema, _}
 
-private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
+private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
   def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
     import Method._
 
@@ -158,15 +158,6 @@ private[openapi] class WithSchemaKeys(schemaKeys: SchemaKeys) {
         }
       case _ => Right(SSchemaToOSchema(schema))
     }
-  }
-
-  def components: Option[Components] = {
-    if (schemaKeys.nonEmpty) {
-      Some(Components(Some(schemaKeys.map {
-        case (_, (key, schema)) =>
-          key -> Right(schema)
-      })))
-    } else None
   }
 
   private def exampleValue[T](codec: GeneralCodec[T, _, _], e: T): Option[ExampleValue] =
