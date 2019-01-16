@@ -1,7 +1,8 @@
 lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.tapir",
   scalaVersion := "2.12.8",
-  scalafmtOnCompile := true
+  scalafmtOnCompile := true,
+  libraryDependencies += compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.2")
 )
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
