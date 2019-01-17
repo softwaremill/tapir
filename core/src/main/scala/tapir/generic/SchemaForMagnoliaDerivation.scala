@@ -10,10 +10,10 @@ import scala.language.experimental.macros
 trait SchemaForMagnoliaDerivation {
   type Typeclass[T] = SchemaFor[T]
 
-  private val derivInProgress = mutable.Set[String]()
+  private val deriveInProgress = mutable.Set[String]()
 
   def combine[T](ctx: CaseClass[SchemaFor, T]): SchemaFor[T] = {
-    if (derivInProgress.contains(ctx.typeName.full)) {
+    if (deriveInProgress.contains(ctx.typeName.full)) {
       new SchemaFor[T] {
         override def schema: Schema = SRef(ctx.typeName.full)
       }
@@ -32,9 +32,9 @@ trait SchemaForMagnoliaDerivation {
 
   private def withProgressCache[T](ctx: CaseClass[SchemaFor, T])(f: => SchemaFor[T]): SchemaFor[T] = {
     val fullName = ctx.typeName.full
-    derivInProgress.add(fullName)
+    deriveInProgress.add(fullName)
     val result = f
-    derivInProgress.remove(fullName)
+    deriveInProgress.remove(fullName)
     result
   }
 
