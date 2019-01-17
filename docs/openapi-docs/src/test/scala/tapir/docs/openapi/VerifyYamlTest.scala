@@ -26,11 +26,8 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  val endpoint_wit_recursive_structure: Endpoint[(FruitAmount, String), Unit, (F1, Int)] = endpoint
-    .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
-    .in(query[String]("color"))
+  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1] = endpoint
     .out(jsonBody[F1])
-    .out(header[Int]("X-Role"))
 
   test("should match the expected yaml when schema is recursive") {
     val expectedYaml = noIndentation(Source.fromResource("expected_recursive.yml").getLines().mkString("\n"))
