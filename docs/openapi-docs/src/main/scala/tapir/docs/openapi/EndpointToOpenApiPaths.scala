@@ -14,7 +14,7 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
 
     val pathComponents = foldInputToVector(e.input, {
       case EndpointInput.PathCapture(_, name, _) => s"{${name.getOrElse("-")}}"
-      case EndpointInput.PathSegment(s)             => s
+      case EndpointInput.PathSegment(s)          => s
     })
 
     val defaultId = operationId(pathComponents, e.method)
@@ -91,7 +91,9 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
                                            header.info.example.flatMap(exampleValue(header.codec, _)))
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    EndpointInputToParameterConverter.from(p, sschemaToReferenceOrOSchema(p.codec.meta.schema), p.info.example.flatMap(exampleValue(p.codec, _)))
+    EndpointInputToParameterConverter.from(p,
+                                           sschemaToReferenceOrOSchema(p.codec.meta.schema),
+                                           p.info.example.flatMap(exampleValue(p.codec, _)))
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
@@ -116,17 +118,19 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
       io, {
         case EndpointIO.Header(name, codec, info) =>
           name -> Right(
-            Header(info.description,
-                   Some(!codec.meta.isOptional),
-                   None,
-                   None,
-                   None,
-                   None,
-                   None,
-                   Some(sschemaToReferenceOrOSchema(codec.meta.schema)),
-                   info.example.flatMap(exampleValue(codec, _)),
-                   None,
-                   None))
+            Header(
+              info.description,
+              Some(!codec.meta.isOptional),
+              None,
+              None,
+              None,
+              None,
+              None,
+              Some(sschemaToReferenceOrOSchema(codec.meta.schema)),
+              info.example.flatMap(exampleValue(codec, _)),
+              None,
+              None
+            ))
       }
     )
 
@@ -148,9 +152,9 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
   private def codecToMediaType[T, M <: SMediaType](o: GeneralCodec[T, M, _], example: Option[T]): Map[String, OMediaType] = {
     Map(
       o.meta.mediaType.mediaTypeNoParams -> OMediaType(Some(sschemaToReferenceOrOSchema(o.meta.schema)),
-                                                  example.flatMap(exampleValue(o, _)),
-                                                  None,
-                                                  None))
+                                                       example.flatMap(exampleValue(o, _)),
+                                                       None,
+                                                       None))
   }
 
   private def sschemaToReferenceOrOSchema(schema: SSchema): ReferenceOr[OSchema] = {

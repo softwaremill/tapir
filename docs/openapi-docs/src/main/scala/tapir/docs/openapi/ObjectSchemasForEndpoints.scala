@@ -63,6 +63,8 @@ object ObjectSchemasForEndpoints {
         filterIsObjectSchema(tm.meta.schema)
       case EndpointInput.Query(_, tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
+      case EndpointInput.QueryParams(_) =>
+        List.empty
       case EndpointInput.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
       case EndpointInput.Multiple(inputs) =>
@@ -77,6 +79,8 @@ object ObjectSchemasForEndpoints {
         foldLists(inputs.map(forInput))
       case EndpointIO.Header(_, tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
+      case EndpointIO.Headers(_) =>
+        List.empty
       case EndpointIO.Body(tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
