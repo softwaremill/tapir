@@ -76,7 +76,9 @@ class SchemaForTest extends FlatSpec with Matchers {
 
   it should "find schema for recursive data structure" in {
     val schema = implicitly[SchemaFor[F]].schema
-    schema shouldBe SObject(SObjectInfo("F", "tapir.F"), List(("f1", SArray(SRef("tapir.F"))), ("f2", SInteger)), List("f1", "f2"))
+    schema shouldBe SObject(SObjectInfo("F", "tapir.generic.F"),
+                            List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)),
+                            List("f1", "f2"))
   }
 }
 
