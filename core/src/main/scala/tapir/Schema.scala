@@ -31,6 +31,6 @@ object Schema {
   case class SObjectInfo(shortName: String, fullName: String)
 
   case class SRef(fullName: String) extends Schema {
-    def show: String = s"fullName:$fullName"
+    def show: String = s"ref($fullName)"
   }
 }
