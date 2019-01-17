@@ -5,14 +5,12 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema}
 import tapir.{Schema => SSchema, _}
 
-import scala.collection.immutable
-
 object ObjectSchemasForEndpoints {
   type SchemaKey = String
   type SchemaKeys = Map[SObjectInfo, (SchemaKey, ReferenceOr[OSchema])]
 
   def apply(es: Iterable[Endpoint[_, _, _]]): SchemaKeys = {
-    val schemas = foldLists(es.map(e => forInput(e.input) ++ forIO(e.errorOutput) ++ forIO(e.output)))
+    val schemas = es.flatMap(e => forInput(e.input) ++ forIO(e.errorOutput) ++ forIO(e.output))
     val infos = schemas.collect { case SObject(info, _, _) => info }
     val infoToKey = calculateUniqueKeys(infos)
     val sschemaToOSchema = new SSchemaToOSchema(infoToKey.map { case (k, v) => k.fullName -> v })
@@ -20,7 +18,7 @@ object ObjectSchemasForEndpoints {
     infosToSchema.map { case (k, v) => k -> (infoToKey(k) -> v) }
   }
 
-  private def calculateUniqueKeys(infos: immutable.Seq[SObjectInfo]) = {
+  private def calculateUniqueKeys(infos: Iterable[SObjectInfo]) = {
     case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, SObjectInfo], infoToKey: Map[SObjectInfo, SchemaKey])
     infos
       .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) {
@@ -68,7 +66,7 @@ object ObjectSchemasForEndpoints {
       case EndpointInput.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
       case EndpointInput.Multiple(inputs) =>
-        foldLists(inputs.map(forInput))
+        inputs.toList.flatMap(forInput)
       case op: EndpointIO[_] => forIO(op)
     }
   }
@@ -76,7 +74,7 @@ object ObjectSchemasForEndpoints {
   private def forIO(io: EndpointIO[_]): List[SSchema] = {
     io match {
       case EndpointIO.Multiple(inputs) =>
-        foldLists(inputs.map(forInput))
+        inputs.toList.flatMap(forInput)
       case EndpointIO.Header(_, tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
       case EndpointIO.Headers(_) =>
@@ -86,9 +84,5 @@ object ObjectSchemasForEndpoints {
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
     }
-  }
-
-  private def foldLists[K](maps: Iterable[List[K]]): List[K] = {
-    maps.foldLeft(List.empty[K])(_ ++ _)
   }
 }
