@@ -18,8 +18,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
     .out(header[Int]("X-Role"))
 
   test("should match the expected yaml") {
-    def noIndentation(s: String) = s.replaceAll("[ \t]", "").trim
-
     val expectedYaml = noIndentation(Source.fromResource("expected.yml").getLines().mkString("\n"))
 
     val actualYaml = List(in_query_query_out_string, all_the_way).toOpenAPI("Fruits", "1.0").toYaml
@@ -27,4 +25,20 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1] = endpoint
+    .out(jsonBody[F1])
+
+  test("should match the expected yaml when schema is recursive") {
+    val expectedYaml = noIndentation(Source.fromResource("expected_recursive.yml").getLines().mkString("\n"))
+
+    val actualYaml = endpoint_wit_recursive_structure.toOpenAPI("Fruits", "1.0").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  case class F1(data: List[F1])
+
+  private def noIndentation(s: String) = s.replaceAll("[ \t]", "").trim
 }

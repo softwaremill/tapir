@@ -4,19 +4,38 @@ import magnolia._
 import tapir.{Schema, SchemaFor}
 import tapir.Schema._
 
+import scala.collection.mutable
 import scala.language.experimental.macros
 
 trait SchemaForMagnoliaDerivation {
   type Typeclass[T] = SchemaFor[T]
 
+  private val deriveInProgress = mutable.Set[String]()
+
   def combine[T](ctx: CaseClass[SchemaFor, T])(implicit genericDerivationConfig: Configuration): SchemaFor[T] = {
-    new SchemaFor[T] {
-      override val schema: Schema = SObject(
-        SObjectInfo(ctx.typeName.short, ctx.typeName.full),
-        ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
-        ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
-      )
+    if (deriveInProgress.contains(ctx.typeName.full)) {
+      new SchemaFor[T] {
+        override def schema: Schema = SRef(ctx.typeName.full)
+      }
+    } else {
+      withProgressCache(ctx) {
+        new SchemaFor[T] {
+          override val schema: Schema = SObject(
+            SObjectInfo(ctx.typeName.short, ctx.typeName.full),
+            ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
+            ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
+          )
+        }
+      }
     }
+  }
+
+  private def withProgressCache[T](ctx: CaseClass[SchemaFor, T])(f: => SchemaFor[T]): SchemaFor[T] = {
+    val fullName = ctx.typeName.full
+    deriveInProgress.add(fullName)
+    val result = f
+    deriveInProgress.remove(fullName)
+    result
   }
 
   def dispatch[T](ctx: SealedTrait[SchemaFor, T]): SchemaFor[T] = {
