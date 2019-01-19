@@ -1,23 +1,25 @@
-package tapir.docs.openapi
+package tapir.docs.openapi.schema
 
 import tapir.Schema.SRef
-import tapir.docs.openapi.ObjectSchemasForEndpoints.SchemaKey
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
-import tapir.{Schema => SSchema}
+import tapir.{Schema => TSchema}
 
-class SSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
-  def apply(schema: SSchema): ReferenceOr[OSchema] = {
+/**
+  * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
+  */
+private[schema] class TSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
+  def apply(schema: TSchema): ReferenceOr[OSchema] = {
     schema match {
-      case SSchema.SInteger =>
+      case TSchema.SInteger =>
         Right(OSchema(SchemaType.Integer))
-      case SSchema.SNumber =>
+      case TSchema.SNumber =>
         Right(OSchema(SchemaType.Number))
-      case SSchema.SBoolean =>
+      case TSchema.SBoolean =>
         Right(OSchema(SchemaType.Boolean))
-      case SSchema.SString =>
+      case TSchema.SString =>
         Right(OSchema(SchemaType.String))
-      case SSchema.SObject(_, fields, required) =>
+      case TSchema.SObject(_, fields, required) =>
         Right(
           OSchema(SchemaType.Object).copy(
             required = Some(required.toList),
@@ -28,12 +30,12 @@ class SSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
               }.toMap
             )
           ))
-      case SSchema.SArray(el) =>
+      case TSchema.SArray(el) =>
         Right(
           OSchema(SchemaType.Array).copy(
             items = Some(apply(el))
           ))
-      case SSchema.SBinary() =>
+      case TSchema.SBinary() =>
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
       case SRef(fullName) =>
         Left(Reference("#/components/schemas/" + fullNameToKey(fullName)))

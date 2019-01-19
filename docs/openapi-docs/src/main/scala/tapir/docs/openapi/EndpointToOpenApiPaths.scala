@@ -1,13 +1,11 @@
 package tapir.docs.openapi
-import tapir.Schema.SObject
-import tapir.docs.openapi.ObjectSchemasForEndpoints.SchemaKeys
+
+import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi.{MediaType => OMediaType, Schema => OSchema, _}
-import tapir.{EndpointInput, MediaType => SMediaType, Schema => SSchema, _}
+import tapir.openapi.{MediaType => OMediaType, _}
+import tapir.{EndpointInput, MediaType => SMediaType, _}
 
-private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
-
-  private lazy val sschemaToOSchema = new SSchemaToOSchema(schemaKeys.map { case (k, v) => k.fullName -> v._1 })
+private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas) {
 
   def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
     import Method._
@@ -87,18 +85,16 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
     EndpointInputToParameterConverter.from(header,
-                                           sschemaToReferenceOrOSchema(header.codec.meta.schema),
+                                           objectSchemas(header.codec.meta.schema),
                                            header.info.example.flatMap(exampleValue(header.codec, _)))
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    EndpointInputToParameterConverter.from(p,
-                                           sschemaToReferenceOrOSchema(p.codec.meta.schema),
-                                           p.info.example.flatMap(exampleValue(p.codec, _)))
+    EndpointInputToParameterConverter.from(p, objectSchemas(p.codec.meta.schema), p.info.example.flatMap(exampleValue(p.codec, _)))
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
     EndpointInputToParameterConverter.from(query,
-                                           sschemaToReferenceOrOSchema(query.codec.meta.schema),
+                                           objectSchemas(query.codec.meta.schema),
                                            query.info.example.flatMap(exampleValue(query.codec, _)))
   }
 
@@ -126,7 +122,7 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
               None,
               None,
               None,
-              Some(sschemaToReferenceOrOSchema(codec.meta.schema)),
+              Some(objectSchemas(codec.meta.schema)),
               info.example.flatMap(exampleValue(codec, _)),
               None,
               None
@@ -151,21 +147,7 @@ private[openapi] class EndpointToOpenApiPaths(schemaKeys: SchemaKeys) {
 
   private def codecToMediaType[T, M <: SMediaType](o: GeneralCodec[T, M, _], example: Option[T]): Map[String, OMediaType] = {
     Map(
-      o.meta.mediaType.mediaTypeNoParams -> OMediaType(Some(sschemaToReferenceOrOSchema(o.meta.schema)),
-                                                       example.flatMap(exampleValue(o, _)),
-                                                       None,
-                                                       None))
-  }
-
-  private def sschemaToReferenceOrOSchema(schema: SSchema): ReferenceOr[OSchema] = {
-    schema match {
-      case SObject(info, _, _) =>
-        schemaKeys.get(info) match {
-          case Some((key, _)) => Left(Reference("#/components/schemas/" + key))
-          case None           => sschemaToOSchema(schema)
-        }
-      case _ => sschemaToOSchema(schema)
-    }
+      o.meta.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(o.meta.schema)), example.flatMap(exampleValue(o, _)), None, None))
   }
 
   private def exampleValue[T](codec: GeneralCodec[T, _, _], e: T): Option[ExampleValue] =

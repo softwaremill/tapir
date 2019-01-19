@@ -1,15 +1,12 @@
 package tapir.docs.openapi
-import tapir.docs.openapi.ObjectSchemasForEndpoints.SchemaKeys
+
+import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.openapi.Components
 
-private[openapi] class EndpointToOpenApiComponents(schemaKeys: SchemaKeys) {
-
+private[openapi] class EndpointToOpenApiComponents(objectSchemas: ObjectSchemas) {
   def components: Option[Components] = {
-    if (schemaKeys.nonEmpty) {
-      Some(Components(Some(schemaKeys.map {
-        case (_, (key, Right(schema))) =>
-          key -> Right(schema)
-      })))
-    } else None
+    val keyToSchema = objectSchemas.keyToOSchema
+    if (keyToSchema.nonEmpty) Some(Components(Some(keyToSchema)))
+    else None
   }
 }

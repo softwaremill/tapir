@@ -1,23 +1,21 @@
-package tapir.docs.openapi
+package tapir.docs.openapi.schema
 
-import tapir.Schema.{SObjectInfo}
-import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi.{Schema => OSchema}
-import tapir.{Schema => SSchema, _}
+import tapir.Schema.SObjectInfo
+import tapir.{Schema => TSchema, _}
 
 object ObjectSchemasForEndpoints {
-  type SchemaKey = String
-  type SchemaKeys = Map[SObjectInfo, (SchemaKey, ReferenceOr[OSchema])]
 
-  def apply(es: Iterable[Endpoint[_, _, _]]): SchemaKeys = {
+  def apply(es: Iterable[Endpoint[_, _, _]]): ObjectSchemas = {
     val sObjects = es.flatMap(e => forInput(e.input) ++ forIO(e.errorOutput) ++ forIO(e.output))
     val infoToKey = calculateUniqueKeys(sObjects.map(_.info))
-    val sschemaToOSchema = new SSchemaToOSchema(infoToKey.map { case (k, v) => k.fullName -> v })
-    val infosToSchema = sObjects.flatMap(objectSchemaToOSchema(sschemaToOSchema)).toMap
-    infosToSchema.map { case (k, v) => k -> (infoToKey(k) -> v) }
+    val tschemaToOSchema = new TSchemaToOSchema(infoToKey.map { case (k, v) => k.fullName -> v })
+    val infosToSchema = sObjects.map(so => (so.info, tschemaToOSchema(so))).toMap
+    val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
+
+    new ObjectSchemas(tschemaToOSchema, schemaKeys)
   }
 
-  private def calculateUniqueKeys(infos: Iterable[SObjectInfo]) = {
+  private def calculateUniqueKeys(infos: Iterable[SObjectInfo]): Map[SObjectInfo, SchemaKey] = {
     case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, SObjectInfo], infoToKey: Map[SObjectInfo, SchemaKey])
     infos
       .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) {
@@ -36,20 +34,16 @@ object ObjectSchemasForEndpoints {
       }
       .infoToKey
   }
-  private def objectSchemaToOSchema(sschemaToOSSchema: SSchemaToOSchema)(
-      schema: SSchema.SObject): Map[SObjectInfo, ReferenceOr[OSchema]] = {
-    Map(schema.info -> sschemaToOSSchema(schema))
-  }
 
-  private def filterIsObjectSchema(schema: SSchema): List[SSchema.SObject] = {
+  private def filterIsObjectSchema(schema: TSchema): List[TSchema.SObject] = {
     schema match {
-      case s: SSchema.SObject =>
+      case s: TSchema.SObject =>
         List(s)
       case _ => List.empty
     }
   }
 
-  private def forInput(input: EndpointInput[_]): List[SSchema.SObject] = {
+  private def forInput(input: EndpointInput[_]): List[TSchema.SObject] = {
     input match {
       case EndpointInput.PathSegment(_) =>
         List.empty
@@ -69,7 +63,7 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forIO(io: EndpointIO[_]): List[SSchema.SObject] = {
+  private def forIO(io: EndpointIO[_]): List[TSchema.SObject] = {
     io match {
       case EndpointIO.Multiple(inputs) =>
         inputs.toList.flatMap(forInput)

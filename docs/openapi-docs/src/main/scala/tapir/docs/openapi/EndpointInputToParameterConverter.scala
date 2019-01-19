@@ -5,7 +5,7 @@ import tapir.{EndpointIO, EndpointInput}
 
 private[openapi] object EndpointInputToParameterConverter {
 
-  def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]) = {
+  def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
     Parameter(
       query.name,
       ParameterIn.Query,
@@ -23,7 +23,7 @@ private[openapi] object EndpointInputToParameterConverter {
     )
   }
 
-  def from[T](pathCapture: EndpointInput.PathCapture[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]) = {
+  def from[T](pathCapture: EndpointInput.PathCapture[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
     Parameter(
       pathCapture.name.getOrElse("?"),
       ParameterIn.Path,
@@ -41,7 +41,7 @@ private[openapi] object EndpointInputToParameterConverter {
     )
   }
 
-  def from[T](header: EndpointIO.Header[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]) = {
+  def from[T](header: EndpointIO.Header[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
     Parameter(
       header.name,
       ParameterIn.Header,

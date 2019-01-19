@@ -1,14 +1,15 @@
 package tapir.docs.openapi
 
+import tapir.docs.openapi.schema.ObjectSchemasForEndpoints
 import tapir.openapi._
 import tapir.{EndpointInput, _}
 
 object EndpointToOpenAPIDocs {
   def toOpenAPI(title: String, version: String, es: Iterable[Endpoint[_, _, _]]): OpenAPI = {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
-    val schemaKeys = ObjectSchemasForEndpoints(es2)
-    val pathCreator = new EndpointToOpenApiPaths(schemaKeys)
-    val componentsCreator = new EndpointToOpenApiComponents(schemaKeys)
+    val objectSchemas = ObjectSchemasForEndpoints(es2)
+    val pathCreator = new EndpointToOpenApiPaths(objectSchemas)
+    val componentsCreator = new EndpointToOpenApiComponents(objectSchemas)
 
     val base = OpenAPI(
       info = Info(title, None, None, version),
