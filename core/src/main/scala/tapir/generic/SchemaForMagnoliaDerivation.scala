@@ -13,7 +13,7 @@ trait SchemaForMagnoliaDerivation {
   type Typeclass[T] = SchemaFor[T]
 
   def combine[T](ctx: CaseClass[SchemaFor, T])(implicit genericDerivationConfig: Configuration): SchemaFor[T] = {
-    if (deriveInProgress.contains(ctx.typeName.full)) {
+    if (deriveInProgress.get().contains(ctx.typeName.full)) {
       println(s"REF ${ctx.typeName.full}")
       new SchemaFor[T] {
         override val schema: Schema = SRef(ctx.typeName.full)
@@ -35,11 +35,11 @@ trait SchemaForMagnoliaDerivation {
     val fullName = ctx.typeName.full
     try {
       println(s"ADD $fullName ${Thread.currentThread().getId}")
-      deriveInProgress.add(fullName)
+      deriveInProgress.get().add(fullName)
       f
     } finally {
       println(s"REM $fullName ${Thread.currentThread().getId}") // TODO
-      deriveInProgress.remove(fullName)
+      deriveInProgress.get().remove(fullName)
     }
   }
 
@@ -51,5 +51,5 @@ trait SchemaForMagnoliaDerivation {
 }
 
 object SchemaForMagnoliaDerivation {
-  private[generic] val deriveInProgress = mutable.Set[String]()
+  private[generic] val deriveInProgress: ThreadLocal[mutable.Set[String]] = ThreadLocal.withInitial(() => mutable.Set[String]())
 }
