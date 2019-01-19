@@ -42,6 +42,19 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
           matchInputs(inputsTail).map(_.prependValue(v))
         case decodingFailure => StateT.liftF(Either.left(s"Decoding path failed: $decodingFailure"))
       }
+    case EndpointInput.PathsCapture(_) +: inputsTail =>
+      def allSegments(p: String, acc: Vector[String]): Vector[String] = nextSegment(p) match {
+        case Left(_)                     => acc
+        case Right((segment, remaining)) => allSegments(remaining, acc :+ segment)
+      }
+
+      for {
+        ctx <- getState
+        ps = allSegments(ctx.unmatchedPath, Vector.empty)
+        _ <- modifyState(ctx => ctx.copy(unmatchedPath = ""))
+        _ = logger.debug(s"Capturing paths: $ps")
+        r <- matchInputs(inputsTail).map(_.prependValue(ps))
+      } yield r
     case EndpointInput.Query(name, codec, _) +: inputsTail =>
       for {
         ctx <- getState

@@ -113,6 +113,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointInput.PathCapture(codec, _, _) +: tail =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path :+ v), req)
+      case EndpointInput.PathsCapture(_) +: tail =>
+        val ps = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[Seq[String]]
+        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path ++ ps), req)
       case EndpointInput.Query(name, codec, _) +: tail =>
         val uri2 = codec
           .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))

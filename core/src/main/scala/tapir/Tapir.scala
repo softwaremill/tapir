@@ -11,10 +11,11 @@ trait Tapir {
 
   implicit val defaultGenericConfiguration: Configuration = Configuration.default
 
-  def path[T: PlainCodec]: EndpointInput[T] =
+  def path[T: PlainCodec]: EndpointInput.PathCapture[T] =
     EndpointInput.PathCapture(implicitly[PlainCodec[T]], None, EndpointIO.Info.empty)
-  def path[T: PlainCodec](name: String): EndpointInput[T] =
+  def path[T: PlainCodec](name: String): EndpointInput.PathCapture[T] =
     EndpointInput.PathCapture(implicitly[PlainCodec[T]], Some(name), EndpointIO.Info.empty)
+  def paths: EndpointInput.PathsCapture = EndpointInput.PathsCapture(EndpointIO.Info.empty)
 
   def query[T: GeneralPlainCodec](name: String): EndpointInput.Query[T] =
     EndpointInput.Query(name, implicitly[GeneralPlainCodec[T]], EndpointIO.Info.empty)

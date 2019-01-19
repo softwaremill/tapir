@@ -72,5 +72,8 @@ package object tests {
   val in_headers_out_headers: Endpoint[Seq[(String, String)], Unit, Seq[(String, String)]] =
     endpoint.get.in("api" / "echo" / "headers").in(headers).out(headers)
 
+  val in_paths_out_string: Endpoint[Seq[String], Unit, String] =
+    endpoint.get.in(paths).out(stringBody)
+
   val allTestEndpoints: Set[Endpoint[_, _, _]] = wireSet[Endpoint[_, _, _]]
 }

@@ -62,6 +62,7 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
     MultiQueryParams.fromMap(Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")),
     Right("kind=very good&name=apple&weight=42")
   )
+  testClient(in_paths_out_string, Seq("fruit", "apple", "amount", "50"), Right("apple 50 None"))
 
   //
 

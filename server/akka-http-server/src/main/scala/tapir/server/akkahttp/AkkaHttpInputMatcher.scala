@@ -4,6 +4,8 @@ import akka.http.scaladsl.server.RequestContext
 import tapir.internal.SeqToParams
 import tapir.{DecodeResult, EndpointIO, EndpointInput, MultiQueryParams}
 
+import scala.annotation.tailrec
+
 private[akkahttp] object AkkaHttpInputMatcher {
 
   def doMatch(inputs: Vector[EndpointInput.Single[_]], req: RequestContext, body: Any): Option[List[Any]] = {
@@ -36,6 +38,17 @@ private[akkahttp] object AkkaHttpInputMatcher {
             }
           case _ => None
         }
+      case EndpointInput.PathsCapture(_) +: inputsTail =>
+        @tailrec
+        def remainingPath(p: Uri.Path, acc: Vector[String]): Vector[String] = p match {
+          case Uri.Path.Slash(tail)      => remainingPath(tail, acc)
+          case Uri.Path.Segment(s, tail) => remainingPath(tail, acc :+ s)
+          case Uri.Path.Empty            => acc
+        }
+
+        val ps = remainingPath(ctx.req.unmatchedPath, Vector.empty)
+
+        doMatch(inputsTail, ctx.copy(req = ctx.req.withUnmatchedPath(Uri.Path.Empty))).map(ps :: _)
       case EndpointInput.Query(name, codec, _) +: inputsTail =>
         codec.decodeOptional(ctx.req.request.uri.query().get(name)) match {
           case DecodeResult.Value(v) =>

@@ -62,6 +62,12 @@ object EndpointInput {
     def show = s"/[${name.getOrElse("")}]"
   }
 
+  case class PathsCapture(info: EndpointIO.Info[Seq[String]]) extends Single[Seq[String]] {
+    def description(d: String): PathsCapture = copy(info = info.description(d))
+    def example(t: Seq[String]): PathsCapture = copy(info = info.example(t))
+    def show = s"/[multiple paths]"
+  }
+
   case class Query[T](name: String, codec: GeneralPlainCodec[T], info: EndpointIO.Info[T]) extends Single[T] {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))

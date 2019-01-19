@@ -55,6 +55,8 @@ object ObjectSchemasForEndpoints {
         List.empty
       case EndpointInput.PathCapture(tm, _, _) =>
         filterIsObjectSchema(tm.meta.schema)
+      case EndpointInput.PathsCapture(_) =>
+        List.empty
       case EndpointInput.Query(_, tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
       case EndpointInput.QueryParams(_) =>
