@@ -15,7 +15,7 @@ trait SchemaForMagnoliaDerivation {
   def combine[T](ctx: CaseClass[SchemaFor, T])(implicit genericDerivationConfig: Configuration): SchemaFor[T] = {
     if (deriveInProgress.contains(ctx.typeName.full)) {
       new SchemaFor[T] {
-        override def schema: Schema = SRef(ctx.typeName.full)
+        override val schema: Schema = SRef(ctx.typeName.full)
       }
     } else {
       withProgressCache(ctx) {
