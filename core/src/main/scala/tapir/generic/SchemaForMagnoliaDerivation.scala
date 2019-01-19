@@ -33,9 +33,13 @@ trait SchemaForMagnoliaDerivation {
   private def withProgressCache[T](ctx: CaseClass[SchemaFor, T])(f: => SchemaFor[T]): SchemaFor[T] = {
     val fullName = ctx.typeName.full
     try {
+      println("ADD " + fullName)
       deriveInProgress.add(fullName)
       f
-    } finally deriveInProgress.remove(fullName)
+    } finally {
+      println("REMOVE " + fullName ) // TODO
+      deriveInProgress.remove(fullName)
+    }
   }
 
   def dispatch[T](ctx: SealedTrait[SchemaFor, T]): SchemaFor[T] = {
