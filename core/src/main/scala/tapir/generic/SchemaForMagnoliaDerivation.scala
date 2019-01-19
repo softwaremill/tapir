@@ -7,10 +7,10 @@ import tapir.Schema._
 import scala.collection.mutable
 import scala.language.experimental.macros
 
+import SchemaForMagnoliaDerivation.deriveInProgress
+
 trait SchemaForMagnoliaDerivation {
   type Typeclass[T] = SchemaFor[T]
-
-  private val deriveInProgress = mutable.Set[String]()
 
   def combine[T](ctx: CaseClass[SchemaFor, T])(implicit genericDerivationConfig: Configuration): SchemaFor[T] = {
     if (deriveInProgress.contains(ctx.typeName.full)) {
@@ -32,10 +32,10 @@ trait SchemaForMagnoliaDerivation {
 
   private def withProgressCache[T](ctx: CaseClass[SchemaFor, T])(f: => SchemaFor[T]): SchemaFor[T] = {
     val fullName = ctx.typeName.full
-    deriveInProgress.add(fullName)
-    val result = f
-    deriveInProgress.remove(fullName)
-    result
+    try {
+      deriveInProgress.add(fullName)
+      f
+    } finally deriveInProgress.remove(fullName)
   }
 
   def dispatch[T](ctx: SealedTrait[SchemaFor, T]): SchemaFor[T] = {
@@ -43,4 +43,8 @@ trait SchemaForMagnoliaDerivation {
   }
 
   implicit def schemaForCaseClass[T]: SchemaFor[T] = macro Magnolia.gen[T]
+}
+
+object SchemaForMagnoliaDerivation {
+  private[generic] val deriveInProgress = mutable.Set[String]()
 }
