@@ -13,33 +13,42 @@ trait SchemaForMagnoliaDerivation {
   type Typeclass[T] = SchemaFor[T]
 
   def combine[T](ctx: CaseClass[SchemaFor, T])(implicit genericDerivationConfig: Configuration): SchemaFor[T] = {
-    if (deriveInProgress.get().contains(ctx.typeName.full)) {
-      println(s"REF ${ctx.typeName.full}")
-      new SchemaFor[T] {
-        override val schema: Schema = SRef(ctx.typeName.full)
-      }
-    } else {
-      withProgressCache(ctx) {
+    withProgressCache { cache =>
+      val cacheKey = ctx.typeName.full
+      if (cache.contains(cacheKey)) {
         new SchemaFor[T] {
-          override val schema: Schema = SObject(
-            SObjectInfo(ctx.typeName.short, ctx.typeName.full),
-            ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
-            ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
-          )
+          override val schema: Schema = SRef(ctx.typeName.full)
+        }
+      } else {
+        try {
+          cache.add(cacheKey)
+          new SchemaFor[T] {
+            override val schema: Schema = SObject(
+              SObjectInfo(ctx.typeName.short, ctx.typeName.full),
+              ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
+              ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
+            )
+          }
+        } finally {
+          cache.remove(cacheKey)
         }
       }
     }
   }
 
-  private def withProgressCache[T](ctx: CaseClass[SchemaFor, T])(f: => SchemaFor[T]): SchemaFor[T] = {
-    val fullName = ctx.typeName.full
-    try {
-      println(s"ADD $fullName ${Thread.currentThread().getId}")
-      deriveInProgress.get().add(fullName)
-      f
-    } finally {
-      println(s"REM $fullName ${Thread.currentThread().getId}") // TODO
-      deriveInProgress.get().remove(fullName)
+  private def withProgressCache[T](f: mutable.Set[String] => SchemaFor[T]): SchemaFor[T] = {
+    var cache = deriveInProgress.get()
+    val newCache = cache == null
+    if (newCache) {
+      cache = mutable.Set[String]()
+      deriveInProgress.set(cache)
+    }
+
+    try f(cache)
+    finally {
+      if (newCache) {
+        deriveInProgress.remove()
+      }
     }
   }
 
