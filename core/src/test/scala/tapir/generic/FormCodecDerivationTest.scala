@@ -77,4 +77,26 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
       List("f1", "f2")
     )
   }
+
+  it should "generate a codec for a one-arg case class using snake-case naming transformation" in {
+    // given
+    implicit val configuration = Configuration.default.withSnakeCaseMemberNames
+    val codec = implicitly[GeneralCodec[CaseClassWithComplicatedName, MediaType.XWwwFormUrlencoded, String]]
+
+    // when
+    codec.encodeOptional(CaseClassWithComplicatedName(10)) shouldBe Some("complicated_name=10")
+    codec.decodeOptional(Some("complicated_name=10")) shouldBe DecodeResult.Value(CaseClassWithComplicatedName(10))
+  }
+
+  it should "generate a codec for a one-arg case class using kebab-case naming transformation" in {
+    // given
+    implicit val configuration = Configuration.default.withKebabCaseMemberNames
+    val codec = implicitly[GeneralCodec[CaseClassWithComplicatedName, MediaType.XWwwFormUrlencoded, String]]
+
+    // when
+    codec.encodeOptional(CaseClassWithComplicatedName(10)) shouldBe Some("complicated-name=10")
+    codec.decodeOptional(Some("complicated-name=10")) shouldBe DecodeResult.Value(CaseClassWithComplicatedName(10))
+  }
 }
+
+case class CaseClassWithComplicatedName(complicatedName: Int)

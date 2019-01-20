@@ -36,13 +36,15 @@ object FormCodecMacros {
       case (field, codec) =>
         val fieldName = field.name.asInstanceOf[TermName]
         val fieldNameAsString = fieldName.decodedName.toString
-        q"""$codec.encodeOptional(o.$fieldName).map(v => ($fieldNameAsString, v))"""
+        q"""val transformedName = implicitly[tapir.generic.Configuration].transformMemberName($fieldNameAsString)
+           $codec.encodeOptional(o.$fieldName).map(v => (transformedName, v))"""
     }
 
     val decodeParams = fieldsWithCodecs.map {
       case (field, codec) =>
         val fieldName = field.name.decodedName.toString
-        q"""$codec.decodeOptional(paramsMap.get($fieldName).flatMap(_.headOption))"""
+        q"""val transformedName = implicitly[tapir.generic.Configuration].transformMemberName($fieldName)
+           $codec.decodeOptional(paramsMap.get(transformedName).flatMap(_.headOption))"""
     }
 
     val companion = Ident(TermName(t.typeSymbol.name.decodedName.toString))
