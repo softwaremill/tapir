@@ -15,6 +15,8 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
     case EndpointInput.PathSegment(ss: String) +: inputsTail =>
       for {
         ctx <- getState
+        _ <- if (ss.isEmpty && ctx.unmatchedPath.nonEmpty) failState(s"Couldn't match segment: ${ss} with ${ctx.unmatchedPath}")
+        else getState
         _ <- modifyState(_.dropPath(ss.length + 1))
         doesMatch = ctx.unmatchedPath.drop(1).startsWith(ss)
         _ = logger.debug(s"$doesMatch, ${ctx.unmatchedPath}, $ss")
@@ -134,4 +136,6 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
   private def getState: StateT[Either[Error, ?], Context[F], Context[F]] = StateT.get
   private def modifyState(f: Context[F] => Context[F]): StateT[Either[Error, ?], Context[F], Unit] =
     StateT.modify[Either[Error, ?], Context[F]](f)
+  private def failState(error: Error): StateT[Either[Error, ?], Context[F], Unit] =
+    StateT.modifyF(_ => Either.left(error))
 }

@@ -168,6 +168,11 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(uri"$baseUri/hello/it/is/me/hal").send().map(_.body shouldBe Right("hello it is me hal"))
   }
 
+  testServer(in_empty_path_out_string, () => pureResult(Either.right[Unit, String]("")), "empty path should not match nonempty path") {
+    baseUri =>
+      sttp.get(uri"$baseUri/nonemptypath").send().map(_.code should not be com.softwaremill.sttp.StatusCodes.Ok)
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()

@@ -75,5 +75,8 @@ package object tests {
   val in_paths_out_string: Endpoint[Seq[String], Unit, String] =
     endpoint.get.in(paths).out(stringBody)
 
+  val in_empty_path_out_string: Endpoint[Unit, Unit, String] =
+    endpoint.get.in("").out(stringBody)
+
   val allTestEndpoints: Set[Endpoint[_, _, _]] = wireSet[Endpoint[_, _, _]]
 }
