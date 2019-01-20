@@ -1,9 +1,9 @@
 package tapir.docs.openapi
 import tapir.Method
 
-case class OpenApiDocsOptions(operationIdGenerator: (Vector[String], Method) => String)
+case class OpenAPIDocsOptions(operationIdGenerator: (Vector[String], Method) => String)
 
-object OpenApiDocsOptions {
+object OpenAPIDocsOptions {
   val DefaultOperationIdGenerator: (Vector[String], Method) => String = { (pathComponents, method) =>
     val pathComponentsOrRoot = if (pathComponents.isEmpty) {
       Vector("root")
@@ -13,5 +13,5 @@ object OpenApiDocsOptions {
     s"${pathComponentsOrRoot.mkString("-")}-${method.m.toLowerCase}"
   }
 
-  implicit val Default = OpenApiDocsOptions(DefaultOperationIdGenerator)
+  implicit val Default = OpenAPIDocsOptions(DefaultOperationIdGenerator)
 }

@@ -5,7 +5,7 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{MediaType => OMediaType, _}
 import tapir.{EndpointInput, MediaType => SMediaType, _}
 
-private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, options: OpenApiDocsOptions) {
+private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, options: OpenAPIDocsOptions) {
 
   def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
     import Method._
