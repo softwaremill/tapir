@@ -1,8 +1,15 @@
 package tapir.generic
 
+import java.util.concurrent.CountDownLatch
+
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
-import tapir.SchemaFor
+import tapir.{Schema, SchemaFor}
+
+import scala.collection.mutable
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits._
+import scala.concurrent.duration._
 
 class SchemaForTest extends FlatSpec with Matchers {
 
@@ -79,6 +86,32 @@ class SchemaForTest extends FlatSpec with Matchers {
     schema shouldBe SObject(SObjectInfo("F", "tapir.generic.F"),
                             List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)),
                             List("f1", "f2"))
+  }
+
+  it should "find schema for recursive data structure when invoked from many threads" in {
+    val expected =
+      SObject(SObjectInfo("F", "tapir.generic.F"), List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)), List("f1", "f2"))
+
+    val count = 100
+    val countDownLatch = new CountDownLatch(1)
+    val futures = (1 until count).map { _ =>
+      Future[Schema] {
+        countDownLatch.await()
+        implicitly[SchemaFor[F]].schema
+      }
+    }.toList
+
+    val eventualSchemas = foldFuturesToList(futures)
+    countDownLatch.countDown()
+
+    val schemas = Await.result(eventualSchemas, 5 seconds)
+    schemas should contain only expected
+  }
+
+  private def foldFuturesToList[X](fl: List[Future[X]]): Future[List[X]] = {
+    Future
+      .foldLeft(fl)(mutable.ListBuffer.empty[X])(_ += _)
+      .map(_.toList)
   }
 }
 
