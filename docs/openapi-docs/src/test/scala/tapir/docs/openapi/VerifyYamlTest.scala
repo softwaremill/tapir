@@ -1,11 +1,11 @@
 package tapir.docs.openapi
 
+import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import tapir._
 import tapir.json.circe._
-import tapir.tests._
 import tapir.openapi.circe.yaml._
-import io.circe.generic.auto._
+import tapir.tests._
 
 import scala.io.Source
 
@@ -36,6 +36,19 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should use custom operationId generator") {
+    def customOperationIdGenerator(pc: Vector[String], m: Method) = pc.map(_.toUpperCase).mkString("", "+", "-") + m.m.toUpperCase
+    val options = OpenApiDocsOptions.Default.copy(customOperationIdGenerator)
+    val expectedYaml = noIndentation(Source.fromResource("expected_custom_operation_id.yml").getLines().mkString("\n"))
+
+    val actualYaml = in_query_query_out_string
+      .in("add")
+      .in("path")
+      .toOpenAPI("Fruits", "1.0")(options)
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
   }
 
   case class F1(data: List[F1])

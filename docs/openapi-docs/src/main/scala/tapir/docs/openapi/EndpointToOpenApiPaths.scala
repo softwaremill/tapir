@@ -5,7 +5,7 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{MediaType => OMediaType, _}
 import tapir.{EndpointInput, MediaType => SMediaType, _}
 
-private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas) {
+private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, options: OpenApiDocsOptions) {
 
   def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
     import Method._
@@ -15,7 +15,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas) {
       case EndpointInput.PathSegment(s)          => s
     })
 
-    val defaultId = operationId(pathComponents, e.method)
+    val defaultId = options.operationIdGenerator(pathComponents, e.method)
 
     val operation = Some(endpointToOperation(defaultId, e))
     val pathItem = PathItem(
@@ -34,17 +34,6 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas) {
     )
 
     ("/" + pathComponents.mkString("/"), pathItem)
-  }
-
-  private def operationId(pathComponents: Vector[String], method: Method): String = {
-    val pathComponentsOrRoot = if (pathComponents.isEmpty) {
-      Vector("root")
-    } else {
-      pathComponents
-    }
-
-    // TODO parametrize the class with customizable id generation
-    s"${pathComponentsOrRoot.mkString("-")}-${method.m.toLowerCase}"
   }
 
   private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _]): Operation = {

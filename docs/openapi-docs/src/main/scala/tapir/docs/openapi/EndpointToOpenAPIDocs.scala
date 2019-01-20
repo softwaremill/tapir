@@ -5,10 +5,10 @@ import tapir.openapi._
 import tapir.{EndpointInput, _}
 
 object EndpointToOpenAPIDocs {
-  def toOpenAPI(title: String, version: String, es: Iterable[Endpoint[_, _, _]]): OpenAPI = {
+  def toOpenAPI(title: String, version: String, es: Iterable[Endpoint[_, _, _]], options: OpenApiDocsOptions): OpenAPI = {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
     val objectSchemas = ObjectSchemasForEndpoints(es2)
-    val pathCreator = new EndpointToOpenApiPaths(objectSchemas)
+    val pathCreator = new EndpointToOpenApiPaths(objectSchemas, options)
     val componentsCreator = new EndpointToOpenApiComponents(objectSchemas)
 
     val base = OpenAPI(
