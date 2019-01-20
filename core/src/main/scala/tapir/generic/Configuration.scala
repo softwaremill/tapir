@@ -12,8 +12,8 @@ final case class Configuration(transformMemberName: String => String) {
 }
 
 object Configuration {
+  implicit val default: Configuration = Configuration(Predef.identity)
 
-  val default: Configuration = Configuration(Predef.identity)
   private val basePattern: Pattern = Pattern.compile("([A-Z]+)([A-Z][a-z])")
   private val swapPattern: Pattern = Pattern.compile("([a-z\\d])([A-Z])")
 

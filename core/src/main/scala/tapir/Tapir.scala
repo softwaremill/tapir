@@ -3,13 +3,9 @@ package tapir
 import java.nio.charset.{Charset, StandardCharsets}
 
 import tapir.GeneralCodec.{GeneralPlainCodec, PlainCodec}
-import tapir.generic.Configuration
 
 trait Tapir {
-
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
-
-  implicit val defaultGenericConfiguration: Configuration = Configuration.default
 
   def path[T: PlainCodec]: EndpointInput.PathCapture[T] =
     EndpointInput.PathCapture(implicitly[PlainCodec[T]], None, EndpointIO.Info.empty)
