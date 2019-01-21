@@ -1,11 +1,11 @@
 package tapir.docs.openapi
 
+import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import tapir._
 import tapir.json.circe._
-import tapir.tests._
 import tapir.openapi.circe.yaml._
-import io.circe.generic.auto._
+import tapir.tests._
 
 import scala.io.Source
 
@@ -18,7 +18,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     .out(header[Int]("X-Role"))
 
   test("should match the expected yaml") {
-    val expectedYaml = noIndentation(Source.fromResource("expected.yml").getLines().mkString("\n"))
+    val expectedYaml = loadYaml("expected.yml")
 
     val actualYaml = List(in_query_query_out_string, all_the_way).toOpenAPI("Fruits", "1.0").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -30,7 +30,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     .out(jsonBody[F1])
 
   test("should match the expected yaml when schema is recursive") {
-    val expectedYaml = noIndentation(Source.fromResource("expected_recursive.yml").getLines().mkString("\n"))
+    val expectedYaml = loadYaml("expected_recursive.yml")
 
     val actualYaml = endpoint_wit_recursive_structure.toOpenAPI("Fruits", "1.0").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -38,7 +38,24 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  case class F1(data: List[F1])
+  test("should use custom operationId generator") {
+    def customOperationIdGenerator(pc: Vector[String], m: Method) = pc.map(_.toUpperCase).mkString("", "+", "-") + m.m.toUpperCase
+    val options = OpenAPIDocsOptions.Default.copy(customOperationIdGenerator)
+    val expectedYaml = loadYaml("expected_custom_operation_id.yml")
+
+    val actualYaml = in_query_query_out_string
+      .in("add")
+      .in("path")
+      .toOpenAPI("Fruits", "1.0")(options)
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  private def loadYaml(fileName: String): String = {
+    noIndentation(Source.fromResource(fileName).getLines().mkString("\n"))
+  }
 
   private def noIndentation(s: String) = s.replaceAll("[ \t]", "").trim
 }
+
+case class F1(data: List[F1])
