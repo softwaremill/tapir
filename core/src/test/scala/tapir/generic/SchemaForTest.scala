@@ -2,7 +2,11 @@ package tapir.generic
 
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
-import tapir.SchemaFor
+import tapir.{Schema, SchemaFor}
+
+import scala.concurrent.ExecutionContext.Implicits._
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class SchemaForTest extends FlatSpec with Matchers {
 
@@ -79,6 +83,23 @@ class SchemaForTest extends FlatSpec with Matchers {
     schema shouldBe SObject(SObjectInfo("F", "tapir.generic.F"),
                             List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)),
                             List("f1", "f2"))
+  }
+
+  it should "find schema for recursive data structure when invoked from many threads" in {
+    val expected =
+      SObject(SObjectInfo("F", "tapir.generic.F"), List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)), List("f1", "f2"))
+
+    val count = 100
+    val futures = (1 until count).map { _ =>
+      Future[Schema] {
+        implicitly[SchemaFor[F]].schema
+      }
+    }
+
+    val eventualSchemas = Future.sequence(futures)
+
+    val schemas = Await.result(eventualSchemas, 5 seconds)
+    schemas should contain only expected
   }
 }
 
