@@ -6,10 +6,9 @@ import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
 import tapir.{Schema, SchemaFor}
 
-import scala.collection.mutable
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class SchemaForTest extends FlatSpec with Matchers {
 
@@ -101,17 +100,11 @@ class SchemaForTest extends FlatSpec with Matchers {
       }
     }.toList
 
-    val eventualSchemas = foldFuturesToList(futures)
+    val eventualSchemas = Future.sequence(futures)
     countDownLatch.countDown()
 
     val schemas = Await.result(eventualSchemas, 5 seconds)
     schemas should contain only expected
-  }
-
-  private def foldFuturesToList[X](fl: List[Future[X]]): Future[List[X]] = {
-    Future
-      .foldLeft(fl)(mutable.ListBuffer.empty[X])(_ += _)
-      .map(_.toList)
   }
 }
 
