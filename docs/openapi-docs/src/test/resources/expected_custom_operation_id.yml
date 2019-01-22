@@ -20,7 +20,6 @@ paths:
       responses:
         '200':
           description: ''
-          headers: {}
           content:
             text/plain:
               schema:

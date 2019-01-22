@@ -3,10 +3,9 @@ package tapir.openapi
 import OpenAPI.ReferenceOr
 
 // todo security, tags, externaldocs
-// todo: should we use Options (e.g. Option[List[Server]]), or maybe always skip fields which are empty collections during serialization?
 case class OpenAPI(openapi: String = "3.0.1",
                    info: Info,
-                   servers: Option[List[Server]],
+                   servers: List[Server],
                    paths: Map[String, PathItem],
                    components: Option[Components]) {
 
@@ -40,7 +39,7 @@ case class Server(
 
 // todo: responses, parameters, examples, requestBodies, headers, securitySchemas, links, callbacks
 case class Components(
-    schemas: Option[Map[String, ReferenceOr[Schema]]]
+    schemas: Map[String, ReferenceOr[Schema]]
 )
 
 // todo: $ref
@@ -55,8 +54,8 @@ case class PathItem(
     head: Option[Operation],
     patch: Option[Operation],
     trace: Option[Operation],
-    servers: Option[List[Server]],
-    parameters: Option[List[ReferenceOr[Parameter]]]
+    servers: List[Server],
+    parameters: List[ReferenceOr[Parameter]]
 ) {
   def mergeWith(other: PathItem): PathItem = {
     PathItem(
@@ -70,23 +69,23 @@ case class PathItem(
       head = head.orElse(other.head),
       patch = patch.orElse(other.patch),
       trace = trace.orElse(other.trace),
-      servers = None,
-      parameters = None
+      servers = List.empty,
+      parameters = List.empty
     )
   }
 }
 
 // todo: external docs, callbacks, security
 case class Operation(
-    tags: Option[List[String]],
+    tags: List[String],
     summary: Option[String],
     description: Option[String],
     operationId: String,
-    parameters: Option[List[ReferenceOr[Parameter]]],
+    parameters: List[ReferenceOr[Parameter]],
     requestBody: Option[ReferenceOr[RequestBody]],
     responses: Map[ResponsesKey, ReferenceOr[Response]],
     deprecated: Option[Boolean],
-    servers: Option[List[Server]]
+    servers: List[Server]
 )
 
 case class Parameter(
@@ -101,8 +100,8 @@ case class Parameter(
     allowReserved: Option[Boolean],
     schema: ReferenceOr[Schema],
     example: Option[ExampleValue],
-    examples: Option[Map[String, ReferenceOr[Example]]],
-    content: Option[Map[String, MediaType]]
+    examples: Map[String, ReferenceOr[Example]],
+    content: Map[String, MediaType]
 )
 
 object ParameterIn extends Enumeration {
@@ -131,13 +130,13 @@ case class RequestBody(description: Option[String], content: Map[String, MediaTy
 case class MediaType(
     schema: Option[ReferenceOr[Schema]],
     example: Option[ExampleValue],
-    examples: Option[Map[String, ReferenceOr[Example]]],
-    encoding: Option[Map[String, Encoding]]
+    examples: Map[String, ReferenceOr[Example]],
+    encoding: Map[String, Encoding]
 )
 
 case class Encoding(
     contentType: Option[String],
-    headers: Option[Map[String, ReferenceOr[Header]]],
+    headers: Map[String, ReferenceOr[Header]],
     style: Option[ParameterStyle.ParameterStyle],
     explode: Option[Boolean],
     allowReserved: Option[Boolean]
@@ -148,7 +147,7 @@ case object ResponsesDefaultKey extends ResponsesKey
 case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
-case class Response(description: String, headers: Option[Map[String, ReferenceOr[Header]]], content: Option[Map[String, MediaType]])
+case class Response(description: String, headers: Map[String, ReferenceOr[Header]], content: Map[String, MediaType])
 
 case class Example(summary: Option[String], description: Option[String], value: Option[ExampleValue], externalValue: Option[String])
 
@@ -161,17 +160,17 @@ case class Header(description: Option[String],
                   allowReserved: Option[Boolean],
                   schema: Option[ReferenceOr[Schema]],
                   example: Option[ExampleValue],
-                  examples: Option[Map[String, ReferenceOr[Example]]],
-                  content: Option[Map[String, MediaType]])
+                  examples: Map[String, ReferenceOr[Example]],
+                  content: Map[String, MediaType])
 
 case class Reference($ref: String)
 
 // todo: discriminator, xml, json-schema properties
 case class Schema(title: Option[String],
-                  required: Option[List[String]],
+                  required: List[String],
                   `type`: SchemaType.SchemaType,
                   items: Option[ReferenceOr[Schema]],
-                  properties: Option[Map[String, ReferenceOr[Schema]]],
+                  properties: Map[String, ReferenceOr[Schema]],
                   description: Option[String],
                   format: Option[SchemaFormat.SchemaFormat],
                   default: Option[ExampleValue],
@@ -182,7 +181,8 @@ case class Schema(title: Option[String],
                   deprecated: Option[Boolean])
 
 object Schema {
-  def apply(`type`: SchemaType.SchemaType): Schema = Schema(None, None, `type`, None, None, None, None, None, None, None, None, None, None)
+  def apply(`type`: SchemaType.SchemaType): Schema =
+    Schema(None, List.empty, `type`, None, Map.empty, None, None, None, None, None, None, None, None)
 }
 
 object SchemaType extends Enumeration {

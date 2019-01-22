@@ -13,7 +13,7 @@ object EndpointToOpenAPIDocs {
 
     val base = OpenAPI(
       info = Info(title, None, None, version),
-      servers = None,
+      servers = List.empty,
       paths = Map.empty,
       components = componentsCreator.components
     )

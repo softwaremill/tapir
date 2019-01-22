@@ -18,8 +18,8 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       schema,
       example,
-      None,
-      None
+      Map.empty,
+      Map.empty
     )
   }
 
@@ -36,8 +36,8 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       schema,
       example,
-      None,
-      None
+      Map.empty,
+      Map.empty
     )
   }
 
@@ -54,8 +54,8 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       schema,
       example,
-      None,
-      None
+      Map.empty,
+      Map.empty
     )
   }
 }

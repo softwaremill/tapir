@@ -9,7 +9,6 @@ paths:
       responses:
         '200':
           description: ''
-          headers: {}
           content:
             application/json:
               schema:

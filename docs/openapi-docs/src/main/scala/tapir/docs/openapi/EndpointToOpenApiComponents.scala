@@ -6,7 +6,7 @@ import tapir.openapi.Components
 private[openapi] class EndpointToOpenApiComponents(objectSchemas: ObjectSchemas) {
   def components: Option[Components] = {
     val keyToSchema = objectSchemas.keyToOSchema
-    if (keyToSchema.nonEmpty) Some(Components(Some(keyToSchema)))
+    if (keyToSchema.nonEmpty) Some(Components(keyToSchema))
     else None
   }
 }
