@@ -22,13 +22,11 @@ private[schema] class TSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
       case TSchema.SObject(_, fields, required) =>
         Right(
           OSchema(SchemaType.Object).copy(
-            required = Some(required.toList),
-            properties = Some(
-              fields.map {
-                case (fieldName, fieldSchema) =>
-                  fieldName -> apply(fieldSchema)
-              }.toMap
-            )
+            required = required.toList,
+            properties = fields.map {
+              case (fieldName, fieldSchema) =>
+                fieldName -> apply(fieldSchema)
+            }.toMap
           ))
       case TSchema.SArray(el) =>
         Right(

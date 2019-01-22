@@ -29,8 +29,8 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
       head = if (e.method == HEAD) operation else None,
       patch = if (e.method == PATCH) operation else None,
       trace = if (e.method == TRACE) operation else None,
-      servers = None,
-      parameters = None
+      servers = List.empty,
+      parameters = List.empty
     )
 
     ("/" + pathComponents.mkString("/"), pathItem)
@@ -41,15 +41,15 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(e)
     val responses: Map[ResponsesKey, ReferenceOr[Response]] = operationResponse(e)
     Operation(
-      noneIfEmpty(e.info.tags.toList),
+      e.info.tags.toList,
       e.info.summary,
       e.info.description,
       defaultId,
-      noneIfEmpty(parameters.toList.map(Right(_))),
+      parameters.toList.map(Right(_)),
       body.headOption,
       responses,
       None,
-      None
+      List.empty
     )
   }
 
@@ -113,8 +113,8 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
               None,
               Some(objectSchemas(codec.meta.schema)),
               info.example.flatMap(exampleValue(codec, _)),
-              None,
-              None
+              Map.empty,
+              Map.empty
             ))
       }
     )
@@ -125,10 +125,10 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     val body = bodies.headOption
 
     val description = body.flatMap(_._1).getOrElse("")
-    val content = body.map(_._2)
+    val content = body.map(_._2).getOrElse(Map.empty)
 
     if (body.isDefined || headers.nonEmpty) {
-      Some(Response(description, Some(headers.toMap), content))
+      Some(Response(description, headers.toMap, content))
     } else {
       None
     }
@@ -136,13 +136,14 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
 
   private def codecToMediaType[T, M <: SMediaType](o: GeneralCodec[T, M, _], example: Option[T]): Map[String, OMediaType] = {
     Map(
-      o.meta.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(o.meta.schema)), example.flatMap(exampleValue(o, _)), None, None))
+      o.meta.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(o.meta.schema)),
+                                                       example.flatMap(exampleValue(o, _)),
+                                                       Map.empty,
+                                                       Map.empty))
   }
 
   private def exampleValue[T](codec: GeneralCodec[T, _, _], e: T): Option[ExampleValue] =
     codec.encodeOptional(e).map(v => ExampleValue(v.toString))
-
-  private def noneIfEmpty[T](l: List[T]): Option[List[T]] = if (l.isEmpty) None else Some(l)
 
   private def foldInputToVector[T](i: EndpointInput[_], f: PartialFunction[EndpointInput[_], T]): Vector[T] = {
     i match {

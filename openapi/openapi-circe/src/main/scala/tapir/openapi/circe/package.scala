@@ -1,9 +1,9 @@
 package tapir.openapi
 
-import io.circe.{Encoder, Json}
-import io.circe.syntax._
-import io.circe.parser._
 import io.circe.magnolia.derivation.encoder.semiauto._
+import io.circe.parser._
+import io.circe.syntax._
+import io.circe.{Encoder, Json}
 import tapir.openapi.OpenAPI.ReferenceOr
 
 package object circe extends Encoders
@@ -47,4 +47,14 @@ trait Encoders {
   implicit val encoderServer: Encoder[Server] = deriveMagnoliaEncoder[Server]
   implicit val encoderInfo: Encoder[Info] = deriveMagnoliaEncoder[Info]
   implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveMagnoliaEncoder[OpenAPI]
+  implicit def encodeList[T: Encoder]: Encoder[List[T]] = {
+    case Nil        => Json.Null
+    case l: List[T] => Json.arr(l.map(i => implicitly[Encoder[T]].apply(i)): _*)
+  }
+  implicit def encodeMap[V: Encoder]: Encoder[Map[String, V]] = {
+    case m: Map[String, V] if m.isEmpty => Json.Null
+    case m: Map[String, V] =>
+      val properties = m.mapValues(v => implicitly[Encoder[V]].apply(v)).toList
+      Json.obj(properties: _*)
+  }
 }
