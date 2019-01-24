@@ -86,7 +86,7 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
     case EndpointIO.Body(codec, _) +: inputsTail =>
       for {
         ctx <- getState
-        decoded: DecodeResult[Any] = codec.decodeOptional(ctx.body)
+        decoded: DecodeResult[Any] = codec.decodeOptional(ctx.basicBody)
         res <- decoded match {
           case DecodeResult.Value(_) =>
             val r: ContextState[F] = continueMatch(decoded, inputsTail)
@@ -98,7 +98,7 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
     case EndpointIO.StreamBodyWrapper(_) +: inputsTail =>
       for {
         ctx <- getState
-        res <- continueMatch(DecodeResult.Value(ctx.rawBody), inputsTail)
+        res <- continueMatch(DecodeResult.Value(ctx.streamingBody), inputsTail)
       } yield res
     case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
       handleMapped(wrapped, f, inputsTail)

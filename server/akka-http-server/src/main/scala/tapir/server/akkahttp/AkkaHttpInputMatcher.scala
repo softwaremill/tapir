@@ -8,11 +8,11 @@ import scala.annotation.tailrec
 
 private[akkahttp] object AkkaHttpInputMatcher {
 
-  def doMatch(inputs: Vector[EndpointInput.Single[_]], req: RequestContext, body: Any): Option[List[Any]] = {
-    doMatch(inputs, MatchContext(req, canRemoveSlash = true, body))
+  def doMatch(inputs: Vector[EndpointInput.Single[_]], req: RequestContext, basicBody: Any): Option[List[Any]] = {
+    doMatch(inputs, MatchContext(req, canRemoveSlash = true, basicBody))
   }
 
-  private case class MatchContext(req: RequestContext, canRemoveSlash: Boolean, body: Any)
+  private case class MatchContext(req: RequestContext, canRemoveSlash: Boolean, basicBody: Any)
 
   private def doMatch(inputs: Vector[EndpointInput.Single[_]], ctx: MatchContext): Option[List[Any]] = {
 
@@ -68,7 +68,7 @@ private[akkahttp] object AkkaHttpInputMatcher {
         val headers = ctx.req.request.headers.map(h => (h.name(), h.value()))
         doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(headers :: _)
       case EndpointIO.Body(codec, _) +: inputsTail =>
-        codec.decodeOptional(Some(ctx.body)) match {
+        codec.decodeOptional(Some(ctx.basicBody)) match {
           case DecodeResult.Value(v) =>
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None

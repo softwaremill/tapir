@@ -164,21 +164,21 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   private def createContext[I, E, O](e: Endpoint[I, E, O, EntityBody[F]], req: Request[F]): F[Context[F]] = {
     val formAndBody: F[Option[Any]] = e.input.bodyType match {
       case None     => none[Any].pure[F]
-      case Some(bt) => requestBody(req, bt).map(_.some)
+      case Some(bt) => basicRequestBody(req, bt).map(_.some)
     }
 
     formAndBody.map { body =>
       Context(
         queryParams = req.params,
         headers = req.headers,
-        body = body,
-        rawBody = req.body,
+        basicBody = body,
+        streamingBody = req.body,
         unmatchedPath = req.uri.renderString
       )
     }
   }
 
-  private def requestBody[R](req: Request[F], rawBodyType: RawValueType[R]): F[R] = {
+  private def basicRequestBody[R](req: Request[F], rawBodyType: RawValueType[R]): F[R] = {
     def asChunk: F[Chunk[Byte]] = req.body.compile.toChunk
     def asByteArray: F[Array[Byte]] = req.body.compile.toChunk.map(_.toByteBuffer.array())
 
