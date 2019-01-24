@@ -15,7 +15,6 @@ private[akkahttp] object AkkaHttpInputMatcher {
   private case class MatchContext(req: RequestContext, canRemoveSlash: Boolean, basicBody: Any)
 
   private def doMatch(inputs: Vector[EndpointInput.Single[_]], ctx: MatchContext): Option[List[Any]] = {
-
     inputs match {
       case Vector() => Some(Nil)
       case EndpointInput.PathSegment(ss) +: inputsTail =>
@@ -50,7 +49,8 @@ private[akkahttp] object AkkaHttpInputMatcher {
 
         doMatch(inputsTail, ctx.copy(req = ctx.req.withUnmatchedPath(Uri.Path.Empty))).map(ps :: _)
       case EndpointInput.Query(name, codec, _) +: inputsTail =>
-        codec.decodeOptional(ctx.req.request.uri.query().get(name)) match {
+        // akka-http returns the parameters in reverse order
+        codec.decodeMany(ctx.req.request.uri.query().getAll(name).reverse) match {
           case DecodeResult.Value(v) =>
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
@@ -59,7 +59,7 @@ private[akkahttp] object AkkaHttpInputMatcher {
         val params = MultiQueryParams.fromSeq(ctx.req.request.uri.query())
         doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(params :: _)
       case EndpointIO.Header(name, codec, _) +: inputsTail =>
-        codec.decodeOptional(ctx.req.request.headers.find(_.is(name.toLowerCase)).map(_.value())) match {
+        codec.decodeMany(ctx.req.request.headers.filter(_.is(name.toLowerCase)).map(_.value()).toList) match {
           case DecodeResult.Value(v) =>
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
@@ -68,7 +68,7 @@ private[akkahttp] object AkkaHttpInputMatcher {
         val headers = ctx.req.request.headers.map(h => (h.name(), h.value()))
         doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(headers :: _)
       case EndpointIO.Body(codec, _) +: inputsTail =>
-        codec.decodeOptional(Some(ctx.basicBody)) match {
+        codec.decodeMany(List(ctx.basicBody)) match {
           case DecodeResult.Value(v) =>
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None

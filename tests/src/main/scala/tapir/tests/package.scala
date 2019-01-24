@@ -75,6 +75,9 @@ package object tests {
   val in_paths_out_string: Endpoint[Seq[String], Unit, String, Nothing] =
     endpoint.get.in(paths).out(stringBody)
 
+  val in_query_list_out_header_list: Endpoint[List[String], Unit, List[String], Nothing] =
+    endpoint.get.in("api" / "echo" / "param-to-header").in(query[List[String]]("qq")).out(header[List[String]]("hh"))
+
   def in_stream_out_stream[S]: Endpoint[S, Unit, S, S] = {
     val sb = streamBody[S](schemaFor[String], MediaType.TextPlain())
     endpoint.post.in("api" / "echo").in(sb).out(sb)

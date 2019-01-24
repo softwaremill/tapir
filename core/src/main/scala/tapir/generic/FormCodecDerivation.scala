@@ -40,14 +40,14 @@ object FormCodecMacros {
         val fieldName = field.name.asInstanceOf[TermName]
         val fieldNameAsString = fieldName.decodedName.toString
         q"""val transformedName = $conf.transformMemberName($fieldNameAsString)
-           $codec.encodeOptional(o.$fieldName).map(v => (transformedName, v))"""
+           $codec.encodeMany(o.$fieldName).map(v => (transformedName, v))"""
     }
 
     val decodeParams = fieldsWithCodecs.map {
       case (field, codec) =>
         val fieldName = field.name.decodedName.toString
         q"""val transformedName = $conf.transformMemberName($fieldName)
-           $codec.decodeOptional(paramsMap.get(transformedName).flatMap(_.headOption))"""
+           $codec.decodeMany(paramsMap.get(transformedName).toList.flatMap(_.toList))"""
     }
 
     val companion = Ident(TermName(t.typeSymbol.name.decodedName.toString))
@@ -58,7 +58,7 @@ object FormCodecMacros {
       q"$companion.tupled.asInstanceOf[Any => $t].apply(tapir.internal.SeqToParams(vs))"
     }
 
-    c.Expr[Codec[T, MediaType.XWwwFormUrlencoded, String]](q"""
+    val codecTree = q"""
       {
         def decode(params: Seq[(String, String)]): DecodeResult[$t] = {
           val paramsMap: Map[String, Seq[String]] = params.groupBy(_._1).mapValues(_.map(_._2))
@@ -73,6 +73,8 @@ object FormCodecMacros {
           .mapDecode(decode _)(encode _)
           .schema($schema.schema)
       }
-     """)
+     """
+
+    c.Expr[Codec[T, MediaType.XWwwFormUrlencoded, String]](codecTree)
   }
 }

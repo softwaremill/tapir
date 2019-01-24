@@ -152,7 +152,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   }
 
   private def exampleValue[T](codec: GeneralCodec[T, _, _], e: T): Option[ExampleValue] =
-    codec.encodeOptional(e).map(v => ExampleValue(v.toString))
+    codec.encodeMany(e).headOption.map(v => ExampleValue(v.toString))
 
   private def foldInputToVector[T](i: EndpointInput[_], f: PartialFunction[EndpointInput[_], T]): Vector[T] = {
     i match {

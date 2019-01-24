@@ -67,14 +67,14 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     val values = outputs
       .map {
         case EndpointIO.Body(codec, _) =>
-          val so = if (codec.meta.isOptional && body == "") None else Some(body)
-          codec.decodeOptional(so).getOrThrow(InvalidOutput)
+          val so = if (codec.meta.isOptional && body == "") Nil else List(body)
+          codec.decodeMany(so).getOrThrow(InvalidOutput)
 
         case EndpointIO.StreamBodyWrapper(_) =>
           body
 
         case EndpointIO.Header(name, codec, _) =>
-          codec.decodeOptional(meta.header(name)).getOrThrow(InvalidOutput)
+          codec.decodeMany(meta.headers(name).toList).getOrThrow(InvalidOutput)
 
         case EndpointIO.Headers(_) =>
           meta.headers
@@ -123,9 +123,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path ++ ps), req)
       case EndpointInput.Query(name, codec, _) +: tail =>
         val uri2 = codec
-          .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
-          .map(v => uri.param(name, v))
-          .getOrElse(uri)
+          .encodeMany(paramsAsArgs.paramAt(params, paramIndex))
+          .foldLeft(uri) { case (u, v) => u.param(name, v) }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
       case EndpointInput.QueryParams(_) +: tail =>
         val mqp = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[MultiQueryParams]
@@ -139,9 +138,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointIO.Header(name, codec, _) +: tail =>
         val req2 = codec
-          .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
-          .map(v => req.header(name, v))
-          .getOrElse(req)
+          .encodeMany(paramsAsArgs.paramAt(params, paramIndex))
+          .foldLeft(req) { case (r, v) => r.header(name, v) }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointIO.Headers(_) +: tail =>
         val headers = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[Seq[(String, String)]]
@@ -156,7 +154,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private def setBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
     codec
-      .encodeOptional(v)
+      .encodeMany(v)
+      .headOption
       .map { t =>
         codec.rawValueType match {
           case StringValueType(charset) => req.body(t, charset.name())

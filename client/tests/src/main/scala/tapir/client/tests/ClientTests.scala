@@ -63,6 +63,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     Right("kind=very good&name=apple&weight=42")
   )
   testClient(in_paths_out_string, Seq("fruit", "apple", "amount", "50"), Right("apple 50 None"))
+  testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
 
   //
 
@@ -99,7 +100,9 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ GET -> Root / "api" / "echo" / "headers"                      => Ok(headers = r.headers.map(h => Header(h.name.value, h.value.reverse)).toSeq: _*)
-    case r @ POST -> Root / "api" / "echo"                                 => r.as[String].flatMap(Ok(_))
+    case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
+      Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
+    case r @ POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))
     case r @ GET -> Root =>
       r.headers.get(CaseInsensitiveString("X-Role")) match {
         case None    => Ok()

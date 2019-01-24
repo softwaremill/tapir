@@ -16,21 +16,21 @@ import tapir.internal.UrlencodedData
 trait GeneralCodec[T, M <: MediaType, R] { outer =>
   val rawValueType: RawValueType[R]
 
-  def encodeOptional(t: T): Option[R]
-  def decodeOptional(s: Option[R]): DecodeResult[T]
+  def encodeMany(t: T): List[R]
+  def decodeMany(s: List[R]): DecodeResult[T]
   def meta: CodecMeta[M]
 
   def map[TT](f: T => TT)(g: TT => T): GeneralCodec[TT, M, R] = new GeneralCodec[TT, M, R] {
     override val rawValueType: RawValueType[R] = outer.rawValueType
-    override def encodeOptional(t: TT): Option[R] = outer.encodeOptional(g(t))
-    override def decodeOptional(s: Option[R]): DecodeResult[TT] = outer.decodeOptional(s).map(f)
+    override def encodeMany(t: TT): List[R] = outer.encodeMany(g(t))
+    override def decodeMany(s: List[R]): DecodeResult[TT] = outer.decodeMany(s).map(f)
     override def meta: CodecMeta[M] = outer.meta
   }
 
   private def withMeta[M2 <: MediaType](meta2: CodecMeta[M2]): GeneralCodec[T, M2, R] = new GeneralCodec[T, M2, R] {
     override val rawValueType: RawValueType[R] = outer.rawValueType
-    override def encodeOptional(t: T): Option[R] = outer.encodeOptional(t)
-    override def decodeOptional(s: Option[R]): DecodeResult[T] = outer.decodeOptional(s)
+    override def encodeMany(t: T): List[R] = outer.encodeMany(t)
+    override def decodeMany(s: List[R]): DecodeResult[T] = outer.decodeMany(s)
     override def meta: CodecMeta[M2] = meta2
   }
 
@@ -52,10 +52,11 @@ trait Codec[T, M <: MediaType, R] extends GeneralCodec[T, M, R] { outer =>
   def encode(t: T): R
   def decode(s: R): DecodeResult[T]
 
-  override def encodeOptional(t: T): Option[R] = Some(encode(t))
-  override def decodeOptional(s: Option[R]): DecodeResult[T] = s match {
-    case None     => DecodeResult.Missing
-    case Some(ss) => decode(ss)
+  override def encodeMany(t: T): List[R] = List(encode(t))
+  override def decodeMany(s: List[R]): DecodeResult[T] = s match {
+    case Nil     => DecodeResult.Missing
+    case List(h) => decode(h)
+    case l       => DecodeResult.Multiple(l)
   }
 
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): Codec[TT, M, R] =
@@ -111,16 +112,24 @@ object GeneralCodec extends FormCodecDerivation {
     new GeneralCodec[Option[T], M, R] {
       override val rawValueType: RawValueType[R] = tm.rawValueType
 
-      override def encodeOptional(t: Option[T]): Option[R] = t.map(v => tm.encode(v))
-      override def decodeOptional(s: Option[R]): DecodeResult[Option[T]] = s match {
-        case None => DecodeResult.Value(None)
-        case Some(ss) =>
+      override def encodeMany(t: Option[T]): List[R] = t.map(v => tm.encode(v)).toList
+      override def decodeMany(s: List[R]): DecodeResult[Option[T]] = s match {
+        case Nil => DecodeResult.Value(None)
+        case List(ss) =>
           tm.decode(ss) match {
-            case DecodeResult.Value(v)  => DecodeResult.Value(Some(v))
-            case DecodeResult.Missing   => DecodeResult.Missing
-            case de: DecodeResult.Error => de
+            case DecodeResult.Value(v) => DecodeResult.Value(Some(v))
+            case df: DecodeFailure     => df
           }
       }
+      override def meta: CodecMeta[M] = tm.meta.copy(isOptional = true)
+    }
+
+  implicit def listCodec[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): GeneralCodec[List[T], M, R] =
+    new GeneralCodec[List[T], M, R] {
+      override val rawValueType: RawValueType[R] = tm.rawValueType
+
+      override def encodeMany(t: List[T]): List[R] = t.map(v => tm.encode(v))
+      override def decodeMany(s: List[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode))
       override def meta: CodecMeta[M] = tm.meta.copy(isOptional = true)
     }
 

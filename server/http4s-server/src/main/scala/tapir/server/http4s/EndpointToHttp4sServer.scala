@@ -57,7 +57,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[(EntityBody[F], Header)] = {
     val ct: `Content-Type` = mediaTypeToContentType(codec.meta.mediaType)
 
-    codec.encodeOptional(v).map { r: R =>
+    codec.encodeMany(v).headOption.map { r: R =>
       codec.rawValueType match {
         case StringValueType(charset) =>
           val bytes = r.toString.getBytes(charset)
@@ -90,10 +90,10 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
       case (EndpointIO.Header(name, codec, _), i) =>
         codec
-          .encodeOptional(vs(i))
+          .encodeMany(vs(i))
           .map((headerValue: String) => Header.Raw(CaseInsensitiveString(name), headerValue)) match {
-          case Some(header) => State.modify[OutputValues](ov => ov.copy(headers = ov.headers :+ header))
-          case None         => State.pure[OutputValues, Unit](())
+          case Nil     => State.pure[OutputValues, Unit](())
+          case headers => State.modify[OutputValues](ov => ov.copy(headers = ov.headers ++ headers))
         }
 
       case (EndpointIO.Headers(_), i) =>
@@ -169,7 +169,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
     formAndBody.map { body =>
       Context(
-        queryParams = req.params,
+        queryParams = req.multiParams,
         headers = req.headers,
         basicBody = body,
         streamingBody = req.body,

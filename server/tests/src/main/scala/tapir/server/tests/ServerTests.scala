@@ -172,6 +172,15 @@ trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll
     sttp.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
   }
 
+  testServer(in_query_list_out_header_list, (l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
+    sttp
+      .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
+      .send()
+      .map { r =>
+        r.headers.filter(_._1 == "hh").map(_._2).toList shouldBe List("v3", "v2", "v1", "v0")
+      }
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()

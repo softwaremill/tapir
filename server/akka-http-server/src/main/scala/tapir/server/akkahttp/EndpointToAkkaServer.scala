@@ -83,7 +83,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
         ov = ov.copy(body = Some(re))
       case (EndpointIO.Header(name, codec, _), i) =>
         codec
-          .encodeOptional(vs(i))
+          .encodeMany(vs(i))
           .map(HttpHeader.parse(name, _))
           .collect {
             case ParsingResult.Ok(h, _) => h
@@ -172,7 +172,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
 
   private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[ResponseEntity] = {
     val ct = mediaTypeToContentType(codec.meta.mediaType)
-    codec.encodeOptional(v).map { r =>
+    codec.encodeMany(v).headOption.map { r =>
       codec.rawValueType match {
         case StringValueType(charset) =>
           ct match {
