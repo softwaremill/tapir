@@ -15,7 +15,6 @@ paths:
       responses:
         '200':
           description: ''
-          headers: {}
           content:
             application/octet-stream:
               schema:
