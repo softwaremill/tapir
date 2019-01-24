@@ -148,7 +148,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   }
 
   private def codecToMediaType[M <: SMediaType](cm: CodecMeta[M], example: Option[String]): Map[String, OMediaType] = {
-    Map(cm.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(cm.schema)), example.map(ExampleValue), None, None))
+    Map(cm.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(cm.schema)), example.map(ExampleValue), Map.empty, Map.empty))
   }
 
   private def exampleValue[T](codec: GeneralCodec[T, _, _], e: T): Option[ExampleValue] =
