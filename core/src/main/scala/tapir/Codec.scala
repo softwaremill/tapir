@@ -135,7 +135,7 @@ object GeneralCodec extends FormCodecDerivation {
 
     override def encode(b: T): T = b
     override def decode(b: T): DecodeResult[T] = Value(b)
-    override def meta: CodecMeta[MediaType.OctetStream] = CodecMeta(Schema.SBinary(), MediaType.OctetStream())
+    override def meta: CodecMeta[MediaType.OctetStream] = CodecMeta(Schema.SBinary, MediaType.OctetStream())
   }
 
   implicit val formSeqCodecUtf8: Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] = formSeqCodec(StandardCharsets.UTF_8)

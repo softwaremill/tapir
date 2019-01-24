@@ -53,7 +53,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
   val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], Vector[Byte]] = endpoint
     .in(streamBody[Vector[Byte]](schemaFor[String], MediaType.TextPlain()))
-    .out(streamBody[Vector[Byte]](Schema.SBinary(), MediaType.OctetStream()))
+    .out(streamBody[Vector[Byte]](Schema.SBinary, MediaType.OctetStream()))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")

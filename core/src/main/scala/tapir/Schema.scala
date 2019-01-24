@@ -4,8 +4,6 @@ sealed trait Schema {
   def show: String
 }
 
-// TODO: configuration; camel-case/normal case
-// TODO: test recurrence
 object Schema {
   case object SString extends Schema {
     def show: String = "string"
@@ -25,12 +23,13 @@ object Schema {
   case class SArray(element: Schema) extends Schema {
     def show: String = s"array(${element.show})"
   }
-  case class SBinary() extends Schema {
+  case object SBinary extends Schema {
     def show: String = "binary"
   }
-  case class SObjectInfo(shortName: String, fullName: String)
 
   case class SRef(fullName: String) extends Schema {
     def show: String = s"ref($fullName)"
   }
+
+  case class SObjectInfo(shortName: String, fullName: String)
 }
