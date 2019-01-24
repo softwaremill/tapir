@@ -130,7 +130,7 @@ object GeneralCodec extends FormCodecDerivation {
 
       override def encodeMany(t: List[T]): List[R] = t.map(v => tm.encode(v))
       override def decodeMany(s: List[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode))
-      override def meta: CodecMeta[M] = tm.meta.copy(isOptional = true)
+      override def meta: CodecMeta[M] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
     }
 
   implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] = binaryCodec(ByteArrayValueType)
