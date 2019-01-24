@@ -24,7 +24,7 @@ type AuthToken = String
 case class BooksFromYear(genre: String, year: Int)
 case class Book(title: String)
 
-val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]] = endpoint
+val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Nothing] = endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
     .in(query[Int]("limit").description("Maximum number of books to retrieve"))
@@ -103,11 +103,12 @@ To see an example project using Tapir, [check out this Todo-Backend](https://git
 
 ## Anatomy an endpoint
 
-An endpoint is represented as a value of type `Endpoint[I, E, O]`, where:
+An endpoint is represented as a value of type `Endpoint[I, E, O, S]`, where:
 
 * `I` is the type of the input parameters
 * `E` is the type of the error-output parameters
 * `O` is the type of the output parameters
+* `S` is the type of streams that are used by the endpoint's inputs/outputs
 
 Output parameters can be:
 
@@ -137,6 +138,7 @@ An input is represented as an instance of the `EndpointInput` trait, and an outp
 * `query[T](name)` captures a query parameter with the given name
 * `header[T](name)` captures a header with the given name
 * `body[T, M]`, `stringBody`, `textBody[T]`, `jsonBody[T]` captures the body
+* `streamBody[S]` captures the body as a stream: only a client/server interpreter supporting streams of type `S` can be used with such an endpoint
 
 For outputs, you can use the `header` and `body` family of methods.
 

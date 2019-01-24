@@ -24,6 +24,7 @@ import tapir.{
   MediaType,
   RawValueType,
   StatusCode,
+  StreamingEndpointIO,
   StringValueType
 }
 
@@ -83,6 +84,10 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           case None                   => State.pure[OutputValues, Unit](())
         }
 
+      case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codecMeta, _)), i) =>
+        val ctHeader = mediaTypeToContentType(codecMeta.mediaType)
+        State.modify[OutputValues](ov => ov.copy(body = Some(vs(i).asInstanceOf[EntityBody[F]]), headers = ov.headers :+ ctHeader))
+
       case (EndpointIO.Header(name, codec, _), i) =>
         codec
           .encodeOptional(vs(i))
@@ -102,7 +107,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     states.sequence_
   }
 
-  def toRoutes[I, E, O, FN[_]](e: Endpoint[I, E, O])(
+  def toRoutes[I, E, O, FN[_]](e: Endpoint[I, E, O, EntityBody[F]])(
       logic: FN[F[Either[E, O]]],
       statusMapper: O => StatusCode,
       errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
@@ -156,7 +161,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
   private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status = Status.fromInt(code).right.get
 
-  private def createContext[I, E, O](e: Endpoint[I, E, O], req: Request[F]): F[Context[F]] = {
+  private def createContext[I, E, O](e: Endpoint[I, E, O, EntityBody[F]], req: Request[F]): F[Context[F]] = {
     val formAndBody: F[Option[Any]] = e.input.bodyType match {
       case None     => none[Any].pure[F]
       case Some(bt) => requestBody(req, bt).map(_.some)
@@ -167,6 +172,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         queryParams = req.params,
         headers = req.headers,
         body = body,
+        rawBody = req.body,
         unmatchedPath = req.uri.renderString
       )
     }

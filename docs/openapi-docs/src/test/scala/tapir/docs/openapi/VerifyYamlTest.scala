@@ -11,7 +11,7 @@ import scala.io.Source
 
 class VerifyYamlTest extends FunSuite with Matchers {
 
-  val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int)] = endpoint
+  val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Nothing] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))
     .out(jsonBody[FruitAmount])
@@ -26,7 +26,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1] = endpoint
+  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1, Nothing] = endpoint
     .out(jsonBody[F1])
 
   test("should match the expected yaml when schema is recursive") {
@@ -49,6 +49,19 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toOpenAPI("Fruits", "1.0")(options)
       .toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], Vector[Byte]] = endpoint
+    .in(streamBody[Vector[Byte]](schemaFor[String], MediaType.TextPlain()))
+    .out(streamBody[Vector[Byte]](Schema.SBinary(), MediaType.OctetStream()))
+
+  test("should match the expected yaml for streaming endpoints") {
+    val expectedYaml = loadYaml("expected_streaming.yml")
+
+    val actualYaml = streaming_endpoint.toOpenAPI("Fruits", "1.0").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
   }
 
   private def loadYaml(fileName: String): String = {

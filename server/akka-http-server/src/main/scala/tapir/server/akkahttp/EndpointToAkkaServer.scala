@@ -31,14 +31,14 @@ import scala.concurrent.Future
 import scala.util.Failure
 
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
-  def toDirective[I, E, O, T](e: Endpoint[I, E, O])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
+  def toDirective[I, E, O, T](e: Endpoint[I, E, O, AkkaStream])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
     implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
     toDirective1(e).flatMap { values =>
       tprovide(paramsToTuple.toTuple(values))
     }
   }
 
-  def toRoute[I, E, O, FN[_]](e: Endpoint[I, E, O])(
+  def toRoute[I, E, O, FN[_]](e: Endpoint[I, E, O, AkkaStream])(
       logic: FN[Future[Either[E, O]]],
       statusMapper: O => StatusCode,
       errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
@@ -77,6 +77,10 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
       case (EndpointIO.Body(codec, _), i) =>
         // TODO: check if body isn't already set
         encodeBody(vs(i), codec).foreach(re => ov = ov.copy(body = Some(re)))
+      case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codecMeta, _)), i) =>
+        // TODO: check if body isn't already set
+        val re = HttpEntity(mediaTypeToContentType(codecMeta.mediaType), vs(i).asInstanceOf[AkkaStream])
+        ov = ov.copy(body = Some(re))
       case (EndpointIO.Header(name, codec, _), i) =>
         codec
           .encodeOptional(vs(i))
@@ -102,7 +106,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     ov
   }
 
-  private def toDirective1[I, E, O](e: Endpoint[I, E, O]): Directive1[I] = {
+  private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive1[I] = {
 
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._
@@ -153,7 +157,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     }
   }
 
-  private def methodToAkkaDirective[O, E, I](e: Endpoint[I, E, O]) = {
+  private def methodToAkkaDirective[O, E, I](e: Endpoint[I, E, O, AkkaStream]) = {
     e.method match {
       case Method.GET     => get
       case Method.HEAD    => head

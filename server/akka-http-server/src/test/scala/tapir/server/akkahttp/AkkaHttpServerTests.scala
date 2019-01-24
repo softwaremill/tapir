@@ -12,7 +12,7 @@ import tapir.typelevel.ParamsAsArgs
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-class AkkaHttpServerTests extends ServerTests[Future] {
+class AkkaHttpServerTests extends ServerTests[Future, AkkaStream] {
 
   private implicit var actorSystem: ActorSystem = _
   private implicit var materializer: ActorMaterializer = _
@@ -29,7 +29,7 @@ class AkkaHttpServerTests extends ServerTests[Future] {
   }
 
   override def server[I, E, O, FN[_]](
-      e: Endpoint[I, E, O],
+      e: Endpoint[I, E, O, AkkaStream],
       port: Port,
       fn: FN[Future[Either[E, O]]],
       statusMapper: O => StatusCode,

@@ -5,7 +5,7 @@ import tapir.{Schema => TSchema, _}
 
 object ObjectSchemasForEndpoints {
 
-  def apply(es: Iterable[Endpoint[_, _, _]]): ObjectSchemas = {
+  def apply(es: Iterable[Endpoint[_, _, _, _]]): ObjectSchemas = {
     val sObjects = es.flatMap(e => forInput(e.input) ++ forIO(e.errorOutput) ++ forIO(e.output))
     val infoToKey = calculateUniqueKeys(sObjects.map(_.info))
     val tschemaToOSchema = new TSchemaToOSchema(infoToKey.map { case (k, v) => k.fullName -> v })
@@ -73,6 +73,8 @@ object ObjectSchemasForEndpoints {
         List.empty
       case EndpointIO.Body(tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(cm, _)) =>
+        filterIsObjectSchema(cm.schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
     }

@@ -37,10 +37,15 @@ trait Tapir {
   def formBody[T](implicit codec: GeneralCodec[T, MediaType.XWwwFormUrlencoded, _]): EndpointIO.Body[T, MediaType.XWwwFormUrlencoded, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
 
+  def streamBody[S](schema: Schema, mediaType: MediaType): StreamingEndpointIO.Body[S, mediaType.type] =
+    StreamingEndpointIO.Body(CodecMeta(schema, mediaType), EndpointIO.Info.empty)
+
+  def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
+
   case class InvalidOutput(reason: DecodeResult[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull) // TODO
 
-  val endpoint: Endpoint[Unit, Unit, Unit] =
-    Endpoint[Unit, Unit, Unit](
+  val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
+    Endpoint[Unit, Unit, Unit, Nothing](
       Method.GET,
       EndpointInput.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),

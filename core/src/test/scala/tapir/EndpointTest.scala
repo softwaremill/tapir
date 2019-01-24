@@ -5,34 +5,48 @@ import tapir.util.CompileUtil
 
 class EndpointTest extends FlatSpec with Matchers {
   it should "compile inputs" in {
-    endpoint.in(query[String]("q1")): Endpoint[String, Unit, Unit]
-    endpoint.in(query[String]("q1").and(query[Int]("q2"))): Endpoint[(String, Int), Unit, Unit]
+    endpoint.in(query[String]("q1")): Endpoint[String, Unit, Unit, Nothing]
+    endpoint.in(query[String]("q1").and(query[Int]("q2"))): Endpoint[(String, Int), Unit, Unit, Nothing]
 
-    endpoint.in(header[String]("h1")): Endpoint[String, Unit, Unit]
-    endpoint.in(header[String]("h1").and(header[Int]("h2"))): Endpoint[(String, Int), Unit, Unit]
+    endpoint.in(header[String]("h1")): Endpoint[String, Unit, Unit, Nothing]
+    endpoint.in(header[String]("h1").and(header[Int]("h2"))): Endpoint[(String, Int), Unit, Unit, Nothing]
 
-    endpoint.in("p" / "p2" / "p3"): Endpoint[Unit, Unit, Unit]
-    endpoint.in("p" / "p2" / "p3" / path[String]): Endpoint[String, Unit, Unit]
-    endpoint.in("p" / "p2" / "p3" / path[String] / path[Int]): Endpoint[(String, Int), Unit, Unit]
+    endpoint.in("p" / "p2" / "p3"): Endpoint[Unit, Unit, Unit, Nothing]
+    endpoint.in("p" / "p2" / "p3" / path[String]): Endpoint[String, Unit, Unit, Nothing]
+    endpoint.in("p" / "p2" / "p3" / path[String] / path[Int]): Endpoint[(String, Int), Unit, Unit, Nothing]
 
-    endpoint.in(stringBody): Endpoint[String, Unit, Unit]
-    endpoint.in(stringBody).in(path[Int]): Endpoint[(String, Int), Unit, Unit]
+    endpoint.in(stringBody): Endpoint[String, Unit, Unit, Nothing]
+    endpoint.in(stringBody).in(path[Int]): Endpoint[(String, Int), Unit, Unit, Nothing]
+  }
+
+  it should "compile inputs with streams" in {
+    endpoint.in(streamBody[Vector[Byte]](schemaFor[String], MediaType.Json())): Endpoint[Vector[Byte], Unit, Unit, Vector[Byte]]
+    endpoint
+      .in(streamBody[Vector[Byte]](schemaFor[String], MediaType.Json()))
+      .in(path[Int]): Endpoint[(Vector[Byte], Int), Unit, Unit, Vector[Byte]]
   }
 
   it should "compile outputs" in {
-    endpoint.out(header[String]("h1")): Endpoint[Unit, Unit, String]
-    endpoint.out(header[String]("h1").and(header[Int]("h2"))): Endpoint[Unit, Unit, (String, Int)]
+    endpoint.out(header[String]("h1")): Endpoint[Unit, Unit, String, Nothing]
+    endpoint.out(header[String]("h1").and(header[Int]("h2"))): Endpoint[Unit, Unit, (String, Int), Nothing]
 
-    endpoint.out(stringBody): Endpoint[Unit, Unit, String]
-    endpoint.out(stringBody).out(header[Int]("h1")): Endpoint[Unit, Unit, (String, Int)]
+    endpoint.out(stringBody): Endpoint[Unit, Unit, String, Nothing]
+    endpoint.out(stringBody).out(header[Int]("h1")): Endpoint[Unit, Unit, (String, Int), Nothing]
+  }
+
+  it should "compile outputs with streams" in {
+    endpoint.out(streamBody[Vector[Byte]](schemaFor[String], MediaType.Json())): Endpoint[Unit, Unit, Vector[Byte], Vector[Byte]]
+    endpoint
+      .out(streamBody[Vector[Byte]](schemaFor[String], MediaType.Json()))
+      .out(header[Int]("h1")): Endpoint[Unit, Unit, (Vector[Byte], Int), Vector[Byte]]
   }
 
   it should "compile error outputs" in {
-    endpoint.errorOut(header[String]("h1")): Endpoint[Unit, String, Unit]
-    endpoint.errorOut(header[String]("h1").and(header[Int]("h2"))): Endpoint[Unit, (String, Int), Unit]
+    endpoint.errorOut(header[String]("h1")): Endpoint[Unit, String, Unit, Nothing]
+    endpoint.errorOut(header[String]("h1").and(header[Int]("h2"))): Endpoint[Unit, (String, Int), Unit, Nothing]
 
-    endpoint.errorOut(stringBody): Endpoint[Unit, String, Unit]
-    endpoint.errorOut(stringBody).errorOut(header[Int]("h1")): Endpoint[Unit, (String, Int), Unit]
+    endpoint.errorOut(stringBody): Endpoint[Unit, String, Unit, Nothing]
+    endpoint.errorOut(stringBody).errorOut(header[Int]("h1")): Endpoint[Unit, (String, Int), Unit, Nothing]
   }
 
   it should "not compile invalid outputs with queries" in {

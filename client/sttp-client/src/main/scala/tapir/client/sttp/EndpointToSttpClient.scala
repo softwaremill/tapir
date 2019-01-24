@@ -12,8 +12,8 @@ import tapir._
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   // don't look. The code is really, really ugly.
 
-  def toSttpRequest[I, E, O](e: Endpoint[I, E, O], baseUri: Uri)(
-      implicit paramsAsArgs: ParamsAsArgs[I]): paramsAsArgs.FN[Request[Either[E, O], Nothing]] = {
+  def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri)(
+      implicit paramsAsArgs: ParamsAsArgs[I]): paramsAsArgs.FN[Request[Either[E, O], S]] = {
     paramsAsArgs.toFn(params => {
       val baseReq = sttp
         .response(ignore)
@@ -21,15 +21,15 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
       val (uri, req) = setInputParams(e.input.asVectorOfSingle, params, paramsAsArgs, 0, baseUri, baseReq)
 
-      var req2 = req.copy[Id, Either[Any, Any], Nothing](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
+      var req2 = req.copy[Id, Either[Any, Any], Any](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
 
       if (e.output.asVectorOfSingle.nonEmpty || e.errorOutput.asVectorOfSingle.nonEmpty) {
         // by default, reading the body as specified by the output, and optionally adjusting to the error output
         // if there's no body in the output, reading the body as specified by the error output
         // otherwise, ignoring
-        val outputBodyType = bodyType(e.output)
-        val errorOutputBodyType = bodyType(e.errorOutput)
-        val baseResponseAs = outputBodyType
+        val outputBodyType = e.output.bodyType
+        val errorOutputBodyType = e.errorOutput.bodyType
+        val baseResponseAs1 = outputBodyType
           .orElse(errorOutputBodyType)
           .map {
             case StringValueType(charset) => asString(charset.name())
@@ -41,7 +41,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           }
           .getOrElse(ignore)
 
-        val responseAs = baseResponseAs.mapWithMetadata {
+        val baseResponseAs2 = if (bodyIsStream(e.output)) asStream[Any] else baseResponseAs1
+
+        val responseAs = baseResponseAs2.mapWithMetadata {
           (body, meta) =>
             val outputs = if (meta.isSuccess) e.output.asVectorOfSingle else e.errorOutput.asVectorOfSingle
 
@@ -54,10 +56,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             if (meta.isSuccess) Right(params) else Left(params)
         }
 
-        req2 = req2.response(responseAs.asInstanceOf[ResponseAs[Either[Any, Any], Nothing]]).parseResponseIf(_ => true)
+        req2 = req2.response(responseAs.asInstanceOf[ResponseAs[Either[Any, Any], S]]).parseResponseIf(_ => true)
       }
 
-      req2.asInstanceOf[Request[Either[E, O], Nothing]]
+      req2.asInstanceOf[Request[Either[E, O], S]]
     })
   }
 
@@ -67,6 +69,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         case EndpointIO.Body(codec, _) =>
           val so = if (codec.meta.isOptional && body == "") None else Some(body)
           codec.decodeOptional(so).getOrThrow(InvalidOutput)
+
+        case EndpointIO.StreamBodyWrapper(_) =>
+          body
 
         case EndpointIO.Header(name, codec, _) =>
           codec.decodeOptional(meta.header(name)).getOrThrow(InvalidOutput)
@@ -81,7 +86,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     SeqToParams(values)
   }
 
-  private type PartialAnyRequest = PartialRequest[Either[Any, Any], Nothing]
+  private type PartialAnyRequest = PartialRequest[Either[Any, Any], Any]
 
   private def setInputParams[I](inputs: Vector[EndpointInput.Single[_]],
                                 params: I,
@@ -129,6 +134,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointIO.Body(codec, _) +: tail =>
         val req2 = setBody(paramsAsArgs.paramAt(params, paramIndex), codec, req)
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+      case EndpointIO.StreamBodyWrapper(_) +: tail =>
+        val req2 = req.streamBody(paramsAsArgs.paramAt(params, paramIndex))
+        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointIO.Header(name, codec, _) +: tail =>
         val req2 = codec
           .encodeOptional(paramsAsArgs.paramAt(params, paramIndex))
@@ -161,12 +169,14 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       .getOrElse(req)
   }
 
-  private def bodyType[I](in: EndpointInput[I]): Option[RawValueType[_]] = {
+  private def bodyIsStream[I](in: EndpointInput[I]): Boolean = {
     in match {
-      case b: EndpointIO.Body[_, _, _]         => Some(b.codec.rawValueType)
-      case EndpointIO.Multiple(inputs)         => inputs.flatMap(bodyType(_)).headOption
-      case EndpointIO.Mapped(wrapped, _, _, _) => bodyType(wrapped)
-      case _                                   => None
+      case _: EndpointIO.StreamBodyWrapper[_, _]  => true
+      case EndpointIO.Multiple(inputs)            => inputs.exists(i => bodyIsStream(i))
+      case EndpointInput.Multiple(inputs)         => inputs.exists(i => bodyIsStream(i))
+      case EndpointIO.Mapped(wrapped, _, _, _)    => bodyIsStream(wrapped)
+      case EndpointInput.Mapped(wrapped, _, _, _) => bodyIsStream(wrapped)
+      case _                                      => false
     }
   }
 

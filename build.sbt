@@ -9,7 +9,7 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
 
 val http4sVersion = "0.20.0-M4"
 val circeVersion = "0.11.0"
-val sttpVersion = "1.5.2"
+val sttpVersion = "1.5.8"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -20,7 +20,18 @@ lazy val loggerDependencies = Seq(
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
   .settings(publishArtifact := false, name := "tapir")
-  .aggregate(core, circeJson, openapiModel, openapiCirce, openapiCirceYaml, openapiDocs, serverTests, akkaHttpServer, http4sServer, sttpClient, tests, playground)
+  .aggregate(core,
+             circeJson,
+             openapiModel,
+             openapiCirce,
+             openapiCirceYaml,
+             openapiDocs,
+             serverTests,
+             akkaHttpServer,
+             http4sServer,
+             sttpClient,
+             tests,
+             playground)
 
 // core
 
@@ -150,7 +161,10 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings: _*)
   .settings(
     name := "tapir-sttp-client",
-    libraryDependencies ++= Seq("com.softwaremill.sttp" %% "core" % sttpVersion)
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp" %% "core" % sttpVersion,
+      "com.softwaremill.sttp" %% "async-http-client-backend-fs2" % sttpVersion % "test"
+    )
   )
   .dependsOn(core, clientTests % "test")
 

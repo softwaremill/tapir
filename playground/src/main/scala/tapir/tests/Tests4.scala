@@ -10,7 +10,7 @@ object Tests4 {
   case class BooksFromYear(genre: String, year: Int)
   case class Book(title: String)
 
-  val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]] = endpoint.get
+  val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Nothing] = endpoint.get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
     .in(query[Int]("limit").description("Maximum number of products to retrieve"))
     .in(header[String]("X-Auth-Token"))

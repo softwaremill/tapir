@@ -33,12 +33,6 @@ sealed trait EndpointInput[I] {
     case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.bodyType
     case _                                      => None
   }
-
-  private[tapir] def hasForm: Boolean = this match {
-    case m: EndpointIO.Multiple[_]    => m.ios.exists(_.hasForm)
-    case m: EndpointInput.Multiple[_] => m.inputs.exists(_.hasForm)
-    case _                            => false
-  }
 }
 
 object EndpointInput {
@@ -133,6 +127,10 @@ object EndpointIO {
     def show = s"{body as ${codec.meta.mediaType.mediaType}}"
   }
 
+  case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Single[S] {
+    def show = s"{body as stream, ${wrapped.codecMeta.mediaType.mediaType}}"
+  }
+
   case class Header[T](name: String, codec: GeneralPlainCodec[T], info: Info[T]) extends Single[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
@@ -176,6 +174,40 @@ object EndpointIO {
   }
   object Info {
     def empty[T]: Info[T] = Info[T](None, None)
+  }
+}
+
+/*
+Streaming body is a special kind of input, as it influences the 4th type parameter of `Endpoint`. Other inputs
+(`EndpointInput`s and `EndpointIO`s aren't parametrised with the type of streams that they use (to make them simpler),
+so we need to pass the streaming information directly between the streaming body input and the endpoint.
+
+That's why the streaming body input is a separate trait, unrelated to `EndpointInput`: it can't be combined with
+other inputs, and the `Endpoint.in(EndpointInput)` method can't be used to add a streaming body. Instead, there's an
+overloaded variant `Endpoint.in(StreamingEndpointIO)`, which takes into account the streaming type.
+
+Internally, the streaming body is converted into a wrapper `EndpointIO`, which "forgets" about the streaming
+information. The `EndpointIO.StreamBodyWrapper` should only be used internally, not by the end user: there's no
+factory method in `Tapir` which would directly create an instance of it.
+ */
+sealed trait StreamingEndpointIO[I, +S] {
+  def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): StreamingEndpointIO[II, S] =
+    StreamingEndpointIO.Mapped(this, f, g, paramsAsArgs)
+
+  private[tapir] def toEndpointIO: EndpointIO[I]
+}
+
+object StreamingEndpointIO {
+  case class Body[S, M <: MediaType](codecMeta: CodecMeta[M], info: EndpointIO.Info[String]) extends StreamingEndpointIO[S, S] {
+    def description(d: String): Body[S, M] = copy(info = info.description(d))
+    def example(t: String): Body[S, M] = copy(info = info.example(t))
+
+    private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, M] = EndpointIO.StreamBodyWrapper(this)
+  }
+
+  case class Mapped[I, T, S](wrapped: StreamingEndpointIO[I, S], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I])
+      extends StreamingEndpointIO[T, S] {
+    private[tapir] override def toEndpointIO: EndpointIO[T] = wrapped.toEndpointIO.map(f)(g)
   }
 }
 

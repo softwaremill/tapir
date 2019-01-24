@@ -13,5 +13,5 @@ object OpenAPIDocsOptions {
     s"${pathComponentsOrRoot.mkString("-")}-${method.m.toLowerCase}"
   }
 
-  implicit val Default = OpenAPIDocsOptions(DefaultOperationIdGenerator)
+  implicit val Default: OpenAPIDocsOptions = OpenAPIDocsOptions(DefaultOperationIdGenerator)
 }

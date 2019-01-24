@@ -9,71 +9,76 @@ import com.softwaremill.macwire._
 
 package object tests {
 
-  val in_query_out_string: Endpoint[String, Unit, String] = endpoint.in(query[String]("fruit")).out(stringBody)
+  val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 
-  val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String] =
+  val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String, Nothing] =
     endpoint.in(query[String]("fruit")).in(query[Option[Int]]("amount")).out(stringBody)
 
-  val in_header_out_string: Endpoint[String, Unit, String] = endpoint.in(header[String]("X-Role")).out(stringBody)
+  val in_header_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(header[String]("X-Role")).out(stringBody)
 
-  val in_path_path_out_string: Endpoint[(String, Int), Unit, String] =
+  val in_path_path_out_string: Endpoint[(String, Int), Unit, String, Nothing] =
     endpoint.in("fruit" / path[String] / "amount" / path[Int]).out(stringBody)
 
-  val in_string_out_string: Endpoint[String, Unit, String] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
+  val in_string_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
 
-  val in_mapped_query_out_string: Endpoint[List[Char], Unit, String] =
+  val in_mapped_query_out_string: Endpoint[List[Char], Unit, String, Nothing] =
     endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody)
 
-  val in_mapped_path_out_string: Endpoint[Fruit, Unit, String] =
+  val in_mapped_path_out_string: Endpoint[Fruit, Unit, String, Nothing] =
     endpoint.in(("fruit" / path[String]).mapTo(Fruit)).out(stringBody)
 
-  val in_mapped_path_path_out_string: Endpoint[FruitAmount, Unit, String] =
+  val in_mapped_path_path_out_string: Endpoint[FruitAmount, Unit, String, Nothing] =
     endpoint.in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount)).out(stringBody)
 
-  val in_query_mapped_path_path_out_string: Endpoint[(FruitAmount, String), Unit, String] = endpoint
+  val in_query_mapped_path_path_out_string: Endpoint[(FruitAmount, String), Unit, String, Nothing] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))
     .out(stringBody)
 
-  val in_query_out_mapped_string: Endpoint[String, Unit, List[Char]] =
+  val in_query_out_mapped_string: Endpoint[String, Unit, List[Char], Nothing] =
     endpoint.in(query[String]("fruit")).out(stringBody.map(_.toList)(_.mkString("")))
 
-  val in_query_out_mapped_string_header: Endpoint[String, Unit, FruitAmount] = endpoint
+  val in_query_out_mapped_string_header: Endpoint[String, Unit, FruitAmount, Nothing] = endpoint
     .in(query[String]("fruit"))
     .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
 
-  val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount] =
+  val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
     endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
 
-  val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte]] =
+  val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte], Nothing] =
     endpoint.post.in("api" / "echo").in(binaryBody[Array[Byte]]).out(binaryBody[Array[Byte]]).name("echo byte array")
 
-  val in_byte_buffer_out_byte_buffer: Endpoint[ByteBuffer, Unit, ByteBuffer] =
+  val in_byte_buffer_out_byte_buffer: Endpoint[ByteBuffer, Unit, ByteBuffer, Nothing] =
     endpoint.post.in("api" / "echo").in(binaryBody[ByteBuffer]).out(binaryBody[ByteBuffer]).name("echo byte buffer")
 
-  val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream] =
+  val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream, Nothing] =
     endpoint.post.in("api" / "echo").in(binaryBody[InputStream]).out(binaryBody[InputStream]).name("echo input stream")
 
-  val in_file_out_file: Endpoint[File, Unit, File] =
+  val in_file_out_file: Endpoint[File, Unit, File, Nothing] =
     endpoint.post.in("api" / "echo").in(binaryBody[File]).out(binaryBody[File]).name("echo file")
 
-  val in_unit_out_string: Endpoint[Unit, Unit, String] =
+  val in_unit_out_string: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.in("api").out(stringBody)
 
-  val in_unit_error_out_string: Endpoint[Unit, String, Unit] =
+  val in_unit_error_out_string: Endpoint[Unit, String, Unit, Nothing] =
     endpoint.in("api").errorOut(stringBody)
 
-  val in_form_out_form: Endpoint[FruitAmount, Unit, FruitAmount] =
+  val in_form_out_form: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
     endpoint.post.in("api" / "echo").in(formBody[FruitAmount]).out(formBody[FruitAmount])
 
-  val in_query_params_out_string: Endpoint[MultiQueryParams, Unit, String] =
+  val in_query_params_out_string: Endpoint[MultiQueryParams, Unit, String, Nothing] =
     endpoint.get.in("api" / "echo" / "params").in(queryParams).out(stringBody)
 
-  val in_headers_out_headers: Endpoint[Seq[(String, String)], Unit, Seq[(String, String)]] =
+  val in_headers_out_headers: Endpoint[Seq[(String, String)], Unit, Seq[(String, String)], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(headers).out(headers)
 
-  val in_paths_out_string: Endpoint[Seq[String], Unit, String] =
+  val in_paths_out_string: Endpoint[Seq[String], Unit, String, Nothing] =
     endpoint.get.in(paths).out(stringBody)
 
-  val allTestEndpoints: Set[Endpoint[_, _, _]] = wireSet[Endpoint[_, _, _]]
+  def in_stream_out_stream[S]: Endpoint[S, Unit, S, S] = {
+    val sb = streamBody[S](schemaFor[String], MediaType.TextPlain())
+    endpoint.post.in("api" / "echo").in(sb).out(sb)
+  }
+
+  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 }

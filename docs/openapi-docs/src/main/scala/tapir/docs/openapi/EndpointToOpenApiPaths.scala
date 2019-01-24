@@ -7,7 +7,7 @@ import tapir.{EndpointInput, MediaType => SMediaType, _}
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, options: OpenAPIDocsOptions) {
 
-  def pathItem(e: Endpoint[_, _, _]): (String, PathItem) = {
+  def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
     import Method._
 
     val pathComponents = foldInputToVector(e.input, {
@@ -36,7 +36,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     ("/" + pathComponents.mkString("/"), pathItem)
   }
 
-  private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _]): Operation = {
+  private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _]): Operation = {
     val parameters = operationParameters(e)
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(e)
     val responses: Map[ResponsesKey, ReferenceOr[Response]] = operationResponse(e)
@@ -53,16 +53,18 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     )
   }
 
-  private def operationInputBody(e: Endpoint[_, _, _]) = {
+  private def operationInputBody(e: Endpoint[_, _, _, _]) = {
     foldInputToVector(
       e.input, {
         case EndpointIO.Body(codec, info) =>
           Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional)))
+        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(cm, info)) =>
+          Right(RequestBody(info.description, codecToMediaType(cm, info.example), Some(!cm.isOptional)))
       }
     )
   }
 
-  private def operationParameters(e: Endpoint[_, _, _]) = {
+  private def operationParameters(e: Endpoint[_, _, _, _]) = {
     foldInputToVector(
       e.input, {
         case q: EndpointInput.Query[_]       => queryToParameter(q)
@@ -87,7 +89,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
                                            query.info.example.flatMap(exampleValue(query.codec, _)))
   }
 
-  private def operationResponse(e: Endpoint[_, _, _]): Map[ResponsesKey, Right[Nothing, Response]] = {
+  private def operationResponse(e: Endpoint[_, _, _, _]): Map[ResponsesKey, Right[Nothing, Response]] = {
     List(
       outputToResponse(e.output).map { r =>
         ResponsesCodeKey(200) -> Right(r)
@@ -119,9 +121,12 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
       }
     )
 
-    val bodies = foldIOToVector(io, {
-      case EndpointIO.Body(m, info) => (info.description, codecToMediaType(m, info.example))
-    })
+    val bodies = foldIOToVector(
+      io, {
+        case EndpointIO.Body(m, info)                                         => (info.description, codecToMediaType(m, info.example))
+        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(cm, info)) => (info.description, codecToMediaType(cm, info.example))
+      }
+    )
     val body = bodies.headOption
 
     val description = body.flatMap(_._1).getOrElse("")
@@ -140,6 +145,10 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
                                                        example.flatMap(exampleValue(o, _)),
                                                        Map.empty,
                                                        Map.empty))
+  }
+
+  private def codecToMediaType[M <: SMediaType](cm: CodecMeta[M], example: Option[String]): Map[String, OMediaType] = {
+    Map(cm.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(cm.schema)), example.map(ExampleValue), None, None))
   }
 
   private def exampleValue[T](codec: GeneralCodec[T, _, _], e: T): Option[ExampleValue] =

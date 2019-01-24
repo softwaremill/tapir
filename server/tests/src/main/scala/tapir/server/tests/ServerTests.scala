@@ -15,7 +15,7 @@ import tapir.{StatusCodes, _}
 
 import scala.util.Random
 
-trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
+trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testServer(endpoint, () => pureResult(().asRight[Unit])) { baseUri =>
     sttp.get(baseUri).send().map(_.body shouldBe Right(""))
@@ -168,6 +168,10 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
     sttp.get(uri"$baseUri/hello/it/is/me/hal").send().map(_.body shouldBe Right("hello it is me hal"))
   }
 
+  testServer(in_stream_out_stream[S], (s: S) => pureResult(s.asRight[Unit])) { baseUri =>
+    sttp.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()
@@ -183,13 +187,13 @@ trait ServerTests[R[_]] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   def pureResult[T](t: T): R[T]
 
-  def server[I, E, O, FN[_]](e: Endpoint[I, E, O],
+  def server[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
                              port: Port,
                              fn: FN[R[Either[E, O]]],
                              statusMapper: O => StatusCode,
                              errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Resource[IO, Unit]
 
-  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O],
+  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
                                  fn: FN[R[Either[E, O]]],
                                  testNameSuffix: String = "",
                                  statusMapper: O => StatusCode = Defaults.statusMapper,

@@ -1,6 +1,6 @@
 package tapir
 
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 
 trait MediaType {
   def mediaTypeNoParams: String
@@ -12,7 +12,7 @@ object MediaType {
     override val mediaTypeNoParams: String = "application/json"
   }
 
-  case class TextPlain(charset: Charset) extends MediaType {
+  case class TextPlain(charset: Charset = StandardCharsets.UTF_8) extends MediaType {
     override val mediaTypeNoParams: String = s"text/plain"
     override val mediaType: String = s"$mediaTypeNoParams; charset=${charset.name()}"
   }

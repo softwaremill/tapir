@@ -23,7 +23,7 @@ import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.io.Source
 import scala.util.Random
 
-trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
+trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   private val logger = org.log4s.getLogger
 
@@ -75,6 +75,19 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   //
 
+  def mkStream(s: String): S
+  def rmStream(s: S): String
+
+  test(in_stream_out_stream[S].show) {
+    rmStream(
+      send(in_stream_out_stream[S], port, mkStream("mango cranberry"))
+        .unsafeRunSync()
+        .right
+        .get) shouldBe "mango cranberry"
+  }
+
+  //
+
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
   private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
@@ -100,9 +113,9 @@ trait ClientTests extends FunSuite with Matchers with BeforeAndAfterAll {
 
   type Port = Int
 
-  def send[I, E, O, FN[_]](e: Endpoint[I, E, O], port: Port, args: I)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): IO[Either[E, O]]
+  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): IO[Either[E, O]]
 
-  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O], args: I, expectedResult: Either[E, O])(
+  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
 
     test(e.show) {

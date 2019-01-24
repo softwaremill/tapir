@@ -21,7 +21,7 @@ object Endpoints {
   private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
 
   // The path for this endpoint will be '/books/add', as we are using the base endpoint
-  val addBook: Endpoint[(Book, AuthToken), String, Unit] = baseEndpoint.post
+  val addBook: Endpoint[(Book, AuthToken), String, Unit, Nothing] = baseEndpoint.post
     .in("add")
     .in(jsonBody[Book].description("The book to add").example(Book("Pride and Prejudice", "Novel", 1813)))
     .in(header[String]("X-Auth-Token").description("The token is 'secret'"))
@@ -29,12 +29,12 @@ object Endpoints {
   // Re-usable parameter description
   private val limitParameter = query[Option[Int]]("limit").description("Maximum number of books to retrieve")
 
-  val booksListing: Endpoint[Limit, String, Vector[Book]] = baseEndpoint.get
+  val booksListing: Endpoint[Limit, String, Vector[Book], Nothing] = baseEndpoint.get
     .in("list" / "all")
     .in(limitParameter)
     .out(jsonBody[Vector[Book]])
 
-  val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book]] = baseEndpoint.get
+  val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book], Nothing] = baseEndpoint.get
     .in(("list" / path[String]("genre").map(Some(_))(_.get)).and(limitParameter).mapTo(BooksQuery))
     .out(jsonBody[Vector[Book]])
 }

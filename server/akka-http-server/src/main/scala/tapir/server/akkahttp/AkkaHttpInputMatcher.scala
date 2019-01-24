@@ -73,6 +73,8 @@ private[akkahttp] object AkkaHttpInputMatcher {
             doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(v :: _)
           case _ => None
         }
+      case EndpointIO.StreamBodyWrapper(_) +: inputsTail =>
+        doMatch(inputsTail, ctx.copy(canRemoveSlash = true)).map(ctx.req.request.entity.dataBytes :: _)
       case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
         handleMapped(wrapped, f, inputsTail, ctx)
       case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>

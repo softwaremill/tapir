@@ -95,6 +95,11 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
             matchInputs(inputsTail)
         }
       } yield res
+    case EndpointIO.StreamBodyWrapper(_) +: inputsTail =>
+      for {
+        ctx <- getState
+        res <- continueMatch(DecodeResult.Value(ctx.rawBody), inputsTail)
+      } yield res
     case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
       handleMapped(wrapped, f, inputsTail)
     case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
