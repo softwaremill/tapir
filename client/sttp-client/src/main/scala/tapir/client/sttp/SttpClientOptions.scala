@@ -7,5 +7,5 @@ import tapir.Defaults
 case class SttpClientOptions(createFile: () => File) // TODO: change to ResponseMetadata once available
 
 object SttpClientOptions {
-  implicit val Default: SttpClientOptions = SttpClientOptions(Defaults.createTempFile)
+  implicit val default: SttpClientOptions = SttpClientOptions(Defaults.createTempFile)
 }

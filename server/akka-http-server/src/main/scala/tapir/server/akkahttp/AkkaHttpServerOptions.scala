@@ -10,10 +10,10 @@ import scala.concurrent.Future
 case class AkkaHttpServerOptions(createFile: RequestContext => Future[File])
 
 object AkkaHttpServerOptions {
-  val DefaultCreateFile: RequestContext => Future[File] = { _ =>
+  val defaultCreateFile: RequestContext => Future[File] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(Defaults.createTempFile())
   }
 
-  implicit val Default: AkkaHttpServerOptions = AkkaHttpServerOptions(DefaultCreateFile)
+  implicit val default: AkkaHttpServerOptions = AkkaHttpServerOptions(defaultCreateFile)
 }

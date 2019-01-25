@@ -40,7 +40,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
   test("should use custom operationId generator") {
     def customOperationIdGenerator(pc: Vector[String], m: Method) = pc.map(_.toUpperCase).mkString("", "+", "-") + m.m.toUpperCase
-    val options = OpenAPIDocsOptions.Default.copy(customOperationIdGenerator)
+    val options = OpenAPIDocsOptions.default.copy(customOperationIdGenerator)
     val expectedYaml = loadYaml("expected_custom_operation_id.yml")
 
     val actualYaml = in_query_query_out_string

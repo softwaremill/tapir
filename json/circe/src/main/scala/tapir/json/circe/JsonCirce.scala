@@ -3,7 +3,7 @@ package tapir.json.circe
 import java.nio.charset.StandardCharsets
 
 import tapir.DecodeResult.{Error, Value}
-import tapir.{CodecMeta, DecodeResult, MediaType, RawValueType, StringValueType}
+import tapir.{CodecMeta, DecodeResult, MediaType, StringValueType}
 import io.circe.syntax._
 import io.circe.{Decoder, Encoder}
 import tapir.Codec.JsonCodec
