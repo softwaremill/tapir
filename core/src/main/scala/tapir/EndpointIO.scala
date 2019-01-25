@@ -1,6 +1,7 @@
 package tapir
 
-import tapir.GeneralCodec.{GeneralPlainCodec, PlainCodec}
+import tapir.Codec.PlainCodec
+import tapir.CodecFromMany.PlainCodecFromMany
 import tapir.internal.ProductToParams
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
@@ -62,7 +63,7 @@ object EndpointInput {
     def show = s"/[multiple paths]"
   }
 
-  case class Query[T](name: String, codec: GeneralPlainCodec[T], info: EndpointIO.Info[T]) extends Single[T] {
+  case class Query[T](name: String, codec: PlainCodecFromMany[T], info: EndpointIO.Info[T]) extends Single[T] {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
     def show = s"?$name"
@@ -121,7 +122,7 @@ object EndpointIO {
       }
   }
 
-  case class Body[T, M <: MediaType, R](codec: GeneralCodec[T, M, R], info: Info[T]) extends Single[T] {
+  case class Body[T, M <: MediaType, R](codec: CodecFromOption[T, M, R], info: Info[T]) extends Single[T] {
     def description(d: String): Body[T, M, R] = copy(info = info.description(d))
     def example(t: T): Body[T, M, R] = copy(info = info.example(t))
     def show = s"{body as ${codec.meta.mediaType.mediaType}}"
@@ -131,7 +132,7 @@ object EndpointIO {
     def show = s"{body as stream, ${wrapped.codecMeta.mediaType.mediaType}}"
   }
 
-  case class Header[T](name: String, codec: GeneralPlainCodec[T], info: Info[T]) extends Single[T] {
+  case class Header[T](name: String, codec: PlainCodecFromMany[T], info: Info[T]) extends Single[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
     def show = s"{header $name}"

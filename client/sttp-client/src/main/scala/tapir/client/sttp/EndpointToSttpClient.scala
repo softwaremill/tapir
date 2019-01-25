@@ -4,7 +4,7 @@ import java.io.{BufferedOutputStream, ByteArrayInputStream, FileOutputStream}
 import java.nio.ByteBuffer
 
 import com.softwaremill.sttp._
-import tapir.GeneralCodec.PlainCodec
+import tapir.Codec.PlainCodec
 import tapir.internal.SeqToParams
 import tapir.typelevel.ParamsAsArgs
 import tapir._
@@ -67,14 +67,14 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     val values = outputs
       .map {
         case EndpointIO.Body(codec, _) =>
-          val so = if (codec.meta.isOptional && body == "") Nil else List(body)
-          codec.decodeMany(so).getOrThrow(InvalidOutput)
+          val so = if (codec.meta.isOptional && body == "") None else Some(body)
+          codec.decode(so).getOrThrow(InvalidOutput)
 
         case EndpointIO.StreamBodyWrapper(_) =>
           body
 
         case EndpointIO.Header(name, codec, _) =>
-          codec.decodeMany(meta.headers(name).toList).getOrThrow(InvalidOutput)
+          codec.decode(meta.headers(name).toList).getOrThrow(InvalidOutput)
 
         case EndpointIO.Headers(_) =>
           meta.headers
@@ -123,7 +123,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path ++ ps), req)
       case EndpointInput.Query(name, codec, _) +: tail =>
         val uri2 = codec
-          .encodeMany(paramsAsArgs.paramAt(params, paramIndex))
+          .encode(paramsAsArgs.paramAt(params, paramIndex))
           .foldLeft(uri) { case (u, v) => u.param(name, v) }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
       case EndpointInput.QueryParams(_) +: tail =>
@@ -138,7 +138,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointIO.Header(name, codec, _) +: tail =>
         val req2 = codec
-          .encodeMany(paramsAsArgs.paramAt(params, paramIndex))
+          .encode(paramsAsArgs.paramAt(params, paramIndex))
           .foldLeft(req) { case (r, v) => r.header(name, v) }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointIO.Headers(_) +: tail =>
@@ -152,9 +152,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     }
   }
 
-  private def setBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
+  private def setBody[T, M <: MediaType, R](v: T, codec: CodecFromOption[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
     codec
-      .encodeMany(v)
+      .encode(v)
       .headOption
       .map { t =>
         codec.rawValueType match {

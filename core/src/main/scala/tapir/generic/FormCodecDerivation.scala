@@ -30,7 +30,7 @@ object FormCodecMacros {
       .head
 
     val fieldsWithCodecs = fields.map { field =>
-      (field, c.typecheck(q"implicitly[tapir.GeneralCodec.GeneralPlainCodec[${field.typeSignature}]]"))
+      (field, c.typecheck(q"implicitly[tapir.CodecFromMany.PlainCodecFromMany[${field.typeSignature}]]"))
     }
 
     val schema = c.typecheck(q"implicitly[tapir.SchemaFor[$t]]")
@@ -40,14 +40,14 @@ object FormCodecMacros {
         val fieldName = field.name.asInstanceOf[TermName]
         val fieldNameAsString = fieldName.decodedName.toString
         q"""val transformedName = $conf.transformMemberName($fieldNameAsString)
-           $codec.encodeMany(o.$fieldName).map(v => (transformedName, v))"""
+           $codec.encode(o.$fieldName).map(v => (transformedName, v))"""
     }
 
     val decodeParams = fieldsWithCodecs.map {
       case (field, codec) =>
         val fieldName = field.name.decodedName.toString
         q"""val transformedName = $conf.transformMemberName($fieldName)
-           $codec.decodeMany(paramsMap.get(transformedName).toList.flatMap(_.toList))"""
+           $codec.decode(paramsMap.get(transformedName).toList.flatten)"""
     }
 
     val companion = Ident(TermName(t.typeSymbol.name.decodedName.toString))
@@ -69,7 +69,7 @@ object FormCodecMacros {
         }
         def encode(o: $t): Seq[(String, String)] = List(..$encodeParams).flatten
 
-        tapir.GeneralCodec.formSeqCodecUtf8
+        tapir.Codec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
           .schema($schema.schema)
       }

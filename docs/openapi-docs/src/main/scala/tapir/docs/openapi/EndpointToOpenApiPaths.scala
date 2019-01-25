@@ -139,7 +139,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     }
   }
 
-  private def codecToMediaType[T, M <: SMediaType](o: GeneralCodec[T, M, _], example: Option[T]): Map[String, OMediaType] = {
+  private def codecToMediaType[T, M <: SMediaType](o: CodecFromOption[T, M, _], example: Option[T]): Map[String, OMediaType] = {
     Map(
       o.meta.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(o.meta.schema)),
                                                        example.flatMap(exampleValue(o, _)),
@@ -151,8 +151,10 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     Map(cm.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(cm.schema)), example.map(ExampleValue), Map.empty, Map.empty))
   }
 
-  private def exampleValue[T](codec: GeneralCodec[T, _, _], e: T): Option[ExampleValue] =
-    codec.encodeMany(e).headOption.map(v => ExampleValue(v.toString))
+  private def exampleValue[T](v: Any): ExampleValue = ExampleValue(v.toString)
+  private def exampleValue[T](codec: Codec[T, _, _], e: T): Option[ExampleValue] = Some(exampleValue(codec.encode(e)))
+  private def exampleValue[T](codec: CodecFromOption[T, _, _], e: T): Option[ExampleValue] = codec.encode(e).map(exampleValue)
+  private def exampleValue[T](codec: CodecFromMany[T, _, _], e: T): Option[ExampleValue] = codec.encode(e).headOption.map(exampleValue)
 
   private def foldInputToVector[T](i: EndpointInput[_], f: PartialFunction[EndpointInput[_], T]): Vector[T] = {
     i match {

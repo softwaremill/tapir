@@ -15,11 +15,11 @@ import tapir.typelevel.ParamsAsArgs
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
+  CodecFromOption,
   Endpoint,
   EndpointIO,
   EndpointInput,
   FileValueType,
-  GeneralCodec,
   InputStreamValueType,
   MediaType,
   RawValueType,
@@ -54,10 +54,10 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case mt                             => `Content-Type`(http4s.MediaType.parse(mt.mediaType).right.get) // TODO
     }
 
-  private def encodeBody[T, M <: MediaType, R](v: T, codec: GeneralCodec[T, M, R]): Option[(EntityBody[F], Header)] = {
+  private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecFromOption[T, M, R]): Option[(EntityBody[F], Header)] = {
     val ct: `Content-Type` = mediaTypeToContentType(codec.meta.mediaType)
 
-    codec.encodeMany(v).headOption.map { r: R =>
+    codec.encode(v).headOption.map { r: R =>
       codec.rawValueType match {
         case StringValueType(charset) =>
           val bytes = r.toString.getBytes(charset)
@@ -90,7 +90,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
       case (EndpointIO.Header(name, codec, _), i) =>
         codec
-          .encodeMany(vs(i))
+          .encode(vs(i))
           .map((headerValue: String) => Header.Raw(CaseInsensitiveString(name), headerValue)) match {
           case Nil     => State.pure[OutputValues, Unit](())
           case headers => State.modify[OutputValues](ov => ov.copy(headers = ov.headers ++ headers))

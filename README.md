@@ -150,13 +150,13 @@ A codec specifies how to map from and to raw textual values that are sent over t
 
 For example, a `query[Int]("quantity")` specifies an input parameter which will be read from the `quantity` query parameter and decoded into an `Int`. If the value cannot be parsed to an int, the endpoint won't match the request.
 
-Optional parameters are represented as `Option` values, e.g. `header[Option[String]]("X-Auth-Token")`.
+Optional parameters are represented as `Option` values, e.g. `header[Option[String]]("X-Auth-Token")`, and multiple parameters as `List`s, e.g. `query[List[String]]("color")`.
 
 #### Media types
 
 Codecs carry an additional type parameter, which specifies the media type. There are two built-in media types for now: `text/plain` and `application/json`.
 
-Hence, it is possible to have a `Codec[MyCaseClass, Text]` which specified how to serialize a case class to plain text, and a different `Codec[MyCaseClass, Json]`, which specifies how to serialize a case class to json.
+Hence, it is possible to have a `Codec[MyCaseClass, Text, _]` which specified how to serialize a case class to plain text, and a different `Codec[MyCaseClass, Json, _]`, which specifies how to serialize a case class to json.
 
 When defining a path, query or header parameter, only a codec with the `Text` media type can be used.
 

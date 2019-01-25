@@ -58,7 +58,7 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
     case EndpointInput.Query(name, codec, _) +: inputsTail =>
       for {
         ctx <- getState
-        query = codec.decodeMany(ctx.queryParam(name).toList)
+        query = codec.decode(ctx.queryParam(name).toList)
         _ = logger.debug(s"Found query: $query, $name, ${ctx.queryParams}")
         res <- continueMatch(query, inputsTail)
       } yield res
@@ -72,7 +72,7 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
     case EndpointIO.Header(name, codec, _) +: inputsTail =>
       for {
         ctx <- getState
-        header = codec.decodeMany(ctx.headers(name).toList)
+        header = codec.decode(ctx.headers(name).toList)
         _ = logger.debug(s"Found header: $header")
         res <- continueMatch(header, inputsTail)
       } yield res
@@ -86,7 +86,7 @@ private[http4s] class Http4sInputMatcher[F[_]: Sync] {
     case EndpointIO.Body(codec, _) +: inputsTail =>
       for {
         ctx <- getState
-        decoded: DecodeResult[Any] = codec.decodeMany(ctx.basicBody.toList)
+        decoded: DecodeResult[Any] = codec.decode(ctx.basicBody)
         res <- decoded match {
           case DecodeResult.Value(_) =>
             val r: ContextState[F] = continueMatch(decoded, inputsTail)
