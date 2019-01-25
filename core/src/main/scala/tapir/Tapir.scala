@@ -41,7 +41,7 @@ trait Tapir {
     EndpointIO.Body(codec, EndpointIO.Info.empty)
 
   def streamBody[S](schema: Schema, mediaType: MediaType): StreamingEndpointIO.Body[S, mediaType.type] =
-    StreamingEndpointIO.Body(CodecMeta(schema, mediaType), EndpointIO.Info.empty)
+    StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)
 
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 

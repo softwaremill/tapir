@@ -27,7 +27,7 @@ sealed trait EndpointInput[I] {
   }
 
   private[tapir] def bodyType: Option[RawValueType[_]] = this match {
-    case b: EndpointIO.Body[_, _, _]            => Some(b.codec.rawValueType)
+    case b: EndpointIO.Body[_, _, _]            => Some(b.codec.meta.rawValueType)
     case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.bodyType).headOption
     case EndpointIO.Multiple(inputs)            => inputs.flatMap(_.bodyType).headOption
     case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.bodyType
@@ -129,7 +129,7 @@ object EndpointIO {
   }
 
   case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Single[S] {
-    def show = s"{body as stream, ${wrapped.codecMeta.mediaType.mediaType}}"
+    def show = s"{body as stream, ${wrapped.mediaType.mediaType}}"
   }
 
   case class Header[T](name: String, codec: PlainCodecFromMany[T], info: Info[T]) extends Single[T] {
@@ -199,7 +199,7 @@ sealed trait StreamingEndpointIO[I, +S] {
 }
 
 object StreamingEndpointIO {
-  case class Body[S, M <: MediaType](codecMeta: CodecMeta[M], info: EndpointIO.Info[String]) extends StreamingEndpointIO[S, S] {
+  case class Body[S, M <: MediaType](schema: Schema, mediaType: M, info: EndpointIO.Info[String]) extends StreamingEndpointIO[S, S] {
     def description(d: String): Body[S, M] = copy(info = info.description(d))
     def example(t: String): Body[S, M] = copy(info = info.example(t))
 

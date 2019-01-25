@@ -155,9 +155,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   private def setBody[T, M <: MediaType, R](v: T, codec: CodecFromOption[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
     codec
       .encode(v)
-      .headOption
       .map { t =>
-        codec.rawValueType match {
+        codec.meta.rawValueType match {
           case StringValueType(charset) => req.body(t, charset.name())
           case ByteArrayValueType       => req.body(t)
           case ByteBufferValueType      => req.body(t)

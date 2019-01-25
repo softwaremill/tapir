@@ -57,8 +57,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecFromOption[T, M, R]): Option[(EntityBody[F], Header)] = {
     val ct: `Content-Type` = mediaTypeToContentType(codec.meta.mediaType)
 
-    codec.encode(v).headOption.map { r: R =>
-      codec.rawValueType match {
+    codec.encode(v).map { r: R =>
+      codec.meta.rawValueType match {
         case StringValueType(charset) =>
           val bytes = r.toString.getBytes(charset)
           fs2.Stream.chunk(Chunk.bytes(bytes)) -> ct
@@ -84,8 +84,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           case None                   => State.pure[OutputValues, Unit](())
         }
 
-      case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codecMeta, _)), i) =>
-        val ctHeader = mediaTypeToContentType(codecMeta.mediaType)
+      case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
+        val ctHeader = mediaTypeToContentType(mediaType)
         State.modify[OutputValues](ov => ov.copy(body = Some(vs(i).asInstanceOf[EntityBody[F]]), headers = ov.headers :+ ctHeader))
 
       case (EndpointIO.Header(name, codec, _), i) =>

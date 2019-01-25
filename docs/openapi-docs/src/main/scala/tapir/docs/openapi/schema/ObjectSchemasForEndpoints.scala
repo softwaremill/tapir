@@ -73,8 +73,8 @@ object ObjectSchemasForEndpoints {
         List.empty
       case EndpointIO.Body(tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(cm, _)) =>
-        filterIsObjectSchema(cm.schema)
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) =>
+        filterIsObjectSchema(schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
     }

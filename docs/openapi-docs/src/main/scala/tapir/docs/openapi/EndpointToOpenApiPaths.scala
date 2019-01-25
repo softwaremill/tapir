@@ -3,7 +3,7 @@ package tapir.docs.openapi
 import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{MediaType => OMediaType, _}
-import tapir.{EndpointInput, MediaType => SMediaType, _}
+import tapir.{EndpointInput, MediaType => SMediaType, Schema => SSchema, _}
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, options: OpenAPIDocsOptions) {
 
@@ -58,8 +58,8 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
       e.input, {
         case EndpointIO.Body(codec, info) =>
           Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional)))
-        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(cm, info)) =>
-          Right(RequestBody(info.description, codecToMediaType(cm, info.example), Some(!cm.isOptional)))
+        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
+          Right(RequestBody(i.description, codecToMediaType(s, mt, i.example), Some(true)))
       }
     )
   }
@@ -123,8 +123,8 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
 
     val bodies = foldIOToVector(
       io, {
-        case EndpointIO.Body(m, info)                                         => (info.description, codecToMediaType(m, info.example))
-        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(cm, info)) => (info.description, codecToMediaType(cm, info.example))
+        case EndpointIO.Body(m, i)                                            => (i.description, codecToMediaType(m, i.example))
+        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) => (i.description, codecToMediaType(s, mt, i.example))
       }
     )
     val body = bodies.headOption
@@ -147,8 +147,8 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
                                                        Map.empty))
   }
 
-  private def codecToMediaType[M <: SMediaType](cm: CodecMeta[M], example: Option[String]): Map[String, OMediaType] = {
-    Map(cm.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(cm.schema)), example.map(ExampleValue), Map.empty, Map.empty))
+  private def codecToMediaType[M <: SMediaType](schema: SSchema, mediaType: M, example: Option[String]): Map[String, OMediaType] = {
+    Map(mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(schema)), example.map(ExampleValue), Map.empty, Map.empty))
   }
 
   private def exampleValue[T](v: Any): ExampleValue = ExampleValue(v.toString)

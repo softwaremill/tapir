@@ -77,9 +77,9 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
       case (EndpointIO.Body(codec, _), i) =>
         // TODO: check if body isn't already set
         encodeBody(vs(i), codec).foreach(re => ov = ov.copy(body = Some(re)))
-      case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codecMeta, _)), i) =>
+      case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
         // TODO: check if body isn't already set
-        val re = HttpEntity(mediaTypeToContentType(codecMeta.mediaType), vs(i).asInstanceOf[AkkaStream])
+        val re = HttpEntity(mediaTypeToContentType(mediaType), vs(i).asInstanceOf[AkkaStream])
         ov = ov.copy(body = Some(re))
       case (EndpointIO.Header(name, codec, _), i) =>
         codec
@@ -172,8 +172,8 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
 
   private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecFromOption[T, M, R]): Option[ResponseEntity] = {
     val ct = mediaTypeToContentType(codec.meta.mediaType)
-    codec.encode(v).headOption.map { r =>
-      codec.rawValueType match {
+    codec.encode(v).map { r =>
+      codec.meta.rawValueType match {
         case StringValueType(charset) =>
           ct match {
             case nonBinary: ContentType.NonBinary => HttpEntity(nonBinary, r)
