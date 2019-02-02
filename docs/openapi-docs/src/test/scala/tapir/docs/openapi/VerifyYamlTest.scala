@@ -2,6 +2,7 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
+import tapir.Api.{Contact, Info, License}
 import tapir._
 import tapir.json.circe._
 import tapir.openapi.circe.yaml._
@@ -20,7 +21,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml") {
     val expectedYaml = loadYaml("expected.yml")
 
-    val actualYaml = List(in_query_query_out_string, all_the_way).toOpenAPI("Fruits", "1.0").toYaml
+    val actualYaml = List(in_query_query_out_string, all_the_way).toOpenAPI(Api("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -32,7 +33,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml when schema is recursive") {
     val expectedYaml = loadYaml("expected_recursive.yml")
 
-    val actualYaml = endpoint_wit_recursive_structure.toOpenAPI("Fruits", "1.0").toYaml
+    val actualYaml = endpoint_wit_recursive_structure.toOpenAPI(Api("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -46,7 +47,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val actualYaml = in_query_query_out_string
       .in("add")
       .in("path")
-      .toOpenAPI("Fruits", "1.0")(options)
+      .toOpenAPI(Api("Fruits", "1.0"))(options)
       .toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
@@ -58,7 +59,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")
 
-    val actualYaml = streaming_endpoint.toOpenAPI("Fruits", "1.0").toYaml
+    val actualYaml = streaming_endpoint.toOpenAPI(Api("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -71,7 +72,26 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_tags.yml")
 
-    val actualYaml = List(userTaggedEndpointShow, userTaggedEdnpointSearch, adminTaggedEndpointAdd).toOpenAPI("Fruits", "1.0").toYaml
+    val actualYaml = List(userTaggedEndpointShow, userTaggedEdnpointSearch, adminTaggedEndpointAdd).toOpenAPI(Api("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml for general info") {
+    val expectedYaml = loadYaml("expected_general_info.yml")
+
+    val api = Api(
+      Info(
+        "Fruits",
+        "1.0",
+        description = Some("Fruits are awesome"),
+        termsOfService = Some("our.terms.of.service"),
+        contact = Some(Contact(Some("Author"), Some("tapir@softwaremill.com"), Some("tapir.io"))),
+        license = Some(License("MIT", Some("mit.license")))
+      ))
+
+    val actualYaml = in_query_query_out_string.toOpenAPI(api).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

@@ -23,13 +23,17 @@ object OpenAPI {
   type ReferenceOr[T] = Either[Reference, T]
 }
 
-// todo: contact, license
 case class Info(
     title: String,
+    version: String,
     description: Option[String],
     termsOfService: Option[String],
-    version: String
+    contact: Option[Contact],
+    license: Option[License]
 )
+
+case class Contact(name: Option[String], email: Option[String], url: Option[String])
+case class License(name: String, url: Option[String])
 
 // todo: variables
 case class Server(

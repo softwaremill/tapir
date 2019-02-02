@@ -46,6 +46,8 @@ trait Encoders {
   implicit val encoderComponents: Encoder[Components] = deriveMagnoliaEncoder[Components]
   implicit val encoderServer: Encoder[Server] = deriveMagnoliaEncoder[Server]
   implicit val encoderInfo: Encoder[Info] = deriveMagnoliaEncoder[Info]
+  implicit val encoderContact: Encoder[Contact] = deriveMagnoliaEncoder[Contact]
+  implicit val encoderLicense: Encoder[License] = deriveMagnoliaEncoder[License]
   implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveMagnoliaEncoder[OpenAPI]
   implicit def encodeList[T: Encoder]: Encoder[List[T]] = {
     case Nil        => Json.Null

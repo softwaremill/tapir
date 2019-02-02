@@ -20,6 +20,7 @@ object Endpoints {
   // All endpoints report errors as strings, and have the common path prefix '/books'
   private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
 
+
   // The path for this endpoint will be '/books/add', as we are using the base endpoint
   val addBook: Endpoint[(Book, AuthToken), String, Unit, Nothing] = baseEndpoint.post
     .in("add")
@@ -37,6 +38,8 @@ object Endpoints {
   val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book], Nothing] = baseEndpoint.get
     .in(("list" / path[String]("genre").map(Some(_))(_.get)).and(limitParameter).mapTo(BooksQuery))
     .out(jsonBody[Vector[Book]])
+
+  val api = Api("The Tapir Library", "1.0")
 }
 
 object BooksExample extends App with StrictLogging {
@@ -49,7 +52,7 @@ object BooksExample extends App with StrictLogging {
     import tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI("The Tapir Library", "1.0")
+    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI(api)
     docs.toYaml
   }
 

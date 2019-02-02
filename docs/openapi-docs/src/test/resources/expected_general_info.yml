@@ -1,0 +1,35 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+  description: Fruits are awesome
+  termsOfService: our.terms.of.service
+  contact:
+    name: Author
+    email: tapir@softwaremill.com
+    url: tapir.io
+  license:
+    name: MIT
+    url: mit.license
+paths:
+  /:
+    get:
+      operationId: root-get
+      parameters:
+        - name: fruit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: amount
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
