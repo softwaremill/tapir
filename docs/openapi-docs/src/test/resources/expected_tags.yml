@@ -1,0 +1,42 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /user/show:
+    get:
+      tags:
+        - user
+      operationId: user-show-get
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+  /user/search:
+    get:
+      tags:
+        - user
+        - admin
+      operationId: user-search-get
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+  /admin/add:
+    get:
+      tags:
+        - admin
+      operationId: admin-add-get
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
