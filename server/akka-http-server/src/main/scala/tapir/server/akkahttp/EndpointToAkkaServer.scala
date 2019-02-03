@@ -170,7 +170,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     }
   }
 
-  private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecFromOption[T, M, R]): Option[ResponseEntity] = {
+  private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecForOptional[T, M, R]): Option[ResponseEntity] = {
     val ct = mediaTypeToContentType(codec.meta.mediaType)
     codec.encode(v).map { r =>
       codec.meta.rawValueType match {

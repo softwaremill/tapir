@@ -15,7 +15,7 @@ import tapir.typelevel.ParamsAsArgs
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
-  CodecFromOption,
+  CodecForOptional,
   Endpoint,
   EndpointIO,
   EndpointInput,
@@ -54,7 +54,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case mt                             => `Content-Type`(http4s.MediaType.parse(mt.mediaType).right.get) // TODO
     }
 
-  private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecFromOption[T, M, R]): Option[(EntityBody[F], Header)] = {
+  private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecForOptional[T, M, R]): Option[(EntityBody[F], Header)] = {
     val ct: `Content-Type` = mediaTypeToContentType(codec.meta.mediaType)
 
     codec.encode(v).map { r: R =>

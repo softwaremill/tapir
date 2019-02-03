@@ -62,7 +62,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
         |""".stripMargin)
 
     error.message should include("could not find implicit value")
-    error.message should include("PlainCodecFromMany[NoCodecForThisTrait]")
+    error.message should include("PlainCodecForMany[NoCodecForThisTrait]")
   }
 
   it should "use the right schema for a two-arg case class" in {

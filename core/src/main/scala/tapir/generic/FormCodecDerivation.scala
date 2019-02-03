@@ -30,7 +30,7 @@ object FormCodecMacros {
       .head
 
     val fieldsWithCodecs = fields.map { field =>
-      (field, c.typecheck(q"implicitly[tapir.CodecFromMany.PlainCodecFromMany[${field.typeSignature}]]"))
+      (field, c.typecheck(q"implicitly[tapir.CodecForMany.PlainCodecForMany[${field.typeSignature}]]"))
     }
 
     val schema = c.typecheck(q"implicitly[tapir.SchemaFor[$t]]")

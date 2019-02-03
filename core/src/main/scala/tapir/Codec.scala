@@ -96,14 +96,14 @@ object Codec extends FormCodecDerivation {
   *
   * Should be used for inputs/outputs which allow optional values.
   */
-trait CodecFromOption[T, M <: MediaType, R] { outer =>
+trait CodecForOptional[T, M <: MediaType, R] { outer =>
   def encode(t: T): Option[R]
   def decode(s: Option[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
 }
 
-object CodecFromOption {
-  implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecFromOption[T, M, R] = new CodecFromOption[T, M, R] {
+object CodecForOptional {
+  implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecForOptional[T, M, R] = new CodecForOptional[T, M, R] {
     override def encode(t: T): Option[R] = Some(c.encode(t))
     override def decode(s: Option[R]): DecodeResult[T] = s match {
       case None    => DecodeResult.Missing
@@ -112,8 +112,8 @@ object CodecFromOption {
     override def meta: CodecMeta[M, R] = c.meta
   }
 
-  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecFromOption[Option[T], M, R] =
-    new CodecFromOption[Option[T], M, R] {
+  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForOptional[Option[T], M, R] =
+    new CodecForOptional[Option[T], M, R] {
       override def encode(t: Option[T]): Option[R] = t.map(v => tm.encode(v))
       override def decode(s: Option[R]): DecodeResult[Option[T]] = s match {
         case None     => DecodeResult.Value(None)
@@ -130,16 +130,16 @@ object CodecFromOption {
   *
   * Should be used for inputs/outputs which allow multiple values.
   */
-trait CodecFromMany[T, M <: MediaType, R] { outer =>
+trait CodecForMany[T, M <: MediaType, R] { outer =>
   def encode(t: T): List[R]
   def decode(s: List[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
 }
 
-object CodecFromMany extends FormCodecDerivation {
-  type PlainCodecFromMany[T] = CodecFromMany[T, MediaType.TextPlain, String]
+object CodecForMany extends FormCodecDerivation {
+  type PlainCodecForMany[T] = CodecForMany[T, MediaType.TextPlain, String]
 
-  implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecFromMany[T, M, R] = new CodecFromMany[T, M, R] {
+  implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecForMany[T, M, R] = new CodecForMany[T, M, R] {
     override def encode(t: T): List[R] = List(c.encode(t))
     override def decode(s: List[R]): DecodeResult[T] = s match {
       case Nil     => DecodeResult.Missing
@@ -149,8 +149,8 @@ object CodecFromMany extends FormCodecDerivation {
     override def meta: CodecMeta[M, R] = c.meta
   }
 
-  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecFromMany[Option[T], M, R] =
-    new CodecFromMany[Option[T], M, R] {
+  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Option[T], M, R] =
+    new CodecForMany[Option[T], M, R] {
       override def encode(t: Option[T]): List[R] = t.map(v => tm.encode(v)).toList
       override def decode(s: List[R]): DecodeResult[Option[T]] = s match {
         case Nil     => DecodeResult.Value(None)
@@ -160,8 +160,8 @@ object CodecFromMany extends FormCodecDerivation {
       override def meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
     }
 
-  implicit def forList[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecFromMany[List[T], M, R] =
-    new CodecFromMany[List[T], M, R] {
+  implicit def forList[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[List[T], M, R] =
+    new CodecForMany[List[T], M, R] {
       override def encode(t: List[T]): List[R] = t.map(v => tm.encode(v))
       override def decode(s: List[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode))
       override def meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))

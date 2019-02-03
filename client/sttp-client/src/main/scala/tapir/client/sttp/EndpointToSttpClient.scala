@@ -152,7 +152,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     }
   }
 
-  private def setBody[T, M <: MediaType, R](v: T, codec: CodecFromOption[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
+  private def setBody[T, M <: MediaType, R](v: T, codec: CodecForOptional[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
     codec
       .encode(v)
       .map { t =>
