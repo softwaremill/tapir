@@ -96,7 +96,7 @@ object Codec extends FormCodecDerivation {
   *
   * Should be used for inputs/outputs which allow optional values.
   */
-trait CodecForOptional[T, M <: MediaType, R] { outer =>
+trait CodecForOptional[T, M <: MediaType, R] {
   def encode(t: T): Option[R]
   def decode(s: Option[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
@@ -130,7 +130,7 @@ object CodecForOptional {
   *
   * Should be used for inputs/outputs which allow multiple values.
   */
-trait CodecForMany[T, M <: MediaType, R] { outer =>
+trait CodecForMany[T, M <: MediaType, R] {
   def encode(t: T): List[R]
   def decode(s: List[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
