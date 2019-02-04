@@ -1,4 +1,5 @@
 package tapir.tests
+import tapir.openapi.Info
 
 object Tests4 {
   import tapir._
@@ -24,7 +25,7 @@ object Tests4 {
     import tapir.openapi.circe._
     import tapir.openapi.circe.yaml._
 
-    val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
+    val docs = booksListing.toOpenAPI(Info("My Bookshop", "1.0"))
     println(docs.toYaml)
   }
 

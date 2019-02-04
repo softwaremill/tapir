@@ -1,6 +1,6 @@
 package tapir.openapi
 
-import OpenAPI.ReferenceOr
+import tapir.openapi.OpenAPI.ReferenceOr
 
 // todo security, tags, externaldocs
 case class OpenAPI(openapi: String = "3.0.1",
@@ -26,10 +26,10 @@ object OpenAPI {
 case class Info(
     title: String,
     version: String,
-    description: Option[String],
-    termsOfService: Option[String],
-    contact: Option[Contact],
-    license: Option[License]
+    description: Option[String] = None,
+    termsOfService: Option[String] = None,
+    contact: Option[Contact] = None,
+    license: Option[License] = None
 )
 
 case class Contact(name: Option[String], email: Option[String], url: Option[String])

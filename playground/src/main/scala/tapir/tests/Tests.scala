@@ -11,6 +11,7 @@ import tapir._
 import tapir.server.akkahttp._
 import tapir.client.sttp._
 import tapir.docs.openapi._
+import tapir.openapi.Info
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -50,7 +51,7 @@ object Tests extends App {
 
   import tapir.openapi.circe.yaml._
 
-  val docs = e.toOpenAPI("Example 1", "1.0")
+  val docs = e.toOpenAPI(Info("Example 1", "1.0"))
   println("XXX")
   println(docs.toYaml)
   println("YYY")
