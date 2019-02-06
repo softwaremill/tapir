@@ -181,6 +181,18 @@ trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll
       }
   }
 
+  testServer(in_simple_multipart_out_multipart,
+             (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])) { baseUri =>
+    sttp
+      .post(uri"$baseUri/api/echo")
+      .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
+      .send()
+      .map { r =>
+        r.unsafeBody should include regex "name=\"fruit\"\\s*pineapple apple"
+        r.unsafeBody should include regex "name=\"amount\"\\s*240"
+      }
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()

@@ -39,6 +39,9 @@ trait Tapir {
   def formBody[T](
       implicit codec: CodecForOptional[T, MediaType.XWwwFormUrlencoded, _]): EndpointIO.Body[T, MediaType.XWwwFormUrlencoded, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
+  def multipartBody[T](
+      implicit codec: CodecForOptional[T, MediaType.MultipartFormData, _]): EndpointIO.Body[T, MediaType.MultipartFormData, _] =
+    EndpointIO.Body(codec, EndpointIO.Info.empty)
 
   def streamBody[S](schema: Schema, mediaType: MediaType): StreamingEndpointIO.Body[S, mediaType.type] =
     StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)

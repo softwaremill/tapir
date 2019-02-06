@@ -22,6 +22,10 @@ object MediaType {
   }
 
   case class XWwwFormUrlencoded() extends MediaType {
-    override def mediaTypeNoParams: String = "application/x-www-form-urlencoded"
+    override val mediaTypeNoParams: String = "application/x-www-form-urlencoded"
+  }
+
+  case class MultipartFormData() extends MediaType {
+    override val mediaTypeNoParams: String = "multipart/form-data"
   }
 }

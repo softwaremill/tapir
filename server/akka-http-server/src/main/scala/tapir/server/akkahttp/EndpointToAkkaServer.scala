@@ -1,10 +1,11 @@
 package tapir.server.akkahttp
 
-import java.io.{ByteArrayInputStream, File}
+import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
 import akka.http.scaladsl.model.{
+  BodyPartEntity,
   ContentType,
   ContentTypes,
   HttpCharset,
@@ -13,13 +14,15 @@ import akka.http.scaladsl.model.{
   HttpMethod,
   HttpResponse,
   MediaTypes,
+  Multipart,
   ResponseEntity,
   StatusCode => AkkaStatusCode,
   MediaType => _
 }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
-import akka.http.scaladsl.server.{Directive, Directive1, Route}
+import akka.http.scaladsl.server.{Directive, Directive1, RequestContext, Route}
+import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.ByteString
@@ -27,7 +30,7 @@ import tapir._
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Failure
 
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
@@ -76,7 +79,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     outputs.zipWithIndex.foreach {
       case (EndpointIO.Body(codec, _), i) =>
         // TODO: check if body isn't already set
-        encodeBody(vs(i), codec).foreach(re => ov = ov.copy(body = Some(re)))
+        codec.encode(vs(i)).map(rawValueToResponseEntity(codec.meta, _)).foreach(re => ov = ov.copy(body = Some(re)))
       case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
         // TODO: check if body isn't already set
         val re = HttpEntity(mediaTypeToContentType(mediaType), vs(i).asInstanceOf[AkkaStream])
@@ -116,16 +119,21 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     // TODO: when parsing a query parameter/header/body/path fragment fails, provide an option to return a nice
     // error to the user (instead of a 404).
 
+    // TODO: match body last & lazily. If body matching fails, don't try other directives
+
     val inputDirectives: Directive1[I] = {
       val bodyType = e.input.bodyType
-      val bodyDirective: Directive1[Any] = bodyType match {
-        case Some(StringValueType(_))   => entity(as[String]).asInstanceOf[Directive1[Any]]
-        case Some(ByteArrayValueType)   => entity(as[Array[Byte]]).asInstanceOf[Directive1[Any]]
-        case Some(ByteBufferValueType)  => entity(as[ByteString]).map(_.asByteBuffer).asInstanceOf[Directive1[Any]]
-        case Some(InputStreamValueType) => entity(as[Array[Byte]]).map(new ByteArrayInputStream(_)).asInstanceOf[Directive1[Any]]
-        case Some(FileValueType)        => saveRequestBodyToFile.asInstanceOf[Directive1[Any]]
-        case None                       => provide(null)
+
+      val bodyDirective: Directive1[Any] = extractRequestContext.flatMap { ctx =>
+        extractMaterializer.flatMap { implicit materializer =>
+          extractExecutionContext.flatMap { implicit ec =>
+            bodyType
+              .map(bt => onSuccess(dataBytesToRawValue(ctx.request.entity, bt, ctx)).asInstanceOf[Directive1[Any]])
+              .getOrElse(provide(null))
+          }
+        }
       }
+
       bodyDirective.flatMap { body =>
         extractRequestContext.flatMap { ctx =>
           AkkaHttpInputMatcher.doMatch(e.input.asVectorOfSingle, ctx, body) match {
@@ -140,21 +148,43 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     methodDirective & inputDirectives
   }
 
-  private def saveRequestBodyToFile: Directive1[File] = {
-    extractRequestContext.flatMap { r =>
-      onSuccess(serverOptions.createFile(r)).flatMap { file =>
-        extractMaterializer.flatMap { implicit materializer =>
-          val runResult: Future[IOResult] = r.request.entity.dataBytes.runWith(FileIO.toPath(file.toPath))
-          onSuccess(runResult).map { ioResult =>
-            ioResult.status match {
-              case Failure(t) => throw t
-              case _          => // do nothing
-            }
-            file
-          }
+  private def dataBytesToRawValue[R](entity: HttpEntity, rawValueType: RawValueType[R], ctx: RequestContext)(
+      implicit mat: Materializer,
+      ec: ExecutionContext): Future[R] = {
+
+    rawValueType match {
+      case StringValueType(_)   => implicitly[FromEntityUnmarshaller[String]].apply(entity)
+      case ByteArrayValueType   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(entity)
+      case ByteBufferValueType  => implicitly[FromEntityUnmarshaller[ByteString]].apply(entity).map(_.asByteBuffer)
+      case InputStreamValueType => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(entity).map(new ByteArrayInputStream(_))
+      case FileValueType =>
+        serverOptions
+          .createFile(ctx)
+          .flatMap(file =>
+            entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map { ioResult =>
+              ioResult.status match {
+                case Failure(t) => throw t
+                case _          => // do nothing
+              }
+              file
+          })
+      case mvt: MultipartValueType =>
+        implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(entity).flatMap { fd =>
+          fd.parts
+            .mapConcat(part => mvt.partCodecMeta(part.name).map((part, _)).toList)
+            .mapAsync[RawPart](1) { case (part, codecMeta) => toRawPart(part, codecMeta, ctx) }
+            .runWith[Future[scala.collection.immutable.Seq[RawPart]]](Sink.seq)
+            .asInstanceOf[Future[R]]
         }
-      }
     }
+  }
+
+  private def toRawPart[R](part: Multipart.FormData.BodyPart, codecMeta: CodecMeta[_, R], ctx: RequestContext)(
+      implicit mat: Materializer,
+      ec: ExecutionContext): Future[Part[R]] = {
+
+    dataBytesToRawValue(part.entity, codecMeta.rawValueType, ctx)
+      .map(r => Part(part.name, part.additionalDispositionParams, part.headers.map(h => (h.name, h.value)), r))
   }
 
   private def methodToAkkaDirective[O, E, I](e: Endpoint[I, E, O, AkkaStream]) = {
@@ -170,20 +200,41 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     }
   }
 
-  private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecForOptional[T, M, R]): Option[ResponseEntity] = {
-    val ct = mediaTypeToContentType(codec.meta.mediaType)
-    codec.encode(v).map { r =>
-      codec.meta.rawValueType match {
-        case StringValueType(charset) =>
-          ct match {
-            case nonBinary: ContentType.NonBinary => HttpEntity(nonBinary, r)
-            case _                                => HttpEntity(ct, r.getBytes(charset))
+  private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): ResponseEntity = {
+    val ct = mediaTypeToContentType(codecMeta.mediaType)
+    codecMeta.rawValueType match {
+      case StringValueType(charset) =>
+        ct match {
+          case nb: ContentType.NonBinary => HttpEntity(nb, r)
+          case _                         => HttpEntity(ct, r.getBytes(charset))
+        }
+      case ByteArrayValueType   => HttpEntity(ct, r)
+      case ByteBufferValueType  => HttpEntity(ct, ByteString(r))
+      case InputStreamValueType => HttpEntity(ct, StreamConverters.fromInputStream(() => r))
+      case FileValueType        => HttpEntity.fromPath(ct, r.toPath)
+      case mvt: MultipartValueType =>
+        val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(mvt, _))
+        val body = Multipart.FormData(parts: _*)
+        body.toEntity()
+    }
+  }
+
+  private def rawPartToBodyPart[T](mvt: MultipartValueType, part: Part[T]): Option[Multipart.FormData.BodyPart] = {
+    mvt.partCodecMeta(part.name).map { codecMeta =>
+      val headers = part.headers.map {
+        case (hk, hv) =>
+          HttpHeader.parse(hk, hv) match {
+            case ParsingResult.Ok(h, _) => h
+            case _                      => throw new IllegalArgumentException(s"Invalid header: $hk -> $hv") // TODO
           }
-        case ByteArrayValueType   => HttpEntity(ct, r)
-        case ByteBufferValueType  => HttpEntity(ct, ByteString(r))
-        case InputStreamValueType => HttpEntity(ct, StreamConverters.fromInputStream(() => r))
-        case FileValueType        => HttpEntity(ct, FileIO.fromPath(r.toPath))
       }
+
+      val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.body) match {
+        case b: BodyPartEntity => b
+        case _                 => throw new IllegalArgumentException(s"${codecMeta.rawValueType} is not supported in multipart bodies")
+      }
+
+      Multipart.FormData.BodyPart(part.name, body, part.otherDispositionParams, headers.toList)
     }
   }
 
@@ -193,6 +244,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
       case MediaType.TextPlain(charset)   => MediaTypes.`text/plain`.withCharset(charsetToHttpCharset(charset))
       case MediaType.OctetStream()        => MediaTypes.`application/octet-stream`
       case MediaType.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`.withMissingCharset
+      case MediaType.MultipartFormData()  => MediaTypes.`multipart/form-data`
       case mt                             => ContentType.parse(mt.mediaType).right.get
     }
   }

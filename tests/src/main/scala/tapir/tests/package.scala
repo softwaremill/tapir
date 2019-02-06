@@ -83,5 +83,8 @@ package object tests {
     endpoint.post.in("api" / "echo").in(sb).out(sb)
   }
 
+  val in_simple_multipart_out_multipart: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
+    endpoint.post.in("api" / "echo").in(multipartBody[FruitAmount]).out(multipartBody[FruitAmount])
+
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 }

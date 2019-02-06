@@ -6,7 +6,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 import tapir.DecodeResult._
-import tapir.generic.FormCodecDerivation
+import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
 import tapir.internal.UrlencodedData
 
 /**
@@ -28,7 +28,7 @@ trait Codec[T, M <: MediaType, R] { outer =>
     new Codec[TT, M, R] {
       override def encode(t: TT): R = outer.encode(g(t))
       override def decode(s: R): DecodeResult[TT] = outer.decode(s).flatMap(f)
-      override def meta: CodecMeta[M, R] = outer.meta
+      override val meta: CodecMeta[M, R] = outer.meta
     }
 
   def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
@@ -36,14 +36,14 @@ trait Codec[T, M <: MediaType, R] { outer =>
   private def withMeta[M2 <: MediaType](meta2: CodecMeta[M2, R]): Codec[T, M2, R] = new Codec[T, M2, R] {
     override def encode(t: T): R = outer.encode(t)
     override def decode(s: R): DecodeResult[T] = outer.decode(s)
-    override def meta: CodecMeta[M2, R] = meta2
+    override val meta: CodecMeta[M2, R] = meta2
   }
 
   def mediaType[M2 <: MediaType](m2: M2): Codec[T, M2, R] = withMeta[M2](meta.copy[M2, R](mediaType = m2))
   def schema(s2: Schema): Codec[T, M, R] = withMeta(meta.copy(schema = s2))
 }
 
-object Codec extends FormCodecDerivation {
+object Codec extends FormCodecDerivation with MultipartCodecDerivation {
   type PlainCodec[T] = Codec[T, MediaType.TextPlain, String]
   type JsonCodec[T] = Codec[T, MediaType.Json, String]
 
@@ -65,7 +65,7 @@ object Codec extends FormCodecDerivation {
         catch {
           case e: Exception => Error(s, e, "Cannot parse")
         }
-      override def meta: CodecMeta[MediaType.TextPlain, String] = CodecMeta(_schema, MediaType.TextPlain(charset), StringValueType(charset))
+      override val meta: CodecMeta[MediaType.TextPlain, String] = CodecMeta(_schema, MediaType.TextPlain(charset), StringValueType(charset))
     }
 
   implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] = binaryCodec(ByteArrayValueType)
@@ -77,7 +77,7 @@ object Codec extends FormCodecDerivation {
   def binaryCodec[T](_rawValueType: RawValueType[T]): Codec[T, MediaType.OctetStream, T] = new Codec[T, MediaType.OctetStream, T] {
     override def encode(b: T): T = b
     override def decode(b: T): DecodeResult[T] = Value(b)
-    override def meta: CodecMeta[MediaType.OctetStream, T] = CodecMeta(Schema.SBinary, MediaType.OctetStream(), _rawValueType)
+    override val meta: CodecMeta[MediaType.OctetStream, T] = CodecMeta(Schema.SBinary, MediaType.OctetStream(), _rawValueType)
   }
 
   implicit val formSeqCodecUtf8: Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] = formSeqCodec(StandardCharsets.UTF_8)
@@ -87,6 +87,58 @@ object Codec extends FormCodecDerivation {
     stringCodec(charset).map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset)).mediaType(MediaType.XWwwFormUrlencoded())
   def formMapCodec(charset: Charset): Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] =
     formSeqCodec(charset).map(_.toMap)(_.toSeq)
+
+  implicit val multipartFormSeqCodec: Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
+    multipartCodec(Map.empty, defaultCodec = Some(CodecForMany.fromCodec(byteArrayCodec)))
+
+  /**
+    * @param partCodecs For each supported part, a codec which encodes the part value into a raw value. A single part
+    *                   value might be encoded as multiple (or none) raw values.
+    * @param defaultCodec Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra parts
+    *                     should be discarded.
+    */
+  def multipartCodec(partCodecs: Map[String, AnyCodecForMany],
+                     defaultCodec: Option[AnyCodecForMany]): Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
+    new Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] {
+      private val mvt = MultipartValueType(partCodecs, defaultCodec)
+
+      override def encode(t: Seq[AnyPart]): Seq[RawPart] = {
+        t.flatMap { part =>
+          mvt.partCodec(part.name).toList.flatMap { codec =>
+            // a single value-part might yield multiple raw-parts (e.g. for repeated fields)
+            val rawParts: List[RawPart] = codec.asInstanceOf[CodecForMany[Any, _, _]].encode(part.body).map { b =>
+              part.copy(body = b)
+            }
+
+            rawParts
+          }
+        }
+      }
+      override def decode(r: Seq[RawPart]): DecodeResult[Seq[AnyPart]] = {
+        val rawPartsByName = r.groupBy(_.name)
+
+        // we need to decode all parts for which there's a codec defined (even if that part is missing a value -
+        // it might still decode to e.g. None), and if there's a default codec also the extra parts
+        val partNamesToDecode = partCodecs.keys.toSet ++ (if (defaultCodec.isDefined) rawPartsByName.keys.toSet else Set.empty)
+
+        // there might be multiple raw-parts for each name, yielding a single value-part
+        val anyParts: List[DecodeResult[AnyPart]] = partNamesToDecode.map { name =>
+          val codec = mvt.partCodec(name).get
+          val rawParts = rawPartsByName.get(name).toList.flatten
+          codec.asInstanceOf[CodecForMany[_, _, Any]].decode(rawParts.map(_.body)).map { body =>
+            // we know there's at least one part. Using this part to create the value-part
+            rawParts.headOption match {
+              case Some(rawPart) => rawPart.copy(body = body)
+              case None          => Part(name, body)
+            }
+          }
+        }.toList
+
+        DecodeResult.sequence(anyParts)
+      }
+      override val meta: CodecMeta[MediaType.MultipartFormData, Seq[RawPart]] =
+        CodecMeta(Schema.SBinary, MediaType.MultipartFormData(), mvt)
+    }
 }
 
 /**
@@ -109,7 +161,7 @@ object CodecForOptional {
       case None    => DecodeResult.Missing
       case Some(h) => c.decode(h)
     }
-    override def meta: CodecMeta[M, R] = c.meta
+    override val meta: CodecMeta[M, R] = c.meta
   }
 
   implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForOptional[Option[T], M, R] =
@@ -119,7 +171,7 @@ object CodecForOptional {
         case None     => DecodeResult.Value(None)
         case Some(ss) => tm.decode(ss).map(Some(_))
       }
-      override def meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
+      override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
     }
 }
 
@@ -136,7 +188,7 @@ trait CodecForMany[T, M <: MediaType, R] {
   def meta: CodecMeta[M, R]
 }
 
-object CodecForMany extends FormCodecDerivation {
+object CodecForMany {
   type PlainCodecForMany[T] = CodecForMany[T, MediaType.TextPlain, String]
 
   implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecForMany[T, M, R] = new CodecForMany[T, M, R] {
@@ -146,7 +198,7 @@ object CodecForMany extends FormCodecDerivation {
       case List(h) => c.decode(h)
       case l       => DecodeResult.Multiple(l)
     }
-    override def meta: CodecMeta[M, R] = c.meta
+    override val meta: CodecMeta[M, R] = c.meta
   }
 
   implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Option[T], M, R] =
@@ -157,14 +209,14 @@ object CodecForMany extends FormCodecDerivation {
         case List(h) => tm.decode(h).map(Some(_))
         case l       => DecodeResult.Multiple(l)
       }
-      override def meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
+      override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
     }
 
   implicit def forList[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[List[T], M, R] =
     new CodecForMany[List[T], M, R] {
       override def encode(t: List[T]): List[R] = t.map(v => tm.encode(v))
       override def decode(s: List[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode))
-      override def meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
+      override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
     }
 }
 
@@ -174,10 +226,14 @@ object CodecMeta {
     CodecMeta(isOptional = false, schema, mediaType, rawValueType)
 }
 
-// string, byte array, input stream, file, form values (?), stream
 sealed trait RawValueType[R]
 case class StringValueType(charset: Charset) extends RawValueType[String]
 case object ByteArrayValueType extends RawValueType[Array[Byte]]
 case object ByteBufferValueType extends RawValueType[ByteBuffer]
 case object InputStreamValueType extends RawValueType[InputStream]
 case object FileValueType extends RawValueType[File]
+case class MultipartValueType(partCodecs: Map[String, AnyCodecForMany], defaultCodec: Option[AnyCodecForMany])
+    extends RawValueType[Seq[RawPart]] {
+  private[tapir] def partCodec(name: String): Option[AnyCodecForMany] = partCodecs.get(name).orElse(defaultCodec)
+  def partCodecMeta(name: String): Option[AnyCodecMeta] = partCodec(name).map(_.meta)
+}

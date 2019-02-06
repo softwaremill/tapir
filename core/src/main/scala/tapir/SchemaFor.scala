@@ -1,4 +1,8 @@
 package tapir
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.file.Path
+
 import tapir.Schema._
 import tapir.generic.SchemaForMagnoliaDerivation
 
@@ -28,6 +32,18 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   }
   implicit case object SchemaForBoolean extends SchemaFor[Boolean] {
     override val schema: Schema = SBoolean
+  }
+  implicit case object SchemaForFile extends SchemaFor[File] {
+    override val schema: Schema = SBinary
+  }
+  implicit case object SchemaForPath extends SchemaFor[Path] {
+    override val schema: Schema = SBinary
+  }
+  implicit case object SchemaForByteArray extends SchemaFor[Array[Byte]] {
+    override val schema: Schema = SBinary
+  }
+  implicit case object SchemaForByteBuffer extends SchemaFor[ByteBuffer] {
+    override val schema: Schema = SBinary
   }
   implicit def schemaForOption[T: SchemaFor]: SchemaFor[Option[T]] = new SchemaFor[Option[T]] {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
