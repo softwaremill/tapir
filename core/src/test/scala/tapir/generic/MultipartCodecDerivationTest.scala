@@ -3,7 +3,7 @@ package tapir.generic
 import java.io.File
 
 import org.scalatest.{FlatSpec, Matchers}
-import tapir.Schema.{SInteger, SObject, SObjectInfo, SString}
+import tapir.Schema._
 import tapir.util.CompileUtil
 import tapir.{Codec, DecodeResult, MediaType, Part, RawPart}
 
@@ -56,7 +56,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     error.message should include("CodecForMany[NoCodecForThisTrait")
   }
 
-  it should "use the right schema for a two-arg case class" in {
+  it should "use the right schema for a case class with part metadata" in {
     // given
     case class Test6(f1: String, f2: Int)
     val codec = implicitly[Codec[Test6, MediaType.MultipartFormData, Seq[RawPart]]]
@@ -65,6 +65,19 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     codec.meta.schema shouldBe SObject(
       SObjectInfo("Test6", "tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"),
       List(("f1", SString), ("f2", SInteger)),
+      List("f1", "f2")
+    )
+  }
+
+  it should "use the right schema for a two-arg case class" in {
+    // given
+    case class Test1(f1: Part[File], f2: Int)
+    val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
+
+    // when
+    codec.meta.schema shouldBe SObject(
+      SObjectInfo("Test1", "tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
+      List(("f1", SBinary), ("f2", SInteger)),
       List("f1", "f2")
     )
   }

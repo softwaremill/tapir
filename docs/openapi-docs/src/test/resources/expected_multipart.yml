@@ -1,0 +1,31 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /api/echo/multipart:
+    post:
+      operationId: api-echo-multipart-post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/FruitData'
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            multipart/form-data:
+              schema:
+                $ref: '#/components/schemas/FruitData'
+components:
+  schemas:
+    FruitData:
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: string
+          format: binary

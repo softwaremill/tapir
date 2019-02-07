@@ -56,4 +56,8 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   implicit def schemaForIterable[T: SchemaFor, C[_] <: Iterable[_]]: SchemaFor[C[T]] = new SchemaFor[C[T]] {
     override def schema: Schema = SArray(implicitly[SchemaFor[T]].schema)
   }
+
+  implicit def schemaForPart[T: SchemaFor]: SchemaFor[Part[T]] = new SchemaFor[Part[T]] {
+    override def schema: Schema = implicitly[SchemaFor[T]].schema
+  }
 }
