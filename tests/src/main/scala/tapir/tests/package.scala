@@ -86,10 +86,13 @@ package object tests {
   }
 
   val in_simple_multipart_out_multipart: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
-    endpoint.post.in("api" / "echo").in(multipartBody[FruitAmount]).out(multipartBody[FruitAmount]).name("echo simple")
+    endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitAmount]).out(multipartBody[FruitAmount]).name("echo simple")
+
+  val in_simple_multipart_out_string: Endpoint[FruitAmount, Unit, String, Nothing] =
+    endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitAmount]).out(stringBody)
 
   val in_file_multipart_out_multipart: Endpoint[FruitData, Unit, FruitData, Nothing] =
-    endpoint.post.in("api" / "echo").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
+    endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
 
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 

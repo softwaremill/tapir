@@ -184,7 +184,7 @@ trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll
   testServer(in_simple_multipart_out_multipart,
              (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])) { baseUri =>
     sttp
-      .post(uri"$baseUri/api/echo")
+      .post(uri"$baseUri/api/echo/multipart")
       .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
       .send()
       .map { r =>
@@ -201,7 +201,7 @@ trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll
   ) { baseUri =>
     val file = writeToFile("peach mario")
     sttp
-      .post(uri"$baseUri/api/echo")
+      .post(uri"$baseUri/api/echo/multipart")
       .multipartBody(multipartFile("data", file).fileName("fruit-data.txt").header("X-Auth", "12"))
       .send()
       .map { r =>

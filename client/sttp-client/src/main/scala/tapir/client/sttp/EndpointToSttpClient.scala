@@ -38,6 +38,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             case InputStreamValueType     => asByteArray.map(new ByteArrayInputStream(_))
             case FileValueType =>
               asFile(clientOptions.createFile(), overwrite = true) // TODO: use factory ResponseMetadata => File once available
+            case MultipartValueType(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse(ignore)
 
@@ -162,9 +163,28 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           case ByteBufferValueType      => req.body(t)
           case InputStreamValueType     => req.body(t)
           case FileValueType            => req.body(t)
+          case mvt: MultipartValueType =>
+            val parts: Seq[Multipart] = (t: Seq[RawPart]).flatMap { p =>
+              mvt.partCodecMeta(p.name).map { codec =>
+                val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], codec.asInstanceOf[CodecMeta[_, Any]])
+                val sttpPart2 = p.headers.foldLeft(sttpPart1) { case (sp, (hk, hv)) => sp.header(hk, hv) }
+                p.fileName.map(sttpPart2.fileName).getOrElse(sttpPart2)
+              }
+            }
+
+            req.multipartBody(parts.toList)
         }
       }
       .getOrElse(req)
+  }
+
+  private def partToSttpPart[R](p: Part[R], codecMeta: CodecMeta[_, R]): Multipart = codecMeta.rawValueType match {
+    case StringValueType(charset) => multipart(p.name, p.body, charset.toString)
+    case ByteArrayValueType       => multipart(p.name, p.body)
+    case ByteBufferValueType      => multipart(p.name, p.body)
+    case InputStreamValueType     => multipart(p.name, p.body)
+    case FileValueType            => multipartFile(p.name, p.body)
+    case MultipartValueType(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
   }
 
   private def bodyIsStream[I](in: EndpointInput[I]): Boolean = {
@@ -197,6 +217,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         try target.write(bytes, 0, bytes.length - 1)
         finally target.close()
         f
+      case MultipartValueType(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
     }
   }
 }

@@ -1,10 +1,11 @@
 package tapir.client.tests
 
-import java.io.{ByteArrayInputStream, File, InputStream, PrintWriter}
+import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
 
 import cats.effect._
 import cats.effect.concurrent.Ref
+import cats.implicits._
 import fs2.concurrent.SignallingRef
 import org.http4s._
 import org.http4s.dsl.io._
@@ -17,10 +18,10 @@ import tapir._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
 import TestUtil._
+import org.http4s.multipart
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.io.Source
 import scala.util.Random
 
 trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
@@ -60,6 +61,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   )
   testClient(in_paths_out_string, Seq("fruit", "apple", "amount", "50"), Right("apple 50 None"))
   testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
+  testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
 
   //
 
@@ -98,6 +100,16 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     case r @ GET -> Root / "api" / "echo" / "headers"                      => Ok(headers = r.headers.map(h => Header(h.name.value, h.value.reverse)).toSeq: _*)
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
       Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
+    case r @ POST -> Root / "api" / "echo" / "multipart" =>
+      r.decode[multipart.Multipart[IO]] { mp =>
+        val parts: Vector[multipart.Part[IO]] = mp.parts
+        def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8Decode).compile.foldMonoid
+        def partToString(name: String): IO[String] = parts.find(_.name.contains(name)).map(p => toString(p.body)).getOrElse(IO.pure(""))
+        partToString("fruit").product(partToString("amount")).flatMap {
+          case (fruit, amount) =>
+            Ok(s"$fruit=$amount")
+        }
+      }
     case r @ POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))
     case r @ GET -> Root =>
       r.headers.get(CaseInsensitiveString("X-Role")) match {
