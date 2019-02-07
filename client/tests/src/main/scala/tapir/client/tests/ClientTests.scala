@@ -31,11 +31,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit private val timer: Timer[IO] = IO.timer(ec)
 
-  private val testFile = {
-    val f = File.createTempFile("test", "tapir")
-    new PrintWriter(f) { write("pen pineapple apple pen"); close() }
-    f
-  }
+  private val testFile = writeToFile("pen pineapple apple pen")
 
   testClient(endpoint, (), Right(()))
   testClient(in_query_out_string, "apple", Right("fruit: apple"))
@@ -127,7 +123,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
         def doAdjust(v: Any) = v match {
           case is: InputStream => inputStreamToByteArray(is).toList
           case a: Array[Byte]  => a.toList
-          case f: File         => Source.fromFile(f).mkString
+          case f: File         => readFromFile(f)
           case _               => v
         }
 

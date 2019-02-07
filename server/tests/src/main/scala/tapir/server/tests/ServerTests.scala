@@ -193,6 +193,22 @@ trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll
       }
   }
 
+  testServer(
+    in_file_multipart_out_multipart,
+    (fd: FruitData) =>
+      pureResult(
+        FruitData(Part(writeToFile(readFromFile(fd.data.body).reverse)).header("X-Auth", fd.data.header("X-Auth").toString)).asRight[Unit])
+  ) { baseUri =>
+    val file = writeToFile("peach mario")
+    sttp
+      .post(uri"$baseUri/api/echo")
+      .multipartBody(multipartFile("data", file).fileName("fruit-data.txt").header("X-Auth", "12"))
+      .send()
+      .map { r =>
+        r.unsafeBody should include regex "name=\"data\"\\s*X-Auth: Some\\(12\\)\\s*oiram hcaep"
+      }
+  }
+
   //
 
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()

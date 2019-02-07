@@ -1,11 +1,13 @@
 package tapir
 
-import java.io.{File, InputStream}
+import java.io.{File, InputStream, PrintWriter}
 import java.nio.ByteBuffer
 
 import io.circe.generic.auto._
 import tapir.json.circe._
 import com.softwaremill.macwire._
+
+import scala.io.Source
 
 package object tests {
 
@@ -84,7 +86,19 @@ package object tests {
   }
 
   val in_simple_multipart_out_multipart: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
-    endpoint.post.in("api" / "echo").in(multipartBody[FruitAmount]).out(multipartBody[FruitAmount])
+    endpoint.post.in("api" / "echo").in(multipartBody[FruitAmount]).out(multipartBody[FruitAmount]).name("echo simple")
+
+  val in_file_multipart_out_multipart: Endpoint[FruitData, Unit, FruitData, Nothing] =
+    endpoint.post.in("api" / "echo").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
 
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
+
+  def writeToFile(s: String): File = {
+    val f = File.createTempFile("test", "tapir")
+    new PrintWriter(f) { write(s); close() }
+    f.deleteOnExit()
+    f
+  }
+
+  def readFromFile(f: File): String = Source.fromFile(f).mkString
 }
