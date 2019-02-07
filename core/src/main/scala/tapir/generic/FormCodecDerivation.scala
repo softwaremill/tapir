@@ -17,23 +17,12 @@ object FormCodecMacros {
     import c.universe._
 
     val t = weakTypeOf[T]
-    if (!t.typeSymbol.isClass || !t.typeSymbol.asClass.isCaseClass) {
-      c.error(c.enclosingPosition, s"Form data codec can only be generated for a case class, but got: $t.")
-    }
-
-    val fields = t.decls
-      .collectFirst {
-        case m: MethodSymbol if m.isPrimaryConstructor => m
-      }
-      .get
-      .paramLists
-      .head
+    val util = new CaseClassUtil[c.type, T](c)
+    val fields = util.fields
 
     val fieldsWithCodecs = fields.map { field =>
       (field, c.typecheck(q"implicitly[tapir.CodecForMany.PlainCodecForMany[${field.typeSignature}]]"))
     }
-
-    val schema = c.typecheck(q"implicitly[tapir.SchemaFor[$t]]")
 
     val encodeParams: Iterable[Tree] = fieldsWithCodecs.map {
       case (field, codec) =>
@@ -50,28 +39,20 @@ object FormCodecMacros {
            $codec.decode(paramsMap.get(transformedName).toList.flatten)"""
     }
 
-    val companion = Ident(TermName(t.typeSymbol.name.decodedName.toString))
-
-    val instanceFromValues = if (fields.size == 1) {
-      q"$companion.apply(vs.head.asInstanceOf[${fields.head.typeSignature}])"
-    } else {
-      q"$companion.tupled.asInstanceOf[Any => $t].apply(tapir.internal.SeqToParams(vs))"
-    }
-
     val codecTree = q"""
       {
         def decode(params: Seq[(String, String)]): DecodeResult[$t] = {
           val paramsMap: Map[String, Seq[String]] = params.groupBy(_._1).mapValues(_.map(_._2))
           val decodeResults = List(..$decodeParams)
-          tapir.DecodeResult.sequence(decodeResults).map { vs =>
-            $instanceFromValues
+          tapir.DecodeResult.sequence(decodeResults).map { values =>
+            ${util.instanceFromValues}
           }
         }
         def encode(o: $t): Seq[(String, String)] = List(..$encodeParams).flatten
 
         tapir.Codec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
-          .schema($schema.schema)
+          .schema(${util.schema}.schema)
       }
      """
 

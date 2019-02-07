@@ -17,22 +17,12 @@ object MultipartCodecDerivation {
     import c.universe._
 
     val t = weakTypeOf[T]
-    if (!t.typeSymbol.isClass || !t.typeSymbol.asClass.isCaseClass) {
-      c.error(c.enclosingPosition, s"Multipart codec can only be generated for a case class, but got: $t.")
-    }
-
-    val fields = t.decls
-      .collectFirst {
-        case m: MethodSymbol if m.isPrimaryConstructor => m
-      }
-      .get
-      .paramLists
-      .head
+    val util = new CaseClassUtil[c.type, T](c)
+    val fields = util.fields
 
     def fieldIsPart(field: Symbol): Boolean = field.typeSignature.typeSymbol.fullName.startsWith("tapir.Part")
     def partTypeArg(field: Symbol): Type = field.typeSignature.typeArgs.head
 
-    // TODO: simplify
     val fieldsWithCodecs = fields.map { field =>
       val codecType = if (fieldIsPart(field)) partTypeArg(field) else field.typeSignature
 
@@ -51,8 +41,6 @@ object MultipartCodecDerivation {
     }
 
     val partCodecs = q"""Map(..$partCodecPairs)"""
-
-    val schema = c.typecheck(q"implicitly[tapir.SchemaFor[$t]]")
 
     val encodeParams: Iterable[Tree] = fields.map { field =>
       val fieldName = field.name.asInstanceOf[TermName]
@@ -89,26 +77,18 @@ object MultipartCodecDerivation {
       }
     }
 
-    val companion = Ident(TermName(t.typeSymbol.name.decodedName.toString))
-
-    val instanceFromValues = if (fields.size == 1) {
-      q"$companion.apply(values.head.asInstanceOf[${fields.head.typeSignature}])"
-    } else {
-      q"$companion.tupled.asInstanceOf[Any => $t].apply(tapir.internal.SeqToParams(values))"
-    }
-
     val codecTree = q"""
       {
         def decode(parts: Seq[tapir.AnyPart]): $t = {
           val partsByName: Map[String, tapir.AnyPart] = parts.map(p => p.name -> p).toMap
           val values = List(..$decodeParams)
-          $instanceFromValues
+          ${util.instanceFromValues}
         }
         def encode(o: $t): Seq[tapir.AnyPart] = List(..$encodeParams)
 
         tapir.Codec.multipartCodec($partCodecs, None)
           .map(decode _)(encode _)
-          .schema($schema.schema)
+          .schema(${util.schema}.schema)
       }
      """
 
