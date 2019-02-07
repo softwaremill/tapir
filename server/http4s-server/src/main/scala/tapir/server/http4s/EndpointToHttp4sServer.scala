@@ -7,21 +7,24 @@ import cats.effect.{ContextShift, Sync}
 import cats.implicits._
 import fs2.Chunk
 import org.http4s
-import org.http4s.headers.`Content-Type`
+import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.util.CaseInsensitiveString
-import org.http4s.{Charset, EntityBody, Header, Headers, HttpRoutes, Request, Response, Status}
+import org.http4s.{Charset, EntityBody, EntityDecoder, EntityEncoder, Header, Headers, HttpRoutes, Request, Response, Status, multipart}
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
-  CodecForOptional,
+  CodecMeta,
   Endpoint,
   EndpointIO,
   EndpointInput,
   FileValueType,
   InputStreamValueType,
   MediaType,
+  MultipartValueType,
+  Part,
+  RawPart,
   RawValueType,
   StatusCode,
   StreamingEndpointIO,
@@ -51,23 +54,40 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case MediaType.TextPlain(charset)   => `Content-Type`(http4s.MediaType.text.plain, Charset.fromNioCharset(charset))
       case MediaType.OctetStream()        => `Content-Type`(http4s.MediaType.application.`octet-stream`)
       case MediaType.XWwwFormUrlencoded() => `Content-Type`(http4s.MediaType.application.`x-www-form-urlencoded`)
+      case MediaType.MultipartFormData()  => `Content-Type`(http4s.MediaType.multipart.`form-data`)
       case mt                             => `Content-Type`(http4s.MediaType.parse(mt.mediaType).right.get) // TODO
     }
 
-  private def encodeBody[T, M <: MediaType, R](v: T, codec: CodecForOptional[T, M, R]): Option[(EntityBody[F], Header)] = {
-    val ct: `Content-Type` = mediaTypeToContentType(codec.meta.mediaType)
+  private def rawValueToEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): (EntityBody[F], Header) = {
+    val ct: `Content-Type` = mediaTypeToContentType(codecMeta.mediaType)
 
-    codec.encode(v).map { r: R =>
-      codec.meta.rawValueType match {
-        case StringValueType(charset) =>
-          val bytes = r.toString.getBytes(charset)
-          fs2.Stream.chunk(Chunk.bytes(bytes)) -> ct
-        case ByteArrayValueType  => fs2.Stream.chunk(Chunk.bytes(r)) -> ct
-        case ByteBufferValueType => fs2.Stream.chunk(Chunk.byteBuffer(r)) -> ct
-        case InputStreamValueType =>
-          fs2.io.readInputStream(r.pure[F], serverOptions.ioChunkSize, serverOptions.blockingExecutionContext) -> ct
-        case FileValueType => fs2.io.file.readAll(r.toPath, serverOptions.blockingExecutionContext, serverOptions.ioChunkSize) -> ct
-      }
+    codecMeta.rawValueType match {
+      case StringValueType(charset) =>
+        val bytes = r.toString.getBytes(charset)
+        fs2.Stream.chunk(Chunk.bytes(bytes)) -> ct
+      case ByteArrayValueType  => fs2.Stream.chunk(Chunk.bytes(r)) -> ct
+      case ByteBufferValueType => fs2.Stream.chunk(Chunk.byteBuffer(r)) -> ct
+      case InputStreamValueType =>
+        fs2.io.readInputStream(r.pure[F], serverOptions.ioChunkSize, serverOptions.blockingExecutionContext) -> ct
+      case FileValueType => fs2.io.file.readAll(r.toPath, serverOptions.blockingExecutionContext, serverOptions.ioChunkSize) -> ct
+      case mvt: MultipartValueType =>
+        val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(mvt, _))
+        val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body
+        body -> ct
+    }
+  }
+
+  private def rawPartToBodyPart[T](mvt: MultipartValueType, part: Part[T]): Option[multipart.Part[F]] = {
+    mvt.partCodecMeta(part.name).map { codecMeta =>
+      val headers = part.headers.map {
+        case (hk, hv) => Header.Raw(CaseInsensitiveString(hk), hv)
+      }.toList
+
+      val (entity, ctHeader) = rawValueToEntity(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.body)
+
+      val contentDispositionHeader = `Content-Disposition`("form-data", part.otherDispositionParams + ("name" -> part.name))
+
+      multipart.Part(Headers(ctHeader :: contentDispositionHeader :: headers), entity)
     }
   }
 
@@ -78,7 +98,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
     val states = outputs.zipWithIndex.map {
       case (EndpointIO.Body(codec, _), i) =>
-        encodeBody(vs(i), codec) match {
+        codec.encode(vs(i)).map(rawValueToEntity(codec.meta, _)) match {
           // TODO: check if body isn't already set
           case Some((entity, header)) => State.modify[OutputValues](ov => ov.copy(body = Some(entity), headers = ov.headers :+ header))
           case None                   => State.pure[OutputValues, Unit](())
@@ -164,7 +184,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   private def createContext[I, E, O](e: Endpoint[I, E, O, EntityBody[F]], req: Request[F]): F[Context[F]] = {
     val formAndBody: F[Option[Any]] = e.input.bodyType match {
       case None     => none[Any].pure[F]
-      case Some(bt) => basicRequestBody(req, bt).map(_.some)
+      case Some(bt) => basicRequestBody(req.body, bt, req.charset, req).map(_.some)
     }
 
     formAndBody.map { body =>
@@ -178,21 +198,45 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  private def basicRequestBody[R](req: Request[F], rawBodyType: RawValueType[R]): F[R] = {
-    def asChunk: F[Chunk[Byte]] = req.body.compile.toChunk
-    def asByteArray: F[Array[Byte]] = req.body.compile.toChunk.map(_.toByteBuffer.array())
+  private def basicRequestBody[R](body: fs2.Stream[F, Byte],
+                                  rawBodyType: RawValueType[R],
+                                  charset: Option[Charset],
+                                  req: Request[F]): F[R] = {
+    def asChunk: F[Chunk[Byte]] = body.compile.toChunk
+    def asByteArray: F[Array[Byte]] = body.compile.toChunk.map(_.toByteBuffer.array())
 
     rawBodyType match {
-      case StringValueType(charset) => asByteArray.map(new String(_, req.charset.map(_.nioCharset).getOrElse(charset)))
-      case ByteArrayValueType       => asByteArray
-      case ByteBufferValueType      => asChunk.map(_.toByteBuffer)
-      case InputStreamValueType     => asByteArray.map(new ByteArrayInputStream(_))
+      case StringValueType(defaultCharset) => asByteArray.map(new String(_, charset.map(_.nioCharset).getOrElse(defaultCharset)))
+      case ByteArrayValueType              => asByteArray
+      case ByteBufferValueType             => asChunk.map(_.toByteBuffer)
+      case InputStreamValueType            => asByteArray.map(new ByteArrayInputStream(_))
       case FileValueType =>
         serverOptions.createFile(serverOptions.blockingExecutionContext, req).flatMap { file =>
           val fileSink = fs2.io.file.writeAll(file.toPath, serverOptions.blockingExecutionContext)
-          req.body.through(fileSink).compile.drain.map(_ => file)
+          body.through(fileSink).compile.drain.map(_ => file)
+        }
+      case mvt: MultipartValueType =>
+        // TODO: use MultipartDecoder.mixedMultipart once available?
+        implicitly[EntityDecoder[F, multipart.Multipart[F]]].decode(req, strict = false).value.flatMap {
+          case Left(failure) =>
+            throw new IllegalArgumentException("Cannot decode multipart body: " + failure) // TODO
+          case Right(mp) =>
+            val rawPartsF: Vector[F[RawPart]] = mp.parts
+              .flatMap(part => part.name.flatMap(name => mvt.partCodecMeta(name)).map((part, _)).toList)
+              .map { case (part, codecMeta) => toRawPart(part, codecMeta, req).asInstanceOf[F[RawPart]] }
+
+            val rawParts: F[Vector[RawPart]] = rawPartsF.sequence
+
+            rawParts.asInstanceOf[F[R]] // R is Seq[RawPart]
         }
     }
+  }
+
+  private def toRawPart[R](part: multipart.Part[F], codecMeta: CodecMeta[_, R], req: Request[F]): F[Part[R]] = {
+    val dispositionParams = part.headers.get(`Content-Disposition`).map(_.parameters).getOrElse(Map.empty)
+    val charset = part.headers.get(`Content-Type`).flatMap(_.charset)
+    basicRequestBody(part.body, codecMeta.rawValueType, charset, req)
+      .map(r => Part(part.name.getOrElse(""), dispositionParams - "name", part.headers.map(h => (h.name.value, h.value)).toSeq, r))
   }
 
   private def makeResponse[O](statusCode: org.http4s.Status, output: EndpointIO[O], v: O): Response[F] = {

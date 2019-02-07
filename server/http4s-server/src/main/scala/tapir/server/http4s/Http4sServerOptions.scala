@@ -8,9 +8,10 @@ import tapir.Defaults
 
 import scala.concurrent.ExecutionContext
 
-case class Http4sServerOptions[F[_]](createFile: (ExecutionContext, Request[F]) => F[File],
-                                     blockingExecutionContext: ExecutionContext,
-                                     ioChunkSize: Int)
+case class Http4sServerOptions[F[_]](
+    createFile: (ExecutionContext, Request[F]) => F[File], // TODO: include request/part headers, information if this is a part?
+    blockingExecutionContext: ExecutionContext,
+    ioChunkSize: Int)
 
 object Http4sServerOptions {
   def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): (ExecutionContext, Request[F]) => F[File] =
