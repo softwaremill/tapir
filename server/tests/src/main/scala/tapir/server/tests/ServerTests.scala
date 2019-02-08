@@ -3,6 +3,7 @@ package tapir.server.tests
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
 
+import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.implicits._
 import com.softwaremill.sttp._
@@ -15,7 +16,7 @@ import tapir.{StatusCodes, _}
 
 import scala.util.Random
 
-trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll {
+trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   testServer(endpoint, () => pureResult(().asRight[Unit])) { baseUri =>
     sttp.get(baseUri).send().map(_.body shouldBe Right(""))
@@ -224,11 +225,12 @@ trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll
 
   def pureResult[T](t: T): R[T]
 
-  def server[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
-                             port: Port,
-                             fn: FN[R[Either[E, O]]],
-                             statusMapper: O => StatusCode,
-                             errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Resource[IO, Unit]
+  def route[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
+                            fn: FN[R[Either[E, O]]],
+                            statusMapper: O => StatusCode,
+                            errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): ROUTE
+
+  def server[I, E, O, FN[_]](routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
 
   def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
                                  fn: FN[R[Either[E, O]]],
@@ -236,12 +238,18 @@ trait ServerTests[R[_], S] extends FunSuite with Matchers with BeforeAndAfterAll
                                  statusMapper: O => StatusCode = Defaults.statusMapper,
                                  errorStatusMapper: E => StatusCode = Defaults.errorStatusMapper)(runTest: Uri => IO[Assertion])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
+
+    testServer(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix),
+               NonEmptyList.of(route(e, fn, statusMapper, errorStatusMapper)))(runTest)
+  }
+
+  def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
     val resources = for {
       port <- Resource.liftF(IO(randomPort()))
-      _ <- server(e, port, fn, statusMapper, errorStatusMapper)
+      _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
-    test(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix))(resources.use(runTest).unsafeRunSync())
+    test(name)(resources.use(runTest).unsafeRunSync())
   }
 
   //
