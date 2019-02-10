@@ -212,6 +212,26 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   //
 
+  testServer(
+    "two endpoints with an initial body mapper",
+    NonEmptyList.of(
+      route(endpoint.post.in(binaryBody[Array[Byte]]).in("p1").out(stringBody),
+            (s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])),
+      route(endpoint.post.in(binaryBody[Array[Byte]]).in("p2").out(stringBody),
+            (s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit]))
+    )
+  ) { baseUri =>
+    sttp
+      .post(uri"$baseUri/p2")
+      .body("a" * 1000000)
+      .send()
+      .map { r =>
+        r.unsafeBody shouldBe "p2 1000000"
+      }
+  }
+
+  //
+
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()
 
   override protected def afterAll(): Unit = {
@@ -225,12 +245,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   def pureResult[T](t: T): R[T]
 
-  def route[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
-                            fn: FN[R[Either[E, O]]],
-                            statusMapper: O => StatusCode,
-                            errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): ROUTE
+  def route[I, E, O, FN[_]](
+      e: Endpoint[I, E, O, S],
+      fn: FN[R[Either[E, O]]],
+      statusMapper: O => StatusCode = Defaults.statusMapper,
+      errorStatusMapper: E => StatusCode = Defaults.errorStatusMapper)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): ROUTE
 
-  def server[I, E, O, FN[_]](routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
+  def server(routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
 
   def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
                                  fn: FN[R[Either[E, O]]],

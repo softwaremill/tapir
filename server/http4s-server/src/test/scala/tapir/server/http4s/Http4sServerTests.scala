@@ -29,7 +29,7 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
     e.toRoutes(fn, statusMapper = statusMapper, errorStatusMapper = errorStatusMapperMapper)
   }
 
-  override def server[I, E, O, FN[_]](routes: NonEmptyList[HttpRoutes[IO]], port: Port): Resource[IO, Unit] = {
+  override def server(routes: NonEmptyList[HttpRoutes[IO]], port: Port): Resource[IO, Unit] = {
 
     val service: Kleisli[IO, Request[IO], Response[IO]] = routes.reduceK.orNotFound
 

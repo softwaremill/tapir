@@ -17,6 +17,7 @@ import akka.http.scaladsl.model.{
   Multipart,
   ResponseEntity,
   StatusCode => AkkaStatusCode,
+  StatusCodes => AkkaStatusCodes,
   MediaType => _
 }
 import akka.http.scaladsl.server.Directives._
@@ -28,6 +29,7 @@ import akka.stream.scaladsl._
 import akka.util.ByteString
 import tapir._
 import tapir.internal.{ParamsToSeq, SeqToParams}
+import tapir.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -119,28 +121,39 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     // TODO: when parsing a query parameter/header/body/path fragment fails, provide an option to return a nice
     // error to the user (instead of a 404).
 
-    // TODO: match body last & lazily. If body matching fails, don't try other directives
-
     val inputDirectives: Directive1[I] = {
-      val bodyType = e.input.bodyType
 
-      val bodyDirective: Directive1[Any] = extractRequestContext.flatMap { ctx =>
+      def rawBodyDirective(bodyType: RawValueType[_]): Directive1[Any] = extractRequestContext.flatMap { ctx =>
         extractMaterializer.flatMap { implicit materializer =>
           extractExecutionContext.flatMap { implicit ec =>
-            bodyType
-              .map(bt => onSuccess(dataBytesToRawValue(ctx.request.entity, bt, ctx)).asInstanceOf[Directive1[Any]])
-              .getOrElse(provide(null))
+            onSuccess(entityToRawValue(ctx.request.entity, bodyType, ctx)).asInstanceOf[Directive1[Any]]
           }
         }
       }
 
-      bodyDirective.flatMap { body =>
-        extractRequestContext.flatMap { ctx =>
-          AkkaHttpInputMatcher.doMatch(e.input.asVectorOfSingle, ctx, body) match {
-            case Some(result) =>
-              provide(SeqToParams(result).asInstanceOf[I]) & mapRequestContext(_ => ctx)
-            case None => reject
-          }
+      def decodeBody(result: DecodeInputsResult.Values): Directive1[DecodeResult[DecodeInputsResult.Values]] = {
+        result.bodyInput match {
+          case Some(input @ EndpointIO.Body(codec, _)) =>
+            rawBodyDirective(codec.meta.rawValueType).map { v =>
+              codec.decode(Some(v)).map { bodyV =>
+                result.value(input, bodyV)
+              }
+            }
+
+          case None => provide(DecodeResult.Value(result))
+        }
+      }
+
+      extractRequestContext.flatMap { ctx =>
+        DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx)) match {
+          case result: DecodeInputsResult.Values =>
+            decodeBody(result).flatMap {
+              case DecodeResult.Value(result2) =>
+                provide(SeqToParams(InputValues(e.input, result2.values)).asInstanceOf[I])
+              case _: DecodeFailure => complete(AkkaStatusCodes.BadRequest)
+            }
+
+          case _: DecodeInputsResult.Failure => reject
         }
       }
     }
@@ -148,7 +161,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     methodDirective & inputDirectives
   }
 
-  private def dataBytesToRawValue[R](entity: HttpEntity, rawValueType: RawValueType[R], ctx: RequestContext)(
+  private def entityToRawValue[R](entity: HttpEntity, rawValueType: RawValueType[R], ctx: RequestContext)(
       implicit mat: Materializer,
       ec: ExecutionContext): Future[R] = {
 
@@ -183,7 +196,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
       implicit mat: Materializer,
       ec: ExecutionContext): Future[Part[R]] = {
 
-    dataBytesToRawValue(part.entity, codecMeta.rawValueType, ctx)
+    entityToRawValue(part.entity, codecMeta.rawValueType, ctx)
       .map(r => Part(part.name, part.additionalDispositionParams, part.headers.map(h => (h.name, h.value)), r))
   }
 

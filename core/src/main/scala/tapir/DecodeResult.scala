@@ -19,6 +19,7 @@ object DecodeResult {
   case object Missing extends DecodeFailure // TODO: add field name?
   case class Multiple[R](vs: List[R]) extends DecodeFailure
   case class Error(original: String, error: Throwable, message: String) extends DecodeFailure
+  case class Mismatch(expected: String, actual: String) extends DecodeFailure
 
   // TODO: to reduce allocations, maybe replace with exceptions (which would all be handled by formats / codecs?)
 

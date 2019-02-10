@@ -11,11 +11,14 @@ import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.{Charset, EntityBody, EntityDecoder, EntityEncoder, Header, Headers, HttpRoutes, Request, Response, Status, multipart}
 import tapir.internal.{ParamsToSeq, SeqToParams}
+import tapir.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
   CodecMeta,
+  DecodeFailure,
+  DecodeResult,
   Endpoint,
   EndpointIO,
   EndpointInput,
@@ -137,66 +140,54 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     logger.debug(inputs.mkString("\n"))
 
     val service: HttpRoutes[F] = HttpRoutes[F] { req: Request[F] =>
-      val context: F[Context[F]] = createContext(e, req)
+      def decodeBody(result: DecodeInputsResult.Values): F[DecodeResult[DecodeInputsResult.Values]] = {
+        result.bodyInput match {
+          case Some(input @ EndpointIO.Body(codec, _)) =>
+            basicRequestBody(req.body, codec.meta.rawValueType, req.charset, req).map { v =>
+              codec.decode(Some(v)).map { bodyV =>
+                result.value(input, bodyV)
+              }
+            }
 
-      val inputMatch: ContextState[F] = new Http4sInputMatcher().matchInputs(inputs)
+          case None => (DecodeResult.Value(result): DecodeResult[DecodeInputsResult.Values]).pure[F]
+        }
+      }
 
-      val methodMatches: Either[Error, String] =
-        Either.cond(http4sMethodToTapirMethodMap
-                      .get(req.method)
-                      .contains(e.method),
-                    "",
-                    s"Method mismatch: got ${req.method}, expected: ${e.method}")
+      def valuesToResponse(values: DecodeInputsResult.Values): F[Response[F]] = {
+        val i = SeqToParams(InputValues(e.input, values.values)).asInstanceOf[I]
+        paramsAsArgs
+          .applyFn(logic, i)
+          .map {
+            case Right(result) =>
+              makeResponse(statusCodeToHttp4sStatus(statusMapper(result)), e.output, result)
+            case Left(err) =>
+              makeResponse(statusCodeToHttp4sStatus(errorStatusMapper(err)), e.errorOutput, err)
+          }
+      }
 
-      val value: F[Either[Error, (Context[F], MatchResult[F])]] =
-        EitherT
-          .fromEither[F](methodMatches)
-          .flatMap(_ =>
-            EitherT(context
-              .map(inputMatch.run)))
-          .value
+      val methodMatches = http4sMethodToTapirMethodMap.get(req.method).contains(e.method)
 
-      logger.debug(s"Result of binding: $value")
+      if (methodMatches) {
+        DecodeInputs(e.input, new Http4sDecodeInputsContext[F](req)) match {
+          case result: DecodeInputsResult.Values =>
+            val response: F[Response[F]] = decodeBody(result).flatMap {
+              case DecodeResult.Value(result2) => valuesToResponse(result2)
+              case _: DecodeFailure            => Response(status = Status.BadRequest).pure[F]
+            }
 
-      val maybeMatch: OptionT[F, I] = OptionT(value.map(_.toOption.map {
-        case (context2, result) =>
-          logger.debug(s"Result of binding: ${result.values}")
-          logger.debug(context2.toString)
-          SeqToParams(result.values).asInstanceOf[I]
-      }))
+            OptionT.liftF(response)
 
-      val res: OptionT[F, F[Either[E, O]]] = maybeMatch.map(i => paramsAsArgs.applyFn(logic, i))
-
-      res.flatMapF(_.map {
-        case Right(result) =>
-          Option(makeResponse(statusCodeToHttp4sStatus(statusMapper(result)), e.output, result))
-        case Left(err) =>
-          logger.error(err.toString)
-          Option(makeResponse(statusCodeToHttp4sStatus(errorStatusMapper(err)), e.errorOutput, err))
-      })
+          case _: DecodeInputsResult.Failure => OptionT.none
+        }
+      } else {
+        OptionT.none
+      }
     }
 
     service
   }
 
   private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status = Status.fromInt(code).right.get
-
-  private def createContext[I, E, O](e: Endpoint[I, E, O, EntityBody[F]], req: Request[F]): F[Context[F]] = {
-    val formAndBody: F[Option[Any]] = e.input.bodyType match {
-      case None     => none[Any].pure[F]
-      case Some(bt) => basicRequestBody(req.body, bt, req.charset, req).map(_.some)
-    }
-
-    formAndBody.map { body =>
-      Context(
-        queryParams = req.multiParams,
-        headers = req.headers,
-        basicBody = body,
-        streamingBody = req.body,
-        unmatchedPath = req.uri.renderString
-      )
-    }
-  }
 
   private def basicRequestBody[R](body: fs2.Stream[F, Byte],
                                   rawBodyType: RawValueType[R],
