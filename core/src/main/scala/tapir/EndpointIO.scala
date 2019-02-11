@@ -26,6 +26,14 @@ sealed trait EndpointInput[I] {
     case m: EndpointIO.Multiple[_]    => m.ios
   }
 
+  private[tapir] def asVectorOfBasic: Vector[EndpointInput.Basic[_]] = this match {
+    case b: EndpointInput.Basic[_]              => Vector(b)
+    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.asVectorOfBasic
+    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.asVectorOfBasic
+    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.asVectorOfBasic)
+    case EndpointIO.Multiple(ios)               => ios.flatMap(_.asVectorOfBasic)
+  }
+
   private[tapir] def bodyType: Option[RawValueType[_]] = this match {
     case b: EndpointIO.Body[_, _, _]            => Some(b.codec.meta.rawValueType)
     case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.bodyType).headOption
@@ -46,30 +54,32 @@ object EndpointInput {
       }
   }
 
-  case class PathSegment(s: String) extends Single[Unit] {
+  sealed trait Basic[I] extends Single[I]
+
+  case class PathSegment(s: String) extends Basic[Unit] {
     def show = s"/$s"
   }
 
-  case class PathCapture[T](codec: PlainCodec[T], name: Option[String], info: EndpointIO.Info[T]) extends Single[T] {
+  case class PathCapture[T](codec: PlainCodec[T], name: Option[String], info: EndpointIO.Info[T]) extends Basic[T] {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
     def description(d: String): PathCapture[T] = copy(info = info.description(d))
     def example(t: T): PathCapture[T] = copy(info = info.example(t))
     def show = s"/[${name.getOrElse("")}]"
   }
 
-  case class PathsCapture(info: EndpointIO.Info[Seq[String]]) extends Single[Seq[String]] {
+  case class PathsCapture(info: EndpointIO.Info[Seq[String]]) extends Basic[Seq[String]] {
     def description(d: String): PathsCapture = copy(info = info.description(d))
     def example(t: Seq[String]): PathsCapture = copy(info = info.example(t))
     def show = s"/[multiple paths]"
   }
 
-  case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Single[T] {
+  case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
     def show = s"?$name"
   }
 
-  case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Single[MultiQueryParams] {
+  case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Basic[MultiQueryParams] {
     def description(d: String): QueryParams = copy(info = info.description(d))
     def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
     def show = s"?{multiple params}"
@@ -122,23 +132,25 @@ object EndpointIO {
       }
   }
 
-  case class Body[T, M <: MediaType, R](codec: CodecForOptional[T, M, R], info: Info[T]) extends Single[T] {
+  sealed trait Basic[I] extends Single[I] with EndpointInput.Basic[I]
+
+  case class Body[T, M <: MediaType, R](codec: CodecForOptional[T, M, R], info: Info[T]) extends Basic[T] {
     def description(d: String): Body[T, M, R] = copy(info = info.description(d))
     def example(t: T): Body[T, M, R] = copy(info = info.example(t))
     def show = s"{body as ${codec.meta.mediaType.mediaType}}"
   }
 
-  case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Single[S] {
+  case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Basic[S] {
     def show = s"{body as stream, ${wrapped.mediaType.mediaType}}"
   }
 
-  case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Single[T] {
+  case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Basic[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
     def show = s"{header $name}"
   }
 
-  case class Headers(info: Info[Seq[(String, String)]]) extends Single[Seq[(String, String)]] {
+  case class Headers(info: Info[Seq[(String, String)]]) extends Basic[Seq[(String, String)]] {
     def description(d: String): Headers = copy(info = info.description(d))
     def example(t: Seq[(String, String)]): Headers = copy(info = info.example(t))
     def show = s"{multiple headers}"

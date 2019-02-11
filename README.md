@@ -205,6 +205,17 @@ Note that the function doesn't take the tuple `I` directly as input, but instead
  
 > As an endpoint can be interpreted to an akka-http directive or route, it is possible to nest and combine it with other routes. It's completely feasible that some part of the input is read using akka-http directives, and the rest using Tapir endpoint descriptions; or, that the Tapir-generated route is wrapped in e.g. a metrics route. Moreover, "edge-case endpoints", which require some special logic not expressible using Tapir, can be always implemented directly using akka-http.
   
+### When things go wrong
+
+Quite often user input will be malformed and decoding will fail. Should the request be completed with a `400 Bad Request` response, or should the request be forwarded to another endpoint? By default, tapir follows OpenAPI conventions, that an endpoint is uniquely identified by the method and served path. That's why:
+
+* an "endpoint doesn't match" result is returned if the request method or path doesn't match
+* otherwise, we assume that this is the correct endpoint to server the request, but the parameters are somehow malformed. A `400 Bad Request` response is returned if a query parameter, header or body is missing / decoding fails, or if the decoding a path capture fails.
+
+This can be customised by providing an instance of `tapir.server.DecodeFailureHandler`, which basing on the request, failing input and failure description can decide, whether to return a "no match", an endpoint-specific error value, or a specific response.
+
+Only the first failure is passed to the `DecodeFailureHandler`. Inputs are decoded in the following order: method, path, query, header, body.
+  
 ## Using as an sttp client
 
 ```scala

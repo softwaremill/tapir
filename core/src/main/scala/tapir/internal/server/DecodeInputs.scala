@@ -9,7 +9,7 @@ object DecodeInputsResult {
   case class Values(values: Map[EndpointInput.Single[_], Any], bodyInput: Option[EndpointIO.Body[_, _, _]]) extends DecodeInputsResult {
     def value(i: EndpointInput.Single[_], v: Any): Values = copy(values = values + (i -> v))
   }
-  case class Failure(failure: DecodeFailure, input: EndpointInput.Single[_]) extends DecodeInputsResult
+  case class Failure(input: EndpointInput.Single[_], failure: DecodeFailure) extends DecodeInputsResult
 }
 
 trait DecodeInputsContext {
@@ -36,10 +36,23 @@ object DecodeInputs {
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
   def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
-    apply(input.asVectorOfSingle, DecodeInputsResult.Values(Map(), None), ctx)
+    // the first decoding error is returned. We decode in the following order: path, query, headers, body
+    val inputs = input.asVectorOfBasic.sortBy {
+      case _: EndpointInput.PathSegment          => 0
+      case _: EndpointInput.PathCapture[_]       => 0
+      case _: EndpointInput.PathsCapture         => 0
+      case _: EndpointInput.Query[_]             => 1
+      case _: EndpointInput.QueryParams          => 1
+      case _: EndpointIO.Header[_]               => 2
+      case _: EndpointIO.Headers                 => 2
+      case _: EndpointIO.Body[_, _, _]           => 3
+      case _: EndpointIO.StreamBodyWrapper[_, _] => 3
+    }
+
+    apply(inputs, DecodeInputsResult.Values(Map(), None), ctx)
   }
 
-  private def apply(inputs: Vector[EndpointInput.Single[_]],
+  private def apply(inputs: Vector[EndpointInput.Basic[_]],
                     values: DecodeInputsResult.Values,
                     ctx: DecodeInputsContext): DecodeInputsResult = {
     inputs match {
@@ -48,8 +61,8 @@ object DecodeInputs {
       case (input @ EndpointInput.PathSegment(ss)) +: inputsTail =>
         ctx.nextPathSegment match {
           case (Some(`ss`), ctx2) => apply(inputsTail, values, ctx2)
-          case (Some(s), _)       => DecodeInputsResult.Failure(DecodeResult.Mismatch(ss, s), input)
-          case (None, _)          => DecodeInputsResult.Failure(DecodeResult.Missing, input)
+          case (Some(s), _)       => DecodeInputsResult.Failure(input, DecodeResult.Mismatch(ss, s))
+          case (None, _)          => DecodeInputsResult.Failure(input, DecodeResult.Missing)
         }
 
       case (input @ EndpointInput.PathCapture(codec, _, _)) +: inputsTail =>
@@ -57,9 +70,9 @@ object DecodeInputs {
           case (Some(s), ctx2) =>
             codec.decode(s) match {
               case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx2)
-              case failure: DecodeFailure => DecodeInputsResult.Failure(failure, input)
+              case failure: DecodeFailure => DecodeInputsResult.Failure(input, failure)
             }
-          case (None, _) => DecodeInputsResult.Failure(DecodeResult.Missing, input)
+          case (None, _) => DecodeInputsResult.Failure(input, DecodeResult.Missing)
         }
 
       case (input @ EndpointInput.PathsCapture(_)) +: inputsTail =>
@@ -76,7 +89,7 @@ object DecodeInputs {
       case (input @ EndpointInput.Query(name, codec, _)) +: inputsTail =>
         codec.decode(ctx.queryParameter(name).toList) match {
           case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
-          case failure: DecodeFailure => DecodeInputsResult.Failure(failure, input)
+          case failure: DecodeFailure => DecodeInputsResult.Failure(input, failure)
         }
 
       case (input @ EndpointInput.QueryParams(_)) +: inputsTail =>
@@ -85,7 +98,7 @@ object DecodeInputs {
       case (input @ EndpointIO.Header(name, codec, _)) +: inputsTail =>
         codec.decode(ctx.header(name)) match {
           case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
-          case failure: DecodeFailure => DecodeInputsResult.Failure(failure, input)
+          case failure: DecodeFailure => DecodeInputsResult.Failure(input, failure)
         }
 
       case (input @ EndpointIO.Headers(_)) +: inputsTail =>
@@ -96,12 +109,6 @@ object DecodeInputs {
 
       case (input @ EndpointIO.StreamBodyWrapper(_)) +: inputsTail =>
         apply(inputsTail, values.value(input, ctx.bodyStream), ctx)
-
-      case EndpointInput.Mapped(wrapped, _, _, _) +: inputsTail =>
-        apply(wrapped.asVectorOfSingle ++ inputsTail, values, ctx)
-
-      case EndpointIO.Mapped(wrapped, _, _, _) +: inputsTail =>
-        apply(wrapped.asVectorOfSingle ++ inputsTail, values, ctx)
     }
   }
 }

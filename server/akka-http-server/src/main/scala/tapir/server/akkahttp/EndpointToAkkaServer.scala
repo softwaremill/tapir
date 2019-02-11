@@ -17,12 +17,11 @@ import akka.http.scaladsl.model.{
   Multipart,
   ResponseEntity,
   StatusCode => AkkaStatusCode,
-  StatusCodes => AkkaStatusCodes,
   MediaType => _
 }
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
-import akka.http.scaladsl.server.{Directive, Directive1, RequestContext, Route}
+import akka.http.scaladsl.server._
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream._
 import akka.stream.scaladsl._
@@ -30,6 +29,7 @@ import akka.util.ByteString
 import tapir._
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{ParamsToSeq, SeqToParams}
+import tapir.server.DecodeFailureHandling
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -118,9 +118,6 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
 
     val methodDirective = methodToAkkaDirective(e)
 
-    // TODO: when parsing a query parameter/header/body/path fragment fails, provide an option to return a nice
-    // error to the user (instead of a 404).
-
     val inputDirectives: Directive1[I] = {
 
       def rawBodyDirective(bodyType: RawValueType[_]): Directive1[Any] = extractRequestContext.flatMap { ctx =>
@@ -131,29 +128,29 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
         }
       }
 
-      def decodeBody(result: DecodeInputsResult.Values): Directive1[DecodeResult[DecodeInputsResult.Values]] = {
-        result.bodyInput match {
-          case Some(input @ EndpointIO.Body(codec, _)) =>
-            rawBodyDirective(codec.meta.rawValueType).map { v =>
-              codec.decode(Some(v)).map { bodyV =>
-                result.value(input, bodyV)
-              }
-            }
+      def decodeBody(result: DecodeInputsResult): Directive1[DecodeInputsResult] = {
+        result match {
+          case values: DecodeInputsResult.Values =>
+            values.bodyInput match {
+              case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
+                rawBodyDirective(codec.meta.rawValueType)
+                  .map { v =>
+                    codec.decode(Some(v)) match {
+                      case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
+                      case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                    }
+                  }
 
-          case None => provide(DecodeResult.Value(result))
+              case None => provide(values)
+            }
+          case failure: DecodeInputsResult.Failure => provide(failure)
         }
       }
 
       extractRequestContext.flatMap { ctx =>
-        DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx)) match {
-          case result: DecodeInputsResult.Values =>
-            decodeBody(result).flatMap {
-              case DecodeResult.Value(result2) =>
-                provide(SeqToParams(InputValues(e.input, result2.values)).asInstanceOf[I])
-              case _: DecodeFailure => complete(AkkaStatusCodes.BadRequest)
-            }
-
-          case _: DecodeInputsResult.Failure => reject
+        decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
+          case DecodeInputsResult.Values(values, _)       => provide(SeqToParams(InputValues(e.input, values)).asInstanceOf[I])
+          case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(ctx, input, failure)
         }
       }
     }
@@ -263,4 +260,13 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   }
 
   private def charsetToHttpCharset(charset: Charset): HttpCharset = HttpCharset.custom(charset.name())
+
+  private def handleDecodeFailure[I](ctx: RequestContext, input: EndpointInput.Single[_], failure: DecodeFailure): Directive1[I] = {
+    val handling = serverOptions.decodeFailureHandler(ctx, input, failure)
+    handling match {
+      case DecodeFailureHandling.NoMatch => reject
+      case DecodeFailureHandling.RespondWithResponse(statusCode, body, codec) =>
+        complete(HttpResponse(entity = rawValueToResponseEntity(codec.meta, codec.encode(body)), status = statusCode))
+    }
+  }
 }

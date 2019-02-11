@@ -21,8 +21,6 @@ object DecodeResult {
   case class Error(original: String, error: Throwable, message: String) extends DecodeFailure
   case class Mismatch(expected: String, actual: String) extends DecodeFailure
 
-  // TODO: to reduce allocations, maybe replace with exceptions (which would all be handled by formats / codecs?)
-
   def sequence[T](results: List[DecodeResult[T]]): DecodeResult[List[T]] = {
     results.foldRight(Value(List.empty[T]): DecodeResult[List[T]]) {
       case (result, acc) =>

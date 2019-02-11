@@ -210,10 +210,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
+  testServer(in_query_out_string, (fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit]), "invalid query parameter") { baseUri =>
+    sttp.get(uri"$baseUri?fruit2=orange").send().map(_.code shouldBe 400)
+  }
+
   //
 
   testServer(
-    "two endpoints with an initial body mapper",
+    "two endpoints with a body defined as the first input: should only consume body when then path matches",
     NonEmptyList.of(
       route(endpoint.post.in(binaryBody[Array[Byte]]).in("p1").out(stringBody),
             (s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])),
@@ -228,6 +232,19 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .map { r =>
         r.unsafeBody shouldBe "p2 1000000"
       }
+  }
+
+  testServer(
+    "two endpoints with query defined as the first input, path segments as second input: should try the second endpoint if the path doesn't match",
+    NonEmptyList.of(
+      route(endpoint.get.in(query[String]("q1")).in("p1"), (_: String) => pureResult(().asRight[Unit])),
+      route(endpoint.get.in(query[String]("q2")).in("p2"), (_: String) => pureResult(().asRight[Unit]))
+    )
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/p1?q1=10").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri/p1?q2=10").send().map(_.code shouldBe StatusCodes.BadRequest) >>
+      sttp.get(uri"$baseUri/p2?q2=10").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri/p2?q1=10").send().map(_.code shouldBe StatusCodes.BadRequest)
   }
 
   //
