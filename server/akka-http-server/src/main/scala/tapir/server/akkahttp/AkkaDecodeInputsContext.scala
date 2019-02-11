@@ -3,7 +3,7 @@ package tapir.server.akkahttp
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.RequestContext
 import tapir.MultiQueryParams
-import tapir.server.DecodeInputsContext
+import tapir.internal.server.DecodeInputsContext
 
 class AkkaDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {

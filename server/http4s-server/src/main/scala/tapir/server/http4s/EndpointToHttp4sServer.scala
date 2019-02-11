@@ -10,8 +10,8 @@ import org.http4s
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.{Charset, EntityBody, EntityDecoder, EntityEncoder, Header, Headers, HttpRoutes, Request, Response, Status, multipart}
+import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{ParamsToSeq, SeqToParams}
-import tapir.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{
   ByteArrayValueType,

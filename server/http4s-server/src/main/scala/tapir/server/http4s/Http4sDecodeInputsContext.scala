@@ -1,7 +1,7 @@
 package tapir.server.http4s
 import org.http4s.Request
 import org.http4s.util.CaseInsensitiveString
-import tapir.server.DecodeInputsContext
+import tapir.internal.server.DecodeInputsContext
 
 class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsContext {
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {

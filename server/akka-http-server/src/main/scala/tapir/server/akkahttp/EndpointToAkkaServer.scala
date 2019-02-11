@@ -28,8 +28,8 @@ import akka.stream._
 import akka.stream.scaladsl._
 import akka.util.ByteString
 import tapir._
+import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{ParamsToSeq, SeqToParams}
-import tapir.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.{ExecutionContext, Future}

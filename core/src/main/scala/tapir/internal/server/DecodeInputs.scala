@@ -1,4 +1,4 @@
-package tapir.server
+package tapir.internal.server
 
 import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, MultiQueryParams}
 

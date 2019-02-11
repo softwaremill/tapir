@@ -1,5 +1,4 @@
-package tapir.server
-
+package tapir.internal.server
 import tapir.internal.SeqToParams
 import tapir.{EndpointIO, EndpointInput}
 
