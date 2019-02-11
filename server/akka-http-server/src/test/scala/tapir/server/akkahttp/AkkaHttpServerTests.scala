@@ -8,7 +8,8 @@ import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import tapir.{Endpoint, _}
+import tapir.server.StatusMapper
+import tapir.Endpoint
 import tapir.server.tests.ServerTests
 import tapir.typelevel.ParamsAsArgs
 
@@ -33,10 +34,11 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
 
   override def route[I, E, O, FN[_]](e: Endpoint[I, E, O, AkkaStream],
                                      fn: FN[Future[Either[E, O]]],
-                                     statusMapper: O => StatusCode,
-                                     errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
-
-    e.toRoute(fn, statusMapper, errorStatusMapper)
+                                     statusMapper: StatusMapper[O],
+                                     errorStatusMapper: StatusMapper[E])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
+    implicit val sm: StatusMapper[O] = statusMapper
+    implicit val esm: StatusMapper[E] = errorStatusMapper
+    e.toRoute(fn)
   }
 
   override def server(routes: NonEmptyList[Route], port: Port): Resource[IO, Unit] = {

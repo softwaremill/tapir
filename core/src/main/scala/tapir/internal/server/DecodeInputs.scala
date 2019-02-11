@@ -36,7 +36,7 @@ object DecodeInputs {
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
   def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
-    // the first decoding error is returned. We decode in the following order: path, query, headers, body
+    // the first decoding failure is returned. We decode in the following order: path, query, headers, body
     val inputs = input.asVectorOfBasic.sortBy {
       case _: EndpointInput.PathSegment          => 0
       case _: EndpointInput.PathCapture[_]       => 0

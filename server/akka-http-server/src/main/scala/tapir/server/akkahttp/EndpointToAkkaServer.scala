@@ -29,7 +29,7 @@ import akka.util.ByteString
 import tapir._
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{ParamsToSeq, SeqToParams}
-import tapir.server.DecodeFailureHandling
+import tapir.server.{DecodeFailureHandling, StatusMapper}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -45,8 +45,8 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
 
   def toRoute[I, E, O, FN[_]](e: Endpoint[I, E, O, AkkaStream])(
       logic: FN[Future[Either[E, O]]],
-      statusMapper: O => StatusCode,
-      errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
+      statusMapper: StatusMapper[O],
+      errorStatusMapper: StatusMapper[E])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
     toDirective1(e) { values =>
       onSuccess(paramsAsArgs.applyFn(logic, values)) {
         case Left(v)  => outputToRoute(errorStatusMapper(v), e.errorOutput, v)

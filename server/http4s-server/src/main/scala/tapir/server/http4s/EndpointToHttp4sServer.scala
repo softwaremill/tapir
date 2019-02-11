@@ -12,7 +12,7 @@ import org.http4s.util.CaseInsensitiveString
 import org.http4s.{Charset, EntityBody, EntityDecoder, EntityEncoder, Header, Headers, HttpRoutes, Request, Response, Status, multipart}
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{ParamsToSeq, SeqToParams}
-import tapir.server.DecodeFailureHandling
+import tapir.server.{DecodeFailureHandling, StatusMapper}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{
   ByteArrayValueType,
@@ -133,8 +133,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
   def toRoutes[I, E, O, FN[_]](e: Endpoint[I, E, O, EntityBody[F]])(
       logic: FN[F[Either[E, O]]],
-      statusMapper: O => StatusCode,
-      errorStatusMapper: E => StatusCode)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
+      statusMapper: StatusMapper[O],
+      errorStatusMapper: StatusMapper[E])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
 
     val inputs: Vector[EndpointInput.Single[_]] = e.input.asVectorOfSingle
     logger.debug(s"Inputs: ")

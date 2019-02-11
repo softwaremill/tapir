@@ -9,6 +9,7 @@ import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import tapir.server.{ServerDefaults, StatusMapper}
 import tapir.tests.TestUtil._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
@@ -265,16 +266,16 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def route[I, E, O, FN[_]](
       e: Endpoint[I, E, O, S],
       fn: FN[R[Either[E, O]]],
-      statusMapper: O => StatusCode = Defaults.statusMapper,
-      errorStatusMapper: E => StatusCode = Defaults.errorStatusMapper)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): ROUTE
+      statusMapper: StatusMapper[O] = ServerDefaults.statusMapper,
+      errorStatusMapper: StatusMapper[E] = ServerDefaults.errorStatusMapper)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): ROUTE
 
   def server(routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
 
   def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
                                  fn: FN[R[Either[E, O]]],
                                  testNameSuffix: String = "",
-                                 statusMapper: O => StatusCode = Defaults.statusMapper,
-                                 errorStatusMapper: E => StatusCode = Defaults.errorStatusMapper)(runTest: Uri => IO[Assertion])(
+                                 statusMapper: StatusMapper[O] = ServerDefaults.statusMapper,
+                                 errorStatusMapper: StatusMapper[E] = ServerDefaults.errorStatusMapper)(runTest: Uri => IO[Assertion])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
 
     testServer(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix),
