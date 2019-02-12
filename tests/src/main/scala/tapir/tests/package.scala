@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import io.circe.generic.auto._
 import tapir.json.circe._
 import com.softwaremill.macwire._
+import tapir.model.{Cookie, CookiePair}
 
 import scala.io.Source
 
@@ -93,6 +94,9 @@ package object tests {
 
   val in_file_multipart_out_multipart: Endpoint[FruitData, Unit, FruitData, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
+
+  val in_cookies_out_cookies: Endpoint[List[CookiePair], Unit, List[Cookie], Nothing] =
+    endpoint.get.in("api" / "echo" / "headers").in(cookies).out(setCookies)
 
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 

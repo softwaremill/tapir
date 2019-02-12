@@ -13,7 +13,7 @@ trait JsonCirce {
   implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
     override def encode(t: T): String = t.asJson.noSpaces
     override def decode(s: String): DecodeResult[T] = io.circe.parser.decode[T](s) match {
-      case Left(error) => Error(s, error, error.getMessage)
+      case Left(error) => Error(s, error)
       case Right(v)    => Value(v)
     }
     override def meta: CodecMeta[MediaType.Json, String] =

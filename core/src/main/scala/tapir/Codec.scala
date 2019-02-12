@@ -63,7 +63,7 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
       override def decode(s: String): DecodeResult[T] =
         try Value(parse(s))
         catch {
-          case e: Exception => Error(s, e, "Cannot parse")
+          case e: Exception => Error(s, e)
         }
       override val meta: CodecMeta[MediaType.TextPlain, String] = CodecMeta(_schema, MediaType.TextPlain(charset), StringValueType(charset))
     }
@@ -148,10 +148,19 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
   *
   * Should be used for inputs/outputs which allow optional values.
   */
-trait CodecForOptional[T, M <: MediaType, R] {
+trait CodecForOptional[T, M <: MediaType, R] { outer =>
   def encode(t: T): Option[R]
   def decode(s: Option[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
+
+  def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): CodecForOptional[TT, M, R] =
+    new CodecForOptional[TT, M, R] {
+      override def encode(t: TT): Option[R] = outer.encode(g(t))
+      override def decode(s: Option[R]): DecodeResult[TT] = outer.decode(s).flatMap(f)
+      override val meta: CodecMeta[M, R] = outer.meta
+    }
+
+  def map[TT](f: T => TT)(g: TT => T): CodecForOptional[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
 }
 
 object CodecForOptional {
@@ -182,10 +191,19 @@ object CodecForOptional {
   *
   * Should be used for inputs/outputs which allow multiple values.
   */
-trait CodecForMany[T, M <: MediaType, R] {
+trait CodecForMany[T, M <: MediaType, R] { outer =>
   def encode(t: T): List[R]
   def decode(s: List[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
+
+  def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): CodecForMany[TT, M, R] =
+    new CodecForMany[TT, M, R] {
+      override def encode(t: TT): List[R] = outer.encode(g(t))
+      override def decode(s: List[R]): DecodeResult[TT] = outer.decode(s).flatMap(f)
+      override val meta: CodecMeta[M, R] = outer.meta
+    }
+
+  def map[TT](f: T => TT)(g: TT => T): CodecForMany[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
 }
 
 object CodecForMany {
