@@ -10,12 +10,15 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
     import Method._
 
-    val pathComponents = foldInputToVector(e.input, {
-      case EndpointInput.PathCapture(_, name, _) => s"{${name.getOrElse("-")}}"
-      case EndpointInput.PathSegment(s)          => s
-    })
+    val pathComponents = namedPathComponents(e.input)
 
-    val defaultId = options.operationIdGenerator(pathComponents, e.method)
+    val pathComponentsForId = pathComponents.map(_.fold(identity, identity))
+    val defaultId = options.operationIdGenerator(pathComponentsForId, e.method)
+
+    val pathComponentForPath = pathComponents.map {
+      case Left(p)  => s"{$p}"
+      case Right(p) => p
+    }
 
     val operation = Some(endpointToOperation(defaultId, e))
     val pathItem = PathItem(
@@ -33,7 +36,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
       parameters = List.empty
     )
 
-    ("/" + pathComponents.mkString("/"), pathItem)
+    ("/" + pathComponentForPath.mkString("/"), pathItem)
   }
 
   private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _]): Operation = {
@@ -155,6 +158,24 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   private def exampleValue[T](codec: Codec[T, _, _], e: T): Option[ExampleValue] = Some(exampleValue(codec.encode(e)))
   private def exampleValue[T](codec: CodecForOptional[T, _, _], e: T): Option[ExampleValue] = codec.encode(e).map(exampleValue)
   private def exampleValue[T](codec: CodecForMany[T, _, _], e: T): Option[ExampleValue] = codec.encode(e).headOption.map(exampleValue)
+
+  /**
+    * @return `Left` if the component is a capture, `Right` if it is a segment
+    */
+  private def namedPathComponents(input: EndpointInput[_]): Vector[Either[String, String]] = {
+    foldInputToVector(input, {
+      case EndpointInput.PathCapture(_, name, _) => Left(name)
+      case EndpointInput.PathSegment(s)          => Right(s)
+    }).foldLeft((Vector.empty[Either[String, String]], 1)) {
+        case ((acc, i), component) =>
+          component match {
+            case Left(None)    => (acc :+ Left(s"param$i"), i + 1)
+            case Left(Some(p)) => (acc :+ Left(p), i)
+            case Right(p)      => (acc :+ Right(p), i)
+          }
+      }
+      ._1
+  }
 
   private def foldInputToVector[T](i: EndpointInput[_], f: PartialFunction[EndpointInput[_], T]): Vector[T] = {
     i match {

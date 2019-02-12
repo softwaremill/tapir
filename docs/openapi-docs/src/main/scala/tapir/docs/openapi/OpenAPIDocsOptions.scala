@@ -5,12 +5,14 @@ case class OpenAPIDocsOptions(operationIdGenerator: (Vector[String], Method) => 
 
 object OpenAPIDocsOptions {
   val defaultOperationIdGenerator: (Vector[String], Method) => String = { (pathComponents, method) =>
-    val pathComponentsOrRoot = if (pathComponents.isEmpty) {
+    val components = if (pathComponents.isEmpty) {
       Vector("root")
     } else {
       pathComponents
     }
-    s"${pathComponentsOrRoot.mkString("-")}-${method.m.toLowerCase}"
+
+    // converting to camelCase
+    (method.m.toLowerCase +: components.map(_.toLowerCase.capitalize)).mkString
   }
 
   implicit val default: OpenAPIDocsOptions = OpenAPIDocsOptions(defaultOperationIdGenerator)

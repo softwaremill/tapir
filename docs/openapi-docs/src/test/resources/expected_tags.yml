@@ -7,7 +7,7 @@ paths:
     get:
       tags:
         - user
-      operationId: user-show-get
+      operationId: getUserShow
       responses:
         '200':
           description: ''
@@ -20,7 +20,7 @@ paths:
       tags:
         - user
         - admin
-      operationId: user-search-get
+      operationId: getUserSearch
       responses:
         '200':
           description: ''
@@ -32,7 +32,7 @@ paths:
     get:
       tags:
         - admin
-      operationId: admin-add-get
+      operationId: getAdminAdd
       responses:
         '200':
           description: ''

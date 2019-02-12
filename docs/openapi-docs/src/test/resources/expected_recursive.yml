@@ -5,7 +5,7 @@ info:
 paths:
   /:
     get:
-      operationId: root-get
+      operationId: getRoot
       responses:
         '200':
           description: ''

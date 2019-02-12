@@ -5,7 +5,7 @@ info:
 paths:
   /:
     get:
-      operationId: root-get
+      operationId: getRoot
       parameters:
         - name: fruit
           in: query
@@ -26,7 +26,7 @@ paths:
                 type: string
   /fruit/{p1}/amount/{p2}:
     get:
-      operationId: fruit-{p1}-amount-{p2}-get
+      operationId: getFruitP1AmountP2
       parameters:
         - name: p1
           in: path

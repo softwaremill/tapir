@@ -5,7 +5,7 @@ info:
 paths:
   /api/echo/multipart:
     post:
-      operationId: api-echo-multipart-post
+      operationId: postApiEchoMultipart
       requestBody:
         content:
           multipart/form-data:
