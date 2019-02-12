@@ -9,7 +9,6 @@ import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
   def /[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
-  def &[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
 
   def show: String
 
@@ -107,7 +106,6 @@ object EndpointInput {
 
 sealed trait EndpointIO[I] extends EndpointInput[I] {
   def and[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ]
-  def &[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ] = and(other)
 
   def show: String
   override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
