@@ -10,7 +10,8 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
     import Method._
 
-    val pathComponents = namedPathComponents(e.input)
+    val inputs = e.input.asVectorOfBasic
+    val pathComponents = namedPathComponents(inputs)
 
     val pathComponentsForId = pathComponents.map(_.fold(identity, identity))
     val defaultId = options.operationIdGenerator(pathComponentsForId, e.method)
@@ -40,8 +41,9 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   }
 
   private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _]): Operation = {
-    val parameters = operationParameters(e)
-    val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(e)
+    val inputs = e.input.asVectorOfBasic
+    val parameters = operationParameters(inputs)
+    val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: Map[ResponsesKey, ReferenceOr[Response]] = operationResponse(e)
     Operation(
       e.info.tags.toList,
@@ -56,25 +58,21 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     )
   }
 
-  private def operationInputBody(e: Endpoint[_, _, _, _]) = {
-    foldInputToVector(
-      e.input, {
-        case EndpointIO.Body(codec, info) =>
-          Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional)))
-        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
-          Right(RequestBody(i.description, codecToMediaType(s, mt, i.example), Some(true)))
-      }
-    )
+  private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
+    inputs.collect {
+      case EndpointIO.Body(codec, info) =>
+        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional)))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
+        Right(RequestBody(i.description, codecToMediaType(s, mt, i.example), Some(true)))
+    }
   }
 
-  private def operationParameters(e: Endpoint[_, _, _, _]) = {
-    foldInputToVector(
-      e.input, {
-        case q: EndpointInput.Query[_]       => queryToParameter(q)
-        case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
-        case h: EndpointIO.Header[_]         => headerToParameter(h)
-      }
-    )
+  private def operationParameters(inputs: Vector[EndpointInput.Basic[_]]) = {
+    inputs.collect {
+      case q: EndpointInput.Query[_]       => queryToParameter(q)
+      case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
+      case h: EndpointIO.Header[_]         => headerToParameter(h)
+    }
   }
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
@@ -104,32 +102,30 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   }
 
   private def outputToResponse(io: EndpointIO[_]): Option[Response] = {
-    val headers = foldIOToVector(
-      io, {
-        case EndpointIO.Header(name, codec, info) =>
-          name -> Right(
-            Header(
-              info.description,
-              Some(!codec.meta.isOptional),
-              None,
-              None,
-              None,
-              None,
-              None,
-              Some(objectSchemas(codec.meta.schema)),
-              info.example.flatMap(exampleValue(codec, _)),
-              Map.empty,
-              Map.empty
-            ))
-      }
-    )
+    val ios = io.asVectorOfBasic
 
-    val bodies = foldIOToVector(
-      io, {
-        case EndpointIO.Body(m, i)                                            => (i.description, codecToMediaType(m, i.example))
-        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) => (i.description, codecToMediaType(s, mt, i.example))
-      }
-    )
+    val headers = ios.collect {
+      case EndpointIO.Header(name, codec, info) =>
+        name -> Right(
+          Header(
+            info.description,
+            Some(!codec.meta.isOptional),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(objectSchemas(codec.meta.schema)),
+            info.example.flatMap(exampleValue(codec, _)),
+            Map.empty,
+            Map.empty
+          ))
+    }
+
+    val bodies = ios.collect {
+      case EndpointIO.Body(m, i)                                            => (i.description, codecToMediaType(m, i.example))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) => (i.description, codecToMediaType(s, mt, i.example))
+    }
     val body = bodies.headOption
 
     val description = body.flatMap(_._1).getOrElse("")
@@ -162,11 +158,13 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   /**
     * @return `Left` if the component is a capture, `Right` if it is a segment
     */
-  private def namedPathComponents(input: EndpointInput[_]): Vector[Either[String, String]] = {
-    foldInputToVector(input, {
-      case EndpointInput.PathCapture(_, name, _) => Left(name)
-      case EndpointInput.PathSegment(s)          => Right(s)
-    }).foldLeft((Vector.empty[Either[String, String]], 1)) {
+  private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[Either[String, String]] = {
+    inputs
+      .collect {
+        case EndpointInput.PathCapture(_, name, _) => Left(name)
+        case EndpointInput.PathSegment(s)          => Right(s)
+      }
+      .foldLeft((Vector.empty[Either[String, String]], 1)) {
         case ((acc, i), component) =>
           component match {
             case Left(None)    => (acc :+ Left(s"param$i"), i + 1)
@@ -175,25 +173,5 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
           }
       }
       ._1
-  }
-
-  private def foldInputToVector[T](i: EndpointInput[_], f: PartialFunction[EndpointInput[_], T]): Vector[T] = {
-    i match {
-      case _ if f.isDefinedAt(i)                  => Vector(f(i))
-      case EndpointInput.Mapped(wrapped, _, _, _) => foldInputToVector(wrapped, f)
-      case EndpointIO.Mapped(wrapped, _, _, _)    => foldInputToVector(wrapped, f)
-      case EndpointInput.Multiple(inputs)         => inputs.flatMap(foldInputToVector(_, f))
-      case EndpointIO.Multiple(inputs)            => inputs.flatMap(foldInputToVector(_, f))
-      case _                                      => Vector.empty
-    }
-  }
-
-  private def foldIOToVector[T](io: EndpointIO[_], f: PartialFunction[EndpointIO[_], T]): Vector[T] = {
-    io match {
-      case _ if f.isDefinedAt(io)              => Vector(f(io))
-      case EndpointIO.Mapped(wrapped, _, _, _) => foldIOToVector(wrapped, f)
-      case EndpointIO.Multiple(inputs)         => inputs.flatMap(foldIOToVector(_, f))
-      case _                                   => Vector.empty
-    }
   }
 }
