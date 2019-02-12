@@ -8,7 +8,7 @@ import tapir.{EndpointInput, MediaType => SMediaType, Schema => SSchema, _}
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, options: OpenAPIDocsOptions) {
 
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
-    import Method._
+    import model.Method._
 
     val inputs = e.input.asVectorOfBasic
     val pathComponents = namedPathComponents(inputs)

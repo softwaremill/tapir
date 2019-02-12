@@ -4,6 +4,7 @@ import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import tapir._
 import tapir.json.circe._
+import tapir.model.Method
 import tapir.openapi.circe.yaml._
 import tapir.tests._
 

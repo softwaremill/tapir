@@ -12,6 +12,7 @@ import org.http4s.util.CaseInsensitiveString
 import org.http4s.{Charset, EntityBody, EntityDecoder, EntityEncoder, Header, Headers, HttpRoutes, Request, Response, Status, multipart}
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{ParamsToSeq, SeqToParams}
+import tapir.model.{Method, Part}
 import tapir.server.{DecodeFailureHandling, StatusMapper}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{
@@ -27,7 +28,6 @@ import tapir.{
   InputStreamValueType,
   MediaType,
   MultipartValueType,
-  Part,
   RawPart,
   RawValueType,
   StatusCode,
@@ -38,9 +38,9 @@ import tapir.{
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
 
   private val logger = org.log4s.getLogger
-  private val http4sMethodToTapirMethodMap: Map[org.http4s.Method, tapir.Method] = {
+  private val http4sMethodToTapirMethodMap: Map[org.http4s.Method, Method] = {
     import org.http4s.Method._
-    import tapir.Method
+    import tapir.model.Method
     Map(
       GET -> Method.GET,
       POST -> Method.POST,

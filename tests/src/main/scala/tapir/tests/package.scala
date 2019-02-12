@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 import io.circe.generic.auto._
 import tapir.json.circe._
 import com.softwaremill.macwire._
-import tapir.model.{Cookie, CookiePair}
+import tapir.model.{Cookie, CookiePair, MultiQueryParams}
 
 import scala.io.Source
 

@@ -19,6 +19,7 @@ import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
 import TestUtil._
 import org.http4s.multipart
+import tapir.model.MultiQueryParams
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}

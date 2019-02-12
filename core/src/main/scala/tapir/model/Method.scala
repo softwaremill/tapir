@@ -1,4 +1,4 @@
-package tapir
+package tapir.model
 
 case class Method(m: String) extends AnyVal
 object Method {

@@ -8,6 +8,7 @@ import tapir.Codec.PlainCodec
 import tapir.internal.SeqToParams
 import tapir.typelevel.ParamsAsArgs
 import tapir._
+import tapir.model.{MultiQueryParams, Part}
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   // don't look. The code is really, really ugly.

@@ -1,5 +1,6 @@
 package tapir
 
+import tapir.model.Method
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 /**

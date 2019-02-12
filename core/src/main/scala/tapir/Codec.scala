@@ -8,6 +8,7 @@ import java.nio.file.Path
 import tapir.DecodeResult._
 import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
 import tapir.internal.UrlencodedData
+import tapir.model.Part
 
 /**
   * A pair of functions, one to encode a value of type `T` to a raw value of type `R`,

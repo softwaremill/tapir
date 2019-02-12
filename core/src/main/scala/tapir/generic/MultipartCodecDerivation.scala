@@ -20,7 +20,7 @@ object MultipartCodecDerivation {
     val util = new CaseClassUtil[c.type, T](c)
     val fields = util.fields
 
-    def fieldIsPart(field: Symbol): Boolean = field.typeSignature.typeSymbol.fullName.startsWith("tapir.Part")
+    def fieldIsPart(field: Symbol): Boolean = field.typeSignature.typeSymbol.fullName.startsWith("tapir.model.Part")
     def partTypeArg(field: Symbol): Type = field.typeSignature.typeArgs.head
 
     val fieldsWithCodecs = fields.map { field =>
@@ -52,7 +52,7 @@ object MultipartCodecDerivation {
             o.$fieldName.copy(name = transformedName)"""
       } else {
         val base = q"""$transformedName
-                       tapir.Part(transformedName, o.$fieldName)"""
+                       tapir.model.Part(transformedName, o.$fieldName)"""
 
         // if the field is a File/Path, and is not wrapped in a Path, during encoding adding the file's name
         val fieldTypeName = field.typeSignature.typeSymbol.fullName

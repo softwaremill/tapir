@@ -1,3 +1,5 @@
+import tapir.model.Part
+
 package object tapir extends Tapir {
   type StatusCode = Int
 

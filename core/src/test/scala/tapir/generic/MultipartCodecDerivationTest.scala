@@ -4,8 +4,9 @@ import java.io.File
 
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
+import tapir.model.Part
 import tapir.util.CompileUtil
-import tapir.{Codec, DecodeResult, MediaType, Part, RawPart}
+import tapir.{Codec, DecodeResult, MediaType, RawPart}
 
 class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {

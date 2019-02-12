@@ -4,7 +4,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
-import tapir.model.{Cookie, CookiePair}
+import tapir.model.{Cookie, CookiePair, Method}
 
 trait Tapir {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)

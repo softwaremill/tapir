@@ -1,6 +1,7 @@
 package tapir.server
 
-import tapir.{DecodeResult, EndpointIO, EndpointInput, StatusCodes}
+import tapir.model.StatusCodes
+import tapir.{DecodeResult, EndpointIO, EndpointInput}
 
 object ServerDefaults {
 

@@ -1,5 +1,6 @@
 package tapir.docs.openapi
-import tapir.Method
+
+import tapir.model.Method
 
 case class OpenAPIDocsOptions(operationIdGenerator: (Vector[String], Method) => String)
 

@@ -29,6 +29,7 @@ import akka.util.ByteString
 import tapir._
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{ParamsToSeq, SeqToParams}
+import tapir.model.{Method, Part}
 import tapir.server.{DecodeFailureHandling, StatusMapper}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple}
 

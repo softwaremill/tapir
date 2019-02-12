@@ -1,10 +1,12 @@
 package tapir
+
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.Path
 
 import tapir.Schema._
 import tapir.generic.SchemaForMagnoliaDerivation
+import tapir.model.Part
 
 trait SchemaFor[T] {
   def schema: Schema

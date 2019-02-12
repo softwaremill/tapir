@@ -9,11 +9,12 @@ import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import tapir.model.{MultiQueryParams, Part}
 import tapir.server.{ServerDefaults, StatusMapper}
 import tapir.tests.TestUtil._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
-import tapir.{StatusCodes, _}
+import tapir.{_}
 
 import scala.util.Random
 

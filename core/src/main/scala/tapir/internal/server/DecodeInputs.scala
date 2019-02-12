@@ -1,6 +1,7 @@
 package tapir.internal.server
 
-import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, MultiQueryParams}
+import tapir.model.MultiQueryParams
+import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec
 
