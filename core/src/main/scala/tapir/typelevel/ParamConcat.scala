@@ -1,7 +1,5 @@
 package tapir.typelevel
 
-import tapir.typelevel.akka.TupleOps
-
 /**
   * Concatenates two parameter lists into one. Each parameter list can be either a single type, or a tuple.
   */
