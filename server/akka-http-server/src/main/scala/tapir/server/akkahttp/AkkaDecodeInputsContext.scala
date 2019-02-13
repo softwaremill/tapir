@@ -5,7 +5,7 @@ import akka.http.scaladsl.server.RequestContext
 import tapir.internal.server.DecodeInputsContext
 import tapir.model.MultiQueryParams
 
-class AkkaDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
+private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
     req.unmatchedPath match {
       case Uri.Path.Slash(pathTail)      => new AkkaDecodeInputsContext(req.withUnmatchedPath(pathTail)).nextPathSegment
