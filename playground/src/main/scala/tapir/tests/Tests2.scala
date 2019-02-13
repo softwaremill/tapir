@@ -5,6 +5,7 @@ import tapir.docs.openapi._
 import tapir.openapi.circe.yaml._
 import io.circe.generic.auto._
 import tapir.json.circe._
+import tapir.openapi.Info
 
 object Tests2 extends App {
   case class Address(street: String, number: Option[Int])
@@ -16,7 +17,7 @@ object Tests2 extends App {
     .in(query[Option[String]]("q3"))
     .out(jsonBody[User].example(User("x", 10, Address("y", Some(20)))))
 
-  val docs = e.toOpenAPI("Example 1", "1.0")
+  val docs = e.toOpenAPI(Info("Example 1", "1.0"))
   println(docs.toYaml)
 }
 

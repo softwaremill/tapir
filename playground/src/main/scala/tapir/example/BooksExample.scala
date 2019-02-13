@@ -2,6 +2,7 @@ package tapir.example
 
 import com.typesafe.scalalogging.StrictLogging
 import tapir.example.Endpoints.Limit
+import tapir.openapi.Info
 
 case class Book(title: String, genre: String, year: Int)
 case class BooksQuery(genre: Option[String], limit: Limit)
@@ -49,7 +50,8 @@ object BooksExample extends App with StrictLogging {
     import tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI("The Tapir Library", "1.0")
+    val api = Info("The Tapir Library", "1.0")
+    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI(api)
     docs.toYaml
   }
 
