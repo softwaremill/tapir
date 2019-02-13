@@ -106,7 +106,8 @@ private[akkahttp] object OutputToAkkaResponse {
       case MediaType.OctetStream()        => MediaTypes.`application/octet-stream`
       case MediaType.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`.withMissingCharset
       case MediaType.MultipartFormData()  => MediaTypes.`multipart/form-data`
-      case mt                             => ContentType.parse(mt.mediaType).right.get
+      case mt =>
+        ContentType.parse(mt.mediaType).right.getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $mediaType"))
     }
   }
 
