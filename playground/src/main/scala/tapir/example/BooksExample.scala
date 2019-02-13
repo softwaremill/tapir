@@ -50,8 +50,7 @@ object BooksExample extends App with StrictLogging {
     import tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val api = Info("The Tapir Library", "1.0")
-    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI(api)
+    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI("The Tapir Library", "1.0")
     docs.toYaml
   }
 

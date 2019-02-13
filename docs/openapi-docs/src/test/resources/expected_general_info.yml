@@ -14,7 +14,7 @@ info:
 paths:
   /:
     get:
-      operationId: root-get
+      operationId: getRoot
       parameters:
         - name: fruit
           in: query
