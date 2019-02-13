@@ -52,8 +52,6 @@ trait Tapir {
 
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 
-  case class InvalidOutput(reason: DecodeResult[Nothing], cause: Option[Throwable]) extends Exception(cause.orNull) // TODO
-
   val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
     Endpoint[Unit, Unit, Unit, Nothing](
       Method.GET,

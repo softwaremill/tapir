@@ -70,13 +70,13 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       .map {
         case EndpointIO.Body(codec, _) =>
           val so = if (codec.meta.isOptional && body == "") None else Some(body)
-          codec.decode(so).getOrThrow(InvalidOutput)
+          getOrThrow(codec.decode(so))
 
         case EndpointIO.StreamBodyWrapper(_) =>
           body
 
         case EndpointIO.Header(name, codec, _) =>
-          codec.decode(meta.headers(name).toList).getOrThrow(InvalidOutput)
+          getOrThrow(codec.decode(meta.headers(name).toList))
 
         case EndpointIO.Headers(_) =>
           meta.headers
@@ -220,5 +220,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         f
       case MultipartValueType(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
     }
+  }
+
+  private def getOrThrow[T](dr: DecodeResult[T]): T = dr match {
+    case DecodeResult.Value(v)    => v
+    case DecodeResult.Error(o, e) => throw new IllegalArgumentException(s"Cannot decode from $o", e)
+    case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
   }
 }
