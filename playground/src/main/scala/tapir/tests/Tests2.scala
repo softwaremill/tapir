@@ -29,38 +29,3 @@ TODO:
  * error-result tests
  */
 
-/*
-
-Body:
-
-basic:
-
-- string                body[String]
-- array[byte]           body[Array[Byte]]
-- byte buffer           body[ByteBuffer]
-- input stream          body[InputStream]
-- file                  body[File]           save request body/response to file -> temporary? (file creation strategy?); send the given file
-- map[string, string]   body[Seq[(String, String)]], body[Map[String, String]]  urlencoded!
-- stream (*)            streamBody[...]
-- multipart:
-  - any basic
-
-inputs
-- all query params                 allQueryParams: Seq[(String, String)]
-- all headers (as map)             allHeaders: Seq[(String, String)]
-- remaining path components        remainingPath: List[String]
-
-- all form parameters - FROM BODY! body -> Seq[(String, String)]
-
-- query param                      query[String]("y")                   queryParam
-- path constant/capture            path[String]                         pathSegment
-- header                           header[String]("x")
-
-- form parameter - FROM BODY!      form[String]("z")                    mandates urlencoded form body
-
-- one multipart part               multipart[String]("a") -> Part[String] with headers, filename, body, name
-- all multipart parts              allMultipartParts: Seq[Part] (StringPart / BinaryPart)
-
-
-endpoint compile / non-compile tests
- */

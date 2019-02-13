@@ -17,20 +17,6 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
 object Tests extends App {
-  // TODO
-  //  case class User()
-  //
-  //  implicit val userType = json[User].sample(User("x"))
-  //  implicit val ? = string.format(base64)
-  //  implicit val productErrorType = json[ProductError]
-  //
-  //  val qp = query[String]("v").description("p")      // : EndpointInput[HList] - each input extracts 0+ data from the request
-  //  // an input can be created from a function RequestContext => T
-  //  val hp = header("X-Y")
-  //  val bp = body[User]
-  //
-  //  // verify that there's only one body + that query params aren't repeated?
-  //  val inputs = qp.and(hp).and(bp) // andUsing(combineFn)
 
   val p = "x" / path[String]("p1") / "z"
 
