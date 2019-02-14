@@ -4,6 +4,7 @@ import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
+import java.util.UUID
 
 import tapir.DecodeResult._
 import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
@@ -55,6 +56,7 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
   implicit val floatPlainCodec: PlainCodec[Float] = plainCodec[Float](_.toFloat, Schema.SNumber)
   implicit val doublePlainCodec: PlainCodec[Double] = plainCodec[Double](_.toDouble, Schema.SNumber)
   implicit val booleanPlainCodec: PlainCodec[Boolean] = plainCodec[Boolean](_.toBoolean, Schema.SBoolean)
+  implicit val uuidPlainCodec: PlainCodec[UUID] = plainCodec[UUID](UUID.fromString, Schema.SString)
 
   def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, Schema.SString, charset)
 
