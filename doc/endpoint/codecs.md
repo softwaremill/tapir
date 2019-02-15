@@ -105,4 +105,4 @@ validation fails, the result of the method can be an error, which is one of the 
 
 ## Next
 
-Read on about [json support](json.md).
+Read on about [json support](json.html).
