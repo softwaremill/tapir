@@ -10,10 +10,10 @@ interpreted as:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
-  * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s.
-  * [Http4s](server/http4s.md) `HttpRoutes[F]`
-* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.md).
-* documentation. Currently supported: [OpenAPI](openapi.md).
+  * [Akka HTTP](https://tapir-scala.readthedocs.io/en/latest/server/akkahttp.html) `Route`s/`Directive`s.
+  * [Http4s](https://tapir-scala.readthedocs.io/en/latest/server/http4s.html) `HttpRoutes[F]`
+* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](https://tapir-scala.readthedocs.io/en/latest/sttp.html).
+* documentation. Currently supported: [OpenAPI](https://tapir-scala.readthedocs.io/en/latest/openapi.html).
 
 ## Teaser
 

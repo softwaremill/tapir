@@ -45,4 +45,4 @@ generate a server or a client, as well as in many cases can be used both for inp
 
 ## Next
 
-Read on about describing [endpoint inputs/outputs](ios.md).
+Read on about describing [endpoint inputs/outputs](ios.html).
