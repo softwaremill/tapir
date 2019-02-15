@@ -67,7 +67,7 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 
 ## Documentation
 
-tapir documentation is available at [tapir-scala.readthedocs.io](tapir-scala.readthedocs.io).
+tapir documentation is available at [tapir-scala.readthedocs.io](http://tapir-scala.readthedocs.io).
 
 ## Quickstart with sbt
 
