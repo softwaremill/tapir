@@ -1,7 +1,6 @@
 # Contributing
 
-Tapir is an early stage project. Everything might change. Be warned: the code is often ugly, uses mutable state, 
-imperative loops and type casts. Luckily, there's no reflection. All suggestions welcome :)
+Tapir is an early stage project. Everything might change. All suggestions welcome :)
 
 See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick one! Or report your own.
 
