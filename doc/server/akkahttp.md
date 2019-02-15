@@ -62,4 +62,4 @@ response bodies and reading request bodies. Usage: `streamBody[Source[ByteString
 ## Configuration
 
 The interpreter can be configured by providing an implicit `AkkaHttpServerOptions` value and status mappers, see
-[common server configuration](common.html) for details.
+[common server configuration](common.md) for details.

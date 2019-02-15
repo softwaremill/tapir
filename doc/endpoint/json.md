@@ -8,7 +8,7 @@ the following dependency to your project:
 "com.softwaremill.tapir" %% "tapir-json-circe" % "0.0.11"
 ```
 
-Next, import the package (or extend the `JsonCirce` trait, see [MyTapir](../mytapir.html)):
+Next, import the package (or extend the `JsonCirce` trait, see [MyTapir](../mytapir.md)):
 
 ```scala
 import tapir.json.circe._
@@ -36,4 +36,4 @@ for the Circe codec (which is just a couple of lines of code).
 
 ## Next
 
-Read on about [working with forms](forms.html).
+Read on about [working with forms](forms.md).

@@ -6,10 +6,10 @@ interpreted as:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
-  * [Akka HTTP](server/akkahttp.html) `Route`s/`Directive`s.
-  * [Http4s](server/http4s.html) `HttpRoutes[F]`
-* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.html).
-* documentation. Currently supported: [OpenAPI](openapi.html).
+  * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s.
+  * [Http4s](server/http4s.md) `HttpRoutes[F]`
+* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.md).
+* documentation. Currently supported: [OpenAPI](openapi.md).
 
 Tapir is licensed under Apache2, the source code is [available of GitHub](https://github.com/softwaremill/tapir).
 
@@ -69,17 +69,17 @@ which is a slight extension of the above.
 
 ## Contents
 
-* [Quickstart](quickstart.html)
-* [Goals of the project](goals.html)
-* [Endpoints: basics](endpoint/basics.html)
-* [Endpoints: inputs/outputs](endpoint/ios.html)
-* [Endpoints: codecs](endpoint/codecs.html)
-* [Endpoints: working with JSON](endpoint/json.html)
-* [Endpoints: forms](endpoint/forms.html)
-* [Servers: akka-http interpreter](server/akkahttp.html)
-* [Servers: http4s interpreter](server/http4s.html)
-* [Servers: common configuration](server/common.html)
-* [Clients: sttp interpreter](sttp.html)
-* [Documentation: openapi interpreter](openapi.html)
-* [Create your own tapir](mytapir.html)
-* [Contributing](contributing.html)
+* [Quickstart](quickstart.md)
+* [Goals of the project](goals.md)
+* [Endpoints: basics](endpoint/basics.md)
+* [Endpoints: inputs/outputs](endpoint/ios.md)
+* [Endpoints: codecs](endpoint/codecs.md)
+* [Endpoints: working with JSON](endpoint/json.md)
+* [Endpoints: forms](endpoint/forms.md)
+* [Servers: akka-http interpreter](server/akkahttp.md)
+* [Servers: http4s interpreter](server/http4s.md)
+* [Servers: common configuration](server/common.md)
+* [Clients: sttp interpreter](sttp.md)
+* [Documentation: openapi interpreter](openapi.md)
+* [Create your own tapir](mytapir.md)
+* [Contributing](contributing.md)

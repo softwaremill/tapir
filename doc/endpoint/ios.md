@@ -3,7 +3,7 @@
 An input is represented as an instance of the `EndpointInput` trait, and an output as an instance of the `EndpointIO` 
 trait, as all outputs can also be used as inputs. Each input or output can yield/accept a value. For example, 
 `query[Int]("age"): EndpointInput[Int]` describes an input, which maps to a query parameter `age`, which should be 
-parsed (using the string-to-integer [codec](codecs.html)) as an `Int`.
+parsed (using the string-to-integer [codec](codecs.md)) as an `Int`.
 
 The `tapir` package contains a number of convenience methods to define an input or an output for an endpoint. 
 These are:
@@ -88,4 +88,4 @@ The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the o
 
 ## Next
 
-Read on about [codecs](codecs.html).
+Read on about [codecs](codecs.md).
