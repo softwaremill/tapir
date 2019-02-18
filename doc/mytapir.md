@@ -5,7 +5,7 @@ of this data (turning endpoints into a server or a client). Importing these pack
 may be tedious, that's why each package object inherits all of its functionality from a trait.
 
 Hence, it is possible to create your own object which combines all of the required functionalities and provides
-a single-import whenever you want to use Tapir. For example:
+a single-import whenever you want to use tapir. For example:
 
 ```scala
 object MyTapir extends Tapir

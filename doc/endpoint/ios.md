@@ -1,9 +1,9 @@
 # Defining endpoint's input/output
 
-An input is represented as an instance of the `EndpointInput` trait, and an output as an instance of the `EndpointIO` 
+An input is described by an instance of the `EndpointInput` trait, and an output by an instance of the `EndpointIO` 
 trait, as all outputs can also be used as inputs. Each input or output can yield/accept a value. For example, 
-`query[Int]("age"): EndpointInput[Int]` describes an input, which maps to a query parameter `age`, which should be 
-parsed (using the string-to-integer [codec](codecs.html)) as an `Int`.
+`query[Int]("age"): EndpointInput[Int]` describes an input, which is the `age` query parameter, and which should be 
+mapped (using the string-to-integer [codec](codecs.html)) as an `Int`.
 
 The `tapir` package contains a number of convenience methods to define an input or an output for an endpoint. 
 These are:
@@ -36,7 +36,8 @@ endpoint input/output descriptions are immutable. For example, an input specifyi
 (mandatory) and `limit` (optional) can be written down as:
 
 ```scala
-val paging: EndpointInput[(UUID, Option[Int])] = query[UUID]("start").and(query[Option[Int]]("limit"))
+val paging: EndpointInput[(UUID, Option[Int])] = 
+  query[UUID]("start").and(query[Option[Int]]("limit"))
 
 // we can now use the value in multiple endpoints, e.g.:
 val listUsersEndpoint: Endpoint[(UUID, Option[Int]), Unit, List[User], Nothing] = 
@@ -49,13 +50,15 @@ parameters, but also to define template-endpoints, which can then be further spe
 base endpoint for our API, where all paths always start with `/api/v1.0`, and errors are always returned as a json:
 
 ```scala
-val baseEndpoint: Endpoint[Unit, ErrorInfo, Unit, Nothing] = endpoint.in("api" / "v1.0").errorOut(jsonBody[ErrorInfo])
+val baseEndpoint: Endpoint[Unit, ErrorInfo, Unit, Nothing] =  
+  endpoint.in("api" / "v1.0").errorOut(jsonBody[ErrorInfo])
 ```
 
 Thanks to the fact that inputs/outputs accumulate, we can use the base endpoint to define more inputs, for example:
 
 ```scala
-val statusEndpoint: Endpoint[Unit, ErrorInfo, Status, Nothing] = baseEndpoint.in("status").out(jsonBody[Status])
+val statusEndpoint: Endpoint[Unit, ErrorInfo, Status, Nothing] = 
+  baseEndpoint.in("status").out(jsonBody[Status])
 ```
 
 The above endpoint will correspond to the `api/v1.0/status` path.
@@ -70,8 +73,10 @@ which  accepts functions which provide the mapping in both directions. For examp
 
 ```scala
 case class Paging(from: UUID, limit: Option[Int])
-val paging: EndpointInput[Paging] = query[UUID]("start").and(query[Option[Int]]("limit"))
-  .map((from, limit) => Paging(from, limit))(paging => (paging.from, paging.limit))
+
+val paging: EndpointInput[Paging] = 
+  query[UUID]("start").and(query[Option[Int]]("limit"))
+    .map((from, limit) => Paging(from, limit))(paging => (paging.from, paging.limit))
 ```
 
 Creating a mapping between a tuple and a case class is a common operation, hence there's also a 
@@ -79,8 +84,10 @@ Creating a mapping between a tuple and a case class is a common operation, hence
 
 ```scala
 case class Paging(from: UUID, limit: Option[Int])
-val paging: EndpointInput[Paging] = query[UUID]("start").and(query[Option[Int]]("limit"))
-  .mapTo(Paging)
+
+val paging: EndpointInput[Paging] = 
+  query[UUID]("start").and(query[Option[Int]]("limit"))
+    .mapTo(Paging)
 ```
 
 Mapping methods can also be called on an endpoint (which is useful if inputs/outputs are accumulated, for example).

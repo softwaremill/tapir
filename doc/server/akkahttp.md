@@ -38,7 +38,7 @@ val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] =
 val countCharactersRoute: Route = countCharactersEndpoint.toRoute(countCharacters _)
 ```
 
-The created `Route`/`Directive` can then be further combined with other akka-http directives, for example nest within
+The created `Route`/`Directive` can then be further combined with other akka-http directives, for example nested within
 other routes. The Tapir-generated `Route`/`Directive` captures from the request only what is described by the endpoint.
 
 It's completely feasible that some part of the input is read using akka-http directives, and the rest 

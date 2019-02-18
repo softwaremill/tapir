@@ -31,7 +31,8 @@ import org.http4s.HttpRoutes
 import cats.effect.ContextShift
 
 // will probably come from somewhere else
-implicit val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
+implicit val cs: ContextShift[IO] = 
+  IO.contextShift(scala.concurrent.ExecutionContext.global)
 
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
   IO.pure(Right[Unit, Int](s.length))

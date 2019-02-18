@@ -6,9 +6,11 @@ supported by client/server interpreters, include `String`s, byte arrays, `File`s
 There are built-in codecs for most common types such as `String`, `Int` etc. Codecs are usually defined as implicit 
 values and resolved implicitly when they are referenced.
 
-For example, a `query[Int]("quantity")` specifies an input parameter which will be read from the `quantity` query 
-parameter and decoded into an `Int`. There's an implicit `Codec[Int]` parameter that is referenced by the `query`
-method. In a server setting, if the value cannot be parsed to an int, a decoding failure is reported, and the endpoint 
+For example, a `query[Int]("quantity")` specifies an input parameter which corresponds to the `quantity` query 
+parameter and will be mapped as an `Int`. There's an implicit `Codec[Int]` value that is referenced by the `query`
+method (which is defined in the `tapir` package). 
+
+In a server setting, if the value cannot be parsed as an int, a decoding failure is reported, and the endpoint 
 won't match the request, or a `400 Bad Request` response is returned (depending on configuration).
 
 ## Optional and multiple parameters
@@ -41,15 +43,16 @@ For primitive types, the schema values are built-in, and include values such as 
 `Schema.SBinary` etc. 
 
 For complex types, it is possible to define the schema by hand and apply it to a codec (using the `codec.schema` 
-method), however usually e.g. json codecs lookup the schema implicitly by requiring an implicit value of type
+method), however usually the schema is looked up by codecs by requiring an implicit value of type
 `SchemaFor[T]`. A schema-for value contains a single `schema: Schema` field.
 
-`SchemaFor[T]` values are automatically derived for case classes using  
-[Magnolia](https://propensive.com/opensource/magnolia/). It is possible to configure the automatic derivation to use 
-snake-case, kebab-case or a custom field naming policy, by providing an implicit `tapir.generic.Configuration` value:
+`SchemaFor[T]` values are automatically derived for case classes using [Magnolia](https://propensive.com/opensource/magnolia/). 
+It is possible to configure the automatic derivation to use snake-case, kebab-case or a custom field naming policy, 
+by providing an implicit `tapir.generic.Configuration` value:
 
 ```scala
-implicit val customConfiguration: Configuration = Configuration.defaults.snakeCaseTransformation
+implicit val customConfiguration: Configuration = 
+  Configuration.defaults.snakeCaseTransformation
 ```
 
 ## Media types
@@ -63,8 +66,8 @@ specifies how to serialize a case class to plain text, and a different `Codec[My
 how to serialize a case class to json. Both can be implicitly available without implicit resolution conflicts.
 
 Different media types can be used in different contexts. When defining a path, query or header parameter, only a codec 
-with the `TextPlain` media type can be used. However, for bodies, any media types is allowed. For example, the io 
-described by `jsonBody[T]` requires a json codec.
+with the `TextPlain` media type can be used. However, for bodies, any media types is allowed. For example, the 
+input/output described by `jsonBody[T]` requires a json codec.
 
 ## Custom types
 
@@ -94,13 +97,13 @@ On the other hand, when building composite types out of many values, or when an 
 ## Validation
 
 While codecs support reporting decoding failures, this is not meant as a validation solution, as it only works on single
-values, while validation often involves multiple combines values.
+values, while validation often involves multiple combined values.
 
 Decoding failures should be reported when the input is in an incorrect low-level format, when parsing a "raw value"
-fails. In other words, decoding failures should be reported for format errors, not business validation failures.
+fails. In other words, decoding failures should be reported for format failures, not business validation errors.
 
 Any validation should be done as part of the "business logic" methods provided to the server interpreters. In case 
-validation fails, the result of the method can be an error, which is one of the mappings defined in an endpoint
+validation fails, the result can be an error, which is one of the mappings defined in an endpoint
 (the `E` in `Endpoint[I, E, O, S]`).
 
 ## Next

@@ -36,8 +36,8 @@ println(docs.toYaml)
 Exposing the OpenAPI documentation can be very application-specific. For example, to expose the docs using the
 Swagger UI and akka-http:
 
-1. add `libraryDependencies += "org.webjars" % "swagger-ui" % "3.20.5"` to `build.sbt` (or newer)
-2. generate the yaml content to serve as a `String` using tapir: 
+* add `libraryDependencies += "org.webjars" % "swagger-ui" % "3.20.5"` to `build.sbt` (or newer)
+* generate the yaml content to serve as a `String` using tapir: 
 
 ```scala
 import tapir.docs.openapi._
@@ -46,7 +46,7 @@ import tapir.openapi.circe.yaml._
 val docsAsYaml: String = myEndpoints.toOpenAPI("My App", "1.0").toYaml
 ```
 
-3. add the following routes to your server:
+* add the following routes to your server:
 
 ```scala
 val SwaggerYml = "swagger.yml"
