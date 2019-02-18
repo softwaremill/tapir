@@ -155,7 +155,7 @@ class SwaggerUI(yml: String) {
           path(SwaggerYml) {
             complete(yml)
           } ~
-          getFromResourceDirectory("META-INF/resources/webjars/swagger-ui/3.20.0/")
+          getFromResourceDirectory("META-INF/resources/webjars/swagger-ui/3.20.5/")
       }
 }
 
