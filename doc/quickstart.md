@@ -3,7 +3,7 @@
 To use tapir, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-core" % "0.0.11"
+"com.softwaremill.tapir" %% "tapir-core" % "0.1"
 ```
 
 This will import only the core classes. To generate a server or a client, you will need to add further dependencies.

@@ -5,7 +5,7 @@ needed for actual json parsing/printing. Currently, [Circe](https://github.com/c
 the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-json-circe" % "0.0.11"
+"com.softwaremill.tapir" %% "tapir-json-circe" % "0.1"
 ```
 
 Next, import the package (or extend the `JsonCirce` trait, see [MyTapir](../mytapir.html)):
