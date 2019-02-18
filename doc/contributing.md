@@ -6,7 +6,7 @@ See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick 
 
 If you are having doubts on the *why* or *how* something works, don't hesitate to ask a question on
 [gitter](https://gitter.im/softwaremill/tapir) or via github. This probably means that the documentation, scaladocs or 
-code is unclear and be improved for the benefit of all.
+code is unclear and can be improved for the benefit of all.
 
 ## Acknowledgments
 
