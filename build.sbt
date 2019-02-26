@@ -8,7 +8,7 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.5"
 
 val http4sVersion = "0.20.0-M5"
 val circeVersion = "0.11.1"
-val sttpVersion = "1.5.9"
+val sttpVersion = "1.5.11"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -175,7 +175,7 @@ lazy val playground: Project = (project in file("playground"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
-      "org.webjars" % "swagger-ui" % "3.20.5"
+      "org.webjars" % "swagger-ui" % "3.20.9"
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
