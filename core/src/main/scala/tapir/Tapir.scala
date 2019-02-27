@@ -4,7 +4,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
-import tapir.model.{Cookie, CookiePair, Method}
+import tapir.model.{Cookie, CookiePair}
 
 trait Tapir {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
@@ -54,7 +54,6 @@ trait Tapir {
 
   val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
     Endpoint[Unit, Unit, Unit, Nothing](
-      None,
       EndpointInput.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),

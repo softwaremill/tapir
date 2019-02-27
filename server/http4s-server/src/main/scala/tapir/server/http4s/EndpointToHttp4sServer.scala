@@ -6,7 +6,6 @@ import cats.implicits._
 import org.http4s.{EntityBody, Headers, HttpRoutes, Request, Response, Status}
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import tapir.model.Method
 import tapir.server.{DecodeFailureHandling, StatusMapper}
 import tapir.typelevel.ParamsAsArgs
 import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
@@ -49,36 +48,13 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           }
       }
 
-      val methodMatches = e.method match {
-        case Some(m) => http4sMethodToTapirMethodMap.get(req.method).contains(m)
-        case None    => true
-      }
-
-      if (methodMatches) {
-        OptionT(decodeBody(DecodeInputs(e.input, new Http4sDecodeInputsContext[F](req))).flatMap {
-          case values: DecodeInputsResult.Values          => valuesToResponse(values).map(_.some)
-          case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(req, input, failure).pure[F]
-        })
-      } else {
-        OptionT.none
-      }
+      OptionT(decodeBody(DecodeInputs(e.input, new Http4sDecodeInputsContext[F](req))).flatMap {
+        case values: DecodeInputsResult.Values          => valuesToResponse(values).map(_.some)
+        case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(req, input, failure).pure[F]
+      })
     }
 
     service
-  }
-
-  private val http4sMethodToTapirMethodMap: Map[org.http4s.Method, Method] = {
-    import org.http4s.Method._
-    import tapir.model.Method
-    Map(
-      GET -> Method.GET,
-      POST -> Method.POST,
-      DELETE -> Method.DELETE,
-      PUT -> Method.PUT,
-      OPTIONS -> Method.OPTIONS,
-      PATCH -> Method.PATCH,
-      CONNECT -> Method.CONNECT
-    )
   }
 
   private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status =

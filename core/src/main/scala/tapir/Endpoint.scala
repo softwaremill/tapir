@@ -1,5 +1,6 @@
 package tapir
 
+import tapir.EndpointInput.RequestMethod
 import tapir.model.Method
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
@@ -9,22 +10,18 @@ import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
   * @tparam O Output parameter types.
   * @tparam S The type of streams that are used by this endpoint's inputs/outputs. `Nothing`, if no streams are used.
   */
-case class Endpoint[I, E, O, +S](method: Option[Method],
-                                 input: EndpointInput[I],
-                                 errorOutput: EndpointIO[E],
-                                 output: EndpointIO[O],
-                                 info: EndpointInfo) {
+case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointIO[E], output: EndpointIO[O], info: EndpointInfo) {
 
-  def get: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.GET))
-  def head: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.HEAD))
-  def post: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.POST))
-  def put: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.PUT))
-  def delete: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.DELETE))
-  def options: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.OPTIONS))
-  def patch: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.PATCH))
-  def connect: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.CONNECT))
-  def trace: Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method.TRACE))
-  def method(m: String): Endpoint[I, E, O, S] = this.copy[I, E, O, S](method = Some(Method(m)))
+  def get: Endpoint[I, E, O, S] = in(RequestMethod(Method.GET))
+  def post: Endpoint[I, E, O, S] = in(RequestMethod(Method.POST))
+  def head: Endpoint[I, E, O, S] = in(RequestMethod(Method.HEAD))
+  def put: Endpoint[I, E, O, S] = in(RequestMethod(Method.PUT))
+  def delete: Endpoint[I, E, O, S] = in(RequestMethod(Method.DELETE))
+  def options: Endpoint[I, E, O, S] = in(RequestMethod(Method.OPTIONS))
+  def patch: Endpoint[I, E, O, S] = in(RequestMethod(Method.PATCH))
+  def connect: Endpoint[I, E, O, S] = in(RequestMethod(Method.CONNECT))
+  def trace: Endpoint[I, E, O, S] = in(RequestMethod(Method.TRACE))
+  def method(m: String): Endpoint[I, E, O, S] = in(RequestMethod(Method(m)))
 
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S] =
     this.copy[IJ, E, O, S](input = input.and(i))
@@ -71,8 +68,7 @@ case class Endpoint[I, E, O, +S](method: Option[Method],
   def info(i: EndpointInfo): Endpoint[I, E, O, S] = copy(info = i)
 
   def show: String = {
-    val m = method.fold("")(m => m.m + ", ")
-    s"Endpoint${info.name.map("[" + _ + "]").getOrElse("")}(${m}in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
+    s"Endpoint${info.name.map("[" + _ + "]").getOrElse("")}(in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
   }
 }
 

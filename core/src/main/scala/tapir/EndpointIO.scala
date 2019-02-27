@@ -3,7 +3,7 @@ package tapir
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.internal.ProductToParams
-import tapir.model.MultiQueryParams
+import tapir.model.{Method, MultiQueryParams}
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 sealed trait EndpointInput[I] {
@@ -42,6 +42,15 @@ sealed trait EndpointInput[I] {
     case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.bodyType
     case _                                      => None
   }
+
+  private[tapir] def method: Option[Method] = this match {
+    case i: EndpointInput.RequestMethod         => Some(i.m)
+    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.method).headOption
+    case EndpointIO.Multiple(inputs)            => inputs.flatMap(_.method).headOption
+    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.method
+    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.method
+    case _                                      => None
+  }
 }
 
 object EndpointInput {
@@ -55,6 +64,10 @@ object EndpointInput {
   }
 
   sealed trait Basic[I] extends Single[I]
+
+  case class RequestMethod(m: Method) extends Basic[Unit] {
+    def show: String = m.m
+  }
 
   case class PathSegment(s: String) extends Basic[Unit] {
     def show = s"/$s"

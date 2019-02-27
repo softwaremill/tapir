@@ -1,6 +1,6 @@
 package tapir.internal.server
 
-import tapir.model.MultiQueryParams
+import tapir.model.{Method, MultiQueryParams}
 import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec
@@ -14,6 +14,8 @@ object DecodeInputsResult {
 }
 
 trait DecodeInputsContext {
+  def method: Method
+
   def nextPathSegment: (Option[String], DecodeInputsContext)
 
   def header(name: String): List[String]
@@ -37,17 +39,18 @@ object DecodeInputs {
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
   def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
-    // the first decoding failure is returned. We decode in the following order: path, query, headers, body
+    // the first decoding failure is returned. We decode in the following order: method, path, query, headers, body
     val inputs = input.asVectorOfBasic.sortBy {
-      case _: EndpointInput.PathSegment          => 0
-      case _: EndpointInput.PathCapture[_]       => 0
-      case _: EndpointInput.PathsCapture         => 0
-      case _: EndpointInput.Query[_]             => 1
-      case _: EndpointInput.QueryParams          => 1
-      case _: EndpointIO.Header[_]               => 2
-      case _: EndpointIO.Headers                 => 2
-      case _: EndpointIO.Body[_, _, _]           => 3
-      case _: EndpointIO.StreamBodyWrapper[_, _] => 3
+      case _: EndpointInput.RequestMethod        => 0
+      case _: EndpointInput.PathSegment          => 1
+      case _: EndpointInput.PathCapture[_]       => 1
+      case _: EndpointInput.PathsCapture         => 1
+      case _: EndpointInput.Query[_]             => 2
+      case _: EndpointInput.QueryParams          => 2
+      case _: EndpointIO.Header[_]               => 3
+      case _: EndpointIO.Headers                 => 3
+      case _: EndpointIO.Body[_, _, _]           => 4
+      case _: EndpointIO.StreamBodyWrapper[_, _] => 4
     }
 
     val (result, consumedCtx) = apply(inputs, DecodeInputsResult.Values(Map(), None), ctx)
@@ -63,6 +66,10 @@ object DecodeInputs {
                     ctx: DecodeInputsContext): (DecodeInputsResult, DecodeInputsContext) = {
     inputs match {
       case Vector() => (values, ctx)
+
+      case (input @ EndpointInput.RequestMethod(m)) +: inputsTail =>
+        if (m == ctx.method) apply(inputsTail, values, ctx)
+        else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.m, ctx.method.m)), ctx)
 
       case (input @ EndpointInput.PathSegment(ss)) +: inputsTail =>
         ctx.nextPathSegment match {

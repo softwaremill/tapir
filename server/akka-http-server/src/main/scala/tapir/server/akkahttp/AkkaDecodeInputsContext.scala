@@ -3,9 +3,10 @@ package tapir.server.akkahttp
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.RequestContext
 import tapir.internal.server.DecodeInputsContext
-import tapir.model.MultiQueryParams
+import tapir.model.{Method, MultiQueryParams}
 
 private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
+  override def method: Method = Method(req.request.method.value.toUpperCase)
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
     req.unmatchedPath match {
       case Uri.Path.Slash(pathTail)      => new AkkaDecodeInputsContext(req.withUnmatchedPath(pathTail)).nextPathSegment

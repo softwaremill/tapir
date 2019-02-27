@@ -13,6 +13,8 @@ object InputValues {
   private def apply(inputs: Vector[EndpointInput.Single[_]], values: Map[EndpointInput.Single[_], Any]): List[Any] = {
     inputs match {
       case Vector() => Nil
+      case (_: EndpointInput.RequestMethod) +: inputsTail =>
+        apply(inputsTail, values)
       case (_: EndpointInput.PathSegment) +: inputsTail =>
         apply(inputsTail, values)
       case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>

@@ -13,7 +13,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
 
     val inputs = e.input.asVectorOfBasic
     val pathComponents = namedPathComponents(inputs)
-    val method = e.method.getOrElse(Method.GET)
+    val method = e.input.method.getOrElse(Method.GET)
 
     val pathComponentsForId = pathComponents.map(_.fold(identity, identity))
     val defaultId = options.operationIdGenerator(pathComponentsForId, method)

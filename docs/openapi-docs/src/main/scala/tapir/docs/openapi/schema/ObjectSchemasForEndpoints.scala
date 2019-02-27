@@ -45,6 +45,8 @@ object ObjectSchemasForEndpoints {
 
   private def forInput(input: EndpointInput[_]): List[TSchema.SObject] = {
     input match {
+      case EndpointInput.RequestMethod(_) =>
+        List.empty
       case EndpointInput.PathSegment(_) =>
         List.empty
       case EndpointInput.PathCapture(tm, _, _) =>

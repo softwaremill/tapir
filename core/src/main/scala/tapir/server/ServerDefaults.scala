@@ -12,8 +12,8 @@ object ServerDefaults {
     * By default, a 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason),
     * or if decoding a path capture ends with an error.
     *
-    * Otherwise (e.g. if a path segment, or path capture is missing or there's a mismatch), a "no match" is returned,
-    * which is a signal to try the next endpoint.
+    * Otherwise (e.g. if the method, a path segment, or path capture is missing or there's a mismatch), a "no match" is
+    * returned, which is a signal to try the next endpoint.
     */
   def decodeFailureHandler[R]: DecodeFailureHandler[R] = (_, input, failure) => {
     input match {

@@ -2,8 +2,10 @@ package tapir.server.http4s
 import org.http4s.Request
 import org.http4s.util.CaseInsensitiveString
 import tapir.internal.server.DecodeInputsContext
+import tapir.model.Method
 
 class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsContext {
+  override def method: Method = Method(req.method.name.toUpperCase)
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
 
     val nextStart = req.uri.path.dropWhile(_ == '/')

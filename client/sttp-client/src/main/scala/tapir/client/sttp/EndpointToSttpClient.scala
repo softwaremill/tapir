@@ -22,7 +22,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
       val (uri, req) = setInputParams(e.input.asVectorOfSingle, params, paramsAsArgs, 0, baseUri, baseReq)
 
-      var req2 = req.copy[Id, Either[Any, Any], Any](method = SttpMethod(e.method.getOrElse(Method.GET).m), uri = uri)
+      var req2 = req.copy[Id, Either[Any, Any], Any](method = SttpMethod(e.input.method.getOrElse(Method.GET).m), uri = uri)
 
       if (e.output.asVectorOfSingle.nonEmpty || e.errorOutput.asVectorOfSingle.nonEmpty) {
         // by default, reading the body as specified by the output, and optionally adjusting to the error output
@@ -115,6 +115,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
     inputs match {
       case Vector() => (uri, req)
+      case EndpointInput.RequestMethod(_) +: tail =>
+        setInputParams(tail, params, paramsAsArgs, paramIndex, uri, req)
       case EndpointInput.PathSegment(p) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri.copy(path = uri.path :+ p), req)
       case EndpointInput.PathCapture(codec, _, _) +: tail =>

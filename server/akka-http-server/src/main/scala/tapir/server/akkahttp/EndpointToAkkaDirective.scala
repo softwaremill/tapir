@@ -4,29 +4,20 @@ import java.io.ByteArrayInputStream
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{
   complete,
-  delete,
   extractExecutionContext,
   extractMaterializer,
   extractRequestContext,
-  get,
-  head,
-  method,
   onSuccess,
-  options,
-  patch,
-  post,
-  put,
   reject,
-  pass
 }
-import akka.http.scaladsl.server.{Directive0, Directive1, RequestContext}
+import akka.http.scaladsl.server.{Directive1, RequestContext}
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import tapir.model.{Method, Part}
+import tapir.model.Part
 import tapir.server.DecodeFailureHandling
 import tapir.{
   ByteArrayValueType,
@@ -53,8 +44,6 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
   def apply[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive1[I] = {
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._
-
-    val methodDirective = methodToAkkaDirective(e)
 
     val inputDirectives: Directive1[I] = {
 
@@ -85,25 +74,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       }
     }
 
-    methodDirective & inputDirectives
-  }
-
-  private def methodToAkkaDirective[O, E, I](e: Endpoint[I, E, O, AkkaStream]): Directive0 = {
-    e.method match {
-      case Some(m) =>
-        m match {
-          case Method.GET     => get
-          case Method.HEAD    => head
-          case Method.POST    => post
-          case Method.PUT     => put
-          case Method.DELETE  => delete
-          case Method.OPTIONS => options
-          case Method.PATCH   => patch
-          case _              => method(HttpMethod.custom(m.m))
-        }
-
-      case None => pass
-    }
+    inputDirectives
   }
 
   private def rawBodyDirective(bodyType: RawValueType[_]): Directive1[Any] = extractRequestContext.flatMap { ctx =>
