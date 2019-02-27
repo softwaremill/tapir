@@ -20,13 +20,25 @@ import scala.util.Random
 
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
 
-  testServer(endpoint, () => pureResult(().asRight[Unit])) { baseUri =>
+  // method matching
+
+  testServer(endpoint, () => pureResult(().asRight[Unit]), "GET empty endpoint") { baseUri =>
     sttp.get(baseUri).send().map(_.body shouldBe Right(""))
   }
 
-  testServer(endpoint, () => pureResult(().asRight[Unit]), "with post method") { baseUri =>
+  testServer(endpoint, () => pureResult(().asRight[Unit]), "POST empty endpoint") { baseUri =>
+    sttp.post(baseUri).send().map(_.body shouldBe Right(""))
+  }
+
+  testServer(endpoint.get, () => pureResult(().asRight[Unit]), "GET a GET endpoint") { baseUri =>
+    sttp.get(baseUri).send().map(_.body shouldBe Right(""))
+  }
+
+  testServer(endpoint.get, () => pureResult(().asRight[Unit]), "POST a GET endpoint") { baseUri =>
     sttp.post(baseUri).send().map(_.body shouldBe 'left)
   }
+
+  //
 
   testServer(in_query_out_string, (fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri?fruit=orange").send().map(_.body shouldBe Right("fruit: orange"))

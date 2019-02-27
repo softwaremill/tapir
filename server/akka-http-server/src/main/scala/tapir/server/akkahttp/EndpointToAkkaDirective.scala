@@ -16,7 +16,8 @@ import akka.http.scaladsl.server.Directives.{
   patch,
   post,
   put,
-  reject
+  reject,
+  pass
 }
 import akka.http.scaladsl.server.{Directive0, Directive1, RequestContext}
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
@@ -89,14 +90,19 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
 
   private def methodToAkkaDirective[O, E, I](e: Endpoint[I, E, O, AkkaStream]): Directive0 = {
     e.method match {
-      case Method.GET     => get
-      case Method.HEAD    => head
-      case Method.POST    => post
-      case Method.PUT     => put
-      case Method.DELETE  => delete
-      case Method.OPTIONS => options
-      case Method.PATCH   => patch
-      case m              => method(HttpMethod.custom(m.m))
+      case Some(m) =>
+        m match {
+          case Method.GET     => get
+          case Method.HEAD    => head
+          case Method.POST    => post
+          case Method.PUT     => put
+          case Method.DELETE  => delete
+          case Method.OPTIONS => options
+          case Method.PATCH   => patch
+          case _              => method(HttpMethod.custom(m.m))
+        }
+
+      case None => pass
     }
   }
 

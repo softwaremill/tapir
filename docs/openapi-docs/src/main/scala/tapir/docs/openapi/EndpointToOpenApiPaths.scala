@@ -1,6 +1,7 @@
 package tapir.docs.openapi
 
 import tapir.docs.openapi.schema.ObjectSchemas
+import tapir.model.Method
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{MediaType => OMediaType, _}
 import tapir.{EndpointInput, MediaType => SMediaType, Schema => SSchema, _}
@@ -12,9 +13,10 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
 
     val inputs = e.input.asVectorOfBasic
     val pathComponents = namedPathComponents(inputs)
+    val method = e.method.getOrElse(Method.GET)
 
     val pathComponentsForId = pathComponents.map(_.fold(identity, identity))
-    val defaultId = options.operationIdGenerator(pathComponentsForId, e.method)
+    val defaultId = options.operationIdGenerator(pathComponentsForId, method)
 
     val pathComponentForPath = pathComponents.map {
       case Left(p)  => s"{$p}"
@@ -25,14 +27,14 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     val pathItem = PathItem(
       None,
       None,
-      get = if (e.method == GET) operation else None,
-      put = if (e.method == PUT) operation else None,
-      post = if (e.method == POST) operation else None,
-      delete = if (e.method == DELETE) operation else None,
-      options = if (e.method == OPTIONS) operation else None,
-      head = if (e.method == HEAD) operation else None,
-      patch = if (e.method == PATCH) operation else None,
-      trace = if (e.method == TRACE) operation else None,
+      get = if (method == GET) operation else None,
+      put = if (method == PUT) operation else None,
+      post = if (method == POST) operation else None,
+      delete = if (method == DELETE) operation else None,
+      options = if (method == OPTIONS) operation else None,
+      head = if (method == HEAD) operation else None,
+      patch = if (method == PATCH) operation else None,
+      trace = if (method == TRACE) operation else None,
       servers = List.empty,
       parameters = List.empty
     )

@@ -49,7 +49,10 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           }
       }
 
-      val methodMatches = http4sMethodToTapirMethodMap.get(req.method).contains(e.method)
+      val methodMatches = e.method match {
+        case Some(m) => http4sMethodToTapirMethodMap.get(req.method).contains(m)
+        case None    => true
+      }
 
       if (methodMatches) {
         OptionT(decodeBody(DecodeInputs(e.input, new Http4sDecodeInputsContext[F](req))).flatMap {

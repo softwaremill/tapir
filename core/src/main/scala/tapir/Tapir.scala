@@ -54,7 +54,7 @@ trait Tapir {
 
   val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
     Endpoint[Unit, Unit, Unit, Nothing](
-      Method.GET,
+      None,
       EndpointInput.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),
       EndpointIO.Multiple(Vector.empty),

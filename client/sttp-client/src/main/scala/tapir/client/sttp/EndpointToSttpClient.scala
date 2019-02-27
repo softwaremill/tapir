@@ -3,12 +3,12 @@ package tapir.client.sttp
 import java.io.{BufferedOutputStream, ByteArrayInputStream, FileOutputStream}
 import java.nio.ByteBuffer
 
-import com.softwaremill.sttp._
+import com.softwaremill.sttp.{Method => SttpMethod, _}
 import tapir.Codec.PlainCodec
 import tapir.internal.SeqToParams
 import tapir.typelevel.ParamsAsArgs
 import tapir._
-import tapir.model.{MultiQueryParams, Part}
+import tapir.model.{MultiQueryParams, Part, Method}
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   // don't look. The code is really, really ugly.
@@ -22,7 +22,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
       val (uri, req) = setInputParams(e.input.asVectorOfSingle, params, paramsAsArgs, 0, baseUri, baseReq)
 
-      var req2 = req.copy[Id, Either[Any, Any], Any](method = com.softwaremill.sttp.Method(e.method.m), uri = uri)
+      var req2 = req.copy[Id, Either[Any, Any], Any](method = SttpMethod(e.method.getOrElse(Method.GET).m), uri = uri)
 
       if (e.output.asVectorOfSingle.nonEmpty || e.errorOutput.asVectorOfSingle.nonEmpty) {
         // by default, reading the body as specified by the output, and optionally adjusting to the error output
