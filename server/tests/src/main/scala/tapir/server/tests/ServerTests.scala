@@ -171,6 +171,11 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/hello/it/is/me/hal").send().map(_.body shouldBe Right("hello it is me hal"))
   }
 
+  testServer(in_paths_out_string, (ps: Seq[String]) => pureResult(ps.mkString(" ").asRight[Unit]), "paths should match empty path") {
+    baseUri =>
+      sttp.get(uri"$baseUri").send().map(_.body shouldBe Right(""))
+  }
+
   testServer(in_stream_out_stream[S], (s: S) => pureResult(s.asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
   }
@@ -213,7 +218,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(in_query_out_string, (fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit]), "invalid query parameter") { baseUri =>
-    sttp.get(uri"$baseUri?fruit2=orange").send().map(_.code shouldBe 400)
+    sttp.get(uri"$baseUri?fruit2=orange").send().map(_.code shouldBe StatusCodes.BadRequest)
   }
 
   testServer(
@@ -223,6 +228,45 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send().map { r =>
       r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
     }
+  }
+
+  // path matching
+
+  testServer(endpoint, () => pureResult(Either.right[Unit, Unit](())), "no path should match anything") { baseUri =>
+    sttp.get(uri"$baseUri").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri/").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri/nonemptypath").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri/nonemptypath/nonemptypath2").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(in_root_path, () => pureResult(Either.right[Unit, Unit](())), "root path should not match non-root path") { baseUri =>
+    sttp.get(uri"$baseUri/nonemptypath").send().map(_.code shouldBe StatusCodes.NotFound)
+  }
+
+  testServer(in_root_path, () => pureResult(Either.right[Unit, Unit](())), "root path should match empty path") { baseUri =>
+    sttp.get(uri"$baseUri").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(in_root_path, () => pureResult(Either.right[Unit, Unit](())), "root path should match root path") { baseUri =>
+    sttp.get(uri"$baseUri/").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(in_single_path, () => pureResult(Either.right[Unit, Unit](())), "single path should match single path") { baseUri =>
+    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(in_single_path, () => pureResult(Either.right[Unit, Unit](())), "single path should match single/ path") { baseUri =>
+    sttp.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(in_single_path, () => pureResult(Either.right[Unit, Unit](())), "single path should not match root path") { baseUri =>
+    sttp.get(uri"$baseUri").send().map(_.code shouldBe StatusCodes.NotFound) >>
+      sttp.get(uri"$baseUri/").send().map(_.code shouldBe StatusCodes.NotFound)
+  }
+
+  testServer(in_single_path, () => pureResult(Either.right[Unit, Unit](())), "single path should not match larger path") { baseUri =>
+    sttp.get(uri"$baseUri/api/echo").send().map(_.code shouldBe StatusCodes.NotFound) >>
+      sttp.get(uri"$baseUri/api/echo/").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
   //

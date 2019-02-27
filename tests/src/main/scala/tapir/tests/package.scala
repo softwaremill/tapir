@@ -98,6 +98,10 @@ package object tests {
   val in_cookies_out_cookies: Endpoint[List[CookiePair], Unit, List[Cookie], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(cookies).out(setCookies)
 
+  val in_root_path: Endpoint[Unit, Unit, Unit, Nothing] = endpoint.get.in("")
+
+  val in_single_path: Endpoint[Unit, Unit, Unit, Nothing] = endpoint.get.in("api")
+
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 
   def writeToFile(s: String): File = {

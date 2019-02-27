@@ -50,20 +50,26 @@ object DecodeInputs {
       case _: EndpointIO.StreamBodyWrapper[_, _] => 3
     }
 
-    apply(inputs, DecodeInputsResult.Values(Map(), None), ctx)
+    val (result, consumedCtx) = apply(inputs, DecodeInputsResult.Values(Map(), None), ctx)
+
+    result match {
+      case v: DecodeInputsResult.Values => verifyPathExactMatch(inputs, consumedCtx).getOrElse(v)
+      case r                            => r
+    }
   }
 
   private def apply(inputs: Vector[EndpointInput.Basic[_]],
                     values: DecodeInputsResult.Values,
-                    ctx: DecodeInputsContext): DecodeInputsResult = {
+                    ctx: DecodeInputsContext): (DecodeInputsResult, DecodeInputsContext) = {
     inputs match {
-      case Vector() => values
+      case Vector() => (values, ctx)
 
       case (input @ EndpointInput.PathSegment(ss)) +: inputsTail =>
         ctx.nextPathSegment match {
-          case (Some(`ss`), ctx2) => apply(inputsTail, values, ctx2)
-          case (Some(s), _)       => DecodeInputsResult.Failure(input, DecodeResult.Mismatch(ss, s))
-          case (None, _)          => DecodeInputsResult.Failure(input, DecodeResult.Missing)
+          case (Some(`ss`), ctx2)       => apply(inputsTail, values, ctx2)
+          case (None, ctx2) if ss == "" => apply(inputsTail, values, ctx2) // root path
+          case (Some(s), _)             => (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(ss, s)), ctx)
+          case (None, _)                => (DecodeInputsResult.Failure(input, DecodeResult.Missing), ctx)
         }
 
       case (input @ EndpointInput.PathCapture(codec, _, _)) +: inputsTail =>
@@ -71,9 +77,9 @@ object DecodeInputs {
           case (Some(s), ctx2) =>
             codec.decode(s) match {
               case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx2)
-              case failure: DecodeFailure => DecodeInputsResult.Failure(input, failure)
+              case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
             }
-          case (None, _) => DecodeInputsResult.Failure(input, DecodeResult.Missing)
+          case (None, _) => (DecodeInputsResult.Failure(input, DecodeResult.Missing), ctx)
         }
 
       case (input @ EndpointInput.PathsCapture(_)) +: inputsTail =>
@@ -90,7 +96,7 @@ object DecodeInputs {
       case (input @ EndpointInput.Query(name, codec, _)) +: inputsTail =>
         codec.decode(ctx.queryParameter(name).toList) match {
           case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
-          case failure: DecodeFailure => DecodeInputsResult.Failure(input, failure)
+          case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
 
       case (input @ EndpointInput.QueryParams(_)) +: inputsTail =>
@@ -99,7 +105,7 @@ object DecodeInputs {
       case (input @ EndpointIO.Header(name, codec, _)) +: inputsTail =>
         codec.decode(ctx.header(name)) match {
           case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
-          case failure: DecodeFailure => DecodeInputsResult.Failure(input, failure)
+          case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
 
       case (input @ EndpointIO.Headers(_)) +: inputsTail =>
@@ -110,6 +116,27 @@ object DecodeInputs {
 
       case (input @ EndpointIO.StreamBodyWrapper(_)) +: inputsTail =>
         apply(inputsTail, values.value(input, ctx.bodyStream), ctx)
+    }
+  }
+
+  /**
+    * If there's any path input, the path must match exactly.
+    */
+  private def verifyPathExactMatch(inputs: Vector[EndpointInput.Basic[_]], ctx: DecodeInputsContext): Option[DecodeInputsResult.Failure] = {
+    inputs.filter {
+      case _: EndpointInput.PathSegment    => true
+      case _: EndpointInput.PathCapture[_] => true
+      case _: EndpointInput.PathsCapture   => true
+      case _                               => false
+    }.lastOption match {
+      case Some(lastPathInput) =>
+        ctx.nextPathSegment._1 match {
+          case Some(nextPathSegment) =>
+            Some(DecodeInputsResult.Failure(lastPathInput, DecodeResult.Mismatch("", nextPathSegment)))
+          case None => None
+        }
+
+      case None => None
     }
   }
 }

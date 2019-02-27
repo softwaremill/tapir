@@ -93,6 +93,17 @@ val paging: EndpointInput[Paging] =
 Mapping methods can also be called on an endpoint (which is useful if inputs/outputs are accumulated, for example).
 The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the ones above.
 
+## Path matching
+
+By default (as with all other types of inputs), if no path input/path segments are defined, any path will match.
+
+If any path input/path segment is defined, the path must match *exactly* - any remaining path segments will cause the
+endpoint not to match the request. For example, `endpoint.path("api")` will match `/api`, `/api/`, but won't match
+`/`, `/api/users`.
+
+To match only the root path, use an empty string: `endpoint.path("")` will match `http://server.com/` and 
+`http://server.com`.
+
 ## Next
 
 Read on about [codecs](codecs.html).
