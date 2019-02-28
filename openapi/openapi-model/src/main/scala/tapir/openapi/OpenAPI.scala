@@ -1,13 +1,14 @@
 package tapir.openapi
 
-import tapir.openapi.OpenAPI.ReferenceOr
+import tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
 
-// todo security, tags, externaldocs
+// todo tags, externaldocs
 case class OpenAPI(openapi: String = "3.0.1",
                    info: Info,
                    servers: List[Server],
                    paths: Map[String, PathItem],
-                   components: Option[Components]) {
+                   components: Option[Components],
+                   security: List[SecurityRequirement]) {
 
   def addPathItem(path: String, pathItem: PathItem): OpenAPI = {
     val pathItem2 = paths.get(path) match {
@@ -21,6 +22,9 @@ case class OpenAPI(openapi: String = "3.0.1",
 
 object OpenAPI {
   type ReferenceOr[T] = Either[Reference, T]
+  // using a Vector instead of a List, as empty Lists are always encoded as nulls
+  // here, we need them encoded as an empty array
+  type SecurityRequirement = Map[String, Vector[String]]
 }
 
 case class Info(
@@ -41,9 +45,10 @@ case class Server(
     description: Option[String]
 )
 
-// todo: responses, parameters, examples, requestBodies, headers, securitySchemas, links, callbacks
+// todo: responses, parameters, examples, requestBodies, headers, links, callbacks
 case class Components(
-    schemas: Map[String, ReferenceOr[Schema]]
+    schemas: Map[String, ReferenceOr[Schema]],
+    securitySchemes: Map[String, ReferenceOr[SecurityScheme]]
 )
 
 // todo: $ref
@@ -89,6 +94,7 @@ case class Operation(
     requestBody: Option[ReferenceOr[RequestBody]],
     responses: Map[ResponsesKey, ReferenceOr[Response]],
     deprecated: Option[Boolean],
+    security: List[SecurityRequirement],
     servers: List[Server]
 )
 
@@ -215,3 +221,19 @@ object SchemaFormat extends Enumeration {
 }
 
 case class ExampleValue(value: String)
+
+case class SecurityScheme(`type`: String,
+                          description: Option[String],
+                          name: Option[String],
+                          in: Option[String],
+                          scheme: Option[String],
+                          bearerFormat: Option[String],
+                          flows: Option[OAuthFlows],
+                          openIdConnectUrl: Option[String])
+
+case class OAuthFlows(`implicit`: Option[OAuthFlow],
+                      password: Option[OAuthFlow],
+                      clientCredentials: Option[OAuthFlow],
+                      authorizationCode: Option[OAuthFlow])
+
+case class OAuthFlow(authorizationUrl: String, tokenUrl: String, refreshUrl: Option[String], scopes: Map[String, String])

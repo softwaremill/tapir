@@ -8,9 +8,9 @@ object InputValues {
     * Returns the values of the inputs in the order specified by `input`, and mapped if necessary using defined mapping
     * functions.
     */
-  def apply(input: EndpointInput[_], values: Map[EndpointInput.Single[_], Any]): List[Any] = apply(input.asVectorOfSingle, values)
+  def apply(input: EndpointInput[_], values: Map[EndpointInput.Basic[_], Any]): List[Any] = apply(input.asVectorOfSingle, values)
 
-  private def apply(inputs: Vector[EndpointInput.Single[_]], values: Map[EndpointInput.Single[_], Any]): List[Any] = {
+  private def apply(inputs: Vector[EndpointInput.Single[_]], values: Map[EndpointInput.Basic[_], Any]): List[Any] = {
     inputs match {
       case Vector() => Nil
       case (_: EndpointInput.RequestMethod) +: inputsTail =>
@@ -21,7 +21,9 @@ object InputValues {
         handleMapped(wrapped, f, inputsTail, values)
       case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
         handleMapped(wrapped, f, inputsTail, values)
-      case (input: EndpointInput.Single[_]) +: inputsTail =>
+      case (auth: EndpointInput.Auth[_]) +: inputsTail =>
+        apply(auth.input +: inputsTail, values)
+      case (input: EndpointInput.Basic[_]) +: inputsTail =>
         values(input) :: apply(inputsTail, values)
     }
   }
@@ -29,7 +31,7 @@ object InputValues {
   private def handleMapped[II, T](wrapped: EndpointInput[II],
                                   f: II => T,
                                   inputsTail: Vector[EndpointInput.Single[_]],
-                                  values: Map[EndpointInput.Single[_], Any]): List[Any] = {
+                                  values: Map[EndpointInput.Basic[_], Any]): List[Any] = {
     val wrappedValue = apply(wrapped.asVectorOfSingle, values)
     f.asInstanceOf[Any => Any].apply(SeqToParams(wrappedValue)) :: apply(inputsTail, values)
   }

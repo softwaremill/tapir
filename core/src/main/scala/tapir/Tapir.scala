@@ -50,6 +50,8 @@ trait Tapir {
   def streamBody[S](schema: Schema, mediaType: MediaType): StreamingEndpointIO.Body[S, mediaType.type] =
     StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)
 
+  def auth: TapirAuth.type = TapirAuth
+
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 
   val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =

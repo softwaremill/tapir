@@ -16,6 +16,9 @@ trait Encoders {
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
+  implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveMagnoliaEncoder[OAuthFlow]
+  implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveMagnoliaEncoder[OAuthFlows]
+  implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveMagnoliaEncoder[SecurityScheme]
   implicit val encoderExampleValue: Encoder[ExampleValue] = { ev: ExampleValue =>
     parse(ev.value).toOption.getOrElse(Json.fromString(ev.value))
   }

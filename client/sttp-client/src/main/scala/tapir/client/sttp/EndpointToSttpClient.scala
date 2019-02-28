@@ -149,6 +149,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         val headers = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[Seq[(String, String)]]
         val req2 = headers.foldLeft(req) { case (r, (k, v)) => r.header(k, v) }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+      case (a: EndpointInput.Auth[_]) +: tail =>
+        setInputParams(a.input +: tail, params, paramsAsArgs, paramIndex, uri, req)
       case EndpointInput.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
         handleMapped(wrapped, g, wrappedParamsAsArgs, tail)
       case EndpointIO.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>

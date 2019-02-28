@@ -9,12 +9,12 @@ import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
-import tapir.model.{MultiQueryParams, Part}
+import tapir.model.{MultiQueryParams, Part, UsernamePassword}
 import tapir.server.{ServerDefaults, StatusMapper}
 import tapir.tests.TestUtil._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
-import tapir.{_}
+import tapir._
 
 import scala.util.Random
 
@@ -279,6 +279,24 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   testServer(in_single_path, () => pureResult(Either.right[Unit, Unit](())), "single path should not match larger path") { baseUri =>
     sttp.get(uri"$baseUri/api/echo").send().map(_.code shouldBe StatusCodes.NotFound) >>
       sttp.get(uri"$baseUri/api/echo/").send().map(_.code shouldBe StatusCodes.NotFound)
+  }
+
+  // auth
+
+  testServer(in_auth_apikey_header_out_string, (s: String) => pureResult(s.asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/auth").header("X-Api-Key", "1234").send().map(_.unsafeBody shouldBe "1234")
+  }
+
+  testServer(in_auth_apikey_query_out_string, (s: String) => pureResult(s.asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/auth?api-key=1234").send().map(_.unsafeBody shouldBe "1234")
+  }
+
+  testServer(in_auth_basic_out_string, (up: UsernamePassword) => pureResult(up.toString.asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/auth").auth.basic("teddy", "bear").send().map(_.unsafeBody shouldBe "UsernamePassword(teddy,Some(bear))")
+  }
+
+  testServer(in_auth_bearer_out_string, (s: String) => pureResult(s.asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri/auth").auth.bearer("1234").send().map(_.unsafeBody shouldBe "1234")
   }
 
   //

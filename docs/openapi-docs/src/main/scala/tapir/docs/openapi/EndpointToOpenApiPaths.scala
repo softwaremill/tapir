@@ -6,12 +6,12 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{MediaType => OMediaType, _}
 import tapir.{EndpointInput, MediaType => SMediaType, Schema => SSchema, _}
 
-private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, options: OpenAPIDocsOptions) {
+private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
 
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
     import model.Method._
 
-    val inputs = e.input.asVectorOfBasic
+    val inputs = e.input.asVectorOfBasic(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
     val method = e.input.method.getOrElse(Method.GET)
 
@@ -23,7 +23,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
       case Right(p) => p
     }
 
-    val operation = Some(endpointToOperation(defaultId, e))
+    val operation = Some(endpointToOperation(defaultId, e, inputs))
     val pathItem = PathItem(
       None,
       None,
@@ -42,11 +42,15 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
     ("/" + pathComponentForPath.mkString("/"), pathItem)
   }
 
-  private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _]): Operation = {
-    val inputs = e.input.asVectorOfBasic
+  private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_]]): Operation = {
     val parameters = operationParameters(inputs)
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: Map[ResponsesKey, ReferenceOr[Response]] = operationResponse(e)
+
+    val authNames = e.input.auths.flatMap(auth => securitySchemes.get(auth).map(_._1))
+    // for now, all auths have empty scope
+    val securityRequirement = authNames.map(_ -> Vector.empty).toMap
+
     Operation(
       e.info.tags.toList,
       e.info.summary,
@@ -56,6 +60,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
       body.headOption,
       responses,
       None,
+      if (securityRequirement.isEmpty) List.empty else List(securityRequirement),
       List.empty
     )
   }
@@ -104,7 +109,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, opti
   }
 
   private def outputToResponse(io: EndpointIO[_]): Option[Response] = {
-    val ios = io.asVectorOfBasic
+    val ios = io.asVectorOfBasic()
 
     val headers = ios.collect {
       case EndpointIO.Header(name, codec, info) =>

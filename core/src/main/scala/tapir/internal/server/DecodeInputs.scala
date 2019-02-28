@@ -7,10 +7,10 @@ import scala.annotation.tailrec
 
 trait DecodeInputsResult
 object DecodeInputsResult {
-  case class Values(values: Map[EndpointInput.Single[_], Any], bodyInput: Option[EndpointIO.Body[_, _, _]]) extends DecodeInputsResult {
-    def value(i: EndpointInput.Single[_], v: Any): Values = copy(values = values + (i -> v))
+  case class Values(values: Map[EndpointInput.Basic[_], Any], bodyInput: Option[EndpointIO.Body[_, _, _]]) extends DecodeInputsResult {
+    def value(i: EndpointInput.Basic[_], v: Any): Values = copy(values = values + (i -> v))
   }
-  case class Failure(input: EndpointInput.Single[_], failure: DecodeFailure) extends DecodeInputsResult
+  case class Failure(input: EndpointInput.Basic[_], failure: DecodeFailure) extends DecodeInputsResult
 }
 
 trait DecodeInputsContext {
@@ -40,7 +40,7 @@ object DecodeInputs {
     */
   def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
     // the first decoding failure is returned. We decode in the following order: method, path, query, headers, body
-    val inputs = input.asVectorOfBasic.sortBy {
+    val inputs = input.asVectorOfBasic().sortBy {
       case _: EndpointInput.RequestMethod        => 0
       case _: EndpointInput.PathSegment          => 1
       case _: EndpointInput.PathCapture[_]       => 1

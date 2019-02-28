@@ -19,7 +19,7 @@ import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
 import TestUtil._
 import org.http4s.multipart
-import tapir.model.MultiQueryParams
+import tapir.model.{MultiQueryParams, UsernamePassword}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -63,6 +63,13 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_paths_out_string, Seq("fruit", "apple", "amount", "50"), Right("apple 50 None"))
   testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
   testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
+  // TODO: test root path
+  testClient(in_auth_apikey_header_out_string, "1234", Right("Authorization=None; X-Api-Key=Some(1234); Query=None"))
+  testClient(in_auth_apikey_query_out_string, "1234", Right("Authorization=None; X-Api-Key=None; Query=Some(1234)"))
+  testClient(in_auth_basic_out_string,
+             UsernamePassword("teddy", Some("bear")),
+             Right("Authorization=Some(Basic dGVkZHk6YmVhcg==); X-Api-Key=None; Query=None"))
+  testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
 
   //
 
@@ -91,6 +98,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
   private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
+  private object apiKeyOptParam extends OptionalQueryParamDecoderMatcher[String]("api-key")
 
   private val service = HttpRoutes.of[IO] {
     case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
@@ -117,6 +125,10 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
         case None    => Ok()
         case Some(h) => Ok("Role: " + h.value)
       }
+    case r @ GET -> Root / "auth" :? apiKeyOptParam(ak) =>
+      val authHeader = r.headers.get(CaseInsensitiveString("Authorization")).map(_.value)
+      val xApiKey = r.headers.get(CaseInsensitiveString("X-Api-Key")).map(_.value)
+      Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; Query=$ak")
   }
 
   private val app: HttpApp[IO] = Router("/" -> service).orNotFound

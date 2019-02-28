@@ -2,6 +2,7 @@ package tapir.docs.openapi.schema
 
 import tapir.Schema.SObjectInfo
 import tapir.{Schema => TSchema, _}
+import tapir.docs.openapi.uniqueName
 
 object ObjectSchemasForEndpoints {
 
@@ -20,12 +21,7 @@ object ObjectSchemasForEndpoints {
     infos
       .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) {
         case (SchemaKeyAssignment1(keyToInfo, infoToKey), objectInfo) =>
-          var key = objectInfo.shortName
-          var i = 0
-          while (keyToInfo.contains(key) && !keyToInfo.get(key).contains(objectInfo)) {
-            i += 1
-            key = objectInfo.shortName + i
-          }
+          val key = uniqueName(objectInfo.shortName, n => !keyToInfo.contains(n) || keyToInfo.get(n).contains(objectInfo))
 
           SchemaKeyAssignment1(
             keyToInfo + (key -> objectInfo),
@@ -56,6 +52,8 @@ object ObjectSchemasForEndpoints {
       case EndpointInput.Query(_, tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
       case EndpointInput.QueryParams(_) =>
+        List.empty
+      case _: EndpointInput.Auth[_] =>
         List.empty
       case EndpointInput.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)

@@ -8,8 +8,9 @@ object EndpointToOpenAPIDocs {
   def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): OpenAPI = {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
     val objectSchemas = ObjectSchemasForEndpoints(es2)
-    val pathCreator = new EndpointToOpenApiPaths(objectSchemas, options)
-    val componentsCreator = new EndpointToOpenApiComponents(objectSchemas)
+    val securitySchemes = SecuritySchemesForEndpoints(es2)
+    val pathCreator = new EndpointToOpenApiPaths(objectSchemas, securitySchemes, options)
+    val componentsCreator = new EndpointToOpenApiComponents(objectSchemas, securitySchemes)
 
     val base = apiToOpenApi(api, componentsCreator)
 
@@ -24,7 +25,8 @@ object EndpointToOpenAPIDocs {
       info = info,
       servers = List.empty,
       paths = Map.empty,
-      components = componentsCreator.components
+      components = componentsCreator.components,
+      security = List.empty
     )
   }
 

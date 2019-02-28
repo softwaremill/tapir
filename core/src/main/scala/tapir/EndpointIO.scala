@@ -26,12 +26,13 @@ sealed trait EndpointInput[I] {
     case m: EndpointIO.Multiple[_]    => m.ios
   }
 
-  private[tapir] def asVectorOfBasic: Vector[EndpointInput.Basic[_]] = this match {
+  private[tapir] def asVectorOfBasic(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] = this match {
     case b: EndpointInput.Basic[_]              => Vector(b)
-    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.asVectorOfBasic
-    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.asVectorOfBasic
-    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.asVectorOfBasic)
-    case EndpointIO.Multiple(ios)               => ios.flatMap(_.asVectorOfBasic)
+    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.asVectorOfBasic(includeAuth)
+    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.asVectorOfBasic(includeAuth)
+    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.asVectorOfBasic(includeAuth))
+    case EndpointIO.Multiple(ios)               => ios.flatMap(_.asVectorOfBasic(includeAuth))
+    case a: EndpointInput.Auth[_]               => if (includeAuth) a.input.asVectorOfBasic(includeAuth) else Vector.empty
   }
 
   private[tapir] def bodyType: Option[RawValueType[_]] = this match {
@@ -40,6 +41,7 @@ sealed trait EndpointInput[I] {
     case EndpointIO.Multiple(inputs)            => inputs.flatMap(_.bodyType).headOption
     case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.bodyType
     case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.bodyType
+    case a: EndpointInput.Auth[_]               => a.input.bodyType
     case _                                      => None
   }
 
@@ -51,6 +53,17 @@ sealed trait EndpointInput[I] {
     case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.method
     case _                                      => None
   }
+
+  private[tapir] def auths: Vector[EndpointInput.Auth[_]] = this match {
+    case a: EndpointInput.Auth[_]               => Vector(a)
+    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.auths)
+    case EndpointIO.Multiple(inputs)            => inputs.flatMap(_.auths)
+    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.auths
+    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.auths
+    case _                                      => Vector.empty
+  }
+
+  // TODO: add generic traverse
 }
 
 object EndpointInput {
@@ -96,6 +109,21 @@ object EndpointInput {
     def description(d: String): QueryParams = copy(info = info.description(d))
     def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
     def show = s"?{multiple params}"
+  }
+
+  //
+
+  trait Auth[T] extends EndpointInput.Single[T] {
+    def input: EndpointInput.Single[T]
+  }
+
+  object Auth {
+    case class ApiKey[T](input: EndpointInput.Single[T]) extends Auth[T] {
+      def show = s"auth(api key, via ${input.show})"
+    }
+    case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
+      def show = s"auth($scheme http, via ${input.show})"
+    }
   }
 
   //
