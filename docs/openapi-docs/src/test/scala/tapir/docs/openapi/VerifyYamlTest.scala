@@ -119,6 +119,16 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should support empty bodies") {
+    val expectedYaml = loadYaml("expected_empty.yml")
+
+    val actualYaml = List(endpoint).toOpenAPI(Info("Fruits", "1.0")).toYaml
+    println(actualYaml)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromResource(fileName).getLines().mkString("\n"))
   }

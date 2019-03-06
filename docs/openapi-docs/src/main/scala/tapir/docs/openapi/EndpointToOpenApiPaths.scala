@@ -98,10 +98,11 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   }
 
   private def operationResponse(e: Endpoint[_, _, _, _]): Map[ResponsesKey, Right[Nothing, Response]] = {
+    // There always needs to be at least a 200 empty response
+    val okResponse = outputToResponse(e.output).getOrElse(Response("", Map.empty, Map.empty))
+
     List(
-      outputToResponse(e.output).map { r =>
-        ResponsesCodeKey(200) -> Right(r)
-      },
+      Some(ResponsesCodeKey(200) -> Right(okResponse)),
       outputToResponse(e.errorOutput).map { r =>
         ResponsesDefaultKey -> Right(r)
       }
