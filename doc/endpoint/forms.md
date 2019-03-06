@@ -55,3 +55,7 @@ case class RegistrationForm(userData: User, photo: Part[File], news: Boolean)
 
 multipartBody[RegistrationForm]
 ```
+
+## Next
+
+Read on about [authentication](auth.html).

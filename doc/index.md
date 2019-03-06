@@ -76,6 +76,7 @@ which is a slight extension of the above.
 * [Endpoints: codecs](endpoint/codecs.md)
 * [Endpoints: working with JSON](endpoint/json.md)
 * [Endpoints: forms](endpoint/forms.md)
+* [Endpoints: authentication](endpoint/auth.md)
 * [Servers: akka-http interpreter](server/akkahttp.md)
 * [Servers: http4s interpreter](server/http4s.md)
 * [Servers: common configuration](server/common.md)
