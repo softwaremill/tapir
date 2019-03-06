@@ -26,44 +26,34 @@ sealed trait EndpointInput[I] {
     case m: EndpointIO.Multiple[_]    => m.ios
   }
 
-  private[tapir] def asVectorOfBasic(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] = this match {
-    case b: EndpointInput.Basic[_]              => Vector(b)
-    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.asVectorOfBasic(includeAuth)
-    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.asVectorOfBasic(includeAuth)
-    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.asVectorOfBasic(includeAuth))
-    case EndpointIO.Multiple(ios)               => ios.flatMap(_.asVectorOfBasic(includeAuth))
-    case a: EndpointInput.Auth[_]               => if (includeAuth) a.input.asVectorOfBasic(includeAuth) else Vector.empty
+  private[tapir] def traverse[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] = this match {
+    case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
+    case EndpointInput.Multiple(inputs)               => inputs.flatMap(_.traverse(handle))
+    case EndpointIO.Multiple(inputs)                  => inputs.flatMap(_.traverse(handle))
+    case EndpointInput.Mapped(wrapped, _, _, _)       => wrapped.traverse(handle)
+    case EndpointIO.Mapped(wrapped, _, _, _)          => wrapped.traverse(handle)
+    case a: EndpointInput.Auth[_]                     => a.input.traverse(handle)
+    case _                                            => Vector.empty
   }
 
-  private[tapir] def bodyType: Option[RawValueType[_]] = this match {
-    case b: EndpointIO.Body[_, _, _]            => Some(b.codec.meta.rawValueType)
-    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.bodyType).headOption
-    case EndpointIO.Multiple(inputs)            => inputs.flatMap(_.bodyType).headOption
-    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.bodyType
-    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.bodyType
-    case a: EndpointInput.Auth[_]               => a.input.bodyType
-    case _                                      => None
+  private[tapir] def asVectorOfBasic(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] = traverse {
+    case b: EndpointInput.Basic[_] => Vector(b)
+    case a: EndpointInput.Auth[_]  => if (includeAuth) a.input.asVectorOfBasic(includeAuth) else Vector.empty
   }
 
-  private[tapir] def method: Option[Method] = this match {
-    case i: EndpointInput.RequestMethod         => Some(i.m)
-    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.method).headOption
-    case EndpointIO.Multiple(inputs)            => inputs.flatMap(_.method).headOption
-    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.method
-    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.method
-    case _                                      => None
+  private[tapir] def auths: Vector[EndpointInput.Auth[_]] = traverse {
+    case a: EndpointInput.Auth[_] => Vector(a)
   }
 
-  private[tapir] def auths: Vector[EndpointInput.Auth[_]] = this match {
-    case a: EndpointInput.Auth[_]               => Vector(a)
-    case EndpointInput.Multiple(inputs)         => inputs.flatMap(_.auths)
-    case EndpointIO.Multiple(inputs)            => inputs.flatMap(_.auths)
-    case EndpointInput.Mapped(wrapped, _, _, _) => wrapped.auths
-    case EndpointIO.Mapped(wrapped, _, _, _)    => wrapped.auths
-    case _                                      => Vector.empty
-  }
+  private[tapir] def method: Option[Method] =
+    traverse {
+      case i: EndpointInput.RequestMethod => Vector(i.m)
+    }.headOption
 
-  // TODO: add generic traverse
+  private[tapir] def bodyType: Option[RawValueType[_]] =
+    traverse[RawValueType[_]] {
+      case b: EndpointIO.Body[_, _, _] => Vector(b.codec.meta.rawValueType)
+    }.headOption
 }
 
 object EndpointInput {
