@@ -5,7 +5,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
-import tapir.model.{SetCookie, Cookie}
+import tapir.model.{Cookie, SetCookie, SetCookieValue}
 
 trait Tapir {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
@@ -27,6 +27,10 @@ trait Tapir {
   def cookie[T: PlainCodecForOptional](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly[PlainCodecForOptional[T]], EndpointIO.Info.empty)
   def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](Cookie.HeaderName)
+  def setCookie(name: String): EndpointIO.Header[SetCookieValue] = {
+    implicit val codec: Codec[SetCookieValue, MediaType.TextPlain, String] = SetCookieValue.setCookieValueCodec(name)
+    header[SetCookieValue](SetCookie.HeaderName)
+  }
   def setCookies: EndpointIO.Header[List[SetCookie]] = header[List[SetCookie]](SetCookie.HeaderName)
 
   def body[T, M <: MediaType](implicit tm: CodecForOptional[T, M, _]): EndpointIO.Body[T, M, _] =

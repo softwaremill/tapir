@@ -18,6 +18,7 @@ These are:
 * `headers` captures all headers, represented as `Seq[(String, String)]`
 * `cookie[T](name)` captures a cookie from the `Cookie` header with the given name 
 * `cookies` captures cookies from the `Cookie` header and represents them as `List[Cookie]` 
+* `setCookie(name)` captures the value & metadata of the a `Set-Cookie` header with a matching name 
 * `setCookies` captures cookies from the `Set-Cookie` header and represents them as `List[SetCookie]` 
 * `body[T, M]`, `stringBody`, `plainBody[T]`, `jsonBody[T]`, `binaryBody[T]`, `formBody[T]`, `multipartBody[T]` 
   captures the body

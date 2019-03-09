@@ -18,23 +18,25 @@ case class SetCookie(name: String,
                      httpOnly: Boolean = false) {
 
   def toHeaderValue: String = {
-    val hc = new HttpCookie(name, value)
-    maxAge.foreach(ma => hc.setMaxAge(ma))
-    domain.foreach(hc.setDomain)
-    path.foreach(hc.setPath)
-    if (secure) hc.setSecure(true)
-    if (httpOnly) hc.setHttpOnly(true)
-    hc.toString
+    var r = s"$name=$value"
+    maxAge.foreach(v => r += s"; Max-Age=$v")
+    domain.foreach(v => r += s"; Domain=$v")
+    path.foreach(v => r += s"; Path=$v")
+    if (secure) r += "; Secure"
+    if (httpOnly) r += "; HttpOnly"
+    r
   }
+
+  def toSetCookieValue: SetCookieValue = SetCookieValue(value, maxAge, domain, path, secure, httpOnly)
 }
 
 object SetCookie {
   val HeaderName = "Set-Cookie"
 
-  implicit val setCookieCodec: Codec[List[SetCookie], MediaType.TextPlain, String] =
+  implicit val setCookiesCodec: Codec[List[SetCookie], MediaType.TextPlain, String] =
     implicitly[Codec[String, MediaType.TextPlain, String]].mapDecode(parse)(cs => cs.map(_.toHeaderValue).mkString(", "))
 
-  implicit val setCookieCodecForMany: CodecForMany[List[SetCookie], MediaType.TextPlain, String] =
+  implicit val setCookiesCodecForMany: CodecForMany[List[SetCookie], MediaType.TextPlain, String] =
     implicitly[CodecForMany[List[List[SetCookie]], MediaType.TextPlain, String]].map(_.flatten)(_.map(List(_)))
 
   def parse(h: String): DecodeResult[List[SetCookie]] = {
@@ -54,6 +56,30 @@ object SetCookie {
       hc.getSecure,
       hc.isHttpOnly
     )
+  }
+}
+
+case class SetCookieValue(value: String,
+                          maxAge: Option[Long] = None,
+                          domain: Option[String] = None,
+                          path: Option[String] = None,
+                          secure: Boolean = false,
+                          httpOnly: Boolean = false) {
+  def toSetCookie(name: String): SetCookie = SetCookie(name, value, maxAge, domain, path, secure, httpOnly)
+}
+
+object SetCookieValue {
+  implicit def setCookieValueCodec(name: String): Codec[SetCookieValue, MediaType.TextPlain, String] = {
+    implicitly[Codec[String, MediaType.TextPlain, String]]
+      .mapDecode(SetCookie.parse(_).flatMap(findNamed(name)).map(_.toSetCookieValue))(cv => cv.toSetCookie(name).toHeaderValue)
+  }
+
+  private def findNamed(name: String)(cs: List[SetCookie]): DecodeResult[SetCookie] = {
+    cs.filter(_.name == name) match {
+      case Nil     => DecodeResult.Missing
+      case List(c) => DecodeResult.Value(c)
+      case l       => DecodeResult.Multiple(l.map(_.toHeaderValue))
+    }
   }
 }
 

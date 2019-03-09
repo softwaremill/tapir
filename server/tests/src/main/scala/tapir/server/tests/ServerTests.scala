@@ -9,7 +9,7 @@ import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
-import tapir.model.{MultiQueryParams, Part, UsernamePassword}
+import tapir.model.{MultiQueryParams, Part, SetCookieValue, UsernamePassword}
 import tapir.server.{ServerDefaults, StatusMapper}
 import tapir.tests.TestUtil._
 import tapir.tests._
@@ -248,6 +248,15 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   ) { baseUri =>
     sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send().map { r =>
       r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
+    }
+  }
+
+  testServer(
+    in_set_cookie_value_out_set_cookie_value,
+    (c: SetCookieValue) => pureResult(c.copy(value = c.value.reverse).asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send().map { r =>
+      r.cookies.toList shouldBe List(com.softwaremill.sttp.Cookie("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true))
     }
   }
 

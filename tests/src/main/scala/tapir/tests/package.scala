@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 import io.circe.generic.auto._
 import tapir.json.circe._
 import com.softwaremill.macwire._
-import tapir.model.{SetCookie, Cookie, MultiQueryParams, UsernamePassword}
+import tapir.model._
 
 import scala.io.Source
 
@@ -104,6 +104,9 @@ package object tests {
 
   val in_cookies_out_cookies: Endpoint[List[Cookie], Unit, List[SetCookie], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(cookies).out(setCookies)
+
+  val in_set_cookie_value_out_set_cookie_value: Endpoint[SetCookieValue, Unit, SetCookieValue, Nothing] =
+    endpoint.get.in("api" / "echo" / "headers").in(setCookie("c1")).out(setCookie("c1"))
 
   val in_root_path: Endpoint[Unit, Unit, Unit, Nothing] = endpoint.get.in("")
 
