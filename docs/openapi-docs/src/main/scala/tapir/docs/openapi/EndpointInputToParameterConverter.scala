@@ -58,4 +58,22 @@ private[openapi] object EndpointInputToParameterConverter {
       Map.empty
     )
   }
+
+  def from[T](cookie: EndpointInput.Cookie[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+    Parameter(
+      cookie.name,
+      ParameterIn.Cookie,
+      cookie.info.description,
+      Some(!cookie.codec.meta.isOptional),
+      None,
+      None,
+      None,
+      None,
+      None,
+      schema,
+      example,
+      Map.empty,
+      Map.empty
+    )
+  }
 }

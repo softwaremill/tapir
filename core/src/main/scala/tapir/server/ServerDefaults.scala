@@ -20,6 +20,7 @@ object ServerDefaults {
       case EndpointInput.Query(name, _, _) =>
         DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: query parameter $name")
       case _: EndpointInput.QueryParams          => DecodeFailureHandling.response(StatusCodes.BadRequest, "Invalid value for: query parameters")
+      case EndpointInput.Cookie(name, _, _)      => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: cookie $name")
       case EndpointIO.Header(name, _, _)         => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: header $name")
       case _: EndpointIO.Headers                 => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: headers")
       case _: EndpointIO.Body[_, _, _]           => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: body")

@@ -130,6 +130,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           .encode(paramsAsArgs.paramAt(params, paramIndex))
           .foldLeft(uri) { case (u, v) => u.param(name, v) }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
+      case EndpointInput.Cookie(name, codec, _) +: tail =>
+        val req2 = codec
+          .encode(paramsAsArgs.paramAt(params, paramIndex))
+          .foldLeft(req) { case (r, v) => r.cookie(name, v) }
+        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointInput.QueryParams(_) +: tail =>
         val mqp = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[MultiQueryParams]
         val uri2 = uri.params(mqp.toSeq: _*)

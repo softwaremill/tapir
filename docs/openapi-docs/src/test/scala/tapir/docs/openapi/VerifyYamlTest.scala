@@ -123,7 +123,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_empty.yml")
 
     val actualYaml = List(endpoint).toOpenAPI(Info("Fruits", "1.0")).toYaml
-    println(actualYaml)
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

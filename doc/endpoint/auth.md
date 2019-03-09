@@ -6,8 +6,8 @@ when generating documentation. Otherwise, they behave as normal inputs which map
 
 Currently, the following authentication inputs are available (assuming `import tapir._`):
 
-* `auth.apiKey(anotherInput)`: wraps any other input and designates it as an api key. The input is typically a header 
-or a query parameter
+* `auth.apiKey(anotherInput)`: wraps any other input and designates it as an api key. The input is typically a header, 
+cookie or a query parameter
 * `auth.basic: EndpointInput[UsernamePassword]`: maps to the base64-encoded username/password pair in the 
 `Authorization` header
 * `auth.bearer: EndpointInput[String]`: maps to `Bearer [token]` in the `Authorization` header

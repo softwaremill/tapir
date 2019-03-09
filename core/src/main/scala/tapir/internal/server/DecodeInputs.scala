@@ -1,6 +1,6 @@
 package tapir.internal.server
 
-import tapir.model.{Method, MultiQueryParams}
+import tapir.model.{Cookie, Method, MultiQueryParams}
 import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec
@@ -39,7 +39,7 @@ object DecodeInputs {
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
   def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
-    // the first decoding failure is returned. We decode in the following order: method, path, query, headers, body
+    // the first decoding failure is returned. We decode in the following order: method, path, query, headers (incl. cookies), body
     val inputs = input.asVectorOfBasic().sortBy {
       case _: EndpointInput.RequestMethod        => 0
       case _: EndpointInput.PathSegment          => 1
@@ -47,6 +47,7 @@ object DecodeInputs {
       case _: EndpointInput.PathsCapture         => 1
       case _: EndpointInput.Query[_]             => 2
       case _: EndpointInput.QueryParams          => 2
+      case _: EndpointInput.Cookie[_]            => 3
       case _: EndpointIO.Header[_]               => 3
       case _: EndpointIO.Headers                 => 3
       case _: EndpointIO.Body[_, _, _]           => 4
@@ -108,6 +109,14 @@ object DecodeInputs {
 
       case (input @ EndpointInput.QueryParams(_)) +: inputsTail =>
         apply(inputsTail, values.value(input, MultiQueryParams.fromMultiMap(ctx.queryParameters)), ctx)
+
+      case (input @ EndpointInput.Cookie(name, codec, _)) +: inputsTail =>
+        val allCookies = DecodeResult.sequence(ctx.headers.filter(_._1 == Cookie.HeaderName).map(p => Cookie.parse(p._2)).toList)
+        val cookieValue = allCookies.map(_.flatten.find(_.name == name)).flatMap(cookie => codec.decode(cookie.map(_.value)))
+        cookieValue match {
+          case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
+          case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
+        }
 
       case (input @ EndpointIO.Header(name, codec, _)) +: inputsTail =>
         codec.decode(ctx.header(name)) match {

@@ -51,6 +51,8 @@ object ObjectSchemasForEndpoints {
         List.empty
       case EndpointInput.Query(_, tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
+      case EndpointInput.Cookie(_, tm, _) =>
+        filterIsObjectSchema(tm.meta.schema)
       case EndpointInput.QueryParams(_) =>
         List.empty
       case _: EndpointInput.Auth[_] =>

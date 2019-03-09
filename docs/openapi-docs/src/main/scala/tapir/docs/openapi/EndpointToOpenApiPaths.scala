@@ -79,6 +79,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       case q: EndpointInput.Query[_]       => queryToParameter(q)
       case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
       case h: EndpointIO.Header[_]         => headerToParameter(h)
+      case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
     }
   }
 
@@ -86,6 +87,11 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     EndpointInputToParameterConverter.from(header,
                                            objectSchemas(header.codec.meta.schema),
                                            header.info.example.flatMap(exampleValue(header.codec, _)))
+  }
+  private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
+    EndpointInputToParameterConverter.from(cookie,
+                                           objectSchemas(cookie.codec.meta.schema),
+                                           cookie.info.example.flatMap(exampleValue(cookie.codec, _)))
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
     EndpointInputToParameterConverter.from(p, objectSchemas(p.codec.meta.schema), p.info.example.flatMap(exampleValue(p.codec, _)))

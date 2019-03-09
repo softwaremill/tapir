@@ -2,6 +2,7 @@ package tapir
 
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
+import tapir.CodecForOptional.PlainCodecForOptional
 import tapir.internal.ProductToParams
 import tapir.model.{Method, MultiQueryParams}
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
@@ -99,6 +100,12 @@ object EndpointInput {
     def description(d: String): QueryParams = copy(info = info.description(d))
     def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
     def show = s"?{multiple params}"
+  }
+
+  case class Cookie[T](name: String, codec: PlainCodecForOptional[T], info: EndpointIO.Info[T]) extends Basic[T] {
+    def description(d: String): Cookie[T] = copy(info = info.description(d))
+    def example(t: T): Cookie[T] = copy(info = info.example(t))
+    def show = s"{cookie $name}"
   }
 
   //

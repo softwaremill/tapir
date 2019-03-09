@@ -234,8 +234,17 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(
+    in_cookie_cookie_out_header,
+    (p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
+      r.headers("Cookie") shouldBe Seq("32", "etanargemop")
+    }
+  }
+
+  testServer(
     in_cookies_out_cookies,
-    (cs: List[tapir.model.CookiePair]) => pureResult(cs.map(c => tapir.model.Cookie(c.name, c.value.reverse)).asRight[Unit])
+    (cs: List[tapir.model.Cookie]) => pureResult(cs.map(c => tapir.model.SetCookie(c.name, c.value.reverse)).asRight[Unit])
   ) { baseUri =>
     sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send().map { r =>
       r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))

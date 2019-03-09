@@ -16,8 +16,9 @@ These are:
 * `queryParams` captures all query parameters, represented as `MultiQueryParams`
 * `header[T](name)` captures a header with the given name
 * `headers` captures all headers, represented as `Seq[(String, String)]`
-* `cookies` captures cookies from the `Cookie` header and represents them as `List[CookiePair]` 
-* `setCookies` captures cookies from the `Set-Cookie` header and represents them as `List[Cookie]` 
+* `cookie[T](name)` captures a cookie from the `Cookie` header with the given name 
+* `cookies` captures cookies from the `Cookie` header and represents them as `List[Cookie]` 
+* `setCookies` captures cookies from the `Set-Cookie` header and represents them as `List[SetCookie]` 
 * `body[T, M]`, `stringBody`, `plainBody[T]`, `jsonBody[T]`, `binaryBody[T]`, `formBody[T]`, `multipartBody[T]` 
   captures the body
 * `streamBody[S]` captures the body as a stream: only a client/server interpreter supporting streams of type `S` can be 

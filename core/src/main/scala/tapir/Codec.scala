@@ -167,6 +167,8 @@ trait CodecForOptional[T, M <: MediaType, R] { outer =>
 }
 
 object CodecForOptional {
+  type PlainCodecForOptional[T] = CodecForOptional[T, MediaType.TextPlain, String]
+
   implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecForOptional[T, M, R] = new CodecForOptional[T, M, R] {
     override def encode(t: T): Option[R] = Some(c.encode(t))
     override def decode(s: Option[R]): DecodeResult[T] = s match {
