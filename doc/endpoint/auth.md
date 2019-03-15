@@ -14,3 +14,7 @@ cookie or a query parameter
 
 Multiple authentication inputs indicate that all of the given authentication values should be provided. Specifying
 alternative authentication methods (where only one value out of many needs to be provided) is currently not supported.
+
+When interpreting a route as a server, it is useful to define authentication input first, to be able to share the
+authentication logic among multiple endpoints easily. See [common server options](../server/common.html) for more
+details.

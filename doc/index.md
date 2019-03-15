@@ -79,7 +79,7 @@ which is a slight extension of the above.
 * [Endpoints: authentication](endpoint/auth.md)
 * [Servers: akka-http interpreter](server/akkahttp.md)
 * [Servers: http4s interpreter](server/http4s.md)
-* [Servers: common configuration](server/common.md)
+* [Servers: common](server/common.md)
 * [Clients: sttp interpreter](sttp.md)
 * [Documentation: openapi interpreter](openapi.md)
 * [Create your own tapir](mytapir.md)

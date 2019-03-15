@@ -1,4 +1,4 @@
-# Common server configuration
+# Common server options
 
 ## Status codes
 
@@ -35,3 +35,34 @@ value,  or a specific response.
 
 Only the first failure is passed to the `DecodeFailureHandler`. Inputs are decoded in the following order: method, 
 path, query, header, body.
+
+## Extracting common route logic
+
+Quite often, especially for [authentication](../endpoint/auth.md), some part of the route logic is shared among multiple 
+endpoints. However, these functions don't compose in a straightforward way, as the results can both contain errors
+(represented as `Either`s), and are wrapped in a container. Suppose you have the following method:
+
+```scala
+type AuthToken = String
+
+def authFn(token: AuthToken): Future[Either[ErrorInfo, User]]
+def logicFn(user: User, data: String, limit: Int): Future[Either[ErrorInfo, Result]]
+```
+
+which you'd like to apply to an endpoint with type:
+
+```scala
+val myEndpoint: Endpoint[(AuthToken, String, Int), ErrorInfo, Result, Nothing] = ...
+```
+
+To avoid composing these functions by hand, tapir defines a helper extension method, `composeRight`, which allows
+to compose these two functions. If the first function returns an error, that error is propagated to the final result;
+otherwise, the result is passed as input to the second function.
+
+This extension method is defined in the same traits as the route interpreters, both for `Future` (in the akka-http
+interpreter) and for an arbitrary monad (in the http4s interpreter) so importing the package is sufficient to use it:
+
+```scala
+import tapir.server.akkahttp._
+val r: Route = myEndpoint.toRoute((authFn _).composeRight(logicFn _))
+```
