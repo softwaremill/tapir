@@ -6,7 +6,6 @@ import cats.implicits._
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
-import tapir.server.StatusMapper
 import tapir.server.tests.ServerTests
 import tapir.typelevel.ParamsAsArgs
 import tapir.Endpoint
@@ -21,13 +20,8 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
 
   override def pureResult[T](t: T): IO[T] = IO.pure(t)
 
-  override def route[I, E, O, FN[_]](e: Endpoint[I, E, O, EntityBody[IO]],
-                                     fn: FN[IO[Either[E, O]]],
-                                     statusMapper: StatusMapper[O],
-                                     errorStatusMapper: StatusMapper[E])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[IO] = {
-
-    implicit val sm: StatusMapper[O] = statusMapper
-    implicit val esm: StatusMapper[E] = errorStatusMapper
+  override def route[I, E, O, FN[_]](e: Endpoint[I, E, O, EntityBody[IO]], fn: FN[IO[Either[E, O]]])(
+      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[IO] = {
     e.toRoutes(fn)
   }
 

@@ -10,7 +10,7 @@ import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
 import tapir.model.{MultiQueryParams, Part, SetCookieValue, UsernamePassword}
-import tapir.server.{ServerDefaults, StatusMapper}
+import tapir.server.ServerDefaults
 import tapir.tests.TestUtil._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
@@ -131,20 +131,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/not-existing-path").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
-  testServer(in_unit_out_string, () => pureResult("".asRight[Unit]), "custom status mapper", (_: String) => StatusCodes.AlreadyReported) {
-    baseUri =>
-      sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.AlreadyReported)
-  }
-
   testServer(in_unit_error_out_string, () => pureResult("".asLeft[Unit]), "default error status mapper") { baseUri =>
     sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.BadRequest)
-  }
-
-  testServer(in_unit_error_out_string,
-             () => pureResult("".asLeft[Unit]),
-             "custom error status mapper",
-             errorStatusMapper = (_: String) => StatusCodes.TooManyRequests) { baseUri =>
-    sttp.get(uri"$baseUri/api").send().map(_.code shouldBe StatusCodes.TooManyRequests)
   }
 
   testServer(in_file_out_file, (file: File) => pureResult(file.asRight[Unit])) { baseUri =>
@@ -370,23 +358,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   def pureResult[T](t: T): R[T]
 
-  def route[I, E, O, FN[_]](
-      e: Endpoint[I, E, O, S],
-      fn: FN[R[Either[E, O]]],
-      statusMapper: StatusMapper[O] = ServerDefaults.statusMapper,
-      errorStatusMapper: StatusMapper[E] = ServerDefaults.errorStatusMapper)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): ROUTE
+  def route[I, E, O, FN[_]](e: Endpoint[I, E, O, S], fn: FN[R[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): ROUTE
 
   def server(routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
 
-  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O, S],
-                                 fn: FN[R[Either[E, O]]],
-                                 testNameSuffix: String = "",
-                                 statusMapper: StatusMapper[O] = ServerDefaults.statusMapper,
-                                 errorStatusMapper: StatusMapper[E] = ServerDefaults.errorStatusMapper)(runTest: Uri => IO[Assertion])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
+  def testServer[I, E, O, FN[_]](e: Endpoint[I, E, O, S], fn: FN[R[Either[E, O]]], testNameSuffix: String = "")(
+      runTest: Uri => IO[Assertion])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
 
-    testServer(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-               NonEmptyList.of(route(e, fn, statusMapper, errorStatusMapper)))(runTest)
+    testServer(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix), NonEmptyList.of(route(e, fn)))(runTest)
   }
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {

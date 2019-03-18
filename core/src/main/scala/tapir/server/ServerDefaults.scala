@@ -5,9 +5,6 @@ import tapir.{DecodeResult, EndpointIO, EndpointInput}
 
 object ServerDefaults {
 
-  def statusMapper[O]: StatusMapper[O] = _ => StatusCodes.Ok
-  def errorStatusMapper[E]: StatusMapper[E] = _ => StatusCodes.BadRequest
-
   /**
     * By default, a 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason),
     * or if decoding a path capture ends with an error.

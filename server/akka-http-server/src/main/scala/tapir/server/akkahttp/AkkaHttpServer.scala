@@ -1,7 +1,6 @@
 package tapir.server.akkahttp
 
 import akka.http.scaladsl.server.{Directive, Route}
-import tapir.server.{ServerDefaults, StatusMapper}
 import tapir.typelevel.{ParamsAsArgs, ParamsToTuple, ReplaceFirstInFn}
 import tapir.Endpoint
 import tapir.internal.{ParamsToSeq, SeqToParams}
@@ -14,10 +13,8 @@ trait AkkaHttpServer {
       new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)
 
     def toRoute[FN[_]](logic: FN[Future[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
-                                                        serverOptions: AkkaHttpServerOptions,
-                                                        statusMapper: StatusMapper[O] = ServerDefaults.statusMapper,
-                                                        errorStatusMapper: StatusMapper[E] = ServerDefaults.errorStatusMapper): Route =
-      new EndpointToAkkaServer(serverOptions).toRoute(e)(logic, statusMapper, errorStatusMapper)
+                                                        serverOptions: AkkaHttpServerOptions): Route =
+      new EndpointToAkkaServer(serverOptions).toRoute(e)(logic)
   }
 
   implicit class RichToFutureFunction[T, E, U](f: T => Future[Either[E, U]])(implicit ec: ExecutionContext) {
