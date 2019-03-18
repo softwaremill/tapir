@@ -19,12 +19,13 @@ import tapir.{
   MultipartValueType,
   RawPart,
   StreamingEndpointIO,
-  StringValueType
+  StringValueType,
+  StatusCode
 }
 
 private[akkahttp] object OutputToAkkaResponse {
 
-  case class ResponseValues(body: Option[ResponseEntity], headers: Vector[HttpHeader]) {
+  case class ResponseValues(body: Option[ResponseEntity], headers: Vector[HttpHeader], statusCode: Option[StatusCode]) {
     def withBody(b: ResponseEntity): ResponseValues = {
       if (body.isDefined) {
         throw new IllegalArgumentException("Body is already defined")
@@ -34,9 +35,11 @@ private[akkahttp] object OutputToAkkaResponse {
     }
 
     def withHeader(h: HttpHeader): ResponseValues = copy(headers = headers :+ h)
+
+    def withStatusCode(sc: StatusCode): ResponseValues = copy(statusCode = Some(sc))
   }
 
-  def apply(output: EndpointIO[_], v: Any): ResponseValues = apply(output, v, ResponseValues(None, Vector.empty))
+  def apply(output: EndpointIO[_], v: Any): ResponseValues = apply(output, v, ResponseValues(None, Vector.empty, None))
 
   private def apply(output: EndpointIO[_], v: Any, initialResponseValues: ResponseValues): ResponseValues = {
     val vs = ParamsToSeq(v)
@@ -60,6 +63,10 @@ private[akkahttp] object OutputToAkkaResponse {
           .foreach(h => rv = rv.withHeader(h))
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
         rv = apply(wrapped, g(vs(i)), rv)
+      case (EndpointIO.StatusFrom(io, default, _, when), i) =>
+        val v = vs(i)
+        val sc = when.find(_._1.matches(v)).map(_._2).getOrElse(default)
+        rv = apply(io, v, rv.withStatusCode(sc))
     }
 
     rv

@@ -71,6 +71,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
              UsernamePassword("teddy", Some("bear")),
              Right("Authorization=Some(Basic dGVkZHk6YmVhcg==); X-Api-Key=None; Query=None"))
   testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
+  testClient(in_string_out_status_from_string, "apple", Right("fruit: apple")) // status from should be a no-op from the client interpreter's point of view
 
   //
 

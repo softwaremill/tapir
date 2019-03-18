@@ -3,10 +3,13 @@ package tapir.docs.openapi
 import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.model.Method
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi.{MediaType => OMediaType, _}
-import tapir.{EndpointInput, MediaType => SMediaType, Schema => SSchema, _}
+import tapir.openapi._
+import tapir._
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
+
+  private val codecToMediaType = new CodecToMediaType(objectSchemas)
+  private val endpointToOperationResponse = new EndpointToOperationResponse(objectSchemas, codecToMediaType)
 
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
     import model.Method._
@@ -45,7 +48,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_]]): Operation = {
     val parameters = operationParameters(inputs)
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
-    val responses: Map[ResponsesKey, ReferenceOr[Response]] = operationResponse(e)
+    val responses: Map[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
     val authNames = e.input.auths.flatMap(auth => securitySchemes.get(auth).map(_._1))
     // for now, all auths have empty scope
@@ -68,7 +71,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
       case EndpointIO.Body(codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional)))
+        Right(RequestBody(info.description, codecToMediaType(codec, info.example, None), Some(!codec.meta.isOptional)))
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
         Right(RequestBody(i.description, codecToMediaType(s, mt, i.example), Some(true)))
     }
@@ -102,72 +105,6 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
                                            objectSchemas(query.codec.meta.schema),
                                            query.info.example.flatMap(exampleValue(query.codec, _)))
   }
-
-  private def operationResponse(e: Endpoint[_, _, _, _]): Map[ResponsesKey, Right[Nothing, Response]] = {
-    // There always needs to be at least a 200 empty response
-    val okResponse = outputToResponse(e.output).getOrElse(Response("", Map.empty, Map.empty))
-
-    List(
-      Some(ResponsesCodeKey(200) -> Right(okResponse)),
-      outputToResponse(e.errorOutput).map { r =>
-        ResponsesDefaultKey -> Right(r)
-      }
-    ).flatten.toMap
-  }
-
-  private def outputToResponse(io: EndpointIO[_]): Option[Response] = {
-    val ios = io.asVectorOfBasic()
-
-    val headers = ios.collect {
-      case EndpointIO.Header(name, codec, info) =>
-        name -> Right(
-          Header(
-            info.description,
-            Some(!codec.meta.isOptional),
-            None,
-            None,
-            None,
-            None,
-            None,
-            Some(objectSchemas(codec.meta.schema)),
-            info.example.flatMap(exampleValue(codec, _)),
-            Map.empty,
-            Map.empty
-          ))
-    }
-
-    val bodies = ios.collect {
-      case EndpointIO.Body(m, i)                                            => (i.description, codecToMediaType(m, i.example))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) => (i.description, codecToMediaType(s, mt, i.example))
-    }
-    val body = bodies.headOption
-
-    val description = body.flatMap(_._1).getOrElse("")
-    val content = body.map(_._2).getOrElse(Map.empty)
-
-    if (body.isDefined || headers.nonEmpty) {
-      Some(Response(description, headers.toMap, content))
-    } else {
-      None
-    }
-  }
-
-  private def codecToMediaType[T, M <: SMediaType](o: CodecForOptional[T, M, _], example: Option[T]): Map[String, OMediaType] = {
-    Map(
-      o.meta.mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(o.meta.schema)),
-                                                       example.flatMap(exampleValue(o, _)),
-                                                       Map.empty,
-                                                       Map.empty))
-  }
-
-  private def codecToMediaType[M <: SMediaType](schema: SSchema, mediaType: M, example: Option[String]): Map[String, OMediaType] = {
-    Map(mediaType.mediaTypeNoParams -> OMediaType(Some(objectSchemas(schema)), example.map(ExampleValue), Map.empty, Map.empty))
-  }
-
-  private def exampleValue[T](v: Any): ExampleValue = ExampleValue(v.toString)
-  private def exampleValue[T](codec: Codec[T, _, _], e: T): Option[ExampleValue] = Some(exampleValue(codec.encode(e)))
-  private def exampleValue[T](codec: CodecForOptional[T, _, _], e: T): Option[ExampleValue] = codec.encode(e).map(exampleValue)
-  private def exampleValue[T](codec: CodecForMany[T, _, _], e: T): Option[ExampleValue] = codec.encode(e).headOption.map(exampleValue)
 
   /**
     * @return `Left` if the component is a capture, `Right` if it is a segment

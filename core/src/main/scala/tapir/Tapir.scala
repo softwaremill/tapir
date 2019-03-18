@@ -7,6 +7,8 @@ import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
 import tapir.model.{Cookie, SetCookie, SetCookieValue}
 
+import scala.reflect.ClassTag
+
 trait Tapir {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
 
@@ -58,6 +60,12 @@ trait Tapir {
     StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth
+
+  def statusFrom[I](io: EndpointIO[I], default: StatusCode, when: (When[I], StatusCode)*): EndpointIO.StatusFrom[I] =
+    EndpointIO.StatusFrom(io, default, None, when.toVector)
+
+  def whenClass[U: ClassTag: SchemaFor]: When[Any] = WhenClass(implicitly[ClassTag[U]], implicitly[SchemaFor[U]].schema)
+  def whenValue[U](p: U => Boolean): When[U] = WhenValue(p)
 
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 

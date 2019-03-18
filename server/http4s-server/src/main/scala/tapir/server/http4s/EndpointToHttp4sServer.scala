@@ -62,11 +62,12 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
   private def makeResponse[O](statusCode: org.http4s.Status, output: EndpointIO[O], v: O): Response[F] = {
     val responseValues = new OutputToHttp4sResponse[F](serverOptions).apply(output, v)
+    val statusCode2 = responseValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(statusCode)
 
     val headers = Headers(responseValues.headers: _*)
     responseValues.body match {
-      case Some(entity) => Response(status = statusCode, headers = headers, body = entity)
-      case None         => Response(status = statusCode, headers = headers)
+      case Some(entity) => Response(status = statusCode2, headers = headers, body = entity)
+      case None         => Response(status = statusCode2, headers = headers)
     }
   }
 

@@ -79,6 +79,17 @@ object ObjectSchemasForEndpoints {
         filterIsObjectSchema(schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
+      case EndpointIO.StatusFrom(wrapped, _, defaultSchema, whens) =>
+        val fromDefaultSchema = defaultSchema.toList.flatMap(filterIsObjectSchema)
+        val fromWhens = whens.collect {
+          case (WhenClass(_, s), _) => filterIsObjectSchema(s)
+        }.flatten
+        val fromInput = forInput(wrapped)
+
+        // if there's a default schema, we exclude the one from the input
+        val fromInputOrDefault = if (fromDefaultSchema.nonEmpty) fromDefaultSchema else fromInput
+
+        fromInputOrDefault ++ fromWhens
     }
   }
 }

@@ -83,6 +83,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
         case EndpointIO.Mapped(wrapped, f, _, _) =>
           f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingle, body, meta))
+
+        case EndpointIO.StatusFrom(wrapped, _, _, _) =>
+          getOutputParams(wrapped.asVectorOfSingle, body, meta)
       }
 
     SeqToParams(values)

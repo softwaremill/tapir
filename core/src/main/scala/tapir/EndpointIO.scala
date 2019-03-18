@@ -34,12 +34,14 @@ sealed trait EndpointInput[I] {
     case EndpointInput.Mapped(wrapped, _, _, _)       => wrapped.traverse(handle)
     case EndpointIO.Mapped(wrapped, _, _, _)          => wrapped.traverse(handle)
     case a: EndpointInput.Auth[_]                     => a.input.traverse(handle)
+    case s: EndpointIO.StatusFrom[_]                  => s.io.traverse(handle)
     case _                                            => Vector.empty
   }
 
   private[tapir] def asVectorOfBasic(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] = traverse {
-    case b: EndpointInput.Basic[_] => Vector(b)
-    case a: EndpointInput.Auth[_]  => if (includeAuth) a.input.asVectorOfBasic(includeAuth) else Vector.empty
+    case b: EndpointInput.Basic[_]   => Vector(b)
+    case a: EndpointInput.Auth[_]    => if (includeAuth) a.input.asVectorOfBasic(includeAuth) else Vector.empty
+    case s: EndpointIO.StatusFrom[_] => s.io.asVectorOfBasic(includeAuth)
   }
 
   private[tapir] def auths: Vector[EndpointInput.Auth[_]] = traverse {
@@ -194,6 +196,13 @@ object EndpointIO {
   }
 
   //
+
+  // TODO: should be output-only
+  case class StatusFrom[I](io: EndpointIO[I], default: StatusCode, defaultSchema: Option[Schema], when: Vector[(When[I], StatusCode)])
+      extends Single[I] {
+    def defaultSchema(s: Schema): StatusFrom[I] = this.copy(defaultSchema = Some(s))
+    override def show: String = s"status from(${io.show}, $default or ${when.map(_._2).mkString("/")})"
+  }
 
   case class Mapped[I, T](wrapped: EndpointIO[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
     override def show: String = s"map(${wrapped.show})"

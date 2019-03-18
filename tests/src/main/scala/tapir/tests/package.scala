@@ -118,11 +118,12 @@ package object tests {
   val in_auth_apikey_query_out_string: Endpoint[String, Unit, String, Nothing] =
     endpoint.in("auth").in(auth.apiKey(query[String]("api-key"))).out(stringBody)
 
-  // TODO val in_auth_apikey_cookie_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in("auth").in(auth.apiKey(cookie[String]("apikey"))).out(stringBody)
-
   val in_auth_basic_out_string: Endpoint[UsernamePassword, Unit, String, Nothing] = endpoint.in("auth").in(auth.basic).out(stringBody)
 
   val in_auth_bearer_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in("auth").in(auth.bearer).out(stringBody)
+
+  val in_string_out_status_from_string: Endpoint[String, Unit, String, Nothing] =
+    endpoint.in(query[String]("fruit")).out(statusFrom(stringBody, StatusCodes.Ok, whenValue[String](_ == "x") -> StatusCodes.Accepted))
 
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 

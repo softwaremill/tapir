@@ -35,9 +35,11 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   private def outputToRoute[O](statusCode: AkkaStatusCode, output: EndpointIO[O], v: O): Route = {
     val responseValues = OutputToAkkaResponse(output, v)
 
+    val statusCode2 = responseValues.statusCode.map(c => c: AkkaStatusCode).getOrElse(statusCode)
+
     val completeRoute = responseValues.body match {
-      case Some(entity) => complete(HttpResponse(entity = entity, status = statusCode))
-      case None         => complete(HttpResponse(statusCode))
+      case Some(entity) => complete(HttpResponse(entity = entity, status = statusCode2))
+      case None         => complete(HttpResponse(statusCode2))
     }
 
     if (responseValues.headers.nonEmpty) {
