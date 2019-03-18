@@ -93,7 +93,8 @@ endpoint
   .toRoute((logic _).andThen(handleErrors))
 ```
 
-In the above example, errors are represented as `String`s (aliased to `ErrorInfo` for readability), and when the
-logic completes successfuly an `Int` is returned. Any exceptions that are raised are logged, and represented as a
-value of type `ErrorInfo`. Following the convention, the left side of the `Either[ErrorInfo, T]` represents an
-exception, and the right side success.
+In the above example, errors are represented as `String`s (aliased to `ErrorInfo` for readability). When the
+logic completes successfully an `Int` is returned. Any exceptions that are raised are logged, and represented as a
+value of type `ErrorInfo`. 
+
+Following the convention, the left side of the `Either[ErrorInfo, T]` represents an error, and the right side success.
