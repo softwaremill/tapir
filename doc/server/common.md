@@ -63,6 +63,14 @@ import tapir.server.akkahttp._
 val r: Route = myEndpoint.toRoute((authFn _).composeRight(logicFn _))
 ```
 
+Writing down the types, here are the generic signatures when using `composeRight`:
+
+```scala
+f1: T => Future[Either[E, U]]
+f2: (U, A1, A2, ...) => Future[Either[E, O]]
+(f1 _).composeRight(f2): (T, A1, A2, ...) => Future[Either[E, O]]
+```
+
 ## Exception handling
 
 There's no exception handling built into tapir. However, tapir contains a more general error handling mechanism, as the
