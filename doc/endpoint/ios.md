@@ -106,6 +106,30 @@ endpoint not to match the request. For example, `endpoint.path("api")` will matc
 To match only the root path, use an empty string: `endpoint.path("")` will match `http://server.com/` and 
 `http://server.com`.
 
+## Status codes
+
+It is possible to specify how the value of an output (typically the body) maps to the status code. This is used
+when interpreting the endpoint as a server and when generating documentation. 
+
+For example, below is a specification for an endpoint where the error output is fixed to be of type `ErrorInfo`; 
+such a specification can then be refined and reused for other endpoints:
+
+```scala
+case class ErrorInfo(errorType: ErrorType, msg: String)
+
+val baseEndpoint = endpoint.errorOut(
+  statusFrom(
+    jsonBody[ErrorType],
+    StatusCodes.BadRequest,
+    whenValue[ErrorType](_.errorType == ErrorType.NotFound, StatusCodes.NotFound),
+    whenValue[ErrorType](_.errorType == ErrorType.Exception, StatusCodes.InternalServerError)
+  )
+)
+```
+
+The `statusFrom` method takes as parameters: the wrapped output, default status code, and any number of specific
+status codes mappings based on the value (`whenValue`) or class (`whenClass`) of the output value.
+
 ## Next
 
 Read on about [codecs](codecs.html).

@@ -3,11 +3,7 @@
 ## Status codes
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
-this can be customised when interpreting an endpoint as a directive/route, by providing implicit values of 
-`type StatusMapper[T] = T => StatusCode`, where `type StatusCode = Int`.
-
-This can be especially useful for error responses, in which case having an `Endpoint[I, E, O, S]`, you'd need to provide
-an implicit `StatusMapper[E]`.
+this can be customised by specifying how an [output maps to the status code](../endpoint/ios.html#status-codes).
   
 ## Server options
 
