@@ -62,3 +62,38 @@ interpreter) and for an arbitrary monad (in the http4s interpreter), so importin
 import tapir.server.akkahttp._
 val r: Route = myEndpoint.toRoute((authFn _).composeRight(logicFn _))
 ```
+
+## Exception handling
+
+There's no exception handling built into tapir. However, tapir contains a more general error handling mechanism, as the
+endpoints can contain dedicated error outputs.
+
+If the logic function, which is passed to the server interpreter, fails (i.e. throws an exception, which results in
+a failed `Future` or `IO`/`Task`), this is propagated to the library (akka-http or http4s). 
+
+However, any exceptions can be recovered from and mapped to an error value. For example:
+
+```scala
+type ErrorInfo = String
+
+def logic(s: String): Future[Int] = ...
+
+def handleErrors[T](f: Future[T]): Future[Either[ErrorInfo, T]] =
+  f.transform {
+    case Success(v) => Success(Right(v))
+    case Failure(e) =>
+      logger.error("Exception when running endpoint logic", e)
+      Success(Left(e.getMessage))
+  }
+
+endpoint
+  .errorOut(plainBody[ErrorInfo])
+  .out(plainBody[Int])
+  .in(query[String]("name"))
+  .toRoute((logic _).andThen(handleErrors))
+```
+
+In the above example, errors are represented as `String`s (aliased to `ErrorInfo` for readability), and when the
+logic completes successfuly an `Int` is returned. Any exceptions that are raised are logged, and represented as a
+value of type `ErrorInfo`. Following the convention, the left side of the `Either[ErrorInfo, T]` represents an
+exception, and the right side success.
