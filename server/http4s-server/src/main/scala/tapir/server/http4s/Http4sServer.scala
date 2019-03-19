@@ -19,7 +19,7 @@ trait Http4sServer {
   }
 
   implicit class RichToMonadFunction[T, E, U, F[_]: Monad](f: T => F[Either[E, U]]) {
-    def composeRight[O, FN_U[_], FN_T[_]](g: FN_U[F[Either[E, O]]])(implicit
+    def andThenRight[O, FN_U[_], FN_T[_]](g: FN_U[F[Either[E, O]]])(implicit
                                                                     r: ReplaceFirstInFn[U, FN_U, T, FN_T]): FN_T[F[Either[E, O]]] = {
 
       r.paramsAsArgsJk.toFn { paramsWithT =>

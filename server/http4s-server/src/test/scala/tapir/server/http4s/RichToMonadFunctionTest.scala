@@ -19,7 +19,7 @@ class RichToMonadFunctionTest extends FunSuite with Matchers {
     }
 
     // when
-    val result = (f1 _).composeRight(f2 _).apply("john", 10, "x").unsafeRunSync()
+    val result = (f1 _).andThenRight(f2 _).apply("john", 10, "x").unsafeRunSync()
 
     // then
     result shouldBe Right(Result("User(john),10,x"))
@@ -35,7 +35,7 @@ class RichToMonadFunctionTest extends FunSuite with Matchers {
     }
 
     // when
-    val result = (f1 _).composeRight(f2 _).apply("john", 10, "x").unsafeRunSync()
+    val result = (f1 _).andThenRight(f2 _).apply("john", 10, "x").unsafeRunSync()
 
     // then
     result shouldBe Left(Error("e1"))
@@ -51,7 +51,7 @@ class RichToMonadFunctionTest extends FunSuite with Matchers {
     }
 
     // when
-    val result = (f1 _).composeRight(f2 _).apply("john", 10, "x").unsafeRunSync()
+    val result = (f1 _).andThenRight(f2 _).apply("john", 10, "x").unsafeRunSync()
 
     // then
     result shouldBe Left(Error("e2"))

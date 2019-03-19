@@ -51,7 +51,7 @@ which you'd like to apply to an endpoint with type:
 val myEndpoint: Endpoint[(AuthToken, String, Int), ErrorInfo, Result, Nothing] = ...
 ```
 
-To avoid composing these functions by hand, tapir defines a helper extension method, `composeRight`. If the first 
+To avoid composing these functions by hand, tapir defines a helper extension method, `andThenRight`. If the first 
 function returns an error, that error is propagated to the final result; otherwise, the result is passed as input to 
 the second function.
 
@@ -60,15 +60,15 @@ interpreter) and for an arbitrary monad (in the http4s interpreter), so importin
 
 ```scala
 import tapir.server.akkahttp._
-val r: Route = myEndpoint.toRoute((authFn _).composeRight(logicFn _))
+val r: Route = myEndpoint.toRoute((authFn _).andThenRight(logicFn _))
 ```
 
-Writing down the types, here are the generic signatures when using `composeRight`:
+Writing down the types, here are the generic signatures when using `andThenRight`:
 
 ```scala
 f1: T => Future[Either[E, U]]
 f2: (U, A1, A2, ...) => Future[Either[E, O]]
-(f1 _).composeRight(f2): (T, A1, A2, ...) => Future[Either[E, O]]
+(f1 _).andThenRight(f2): (T, A1, A2, ...) => Future[Either[E, O]]
 ```
 
 ## Exception handling

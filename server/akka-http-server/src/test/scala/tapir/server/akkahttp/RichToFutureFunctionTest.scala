@@ -22,7 +22,7 @@ class RichToFutureFunctionTest extends FunSuite with Matchers with ScalaFutures 
     }
 
     // when
-    val result = (f1 _).composeRight(f2 _).apply("john", 10, "x").futureValue
+    val result = (f1 _).andThenRight(f2 _).apply("john", 10, "x").futureValue
 
     // then
     result shouldBe Right(Result("User(john),10,x"))
@@ -38,7 +38,7 @@ class RichToFutureFunctionTest extends FunSuite with Matchers with ScalaFutures 
     }
 
     // when
-    val result = (f1 _).composeRight(f2 _).apply("john", 10, "x").futureValue
+    val result = (f1 _).andThenRight(f2 _).apply("john", 10, "x").futureValue
 
     // then
     result shouldBe Left(Error("e1"))
@@ -54,7 +54,7 @@ class RichToFutureFunctionTest extends FunSuite with Matchers with ScalaFutures 
     }
 
     // when
-    val result = (f1 _).composeRight(f2 _).apply("john", 10, "x").futureValue
+    val result = (f1 _).andThenRight(f2 _).apply("john", 10, "x").futureValue
 
     // then
     result shouldBe Left(Error("e2"))

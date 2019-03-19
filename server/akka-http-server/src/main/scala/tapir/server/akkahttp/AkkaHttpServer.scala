@@ -18,7 +18,7 @@ trait AkkaHttpServer {
   }
 
   implicit class RichToFutureFunction[T, E, U](f: T => Future[Either[E, U]])(implicit ec: ExecutionContext) {
-    def composeRight[O, FN_U[_], FN_T[_]](g: FN_U[Future[Either[E, O]]])(
+    def andThenRight[O, FN_U[_], FN_T[_]](g: FN_U[Future[Either[E, O]]])(
         implicit
         r: ReplaceFirstInFn[U, FN_U, T, FN_T]): FN_T[Future[Either[E, O]]] = {
 
