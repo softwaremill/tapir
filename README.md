@@ -83,6 +83,7 @@ You'll need partial unification enabled in the compiler (alternatively, you'll n
 scalacOptions += "-Ypartial-unification"
 ```
 
+
 Then, import:
 
 ```scala
@@ -91,6 +92,16 @@ import tapir._
 
 And finally, type `endpoint.` and see where auto-complete gets you!
 
+---
+
+Sidenote for scala 2.12.4 and higher:
+If you will encounter issue with compiling your project because of 
+StackOverflowException related to [this](https://github.com/scala/bug/issues/10604) 
+please increase your stack memory. Example:
+
+```
+sbt -J-Xss4M clean compile
+```
 ## Contributing
 
 Tapir is an early stage project. Everything might change. All suggestions welcome :)
