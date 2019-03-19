@@ -109,7 +109,7 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
         t.flatMap { part =>
           mvt.partCodec(part.name).toList.flatMap { codec =>
             // a single value-part might yield multiple raw-parts (e.g. for repeated fields)
-            val rawParts: List[RawPart] = codec.asInstanceOf[CodecForMany[Any, _, _]].encode(part.body).map { b =>
+            val rawParts: Seq[RawPart] = codec.asInstanceOf[CodecForMany[Any, _, _]].encode(part.body).map { b =>
               part.copy(body = b)
             }
 
@@ -197,14 +197,14 @@ object CodecForOptional {
   * Should be used for inputs/outputs which allow multiple values.
   */
 trait CodecForMany[T, M <: MediaType, R] { outer =>
-  def encode(t: T): List[R]
-  def decode(s: List[R]): DecodeResult[T]
+  def encode(t: T): Seq[R]
+  def decode(s: Seq[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
 
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): CodecForMany[TT, M, R] =
     new CodecForMany[TT, M, R] {
-      override def encode(t: TT): List[R] = outer.encode(g(t))
-      override def decode(s: List[R]): DecodeResult[TT] = outer.decode(s).flatMap(f)
+      override def encode(t: TT): Seq[R] = outer.encode(g(t))
+      override def decode(s: Seq[R]): DecodeResult[TT] = outer.decode(s).flatMap(f)
       override val meta: CodecMeta[M, R] = outer.meta
     }
 
@@ -215,8 +215,8 @@ object CodecForMany {
   type PlainCodecForMany[T] = CodecForMany[T, MediaType.TextPlain, String]
 
   implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecForMany[T, M, R] = new CodecForMany[T, M, R] {
-    override def encode(t: T): List[R] = List(c.encode(t))
-    override def decode(s: List[R]): DecodeResult[T] = s match {
+    override def encode(t: T): Seq[R] = List(c.encode(t))
+    override def decode(s: Seq[R]): DecodeResult[T] = s match {
       case Nil     => DecodeResult.Missing
       case List(h) => c.decode(h)
       case l       => DecodeResult.Multiple(l)
@@ -226,8 +226,8 @@ object CodecForMany {
 
   implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Option[T], M, R] =
     new CodecForMany[Option[T], M, R] {
-      override def encode(t: Option[T]): List[R] = t.map(v => tm.encode(v)).toList
-      override def decode(s: List[R]): DecodeResult[Option[T]] = s match {
+      override def encode(t: Option[T]): Seq[R] = t.map(v => tm.encode(v)).toList
+      override def decode(s: Seq[R]): DecodeResult[Option[T]] = s match {
         case Nil     => DecodeResult.Value(None)
         case List(h) => tm.decode(h).map(Some(_))
         case l       => DecodeResult.Multiple(l)
@@ -235,10 +235,33 @@ object CodecForMany {
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
     }
 
+  // collections
+
+  implicit def forSeq[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Seq[T], M, R] =
+    new CodecForMany[Seq[T], M, R] {
+      override def encode(t: Seq[T]): Seq[R] = t.map(v => tm.encode(v))
+      override def decode(s: Seq[R]): DecodeResult[Seq[T]] = DecodeResult.sequence(s.map(tm.decode))
+      override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
+    }
+
   implicit def forList[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[List[T], M, R] =
     new CodecForMany[List[T], M, R] {
-      override def encode(t: List[T]): List[R] = t.map(v => tm.encode(v))
-      override def decode(s: List[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode))
+      override def encode(t: List[T]): Seq[R] = t.map(v => tm.encode(v))
+      override def decode(s: Seq[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toList)
+      override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
+    }
+
+  implicit def forVector[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Vector[T], M, R] =
+    new CodecForMany[Vector[T], M, R] {
+      override def encode(t: Vector[T]): Seq[R] = t.map(v => tm.encode(v))
+      override def decode(s: Seq[R]): DecodeResult[Vector[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toVector)
+      override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
+    }
+
+  implicit def forSet[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Set[T], M, R] =
+    new CodecForMany[Set[T], M, R] {
+      override def encode(t: Set[T]): Seq[R] = t.map(v => tm.encode(v)).toSeq
+      override def decode(s: Seq[R]): DecodeResult[Set[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toSet)
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
     }
 }
