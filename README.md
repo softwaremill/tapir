@@ -83,7 +83,6 @@ You'll need partial unification enabled in the compiler (alternatively, you'll n
 scalacOptions += "-Ypartial-unification"
 ```
 
-
 Then, import:
 
 ```scala
