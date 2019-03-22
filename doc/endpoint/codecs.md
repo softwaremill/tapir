@@ -51,8 +51,8 @@ It is possible to configure the automatic derivation to use snake-case, kebab-ca
 by providing an implicit `tapir.generic.Configuration` value:
 
 ```scala
-implicit val customConfiguration: Configuration = 
-  Configuration.defaults.snakeCaseTransformation
+implicit val customConfiguration: Configuration =
+  Configuration.default.withSnakeCaseMemberNames
 ```
 
 ## Media types
