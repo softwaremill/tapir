@@ -57,6 +57,8 @@ object ObjectSchemasForEndpoints {
         List.empty
       case _: EndpointInput.Auth[_] =>
         List.empty
+      case _: EndpointInput.ExtractFromRequest[_] =>
+        List.empty
       case EndpointInput.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
       case EndpointInput.Multiple(inputs) =>

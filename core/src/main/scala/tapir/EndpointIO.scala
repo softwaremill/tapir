@@ -4,7 +4,7 @@ import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
 import tapir.internal.ProductToParams
-import tapir.model.{Method, MultiQueryParams}
+import tapir.model.{Method, MultiQueryParams, ServerRequest}
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 sealed trait EndpointInput[I] {
@@ -108,6 +108,10 @@ object EndpointInput {
     def description(d: String): Cookie[T] = copy(info = info.description(d))
     def example(t: T): Cookie[T] = copy(info = info.example(t))
     def show = s"{cookie $name}"
+  }
+
+  case class ExtractFromRequest[T](f: ServerRequest => T) extends Basic[T] {
+    def show = s"{from request}"
   }
 
   //

@@ -1,6 +1,6 @@
 package tapir.internal.server
 
-import tapir.model.{Cookie, Method, MultiQueryParams}
+import tapir.model.{Cookie, Method, MultiQueryParams, ServerRequest}
 import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec
@@ -25,6 +25,8 @@ trait DecodeInputsContext {
   def queryParameters: Map[String, Seq[String]]
 
   def bodyStream: Any
+
+  def serverRequest: ServerRequest
 }
 
 object DecodeInputs {
@@ -39,19 +41,20 @@ object DecodeInputs {
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
   def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
-    // the first decoding failure is returned. We decode in the following order: method, path, query, headers (incl. cookies), body
+    // the first decoding failure is returned. We decode in the following order: method, path, query, headers (incl. cookies), request, body
     val inputs = input.asVectorOfBasic().sortBy {
-      case _: EndpointInput.RequestMethod        => 0
-      case _: EndpointInput.PathSegment          => 1
-      case _: EndpointInput.PathCapture[_]       => 1
-      case _: EndpointInput.PathsCapture         => 1
-      case _: EndpointInput.Query[_]             => 2
-      case _: EndpointInput.QueryParams          => 2
-      case _: EndpointInput.Cookie[_]            => 3
-      case _: EndpointIO.Header[_]               => 3
-      case _: EndpointIO.Headers                 => 3
-      case _: EndpointIO.Body[_, _, _]           => 4
-      case _: EndpointIO.StreamBodyWrapper[_, _] => 4
+      case _: EndpointInput.RequestMethod         => 0
+      case _: EndpointInput.PathSegment           => 1
+      case _: EndpointInput.PathCapture[_]        => 1
+      case _: EndpointInput.PathsCapture          => 1
+      case _: EndpointInput.Query[_]              => 2
+      case _: EndpointInput.QueryParams           => 2
+      case _: EndpointInput.Cookie[_]             => 3
+      case _: EndpointIO.Header[_]                => 3
+      case _: EndpointIO.Headers                  => 3
+      case _: EndpointInput.ExtractFromRequest[_] => 4
+      case _: EndpointIO.Body[_, _, _]            => 5
+      case _: EndpointIO.StreamBodyWrapper[_, _]  => 5
     }
 
     val (result, consumedCtx) = apply(inputs, DecodeInputsResult.Values(Map(), None), ctx)
@@ -126,6 +129,9 @@ object DecodeInputs {
 
       case (input @ EndpointIO.Headers(_)) +: inputsTail =>
         apply(inputsTail, values.value(input, ctx.headers), ctx)
+
+      case (input @ EndpointInput.ExtractFromRequest(f)) +: inputsTail =>
+        apply(inputsTail, values.value(input, f(ctx.serverRequest)), ctx)
 
       case (input @ EndpointIO.Body(_, _)) +: inputsTail =>
         apply(inputsTail, values.copy(bodyInput = Some(input)), ctx)

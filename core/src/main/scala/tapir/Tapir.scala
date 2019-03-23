@@ -5,7 +5,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
-import tapir.model.{Cookie, SetCookie, SetCookieValue}
+import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue}
 
 import scala.reflect.ClassTag
 
@@ -60,6 +60,12 @@ trait Tapir {
     StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth
+
+  /**
+    * Extract a value from a server request. This input is only used by server interpreters, it is ignored by
+    * documentation interpreters and the provided value is discarded by client interpreters.
+    */
+  def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] = EndpointInput.ExtractFromRequest(f)
 
   def statusFrom[I](io: EndpointIO[I], default: StatusCode, when: (When[I], StatusCode)*): EndpointIO.StatusFrom[I] =
     EndpointIO.StatusFrom(io, default, None, when.toVector)
