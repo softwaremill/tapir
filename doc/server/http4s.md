@@ -13,15 +13,22 @@ and import the package:
 import tapir.server.http4s._
 ```
 
-This adds an extension method to the `Endpoint` type: `toRoutes`. It requires the logic of the endpoint to be given as 
-a function of type:
+This adds two extension methods to the `Endpoint` type: `toRoutes` and `toRoutesRecoverErrors`. This first requires the 
+logic of the endpoint to be given as a function of type:
 
 ```scala
 [I as function arguments] => F[Either[E, O]]
 ```
 
-where `F[_]` is the chosen effect type. Note that the function doesn't take the tuple `I` directly as input, but instead 
-this is converted to a function of the appropriate arity. For example:
+where `F[_]` is the chosen effect type. The second recovers errors from failed effects, and hence requires that `E` is 
+a subclass of `Throwable` (an exception); it expects a function of type:
+
+```scala
+[I as function arguments] => F[O]
+```
+
+Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the 
+appropriate arity. For example:
 
 ```scala
 import tapir._

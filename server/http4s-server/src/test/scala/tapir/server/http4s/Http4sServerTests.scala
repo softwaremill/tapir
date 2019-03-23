@@ -11,6 +11,7 @@ import tapir.typelevel.ParamsAsArgs
 import tapir.Endpoint
 
 import scala.concurrent.ExecutionContext
+import scala.reflect.ClassTag
 
 class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] {
 
@@ -19,10 +20,17 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
   implicit private val timer: Timer[IO] = IO.timer(ec)
 
   override def pureResult[T](t: T): IO[T] = IO.pure(t)
+  override def suspendResult[T](t: => T): IO[T] = IO.apply(t)
 
   override def route[I, E, O, FN[_]](e: Endpoint[I, E, O, EntityBody[IO]], fn: FN[IO[Either[E, O]]])(
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[IO] = {
     e.toRoutes(fn)
+  }
+
+  override def routeRecoverErrors[I, E <: Throwable, O, FN[_]](e: Endpoint[I, E, O, EntityBody[IO]], fn: FN[IO[O]])(
+      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
+      eClassTag: ClassTag[E]): HttpRoutes[IO] = {
+    e.toRouteRecoverErrors(fn)
   }
 
   override def server(routes: NonEmptyList[HttpRoutes[IO]], port: Port): Resource[IO, Unit] = {

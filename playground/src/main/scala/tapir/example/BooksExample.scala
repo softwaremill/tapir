@@ -2,7 +2,6 @@ package tapir.example
 
 import com.typesafe.scalalogging.StrictLogging
 import tapir.example.Endpoints.Limit
-import tapir.openapi.Info
 
 case class Book(title: String, genre: String, year: Int)
 case class BooksQuery(genre: Option[String], limit: Limit)

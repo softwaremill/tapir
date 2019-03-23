@@ -12,6 +12,7 @@ trait ParamsAsArgs[I] {
   def toFn[O](f: I => O): FN[O]
   def paramAt(params: I, i: Int): Any
   def applyFn[R](f: FN[R], args: I): R
+  def andThen[R, R2](f: FN[R], m: R => R2): FN[R2]
 }
 
 object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
@@ -21,6 +22,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
       override def toFn[R](f: Tuple1[[#A1#]] => R): ([#A1#]) => R = ([#a1#]) => f(Tuple1([#a1#]))
       override def paramAt(params: Tuple1[[#A1#]], i: Int): Any = params.productElement(i)
       override def applyFn[R](f: ([#A1#]) => R, args: Tuple1[[#A1#]]): R = f([#args._1#])
+      override def andThen[R, RR](f: ([#A1#]) => R, m: R => RR): ([#A1#]) => RR = ([#a1#]) => m(f([#a1#]))
     }#
   ]
 }
@@ -31,6 +33,7 @@ trait LowPriorityParamsAsArgs1 extends LowPriorityParamsAsArgs0 {
     override def toFn[O](f: Unit => O): () => O = () => f(())
     override def paramAt(params: Unit, i: Int): Any = throw new IndexOutOfBoundsException(i.toString)
     override def applyFn[R](f: () => R, args: Unit): R = f()
+    override def andThen[R, RR](f: () => R, m: R => RR): () => RR = () => m(f())
   }
 }
 
@@ -43,5 +46,6 @@ trait LowPriorityParamsAsArgs0 {
     override def toFn[R](f: A1 => R): A1 => R = a1 => f(a1)
     override def paramAt(params: A1, i: Int): Any = if (i == 0) params else throw new IndexOutOfBoundsException(i.toString)
     override def applyFn[R](f: A1 => R, args: A1): R = f(args)
+    override def andThen[R, RR](f: A1 => R, m: R => RR): A1 => RR = a => m(f(a))
   }
 }

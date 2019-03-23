@@ -13,11 +13,18 @@ and import the package:
 import tapir.server.akkahttp._
 ```
 
-This adds two extension methods to the `Endpoint` type: `toDirective` and `toRoute`. Both require the logic of the 
-endpoint to be given as a function of type:
+This adds extension methods to the `Endpoint` type: `toDirective`, `toRoute` and `toRouteRecoverErrors`. The first two
+require the logic of the endpoint to be given as a function of type:
 
 ```scala
 [I as function arguments] => Future[Either[E, O]]
+```
+
+The third recovers errors from failed futures, and hence requires that `E` is a subclass of `Throwable` (an exception);
+it expects a function of type:
+
+```scala
+[I as function arguments] => Future[O]
 ```
 
 Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the 

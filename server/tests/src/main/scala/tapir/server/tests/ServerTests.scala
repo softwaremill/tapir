@@ -15,7 +15,10 @@ import tapir.tests.TestUtil._
 import tapir.tests._
 import tapir.typelevel.ParamsAsArgs
 import tapir._
+import tapir.json.circe._
+import io.circe.generic.auto._
 
+import scala.reflect.ClassTag
 import scala.util.Random
 
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
@@ -350,6 +353,31 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   //
 
+  def throwFruits(name: String): R[String] = name match {
+    case "apple"  => pureResult("ok")
+    case "banana" => suspendResult(throw FruitError("no bananas", 102))
+    case n        => suspendResult(throw new IllegalArgumentException(n))
+  }
+
+  testServer(
+    "recover errors from exceptions",
+    NonEmptyList.of(
+      routeRecoverErrors(endpoint.in(query[String]("name")).errorOut(jsonBody[FruitError]).out(stringBody), throwFruits _)
+    )
+  ) { baseUri =>
+    sttp.get(uri"$baseUri?name=apple").send().map(_.body shouldBe Right("ok")) >>
+      sttp.get(uri"$baseUri?name=banana").send().map { r =>
+        r.code shouldBe StatusCodes.BadRequest
+        r.body shouldBe Left("""{"msg":"no bananas","code":102}""")
+      } >>
+      sttp.get(uri"$baseUri?name=orange").send().map { r =>
+        r.code shouldBe StatusCodes.InternalServerError
+        r.body shouldBe 'left
+      }
+  }
+
+  //
+
   implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]()
 
   override protected def afterAll(): Unit = {
@@ -362,8 +390,12 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   type Port = Int
 
   def pureResult[T](t: T): R[T]
+  def suspendResult[T](t: => T): R[T]
 
   def route[I, E, O, FN[_]](e: Endpoint[I, E, O, S], fn: FN[R[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): ROUTE
+
+  def routeRecoverErrors[I, E <: Throwable, O, FN[_]](e: Endpoint[I, E, O, S], fn: FN[R[O]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
+                                                                                             eClassTag: ClassTag[E]): ROUTE
 
   def server(routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
 
