@@ -9,7 +9,7 @@ import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue}
 
 import scala.reflect.ClassTag
 
-trait Tapir {
+trait Tapir extends TapirDerivedInputs {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
 
   def path[T: PlainCodec]: EndpointInput.PathCapture[T] =
@@ -82,4 +82,16 @@ trait Tapir {
       EndpointIO.Multiple(Vector.empty),
       EndpointInfo(None, None, None, Vector.empty)
     )
+}
+
+trait TapirDerivedInputs { this: Tapir =>
+  def clientIp: EndpointInput[Option[String]] =
+    extractFromRequest(
+      request =>
+        request
+          .header("X-Forwarded-For")
+          .flatMap(_.split(",").headOption)
+          .orElse(request.header("Remote-Address"))
+          .orElse(request.header("X-Real-Ip"))
+          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.toString))))
 }
