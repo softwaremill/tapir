@@ -1,6 +1,6 @@
 package tapir.server.http4s
 
-import cats.{ApplicativeError, Monad}
+import cats.Monad
 import cats.implicits._
 import cats.effect.{ContextShift, Sync}
 import org.http4s.{EntityBody, HttpRoutes}
