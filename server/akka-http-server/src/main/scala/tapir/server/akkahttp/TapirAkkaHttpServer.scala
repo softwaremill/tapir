@@ -7,7 +7,7 @@ import tapir.internal.{ParamsToSeq, SeqToParams}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-trait AkkaHttpServer {
+trait TapirAkkaHttpServer {
   implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStream]) {
     def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
       new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)

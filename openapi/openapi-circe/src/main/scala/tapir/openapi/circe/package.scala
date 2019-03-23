@@ -6,9 +6,9 @@ import io.circe.syntax._
 import io.circe.{Encoder, Json}
 import tapir.openapi.OpenAPI.ReferenceOr
 
-package object circe extends Encoders
+package object circe extends TapirOpenAPICirceEncoders
 
-trait Encoders {
+trait TapirOpenAPICirceEncoders {
   // note: these are strict val-s, order matters!
 
   implicit def encoderReferenceOr[T: Encoder]: Encoder[ReferenceOr[T]] = {

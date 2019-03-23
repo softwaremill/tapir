@@ -2,7 +2,7 @@ package tapir.docs.openapi
 import tapir.Endpoint
 import tapir.openapi.{Info, OpenAPI}
 
-trait OpenAPIDocs {
+trait TapirOpenAPIDocs {
   implicit class RichOpenAPIEndpoint[I, E, O, S](e: Endpoint[I, E, O, S]) {
     def toOpenAPI(title: String, version: String)(implicit options: OpenAPIDocsOptions): OpenAPI = toOpenAPI(Info(title, version))
 

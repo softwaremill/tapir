@@ -9,10 +9,10 @@ a single-import whenever you want to use tapir. For example:
 
 ```scala
 object MyTapir extends Tapir
-  with AkkaHttpServer
-  with SttpClient
-  with CirceJson
-  with OpenAPICirceYaml
+  with TapirAkkaHttpServer
+  with TapirSttpClient
+  with TapirCirceJson
+  with TapirOpenAPICirceYaml
 ```
 
 Then, a single `import MyTapir._` and all Tapir data types and extensions methods will be in scope!

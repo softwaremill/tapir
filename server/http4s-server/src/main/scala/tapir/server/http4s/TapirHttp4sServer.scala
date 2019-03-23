@@ -8,7 +8,7 @@ import tapir.Endpoint
 import tapir.internal.{ParamsToSeq, SeqToParams}
 import tapir.typelevel.{ParamsAsArgs, ReplaceFirstInFn}
 
-trait Http4sServer {
+trait TapirHttp4sServer {
   implicit class RichHttp4sHttpEndpoint[I, E, O, F[_]](e: Endpoint[I, E, O, EntityBody[F]]) {
     def toRoutes[FN[_]](logic: FN[F[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
                                                     serverOptions: Http4sServerOptions[F],

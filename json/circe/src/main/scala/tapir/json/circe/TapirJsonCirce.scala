@@ -9,7 +9,7 @@ import io.circe.{Decoder, Encoder}
 import tapir.Codec.JsonCodec
 import tapir.SchemaFor
 
-trait JsonCirce {
+trait TapirJsonCirce {
   implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
     override def encode(t: T): String = t.asJson.noSpaces
     override def decode(s: String): DecodeResult[T] = io.circe.parser.decode[T](s) match {

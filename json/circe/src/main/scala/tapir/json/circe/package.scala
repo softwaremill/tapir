@@ -1,3 +1,3 @@
 package tapir.json
 
-package object circe extends JsonCirce
+package object circe extends TapirJsonCirce
