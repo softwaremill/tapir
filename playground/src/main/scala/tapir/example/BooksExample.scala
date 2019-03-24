@@ -26,7 +26,10 @@ object Endpoints {
   // The path for this endpoint will be '/books/add', as we are using the base endpoint
   val addBook: Endpoint[(Book, AuthToken), String, Unit, Nothing] = baseEndpoint.post
     .in("add")
-    .in(jsonBody[Book].description("The book to add"))
+    .in(
+      jsonBody[Book]
+        .description("The book to add")
+        .example(Book("Pride and Prejudice", Genre("Novel", ""), 1813, Author("Jane Austen", Country("United Kingdom")))))
     .in(header[String]("X-Auth-Token").description("The token is 'secret'"))
 
   // Re-usable parameter description
@@ -52,7 +55,7 @@ object BooksExample extends App with StrictLogging {
     import tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = List(addBook).toOpenAPI("The Tapir Library", "1.0")
+    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI("The Tapir Library", "1.0")
     docs.toYaml
   }
 
@@ -98,7 +101,7 @@ object BooksExample extends App with StrictLogging {
     import scala.concurrent.Await
     import scala.concurrent.duration._
     val routes = route ~ new SwaggerUI(yaml).routes
-
+    println(yaml)
     implicit val actorSystem: ActorSystem = ActorSystem()
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     Await.result(Http().bindAndHandle(routes, "localhost", 8080), 1.minute)
@@ -167,7 +170,15 @@ object Library {
 
   val Books = new AtomicReference(
     Vector(
-      Book("The Sorrows of Young Werther", Genre("Novel", "Novel is genre"), 1774, Author("Johann Wolfgang von Goethe", Country("Germany")))
+      Book("The Sorrows of Young Werther",
+           Genre("Novel", "Novel is genre"),
+           1774,
+           Author("Johann Wolfgang von Goethe", Country("Germany"))),
+      Book("Iliad", Genre("Poetry", ""), -8000, Author("Homer", Country("Greece"))),
+      Book("Nad Niemnem", Genre("Novel", ""), 1888, Author("Eliza Orzeszkowa", Country("Poland"))),
+      Book("The Colour of Magic", Genre("Fantasy", ""), 1983, Author("Terry Pratchett", Country("United Kingdom"))),
+      Book("The Art of Computer Programming", Genre("Non-fiction", ""), 1968, Author("Donald Knuth", Country("USA"))),
+      Book("Pharaoh", Genre("Novel", ""), 1897, Author("Boleslaw Prus", Country("Poland"))),
     ))
 
   def getBooks(query: BooksQuery): Vector[Book] = {
