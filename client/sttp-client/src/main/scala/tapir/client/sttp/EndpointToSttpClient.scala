@@ -81,6 +81,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         case EndpointIO.Headers(_) =>
           meta.headers
 
+        case EndpointIO.StatusCode() =>
+          meta.code
+
         case EndpointIO.Mapped(wrapped, f, _, _) =>
           f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingle, body, meta))
 

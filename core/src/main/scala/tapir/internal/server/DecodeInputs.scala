@@ -41,7 +41,7 @@ object DecodeInputs {
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
   def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
-    // the first decoding failure is returned. We decode in the following order: method, path, query, headers (incl. cookies), request, body
+    // the first decoding failure is returned. We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
     val inputs = input.asVectorOfBasic().sortBy {
       case _: EndpointInput.RequestMethod         => 0
       case _: EndpointInput.PathSegment           => 1
@@ -53,8 +53,9 @@ object DecodeInputs {
       case _: EndpointIO.Header[_]                => 3
       case _: EndpointIO.Headers                  => 3
       case _: EndpointInput.ExtractFromRequest[_] => 4
-      case _: EndpointIO.Body[_, _, _]            => 5
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => 5
+      case _: EndpointIO.StatusCode               => 5
+      case _: EndpointIO.Body[_, _, _]            => 6
+      case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
     }
 
     val (result, consumedCtx) = apply(inputs, DecodeInputsResult.Values(Map(), None), ctx)

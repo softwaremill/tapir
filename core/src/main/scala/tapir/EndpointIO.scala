@@ -199,10 +199,17 @@ object EndpointIO {
     def show = s"{multiple headers}"
   }
 
+  case class StatusCode() extends Basic[tapir.StatusCode] {
+    override def show: String = "{status code}"
+  }
+
   //
 
   // TODO: should be output-only
-  case class StatusFrom[I](io: EndpointIO[I], default: StatusCode, defaultSchema: Option[Schema], when: Vector[(When[I], StatusCode)])
+  case class StatusFrom[I](io: EndpointIO[I],
+                           default: tapir.StatusCode,
+                           defaultSchema: Option[Schema],
+                           when: Vector[(When[I], tapir.StatusCode)])
       extends Single[I] {
     def defaultSchema(s: Schema): StatusFrom[I] = this.copy(defaultSchema = Some(s))
     override def show: String = s"status from(${io.show}, $default or ${when.map(_._2).mkString("/")})"

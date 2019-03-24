@@ -67,8 +67,12 @@ trait Tapir extends TapirDerivedInputs {
     */
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] = EndpointInput.ExtractFromRequest(f)
 
+  // TODO
+  @deprecated
   def statusFrom[I](io: EndpointIO[I], default: StatusCode, when: (When[I], StatusCode)*): EndpointIO.StatusFrom[I] =
     EndpointIO.StatusFrom(io, default, None, when.toVector)
+
+  def statusCode: EndpointIO.StatusCode = EndpointIO.StatusCode()
 
   def whenClass[U: ClassTag: SchemaFor]: When[Any] = WhenClass(implicitly[ClassTag[U]], implicitly[SchemaFor[U]].schema)
   def whenValue[U](p: U => Boolean): When[U] = WhenValue(p)

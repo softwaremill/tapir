@@ -127,6 +127,9 @@ package object tests {
   val in_string_out_status_from_string: Endpoint[String, Unit, String, Nothing] =
     endpoint.in(query[String]("fruit")).out(statusFrom(stringBody, StatusCodes.Ok, whenValue[String](_ == "x") -> StatusCodes.Accepted))
 
+  val in_string_out_status: Endpoint[String, Unit, StatusCode, Nothing] =
+    endpoint.in(query[String]("fruit")).out(statusCode)
+
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 
   def writeToFile(s: String): File = {

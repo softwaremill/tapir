@@ -61,6 +61,8 @@ private[akkahttp] object OutputToAkkaResponse {
           .asInstanceOf[Seq[(String, String)]]
           .map(h => parseHeaderOrThrow(h._1, h._2))
           .foreach(h => rv = rv.withHeader(h))
+      case (EndpointIO.StatusCode(), i) =>
+        rv = rv.withStatusCode(vs(i).asInstanceOf[StatusCode])
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
         rv = apply(wrapped, g(vs(i)), rv)
       case (EndpointIO.StatusFrom(io, default, _, when), i) =>

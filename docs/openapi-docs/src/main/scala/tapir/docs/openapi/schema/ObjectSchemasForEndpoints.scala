@@ -75,6 +75,8 @@ object ObjectSchemasForEndpoints {
         filterIsObjectSchema(tm.meta.schema)
       case EndpointIO.Headers(_) =>
         List.empty
+      case EndpointIO.StatusCode() =>
+        List.empty
       case EndpointIO.Body(tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) =>

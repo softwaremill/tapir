@@ -71,6 +71,9 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         val headers = vs(i).asInstanceOf[Seq[(String, String)]].map(h => Header.Raw(CaseInsensitiveString(h._1), h._2))
         State.modify[ResponseValues](rv => rv.withHeaders(headers))
 
+      case (EndpointIO.StatusCode(), i) =>
+        State.modify[ResponseValues](rv => rv.withStatusCode(vs(i).asInstanceOf[StatusCode]))
+
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
         toResponse(wrapped, g(vs(i)))
 
