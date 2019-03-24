@@ -5,11 +5,11 @@ import java.nio.charset.{Charset, StandardCharsets}
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
-import tapir.model.{Cookie, SetCookie, SetCookieValue}
+import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue}
 
 import scala.reflect.ClassTag
 
-trait Tapir {
+trait Tapir extends TapirDerivedInputs {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
 
   def path[T: PlainCodec]: EndpointInput.PathCapture[T] =
@@ -61,8 +61,18 @@ trait Tapir {
 
   def auth: TapirAuth.type = TapirAuth
 
-  def statusFrom[I](io: EndpointIO[I], default: StatusCode, when: (When[I], StatusCode)*): EndpointIO.StatusFrom[I] =
-    EndpointIO.StatusFrom(io, default, None, when.toVector)
+  /**
+    * Extract a value from a server request. This input is only used by server interpreters, it is ignored by
+    * documentation interpreters and the provided value is discarded by client interpreters.
+    */
+  def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] = EndpointInput.ExtractFromRequest(f)
+
+  // TODO
+  @deprecated
+  def statusFrom[I](io: EndpointIO[I], default: StatusCode, when: (When[I], StatusCode)*): EndpointOutput.StatusFrom[I] =
+    EndpointOutput.StatusFrom(io, default, None, when.toVector)
+
+  def statusCode: EndpointOutput.StatusCode = EndpointOutput.StatusCode()
 
   def whenClass[U: ClassTag: SchemaFor]: When[Any] = WhenClass(implicitly[ClassTag[U]], implicitly[SchemaFor[U]].schema)
   def whenValue[U](p: U => Boolean): When[U] = WhenValue(p)
@@ -72,8 +82,20 @@ trait Tapir {
   val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
     Endpoint[Unit, Unit, Unit, Nothing](
       EndpointInput.Multiple(Vector.empty),
-      EndpointIO.Multiple(Vector.empty),
-      EndpointIO.Multiple(Vector.empty),
+      EndpointOutput.Multiple(Vector.empty),
+      EndpointOutput.Multiple(Vector.empty),
       EndpointInfo(None, None, None, Vector.empty)
     )
+}
+
+trait TapirDerivedInputs { this: Tapir =>
+  def clientIp: EndpointInput[Option[String]] =
+    extractFromRequest(
+      request =>
+        request
+          .header("X-Forwarded-For")
+          .flatMap(_.split(",").headOption)
+          .orElse(request.header("Remote-Address"))
+          .orElse(request.header("X-Real-Ip"))
+          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.toString))))
 }

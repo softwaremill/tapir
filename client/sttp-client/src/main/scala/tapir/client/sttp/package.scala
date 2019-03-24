@@ -1,3 +1,3 @@
 package tapir.client
 
-package object sttp extends SttpClient
+package object sttp extends TapirSttpClient

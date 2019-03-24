@@ -6,15 +6,30 @@ import tapir.Endpoint
 import tapir.internal.{ParamsToSeq, SeqToParams}
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect.ClassTag
 
-trait AkkaHttpServer {
+trait TapirAkkaHttpServer {
   implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStream]) {
     def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
       new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)
 
-    def toRoute[FN[_]](logic: FN[Future[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
-                                                        serverOptions: AkkaHttpServerOptions): Route =
+    def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: AkkaHttpServerOptions): Route =
       new EndpointToAkkaServer(serverOptions).toRoute(e)(logic)
+
+    def toRouteRecoverErrors(logic: I => Future[O])(implicit serverOptions: AkkaHttpServerOptions,
+                                                    eIsThrowable: E <:< Throwable,
+                                                    eClassTag: ClassTag[E]): Route = {
+
+      def reifyFailedFuture(f: Future[O]): Future[Either[E, O]] = {
+        import ExecutionContext.Implicits.global
+        f.map(Right(_): Either[E, O]).recover {
+          case e: Throwable if implicitly[ClassTag[E]].runtimeClass.isInstance(e) => Left(e.asInstanceOf[E]): Either[E, O]
+        }
+      }
+
+      new EndpointToAkkaServer(serverOptions)
+        .toRoute(e)(logic.andThen(reifyFailedFuture))
+    }
   }
 
   implicit class RichToFutureFunction[T, E, U](f: T => Future[Either[E, U]])(implicit ec: ExecutionContext) {

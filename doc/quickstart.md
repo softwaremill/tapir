@@ -3,7 +3,7 @@
 To use tapir, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-core" % "0.3"
+"com.softwaremill.tapir" %% "tapir-core" % "0.4"
 ```
 
 This will import only the core classes. To generate a server or a client, you will need to add further dependencies.
@@ -37,3 +37,13 @@ using tapir and http4s.
 
 Also check out the simple [runnable example](https://github.com/softwaremill/tapir/blob/master/playground/src/main/scala/tapir/example/BooksExample.scala)
 which is available in the repository.
+
+## StackOverflowException during compilation
+
+Sidenote for scala 2.12.4 and higher: if you encounter an issue with compiling your project because of 
+a `StackOverflowException` related to [this](https://github.com/scala/bug/issues/10604) scala bug, 
+please increase your stack memory. Example:
+
+```
+sbt -J-Xss4M clean compile
+```

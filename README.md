@@ -74,7 +74,7 @@ tapir documentation is available at [tapir-scala.readthedocs.io](http://tapir-sc
 Add the following dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-core" % "0.3"
+"com.softwaremill.tapir" %% "tapir-core" % "0.4"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
@@ -90,6 +90,16 @@ import tapir._
 ```
 
 And finally, type `endpoint.` and see where auto-complete gets you!
+
+---
+
+Sidenote for scala 2.12.4 and higher: if you encounter an issue with compiling your project because of 
+a `StackOverflowException` related to [this](https://github.com/scala/bug/issues/10604) scala bug, 
+please increase your stack memory. Example:
+
+```
+sbt -J-Xss4M clean compile
+```
 
 ## Contributing
 

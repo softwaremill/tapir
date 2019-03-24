@@ -10,7 +10,7 @@ import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
   * @tparam O Output parameter types.
   * @tparam S The type of streams that are used by this endpoint's inputs/outputs. `Nothing`, if no streams are used.
   */
-case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointIO[E], output: EndpointIO[O], info: EndpointInfo) {
+case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointOutput[E], output: EndpointOutput[O], info: EndpointInfo) {
 
   def get: Endpoint[I, E, O, S] = in(RequestMethod(Method.GET))
   def post: Endpoint[I, E, O, S] = in(RequestMethod(Method.POST))
@@ -29,13 +29,13 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointI
   def in[J, IJ, S2 >: S](i: StreamingEndpointIO[J, S2])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S2] =
     this.copy[IJ, E, O, S2](input = input.and(i.toEndpointIO))
 
-  def out[P, OP](i: EndpointIO[P])(implicit ts: ParamConcat.Aux[O, P, OP]): Endpoint[I, E, OP, S] =
+  def out[P, OP](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[O, P, OP]): Endpoint[I, E, OP, S] =
     this.copy[I, E, OP, S](output = output.and(i))
 
   def out[P, OP, S2 >: S](i: StreamingEndpointIO[P, S2])(implicit ts: ParamConcat.Aux[O, P, OP]): Endpoint[I, E, OP, S2] =
     this.copy[I, E, OP, S2](output = output.and(i.toEndpointIO))
 
-  def errorOut[F, EF](i: EndpointIO[F])(implicit ts: ParamConcat.Aux[E, F, EF]): Endpoint[I, EF, O, S] =
+  def errorOut[F, EF](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): Endpoint[I, EF, O, S] =
     this.copy[I, EF, O, S](errorOutput = errorOutput.and(i))
 
   def mapIn[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[II, E, O, S] =

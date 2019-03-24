@@ -112,6 +112,8 @@ package object tests {
 
   val in_single_path: Endpoint[Unit, Unit, Unit, Nothing] = endpoint.get.in("api")
 
+  val in_extract_request_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(extractFromRequest(_.method.m)).out(stringBody)
+
   val in_auth_apikey_header_out_string: Endpoint[String, Unit, String, Nothing] =
     endpoint.in("auth").in(auth.apiKey(header[String]("X-Api-Key"))).out(stringBody)
 
@@ -124,6 +126,9 @@ package object tests {
 
   val in_string_out_status_from_string: Endpoint[String, Unit, String, Nothing] =
     endpoint.in(query[String]("fruit")).out(statusFrom(stringBody, StatusCodes.Ok, whenValue[String](_ == "x") -> StatusCodes.Accepted))
+
+  val in_string_out_status: Endpoint[String, Unit, StatusCode, Nothing] =
+    endpoint.in(query[String]("fruit")).out(statusCode)
 
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 

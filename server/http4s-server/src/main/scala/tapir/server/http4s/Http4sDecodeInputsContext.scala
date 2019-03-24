@@ -2,7 +2,7 @@ package tapir.server.http4s
 import org.http4s.Request
 import org.http4s.util.CaseInsensitiveString
 import tapir.internal.server.DecodeInputsContext
-import tapir.model.Method
+import tapir.model.{Method, ServerRequest}
 
 class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsContext {
   override def method: Method = Method(req.method.name.toUpperCase)
@@ -22,4 +22,5 @@ class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsConte
   override def queryParameter(name: String): Seq[String] = queryParameters.get(name).toList.flatten
   override val queryParameters: Map[String, Seq[String]] = req.multiParams
   override def bodyStream: Any = req.body
+  override def serverRequest: ServerRequest = new Http4sServerRequest(req)
 }

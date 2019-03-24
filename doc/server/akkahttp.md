@@ -4,7 +4,7 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-akka-http-server" % "0.3"
+"com.softwaremill.tapir" %% "tapir-akka-http-server" % "0.4"
 ```
 
 and import the package:
@@ -13,15 +13,17 @@ and import the package:
 import tapir.server.akkahttp._
 ```
 
-This adds two extension methods to the `Endpoint` type: `toDirective` and `toRoute`. Both require the logic of the 
-endpoint to be given as a function of type:
+This adds extension methods to the `Endpoint` type: `toDirective`, `toRoute` and `toRouteRecoverErrors`. The first two
+require the logic of the endpoint to be given as a function of type:
 
 ```scala
-[I as function arguments] => Future[Either[E, O]]
+I => Future[Either[E, O]]
 ```
 
-Note that the function doesn't take the tuple `I` directly as input, but instead this is converted to a function of the 
-appropriate arity. For example:
+The third recovers errors from failed futures, and hence requires that `E` is a subclass of `Throwable` (an exception);
+it expects a function of type `I => Future[O]`.
+
+For example:
 
 ```scala
 import tapir._
@@ -35,11 +37,20 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] = 
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: Route = countCharactersEndpoint.toRoute(countCharacters _)
+val countCharactersRoute: Route = countCharactersEndpoint.toRoute(countCharacters)
+```
+
+Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
+arguments need to be converted to a function using a single argument using `.tupled`:
+
+```scala
+def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
+val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? 
+val aRoute: Route = anEndpoint.toRoute((logic _).tupled)
 ```
 
 The created `Route`/`Directive` can then be further combined with other akka-http directives, for example nested within
-other routes. The Tapir-generated `Route`/`Directive` captures from the request only what is described by the endpoint.
+other routes. The tapir-generated `Route`/`Directive` captures from the request only what is described by the endpoint.
 
 It's completely feasible that some part of the input is read using akka-http directives, and the rest 
 using tapir endpoint descriptions; or, that the tapir-generated route is wrapped in e.g. a metrics route. Moreover, 

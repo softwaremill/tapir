@@ -3,7 +3,7 @@ package tapir.docs
 import tapir.{Codec, CodecForMany, CodecForOptional, EndpointInput}
 import tapir.openapi.{ExampleValue, SecurityScheme}
 
-package object openapi extends OpenAPIDocs {
+package object openapi extends TapirOpenAPIDocs {
   private[openapi] type SchemeName = String
   private[openapi] type SecuritySchemes = Map[EndpointInput.Auth[_], (SchemeName, SecurityScheme)]
 

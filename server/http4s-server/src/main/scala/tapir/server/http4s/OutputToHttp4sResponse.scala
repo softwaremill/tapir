@@ -15,14 +15,15 @@ import tapir.{
   ByteBufferValueType,
   CodecMeta,
   EndpointIO,
+  EndpointOutput,
   FileValueType,
   InputStreamValueType,
   MediaType,
   MultipartValueType,
   RawPart,
+  StatusCode,
   StreamingEndpointIO,
-  StringValueType,
-  StatusCode
+  StringValueType
 }
 
 class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
@@ -41,14 +42,14 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     def withStatusCode(sc: StatusCode): ResponseValues = copy(statusCode = Some(sc))
   }
 
-  def apply(output: EndpointIO[_], v: Any): ResponseValues = {
+  def apply(output: EndpointOutput[_], v: Any): ResponseValues = {
     toResponse(output, v).runS(ResponseValues(None, Vector.empty, None)).value
   }
 
-  private def toResponse(output: EndpointIO[_], v: Any): State[ResponseValues, Unit] = {
+  private def toResponse(output: EndpointOutput[_], v: Any): State[ResponseValues, Unit] = {
     val vs = ParamsToSeq(v)
 
-    val states = output.asVectorOfSingle.zipWithIndex.map {
+    val states = output.asVectorOfSingleOutputs.zipWithIndex.map {
       case (EndpointIO.Body(codec, _), i) =>
         codec.encode(vs(i)).map(rawValueToEntity(codec.meta, _)) match {
           case Some((entity, header)) => State.modify[ResponseValues](rv => rv.withBody(entity, header))
@@ -74,10 +75,16 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
         toResponse(wrapped, g(vs(i)))
 
-      case (EndpointIO.StatusFrom(io, default, _, when), i) =>
+      case (EndpointOutput.StatusCode(), i) =>
+        State.modify[ResponseValues](rv => rv.withStatusCode(vs(i).asInstanceOf[StatusCode]))
+
+      case (EndpointOutput.StatusFrom(io, default, _, when), i) =>
         val v = vs(i)
         val sc = when.find(_._1.matches(v)).map(_._2).getOrElse(default)
         toResponse(io, v).modify(_.withStatusCode(sc))
+
+      case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
+        toResponse(wrapped, g(vs(i)))
     }
 
     states.sequence_

@@ -7,7 +7,7 @@ import tapir.docs.openapi.uniqueName
 object ObjectSchemasForEndpoints {
 
   def apply(es: Iterable[Endpoint[_, _, _, _]]): ObjectSchemas = {
-    val sObjectsForEndpoints = es.flatMap(e => forInput(e.input) ++ forIO(e.errorOutput) ++ forIO(e.output))
+    val sObjectsForEndpoints = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
     val sObjectsAll = findNestedSObjects(Nil, sObjectsForEndpoints.toList).map(replaceSObjectFieldsWithSRef)
     val infoToKey = calculateUniqueKeys(sObjectsAll.map(_.info))
 
@@ -76,6 +76,8 @@ object ObjectSchemasForEndpoints {
         List.empty
       case _: EndpointInput.Auth[_] =>
         List.empty
+      case _: EndpointInput.ExtractFromRequest[_] =>
+        List.empty
       case EndpointInput.Mapped(wrapped, _, _, _) =>
         forInput(wrapped)
       case EndpointInput.Multiple(inputs) =>
@@ -84,10 +86,33 @@ object ObjectSchemasForEndpoints {
     }
   }
 
+  private def forOutput(output: EndpointOutput[_]): List[TSchema.SObject] = {
+    output match {
+      case EndpointOutput.StatusFrom(wrapped, _, defaultSchema, whens) =>
+        val fromDefaultSchema = defaultSchema.toList.flatMap(filterIsObjectSchema)
+        val fromWhens = whens.collect {
+          case (WhenClass(_, s), _) => filterIsObjectSchema(s)
+        }.flatten
+        val fromInput = forOutput(wrapped)
+
+        // if there's a default schema, we exclude the one from the input
+        val fromInputOrDefault = if (fromDefaultSchema.nonEmpty) fromDefaultSchema else fromInput
+
+        fromInputOrDefault ++ fromWhens
+      case EndpointOutput.StatusCode() =>
+        List.empty
+      case EndpointOutput.Mapped(wrapped, _, _, _) =>
+        forOutput(wrapped)
+      case EndpointOutput.Multiple(outputs) =>
+        outputs.toList.flatMap(forOutput)
+      case op: EndpointIO[_] => forIO(op)
+    }
+  }
+
   private def forIO(io: EndpointIO[_]): List[TSchema.SObject] = {
     io match {
-      case EndpointIO.Multiple(inputs) =>
-        inputs.toList.flatMap(forInput)
+      case EndpointIO.Multiple(ios) =>
+        ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
       case EndpointIO.Header(_, tm, _) =>
         filterIsObjectSchema(tm.meta.schema)
       case EndpointIO.Headers(_) =>
@@ -97,18 +122,7 @@ object ObjectSchemasForEndpoints {
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) =>
         filterIsObjectSchema(schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
-        forInput(wrapped)
-      case EndpointIO.StatusFrom(wrapped, _, defaultSchema, whens) =>
-        val fromDefaultSchema = defaultSchema.toList.flatMap(filterIsObjectSchema)
-        val fromWhens = whens.collect {
-          case (WhenClass(_, s), _) => filterIsObjectSchema(s)
-        }.flatten
-        val fromInput = forInput(wrapped)
-
-        // if there's a default schema, we exclude the one from the input
-        val fromInputOrDefault = if (fromDefaultSchema.nonEmpty) fromDefaultSchema else fromInput
-
-        fromInputOrDefault ++ fromWhens
+        forInput(wrapped) ++ forOutput(wrapped)
     }
   }
 }

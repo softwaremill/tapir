@@ -13,14 +13,15 @@ import tapir.{
   ByteBufferValueType,
   CodecMeta,
   EndpointIO,
+  EndpointOutput,
   FileValueType,
   InputStreamValueType,
   MediaType,
   MultipartValueType,
   RawPart,
+  StatusCode,
   StreamingEndpointIO,
-  StringValueType,
-  StatusCode
+  StringValueType
 }
 
 private[akkahttp] object OutputToAkkaResponse {
@@ -39,13 +40,13 @@ private[akkahttp] object OutputToAkkaResponse {
     def withStatusCode(sc: StatusCode): ResponseValues = copy(statusCode = Some(sc))
   }
 
-  def apply(output: EndpointIO[_], v: Any): ResponseValues = apply(output, v, ResponseValues(None, Vector.empty, None))
+  def apply(output: EndpointOutput[_], v: Any): ResponseValues = apply(output, v, ResponseValues(None, Vector.empty, None))
 
-  private def apply(output: EndpointIO[_], v: Any, initialResponseValues: ResponseValues): ResponseValues = {
+  private def apply(output: EndpointOutput[_], v: Any, initialResponseValues: ResponseValues): ResponseValues = {
     val vs = ParamsToSeq(v)
     var rv = initialResponseValues
 
-    output.asVectorOfSingle.zipWithIndex.foreach {
+    output.asVectorOfSingleOutputs.zipWithIndex.foreach {
       case (EndpointIO.Body(codec, _), i) =>
         codec.encode(vs(i)).map(rawValueToResponseEntity(codec.meta, _)).foreach(re => rv = rv.withBody(re))
       case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
@@ -63,10 +64,15 @@ private[akkahttp] object OutputToAkkaResponse {
           .foreach(h => rv = rv.withHeader(h))
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
         rv = apply(wrapped, g(vs(i)), rv)
-      case (EndpointIO.StatusFrom(io, default, _, when), i) =>
+
+      case (EndpointOutput.StatusCode(), i) =>
+        rv = rv.withStatusCode(vs(i).asInstanceOf[StatusCode])
+      case (EndpointOutput.StatusFrom(io, default, _, when), i) =>
         val v = vs(i)
         val sc = when.find(_._1.matches(v)).map(_._2).getOrElse(default)
         rv = apply(io, v, rv.withStatusCode(sc))
+      case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
+        rv = apply(wrapped, g(vs(i)), rv)
     }
 
     rv

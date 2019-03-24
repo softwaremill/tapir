@@ -14,7 +14,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
     import model.Method._
 
-    val inputs = e.input.asVectorOfBasic(includeAuth = false)
+    val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
     val method = e.input.method.getOrElse(Method.GET)
 

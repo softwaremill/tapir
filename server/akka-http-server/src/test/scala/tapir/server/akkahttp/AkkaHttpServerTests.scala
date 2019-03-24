@@ -10,10 +10,10 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import tapir.Endpoint
 import tapir.server.tests.ServerTests
-import tapir.typelevel.ParamsAsArgs
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.reflect.ClassTag
 
 class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
 
@@ -31,9 +31,13 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
     super.afterAll()
   }
 
-  override def route[I, E, O, FN[_]](e: Endpoint[I, E, O, AkkaStream], fn: FN[Future[Either[E, O]]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
+  override def route[I, E, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[Either[E, O]]): Route = {
     e.toRoute(fn)
+  }
+
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(
+      implicit eClassTag: ClassTag[E]): Route = {
+    e.toRouteRecoverErrors(fn)
   }
 
   override def server(routes: NonEmptyList[Route], port: Port): Resource[IO, Unit] = {
@@ -42,4 +46,8 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
   }
 
   override def pureResult[T](t: T): Future[T] = Future.successful(t)
+  override def suspendResult[T](t: => T): Future[T] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future { t }
+  }
 }

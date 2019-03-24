@@ -24,6 +24,8 @@ These are:
   captures the body
 * `streamBody[S]` captures the body as a stream: only a client/server interpreter supporting streams of type `S` can be 
   used with such an endpoint
+* `extractFromRequest` extracts a value from the request. This input is only used by server interpreters, ignored
+  by documentation interpreters. Client interpreters ignore the provided value. 
 
 For outputs, you can use the `header`, `setCookies` and `body` family of methods.
 
