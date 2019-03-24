@@ -6,7 +6,7 @@ import cats.effect.{ContextShift, Sync}
 import org.http4s.{EntityBody, HttpRoutes}
 import tapir.Endpoint
 import tapir.internal.{ParamsToSeq, SeqToParams}
-import tapir.typelevel.{ParamsAsArgs, ReplaceFirstInFn}
+import tapir.typelevel.{ParamsAsArgs, ReplaceFirstInFn, ReplaceFirstInTuple}
 
 import scala.reflect.ClassTag
 
@@ -32,19 +32,26 @@ trait TapirHttp4sServer {
     }
   }
 
-  implicit class RichToMonadFunction[T, E, U, F[_]: Monad](f: T => F[Either[E, U]]) {
-    def andThenRight[O, FN_U[_], FN_T[_]](g: FN_U[F[Either[E, O]]])(implicit
-                                                                    r: ReplaceFirstInFn[U, FN_U, T, FN_T]): FN_T[F[Either[E, O]]] = {
+  implicit class RichToMonadFunction[T, U, F[_]: Monad](a: T => F[U]) {
+    def andThenFirst[U_TUPLE, T_TUPLE, O](l: U_TUPLE => F[O])(
+        implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => F[O] = { tTuple =>
+      val t = replaceFirst.first(tTuple)
+      a(t).flatMap { u =>
+        val uTuple = replaceFirst.replace(tTuple, u)
+        l(uTuple)
+      }
+    }
+  }
 
-      r.paramsAsArgsJk.toFn { paramsWithT =>
-        val paramsWithTSeq = ParamsToSeq(paramsWithT)
-        val t = paramsWithTSeq.head.asInstanceOf[T]
-        f(t).flatMap {
-          case Left(e) => implicitly[Monad[F]].point(Left(e))
-          case Right(u) =>
-            val paramsWithU = SeqToParams(u +: paramsWithTSeq.tail)
-            r.paramsAsArgsIk.asInstanceOf[ParamsAsArgs.Aux[Any, FN_U]].applyFn(g, paramsWithU)
-        }
+  implicit class RichToMonadOfEitherFunction[T, U, E, F[_]: Monad](a: T => F[Either[E, U]]) {
+    def andThenFirstE[U_TUPLE, T_TUPLE, O](l: U_TUPLE => F[Either[E, O]])(
+        implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => F[Either[E, O]] = { tTuple =>
+      val t = replaceFirst.first(tTuple)
+      a(t).flatMap {
+        case Left(e) => implicitly[Monad[F]].point(Left(e))
+        case Right(u) =>
+          val uTuple = replaceFirst.replace(tTuple, u)
+          l(uTuple)
       }
     }
   }

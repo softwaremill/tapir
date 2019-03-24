@@ -34,9 +34,9 @@ path, query, header, body.
 
 ## Extracting common route logic
 
-Quite often, especially for [authentication](../endpoint/auth.html), some part of the route logic is shared among multiple 
-endpoints. However, these functions don't compose in a straightforward way, as the results can both contain errors
-(represented as `Either`s), and are wrapped in a container. Suppose you have the following methods:
+Quite often, especially for [authentication](../endpoint/auth.html), some part of the route logic is shared among 
+multiple endpoints. However, these functions don't compose in a straightforward way, as authentication usually operates
+on a single input, which is only a part of the whole logic's input. Suppose you have the following methods:
 
 ```scala
 type AuthToken = String
@@ -51,24 +51,28 @@ which you'd like to apply to an endpoint with type:
 val myEndpoint: Endpoint[(AuthToken, String, Int), ErrorInfo, Result, Nothing] = ...
 ```
 
-To avoid composing these functions by hand, tapir defines a helper extension method, `andThenRight`. If the first 
-function returns an error, that error is propagated to the final result; otherwise, the result is passed as input to 
-the second function.
+To avoid composing these functions by hand, tapir defines helper extension methods, `andThenFirst` and `andTheFirstE`. 
+The first one should be used when errors are represented as failed wrapper types (e.g. failed futures), the second
+is errors are represented as `Either`s. 
 
 This extension method is defined in the same traits as the route interpreters, both for `Future` (in the akka-http
 interpreter) and for an arbitrary monad (in the http4s interpreter), so importing the package is sufficient to use it:
 
 ```scala
 import tapir.server.akkahttp._
-val r: Route = myEndpoint.toRoute((authFn _).andThenRight(logicFn _))
+val r: Route = myEndpoint.toRoute((authFn _).andThenFirstE(logicFn _))
 ```
 
-Writing down the types, here are the generic signatures when using `andThenRight`:
+Writing down the types, here are the generic signatures when using `andThenFirst` and `andThenFirstE`:
 
 ```scala
+f1: T => Future[U]
+f2: (U, A1, A2, ...) => Future[O]
+(f1 _).andThenFirst(f2): (T, A1, A2, ...) => Future[O]
+
 f1: T => Future[Either[E, U]]
 f2: (U, A1, A2, ...) => Future[Either[E, O]]
-(f1 _).andThenRight(f2): (T, A1, A2, ...) => Future[Either[E, O]]
+(f1 _).andThenFirstE(f2): (T, A1, A2, ...) => Future[Either[E, O]]
 ```
 
 ## Exception handling
