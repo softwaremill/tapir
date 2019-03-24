@@ -7,13 +7,11 @@ import org.http4s.{EntityBody, Headers, HttpRoutes, Request, Response, Status}
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.server.DecodeFailureHandling
-import tapir.typelevel.ParamsAsArgs
 import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
 
-  def toRoutes[I, E, O, FN[_]](e: Endpoint[I, E, O, EntityBody[F]])(logic: FN[F[Either[E, O]]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[F] = {
+  def toRoutes[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[Either[E, O]]): HttpRoutes[F] = {
 
     val service: HttpRoutes[F] = HttpRoutes[F] { req: Request[F] =>
       def decodeBody(result: DecodeInputsResult): F[DecodeInputsResult] = {
@@ -36,14 +34,12 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
       def valuesToResponse(values: DecodeInputsResult.Values): F[Response[F]] = {
         val i = SeqToParams(InputValues(e.input, values.values)).asInstanceOf[I]
-        paramsAsArgs
-          .applyFn(logic, i)
-          .map {
-            case Right(result) =>
-              makeResponse(Status.Ok, e.output, result)
-            case Left(err) =>
-              makeResponse(Status.BadRequest, e.errorOutput, err)
-          }
+        logic(i).map {
+          case Right(result) =>
+            makeResponse(Status.Ok, e.output, result)
+          case Left(err) =>
+            makeResponse(Status.BadRequest, e.errorOutput, err)
+        }
       }
 
       OptionT(decodeBody(DecodeInputs(e.input, new Http4sDecodeInputsContext[F](req))).flatMap {

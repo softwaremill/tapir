@@ -10,7 +10,6 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import tapir.Endpoint
 import tapir.server.tests.ServerTests
-import tapir.typelevel.ParamsAsArgs
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -32,14 +31,12 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
     super.afterAll()
   }
 
-  override def route[I, E, O, FN[_]](e: Endpoint[I, E, O, AkkaStream], fn: FN[Future[Either[E, O]]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Route = {
+  override def route[I, E, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[Either[E, O]]): Route = {
     e.toRoute(fn)
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O, FN[_]](e: Endpoint[I, E, O, AkkaStream], fn: FN[Future[O]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
-      eClassTag: ClassTag[E]): Route = {
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(
+      implicit eClassTag: ClassTag[E]): Route = {
     e.toRouteRecoverErrors(fn)
   }
 

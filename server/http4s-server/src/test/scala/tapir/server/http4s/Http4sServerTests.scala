@@ -7,7 +7,6 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import tapir.server.tests.ServerTests
-import tapir.typelevel.ParamsAsArgs
 import tapir.Endpoint
 
 import scala.concurrent.ExecutionContext
@@ -22,14 +21,12 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
   override def pureResult[T](t: T): IO[T] = IO.pure(t)
   override def suspendResult[T](t: => T): IO[T] = IO.apply(t)
 
-  override def route[I, E, O, FN[_]](e: Endpoint[I, E, O, EntityBody[IO]], fn: FN[IO[Either[E, O]]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): HttpRoutes[IO] = {
+  override def route[I, E, O](e: Endpoint[I, E, O, EntityBody[IO]], fn: I => IO[Either[E, O]]): HttpRoutes[IO] = {
     e.toRoutes(fn)
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O, FN[_]](e: Endpoint[I, E, O, EntityBody[IO]], fn: FN[IO[O]])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
-      eClassTag: ClassTag[E]): HttpRoutes[IO] = {
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, EntityBody[IO]], fn: I => IO[O])(
+      implicit eClassTag: ClassTag[E]): HttpRoutes[IO] = {
     e.toRouteRecoverErrors(fn)
   }
 

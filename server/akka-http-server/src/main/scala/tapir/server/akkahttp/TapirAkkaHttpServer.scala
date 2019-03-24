@@ -13,14 +13,12 @@ trait TapirAkkaHttpServer {
     def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
       new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)
 
-    def toRoute[FN[_]](logic: FN[Future[Either[E, O]]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
-                                                        serverOptions: AkkaHttpServerOptions): Route =
+    def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: AkkaHttpServerOptions): Route =
       new EndpointToAkkaServer(serverOptions).toRoute(e)(logic)
 
-    def toRouteRecoverErrors[FN[_]](logic: FN[Future[O]])(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN],
-                                                          serverOptions: AkkaHttpServerOptions,
-                                                          eIsThrowable: E <:< Throwable,
-                                                          eClassTag: ClassTag[E]): Route = {
+    def toRouteRecoverErrors(logic: I => Future[O])(implicit serverOptions: AkkaHttpServerOptions,
+                                                    eIsThrowable: E <:< Throwable,
+                                                    eClassTag: ClassTag[E]): Route = {
 
       def reifyFailedFuture(f: Future[O]): Future[Either[E, O]] = {
         import ExecutionContext.Implicits.global
@@ -30,7 +28,7 @@ trait TapirAkkaHttpServer {
       }
 
       new EndpointToAkkaServer(serverOptions)
-        .toRoute(e)(paramsAsArgs.andThen[Future[O], Future[Either[E, O]]](logic, reifyFailedFuture))
+        .toRoute(e)(logic.andThen(reifyFailedFuture))
     }
   }
 
