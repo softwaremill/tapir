@@ -12,31 +12,33 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
       outputToResponses(e.errorOutput, ResponsesDefaultKey, None)
   }
 
-  private def statusCodesToBodySchemas(io: EndpointIO[_]): Map[StatusCode, Option[SSchema]] = {
-    io.traverse {
-      case EndpointIO.StatusFrom(_: EndpointIO.Body[_, _, _], default, defaultSchema, whens) =>
+  private def statusCodesToBodySchemas(output: EndpointOutput[_]): Map[StatusCode, Option[SSchema]] = {
+    val r = output.traverseOutputs {
+      case EndpointOutput.StatusFrom(_: EndpointIO.Body[_, _, _], default, defaultSchema, whens) =>
         val fromWhens = whens.map {
           case (WhenClass(_, schema), statusCode) => statusCode -> Some(schema)
           case (_, statusCode)                    => statusCode -> None
         }
         (default -> defaultSchema) +: fromWhens
-      case EndpointIO.StatusFrom(_, default, _, whens) =>
+      case EndpointOutput.StatusFrom(_, default, _, whens) =>
         val statusCodes = default +: whens.map(_._2)
         statusCodes.map(_ -> None)
-    }.toMap
+    }
+
+    r.toMap
   }
 
-  private def outputToResponses(io: EndpointIO[_],
+  private def outputToResponses(output: EndpointOutput[_],
                                 defaultResponseKey: ResponsesKey,
                                 defaultResponse: Option[Response]): Map[ResponsesKey, ReferenceOr[Response]] = {
-    val statusCodes = statusCodesToBodySchemas(io)
+    val statusCodes = statusCodesToBodySchemas(output)
     val responses = if (statusCodes.isEmpty) {
       // no status code mapping defined in the output - using the default response key, if there's any response defined at all
-      outputToResponse(io, None).map(defaultResponseKey -> Right(_)).toMap
+      outputToResponse(output, None).map(defaultResponseKey -> Right(_)).toMap
     } else {
       statusCodes.flatMap {
         case (statusCode, bodySchema) =>
-          outputToResponse(io, bodySchema).map((ResponsesCodeKey(statusCode): ResponsesKey) -> Right(_))
+          outputToResponse(output, bodySchema).map((ResponsesCodeKey(statusCode): ResponsesKey) -> Right(_))
       }
     }
 
@@ -46,10 +48,10 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     } else responses
   }
 
-  private def outputToResponse(io: EndpointIO[_], overrideBodySchema: Option[SSchema]): Option[Response] = {
-    val ios = io.asVectorOfBasic()
+  private def outputToResponse(output: EndpointOutput[_], overrideBodySchema: Option[SSchema]): Option[Response] = {
+    val outputs = output.asVectorOfBasicOutputs
 
-    val headers = ios.collect {
+    val headers = outputs.collect {
       case EndpointIO.Header(name, codec, info) =>
         name -> Right(
           Header(
@@ -67,7 +69,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
           ))
     }
 
-    val bodies = ios.collect {
+    val bodies = outputs.collect {
       case EndpointIO.Body(m, i) => (i.description, codecToMediaType(m, i.example, overrideBodySchema))
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
         (i.description, codecToMediaType(overrideBodySchema.getOrElse(s), mt, i.example))

@@ -29,7 +29,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
 
   private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive1[I] = new EndpointToAkkaDirective(serverOptions)(e)
 
-  private def outputToRoute[O](defaultStatusCode: AkkaStatusCode, output: EndpointIO[O], v: O): Route = {
+  private def outputToRoute[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
     val responseValues = OutputToAkkaResponse(output, v)
 
     val statusCode = responseValues.statusCode.map(c => c: AkkaStatusCode).getOrElse(defaultStatusCode)

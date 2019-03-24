@@ -7,7 +7,7 @@ import org.http4s.{EntityBody, Headers, HttpRoutes, Request, Response, Status}
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.server.DecodeFailureHandling
-import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
+import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput}
 
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
 
@@ -54,7 +54,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status =
     Status.fromInt(code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
 
-  private def makeResponse[O](defaultStatusCode: org.http4s.Status, output: EndpointIO[O], v: O): Response[F] = {
+  private def makeResponse[O](defaultStatusCode: org.http4s.Status, output: EndpointOutput[O], v: O): Response[F] = {
     val responseValues = new OutputToHttp4sResponse[F](serverOptions).apply(output, v)
     val statusCode = responseValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(defaultStatusCode)
 

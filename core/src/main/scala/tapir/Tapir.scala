@@ -69,10 +69,10 @@ trait Tapir extends TapirDerivedInputs {
 
   // TODO
   @deprecated
-  def statusFrom[I](io: EndpointIO[I], default: StatusCode, when: (When[I], StatusCode)*): EndpointIO.StatusFrom[I] =
-    EndpointIO.StatusFrom(io, default, None, when.toVector)
+  def statusFrom[I](io: EndpointIO[I], default: StatusCode, when: (When[I], StatusCode)*): EndpointOutput.StatusFrom[I] =
+    EndpointOutput.StatusFrom(io, default, None, when.toVector)
 
-  def statusCode: EndpointIO.StatusCode = EndpointIO.StatusCode()
+  def statusCode: EndpointOutput.StatusCode = EndpointOutput.StatusCode()
 
   def whenClass[U: ClassTag: SchemaFor]: When[Any] = WhenClass(implicitly[ClassTag[U]], implicitly[SchemaFor[U]].schema)
   def whenValue[U](p: U => Boolean): When[U] = WhenValue(p)
@@ -82,8 +82,8 @@ trait Tapir extends TapirDerivedInputs {
   val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
     Endpoint[Unit, Unit, Unit, Nothing](
       EndpointInput.Multiple(Vector.empty),
-      EndpointIO.Multiple(Vector.empty),
-      EndpointIO.Multiple(Vector.empty),
+      EndpointOutput.Multiple(Vector.empty),
+      EndpointOutput.Multiple(Vector.empty),
       EndpointInfo(None, None, None, Vector.empty)
     )
 }
