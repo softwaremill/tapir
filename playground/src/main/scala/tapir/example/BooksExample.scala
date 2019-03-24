@@ -97,7 +97,6 @@ object BooksExample extends App with StrictLogging {
 
     import scala.concurrent.Await
     import scala.concurrent.duration._
-    println(yaml)
     val routes = route ~ new SwaggerUI(yaml).routes
 
     implicit val actorSystem: ActorSystem = ActorSystem()
