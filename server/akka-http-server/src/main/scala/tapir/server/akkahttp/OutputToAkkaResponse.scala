@@ -6,7 +6,7 @@ import akka.http.scaladsl.model.HttpHeader.ParsingResult
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
-import tapir.internal.ParamsToSeq
+import tapir.internal._
 import tapir.model.Part
 import tapir.{
   ByteArrayValueType,

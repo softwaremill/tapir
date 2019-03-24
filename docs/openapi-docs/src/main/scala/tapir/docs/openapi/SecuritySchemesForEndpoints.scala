@@ -1,4 +1,6 @@
 package tapir.docs.openapi
+
+import tapir.internal._
 import tapir.openapi.SecurityScheme
 import tapir.{Endpoint, EndpointIO, EndpointInput}
 

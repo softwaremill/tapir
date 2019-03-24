@@ -1,5 +1,6 @@
 package tapir.docs.openapi
 
+import tapir.internal._
 import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi._

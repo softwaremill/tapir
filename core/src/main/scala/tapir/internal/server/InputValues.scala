@@ -1,5 +1,6 @@
 package tapir.internal.server
-import tapir.internal.SeqToParams
+
+import tapir.internal._
 import tapir.{EndpointIO, EndpointInput}
 
 object InputValues {

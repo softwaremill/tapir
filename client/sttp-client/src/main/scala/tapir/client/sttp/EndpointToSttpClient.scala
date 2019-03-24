@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 
 import com.softwaremill.sttp.{Method => SttpMethod, _}
 import tapir.Codec.PlainCodec
-import tapir.internal.SeqToParams
+import tapir.internal._
 import tapir.typelevel.ParamsAsArgs
 import tapir._
 import tapir.model.{MultiQueryParams, Part, Method}

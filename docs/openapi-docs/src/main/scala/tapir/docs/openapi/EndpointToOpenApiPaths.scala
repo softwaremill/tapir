@@ -4,6 +4,7 @@ import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.model.Method
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi._
+import tapir.internal._
 import tapir._
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {

@@ -2,6 +2,7 @@ package tapir.internal.server
 
 import tapir.model.{Cookie, Method, MultiQueryParams, ServerRequest}
 import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
+import tapir.internal._
 
 import scala.annotation.tailrec
 
