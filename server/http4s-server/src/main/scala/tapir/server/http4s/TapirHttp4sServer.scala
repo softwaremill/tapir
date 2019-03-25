@@ -32,8 +32,8 @@ trait TapirHttp4sServer {
     }
   }
 
-  implicit class RichAkkaHttpServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, EntityBody[F], F]) {
-    def toRoute(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] =
+  implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, EntityBody[F], F]) {
+    def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] =
       new EndpointToHttp4sServer(serverOptions).toRoutes(se.endpoint)(se.logic)
   }
 
