@@ -2,6 +2,7 @@ package tapir.server.akkahttp
 
 import akka.http.scaladsl.server.{Directive, Route}
 import tapir.Endpoint
+import tapir.server.ServerEndpoint
 import tapir.typelevel.{ParamsToTuple, ReplaceFirstInTuple}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,6 +30,14 @@ trait TapirAkkaHttpServer {
       new EndpointToAkkaServer(serverOptions)
         .toRoute(e)(logic.andThen(reifyFailedFuture))
     }
+  }
+
+  implicit class RichAkkaHttpServerEndpoint[I, E, O](se: ServerEndpoint[I, E, O, AkkaStream, Future]) {
+    def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
+      new EndpointToAkkaServer(akkaHttpOptions).toDirective(se.endpoint)
+
+    def toRoute(implicit serverOptions: AkkaHttpServerOptions): Route =
+      new EndpointToAkkaServer(serverOptions).toRoute(se.endpoint)(se.logic)
   }
 
   implicit class RichToFutureFunction[T, U](a: T => Future[U])(implicit ec: ExecutionContext) {

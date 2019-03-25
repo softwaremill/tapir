@@ -2,6 +2,7 @@ package tapir
 
 import tapir.EndpointInput.RequestMethod
 import tapir.model.Method
+import tapir.server.ServerEndpoint
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 /**
@@ -70,6 +71,8 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def show: String = {
     s"Endpoint${info.name.map("[" + _ + "]").getOrElse("")}(in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
   }
+
+  def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
 }
 
 case class EndpointInfo(name: Option[String], summary: Option[String], description: Option[String], tags: Vector[String]) {

@@ -1,12 +1,12 @@
 package tapir.server.http4s
 
 import cats.Monad
-import cats.implicits._
 import cats.effect.{ContextShift, Sync}
+import cats.implicits._
 import org.http4s.{EntityBody, HttpRoutes}
 import tapir.Endpoint
-import tapir.internal.{ParamsToSeq, SeqToParams}
-import tapir.typelevel.{ParamsAsArgs, ReplaceFirstInFn, ReplaceFirstInTuple}
+import tapir.server.ServerEndpoint
+import tapir.typelevel.ReplaceFirstInTuple
 
 import scala.reflect.ClassTag
 
@@ -30,6 +30,11 @@ trait TapirHttp4sServer {
 
       new EndpointToHttp4sServer(serverOptions).toRoutes(e)(logic.andThen(reifyFailedF))
     }
+  }
+
+  implicit class RichAkkaHttpServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, EntityBody[F], F]) {
+    def toRoute(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] =
+      new EndpointToHttp4sServer(serverOptions).toRoutes(se.endpoint)(se.logic)
   }
 
   implicit class RichToMonadFunction[T, U, F[_]: Monad](a: T => F[U]) {
