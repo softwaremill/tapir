@@ -6,6 +6,7 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import tapir._
 import tapir.model.StatusCodes
+import tapir.server.ServerEndpoint
 import tapir.typelevel.ParamsToTuple
 
 import scala.concurrent.Future
@@ -17,6 +18,8 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
       tprovide(paramsToTuple.toTuple(values))
     }
   }
+
+  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStream, Future]): Route = toRoute(se.endpoint)(se.logic)
 
   def toRoute[I, E, O](e: Endpoint[I, E, O, AkkaStream])(logic: I => Future[Either[E, O]]): Route = {
     toDirective1(e) { values =>

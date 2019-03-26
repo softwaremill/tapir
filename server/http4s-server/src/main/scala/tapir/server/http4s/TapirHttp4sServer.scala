@@ -1,9 +1,11 @@
 package tapir.server.http4s
 
 import cats.Monad
+import cats.data.NonEmptyList
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
 import org.http4s.{EntityBody, HttpRoutes}
+import org.http4s.syntax.kleisli._
 import tapir.Endpoint
 import tapir.server.ServerEndpoint
 import tapir.typelevel.ReplaceFirstInTuple
@@ -34,7 +36,17 @@ trait TapirHttp4sServer {
 
   implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, EntityBody[F], F]) {
     def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] =
-      new EndpointToHttp4sServer(serverOptions).toRoutes(se.endpoint)(se.logic)
+      new EndpointToHttp4sServer(serverOptions).toRoutes(se)
+  }
+
+  implicit class RichHttp4sServerEndpoints[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]) {
+    def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] = {
+      val endpointToServer = new EndpointToHttp4sServer(serverOptions)
+      NonEmptyList.fromList(serverEndpoints.map(se => endpointToServer.toRoutes(se))) match {
+        case Some(routes) => routes.reduceK
+        case None         => HttpRoutes.empty
+      }
+    }
   }
 
   implicit class RichToMonadFunction[T, U, F[_]: Monad](a: T => F[U]) {
