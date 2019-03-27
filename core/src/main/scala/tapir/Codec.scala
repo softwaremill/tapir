@@ -11,6 +11,8 @@ import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
 import tapir.internal.UrlencodedData
 import tapir.model.Part
 
+import scala.annotation.implicitNotFound
+
 /**
   * A pair of functions, one to encode a value of type `T` to a raw value of type `R`,
   * and another one to decode.
@@ -21,6 +23,13 @@ import tapir.model.Part
   * @tparam M The media type of encoded values.
   * @tparam R Type of the raw value to which values are encoded.
   */
+@implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
+Did you define a codec for: ${T}?
+Did you import the codecs for: ${M}?
+Is there an implicit schema for: ${T}, and all of its components?
+(codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
+schemas are looked up as implicit values of type SchemaFor[${T}])
+""")
 trait Codec[T, M <: MediaType, R] { outer =>
   def encode(t: T): R
   def decode(s: R): DecodeResult[T]
@@ -151,6 +160,13 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
   *
   * Should be used for inputs/outputs which allow optional values.
   */
+@implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
+Did you define a codec for: ${T}?
+Did you import the codecs for: ${M}?
+Is there an implicit schema for: ${T}, and all of its components?
+(codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
+schemas are looked up as implicit values of type SchemaFor[${T}])
+""")
 trait CodecForOptional[T, M <: MediaType, R] { outer =>
   def encode(t: T): Option[R]
   def decode(s: Option[R]): DecodeResult[T]
@@ -196,6 +212,13 @@ object CodecForOptional {
   *
   * Should be used for inputs/outputs which allow multiple values.
   */
+@implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
+Did you define a codec for: ${T}?
+Did you import the codecs for: ${M}?
+Is there an implicit schema for: ${T}, and all of its components?
+(codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
+schemas are looked up as implicit values of type SchemaFor[${T}])
+""")
 trait CodecForMany[T, M <: MediaType, R] { outer =>
   def encode(t: T): Seq[R]
   def decode(s: Seq[R]): DecodeResult[T]

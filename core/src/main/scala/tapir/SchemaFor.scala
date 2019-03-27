@@ -3,6 +3,8 @@ package tapir
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.Path
+import java.time._
+import java.util.Date
 
 import tapir.Schema._
 import tapir.generic.SchemaForMagnoliaDerivation
@@ -46,6 +48,24 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   }
   implicit case object SchemaForByteBuffer extends SchemaFor[ByteBuffer] {
     override val schema: Schema = SBinary
+  }
+  implicit case object SchemaForInstant extends SchemaFor[Instant] {
+    override val schema: Schema = SDateTime
+  }
+  implicit case object SchemaForZonedDateTime extends SchemaFor[ZonedDateTime] {
+    override val schema: Schema = SDateTime
+  }
+  implicit case object SchemaForOffsetDateTime extends SchemaFor[OffsetDateTime] {
+    override val schema: Schema = SDateTime
+  }
+  implicit case object SchemaForDate extends SchemaFor[Date] {
+    override val schema: Schema = SDateTime
+  }
+  implicit case object SchemaForLocalDateTime extends SchemaFor[LocalDateTime] {
+    override val schema: Schema = SDateTime
+  }
+  implicit case object SchemaForLocalDate extends SchemaFor[LocalDate] {
+    override val schema: Schema = SDate
   }
   implicit def schemaForOption[T: SchemaFor]: SchemaFor[Option[T]] = new SchemaFor[Option[T]] {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
