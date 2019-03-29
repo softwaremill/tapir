@@ -413,5 +413,5 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   //
 
   private val random = new Random()
-  private def randomPort(): Port = random.nextInt(29232) + 32768
+  def randomPort(): Port = random.nextInt(29232) + 32768
 }

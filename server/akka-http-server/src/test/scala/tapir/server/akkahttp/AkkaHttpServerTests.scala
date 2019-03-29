@@ -4,12 +4,15 @@ import cats.implicits._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import tapir.Endpoint
+import com.softwaremill.sttp._
+import tapir.{Endpoint, endpoint, stringBody}
 import tapir.server.tests.ServerTests
+import tapir._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -49,5 +52,14 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
   override def suspendResult[T](t: => T): Future[T] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     Future { t }
+  }
+
+  test("endpoint nested in a path directive") {
+    val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => pureResult("ok".asRight[Unit]))
+    val port = randomPort()
+    val route = Directives.pathPrefix("api")(e.toRoute)
+    server(NonEmptyList.of(route), port).use { _ =>
+      sttp.get(uri"http://localhost:$port/api/test/directive").send().map(_.body shouldBe Right("ok"))
+    }.unsafeRunSync
   }
 }
