@@ -10,7 +10,7 @@ import scala.concurrent.{Await, Future}
 
 class SchemaForTest extends FlatSpec with Matchers {
 
-  it should "find schema for simple types" in {
+  "SchemaFor" should "find schema for simple types" in {
     implicitly[SchemaFor[String]].schema shouldBe SString
     implicitly[SchemaFor[String]].isOptional shouldBe false
 
@@ -55,9 +55,9 @@ class SchemaForTest extends FlatSpec with Matchers {
   }
 
   it should "find schema for a simple case class and use snake case naming transformation" in {
-    val expectedSnakCaseNaming = expectedDSchema.copy(fields = List(("some_field_name", SString)), required = List("some_field_name"))
+    val expectedSnakeCaseNaming = expectedDSchema.copy(fields = List(("some_field_name", SString)), required = List("some_field_name"))
     implicit val customConf = Configuration.default.withSnakeCaseMemberNames
-    implicitly[SchemaFor[D]].schema shouldBe expectedSnakCaseNaming
+    implicitly[SchemaFor[D]].schema shouldBe expectedSnakeCaseNaming
   }
 
   it should "find schema for a simple case class and use kebab case naming transformation" in {
@@ -101,6 +101,12 @@ class SchemaForTest extends FlatSpec with Matchers {
     val schemas = Await.result(eventualSchemas, 5 seconds)
     schemas should contain only expected
   }
+
+  it should "use custom schema for custom types" in {
+    implicit val scustom: SchemaFor[Custom] = SchemaFor[Custom](Schema.SString)
+    val schema = implicitly[SchemaFor[G]].schema
+    schema shouldBe SObject(SObjectInfo("G", "tapir.generic.G"), List(("f1", SInteger), ("f2", SString)), List("f1", "f2"))
+  }
 }
 
 case class A(f1: String, f2: Int, f3: Option[String])
@@ -108,3 +114,6 @@ case class B(g1: String, g2: A)
 case class C(h1: List[String], h2: Option[Int])
 case class D(someFieldName: String)
 case class F(f1: List[F], f2: Int)
+
+class Custom(c: String)
+case class G(f1: Int, f2: Custom)

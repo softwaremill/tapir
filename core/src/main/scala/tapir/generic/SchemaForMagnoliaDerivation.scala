@@ -53,7 +53,7 @@ trait SchemaForMagnoliaDerivation {
   }
 
   def dispatch[T](ctx: SealedTrait[SchemaFor, T]): SchemaFor[T] = {
-    throw new RuntimeException("Sealed trait hierarchies are not yet supported")
+    throw new RuntimeException(s"Sealed trait hierarchies are not yet supported for: ${ctx.typeName}")
   }
 
   implicit def schemaForCaseClass[T]: SchemaFor[T] = macro Magnolia.gen[T]
