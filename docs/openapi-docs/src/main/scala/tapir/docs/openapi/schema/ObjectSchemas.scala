@@ -5,6 +5,8 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema}
 import tapir.{Schema => TSchema}
 
+import scala.collection.immutable.ListMap
+
 class ObjectSchemas(tschemaToOSchema: TSchemaToOSchema, schemaKeys: Map[SObjectInfo, (SchemaKey, ReferenceOr[OSchema])]) {
   def apply(schema: TSchema): ReferenceOr[OSchema] = {
     schema match {
@@ -14,5 +16,5 @@ class ObjectSchemas(tschemaToOSchema: TSchemaToOSchema, schemaKeys: Map[SObjectI
     }
   }
 
-  def keyToOSchema: Map[SchemaKey, ReferenceOr[OSchema]] = schemaKeys.values.toMap
+  def keyToOSchema: ListMap[SchemaKey, ReferenceOr[OSchema]] = schemaKeys.values.toListMap
 }

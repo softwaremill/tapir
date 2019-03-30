@@ -107,6 +107,11 @@ class SchemaForTest extends FlatSpec with Matchers {
     val schema = implicitly[SchemaFor[G]].schema
     schema shouldBe SObject(SObjectInfo("G", "tapir.generic.G"), List(("f1", SInteger), ("f2", SString)), List("f1", "f2"))
   }
+
+  it should "derive schema for parametrised type classes" in {
+    val schema = implicitly[SchemaFor[H[A]]].schema
+    schema shouldBe SObject(SObjectInfo("H", "tapir.generic.H"), List(("data", expectedASchema)), List("data"))
+  }
 }
 
 case class A(f1: String, f2: Int, f3: Option[String])
@@ -117,3 +122,5 @@ case class F(f1: List[F], f2: Int)
 
 class Custom(c: String)
 case class G(f1: Int, f2: Custom)
+
+case class H[T](data: T)

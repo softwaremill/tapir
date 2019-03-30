@@ -4,6 +4,8 @@ import tapir.docs.openapi.schema.ObjectSchemasForEndpoints
 import tapir.openapi._
 import tapir.{EndpointInput, _}
 
+import scala.collection.immutable.ListMap
+
 object EndpointToOpenAPIDocs {
   def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): OpenAPI = {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
@@ -24,7 +26,7 @@ object EndpointToOpenAPIDocs {
     OpenAPI(
       info = info,
       servers = List.empty,
-      paths = Map.empty,
+      paths = ListMap.empty,
       components = componentsCreator.components,
       security = List.empty
     )

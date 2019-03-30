@@ -7,6 +7,8 @@ import tapir.openapi._
 import tapir.internal._
 import tapir._
 
+import scala.collection.immutable.ListMap
+
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
 
   private val codecToMediaType = new CodecToMediaType(objectSchemas)
@@ -49,11 +51,11 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_]]): Operation = {
     val parameters = operationParameters(inputs)
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
-    val responses: Map[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
+    val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
     val authNames = e.input.auths.flatMap(auth => securitySchemes.get(auth).map(_._1))
     // for now, all auths have empty scope
-    val securityRequirement = authNames.map(_ -> Vector.empty).toMap
+    val securityRequirement = authNames.map(_ -> Vector.empty).toListMap
 
     Operation(
       e.info.tags.toList,

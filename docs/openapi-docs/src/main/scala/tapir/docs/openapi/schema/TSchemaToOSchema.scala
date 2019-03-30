@@ -26,7 +26,7 @@ private[schema] class TSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
             properties = fields.map {
               case (fieldName, fieldSchema) =>
                 fieldName -> apply(fieldSchema)
-            }.toMap
+            }.toListMap
           ))
       case TSchema.SArray(el) =>
         Right(

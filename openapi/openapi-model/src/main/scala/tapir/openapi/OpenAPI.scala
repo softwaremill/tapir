@@ -2,11 +2,13 @@ package tapir.openapi
 
 import tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
 
+import scala.collection.immutable.ListMap
+
 // todo tags, externaldocs
 case class OpenAPI(openapi: String = "3.0.1",
                    info: Info,
                    servers: List[Server],
-                   paths: Map[String, PathItem],
+                   paths: ListMap[String, PathItem],
                    components: Option[Components],
                    security: List[SecurityRequirement]) {
 
@@ -24,7 +26,7 @@ object OpenAPI {
   type ReferenceOr[T] = Either[Reference, T]
   // using a Vector instead of a List, as empty Lists are always encoded as nulls
   // here, we need them encoded as an empty array
-  type SecurityRequirement = Map[String, Vector[String]]
+  type SecurityRequirement = ListMap[String, Vector[String]]
 }
 
 case class Info(
@@ -47,8 +49,8 @@ case class Server(
 
 // todo: responses, parameters, examples, requestBodies, headers, links, callbacks
 case class Components(
-    schemas: Map[String, ReferenceOr[Schema]],
-    securitySchemes: Map[String, ReferenceOr[SecurityScheme]]
+    schemas: ListMap[String, ReferenceOr[Schema]],
+    securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]]
 )
 
 // todo: $ref
@@ -92,7 +94,7 @@ case class Operation(
     operationId: String,
     parameters: List[ReferenceOr[Parameter]],
     requestBody: Option[ReferenceOr[RequestBody]],
-    responses: Map[ResponsesKey, ReferenceOr[Response]],
+    responses: ListMap[ResponsesKey, ReferenceOr[Response]],
     deprecated: Option[Boolean],
     security: List[SecurityRequirement],
     servers: List[Server]
@@ -110,8 +112,8 @@ case class Parameter(
     allowReserved: Option[Boolean],
     schema: ReferenceOr[Schema],
     example: Option[ExampleValue],
-    examples: Map[String, ReferenceOr[Example]],
-    content: Map[String, MediaType]
+    examples: ListMap[String, ReferenceOr[Example]],
+    content: ListMap[String, MediaType]
 )
 
 object ParameterIn extends Enumeration {
@@ -135,18 +137,18 @@ object ParameterStyle extends Enumeration {
   val DeepObject = Value("deepObject")
 }
 
-case class RequestBody(description: Option[String], content: Map[String, MediaType], required: Option[Boolean])
+case class RequestBody(description: Option[String], content: ListMap[String, MediaType], required: Option[Boolean])
 
 case class MediaType(
     schema: Option[ReferenceOr[Schema]],
     example: Option[ExampleValue],
-    examples: Map[String, ReferenceOr[Example]],
-    encoding: Map[String, Encoding]
+    examples: ListMap[String, ReferenceOr[Example]],
+    encoding: ListMap[String, Encoding]
 )
 
 case class Encoding(
     contentType: Option[String],
-    headers: Map[String, ReferenceOr[Header]],
+    headers: ListMap[String, ReferenceOr[Header]],
     style: Option[ParameterStyle.ParameterStyle],
     explode: Option[Boolean],
     allowReserved: Option[Boolean]
@@ -157,7 +159,7 @@ case object ResponsesDefaultKey extends ResponsesKey
 case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
-case class Response(description: String, headers: Map[String, ReferenceOr[Header]], content: Map[String, MediaType])
+case class Response(description: String, headers: ListMap[String, ReferenceOr[Header]], content: ListMap[String, MediaType])
 
 case class Example(summary: Option[String], description: Option[String], value: Option[ExampleValue], externalValue: Option[String])
 
@@ -170,8 +172,8 @@ case class Header(description: Option[String],
                   allowReserved: Option[Boolean],
                   schema: Option[ReferenceOr[Schema]],
                   example: Option[ExampleValue],
-                  examples: Map[String, ReferenceOr[Example]],
-                  content: Map[String, MediaType])
+                  examples: ListMap[String, ReferenceOr[Example]],
+                  content: ListMap[String, MediaType])
 
 case class Reference($ref: String)
 
@@ -180,7 +182,7 @@ case class Schema(title: Option[String],
                   required: List[String],
                   `type`: SchemaType.SchemaType,
                   items: Option[ReferenceOr[Schema]],
-                  properties: Map[String, ReferenceOr[Schema]],
+                  properties: ListMap[String, ReferenceOr[Schema]],
                   description: Option[String],
                   format: Option[SchemaFormat.SchemaFormat],
                   default: Option[ExampleValue],
@@ -192,7 +194,7 @@ case class Schema(title: Option[String],
 
 object Schema {
   def apply(`type`: SchemaType.SchemaType): Schema =
-    Schema(None, List.empty, `type`, None, Map.empty, None, None, None, None, None, None, None, None)
+    Schema(None, List.empty, `type`, None, ListMap.empty, None, None, None, None, None, None, None, None)
 }
 
 object SchemaType extends Enumeration {
@@ -236,4 +238,4 @@ case class OAuthFlows(`implicit`: Option[OAuthFlow],
                       clientCredentials: Option[OAuthFlow],
                       authorizationCode: Option[OAuthFlow])
 
-case class OAuthFlow(authorizationUrl: String, tokenUrl: String, refreshUrl: Option[String], scopes: Map[String, String])
+case class OAuthFlow(authorizationUrl: String, tokenUrl: String, refreshUrl: Option[String], scopes: ListMap[String, String])
