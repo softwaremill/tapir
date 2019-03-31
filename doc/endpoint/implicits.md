@@ -23,7 +23,8 @@ def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match {
 }
 def encode(id: MyId): String = id.toString
 
-implicit val myIdCodec: Codec[MyId, TextPlain, _] = Codec.stringPlainCodecUtf8.mapDecode(decode)(encode)
+implicit val myIdCodec: Codec[MyId, TextPlain, _] = Codec.stringPlainCodecUtf8
+  .mapDecode(decode)(encode)
 ```
 
 ## Text and binary bodies
