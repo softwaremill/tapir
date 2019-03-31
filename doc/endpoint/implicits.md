@@ -52,6 +52,6 @@ the schema and the json encoders have to be provided separately.
 
 ## Form bodies
 
-When mapping either url-encoded or multipart [form bodies](form.html), for each field, a plain codec has to be available
+When mapping either url-encoded or multipart [form bodies](forms.html), for each field, a plain codec has to be available
 in the implicit scope. That is, a value of type `Codec[R, TextPlain, _]`, for each `R` which is a field of the case
 class to which the data is being mapped.
