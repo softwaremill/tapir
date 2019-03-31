@@ -42,18 +42,10 @@ A codec also contains the schema of the mapped type. This schema information is 
 For primitive types, the schema values are built-in, and include values such as `Schema.SString`, `Schema.SArray`, 
 `Schema.SBinary` etc. 
 
-For complex types, it is possible to define the schema by hand and apply it to a codec (using the `codec.schema` 
-method), however usually the schema is looked up by codecs by requiring an implicit value of type
-`SchemaFor[T]`. A schema-for value contains a single `schema: Schema` field.
+The schema is left unchanged when mapping over a codec, as the underlying representation of the value doesn't change.
 
-`SchemaFor[T]` values are automatically derived for case classes using [Magnolia](https://propensive.com/opensource/magnolia/). 
-It is possible to configure the automatic derivation to use snake-case, kebab-case or a custom field naming policy, 
-by providing an implicit `tapir.generic.Configuration` value:
-
-```scala
-implicit val customConfiguration: Configuration =
-  Configuration.default.withSnakeCaseMemberNames
-```
+When codecs are derived for complex types, e.g. for json mapping, schemas are looked up through implicit
+`SchemaFor[T]` values. See [json support](json.html) for more details.
 
 ## Media types
 
@@ -84,7 +76,7 @@ def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match {
 }
 def encode(id: MyId): String = id.toString
 
-implicit val myIdCodec: Codec[MyId] = Codec.stringPlainCodecUtf8.mapDecode(decode)(encode)
+implicit val myIdCodec: Codec[MyId, TextPlain, _] = Codec.stringPlainCodecUtf8.mapDecode(decode)(encode)
 ```
 
 Additionally, if a type is supported by a codec, it can be used in multiple contexts, such as query parameters, headers,

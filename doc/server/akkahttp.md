@@ -74,3 +74,8 @@ response bodies and reading request bodies. Usage: `streamBody[Source[ByteString
 
 The interpreter can be configured by providing an implicit `AkkaHttpServerOptions` value and status mappers, see
 [common server configuration](common.html) for details.
+
+## Defining an endpoint together with the server logic
+
+It's also possible to define an endpoint together with the server logic in a single, more concise step. See
+[common server configuration](common.html) for details.

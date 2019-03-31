@@ -71,3 +71,8 @@ The interpreter can be configured by providing an implicit `Http4sServerOptions`
 [common server configuration](common.html) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.
+
+## Defining an endpoint together with the server logic
+
+It's also possible to define an endpoint together with the server logic in a single, more concise step. See
+[common server configuration](common.html) for details.

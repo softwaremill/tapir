@@ -6,10 +6,11 @@ To use tapir, add the following dependency to your project:
 "com.softwaremill.tapir" %% "tapir-core" % "0.5"
 ```
 
-This will import only the core classes. To generate a server or a client, you will need to add further dependencies.
+This will import only the core classes needed to create endpoint descriptions. To generate a server or a client, you
+will need to add further dependencies.
 
-Most of tapir functionalities use package objects which provide builder and extensions methods, hence it's easiest to 
-work with tapir if you import whole packages, e.g.:
+Most of tapir functionalities are grouped package objects which provide builder and extensions methods, hence it's
+easiest to work with tapir if you import whole packages, e.g.:
 
 ```scala
 import tapir._

@@ -1,12 +1,15 @@
 # Defining endpoint's input/output
 
-An input is described by an instance of the `EndpointInput` trait, and an output by an instance of the `EndpointIO` 
-trait, as all outputs can also be used as inputs. Each input or output can yield/accept a value. For example, 
-`query[Int]("age"): EndpointInput[Int]` describes an input, which is the `age` query parameter, and which should be 
-mapped (using the string-to-integer [codec](codecs.html)) as an `Int`.
+An input is described by an instance of the `EndpointInput` trait, and an output by an instance of the `EndpointOutput`
+trait. Some inputs can be used both as inputs and outputs; then, they additionally implement the `EndpointIO` trait.
+
+Each input or output can yield/accept a value (but doesn't have to).
+
+For example, `query[Int]("age"): EndpointInput[Int]` describes an input, which is the `age` parameter from the URI's
+query, and which should be coded (using the string-to-integer [codec](codecs.html)) as an `Int`.
 
 The `tapir` package contains a number of convenience methods to define an input or an output for an endpoint. 
-These are:
+For inputs, these are:
 
 * `path[T]`, which captures a path segment as an input parameter of type `T`
 * any string, which will be implicitly converted to a constant path segment. Path segments can be combined with the `/` 
@@ -14,9 +17,14 @@ These are:
 * `paths`, which maps to the whole remaining path as a `Seq[String]`
 * `query[T](name)` captures a query parameter with the given name
 * `queryParams` captures all query parameters, represented as `MultiQueryParams`
+* `cookie[T](name)` captures a cookie from the `Cookie` header with the given name
+* `extractFromRequest` extracts a value from the request. This input is only used by server interpreters, ignored
+  by documentation interpreters. Client interpreters ignore the provided value.
+
+For both inputs/outputs:
+
 * `header[T](name)` captures a header with the given name
 * `headers` captures all headers, represented as `Seq[(String, String)]`
-* `cookie[T](name)` captures a cookie from the `Cookie` header with the given name 
 * `cookies` captures cookies from the `Cookie` header and represents them as `List[Cookie]` 
 * `setCookie(name)` captures the value & metadata of the a `Set-Cookie` header with a matching name 
 * `setCookies` captures cookies from the `Set-Cookie` header and represents them as `List[SetCookie]` 
@@ -24,19 +32,19 @@ These are:
   captures the body
 * `streamBody[S]` captures the body as a stream: only a client/server interpreter supporting streams of type `S` can be 
   used with such an endpoint
-* `extractFromRequest` extracts a value from the request. This input is only used by server interpreters, ignored
-  by documentation interpreters. Client interpreters ignore the provided value. 
 
-For outputs, you can use the `header`, `setCookies` and `body` family of methods.
+For outputs:
+
+* `statusCode` maps to the status code of the response
 
 ## Combining inputs and outputs
 
 Endpoint inputs/outputs can be combined in two ways. However they are combined, the values they represent always 
 accumulate into tuples of values.
 
-First, descriptions can be combined using the `.and` method. Such a combination results in an input/output represented 
-as a tuple of the given types, can be stored as a value and re-used in multiple endpoints. As all other values in tapir, 
-endpoint input/output descriptions are immutable. For example, an input specifying two query parameters, `start` 
+First, descriptions can be combined using the `.and` method. Such a combination results in an input/output, which maps
+to a tuple of the given types, and can be stored as a value and re-used in multiple endpoints. As all other values in
+tapir, endpoint input/output descriptions are immutable. For example, an input specifying two query parameters, `start`
 (mandatory) and `limit` (optional) can be written down as:
 
 ```scala
@@ -70,7 +78,7 @@ The above endpoint will correspond to the `api/v1.0/status` path.
 ## Mapping over input values
 
 Inputs/outputs can also be mapped over. As noted before, all mappings are bi-directional, so that they can be used both
-when interpreting an endpoint as a server, and as a client.
+when interpreting an endpoint as a server, and as a client, as well as both in input and output contexts.
 
 There's a couple of ways to map over an input/output. First, there's the `map[II](f: I => II)(g: II => I)` method, 
 which  accepts functions which provide the mapping in both directions. For example:
@@ -102,16 +110,23 @@ The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the o
 By default (as with all other types of inputs), if no path input/path segments are defined, any path will match.
 
 If any path input/path segment is defined, the path must match *exactly* - any remaining path segments will cause the
-endpoint not to match the request. For example, `endpoint.path("api")` will match `/api`, `/api/`, but won't match
+endpoint not to match the request. For example, `endpoint.in("api")` will match `/api`, `/api/`, but won't match
 `/`, `/api/users`.
 
-To match only the root path, use an empty string: `endpoint.path("")` will match `http://server.com/` and 
+To match only the root path, use an empty string: `endpoint.in("")` will match `http://server.com/` and
 `http://server.com`.
+
+To match a path prefix, first define inputs which match the path prefix, and then capture any remaining part using
+`paths`, e.g.: `endpoint.in("api" / "download").in(paths)"`.
 
 ## Status codes
 
-It is possible to specify how the value of an output (typically the body) maps to the status code. This is used
-when interpreting the endpoint as a server and when generating documentation. 
+To provide the status code of a server response, use the `statusCode` output, which maps to a
+`type tapir.model.StatusCode = Int` alias. The `tapir.model.StatusCodes` object contains known status codes as
+constants. This type of output is used only when interpreting the endpoint as a server.
+
+It is also possible to specify how to determine the status code basing on the value of an output (typically the body).
+This is used when interpreting the endpoint as a server and when generating documentation.
 
 For example, below is a specification for an endpoint where the error output is fixed to be of type `ErrorInfo`; 
 such a specification can then be refined and reused for other endpoints:

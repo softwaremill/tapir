@@ -4,7 +4,57 @@
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
 this can be customised by specifying how an [output maps to the status code](../endpoint/ios.html#status-codes).
-  
+
+## Defining an endpoint together with the server logic
+
+It's possible to combine an endpoint description with the server logic in a single object,
+`ServerEndpoint[I, E, O, S, F]`. Such an endpoint contains not only an endpoint of type `Endpoint[I, E, O, S]`, but
+also a logic function `I => F[Either[E, O]]`, for some effect `F`.
+
+For example, the book example can be more concisely written as follows:
+
+```scala
+import tapir._
+import tapir.server.akkahttp._
+import scala.concurrent.Future
+import akka.http.scaladsl.server.Route
+
+val countCharactersServerEndpoint: ServerEndpoint[String, Unit, Int, Nothing, Future] =
+  endpoint.in(stringBody).out(plainBody[Int]).serverLogic { s =>
+    Future.successful(Right[Unit, Int](s.length))
+  }
+
+val countCharactersRoute: Route = countCharactersServerEndpoint.toRoute
+```
+
+A `ServerEndpoint` can then be converted to a route using `.toRoute`/`.toRoutes` methods (without any additional
+parameters), or to documentation.
+
+Moreover, a list of server endpoints can be converted to routes or documentation as well:
+
+```scala
+val endpoint1 = endpoint.in("hello").out(stringBody)
+  .serverLogic { _ => Future.successful("world") }
+
+val endpoint2 = endpoint.in("ping").out(stringBody)
+  .serverLogic { _ => Future.successful("pong") }
+
+val route: Route = List(endpoint1, endpoint2).toRoute
+```
+
+Note that when dealing with endpoints which have multiple input parameters, the server logic function is a function
+of a *single* argument, which is a tuple; hence you'll need to pattern-match using `case` to extract the parameters:
+
+```scala
+val echoEndpoint = endpoint
+  .in(query[Int]("count"))
+  .in(stringBody)
+  .out(stringBody)
+  .serverLogic { case (count, body) =>
+     Future.successful(body * count)
+  }
+```
+
 ## Server options
 
 Each interpreter accepts an implicit options value, which contains configuration values for:
@@ -110,3 +160,6 @@ logic completes successfully an `Int` is returned. Any exceptions that are raise
 value of type `ErrorInfo`. 
 
 Following the convention, the left side of the `Either[ErrorInfo, T]` represents an error, and the right side success.
+
+Alternatively, errors can be recovered from failed effects and mapped to the error output - provided that the `E` type
+in the endpoint description is itself a subclass of exception. This can be done using the `toRouteRecoverErrors` method.
