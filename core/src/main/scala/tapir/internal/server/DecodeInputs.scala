@@ -5,6 +5,7 @@ import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
 import tapir.internal._
 
 import scala.annotation.tailrec
+import scala.util.{Failure, Success, Try}
 
 trait DecodeInputsResult
 object DecodeInputsResult {
@@ -87,7 +88,7 @@ object DecodeInputs {
       case (input @ EndpointInput.PathCapture(codec, _, _)) +: inputsTail =>
         ctx.nextPathSegment match {
           case (Some(s), ctx2) =>
-            codec.decode(s) match {
+            decodeHandleExceptions(codec.decode, s) match {
               case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx2)
               case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
             }
@@ -106,7 +107,7 @@ object DecodeInputs {
         apply(inputsTail, values.value(input, ps), ctx2)
 
       case (input @ EndpointInput.Query(name, codec, _)) +: inputsTail =>
-        codec.decode(ctx.queryParameter(name).toList) match {
+        decodeHandleExceptions(codec.decode, ctx.queryParameter(name).toList) match {
           case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
@@ -116,14 +117,15 @@ object DecodeInputs {
 
       case (input @ EndpointInput.Cookie(name, codec, _)) +: inputsTail =>
         val allCookies = DecodeResult.sequence(ctx.headers.filter(_._1 == Cookie.HeaderName).map(p => Cookie.parse(p._2)).toList)
-        val cookieValue = allCookies.map(_.flatten.find(_.name == name)).flatMap(cookie => codec.decode(cookie.map(_.value)))
+        val cookieValue =
+          allCookies.map(_.flatten.find(_.name == name)).flatMap(cookie => decodeHandleExceptions(codec.decode, cookie.map(_.value)))
         cookieValue match {
           case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
 
       case (input @ EndpointIO.Header(name, codec, _)) +: inputsTail =>
-        codec.decode(ctx.header(name)) match {
+        decodeHandleExceptions(codec.decode, ctx.header(name)) match {
           case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
@@ -160,6 +162,13 @@ object DecodeInputs {
         }
 
       case None => None
+    }
+  }
+
+  private def decodeHandleExceptions[F, T](decode: F => DecodeResult[T], f: F): DecodeResult[T] = {
+    Try(decode(f)) match {
+      case Success(r) => r
+      case Failure(e) => DecodeResult.Error(f.toString, e)
     }
   }
 }
