@@ -54,7 +54,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 rawBodyDirective(codec.meta.rawValueType)
                   .map { v =>
-                    codec.decode(Some(v)) match {
+                    codec.safeDecode(Some(v)) match {
                       case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
                       case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                     }

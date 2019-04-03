@@ -36,7 +36,7 @@ object FormCodecMacros {
       case (field, codec) =>
         val fieldName = field.name.decodedName.toString
         q"""val transformedName = $conf.transformMemberName($fieldName)
-           $codec.decode(paramsMap.get(transformedName).toList.flatten)"""
+           $codec.safeDecode(paramsMap.get(transformedName).toList.flatten)"""
     }
 
     val codecTree = q"""

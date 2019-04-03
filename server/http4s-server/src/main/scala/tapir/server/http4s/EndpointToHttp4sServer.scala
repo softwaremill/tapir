@@ -22,7 +22,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
             values.bodyInput match {
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 new Http4sRequestToRawBody(serverOptions).apply(req.body, codec.meta.rawValueType, req.charset, req).map { v =>
-                  codec.decode(Some(v)) match {
+                  codec.safeDecode(Some(v)) match {
                     case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
                     case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                   }

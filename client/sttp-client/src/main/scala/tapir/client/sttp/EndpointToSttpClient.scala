@@ -70,13 +70,13 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       .map {
         case EndpointIO.Body(codec, _) =>
           val so = if (codec.meta.isOptional && body == "") None else Some(body)
-          getOrThrow(codec.decode(so))
+          getOrThrow(codec.safeDecode(so))
 
         case EndpointIO.StreamBodyWrapper(_) =>
           body
 
         case EndpointIO.Header(name, codec, _) =>
-          getOrThrow(codec.decode(meta.headers(name).toList))
+          getOrThrow(codec.safeDecode(meta.headers(name).toList))
 
         case EndpointIO.Headers(_) =>
           meta.headers
