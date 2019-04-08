@@ -7,14 +7,14 @@ import tapir.{EndpointInput, _}
 import scala.collection.immutable.ListMap
 
 object EndpointToOpenAPIDocs {
-  def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions, servers: List[Server] = List.empty): OpenAPI = {
+  def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): OpenAPI = {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
     val objectSchemas = ObjectSchemasForEndpoints(es2)
     val securitySchemes = SecuritySchemesForEndpoints(es2)
     val pathCreator = new EndpointToOpenApiPaths(objectSchemas, securitySchemes, options)
     val componentsCreator = new EndpointToOpenApiComponents(objectSchemas, securitySchemes)
 
-    val base = apiToOpenApi(api, componentsCreator, servers)
+    val base = apiToOpenApi(api, componentsCreator)
 
     es2.map(pathCreator.pathItem).foldLeft(base) {
       case (current, (path, pathItem)) =>
@@ -22,10 +22,10 @@ object EndpointToOpenAPIDocs {
     }
   }
 
-  private def apiToOpenApi(info: Info, componentsCreator: EndpointToOpenApiComponents, servers: List[Server]): OpenAPI = {
+  private def apiToOpenApi(info: Info, componentsCreator: EndpointToOpenApiComponents): OpenAPI = {
     OpenAPI(
       info = info,
-      servers = servers,
+      servers = List.empty,
       paths = ListMap.empty,
       components = componentsCreator.components,
       security = List.empty

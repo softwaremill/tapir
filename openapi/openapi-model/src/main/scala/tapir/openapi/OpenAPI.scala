@@ -20,6 +20,8 @@ case class OpenAPI(openapi: String = "3.0.1",
 
     copy(paths = paths + (path -> pathItem2))
   }
+
+  def servers(s: List[Server]): OpenAPI = copy(servers = s)
 }
 
 object OpenAPI {
