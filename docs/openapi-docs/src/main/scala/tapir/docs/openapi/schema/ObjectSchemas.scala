@@ -1,6 +1,6 @@
 package tapir.docs.openapi.schema
 
-import tapir.Schema.{SObject, SObjectInfo, SRef}
+import tapir.Schema.{SCoproduct, SObject, SObjectInfo, SRef}
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema}
 import tapir.{Schema => TSchema}
@@ -12,6 +12,7 @@ class ObjectSchemas(tschemaToOSchema: TSchemaToOSchema, schemaKeys: Map[SObjectI
     schema match {
       // by construction, references to all object schemas should be present in tschemaToOSchema
       case SObject(info, _, _) => tschemaToOSchema(SRef(info.fullName))
+      case SCoproduct(schemas)      => Right(OSchema.apply(schemas.map(apply)))
       case _                   => tschemaToOSchema(schema)
     }
   }

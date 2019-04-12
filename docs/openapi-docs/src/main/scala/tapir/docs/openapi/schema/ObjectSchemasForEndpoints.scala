@@ -1,8 +1,8 @@
 package tapir.docs.openapi.schema
 
 import tapir.Schema.SObjectInfo
-import tapir.{Schema => TSchema, _}
 import tapir.docs.openapi.uniqueName
+import tapir.{Schema => TSchema, _}
 
 object ObjectSchemasForEndpoints {
 
@@ -35,6 +35,8 @@ object ObjectSchemasForEndpoints {
     schema match {
       case s: TSchema.SObject =>
         List(s)
+      case s: TSchema.SCoproduct =>
+        s.schemas.collect { case so: TSchema.SObject => so }
       case _ => List.empty
     }
   }

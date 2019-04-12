@@ -165,6 +165,19 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
+    .out(jsonBody[Entity])
+
+  test("should match the expected yaml when when using coproduct types") {
+    val expectedYaml = loadYaml("expected_coproduct.yml")
+
+    val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    println(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromResource(fileName).getLines().mkString("\n"))
   }
@@ -173,6 +186,10 @@ class VerifyYamlTest extends FunSuite with Matchers {
 }
 
 case class F1(data: List[F1])
+
+sealed trait Entity
+case class Person(name: String, age: Int) extends Entity
+case class Organization(name: String) extends Entity
 
 sealed trait ErrorInfo
 object ErrorInfo {

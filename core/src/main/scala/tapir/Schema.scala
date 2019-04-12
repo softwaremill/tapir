@@ -37,5 +37,9 @@ object Schema {
     def show: String = s"ref($fullName)"
   }
 
+  case class SCoproduct(schemas: List[Schema]) extends Schema {
+    override def show: String = "allOf:" + schemas.mkString(",")
+  }
+
   case class SObjectInfo(shortName: String, fullName: String)
 }

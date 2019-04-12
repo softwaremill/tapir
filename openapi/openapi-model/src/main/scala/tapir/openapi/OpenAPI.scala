@@ -182,7 +182,7 @@ case class Reference($ref: String)
 // todo: discriminator, xml, json-schema properties
 case class Schema(title: Option[String],
                   required: List[String],
-                  `type`: SchemaType.SchemaType,
+                  `type`: Option[SchemaType.SchemaType],
                   items: Option[ReferenceOr[Schema]],
                   properties: ListMap[String, ReferenceOr[Schema]],
                   description: Option[String],
@@ -192,11 +192,15 @@ case class Schema(title: Option[String],
                   readOnly: Option[Boolean],
                   writeOnly: Option[Boolean],
                   example: Option[ExampleValue],
-                  deprecated: Option[Boolean])
+                  deprecated: Option[Boolean],
+                  oneOf: Option[List[ReferenceOr[Schema]]])
 
 object Schema {
   def apply(`type`: SchemaType.SchemaType): Schema =
-    Schema(None, List.empty, `type`, None, ListMap.empty, None, None, None, None, None, None, None, None)
+    Schema(None, List.empty, Some(`type`), None, ListMap.empty, None, None, None, None, None, None, None, None, None)
+
+  def apply(references: List[ReferenceOr[Schema]]): Schema =
+    Schema(None, List.empty, None, None, ListMap.empty, None, None, None, None, None, None, None, None, Some(references))
 }
 
 object SchemaType extends Enumeration {
