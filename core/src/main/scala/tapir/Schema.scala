@@ -45,11 +45,11 @@ object Schema {
 
   case class SObjectInfo(shortName: String, fullName: String)
 
-  case class Discriminator[T](propertyName: String, mapping: Map[String, SchemaFor[_ <: T]])
+  case class Discriminator[T](propertyName: String, mapping: Map[String, Schema])
 
   def discriminator[T, R](name: MethodName)(mapping: Map[R, SchemaFor[_ <: T]]): Discriminator[T] = {
-    val map: Map[String, SchemaFor[_ <: T]] = mapping.map {
-      case (k, v) => k.toString -> v
+    val map: Map[String, Schema] = mapping.map {
+      case (k, v) => k.toString -> v.schema
     }.toMap
     Discriminator[T](name.name, map)
   }

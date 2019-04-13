@@ -1,23 +1,48 @@
 package tapir.docs.openapi.schema
 
-import tapir.Schema.SObjectInfo
 import tapir.docs.openapi.uniqueName
+import tapir.openapi.OpenAPI.ReferenceOr
+import tapir.openapi.{Schema => OSchema}
 import tapir.{Schema => TSchema, _}
 
+import scala.collection.immutable.ListMap
 object ObjectSchemasForEndpoints {
 
-  def apply(es: Iterable[Endpoint[_, _, _, _]]): ObjectSchemas = {
-    val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
-    val infoToKey = calculateUniqueKeys(sObjects.map(_.info))
-    val tschemaToOSchema = new TSchemaToOSchema(infoToKey.map { case (k, v) => k.fullName -> v })
-    val infosToSchema = sObjects.map(so => (so.info, tschemaToOSchema(so))).toMap
-    val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
+  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
+    val sObjectsForEndpoints = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
+    val sObjectsAll = sObjectsForEndpoints.flatMap(collectFieldObjects).map(replaceSObjectFieldsWithSRef)
+    val infoToKey = calculateUniqueKeys(sObjectsAll.map(_.info))
+    val schemaReferences = new SchemaReferenceMapper(infoToKey.map { case (k, v) => k.fullName -> v })
+    val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
+    val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
+    val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences, discriminatorToOpenApi)
+    val infosToSchema = sObjectsAll.map(so => (so.info, tschemaToOSchema(so))).toMap
 
-    new ObjectSchemas(tschemaToOSchema, schemaKeys)
+    val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
+    (schemaKeys.values.toListMap, schemas)
   }
 
-  private def calculateUniqueKeys(infos: Iterable[SObjectInfo]): Map[SObjectInfo, SchemaKey] = {
-    case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, SObjectInfo], infoToKey: Map[SObjectInfo, SchemaKey])
+  private def collectFieldObjects(schema: TSchema): List[TSchema.SObject] = {
+    schema match {
+      case o: TSchema.SObject =>
+        List(o) ++ o.fields
+          .map(_._2)
+          .flatMap(collectFieldObjects)
+          .toList
+      case c: TSchema.SCoproduct => c.schemas.flatMap(collectFieldObjects)
+      case _                     => List()
+    }
+  }
+  private def replaceSObjectFieldsWithSRef(obj: TSchema.SObject): TSchema.SObject = {
+    val newFields = obj.fields map {
+      case (s, o: TSchema.SObject) => (s, TSchema.SRef(o.info.fullName))
+      case x                       => x
+    }
+    obj.copy(fields = newFields)
+  }
+
+  private def calculateUniqueKeys(infos: Iterable[TSchema.SObjectInfo]): Map[TSchema.SObjectInfo, SchemaKey] = {
+    case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, TSchema.SObjectInfo], infoToKey: Map[TSchema.SObjectInfo, SchemaKey])
     infos
       .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) {
         case (SchemaKeyAssignment1(keyToInfo, infoToKey), objectInfo) =>

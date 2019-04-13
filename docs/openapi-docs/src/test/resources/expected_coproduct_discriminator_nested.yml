@@ -1,0 +1,48 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NestedEntity'
+components:
+  schemas:
+    NestedEntity:
+      required:
+        - entity
+      type: object
+      properties:
+        entity:
+          oneOf:
+            - $ref: '#/components/schemas/Person'
+            - $ref: '#/components/schemas/Organization'
+          discriminator:
+            propertyName: name
+            mapping:
+              john: '#/components/schemas/Person'
+              sml: '#/components/schemas/Organization'
+    Person:
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+    Organization:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string

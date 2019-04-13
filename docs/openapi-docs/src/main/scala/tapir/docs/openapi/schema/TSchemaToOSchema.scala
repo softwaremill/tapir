@@ -1,6 +1,6 @@
 package tapir.docs.openapi.schema
 
-import tapir.Schema.SRef
+import tapir.Schema.SCoproduct
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
 import tapir.{Schema => TSchema}
@@ -8,7 +8,7 @@ import tapir.{Schema => TSchema}
 /**
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
-private[schema] class TSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
+private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
   def apply(schema: TSchema): ReferenceOr[OSchema] = {
     schema match {
       case TSchema.SInteger =>
@@ -39,8 +39,12 @@ private[schema] class TSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
       case TSchema.SDateTime =>
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
-      case SRef(fullName) =>
-        Left(Reference("#/components/schemas/" + fullNameToKey(fullName)))
+      case TSchema.SRef(fullName) =>
+        Left(schemaReferenceMapper.map(fullName))
+      case SCoproduct(schemas, d) =>
+        Right(
+          OSchema.apply(schemas.collect { case s: TSchema.SObject => Left(schemaReferenceMapper.map(s.info.fullName)) },
+                        d.map(discriminatorToOpenApi.apply)))
     }
   }
 }

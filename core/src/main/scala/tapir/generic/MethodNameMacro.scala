@@ -4,6 +4,7 @@ import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
 object MethodNameMacro {
+  // http://onoffswitch.net/extracting-scala-method-names-objects-macros/
   implicit def methodName[A](extractor: A => Any): MethodName = macro methodNamesMacro[A]
 
   def methodNamesMacro[A: c.WeakTypeTag](c: blackbox.Context)(extractor: c.Expr[A => Any]): c.Expr[MethodName] = {
