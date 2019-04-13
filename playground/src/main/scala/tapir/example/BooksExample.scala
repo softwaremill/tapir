@@ -3,16 +3,19 @@ package tapir.example
 import com.typesafe.scalalogging.StrictLogging
 import tapir.example.Endpoints.Limit
 
-case class Book(title: String, genre: String, year: Int)
+case class Country(name: String)
+case class Author(name: String, country: Country)
+case class Genre(name: String, description: String)
+case class Book(title: String, genre: Genre, year: Int, author: Author)
 case class BooksQuery(genre: Option[String], limit: Limit)
 
 /**
   * Descriptions of endpoints used in the example.
   */
 object Endpoints {
+  import io.circe.generic.auto._
   import tapir._
   import tapir.json.circe._
-  import io.circe.generic.auto._
 
   type Limit = Option[Int]
   type AuthToken = String
@@ -23,7 +26,10 @@ object Endpoints {
   // The path for this endpoint will be '/books/add', as we are using the base endpoint
   val addBook: Endpoint[(Book, AuthToken), String, Unit, Nothing] = baseEndpoint.post
     .in("add")
-    .in(jsonBody[Book].description("The book to add").example(Book("Pride and Prejudice", "Novel", 1813)))
+    .in(
+      jsonBody[Book]
+        .description("The book to add")
+        .example(Book("Pride and Prejudice", Genre("Novel", ""), 1813, Author("Jane Austen", Country("United Kingdom")))))
     .in(header[String]("X-Auth-Token").description("The token is 'secret'"))
 
   // Re-usable parameter description
@@ -56,8 +62,9 @@ object BooksExample extends App with StrictLogging {
   def booksRoutes: Route = {
     import akka.http.scaladsl.server.Directives._
     import tapir.server.akkahttp._
-    import scala.concurrent.Future
+
     import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.Future
 
     def bookAddLogic(book: Book, token: AuthToken): Future[Either[String, Unit]] = Future {
       if (token != "secret") {
@@ -88,13 +95,12 @@ object BooksExample extends App with StrictLogging {
   def startServer(route: Route, yaml: String): Unit = {
     import akka.actor.ActorSystem
     import akka.http.scaladsl.Http
-    import akka.stream.ActorMaterializer
     import akka.http.scaladsl.server.Directives._
-    import scala.concurrent.duration._
+    import akka.stream.ActorMaterializer
+
     import scala.concurrent.Await
-
+    import scala.concurrent.duration._
     val routes = route ~ new SwaggerUI(yaml).routes
-
     implicit val actorSystem: ActorSystem = ActorSystem()
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     Await.result(Http().bindAndHandle(routes, "localhost", 8080), 1.minute)
@@ -104,8 +110,8 @@ object BooksExample extends App with StrictLogging {
 
   def makeClientRequest(): Unit = {
 
-    import tapir.client.sttp._
     import com.softwaremill.sttp._
+    import tapir.client.sttp._
 
     implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
 
@@ -163,12 +169,15 @@ object Library {
 
   val Books = new AtomicReference(
     Vector(
-      Book("The Sorrows of Young Werther", "Novel", 1774),
-      Book("Iliad", "Poetry", -8000),
-      Book("Nad Niemnem", "Novel", 1888),
-      Book("The Colour of Magic", "Fantasy", 1983),
-      Book("The Art of Computer Programming", "Non-fiction", 1968),
-      Book("Pharaoh", "Novel", 1897),
+      Book("The Sorrows of Young Werther",
+           Genre("Novel", "Novel is genre"),
+           1774,
+           Author("Johann Wolfgang von Goethe", Country("Germany"))),
+      Book("Iliad", Genre("Poetry", ""), -8000, Author("Homer", Country("Greece"))),
+      Book("Nad Niemnem", Genre("Novel", ""), 1888, Author("Eliza Orzeszkowa", Country("Poland"))),
+      Book("The Colour of Magic", Genre("Fantasy", ""), 1983, Author("Terry Pratchett", Country("United Kingdom"))),
+      Book("The Art of Computer Programming", Genre("Non-fiction", ""), 1968, Author("Donald Knuth", Country("USA"))),
+      Book("Pharaoh", Genre("Novel", ""), 1897, Author("Boleslaw Prus", Country("Poland"))),
     ))
 
   def getBooks(query: BooksQuery): Vector[Book] = {
@@ -179,7 +188,7 @@ object Library {
     }
     val filteredBooks = query.genre match {
       case None    => limitedBooks
-      case Some(g) => limitedBooks.filter(_.genre.equalsIgnoreCase(g))
+      case Some(g) => limitedBooks.filter(_.genre.name.equalsIgnoreCase(g))
     }
     filteredBooks
   }
