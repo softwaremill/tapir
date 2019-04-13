@@ -41,8 +41,6 @@ private[schema] class TSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
       case SRef(fullName) =>
         Left(Reference("#/components/schemas/" + fullNameToKey(fullName)))
-      case TSchema.SCoproduct(schemas) =>
-        Right(OSchema(schemas.map(apply)))
     }
   }
 }

@@ -1,5 +1,7 @@
 package tapir
 
+import tapir.generic.MethodName
+
 sealed trait Schema {
   def show: String
 }
@@ -37,9 +39,18 @@ object Schema {
     def show: String = s"ref($fullName)"
   }
 
-  case class SCoproduct(schemas: List[Schema]) extends Schema {
+  case class SCoproduct(schemas: List[Schema], discriminator: Option[Discriminator[_]]) extends Schema {
     override def show: String = "allOf:" + schemas.mkString(",")
   }
 
   case class SObjectInfo(shortName: String, fullName: String)
+
+  case class Discriminator[T](propertyName: String, mapping: Map[String, SchemaFor[_ <: T]])
+
+  def discriminator[T, R](name: MethodName)(mapping: Map[R, SchemaFor[_ <: T]]): Discriminator[T] = {
+    val map: Map[String, SchemaFor[_ <: T]] = mapping.map {
+      case (k, v) => k.toString -> v
+    }.toMap
+    Discriminator[T](name.name, map)
+  }
 }
