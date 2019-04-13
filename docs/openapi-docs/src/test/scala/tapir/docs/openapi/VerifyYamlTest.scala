@@ -218,7 +218,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .out(jsonBody[NestedEntity])
     val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
-    println(actualYaml)
+
     actualYamlNoIndent shouldBe expectedYaml
   }
 
