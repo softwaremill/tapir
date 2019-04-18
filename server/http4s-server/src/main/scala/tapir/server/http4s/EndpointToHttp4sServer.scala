@@ -60,7 +60,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     val responseValues = new OutputToHttp4sResponse[F](serverOptions).apply(output, v)
     val statusCode = responseValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(defaultStatusCode)
 
-    val headers = Headers(responseValues.headers: _*)
+    val headers = Headers.of(responseValues.headers: _*)
     responseValues.body match {
       case Some(entity) => Response(status = statusCode, headers = headers, body = entity)
       case None         => Response(status = statusCode, headers = headers)
@@ -73,7 +73,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case DecodeFailureHandling.NoMatch => None
       case DecodeFailureHandling.RespondWithResponse(statusCode, body, codec) =>
         val (entity, header) = new OutputToHttp4sResponse(serverOptions).rawValueToEntity(codec.meta, codec.encode(body))
-        Some(Response(status = statusCodeToHttp4sStatus(statusCode), headers = Headers(header), body = entity))
+        Some(Response(status = statusCodeToHttp4sStatus(statusCode), headers = Headers.of(header), body = entity))
     }
   }
 }

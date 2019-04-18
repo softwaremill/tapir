@@ -5,7 +5,6 @@ import cats.data.NonEmptyList
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
 import org.http4s.{EntityBody, HttpRoutes}
-import org.http4s.syntax.kleisli._
 import tapir.Endpoint
 import tapir.server.ServerEndpoint
 import tapir.typelevel.ReplaceFirstInTuple
