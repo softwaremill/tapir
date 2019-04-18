@@ -348,6 +348,17 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       sttp.get(uri"$baseUri/p2?q1=10").send().map(_.code shouldBe StatusCodes.BadRequest)
   }
 
+  testServer(
+    "two endpoints with path inputs, the first one less specific than the second",
+    NonEmptyList.of(
+      route(endpoint.get.in("p1").out(stringBody), (_: Unit) => pureResult("e1".asRight[Unit])),
+      route(endpoint.get.in("p1" / "p2").out(stringBody), (_: Unit) => pureResult("e2".asRight[Unit]))
+    )
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/p1").send().map(_.unsafeBody shouldBe "e1") >>
+      sttp.get(uri"$baseUri/p1/p2").send().map(_.unsafeBody shouldBe "e2")
+  }
+
   //
 
   def throwFruits(name: String): R[String] = name match {
