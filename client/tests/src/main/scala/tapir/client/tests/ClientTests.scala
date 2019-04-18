@@ -2,6 +2,7 @@ package tapir.client.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicInteger
 
 import cats.effect._
 import cats.effect.concurrent.Ref
@@ -23,7 +24,6 @@ import tapir.model.{MultiQueryParams, StatusCodes, UsernamePassword}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.Random
 
 trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
@@ -174,7 +174,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    port = randomPort()
+    port = nextPort()
 
     exitSignal = SignallingRef.apply[IO, Boolean](false).unsafeRunSync()
 
@@ -201,6 +201,6 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   //
 
-  private val random = new Random()
-  private def randomPort(): Port = random.nextInt(29232) + 32768
+  private val _nextPort = new AtomicInteger(40000)
+  def nextPort(): Port = _nextPort.getAndIncrement()
 }

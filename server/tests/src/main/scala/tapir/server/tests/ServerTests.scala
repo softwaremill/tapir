@@ -2,6 +2,7 @@ package tapir.server.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicInteger
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
@@ -17,7 +18,6 @@ import tapir.json.circe._
 import io.circe.generic.auto._
 
 import scala.reflect.ClassTag
-import scala.util.Random
 
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
 
@@ -427,7 +427,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
     val resources = for {
-      port <- Resource.liftF(IO(randomPort()))
+      port <- Resource.liftF(IO(nextPort()))
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
@@ -436,6 +436,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   //
 
-  private val random = new Random()
-  def randomPort(): Port = random.nextInt(29232) + 32768
+  def initialPort: Int
+  private lazy val _nextPort = new AtomicInteger(initialPort)
+  def nextPort(): Port = _nextPort.getAndIncrement()
 }
