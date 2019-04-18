@@ -135,6 +135,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           http4s.MediaType
             .parse(mt.mediaType)
             .right
-            .getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $mediaType")))
+            .getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $mediaType"))
+        )
     }
 }

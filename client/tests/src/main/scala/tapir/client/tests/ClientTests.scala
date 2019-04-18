@@ -50,9 +50,11 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_json_out_json, FruitAmount("orange", 11), Right(FruitAmount("orange", 11)))
   testClient(in_byte_array_out_byte_array, "banana kiwi".getBytes(), Right("banana kiwi".getBytes()))
   testClient(in_byte_buffer_out_byte_buffer, ByteBuffer.wrap("mango".getBytes), Right(ByteBuffer.wrap("mango".getBytes)))
-  testClient(in_input_stream_out_input_stream,
-             new ByteArrayInputStream("mango".getBytes),
-             Right(new ByteArrayInputStream("mango".getBytes)))
+  testClient(
+    in_input_stream_out_input_stream,
+    new ByteArrayInputStream("mango".getBytes),
+    Right(new ByteArrayInputStream("mango".getBytes))
+  )
   testClient(in_file_out_file, testFile, Right(testFile))
   testClient(in_form_out_form, FruitAmount("plum", 10), Right(FruitAmount("plum", 10)))
   testClient(
@@ -67,9 +69,11 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   // TODO: test root path
   testClient(in_auth_apikey_header_out_string, "1234", Right("Authorization=None; X-Api-Key=Some(1234); Query=None"))
   testClient(in_auth_apikey_query_out_string, "1234", Right("Authorization=None; X-Api-Key=None; Query=Some(1234)"))
-  testClient(in_auth_basic_out_string,
-             UsernamePassword("teddy", Some("bear")),
-             Right("Authorization=Some(Basic dGVkZHk6YmVhcg==); X-Api-Key=None; Query=None"))
+  testClient(
+    in_auth_basic_out_string,
+    UsernamePassword("teddy", Some("bear")),
+    Right("Authorization=Some(Basic dGVkZHk6YmVhcg==); X-Api-Key=None; Query=None")
+  )
   testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
   testClient(in_string_out_status_from_string, "apple", Right("fruit: apple")) // status from should be a no-op from the client interpreter's point of view
   testClient(in_string_out_status, "apple", Right(StatusCodes.Ok))
@@ -93,7 +97,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       send(in_stream_out_stream[S], port, mkStream("mango cranberry"))
         .unsafeRunSync()
         .right
-        .get) shouldBe "mango cranberry"
+        .get
+    ) shouldBe "mango cranberry"
   }
 
   //
@@ -143,7 +148,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): IO[Either[E, O]]
 
   def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): Unit = {
+      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]
+  ): Unit = {
 
     test(e.show) {
       // adjust test result values to a form that is comparable by scalatest

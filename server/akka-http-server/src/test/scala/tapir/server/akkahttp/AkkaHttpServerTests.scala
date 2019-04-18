@@ -39,7 +39,8 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(
-      implicit eClassTag: ClassTag[E]): Route = {
+      implicit eClassTag: ClassTag[E]
+  ): Route = {
     e.toRouteRecoverErrors(fn)
   }
 

@@ -143,7 +143,8 @@ class VerifyYamlTest extends FunSuite with Matchers {
         StatusCodes.BadRequest,
         whenClass[ErrorInfo.NotFound] -> StatusCodes.NotFound,
         whenClass[ErrorInfo.Unauthorized] -> StatusCodes.Unauthorized
-      ).defaultSchema(schemaFor[ErrorInfo.Unknown]))
+      ).defaultSchema(schemaFor[ErrorInfo.Unknown])
+    )
 
     // when
     val actualYaml = List(e).toOpenAPI(Info("Fruits", "1.0")).toYaml

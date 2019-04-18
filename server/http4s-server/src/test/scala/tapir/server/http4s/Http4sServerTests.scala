@@ -29,7 +29,8 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, EntityBody[IO]], fn: I => IO[O])(
-      implicit eClassTag: ClassTag[E]): HttpRoutes[IO] = {
+      implicit eClassTag: ClassTag[E]
+  ): HttpRoutes[IO] = {
     e.toRouteRecoverErrors(fn)
   }
 

@@ -168,8 +168,9 @@ object Library {
       Book("Nad Niemnem", "Novel", 1888),
       Book("The Colour of Magic", "Fantasy", 1983),
       Book("The Art of Computer Programming", "Non-fiction", 1968),
-      Book("Pharaoh", "Novel", 1897),
-    ))
+      Book("Pharaoh", "Novel", 1897)
+    )
+  )
 
   def getBooks(query: BooksQuery): Vector[Book] = {
     val allBooks = Books.get()

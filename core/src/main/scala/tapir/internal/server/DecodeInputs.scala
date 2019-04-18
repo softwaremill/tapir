@@ -66,9 +66,11 @@ object DecodeInputs {
     }
   }
 
-  private def apply(inputs: Vector[EndpointInput.Basic[_]],
-                    values: DecodeInputsResult.Values,
-                    ctx: DecodeInputsContext): (DecodeInputsResult, DecodeInputsContext) = {
+  private def apply(
+      inputs: Vector[EndpointInput.Basic[_]],
+      values: DecodeInputsResult.Values,
+      ctx: DecodeInputsContext
+  ): (DecodeInputsResult, DecodeInputsContext) = {
     inputs match {
       case Vector() => (values, ctx)
 

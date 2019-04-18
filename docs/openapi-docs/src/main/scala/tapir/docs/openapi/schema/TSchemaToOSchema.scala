@@ -27,12 +27,14 @@ private[schema] class TSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
               case (fieldName, fieldSchema) =>
                 fieldName -> apply(fieldSchema)
             }.toListMap
-          ))
+          )
+        )
       case TSchema.SArray(el) =>
         Right(
           OSchema(SchemaType.Array).copy(
             items = Some(apply(el))
-          ))
+          )
+        )
       case TSchema.SBinary =>
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
       case TSchema.SDate =>

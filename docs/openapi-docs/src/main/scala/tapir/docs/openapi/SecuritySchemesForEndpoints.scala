@@ -18,9 +18,11 @@ private[openapi] object SecuritySchemesForEndpoints {
   }
 
   @tailrec
-  private def nameSecuritySchemes(schemes: Vector[SecurityScheme],
-                                  takenNames: Set[SchemeName],
-                                  acc: Map[SecurityScheme, SchemeName]): Map[SecurityScheme, SchemeName] = {
+  private def nameSecuritySchemes(
+      schemes: Vector[SecurityScheme],
+      takenNames: Set[SchemeName],
+      acc: Map[SecurityScheme, SchemeName]
+  ): Map[SecurityScheme, SchemeName] = {
     schemes match {
       case Vector() => acc
       case scheme +: tail =>

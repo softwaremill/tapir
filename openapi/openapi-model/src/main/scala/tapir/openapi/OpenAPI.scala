@@ -5,12 +5,14 @@ import tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
 import scala.collection.immutable.ListMap
 
 // todo tags, externaldocs
-case class OpenAPI(openapi: String = "3.0.1",
-                   info: Info,
-                   servers: List[Server],
-                   paths: ListMap[String, PathItem],
-                   components: Option[Components],
-                   security: List[SecurityRequirement]) {
+case class OpenAPI(
+    openapi: String = "3.0.1",
+    info: Info,
+    servers: List[Server],
+    paths: ListMap[String, PathItem],
+    components: Option[Components],
+    security: List[SecurityRequirement]
+) {
 
   def addPathItem(path: String, pathItem: PathItem): OpenAPI = {
     val pathItem2 = paths.get(path) match {
@@ -165,34 +167,38 @@ case class Response(description: String, headers: ListMap[String, ReferenceOr[He
 
 case class Example(summary: Option[String], description: Option[String], value: Option[ExampleValue], externalValue: Option[String])
 
-case class Header(description: Option[String],
-                  required: Option[Boolean],
-                  deprecated: Option[Boolean],
-                  allowEmptyValue: Option[Boolean],
-                  style: Option[ParameterStyle.ParameterStyle],
-                  explode: Option[Boolean],
-                  allowReserved: Option[Boolean],
-                  schema: Option[ReferenceOr[Schema]],
-                  example: Option[ExampleValue],
-                  examples: ListMap[String, ReferenceOr[Example]],
-                  content: ListMap[String, MediaType])
+case class Header(
+    description: Option[String],
+    required: Option[Boolean],
+    deprecated: Option[Boolean],
+    allowEmptyValue: Option[Boolean],
+    style: Option[ParameterStyle.ParameterStyle],
+    explode: Option[Boolean],
+    allowReserved: Option[Boolean],
+    schema: Option[ReferenceOr[Schema]],
+    example: Option[ExampleValue],
+    examples: ListMap[String, ReferenceOr[Example]],
+    content: ListMap[String, MediaType]
+)
 
 case class Reference($ref: String)
 
 // todo: discriminator, xml, json-schema properties
-case class Schema(title: Option[String],
-                  required: List[String],
-                  `type`: SchemaType.SchemaType,
-                  items: Option[ReferenceOr[Schema]],
-                  properties: ListMap[String, ReferenceOr[Schema]],
-                  description: Option[String],
-                  format: Option[SchemaFormat.SchemaFormat],
-                  default: Option[ExampleValue],
-                  nullable: Option[Boolean],
-                  readOnly: Option[Boolean],
-                  writeOnly: Option[Boolean],
-                  example: Option[ExampleValue],
-                  deprecated: Option[Boolean])
+case class Schema(
+    title: Option[String],
+    required: List[String],
+    `type`: SchemaType.SchemaType,
+    items: Option[ReferenceOr[Schema]],
+    properties: ListMap[String, ReferenceOr[Schema]],
+    description: Option[String],
+    format: Option[SchemaFormat.SchemaFormat],
+    default: Option[ExampleValue],
+    nullable: Option[Boolean],
+    readOnly: Option[Boolean],
+    writeOnly: Option[Boolean],
+    example: Option[ExampleValue],
+    deprecated: Option[Boolean]
+)
 
 object Schema {
   def apply(`type`: SchemaType.SchemaType): Schema =
@@ -226,18 +232,22 @@ object SchemaFormat extends Enumeration {
 
 case class ExampleValue(value: String)
 
-case class SecurityScheme(`type`: String,
-                          description: Option[String],
-                          name: Option[String],
-                          in: Option[String],
-                          scheme: Option[String],
-                          bearerFormat: Option[String],
-                          flows: Option[OAuthFlows],
-                          openIdConnectUrl: Option[String])
+case class SecurityScheme(
+    `type`: String,
+    description: Option[String],
+    name: Option[String],
+    in: Option[String],
+    scheme: Option[String],
+    bearerFormat: Option[String],
+    flows: Option[OAuthFlows],
+    openIdConnectUrl: Option[String]
+)
 
-case class OAuthFlows(`implicit`: Option[OAuthFlow],
-                      password: Option[OAuthFlow],
-                      clientCredentials: Option[OAuthFlow],
-                      authorizationCode: Option[OAuthFlow])
+case class OAuthFlows(
+    `implicit`: Option[OAuthFlow],
+    password: Option[OAuthFlow],
+    clientCredentials: Option[OAuthFlow],
+    authorizationCode: Option[OAuthFlow]
+)
 
 case class OAuthFlow(authorizationUrl: String, tokenUrl: String, refreshUrl: Option[String], scopes: ListMap[String, String])
