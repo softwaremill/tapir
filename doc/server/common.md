@@ -110,7 +110,7 @@ interpreter) and for an arbitrary monad (in the http4s interpreter), so importin
 
 ```scala
 import tapir.server.akkahttp._
-val r: Route = myEndpoint.toRoute((authFn _).andThenFirstE(logicFn _))
+val r: Route = myEndpoint.toRoute((authFn _).andThenFirstE((logicFn _).tupled))
 ```
 
 Writing down the types, here are the generic signatures when using `andThenFirst` and `andThenFirstE`:
