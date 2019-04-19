@@ -3,6 +3,8 @@ package tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import tapir._
+import tapir.docs.openapi.dtos.a.{Pet => APet}
+import tapir.docs.openapi.dtos.b.{Pet => BPet}
 import tapir.json.circe._
 import tapir.model.{Method, StatusCodes}
 import tapir.openapi.circe.yaml._
@@ -161,6 +163,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml
     println(actualYaml)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should handle classes with same name") {
+    val e: Endpoint[APet, Unit, BPet, Nothing] = endpoint
+      .in(jsonBody[APet])
+      .out(jsonBody[BPet])
+    val expectedYaml = loadYaml("expected_same_fullnames.yml")
+
+    val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
