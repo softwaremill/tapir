@@ -11,6 +11,9 @@ import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
 import tapir.internal.UrlencodedData
 import tapir.model.Part
 
+import scala.annotation.implicitNotFound
+import scala.util.{Failure, Success, Try}
+
 /**
   * A pair of functions, one to encode a value of type `T` to a raw value of type `R`,
   * and another one to decode.
@@ -21,7 +24,14 @@ import tapir.model.Part
   * @tparam M The media type of encoded values.
   * @tparam R Type of the raw value to which values are encoded.
   */
-trait Codec[T, M <: MediaType, R] { outer =>
+@implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
+Did you define a codec for: ${T}?
+Did you import the codecs for: ${M}?
+Is there an implicit schema for: ${T}, and all of its components?
+(codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
+schemas are looked up as implicit values of type SchemaFor[${T}])
+""")
+trait Codec[T, M <: MediaType, R] extends Decode[R, T] { outer =>
   def encode(t: T): R
   def decode(s: R): DecodeResult[T]
   def meta: CodecMeta[M, R]
@@ -100,8 +110,10 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
     * @param defaultCodec Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra parts
     *                     should be discarded.
     */
-  def multipartCodec(partCodecs: Map[String, AnyCodecForMany],
-                     defaultCodec: Option[AnyCodecForMany]): Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
+  def multipartCodec(
+      partCodecs: Map[String, AnyCodecForMany],
+      defaultCodec: Option[AnyCodecForMany]
+  ): Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
     new Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] {
       private val mvt = MultipartValueType(partCodecs, defaultCodec)
 
@@ -151,7 +163,14 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
   *
   * Should be used for inputs/outputs which allow optional values.
   */
-trait CodecForOptional[T, M <: MediaType, R] { outer =>
+@implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
+Did you define a codec for: ${T}?
+Did you import the codecs for: ${M}?
+Is there an implicit schema for: ${T}, and all of its components?
+(codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
+schemas are looked up as implicit values of type SchemaFor[${T}])
+""")
+trait CodecForOptional[T, M <: MediaType, R] extends Decode[Option[R], T] { outer =>
   def encode(t: T): Option[R]
   def decode(s: Option[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
@@ -196,7 +215,14 @@ object CodecForOptional {
   *
   * Should be used for inputs/outputs which allow multiple values.
   */
-trait CodecForMany[T, M <: MediaType, R] { outer =>
+@implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
+Did you define a codec for: ${T}?
+Did you import the codecs for: ${M}?
+Is there an implicit schema for: ${T}, and all of its components?
+(codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
+schemas are looked up as implicit values of type SchemaFor[${T}])
+""")
+trait CodecForMany[T, M <: MediaType, R] extends Decode[Seq[R], T] { outer =>
   def encode(t: T): Seq[R]
   def decode(s: Seq[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
@@ -282,4 +308,18 @@ case class MultipartValueType(partCodecs: Map[String, AnyCodecForMany], defaultC
     extends RawValueType[Seq[RawPart]] {
   private[tapir] def partCodec(name: String): Option[AnyCodecForMany] = partCodecs.get(name).orElse(defaultCodec)
   def partCodecMeta(name: String): Option[AnyCodecMeta] = partCodec(name).map(_.meta)
+}
+
+trait Decode[F, T] {
+  def decode(s: F): DecodeResult[T]
+
+  /**
+    * Calls `decode` and catches any exceptions that might occur, converting them to decode failures.
+    */
+  def safeDecode(f: F): DecodeResult[T] = {
+    Try(decode(f)) match {
+      case Success(r) => r
+      case Failure(e) => DecodeResult.Error(f.toString, e)
+    }
+  }
 }

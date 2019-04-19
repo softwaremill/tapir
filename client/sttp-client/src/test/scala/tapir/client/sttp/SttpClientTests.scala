@@ -25,7 +25,8 @@ class SttpClientTests extends ClientTests[fs2.Stream[IO, ByteBuffer]] {
       .unsafeRunSync()
 
   override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, fs2.Stream[IO, ByteBuffer]], port: Port, args: I)(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): IO[Either[E, O]] = {
+      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]
+  ): IO[Either[E, O]] = {
 
     paramsAsArgs.applyFn(e.toSttpRequest(uri"http://localhost:$port"), args).send().map(_.unsafeBody)
   }

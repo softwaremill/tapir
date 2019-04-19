@@ -5,9 +5,16 @@ package tapir.typelevel
   * IK = (I, A, B, C, ...)
   * JK = (J, A, B, B, ...)
   */
-trait ReplaceFirstInTuple[I, J, IK, JK]
+trait ReplaceFirstInTuple[I, J, IK, JK] {
+  def replace(ik: IK, j: J): JK
+  def first(ik: IK): I
+}
 
 object ReplaceFirstInTuple {
-  [1..21#implicit def replaceFirstInTuple1[I, J, [#A1#]]: ReplaceFirstInTuple[I, J, (I, [#A1#]), (J, [#A1#])] = null#
+  [1..21#implicit def replaceFirstInTuple1[I, J, [#A1#]]: ReplaceFirstInTuple[I, J, (I, [#A1#]), (J, [#A1#])] =
+    new ReplaceFirstInTuple[I, J, (I, [#A1#]), (J, [#A1#])] {
+      def replace(ik: (I, [#A1#]), j: J): (J, [#A1#]) = ik.copy(_##1 = j)
+      def first(ik: (I, [#A1#])): I = ik._##1
+    }#
   ]
 }

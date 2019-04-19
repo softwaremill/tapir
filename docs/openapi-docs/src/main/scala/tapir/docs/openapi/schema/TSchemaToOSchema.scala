@@ -26,15 +26,21 @@ private[schema] class TSchemaToOSchema(fullNameToKey: Map[String, SchemaKey]) {
             properties = fields.map {
               case (fieldName, fieldSchema) =>
                 fieldName -> apply(fieldSchema)
-            }.toMap
-          ))
+            }.toListMap
+          )
+        )
       case TSchema.SArray(el) =>
         Right(
           OSchema(SchemaType.Array).copy(
             items = Some(apply(el))
-          ))
+          )
+        )
       case TSchema.SBinary =>
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
+      case TSchema.SDate =>
+        Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
+      case TSchema.SDateTime =>
+        Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
       case SRef(fullName) =>
         Left(Reference("#/components/schemas/" + fullNameToKey(fullName)))
     }

@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Directives.{
   extractMaterializer,
   extractRequestContext,
   onSuccess,
-  reject,
+  reject
 }
 import akka.http.scaladsl.server.{Directive1, RequestContext}
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
@@ -54,7 +54,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 rawBodyDirective(codec.meta.rawValueType)
                   .map { v =>
-                    codec.decode(Some(v)) match {
+                    codec.safeDecode(Some(v)) match {
                       case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
                       case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                     }
@@ -96,7 +96,8 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
 
   private def entityToRawValue[R](entity: HttpEntity, rawValueType: RawValueType[R], ctx: RequestContext)(
       implicit mat: Materializer,
-      ec: ExecutionContext): Future[R] = {
+      ec: ExecutionContext
+  ): Future[R] = {
 
     rawValueType match {
       case StringValueType(_)   => implicitly[FromEntityUnmarshaller[String]].apply(entity)
@@ -106,14 +107,16 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       case FileValueType =>
         serverOptions
           .createFile(ctx)
-          .flatMap(file =>
-            entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map { ioResult =>
-              ioResult.status match {
-                case Failure(t) => throw t
-                case _          => // do nothing
+          .flatMap(
+            file =>
+              entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map { ioResult =>
+                ioResult.status match {
+                  case Failure(t) => throw t
+                  case _          => // do nothing
+                }
+                file
               }
-              file
-          })
+          )
       case mvt: MultipartValueType =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(entity).flatMap { fd =>
           fd.parts
@@ -127,7 +130,8 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
 
   private def toRawPart[R](part: Multipart.FormData.BodyPart, codecMeta: CodecMeta[_, R], ctx: RequestContext)(
       implicit mat: Materializer,
-      ec: ExecutionContext): Future[Part[R]] = {
+      ec: ExecutionContext
+  ): Future[Part[R]] = {
 
     entityToRawValue(part.entity, codecMeta.rawValueType, ctx)
       .map(r => Part(part.name, part.additionalDispositionParams, part.headers.map(h => (h.name, h.value)), r))

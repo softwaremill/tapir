@@ -53,8 +53,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
                                             |implicitly[Codec[Test5, MediaType.MultipartFormData, Seq[RawPart]]]
                                             |""".stripMargin)
 
-    error.message should include("could not find implicit value")
-    error.message should include("CodecForMany[NoCodecForThisTrait")
+    error.message should include("Cannot find a codec for type: NoCodecForThisTrait")
   }
 
   it should "use the right schema for a case class with part metadata" in {

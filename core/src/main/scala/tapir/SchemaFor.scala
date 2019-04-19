@@ -3,6 +3,8 @@ package tapir
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.file.Path
+import java.time._
+import java.util.Date
 
 import tapir.Schema._
 import tapir.generic.SchemaForMagnoliaDerivation
@@ -14,39 +16,28 @@ trait SchemaFor[T] {
   def show: String = s"schema is $schema"
 }
 object SchemaFor extends SchemaForMagnoliaDerivation {
-  implicit case object SchemaForString extends SchemaFor[String] {
-    override val schema: Schema = SString
+  def apply[T](s: Schema): SchemaFor[T] = new SchemaFor[T] {
+    override def schema: Schema = s
   }
-  implicit case object SchemaForShort extends SchemaFor[Short] {
-    override val schema: Schema = SInteger
-  }
-  implicit case object SchemaForInt extends SchemaFor[Int] {
-    override val schema: Schema = SInteger
-  }
-  implicit case object SchemaForLong extends SchemaFor[Long] {
-    override val schema: Schema = SInteger
-  }
-  implicit case object SchemaForFloat extends SchemaFor[Float] {
-    override val schema: Schema = SNumber
-  }
-  implicit case object SchemaForDouble extends SchemaFor[Double] {
-    override val schema: Schema = SNumber
-  }
-  implicit case object SchemaForBoolean extends SchemaFor[Boolean] {
-    override val schema: Schema = SBoolean
-  }
-  implicit case object SchemaForFile extends SchemaFor[File] {
-    override val schema: Schema = SBinary
-  }
-  implicit case object SchemaForPath extends SchemaFor[Path] {
-    override val schema: Schema = SBinary
-  }
-  implicit case object SchemaForByteArray extends SchemaFor[Array[Byte]] {
-    override val schema: Schema = SBinary
-  }
-  implicit case object SchemaForByteBuffer extends SchemaFor[ByteBuffer] {
-    override val schema: Schema = SBinary
-  }
+
+  implicit val schemaForString: SchemaFor[String] = SchemaFor(SString)
+  implicit val schemaForShort: SchemaFor[Short] = SchemaFor(SInteger)
+  implicit val schemaForInt: SchemaFor[Int] = SchemaFor(SInteger)
+  implicit val schemaForLong: SchemaFor[Long] = SchemaFor(SInteger)
+  implicit val schemaForFloat: SchemaFor[Float] = SchemaFor(SNumber)
+  implicit val schemaForDouble: SchemaFor[Double] = SchemaFor(SNumber)
+  implicit val schemaForBoolean: SchemaFor[Boolean] = SchemaFor(SBoolean)
+  implicit val schemaForFile: SchemaFor[File] = SchemaFor(SBinary)
+  implicit val schemaForPath: SchemaFor[Path] = SchemaFor(SBinary)
+  implicit val schemaForByteArray: SchemaFor[Array[Byte]] = SchemaFor(SBinary)
+  implicit val schemaForByteBuffer: SchemaFor[ByteBuffer] = SchemaFor(SBinary)
+  implicit val schemaForInstant: SchemaFor[Instant] = SchemaFor(SDateTime)
+  implicit val schemaForZonedDateTime: SchemaFor[ZonedDateTime] = SchemaFor(SDateTime)
+  implicit val schemaForOffsetDateTime: SchemaFor[OffsetDateTime] = SchemaFor(SDateTime)
+  implicit val schemaForDate: SchemaFor[Date] = SchemaFor(SDateTime)
+  implicit val schemaForLocalDateTime: SchemaFor[LocalDateTime] = SchemaFor(SDateTime)
+  implicit val schemaForLocalDate: SchemaFor[LocalDate] = SchemaFor(SDate)
+
   implicit def schemaForOption[T: SchemaFor]: SchemaFor[Option[T]] = new SchemaFor[Option[T]] {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
     override def isOptional: Boolean = true

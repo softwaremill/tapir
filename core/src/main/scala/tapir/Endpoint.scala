@@ -2,6 +2,7 @@ package tapir
 
 import tapir.EndpointInput.RequestMethod
 import tapir.model.Method
+import tapir.server.ServerEndpoint
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 /**
@@ -41,22 +42,25 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def mapIn[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[II, E, O, S] =
     this.copy[II, E, O, S](input = input.map(f)(g))
 
-  def mapInTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                              paramsAsArgs: ParamsAsArgs[I]): Endpoint[CASE_CLASS, E, O, S] =
+  def mapInTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): Endpoint[CASE_CLASS, E, O, S] =
     this.copy[CASE_CLASS, E, O, S](input = input.mapTo(c)(fc, paramsAsArgs))
 
   def mapErrorOut[EE](f: E => EE)(g: EE => E)(implicit paramsAsArgs: ParamsAsArgs[E]): Endpoint[I, EE, O, S] =
     this.copy[I, EE, O, S](errorOutput = errorOutput.map(f)(g))
 
-  def mapErrorOutTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, E, CASE_CLASS],
-                                                                    paramsAsArgs: ParamsAsArgs[E]): Endpoint[I, CASE_CLASS, O, S] =
+  def mapErrorOutTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, E, CASE_CLASS], paramsAsArgs: ParamsAsArgs[E]): Endpoint[I, CASE_CLASS, O, S] =
     this.copy[I, CASE_CLASS, O, S](errorOutput = errorOutput.mapTo(c)(fc, paramsAsArgs))
 
   def mapOut[OO](f: O => OO)(g: OO => O)(implicit paramsAsArgs: ParamsAsArgs[O]): Endpoint[I, E, OO, S] =
     this.copy[I, E, OO, S](output = output.map(f)(g))
 
-  def mapOutTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, O, CASE_CLASS],
-                                                               paramsAsArgs: ParamsAsArgs[O]): Endpoint[I, E, CASE_CLASS, S] =
+  def mapOutTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, O, CASE_CLASS], paramsAsArgs: ParamsAsArgs[O]): Endpoint[I, E, CASE_CLASS, S] =
     this.copy[I, E, CASE_CLASS, S](output = output.mapTo(c)(fc, paramsAsArgs))
 
   def name(n: String): Endpoint[I, E, O, S] = copy(info = info.name(n))
@@ -70,6 +74,8 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def show: String = {
     s"Endpoint${info.name.map("[" + _ + "]").getOrElse("")}(in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
   }
+
+  def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
 }
 
 case class EndpointInfo(name: Option[String], summary: Option[String], description: Option[String], tags: Vector[String]) {

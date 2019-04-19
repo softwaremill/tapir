@@ -2,6 +2,7 @@ package tapir.server.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
+import java.util.concurrent.atomic.AtomicInteger
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
@@ -17,7 +18,6 @@ import tapir.json.circe._
 import io.circe.generic.auto._
 
 import scala.reflect.ClassTag
-import scala.util.Random
 
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
 
@@ -124,8 +124,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
-  testServer(in_input_stream_out_input_stream)((is: InputStream) =>
-    pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])) { baseUri =>
+  testServer(in_input_stream_out_input_stream)(
+    (is: InputStream) => pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
+  ) { baseUri =>
     sttp.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
@@ -150,8 +151,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         .map(_.body shouldBe Right("fruit=mulp&amount=11"))
   }
 
-  testServer(in_query_params_out_string)((mqp: MultiQueryParams) =>
-    pureResult(mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&").asRight[Unit])) { baseUri =>
+  testServer(in_query_params_out_string)(
+    (mqp: MultiQueryParams) => pureResult(mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&").asRight[Unit])
+  ) { baseUri =>
     val params = Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")
     sttp
       .get(uri"$baseUri/api/echo/params?$params")
@@ -190,8 +192,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
-  testServer(in_simple_multipart_out_multipart)((fa: FruitAmount) =>
-    pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])) { baseUri =>
+  testServer(in_simple_multipart_out_multipart)(
+    (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
+  ) { baseUri =>
     sttp
       .post(uri"$baseUri/api/echo/multipart")
       .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
@@ -202,18 +205,20 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
-  testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
-    pureResult(
-      FruitData(Part(writeToFile(readFromFile(fd.data.body).reverse)).header("X-Auth", fd.data.header("X-Auth").toString)).asRight[Unit])) {
-    baseUri =>
-      val file = writeToFile("peach mario")
-      sttp
-        .post(uri"$baseUri/api/echo/multipart")
-        .multipartBody(multipartFile("data", file).fileName("fruit-data.txt").header("X-Auth", "12"))
-        .send()
-        .map { r =>
-          r.unsafeBody should include regex "name=\"data\"\\s*X-Auth: Some\\(12\\)\\s*oiram hcaep"
-        }
+  testServer(in_file_multipart_out_multipart)(
+    (fd: FruitData) =>
+      pureResult(
+        FruitData(Part(writeToFile(readFromFile(fd.data.body).reverse)).header("X-Auth", fd.data.header("X-Auth").toString)).asRight[Unit]
+      )
+  ) { baseUri =>
+    val file = writeToFile("peach mario")
+    sttp
+      .post(uri"$baseUri/api/echo/multipart")
+      .multipartBody(multipartFile("data", file).fileName("fruit-data.txt").header("X-Auth", "12"))
+      .send()
+      .map { r =>
+        r.unsafeBody should include regex "name=\"data\"\\s*X-Auth: Some\\(12\\)\\s*oiram hcaep"
+      }
   }
 
   testServer(in_query_out_string, "invalid query parameter")((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
@@ -227,8 +232,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
-  testServer(in_cookies_out_cookies)((cs: List[tapir.model.Cookie]) =>
-    pureResult(cs.map(c => tapir.model.SetCookie(c.name, c.value.reverse)).asRight[Unit])) { baseUri =>
+  testServer(in_cookies_out_cookies)(
+    (cs: List[tapir.model.Cookie]) => pureResult(cs.map(c => tapir.model.SetCookie(c.name, c.value.reverse)).asRight[Unit])
+  ) { baseUri =>
     sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send().map { r =>
       r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
     }
@@ -238,7 +244,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     baseUri =>
       sttp.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send().map { r =>
         r.cookies.toList shouldBe List(
-          com.softwaremill.sttp.Cookie("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true))
+          com.softwaremill.sttp.Cookie("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true)
+        )
       }
   }
 
@@ -291,8 +298,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       sttp.post(uri"$baseUri").send().map(_.unsafeBody shouldBe "POST")
   }
 
-  testServer(in_string_out_status)((v: String) =>
-    pureResult((if (v == "apple") StatusCodes.Accepted else StatusCodes.NotFound).asRight[Unit])) { baseUri =>
+  testServer(in_string_out_status)(
+    (v: String) => pureResult((if (v == "apple") StatusCodes.Accepted else StatusCodes.NotFound).asRight[Unit])
+  ) { baseUri =>
     sttp.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCodes.Accepted) >>
       sttp.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCodes.NotFound)
   }
@@ -320,10 +328,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   testServer(
     "two endpoints with a body defined as the first input: should only consume body when then path matches",
     NonEmptyList.of(
-      route(endpoint.post.in(binaryBody[Array[Byte]]).in("p1").out(stringBody),
-            (s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])),
-      route(endpoint.post.in(binaryBody[Array[Byte]]).in("p2").out(stringBody),
-            (s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit]))
+      route(
+        endpoint.post.in(binaryBody[Array[Byte]]).in("p1").out(stringBody),
+        (s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])
+      ),
+      route(
+        endpoint.post.in(binaryBody[Array[Byte]]).in("p2").out(stringBody),
+        (s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit])
+      )
     )
   ) { baseUri =>
     sttp
@@ -346,6 +358,17 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       sttp.get(uri"$baseUri/p1?q2=10").send().map(_.code shouldBe StatusCodes.BadRequest) >>
       sttp.get(uri"$baseUri/p2?q2=10").send().map(_.code shouldBe StatusCodes.Ok) >>
       sttp.get(uri"$baseUri/p2?q1=10").send().map(_.code shouldBe StatusCodes.BadRequest)
+  }
+
+  testServer(
+    "two endpoints with path inputs, the first one less specific than the second",
+    NonEmptyList.of(
+      route(endpoint.get.in("p1").out(stringBody), (_: Unit) => pureResult("e1".asRight[Unit])),
+      route(endpoint.get.in("p1" / "p2").out(stringBody), (_: Unit) => pureResult("e2".asRight[Unit]))
+    )
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/p1").send().map(_.unsafeBody shouldBe "e1") >>
+      sttp.get(uri"$baseUri/p1/p2").send().map(_.unsafeBody shouldBe "e2")
   }
 
   //
@@ -395,15 +418,16 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   def server(routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
 
-  def testServer[I, E, O](e: Endpoint[I, E, O, S], testNameSuffix: String = "")(fn: I => R[Either[E, O]])(
-      runTest: Uri => IO[Assertion]): Unit = {
+  def testServer[I, E, O](e: Endpoint[I, E, O, S], testNameSuffix: String = "")(
+      fn: I => R[Either[E, O]]
+  )(runTest: Uri => IO[Assertion]): Unit = {
 
     testServer(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix), NonEmptyList.of(route(e, fn)))(runTest)
   }
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
     val resources = for {
-      port <- Resource.liftF(IO(randomPort()))
+      port <- Resource.liftF(IO(nextPort()))
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
@@ -412,6 +436,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   //
 
-  private val random = new Random()
-  private def randomPort(): Port = random.nextInt(29232) + 32768
+  def initialPort: Int
+  private lazy val _nextPort = new AtomicInteger(initialPort)
+  def nextPort(): Port = _nextPort.getAndIncrement()
 }

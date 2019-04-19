@@ -6,6 +6,8 @@ import io.circe.syntax._
 import io.circe.{Encoder, Json}
 import tapir.openapi.OpenAPI.ReferenceOr
 
+import scala.collection.immutable.ListMap
+
 package object circe extends TapirOpenAPICirceEncoders
 
 trait TapirOpenAPICirceEncoders {
@@ -35,8 +37,8 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderParameterStyle: Encoder[ParameterStyle.ParameterStyle] = Encoder.enumEncoder(ParameterStyle)
   implicit val encoderParameterIn: Encoder[ParameterIn.ParameterIn] = Encoder.enumEncoder(ParameterIn)
   implicit val encoderParameter: Encoder[Parameter] = deriveMagnoliaEncoder[Parameter]
-  implicit val encoderResponseMap: Encoder[Map[ResponsesKey, ReferenceOr[Response]]] =
-    (responses: Map[ResponsesKey, ReferenceOr[Response]]) => {
+  implicit val encoderResponseMap: Encoder[ListMap[ResponsesKey, ReferenceOr[Response]]] =
+    (responses: ListMap[ResponsesKey, ReferenceOr[Response]]) => {
       val fields = responses.map {
         case (ResponsesDefaultKey, r)    => ("default", r.asJson)
         case (ResponsesCodeKey(code), r) => (code.toString, r.asJson)
@@ -56,9 +58,9 @@ trait TapirOpenAPICirceEncoders {
     case Nil        => Json.Null
     case l: List[T] => Json.arr(l.map(i => implicitly[Encoder[T]].apply(i)): _*)
   }
-  implicit def encodeMap[V: Encoder]: Encoder[Map[String, V]] = {
-    case m: Map[String, V] if m.isEmpty => Json.Null
-    case m: Map[String, V] =>
+  implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = {
+    case m: ListMap[String, V] if m.isEmpty => Json.Null
+    case m: ListMap[String, V] =>
       val properties = m.mapValues(v => implicitly[Encoder[V]].apply(v)).toList
       Json.obj(properties: _*)
   }

@@ -1,9 +1,11 @@
 package tapir.server.akkahttp
 
-import akka.http.scaladsl.server.{Directive, Route}
-import tapir.typelevel.{ParamsAsArgs, ParamsToTuple, ReplaceFirstInFn}
+import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server._
+import akka.http.scaladsl.server.directives.RouteDirectives
 import tapir.Endpoint
-import tapir.internal.{ParamsToSeq, SeqToParams}
+import tapir.server.ServerEndpoint
+import tapir.typelevel.{ParamsToTuple, ReplaceFirstInTuple}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -16,9 +18,9 @@ trait TapirAkkaHttpServer {
     def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: AkkaHttpServerOptions): Route =
       new EndpointToAkkaServer(serverOptions).toRoute(e)(logic)
 
-    def toRouteRecoverErrors(logic: I => Future[O])(implicit serverOptions: AkkaHttpServerOptions,
-                                                    eIsThrowable: E <:< Throwable,
-                                                    eClassTag: ClassTag[E]): Route = {
+    def toRouteRecoverErrors(
+        logic: I => Future[O]
+    )(implicit serverOptions: AkkaHttpServerOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route = {
 
       def reifyFailedFuture(f: Future[O]): Future[Either[E, O]] = {
         import ExecutionContext.Implicits.global
@@ -32,20 +34,43 @@ trait TapirAkkaHttpServer {
     }
   }
 
-  implicit class RichToFutureFunction[T, E, U](f: T => Future[Either[E, U]])(implicit ec: ExecutionContext) {
-    def andThenRight[O, FN_U[_], FN_T[_]](g: FN_U[Future[Either[E, O]]])(
-        implicit
-        r: ReplaceFirstInFn[U, FN_U, T, FN_T]): FN_T[Future[Either[E, O]]] = {
+  implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStream, Future]) {
+    def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
+      new EndpointToAkkaServer(akkaHttpOptions).toDirective(serverEndpoint.endpoint)
 
-      r.paramsAsArgsJk.toFn { paramsWithT =>
-        val paramsWithTSeq = ParamsToSeq(paramsWithT)
-        val t = paramsWithTSeq.head.asInstanceOf[T]
-        f(t).flatMap {
-          case Left(e) => Future.successful(Left(e))
-          case Right(u) =>
-            val paramsWithU = SeqToParams(u +: paramsWithTSeq.tail)
-            r.paramsAsArgsIk.asInstanceOf[ParamsAsArgs.Aux[Any, FN_U]].applyFn(g, paramsWithU)
-        }
+    def toRoute(implicit serverOptions: AkkaHttpServerOptions): Route =
+      new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoint)
+  }
+
+  implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStream, Future]]) {
+    def toRoute(implicit serverOptions: AkkaHttpServerOptions): Route = {
+      val endpointToServer = new EndpointToAkkaServer(serverOptions)
+      serverEndpoints.map(se => endpointToServer.toRoute(se)).foldLeft(RouteDirectives.reject: Route)(_ ~ _)
+    }
+  }
+
+  implicit class RichToFutureFunction[T, U](a: T => Future[U])(implicit ec: ExecutionContext) {
+    def andThenFirst[U_TUPLE, T_TUPLE, O](
+        l: U_TUPLE => Future[O]
+    )(implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => Future[O] = { tTuple =>
+      val t = replaceFirst.first(tTuple)
+      a(t).flatMap { u =>
+        val uTuple = replaceFirst.replace(tTuple, u)
+        l(uTuple)
+      }
+    }
+  }
+
+  implicit class RichToFutureOfEitherFunction[T, U, E](a: T => Future[Either[E, U]])(implicit ec: ExecutionContext) {
+    def andThenFirstE[U_TUPLE, T_TUPLE, O](
+        l: U_TUPLE => Future[Either[E, O]]
+    )(implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => Future[Either[E, O]] = { tTuple =>
+      val t = replaceFirst.first(tTuple)
+      a(t).flatMap {
+        case Left(e) => Future.successful(Left(e))
+        case Right(u) =>
+          val uTuple = replaceFirst.replace(tTuple, u)
+          l(uTuple)
       }
     }
   }

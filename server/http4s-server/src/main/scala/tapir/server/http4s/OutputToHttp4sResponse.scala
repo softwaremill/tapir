@@ -8,7 +8,7 @@ import org.http4s
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.{Charset, EntityBody, EntityEncoder, Header, Headers, multipart}
-import tapir.internal.ParamsToSeq
+import tapir.internal._
 import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
@@ -135,6 +135,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           http4s.MediaType
             .parse(mt.mediaType)
             .right
-            .getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $mediaType")))
+            .getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $mediaType"))
+        )
     }
 }

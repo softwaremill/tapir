@@ -3,6 +3,8 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{ExampleValue, Parameter, ParameterIn, Schema}
 import tapir.{EndpointIO, EndpointInput}
 
+import scala.collection.immutable.ListMap
+
 private[openapi] object EndpointInputToParameterConverter {
 
   def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
@@ -18,8 +20,8 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       schema,
       example,
-      Map.empty,
-      Map.empty
+      ListMap.empty,
+      ListMap.empty
     )
   }
 
@@ -36,8 +38,8 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       schema,
       example,
-      Map.empty,
-      Map.empty
+      ListMap.empty,
+      ListMap.empty
     )
   }
 
@@ -54,8 +56,8 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       schema,
       example,
-      Map.empty,
-      Map.empty
+      ListMap.empty,
+      ListMap.empty
     )
   }
 
@@ -72,8 +74,8 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       schema,
       example,
-      Map.empty,
-      Map.empty
+      ListMap.empty,
+      ListMap.empty
     )
   }
 }

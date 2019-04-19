@@ -16,40 +16,11 @@ sealed trait EndpointInput[I] {
   def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[II] =
     EndpointInput.Mapped(this, f, g, paramsAsArgs)
 
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                            paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
+  def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
-
-  private[tapir] def asVectorOfSingleInputs: Vector[EndpointInput.Single[_]] = this match {
-    case s: EndpointInput.Single[_]   => Vector(s)
-    case m: EndpointInput.Multiple[_] => m.inputs
-    case m: EndpointIO.Multiple[_]    => m.ios
-  }
-
-  private[tapir] def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] = this match {
-    case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
-    case EndpointInput.Multiple(inputs)               => inputs.flatMap(_.traverseInputs(handle))
-    case EndpointIO.Multiple(inputs)                  => inputs.flatMap(_.traverseInputs(handle))
-    case EndpointInput.Mapped(wrapped, _, _, _)       => wrapped.traverseInputs(handle)
-    case EndpointIO.Mapped(wrapped, _, _, _)          => wrapped.traverseInputs(handle)
-    case a: EndpointInput.Auth[_]                     => a.input.traverseInputs(handle)
-    case _                                            => Vector.empty
-  }
-
-  private[tapir] def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] = traverseInputs {
-    case b: EndpointInput.Basic[_] => Vector(b)
-    case a: EndpointInput.Auth[_]  => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
-  }
-
-  private[tapir] def auths: Vector[EndpointInput.Auth[_]] = traverseInputs {
-    case a: EndpointInput.Auth[_] => Vector(a)
-  }
-
-  private[tapir] def method: Option[Method] =
-    traverseInputs {
-      case i: EndpointInput.RequestMethod => Vector(i.m)
-    }.headOption
 }
 
 object EndpointInput {
@@ -149,35 +120,11 @@ sealed trait EndpointOutput[I] {
   def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[II] =
     EndpointOutput.Mapped(this, f, g, paramsAsArgs)
 
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                            paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[CASE_CLASS] = {
+  def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
-
-  private[tapir] def asVectorOfSingleOutputs: Vector[EndpointOutput.Single[_]] = this match {
-    case s: EndpointOutput.Single[_]   => Vector(s)
-    case m: EndpointOutput.Multiple[_] => m.outputs
-    case m: EndpointIO.Multiple[_]     => m.ios
-  }
-
-  private[tapir] def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] = this match {
-    case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
-    case EndpointOutput.Multiple(outputs)              => outputs.flatMap(_.traverseOutputs(handle))
-    case EndpointIO.Multiple(outputs)                  => outputs.flatMap(_.traverseOutputs(handle))
-    case EndpointOutput.Mapped(wrapped, _, _, _)       => wrapped.traverseOutputs(handle)
-    case EndpointIO.Mapped(wrapped, _, _, _)           => wrapped.traverseOutputs(handle)
-    case s: EndpointOutput.StatusFrom[_]               => s.output.traverseOutputs(handle)
-    case _                                             => Vector.empty
-  }
-
-  private[tapir] def asVectorOfBasicOutputs: Vector[EndpointOutput.Basic[_]] = traverseOutputs {
-    case b: EndpointOutput.Basic[_] => Vector(b)
-  }
-
-  private[tapir] def bodyType: Option[RawValueType[_]] =
-    traverseOutputs[RawValueType[_]] {
-      case b: EndpointIO.Body[_, _, _] => Vector(b.codec.meta.rawValueType)
-    }.headOption
 }
 
 object EndpointOutput {
@@ -200,11 +147,12 @@ object EndpointOutput {
 
   //
 
-  case class StatusFrom[I](output: EndpointOutput[I],
-                           default: tapir.StatusCode,
-                           defaultSchema: Option[Schema],
-                           when: Vector[(When[I], tapir.StatusCode)])
-      extends Single[I] {
+  case class StatusFrom[I](
+      output: EndpointOutput[I],
+      default: tapir.StatusCode,
+      defaultSchema: Option[Schema],
+      when: Vector[(When[I], tapir.StatusCode)]
+  ) extends Single[I] {
     def defaultSchema(s: Schema): StatusFrom[I] = this.copy(defaultSchema = Some(s))
     override def show: String = s"status from(${output.show}, $default or ${when.map(_._2).mkString("/")})"
   }
@@ -233,8 +181,9 @@ sealed trait EndpointIO[I] extends EndpointInput[I] with EndpointOutput[I] {
   override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
     EndpointIO.Mapped(this, f, g, paramsAsArgs)
 
-  override def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                                     paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
+  override def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
 }
