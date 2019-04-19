@@ -40,7 +40,7 @@ object Schema {
   }
 
   case class SCoproduct(schemas: List[Schema], discriminator: Option[Discriminator[_]]) extends Schema {
-    override def show: String = "allOf:" + schemas.mkString(",")
+    override def show: String = "oneOf:" + schemas.mkString(",")
   }
 
   case class SObjectInfo(shortName: String, fullName: String)
