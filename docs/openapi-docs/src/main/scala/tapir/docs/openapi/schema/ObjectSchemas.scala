@@ -4,9 +4,11 @@ import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema}
 import tapir.{Schema => TSchema}
 
-class ObjectSchemas(tschemaToOSchema: TSchemaToOSchema,
-                    schemaReferenceMapper: SchemaReferenceMapper,
-                    discriminatorToOpenApi: DiscriminatorToOpenApi) {
+class ObjectSchemas(
+    tschemaToOSchema: TSchemaToOSchema,
+    schemaReferenceMapper: SchemaReferenceMapper,
+    discriminatorToOpenApi: DiscriminatorToOpenApi
+) {
   def apply(schema: TSchema): ReferenceOr[OSchema] = {
     schema match {
       case TSchema.SObject(info, _, _) => Left(schemaReferenceMapper.map(info.fullName))

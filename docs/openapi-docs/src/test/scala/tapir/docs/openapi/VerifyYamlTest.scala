@@ -4,7 +4,6 @@ import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import tapir.Schema.SCoproduct
 import tapir._
-import tapir.generic.MethodNameMacro
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
 import tapir.docs.openapi.dtos.b.{Pet => BPet}
@@ -185,8 +184,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml when using coproduct types with discriminator") {
     val sPerson = implicitly[SchemaFor[Person]]
     val sOrganization = implicitly[SchemaFor[Organization]]
-    val discr =
-      Schema.discriminator[Entity, String](MethodNameMacro.methodName[Entity](_.name))(Map("john" -> sPerson, "sml" -> sOrganization))
+    val discr = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
     implicit val sEntity: SchemaFor[Entity] = SchemaFor(SCoproduct(List(sPerson.schema, sOrganization.schema), Some(discr)))
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator.yml")
@@ -213,8 +211,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml when using nested coproduct types with discriminator") {
     val sPerson = implicitly[SchemaFor[Person]]
     val sOrganization = implicitly[SchemaFor[Organization]]
-    val discriminator =
-      Schema.discriminator[Entity, String](MethodNameMacro.methodName[Entity](_.name))(Map("john" -> sPerson, "sml" -> sOrganization))
+    val discriminator = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
     implicit val sEntity: SchemaFor[Entity] = SchemaFor(SCoproduct(List(sPerson.schema, sOrganization.schema), Some(discriminator)))
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator_nested.yml")

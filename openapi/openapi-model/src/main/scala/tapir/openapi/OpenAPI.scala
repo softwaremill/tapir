@@ -184,21 +184,23 @@ case class Header(
 case class Reference($ref: String)
 
 // todo: discriminator, xml, json-schema properties
-case class Schema(title: Option[String],
-                  required: List[String],
-                  `type`: Option[SchemaType.SchemaType],
-                  items: Option[ReferenceOr[Schema]],
-                  properties: ListMap[String, ReferenceOr[Schema]],
-                  description: Option[String],
-                  format: Option[SchemaFormat.SchemaFormat],
-                  default: Option[ExampleValue],
-                  nullable: Option[Boolean],
-                  readOnly: Option[Boolean],
-                  writeOnly: Option[Boolean],
-                  example: Option[ExampleValue],
-                  deprecated: Option[Boolean],
-                  oneOf: Option[List[ReferenceOr[Schema]]],
-                  discriminator: Option[Discriminator])
+case class Schema(
+    title: Option[String],
+    required: List[String],
+    `type`: Option[SchemaType.SchemaType],
+    items: Option[ReferenceOr[Schema]],
+    properties: ListMap[String, ReferenceOr[Schema]],
+    description: Option[String],
+    format: Option[SchemaFormat.SchemaFormat],
+    default: Option[ExampleValue],
+    nullable: Option[Boolean],
+    readOnly: Option[Boolean],
+    writeOnly: Option[Boolean],
+    example: Option[ExampleValue],
+    deprecated: Option[Boolean],
+    oneOf: Option[List[ReferenceOr[Schema]]],
+    discriminator: Option[Discriminator]
+)
 
 case class Discriminator(propertyName: String, mapping: Option[ListMap[String, String]])
 
