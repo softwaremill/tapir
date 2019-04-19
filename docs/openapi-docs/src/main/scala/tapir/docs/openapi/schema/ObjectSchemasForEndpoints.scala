@@ -1,19 +1,38 @@
 package tapir.docs.openapi.schema
 
-import tapir.Schema.SObjectInfo
+import tapir.Schema.{SObject, SObjectInfo, SRef}
 import tapir.{Schema => TSchema, _}
 import tapir.docs.openapi.uniqueName
 
 object ObjectSchemasForEndpoints {
 
   def apply(es: Iterable[Endpoint[_, _, _, _]]): ObjectSchemas = {
-    val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
-    val infoToKey = calculateUniqueKeys(sObjects.map(_.info))
+    val sObjectsForEndpoints = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
+    val sObjectsAll = findNestedSObjects(Nil, sObjectsForEndpoints.toList).map(replaceSObjectFieldsWithSRef)
+    val infoToKey = calculateUniqueKeys(sObjectsAll.map(_.info))
+
     val tschemaToOSchema = new TSchemaToOSchema(infoToKey.map { case (k, v) => k.fullName -> v })
-    val infosToSchema = sObjects.map(so => (so.info, tschemaToOSchema(so))).toMap
+    val infosToSchema = sObjectsAll.map(so => (so.info, tschemaToOSchema(so))).toMap
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
 
     new ObjectSchemas(tschemaToOSchema, schemaKeys)
+  }
+
+  private def findNestedSObjects(acc: List[SObject], left: List[SObject]): List[SObject] = {
+    def collectFieldObjects(x: SObject) = x.fields.collect { case (_, s: SObject) => s }.toList
+    left match {
+      case x :: xs =>
+        findNestedSObjects(findNestedSObjects(acc :+ x, collectFieldObjects(x)), xs)
+      case Nil => acc
+    }
+  }
+
+  private def replaceSObjectFieldsWithSRef(obj: SObject): SObject = {
+    val newFields = obj.fields map {
+      case (s, o: SObject) => (s, SRef(o.info.fullName))
+      case x               => x
+    }
+    obj.copy(fields = newFields)
   }
 
   private def calculateUniqueKeys(infos: Iterable[SObjectInfo]): Map[SObjectInfo, SchemaKey] = {

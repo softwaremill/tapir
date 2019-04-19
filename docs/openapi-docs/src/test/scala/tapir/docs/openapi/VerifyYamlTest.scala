@@ -3,6 +3,7 @@ package tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import tapir._
+import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
 import tapir.docs.openapi.dtos.b.{Pet => BPet}
 import tapir.json.circe._
@@ -173,6 +174,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .in(jsonBody[APet])
       .out(jsonBody[BPet])
     val expectedYaml = loadYaml("expected_same_fullnames.yml")
+
+    val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should unfold nested hierarchy") {
+    val e: Endpoint[Book, Unit, String, Nothing] = endpoint
+      .in(jsonBody[Book])
+      .out(plainBody[String])
+    val expectedYaml = loadYaml("expected_unfolded_hierarchy.yml")
 
     val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
