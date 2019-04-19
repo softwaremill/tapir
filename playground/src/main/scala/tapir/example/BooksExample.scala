@@ -160,7 +160,7 @@ class SwaggerUI(yml: String) {
           path(SwaggerYml) {
             complete(yml)
           } ~
-          getFromResourceDirectory("META-INF/resources/webjars/swagger-ui/3.20.9/")
+          getFromResourceDirectory("META-INF/resources/webjars/swagger-ui/3.22.0/")
       }
 }
 
@@ -177,8 +177,9 @@ object Library {
       Book("Nad Niemnem", Genre("Novel", ""), 1888, Author("Eliza Orzeszkowa", Country("Poland"))),
       Book("The Colour of Magic", Genre("Fantasy", ""), 1983, Author("Terry Pratchett", Country("United Kingdom"))),
       Book("The Art of Computer Programming", Genre("Non-fiction", ""), 1968, Author("Donald Knuth", Country("USA"))),
-      Book("Pharaoh", Genre("Novel", ""), 1897, Author("Boleslaw Prus", Country("Poland"))),
-    ))
+      Book("Pharaoh", Genre("Novel", ""), 1897, Author("Boleslaw Prus", Country("Poland")))
+    )
+  )
 
   def getBooks(query: BooksQuery): Vector[Book] = {
     val allBooks = Books.get()

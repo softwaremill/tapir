@@ -29,7 +29,8 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, EntityBody[IO]], fn: I => IO[O])(
-      implicit eClassTag: ClassTag[E]): HttpRoutes[IO] = {
+      implicit eClassTag: ClassTag[E]
+  ): HttpRoutes[IO] = {
     e.toRouteRecoverErrors(fn)
   }
 
@@ -44,10 +45,12 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
       .map(_ => ())
   }
 
+  override val initialPort: Port = 34000
+
   test("should work with a router and routes in a context") {
     val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
     val routes = e.toRoutes
-    val port = randomPort()
+    val port = nextPort()
 
     BlazeServerBuilder[IO]
       .bindHttp(port, "localhost")

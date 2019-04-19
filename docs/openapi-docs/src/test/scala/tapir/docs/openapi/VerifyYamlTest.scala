@@ -5,6 +5,9 @@ import org.scalatest.{FunSuite, Matchers}
 import tapir.Schema.SCoproduct
 import tapir._
 import tapir.generic.MethodNameMacro
+import tapir.docs.openapi.dtos.Book
+import tapir.docs.openapi.dtos.a.{Pet => APet}
+import tapir.docs.openapi.dtos.b.{Pet => BPet}
 import tapir.json.circe._
 import tapir.model.{Method, StatusCodes}
 import tapir.openapi.circe.yaml._
@@ -145,7 +148,8 @@ class VerifyYamlTest extends FunSuite with Matchers {
         StatusCodes.BadRequest,
         whenClass[ErrorInfo.NotFound] -> StatusCodes.NotFound,
         whenClass[ErrorInfo.Unauthorized] -> StatusCodes.Unauthorized
-      ).defaultSchema(schemaFor[ErrorInfo.Unknown]))
+      ).defaultSchema(schemaFor[ErrorInfo.Unknown])
+    )
 
     // when
     val actualYaml = List(e).toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -217,6 +221,30 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Nothing] = endpoint
       .out(jsonBody[NestedEntity])
     val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should handle classes with same name") {
+    val e: Endpoint[APet, Unit, BPet, Nothing] = endpoint
+      .in(jsonBody[APet])
+      .out(jsonBody[BPet])
+    val expectedYaml = loadYaml("expected_same_fullnames.yml")
+
+    val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should unfold nested hierarchy") {
+    val e: Endpoint[Book, Unit, String, Nothing] = endpoint
+      .in(jsonBody[Book])
+      .out(plainBody[String])
+    val expectedYaml = loadYaml("expected_unfolded_hierarchy.yml")
+
+    val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

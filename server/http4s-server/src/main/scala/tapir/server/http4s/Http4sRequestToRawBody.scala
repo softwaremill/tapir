@@ -58,6 +58,6 @@ class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     val dispositionParams = part.headers.get(`Content-Disposition`).map(_.parameters).getOrElse(Map.empty)
     val charset = part.headers.get(`Content-Type`).flatMap(_.charset)
     apply(part.body, codecMeta.rawValueType, charset, req)
-      .map(r => Part(part.name.getOrElse(""), dispositionParams - "name", part.headers.map(h => (h.name.value, h.value)).toSeq, r))
+      .map(r => Part(part.name.getOrElse(""), dispositionParams - "name", part.headers.toList.map(h => (h.name.value, h.value)), r))
   }
 }

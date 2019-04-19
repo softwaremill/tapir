@@ -1,0 +1,37 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet1'
+components:
+  schemas:
+    Pet:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+    Pet1:
+      required:
+        - legsCount
+      type: object
+      properties:
+        legsCount:
+          type: integer

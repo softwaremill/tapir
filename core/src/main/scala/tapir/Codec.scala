@@ -110,8 +110,10 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
     * @param defaultCodec Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra parts
     *                     should be discarded.
     */
-  def multipartCodec(partCodecs: Map[String, AnyCodecForMany],
-                     defaultCodec: Option[AnyCodecForMany]): Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
+  def multipartCodec(
+      partCodecs: Map[String, AnyCodecForMany],
+      defaultCodec: Option[AnyCodecForMany]
+  ): Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
     new Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] {
       private val mvt = MultipartValueType(partCodecs, defaultCodec)
 

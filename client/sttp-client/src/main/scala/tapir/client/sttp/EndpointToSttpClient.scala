@@ -14,7 +14,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   // don't look. The code is really, really ugly.
 
   def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri)(
-      implicit paramsAsArgs: ParamsAsArgs[I]): paramsAsArgs.FN[Request[Either[E, O], S]] = {
+      implicit paramsAsArgs: ParamsAsArgs[I]
+  ): paramsAsArgs.FN[Request[Either[E, O], S]] = {
     paramsAsArgs.toFn(params => {
       val baseReq = sttp
         .response(ignore)
@@ -99,17 +100,21 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private type PartialAnyRequest = PartialRequest[Either[Any, Any], Any]
 
-  private def setInputParams[I](inputs: Vector[EndpointInput.Single[_]],
-                                params: I,
-                                paramsAsArgs: ParamsAsArgs[I],
-                                paramIndex: Int,
-                                uri: Uri,
-                                req: PartialAnyRequest): (Uri, PartialAnyRequest) = {
+  private def setInputParams[I](
+      inputs: Vector[EndpointInput.Single[_]],
+      params: I,
+      paramsAsArgs: ParamsAsArgs[I],
+      paramIndex: Int,
+      uri: Uri,
+      req: PartialAnyRequest
+  ): (Uri, PartialAnyRequest) = {
 
-    def handleMapped[II, T](wrapped: EndpointInput[II],
-                            g: T => II,
-                            wrappedParamsAsArgs: ParamsAsArgs[II],
-                            tail: Vector[EndpointInput.Single[_]]): (Uri, PartialAnyRequest) = {
+    def handleMapped[II, T](
+        wrapped: EndpointInput[II],
+        g: T => II,
+        wrappedParamsAsArgs: ParamsAsArgs[II],
+        tail: Vector[EndpointInput.Single[_]]
+    ): (Uri, PartialAnyRequest) = {
       val (uri2, req2) = setInputParams(
         wrapped.asVectorOfSingleInputs,
         g(paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[T]),

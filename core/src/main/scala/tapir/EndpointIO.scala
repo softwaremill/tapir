@@ -16,8 +16,9 @@ sealed trait EndpointInput[I] {
   def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[II] =
     EndpointInput.Mapped(this, f, g, paramsAsArgs)
 
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                            paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
+  def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
 }
@@ -119,8 +120,9 @@ sealed trait EndpointOutput[I] {
   def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[II] =
     EndpointOutput.Mapped(this, f, g, paramsAsArgs)
 
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                            paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[CASE_CLASS] = {
+  def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
 }
@@ -145,11 +147,12 @@ object EndpointOutput {
 
   //
 
-  case class StatusFrom[I](output: EndpointOutput[I],
-                           default: tapir.StatusCode,
-                           defaultSchema: Option[Schema],
-                           when: Vector[(When[I], tapir.StatusCode)])
-      extends Single[I] {
+  case class StatusFrom[I](
+      output: EndpointOutput[I],
+      default: tapir.StatusCode,
+      defaultSchema: Option[Schema],
+      when: Vector[(When[I], tapir.StatusCode)]
+  ) extends Single[I] {
     def defaultSchema(s: Schema): StatusFrom[I] = this.copy(defaultSchema = Some(s))
     override def show: String = s"status from(${output.show}, $default or ${when.map(_._2).mkString("/")})"
   }
@@ -178,8 +181,9 @@ sealed trait EndpointIO[I] extends EndpointInput[I] with EndpointOutput[I] {
   override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
     EndpointIO.Mapped(this, f, g, paramsAsArgs)
 
-  override def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                                     paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
+  override def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
 }

@@ -1,0 +1,66 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Book:
+      required:
+        - title
+        - genre
+        - year
+        - author
+      type: object
+      properties:
+        title:
+          type: string
+        genre:
+          $ref: '#/components/schemas/Genre'
+        year:
+          type: integer
+        author:
+          $ref: '#/components/schemas/Author'
+    Genre:
+      required:
+        - name
+        - description
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Author:
+      required:
+        - name
+        - country
+      type: object
+      properties:
+        name:
+          type: string
+        country:
+          $ref: '#/components/schemas/Country'
+    Country:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string

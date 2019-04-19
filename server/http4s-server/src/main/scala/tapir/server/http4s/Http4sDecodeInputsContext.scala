@@ -23,7 +23,7 @@ class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsConte
     (segment, new Http4sDecodeInputsContext(reqWithNewCaret))
   }
   override def header(name: String): List[String] = req.headers.get(CaseInsensitiveString(name)).map(_.value).toList
-  override def headers: Seq[(String, String)] = req.headers.map(h => (h.name.value, h.value)).toSeq
+  override def headers: Seq[(String, String)] = req.headers.toList.map(h => (h.name.value, h.value))
   override def queryParameter(name: String): Seq[String] = queryParameters.get(name).toList.flatten
   override val queryParameters: Map[String, Seq[String]] = req.multiParams
   override def bodyStream: Any = req.body
