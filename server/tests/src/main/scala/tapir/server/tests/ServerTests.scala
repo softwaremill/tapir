@@ -326,6 +326,17 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   //
 
   testServer(
+    "two endpoints with increasingly specific path inputs: should match path exactly",
+    NonEmptyList.of(
+      route(endpoint.get.in("p1").out(stringBody), (_: Unit) => pureResult("e1".asRight[Unit])),
+      route(endpoint.get.in("p1" / "p2").out(stringBody), (_: Unit) => pureResult("e2".asRight[Unit]))
+    )
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/p1").send().map(_.unsafeBody shouldBe "e1") >>
+      sttp.get(uri"$baseUri/p1/p2").send().map(_.unsafeBody shouldBe "e2")
+  }
+
+  testServer(
     "two endpoints with a body defined as the first input: should only consume body when then path matches",
     NonEmptyList.of(
       route(
@@ -361,14 +372,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(
-    "two endpoints with path inputs, the first one less specific than the second",
+    "two endpoints with increasingly specific path inputs, first with a required query parameter: should match path exactly",
     NonEmptyList.of(
-      route(endpoint.get.in("p1").out(stringBody), (_: Unit) => pureResult("e1".asRight[Unit])),
+      route(endpoint.get.in("p1").in(query[String]("q1")).out(stringBody), (_: String) => pureResult("e1".asRight[Unit])),
       route(endpoint.get.in("p1" / "p2").out(stringBody), (_: Unit) => pureResult("e2".asRight[Unit]))
     )
   ) { baseUri =>
-    sttp.get(uri"$baseUri/p1").send().map(_.unsafeBody shouldBe "e1") >>
-      sttp.get(uri"$baseUri/p1/p2").send().map(_.unsafeBody shouldBe "e2")
+    sttp.get(uri"$baseUri/p1/p2").send().map(_.unsafeBody shouldBe "e2")
   }
 
   //
