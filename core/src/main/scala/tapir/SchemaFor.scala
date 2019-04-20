@@ -55,5 +55,5 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
   }
 
-  implicit def oneOf[E, V](extractor: E => V, stringer: E => String)(mapping: (V, SchemaFor[_])*): Discriminator = macro oneOfMacro[E, V]
+  def oneOf[E, V](extractor: E => V, stringer: E => String)(mapping: (V, SchemaFor[_])*): Discriminator = macro oneOfMacro[E, V]
 }
