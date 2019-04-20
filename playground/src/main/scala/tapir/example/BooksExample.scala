@@ -29,7 +29,8 @@ object Endpoints {
     .in(
       jsonBody[Book]
         .description("The book to add")
-        .example(Book("Pride and Prejudice", Genre("Novel", ""), 1813, Author("Jane Austen", Country("United Kingdom")))))
+        .example(Book("Pride and Prejudice", Genre("Novel", ""), 1813, Author("Jane Austen", Country("United Kingdom"))))
+    )
     .in(header[String]("X-Auth-Token").description("The token is 'secret'"))
 
   // Re-usable parameter description
@@ -169,10 +170,12 @@ object Library {
 
   val Books = new AtomicReference(
     Vector(
-      Book("The Sorrows of Young Werther",
-           Genre("Novel", "Novel is genre"),
-           1774,
-           Author("Johann Wolfgang von Goethe", Country("Germany"))),
+      Book(
+        "The Sorrows of Young Werther",
+        Genre("Novel", "Novel is genre"),
+        1774,
+        Author("Johann Wolfgang von Goethe", Country("Germany"))
+      ),
       Book("Iliad", Genre("Poetry", ""), -8000, Author("Homer", Country("Greece"))),
       Book("Nad Niemnem", Genre("Novel", ""), 1888, Author("Eliza Orzeszkowa", Country("Poland"))),
       Book("The Colour of Magic", Genre("Fantasy", ""), 1983, Author("Terry Pratchett", Country("United Kingdom"))),
