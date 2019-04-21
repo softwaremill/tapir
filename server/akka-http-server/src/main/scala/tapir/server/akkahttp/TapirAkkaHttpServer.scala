@@ -1,8 +1,6 @@
 package tapir.server.akkahttp
 
-import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
-import akka.http.scaladsl.server.directives.RouteDirectives
 import tapir.Endpoint
 import tapir.server.ServerEndpoint
 import tapir.typelevel.{ParamsToTuple, ReplaceFirstInTuple}
@@ -16,21 +14,12 @@ trait TapirAkkaHttpServer {
       new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)
 
     def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: AkkaHttpServerOptions): Route =
-      new EndpointToAkkaServer(serverOptions).toRoute(e)(logic)
+      new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogic(logic))
 
     def toRouteRecoverErrors(
         logic: I => Future[O]
     )(implicit serverOptions: AkkaHttpServerOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route = {
-
-      def reifyFailedFuture(f: Future[O]): Future[Either[E, O]] = {
-        import ExecutionContext.Implicits.global
-        f.map(Right(_): Either[E, O]).recover {
-          case e: Throwable if implicitly[ClassTag[E]].runtimeClass.isInstance(e) => Left(e.asInstanceOf[E]): Either[E, O]
-        }
-      }
-
-      new EndpointToAkkaServer(serverOptions)
-        .toRoute(e)(logic.andThen(reifyFailedFuture))
+      new EndpointToAkkaServer(serverOptions).toRouteRecoverErrors(e)(logic)
     }
   }
 
@@ -44,8 +33,7 @@ trait TapirAkkaHttpServer {
 
   implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStream, Future]]) {
     def toRoute(implicit serverOptions: AkkaHttpServerOptions): Route = {
-      val endpointToServer = new EndpointToAkkaServer(serverOptions)
-      serverEndpoints.map(se => endpointToServer.toRoute(se)).foldLeft(RouteDirectives.reject: Route)(_ ~ _)
+      new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoints)
     }
   }
 
