@@ -53,7 +53,7 @@ object EndpointInput {
   case class PathsCapture(info: EndpointIO.Info[Seq[String]]) extends Basic[Seq[String]] {
     def description(d: String): PathsCapture = copy(info = info.description(d))
     def example(t: Seq[String]): PathsCapture = copy(info = info.example(t))
-    def show = s"/[multiple paths]"
+    def show = s"/..."
   }
 
   case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Basic[T] {
@@ -65,7 +65,7 @@ object EndpointInput {
   case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Basic[MultiQueryParams] {
     def description(d: String): QueryParams = copy(info = info.description(d))
     def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
-    def show = s"?{multiple params}"
+    def show = s"?..."
   }
 
   case class Cookie[T](name: String, codec: PlainCodecForOptional[T], info: EndpointIO.Info[T]) extends Basic[T] {
@@ -75,7 +75,7 @@ object EndpointInput {
   }
 
   case class ExtractFromRequest[T](f: ServerRequest => T) extends Basic[T] {
-    def show = s"{from request}"
+    def show = s"{data from request}"
   }
 
   //

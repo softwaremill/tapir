@@ -71,9 +71,33 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
 
   def info(i: EndpointInfo): Endpoint[I, E, O, S] = copy(info = i)
 
+  /**
+    * Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then
+    * path, etc.)
+    */
   def show: String = {
+    import tapir.internal._
+
+    val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
+    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortByType).show
+    val showOutputs = EndpointOutput.Multiple(output.asVectorOfBasicOutputs.sortByType).show
+    val showErrorOutputs = EndpointOutput.Multiple(errorOutput.asVectorOfBasicOutputs.sortByType).show
+
+    s"$namePrefix$showInputs -> $showErrorOutputs/$showOutputs"
+  }
+
+  /**
+    * Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined,
+    * including mapping information.
+    */
+  def showDetail: String = {
     s"Endpoint${info.name.map("[" + _ + "]").getOrElse("")}(in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
   }
+
+  /**
+    * Equivalent to `.toString`, shows the whole case class structure.
+    */
+  def showRaw: String = toString
 
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
 }

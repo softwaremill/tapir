@@ -50,21 +50,7 @@ object DecodeInputs {
 
     val methodInputs = basicInputs.filter(isRequestMethod)
     val pathInputs = basicInputs.filter(isPath)
-    val otherInputs = basicInputs.filterNot(ei => isRequestMethod(ei) || isPath(ei)).sortBy {
-      case _: EndpointInput.Query[_]              => 2
-      case _: EndpointInput.QueryParams           => 2
-      case _: EndpointInput.Cookie[_]             => 3
-      case _: EndpointIO.Header[_]                => 3
-      case _: EndpointIO.Headers                  => 3
-      case _: EndpointInput.ExtractFromRequest[_] => 4
-      case _: EndpointIO.Body[_, _, _]            => 6
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
-      // filtered out earlier
-      case _: EndpointInput.RequestMethod  => throw new IllegalArgumentException
-      case _: EndpointInput.PathSegment    => throw new IllegalArgumentException
-      case _: EndpointInput.PathCapture[_] => throw new IllegalArgumentException
-      case _: EndpointInput.PathsCapture   => throw new IllegalArgumentException
-    }
+    val otherInputs = basicInputs.filterNot(ei => isRequestMethod(ei) || isPath(ei)).sortByType
 
     compose(
       apply(methodInputs, _, _),

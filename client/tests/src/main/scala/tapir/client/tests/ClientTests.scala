@@ -80,7 +80,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   //
 
-  test(in_headers_out_headers.show) {
+  test(in_headers_out_headers.showDetail) {
     send(in_headers_out_headers, port, List(("X-Fruit", "apple"), ("Y-Fruit", "Orange")))
       .unsafeRunSync()
       .right
@@ -92,7 +92,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   def mkStream(s: String): S
   def rmStream(s: S): String
 
-  test(in_stream_out_stream[S].show) {
+  test(in_stream_out_stream[S].showDetail) {
     rmStream(
       send(in_stream_out_stream[S], port, mkStream("mango cranberry"))
         .unsafeRunSync()
@@ -151,7 +151,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]
   ): Unit = {
 
-    test(e.show) {
+    test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Either[Any, Any] = {
         def doAdjust(v: Any) = v match {

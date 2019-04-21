@@ -432,7 +432,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       fn: I => R[Either[E, O]]
   )(runTest: Uri => IO[Assertion]): Unit = {
 
-    testServer(e.show + (if (testNameSuffix == "") "" else " " + testNameSuffix), NonEmptyList.of(route(e, fn)))(runTest)
+    testServer(e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix), NonEmptyList.of(route(e, fn)))(runTest)
   }
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
