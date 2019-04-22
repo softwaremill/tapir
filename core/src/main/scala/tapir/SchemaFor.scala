@@ -7,7 +7,7 @@ import java.time._
 import java.util.Date
 
 import tapir.Schema._
-import tapir.generic.DiscriminatorDerivationMacro.oneOfMacro
+import tapir.generic.OneOfMacro.oneOfMacro
 import tapir.generic.SchemaForMagnoliaDerivation
 import tapir.model.Part
 
@@ -55,5 +55,5 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
   }
 
-  def oneOf[E, V](extractor: E => V, stringer: E => String)(mapping: (V, SchemaFor[_])*): Discriminator = macro oneOfMacro[E, V]
+  def oneOf[E, V](extractor: E => V, asString: V => String)(mapping: (V, SchemaFor[_])*): Discriminator = macro oneOfMacro[E, V]
 }

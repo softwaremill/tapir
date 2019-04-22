@@ -6,12 +6,12 @@ import tapir.SchemaFor
 import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
-object DiscriminatorDerivationMacro {
+object OneOfMacro {
   // http://onoffswitch.net/extracting-scala-method-names-objects-macros/
 
   def oneOfMacro[E: c.WeakTypeTag, V: c.WeakTypeTag](
       c: blackbox.Context
-  )(extractor: c.Expr[E => V], stringer: c.Expr[E => String])(mapping: c.Expr[(V, SchemaFor[_])]*): c.Expr[Discriminator] = {
+  )(extractor: c.Expr[E => V], asString: c.Expr[V => String])(mapping: c.Expr[(V, SchemaFor[_])]*): c.Expr[Discriminator] = {
     import c.universe._
 
     @tailrec
@@ -39,10 +39,9 @@ object DiscriminatorDerivationMacro {
     }
 
     val name = resolveFunctionName(extractor.tree.asInstanceOf[Function])
-    //TODO ${c.typecheck(stringer.tree)}.apply(k)
-    val aaa =
+    val discriminator =
       q"""val rawMapping = Map(..$mapping)
-         tapir.Schema.Discriminator($name,rawMapping.collect{case (k, sf)=> k.toString -> tapir.Schema.SRef(sf.schema.asInstanceOf[tapir.Schema.SObject].info.fullName)})"""
-    c.Expr[Discriminator](aaa)
+         tapir.Schema.Discriminator($name,rawMapping.collect{case (k, sf)=> ${reify(asString.splice)}.apply(k) -> tapir.Schema.SRef(sf.schema.asInstanceOf[tapir.Schema.SObject].info.fullName)})"""
+    c.Expr[Discriminator](discriminator)
   }
 }
