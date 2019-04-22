@@ -41,7 +41,7 @@ object OneOfMacro {
     val name = resolveFunctionName(extractor.tree.asInstanceOf[Function])
     val discriminator =
       q"""val rawMapping = Map(..$mapping)
-         tapir.Schema.Discriminator($name,rawMapping.collect{case (k, sf)=> ${reify(asString.splice)}.apply(k) -> tapir.Schema.SRef(sf.schema.asInstanceOf[tapir.Schema.SObject].info.fullName)})"""
+         tapir.Schema.Discriminator($name,rawMapping.collect{case (k, sf)=> $asString.apply(k) -> tapir.Schema.SRef(sf.schema.asInstanceOf[tapir.Schema.SObject].info.fullName)})"""
     c.Expr[Discriminator](discriminator)
   }
 }
