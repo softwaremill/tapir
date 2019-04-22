@@ -9,11 +9,11 @@ import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.server.{DecodeFailureHandling, ServerEndpoint}
 import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput}
 
+import scala.reflect.ClassTag
+
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
 
-  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] = toRoutes(se.endpoint)(se.logic)
-
-  def toRoutes[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[Either[E, O]]): HttpRoutes[F] = {
+  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] = {
 
     val service: HttpRoutes[F] = HttpRoutes[F] { req: Request[F] =>
       def decodeBody(result: DecodeInputsResult): F[DecodeInputsResult] = {
@@ -35,22 +35,43 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       }
 
       def valuesToResponse(values: DecodeInputsResult.Values): F[Response[F]] = {
-        val i = SeqToParams(InputValues(e.input, values.values)).asInstanceOf[I]
-        logic(i).map {
+        val i = SeqToParams(InputValues(se.endpoint.input, values.values)).asInstanceOf[I]
+        se.logic(i).map {
           case Right(result) =>
-            makeResponse(Status.Ok, e.output, result)
+            makeResponse(Status.Ok, se.endpoint.output, result)
           case Left(err) =>
-            makeResponse(Status.BadRequest, e.errorOutput, err)
+            makeResponse(Status.BadRequest, se.endpoint.errorOutput, err)
         }
       }
 
-      OptionT(decodeBody(DecodeInputs(e.input, new Http4sDecodeInputsContext[F](req))).flatMap {
+      OptionT(decodeBody(DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values          => valuesToResponse(values).map(_.some)
         case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(req, input, failure).pure[F]
       })
     }
 
     service
+  }
+
+  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[O])(
+      implicit serverOptions: Http4sServerOptions[F],
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E]
+  ): HttpRoutes[F] = {
+    def reifyFailedF(f: F[O]): F[Either[E, O]] = {
+      f.map(Right(_): Either[E, O]).recover {
+        case e: Throwable if eClassTag.runtimeClass.isInstance(e) => Left(e.asInstanceOf[E]): Either[E, O]
+      }
+    }
+
+    toRoutes(e.serverLogic(logic.andThen(reifyFailedF)))
+  }
+
+  def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] = {
+    NonEmptyList.fromList(serverEndpoints.map(se => toRoutes(se))) match {
+      case Some(routes) => routes.reduceK
+      case None         => HttpRoutes.empty
+    }
   }
 
   private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status =

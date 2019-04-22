@@ -1,7 +1,6 @@
 package tapir.server.http4s
 
 import cats.Monad
-import cats.data.NonEmptyList
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
 import org.http4s.{EntityBody, HttpRoutes}
@@ -16,7 +15,7 @@ trait TapirHttp4sServer {
     def toRoutes(
         logic: I => F[Either[E, O]]
     )(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] = {
-      new EndpointToHttp4sServer(serverOptions).toRoutes(e)(logic)
+      new EndpointToHttp4sServer(serverOptions).toRoutes(e.serverLogic(logic))
     }
 
     def toRouteRecoverErrors(logic: I => F[O])(
@@ -26,13 +25,7 @@ trait TapirHttp4sServer {
         eIsThrowable: E <:< Throwable,
         eClassTag: ClassTag[E]
     ): HttpRoutes[F] = {
-      def reifyFailedF(f: F[O]): F[Either[E, O]] = {
-        f.map(Right(_): Either[E, O]).recover {
-          case e: Throwable if eClassTag.runtimeClass.isInstance(e) => Left(e.asInstanceOf[E]): Either[E, O]
-        }
-      }
-
-      new EndpointToHttp4sServer(serverOptions).toRoutes(e)(logic.andThen(reifyFailedF))
+      new EndpointToHttp4sServer(serverOptions).toRoutesRecoverErrors(e)(logic)
     }
   }
 
@@ -43,11 +36,7 @@ trait TapirHttp4sServer {
 
   implicit class RichHttp4sServerEndpoints[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]) {
     def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] = {
-      val endpointToServer = new EndpointToHttp4sServer(serverOptions)
-      NonEmptyList.fromList(serverEndpoints.map(se => endpointToServer.toRoutes(se))) match {
-        case Some(routes) => routes.reduceK
-        case None         => HttpRoutes.empty
-      }
+      new EndpointToHttp4sServer(serverOptions).toRoutes(serverEndpoints)
     }
   }
 
