@@ -12,6 +12,7 @@ import tapir.typelevel.ParamsToTuple
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success}
 
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   def toDirective[I, E, O, T](e: Endpoint[I, E, O, AkkaStream])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
@@ -36,9 +37,18 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
 
   def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStream, Future]): Route = {
     toDirective1(se.endpoint) { values =>
-      onSuccess(se.logic(values)) {
-        case Left(v)  => outputToRoute(StatusCodes.BadRequest, se.endpoint.errorOutput, v)
-        case Right(v) => outputToRoute(StatusCodes.Ok, se.endpoint.output, v)
+      extractLog { log =>
+        mapResponse(
+          resp => { serverOptions.loggingOptions.requestHandledMsg(se.endpoint, resp.status.intValue()).foreach(log.debug); resp }
+        ) {
+          onComplete(se.logic(values)) {
+            case Success(Left(v))  => outputToRoute(StatusCodes.BadRequest, se.endpoint.errorOutput, v)
+            case Success(Right(v)) => outputToRoute(StatusCodes.Ok, se.endpoint.output, v)
+            case Failure(e) =>
+              serverOptions.loggingOptions.logicExceptionMsg(se.endpoint).foreach(log.error(e, _))
+              throw e
+          }
+        }
       }
     }
   }

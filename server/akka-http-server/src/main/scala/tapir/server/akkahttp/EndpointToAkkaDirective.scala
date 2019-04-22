@@ -69,7 +69,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       extractRequestContext.flatMap { ctx =>
         decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
           case DecodeInputsResult.Values(values, _)       => provide(SeqToParams(InputValues(e.input, values)).asInstanceOf[I])
-          case DecodeInputsResult.Failure(input, failure) => decodeFailureDirective(ctx, input, failure)
+          case DecodeInputsResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
         }
       }
     }
@@ -85,11 +85,19 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     }
   }
 
-  private def decodeFailureDirective[I](ctx: RequestContext, input: EndpointInput.Single[_], failure: DecodeFailure): Directive1[I] = {
+  private def decodeFailureDirective[I](
+      ctx: RequestContext,
+      e: Endpoint[_, _, _, _],
+      input: EndpointInput.Single[_],
+      failure: DecodeFailure
+  ): Directive1[I] = {
     val handling = serverOptions.decodeFailureHandler(ctx, input, failure)
     handling match {
-      case DecodeFailureHandling.NoMatch => reject
+      case DecodeFailureHandling.NoMatch =>
+        serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(ctx.log.debug)
+        reject
       case DecodeFailureHandling.RespondWithResponse(statusCode, body, codec) =>
+        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, statusCode).foreach(ctx.log.debug)
         complete(HttpResponse(entity = OutputToAkkaResponse.rawValueToResponseEntity(codec.meta, codec.encode(body)), status = statusCode))
     }
   }
