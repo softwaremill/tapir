@@ -47,6 +47,31 @@ The schema is left unchanged when mapping over a codec, as the underlying repres
 When codecs are derived for complex types, e.g. for json mapping, schemas are looked up through implicit
 `SchemaFor[T]` values. See [json support](json.html) for more details.
 
+Tapir supports schema generation for coproduct types of the box. In order to extend openApi schema
+representation a discriminator object can be specified. 
+
+For example, given following coproduct:
+```scala
+sealed trait Entity{
+  def kind: String
+} 
+case class Person(firstName:String, lastName:String) extends Entity {
+  def kind: String = "person"
+}
+case class Organization(name: String) extends Entity {
+  def kind: String = "org"  
+}
+```
+The discriminator may look like:
+```scala
+val sPerson = implicitly[SchemaFor[Person]]
+val sOrganization = implicitly[SchemaFor[Organization]]
+val discriminator = 
+    SchemaFor.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
+implicit val sEntity: SchemaFor[Entity] = 
+    SchemaFor(SCoproduct(List(sPerson.schema, sOrganization.schema), Some(discriminator)))
+```
+ 
 ## Media types
 
 Codecs carry an additional type parameter, which specifies the media type. Some built-in media types include 
