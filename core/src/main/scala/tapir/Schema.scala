@@ -37,7 +37,7 @@ object Schema {
     def show: String = s"ref($fullName)"
   }
 
-  case class SCoproduct(schemas: List[Schema], discriminator: Option[Discriminator]) extends Schema {
+  case class SCoproduct(schemas: Set[Schema], discriminator: Option[Discriminator]) extends Schema {
     override def show: String = "oneOf:" + schemas.mkString(",")
   }
 

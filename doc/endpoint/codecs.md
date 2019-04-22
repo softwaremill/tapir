@@ -66,10 +66,8 @@ The discriminator may look like:
 ```scala
 val sPerson = implicitly[SchemaFor[Person]]
 val sOrganization = implicitly[SchemaFor[Organization]]
-val discriminator = 
-    SchemaFor.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 implicit val sEntity: SchemaFor[Entity] = 
-    SchemaFor(SCoproduct(List(sPerson.schema, sOrganization.schema), Some(discriminator)))
+    SchemaFor.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```
  
 ## Media types

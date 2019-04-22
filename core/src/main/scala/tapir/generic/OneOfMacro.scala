@@ -1,6 +1,5 @@
 package tapir.generic
 
-import tapir.Schema.Discriminator
 import tapir.SchemaFor
 
 import scala.annotation.tailrec
@@ -11,7 +10,7 @@ object OneOfMacro {
 
   def oneOfMacro[E: c.WeakTypeTag, V: c.WeakTypeTag](
       c: blackbox.Context
-  )(extractor: c.Expr[E => V], asString: c.Expr[V => String])(mapping: c.Expr[(V, SchemaFor[_])]*): c.Expr[Discriminator] = {
+  )(extractor: c.Expr[E => V], asString: c.Expr[V => String])(mapping: c.Expr[(V, SchemaFor[_])]*): c.Expr[SchemaFor[E]] = {
     import c.universe._
 
     @tailrec
@@ -38,10 +37,32 @@ object OneOfMacro {
       }
     }
 
+    val coproducts: Set[Symbol] = {
+      val symbol = weakTypeOf[E].typeSymbol
+      if (!symbol.isClass)
+        c.abort(c.enclosingPosition, "Can only enumerate values of a sealed trait or class.")
+      else if (!symbol.asClass.isSealed)
+        c.abort(c.enclosingPosition, "Can only enumerate values of a sealed trait or class.")
+      else {
+        val children = symbol.asClass.knownDirectSubclasses
+        if (!children.forall(_.isClass))
+          c.abort(c.enclosingPosition, "All children must be objects.")
+        else {
+          children
+        }
+      }
+    }
+
+    val coproductSchemas = coproducts.map { coproduct =>
+      c.typecheck(q"implicitly[tapir.SchemaFor[$coproduct]].schema")
+    }
+
     val name = resolveFunctionName(extractor.tree.asInstanceOf[Function])
-    val discriminator =
-      q"""val rawMapping = Map(..$mapping)
-         tapir.Schema.Discriminator($name,rawMapping.collect{case (k, sf)=> $asString.apply(k) -> tapir.Schema.SRef(sf.schema.asInstanceOf[tapir.Schema.SObject].info.fullName)})"""
-    c.Expr[Discriminator](discriminator)
+    val schemaForE =
+      q"""import tapir.Schema._
+          val rawMapping = Map(..$mapping)
+          val discriminator = Discriminator($name, rawMapping.collect{case (k, sf)=> $asString.apply(k) -> SRef(sf.schema.asInstanceOf[SObject].info.fullName)})
+          SchemaFor(SCoproduct($coproductSchemas, Some(discriminator)))"""
+    c.Expr[SchemaFor[E]](schemaForE)
   }
 }

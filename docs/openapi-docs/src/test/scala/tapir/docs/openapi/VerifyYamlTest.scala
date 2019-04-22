@@ -184,8 +184,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml when using coproduct types with discriminator") {
     val sPerson = implicitly[SchemaFor[Person]]
     val sOrganization = implicitly[SchemaFor[Organization]]
-    val discriminator = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
-    implicit val sEntity: SchemaFor[Entity] = SchemaFor(SCoproduct(List(sPerson.schema, sOrganization.schema), Some(discriminator)))
+    implicit val sEntity: SchemaFor[Entity] = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator.yml")
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
@@ -211,8 +210,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml when using nested coproduct types with discriminator") {
     val sPerson = implicitly[SchemaFor[Person]]
     val sOrganization = implicitly[SchemaFor[Organization]]
-    val discriminator = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
-    implicit val sEntity: SchemaFor[Entity] = SchemaFor(SCoproduct(List(sPerson.schema, sOrganization.schema), Some(discriminator)))
+    implicit val sEntity: SchemaFor[Entity] = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator_nested.yml")
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Nothing] = endpoint

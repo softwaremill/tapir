@@ -29,7 +29,7 @@ object ObjectSchemasForEndpoints {
           .map(_._2)
           .flatMap(collectFieldObjects)
           .toList
-      case c: TSchema.SCoproduct => c.schemas.flatMap(collectFieldObjects)
+      case c: TSchema.SCoproduct => c.schemas.flatMap(collectFieldObjects).toList
       case _                     => List()
     }
   }
@@ -61,7 +61,7 @@ object ObjectSchemasForEndpoints {
       case s: TSchema.SObject =>
         List(s)
       case s: TSchema.SCoproduct =>
-        s.schemas.collect { case so: TSchema.SObject => so }
+        s.schemas.collect { case so: TSchema.SObject => so }.toList
       case _ => List.empty
     }
   }
