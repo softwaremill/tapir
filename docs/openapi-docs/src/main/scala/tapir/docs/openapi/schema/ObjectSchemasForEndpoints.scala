@@ -1,42 +1,48 @@
 package tapir.docs.openapi.schema
 
-import tapir.Schema.{SObject, SObjectInfo, SRef}
-import tapir.{Schema => TSchema, _}
 import tapir.docs.openapi.uniqueName
+import tapir.openapi.OpenAPI.ReferenceOr
+import tapir.openapi.{Schema => OSchema}
+import tapir.{Schema => TSchema, _}
 
+import scala.collection.immutable.ListMap
 object ObjectSchemasForEndpoints {
 
-  def apply(es: Iterable[Endpoint[_, _, _, _]]): ObjectSchemas = {
+  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjectsForEndpoints = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
-    val sObjectsAll = findNestedSObjects(Nil, sObjectsForEndpoints.toList).map(replaceSObjectFieldsWithSRef)
+    val sObjectsAll = sObjectsForEndpoints.flatMap(collectFieldObjects).map(replaceSObjectFieldsWithSRef)
     val infoToKey = calculateUniqueKeys(sObjectsAll.map(_.info))
-
-    val tschemaToOSchema = new TSchemaToOSchema(infoToKey.map { case (k, v) => k.fullName -> v })
+    val schemaReferences = new SchemaReferenceMapper(infoToKey.map { case (k, v) => k.fullName -> v })
+    val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
+    val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
+    val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences, discriminatorToOpenApi)
     val infosToSchema = sObjectsAll.map(so => (so.info, tschemaToOSchema(so))).toMap
-    val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
 
-    new ObjectSchemas(tschemaToOSchema, schemaKeys)
+    val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
+    (schemaKeys.values.toListMap, schemas)
   }
 
-  private def findNestedSObjects(acc: List[SObject], left: List[SObject]): List[SObject] = {
-    def collectFieldObjects(x: SObject) = x.fields.collect { case (_, s: SObject) => s }.toList
-    left match {
-      case x :: xs =>
-        findNestedSObjects(findNestedSObjects(acc :+ x, collectFieldObjects(x)), xs)
-      case Nil => acc
+  private def collectFieldObjects(schema: TSchema): List[TSchema.SObject] = {
+    schema match {
+      case o: TSchema.SObject =>
+        List(o) ++ o.fields
+          .map(_._2)
+          .flatMap(collectFieldObjects)
+          .toList
+      case c: TSchema.SCoproduct => c.schemas.flatMap(collectFieldObjects).toList
+      case _                     => List()
     }
   }
-
-  private def replaceSObjectFieldsWithSRef(obj: SObject): SObject = {
+  private def replaceSObjectFieldsWithSRef(obj: TSchema.SObject): TSchema.SObject = {
     val newFields = obj.fields map {
-      case (s, o: SObject) => (s, SRef(o.info.fullName))
-      case x               => x
+      case (s, o: TSchema.SObject) => (s, TSchema.SRef(o.info.fullName))
+      case x                       => x
     }
     obj.copy(fields = newFields)
   }
 
-  private def calculateUniqueKeys(infos: Iterable[SObjectInfo]): Map[SObjectInfo, SchemaKey] = {
-    case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, SObjectInfo], infoToKey: Map[SObjectInfo, SchemaKey])
+  private def calculateUniqueKeys(infos: Iterable[TSchema.SObjectInfo]): Map[TSchema.SObjectInfo, SchemaKey] = {
+    case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, TSchema.SObjectInfo], infoToKey: Map[TSchema.SObjectInfo, SchemaKey])
     infos
       .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) {
         case (SchemaKeyAssignment1(keyToInfo, infoToKey), objectInfo) =>
@@ -54,6 +60,8 @@ object ObjectSchemasForEndpoints {
     schema match {
       case s: TSchema.SObject =>
         List(s)
+      case s: TSchema.SCoproduct =>
+        s.schemas.collect { case so: TSchema.SObject => so }.toList
       case _ => List.empty
     }
   }

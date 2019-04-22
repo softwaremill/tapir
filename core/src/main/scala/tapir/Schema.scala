@@ -37,5 +37,11 @@ object Schema {
     def show: String = s"ref($fullName)"
   }
 
+  case class SCoproduct(schemas: Set[Schema], discriminator: Option[Discriminator]) extends Schema {
+    override def show: String = "oneOf:" + schemas.mkString(",")
+  }
+
   case class SObjectInfo(shortName: String, fullName: String)
+
+  case class Discriminator(propertyName: String, mappingOverride: Map[String, SRef])
 }
