@@ -43,5 +43,5 @@ object Schema {
 
   case class SObjectInfo(shortName: String, fullName: String)
 
-  case class Discriminator(propertyName: String, mapping: Map[String, SRef])
+  case class Discriminator(propertyName: String, mappingOverride: Map[String, SRef])
 }
