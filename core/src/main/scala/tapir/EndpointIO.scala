@@ -141,7 +141,7 @@ object EndpointOutput {
 
   //
 
-  case class StatusCode() extends Basic[tapir.StatusCode] {
+  case class StatusCode() extends Basic[tapir.model.StatusCode] {
     override def show: String = "{status code}"
   }
 
@@ -149,9 +149,9 @@ object EndpointOutput {
 
   case class StatusFrom[I](
       output: EndpointOutput[I],
-      default: tapir.StatusCode,
+      default: tapir.model.StatusCode,
       defaultSchema: Option[Schema],
-      when: Vector[(When[I], tapir.StatusCode)]
+      when: Vector[(When[I], tapir.model.StatusCode)]
   ) extends Single[I] {
     def defaultSchema(s: Schema): StatusFrom[I] = this.copy(defaultSchema = Some(s))
     override def show: String = s"status from(${output.show}, $default or ${when.map(_._2).mkString("/")})"

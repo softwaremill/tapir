@@ -5,7 +5,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
-import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue}
+import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue, StatusCode}
 
 import scala.reflect.ClassTag
 

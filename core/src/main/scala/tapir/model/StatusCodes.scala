@@ -1,7 +1,5 @@
 package tapir.model
 
-import tapir.StatusCode
-
 // https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml
 trait StatusCodes {
   val Continue = 100

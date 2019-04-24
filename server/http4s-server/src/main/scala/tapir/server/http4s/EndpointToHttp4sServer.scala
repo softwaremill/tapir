@@ -81,7 +81,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status =
+  private def statusCodeToHttp4sStatus(code: tapir.model.StatusCode): Status =
     Status.fromInt(code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
 
   private def makeResponse[O](

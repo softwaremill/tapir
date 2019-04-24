@@ -1,7 +1,6 @@
 import tapir.model.Part
 
 package object tapir extends Tapir {
-  type StatusCode = Int
 
   // mainly used in multipart codecs
   type RawPart = Part[_]

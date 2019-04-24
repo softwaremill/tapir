@@ -3,11 +3,11 @@ package tapir.server.akkahttp
 import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
-import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.{StatusCode => _, _}
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
 import tapir.internal._
-import tapir.model.Part
+import tapir.model.{Part, StatusCode}
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -19,7 +19,6 @@ import tapir.{
   MediaType,
   MultipartValueType,
   RawPart,
-  StatusCode,
   StreamingEndpointIO,
   StringValueType
 }

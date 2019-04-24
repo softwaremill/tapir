@@ -2,6 +2,7 @@ package tapir.docs.openapi
 
 import tapir.internal._
 import tapir.docs.openapi.schema.ObjectSchemas
+import tapir.model.StatusCode
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi._
 import tapir.{Schema => SSchema, _}

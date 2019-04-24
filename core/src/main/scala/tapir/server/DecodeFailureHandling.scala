@@ -1,5 +1,6 @@
 package tapir.server
-import tapir.{Codec, MediaType, StatusCode}
+import tapir.model.StatusCode
+import tapir.{Codec, MediaType}
 
 trait DecodeFailureHandling
 
