@@ -22,12 +22,18 @@ trait SchemaForMagnoliaDerivation {
       } else {
         try {
           cache.add(cacheKey)
-          new SchemaFor[T] {
-            override val schema: Schema = SObject(
-              SObjectInfo(ctx.typeName.short, ctx.typeName.full),
-              ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
-              ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
-            )
+          if(ctx.isValueClass) {
+            new SchemaFor[T] {
+              override val schema: Schema = ctx.parameters.head.typeclass.schema
+            }
+          } else {
+            new SchemaFor[T] {
+              override val schema: Schema = SObject(
+                SObjectInfo(ctx.typeName.short, ctx.typeName.full),
+                ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
+                ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
+              )
+            }
           }
         } finally {
           cache.remove(cacheKey)
