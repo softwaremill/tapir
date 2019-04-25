@@ -62,6 +62,13 @@ Each interpreter accepts an implicit options value, which contains configuration
 * how to create a file (when receiving a response that is mapped to a file, or when reading a file-mapped multipart 
   part)
 * how to handle decode failures  
+
+To customise the server options, define an implicit value, which will be visible when converting an endpoint or multiple
+endpoints to a route/routes. For example, for `AkkaHttpServerOptions`:
+
+```
+implicit val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(...) 
+```
   
 ### Handling decode failures
 
@@ -110,7 +117,7 @@ interpreter) and for an arbitrary monad (in the http4s interpreter), so importin
 
 ```scala
 import tapir.server.akkahttp._
-val r: Route = myEndpoint.toRoute((authFn _).andThenFirstE(logicFn _))
+val r: Route = myEndpoint.toRoute((authFn _).andThenFirstE((logicFn _).tupled))
 ```
 
 Writing down the types, here are the generic signatures when using `andThenFirst` and `andThenFirstE`:

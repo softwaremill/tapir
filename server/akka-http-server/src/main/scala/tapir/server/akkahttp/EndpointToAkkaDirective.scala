@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Directives.{
   extractMaterializer,
   extractRequestContext,
   onSuccess,
-  reject,
+  reject
 }
 import akka.http.scaladsl.server.{Directive1, RequestContext}
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
@@ -69,7 +69,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       extractRequestContext.flatMap { ctx =>
         decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
           case DecodeInputsResult.Values(values, _)       => provide(SeqToParams(InputValues(e.input, values)).asInstanceOf[I])
-          case DecodeInputsResult.Failure(input, failure) => decodeFailureDirective(ctx, input, failure)
+          case DecodeInputsResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
         }
       }
     }
@@ -85,18 +85,27 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     }
   }
 
-  private def decodeFailureDirective[I](ctx: RequestContext, input: EndpointInput.Single[_], failure: DecodeFailure): Directive1[I] = {
+  private def decodeFailureDirective[I](
+      ctx: RequestContext,
+      e: Endpoint[_, _, _, _],
+      input: EndpointInput.Single[_],
+      failure: DecodeFailure
+  ): Directive1[I] = {
     val handling = serverOptions.decodeFailureHandler(ctx, input, failure)
     handling match {
-      case DecodeFailureHandling.NoMatch => reject
+      case DecodeFailureHandling.NoMatch =>
+        serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(ctx.log.debug)
+        reject
       case DecodeFailureHandling.RespondWithResponse(statusCode, body, codec) =>
+        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, statusCode).foreach(ctx.log.debug)
         complete(HttpResponse(entity = OutputToAkkaResponse.rawValueToResponseEntity(codec.meta, codec.encode(body)), status = statusCode))
     }
   }
 
   private def entityToRawValue[R](entity: HttpEntity, rawValueType: RawValueType[R], ctx: RequestContext)(
       implicit mat: Materializer,
-      ec: ExecutionContext): Future[R] = {
+      ec: ExecutionContext
+  ): Future[R] = {
 
     rawValueType match {
       case StringValueType(_)   => implicitly[FromEntityUnmarshaller[String]].apply(entity)
@@ -106,14 +115,16 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       case FileValueType =>
         serverOptions
           .createFile(ctx)
-          .flatMap(file =>
-            entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map { ioResult =>
-              ioResult.status match {
-                case Failure(t) => throw t
-                case _          => // do nothing
+          .flatMap(
+            file =>
+              entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map { ioResult =>
+                ioResult.status match {
+                  case Failure(t) => throw t
+                  case _          => // do nothing
+                }
+                file
               }
-              file
-          })
+          )
       case mvt: MultipartValueType =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(entity).flatMap { fd =>
           fd.parts
@@ -127,7 +138,8 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
 
   private def toRawPart[R](part: Multipart.FormData.BodyPart, codecMeta: CodecMeta[_, R], ctx: RequestContext)(
       implicit mat: Materializer,
-      ec: ExecutionContext): Future[Part[R]] = {
+      ec: ExecutionContext
+  ): Future[Part[R]] = {
 
     entityToRawValue(part.entity, codecMeta.rawValueType, ctx)
       .map(r => Part(part.name, part.additionalDispositionParams, part.headers.map(h => (h.name, h.value)), r))

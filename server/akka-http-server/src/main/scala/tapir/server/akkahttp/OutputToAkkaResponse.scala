@@ -3,11 +3,11 @@ package tapir.server.akkahttp
 import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
-import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.{StatusCode => _, _}
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
 import tapir.internal._
-import tapir.model.Part
+import tapir.model.{Part, StatusCode}
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -19,7 +19,6 @@ import tapir.{
   MediaType,
   MultipartValueType,
   RawPart,
-  StatusCode,
   StreamingEndpointIO,
   StringValueType
 }
@@ -117,7 +116,7 @@ private[akkahttp] object OutputToAkkaResponse {
       case MediaType.Json()               => ContentTypes.`application/json`
       case MediaType.TextPlain(charset)   => MediaTypes.`text/plain`.withCharset(charsetToHttpCharset(charset))
       case MediaType.OctetStream()        => MediaTypes.`application/octet-stream`
-      case MediaType.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`.withMissingCharset
+      case MediaType.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`
       case MediaType.MultipartFormData()  => MediaTypes.`multipart/form-data`
       case mt =>
         ContentType.parse(mt.mediaType).right.getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $mediaType"))

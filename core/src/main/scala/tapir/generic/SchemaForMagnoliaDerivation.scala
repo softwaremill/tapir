@@ -1,13 +1,12 @@
 package tapir.generic
 
 import magnolia._
-import tapir.{Schema, SchemaFor}
 import tapir.Schema._
+import tapir.generic.SchemaForMagnoliaDerivation.deriveInProgress
+import tapir.{Schema, SchemaFor}
 
 import scala.collection.mutable
 import scala.language.experimental.macros
-
-import SchemaForMagnoliaDerivation.deriveInProgress
 
 trait SchemaForMagnoliaDerivation {
   type Typeclass[T] = SchemaFor[T]
@@ -59,7 +58,7 @@ trait SchemaForMagnoliaDerivation {
   }
 
   def dispatch[T](ctx: SealedTrait[SchemaFor, T]): SchemaFor[T] = {
-    throw new RuntimeException(s"Sealed trait hierarchies are not yet supported for: ${ctx.typeName}")
+    SchemaFor(SCoproduct(ctx.subtypes.map(_.typeclass.schema).toSet, None))
   }
 
   implicit def schemaForCaseClass[T]: SchemaFor[T] = macro Magnolia.gen[T]

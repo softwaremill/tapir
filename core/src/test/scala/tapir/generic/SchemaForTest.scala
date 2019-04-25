@@ -75,22 +75,28 @@ class SchemaForTest extends FlatSpec with Matchers {
   }
 
   it should "find schema for a nested case class" in {
-    implicitly[SchemaFor[B]].schema shouldBe SObject(SObjectInfo("B", "tapir.generic.B"),
-                                                     List(("g1", SString), ("g2", expectedASchema)),
-                                                     List("g1", "g2"))
+    implicitly[SchemaFor[B]].schema shouldBe SObject(
+      SObjectInfo("B", "tapir.generic.B"),
+      List(("g1", SString), ("g2", expectedASchema)),
+      List("g1", "g2")
+    )
   }
 
   it should "find schema for case classes with collections" in {
-    implicitly[SchemaFor[C]].schema shouldBe SObject(SObjectInfo("C", "tapir.generic.C"),
-                                                     List(("h1", SArray(SString)), ("h2", SInteger)),
-                                                     List("h1"))
+    implicitly[SchemaFor[C]].schema shouldBe SObject(
+      SObjectInfo("C", "tapir.generic.C"),
+      List(("h1", SArray(SString)), ("h2", SInteger)),
+      List("h1")
+    )
   }
 
   it should "find schema for recursive data structure" in {
     val schema = implicitly[SchemaFor[F]].schema
-    schema shouldBe SObject(SObjectInfo("F", "tapir.generic.F"),
-                            List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)),
-                            List("f1", "f2"))
+    schema shouldBe SObject(
+      SObjectInfo("F", "tapir.generic.F"),
+      List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)),
+      List("f1", "f2")
+    )
   }
 
   it should "find schema for recursive data structure when invoked from many threads" in {

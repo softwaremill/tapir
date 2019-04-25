@@ -2,12 +2,16 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
+import tapir.Schema.SCoproduct
 import tapir._
+import tapir.docs.openapi.dtos.Book
+import tapir.docs.openapi.dtos.a.{Pet => APet}
+import tapir.docs.openapi.dtos.b.{Pet => BPet}
 import tapir.json.circe._
 import tapir.model.{Method, StatusCodes}
 import tapir.openapi.circe.yaml._
 import tapir.openapi.{Contact, Info, License}
-import tapir.tests._
+import tapir.tests.{FruitAmount, _}
 
 import scala.io.Source
 
@@ -143,7 +147,8 @@ class VerifyYamlTest extends FunSuite with Matchers {
         StatusCodes.BadRequest,
         whenClass[ErrorInfo.NotFound] -> StatusCodes.NotFound,
         whenClass[ErrorInfo.Unauthorized] -> StatusCodes.Unauthorized
-      ).defaultSchema(schemaFor[ErrorInfo.Unknown]))
+      ).defaultSchema(schemaFor[ErrorInfo.Unknown])
+    )
 
     // when
     val actualYaml = List(e).toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -159,7 +164,82 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val actualYaml = List(endpoint.in("p1"), endpoint.in("p3"), endpoint.in("p2"), endpoint.in("p5"), endpoint.in("p4"))
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml
-    println(actualYaml)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml when using coproduct types") {
+    val expectedYaml = loadYaml("expected_coproduct.yml")
+
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
+      .out(jsonBody[Entity])
+
+    val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml when using coproduct types with discriminator") {
+    val sPerson = implicitly[SchemaFor[Person]]
+    val sOrganization = implicitly[SchemaFor[Organization]]
+    implicit val sEntity: SchemaFor[Entity] = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
+
+    val expectedYaml = loadYaml("expected_coproduct_discriminator.yml")
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
+      .out(jsonBody[Entity])
+    val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml when using nested coproduct types") {
+    val expectedYaml = loadYaml("expected_coproduct_nested.yml")
+
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Nothing] = endpoint
+      .out(jsonBody[NestedEntity])
+
+    val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml when using nested coproduct types with discriminator") {
+    val sPerson = implicitly[SchemaFor[Person]]
+    val sOrganization = implicitly[SchemaFor[Organization]]
+    implicit val sEntity: SchemaFor[Entity] = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
+
+    val expectedYaml = loadYaml("expected_coproduct_discriminator_nested.yml")
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Nothing] = endpoint
+      .out(jsonBody[NestedEntity])
+    val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should handle classes with same name") {
+    val e: Endpoint[APet, Unit, BPet, Nothing] = endpoint
+      .in(jsonBody[APet])
+      .out(jsonBody[BPet])
+    val expectedYaml = loadYaml("expected_same_fullnames.yml")
+
+    val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should unfold nested hierarchy") {
+    val e: Endpoint[Book, Unit, String, Nothing] = endpoint
+      .in(jsonBody[Book])
+      .out(plainBody[String])
+    val expectedYaml = loadYaml("expected_unfolded_hierarchy.yml")
+
+    val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -173,6 +253,14 @@ class VerifyYamlTest extends FunSuite with Matchers {
 }
 
 case class F1(data: List[F1])
+
+case class NestedEntity(entity: Entity)
+
+sealed trait Entity {
+  def name: String
+}
+case class Person(name: String, age: Int) extends Entity
+case class Organization(name: String) extends Entity
 
 sealed trait ErrorInfo
 object ErrorInfo {

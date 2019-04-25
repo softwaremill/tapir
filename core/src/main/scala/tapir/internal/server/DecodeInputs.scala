@@ -42,33 +42,33 @@ object DecodeInputs {
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
   def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
-    // the first decoding failure is returned. We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
-    val inputs = input.asVectorOfBasicInputs().sortBy {
-      case _: EndpointInput.RequestMethod         => 0
-      case _: EndpointInput.PathSegment           => 1
-      case _: EndpointInput.PathCapture[_]        => 1
-      case _: EndpointInput.PathsCapture          => 1
-      case _: EndpointInput.Query[_]              => 2
-      case _: EndpointInput.QueryParams           => 2
-      case _: EndpointInput.Cookie[_]             => 3
-      case _: EndpointIO.Header[_]                => 3
-      case _: EndpointIO.Headers                  => 3
-      case _: EndpointInput.ExtractFromRequest[_] => 4
-      case _: EndpointIO.Body[_, _, _]            => 6
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
-    }
+    // The first decoding failure is returned.
+    // We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
+    // An exact-path check is done after method & path matching
 
-    val (result, consumedCtx) = apply(inputs, DecodeInputsResult.Values(Map(), None), ctx)
+    val basicInputs = input.asVectorOfBasicInputs()
 
-    result match {
-      case v: DecodeInputsResult.Values => verifyPathExactMatch(inputs, consumedCtx).getOrElse(v)
-      case r                            => r
-    }
+    val methodInputs = basicInputs.filter(isRequestMethod)
+    val pathInputs = basicInputs.filter(isPath)
+    val otherInputs = basicInputs.filterNot(ei => isRequestMethod(ei) || isPath(ei)).sortByType
+
+    compose(
+      apply(methodInputs, _, _),
+      apply(pathInputs, _, _),
+      (values, ctx) =>
+        verifyPathExactMatch(pathInputs, ctx) match {
+          case None          => (values, ctx)
+          case Some(failure) => (failure, ctx)
+        },
+      apply(otherInputs, _, _)
+    )(DecodeInputsResult.Values(Map(), None), ctx)._1
   }
 
-  private def apply(inputs: Vector[EndpointInput.Basic[_]],
-                    values: DecodeInputsResult.Values,
-                    ctx: DecodeInputsContext): (DecodeInputsResult, DecodeInputsContext) = {
+  private def apply(
+      inputs: Vector[EndpointInput.Basic[_]],
+      values: DecodeInputsResult.Values,
+      ctx: DecodeInputsContext
+  ): (DecodeInputsResult, DecodeInputsContext) = {
     inputs match {
       case Vector() => (values, ctx)
 
@@ -146,13 +146,11 @@ object DecodeInputs {
   /**
     * If there's any path input, the path must match exactly.
     */
-  private def verifyPathExactMatch(inputs: Vector[EndpointInput.Basic[_]], ctx: DecodeInputsContext): Option[DecodeInputsResult.Failure] = {
-    inputs.filter {
-      case _: EndpointInput.PathSegment    => true
-      case _: EndpointInput.PathCapture[_] => true
-      case _: EndpointInput.PathsCapture   => true
-      case _                               => false
-    }.lastOption match {
+  private def verifyPathExactMatch(
+      pathInputs: Vector[EndpointInput.Basic[_]],
+      ctx: DecodeInputsContext
+  ): Option[DecodeInputsResult.Failure] = {
+    pathInputs.lastOption match {
       case Some(lastPathInput) =>
         ctx.nextPathSegment._1 match {
           case Some(nextPathSegment) =>
@@ -161,6 +159,30 @@ object DecodeInputs {
         }
 
       case None => None
+    }
+  }
+
+  private val isRequestMethod: EndpointInput.Basic[_] => Boolean = {
+    case _: EndpointInput.RequestMethod => true
+    case _                              => false
+  }
+
+  private val isPath: EndpointInput.Basic[_] => Boolean = {
+    case _: EndpointInput.PathSegment    => true
+    case _: EndpointInput.PathCapture[_] => true
+    case _: EndpointInput.PathsCapture   => true
+    case _                               => false
+  }
+
+  private type DecodeInputResultTransform = (DecodeInputsResult.Values, DecodeInputsContext) => (DecodeInputsResult, DecodeInputsContext)
+  private def compose(fs: DecodeInputResultTransform*): DecodeInputResultTransform = { (values, ctx) =>
+    fs match {
+      case f +: tail =>
+        f(values, ctx) match {
+          case (values2: DecodeInputsResult.Values, ctx2) => compose(tail: _*)(values2, ctx2)
+          case r                                          => r
+        }
+      case _ => (values, ctx)
     }
   }
 }

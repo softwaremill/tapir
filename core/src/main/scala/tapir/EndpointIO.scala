@@ -16,8 +16,9 @@ sealed trait EndpointInput[I] {
   def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[II] =
     EndpointInput.Mapped(this, f, g, paramsAsArgs)
 
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                            paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
+  def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
 }
@@ -52,7 +53,7 @@ object EndpointInput {
   case class PathsCapture(info: EndpointIO.Info[Seq[String]]) extends Basic[Seq[String]] {
     def description(d: String): PathsCapture = copy(info = info.description(d))
     def example(t: Seq[String]): PathsCapture = copy(info = info.example(t))
-    def show = s"/[multiple paths]"
+    def show = s"/..."
   }
 
   case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Basic[T] {
@@ -64,7 +65,7 @@ object EndpointInput {
   case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Basic[MultiQueryParams] {
     def description(d: String): QueryParams = copy(info = info.description(d))
     def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
-    def show = s"?{multiple params}"
+    def show = s"?..."
   }
 
   case class Cookie[T](name: String, codec: PlainCodecForOptional[T], info: EndpointIO.Info[T]) extends Basic[T] {
@@ -74,7 +75,7 @@ object EndpointInput {
   }
 
   case class ExtractFromRequest[T](f: ServerRequest => T) extends Basic[T] {
-    def show = s"{from request}"
+    def show = s"{data from request}"
   }
 
   //
@@ -119,8 +120,9 @@ sealed trait EndpointOutput[I] {
   def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[II] =
     EndpointOutput.Mapped(this, f, g, paramsAsArgs)
 
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                            paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[CASE_CLASS] = {
+  def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
 }
@@ -139,17 +141,18 @@ object EndpointOutput {
 
   //
 
-  case class StatusCode() extends Basic[tapir.StatusCode] {
+  case class StatusCode() extends Basic[tapir.model.StatusCode] {
     override def show: String = "{status code}"
   }
 
   //
 
-  case class StatusFrom[I](output: EndpointOutput[I],
-                           default: tapir.StatusCode,
-                           defaultSchema: Option[Schema],
-                           when: Vector[(When[I], tapir.StatusCode)])
-      extends Single[I] {
+  case class StatusFrom[I](
+      output: EndpointOutput[I],
+      default: tapir.model.StatusCode,
+      defaultSchema: Option[Schema],
+      when: Vector[(When[I], tapir.model.StatusCode)]
+  ) extends Single[I] {
     def defaultSchema(s: Schema): StatusFrom[I] = this.copy(defaultSchema = Some(s))
     override def show: String = s"status from(${output.show}, $default or ${when.map(_._2).mkString("/")})"
   }
@@ -178,8 +181,9 @@ sealed trait EndpointIO[I] extends EndpointInput[I] with EndpointOutput[I] {
   override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
     EndpointIO.Mapped(this, f, g, paramsAsArgs)
 
-  override def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, I, CASE_CLASS],
-                                                                     paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
+  override def mapTo[COMPANION, CASE_CLASS <: Product](
+      c: COMPANION
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
   }
 }

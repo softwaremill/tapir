@@ -39,7 +39,8 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(
-      implicit eClassTag: ClassTag[E]): Route = {
+      implicit eClassTag: ClassTag[E]
+  ): Route = {
     e.toRouteRecoverErrors(fn)
   }
 
@@ -54,9 +55,11 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
     Future { t }
   }
 
+  override val initialPort: Port = 33000
+
   test("endpoint nested in a path directive") {
     val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => pureResult("ok".asRight[Unit]))
-    val port = randomPort()
+    val port = nextPort()
     val route = Directives.pathPrefix("api")(e.toRoute)
     server(NonEmptyList.of(route), port).use { _ =>
       sttp.get(uri"http://localhost:$port/api/test/directive").send().map(_.body shouldBe Right("ok"))

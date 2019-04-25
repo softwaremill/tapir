@@ -64,4 +64,21 @@ class EndpointTest extends FlatSpec with Matchers {
     exception.getMessage contains "found   : tapir.EndpointInput.PathCapture[String]"
     exception.getMessage contains "required: tapir.EndpointIO[?]"
   }
+
+  val showTestData = List(
+    (endpoint.name("E1").in("p1"), "[E1] /p1 -> -/-"),
+    (endpoint.get.in("p1" / "p2"), "GET /p1 /p2 -> -/-"),
+    (endpoint.in("p1" / path[String]("p2") / paths), "/p1 /[p2] /... -> -/-"),
+    (
+      endpoint.post.in(query[String]("q1")).in(query[Option[Int]]("q2")).in(stringBody).errorOut(stringBody),
+      "POST ?q1 ?q2 {body as text/plain; charset=UTF-8} -> {body as text/plain; charset=UTF-8}/-"
+    ),
+    (endpoint.get.in(header[String]("X-header")).out(header[String]("Y-header")), "GET {header X-header} -> -/{header Y-header}")
+  )
+
+  for ((testShowEndpoint, expectedShowResult) <- showTestData) {
+    s"show for ${testShowEndpoint.showDetail}" should s"be $expectedShowResult" in {
+      testShowEndpoint.show shouldBe expectedShowResult
+    }
+  }
 }

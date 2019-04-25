@@ -2,6 +2,7 @@ package tapir.docs.openapi
 
 import tapir.internal._
 import tapir.docs.openapi.schema.ObjectSchemas
+import tapir.model.StatusCode
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi._
 import tapir.{Schema => SSchema, _}
@@ -31,9 +32,11 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     r.toMap
   }
 
-  private def outputToResponses(output: EndpointOutput[_],
-                                defaultResponseKey: ResponsesKey,
-                                defaultResponse: Option[Response]): ListMap[ResponsesKey, ReferenceOr[Response]] = {
+  private def outputToResponses(
+      output: EndpointOutput[_],
+      defaultResponseKey: ResponsesKey,
+      defaultResponse: Option[Response]
+  ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
     val statusCodes = statusCodesToBodySchemas(output)
     val responses = if (statusCodes.isEmpty) {
       // no status code mapping defined in the output - using the default response key, if there's any response defined at all
@@ -69,7 +72,8 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             info.example.flatMap(exampleValue(codec, _)),
             ListMap.empty,
             ListMap.empty
-          ))
+          )
+        )
     }
 
     val bodies = outputs.collect {

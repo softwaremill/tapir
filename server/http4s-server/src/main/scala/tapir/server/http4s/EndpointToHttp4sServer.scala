@@ -8,12 +8,14 @@ import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.server.{DecodeFailureHandling, ServerEndpoint}
 import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput}
+import org.log4s._
+
+import scala.reflect.ClassTag
 
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
+  private val log = getLogger
 
-  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] = toRoutes(se.endpoint)(se.logic)
-
-  def toRoutes[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[Either[E, O]]): HttpRoutes[F] = {
+  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] = {
 
     val service: HttpRoutes[F] = HttpRoutes[F] { req: Request[F] =>
       def decodeBody(result: DecodeInputsResult): F[DecodeInputsResult] = {
@@ -35,45 +37,86 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       }
 
       def valuesToResponse(values: DecodeInputsResult.Values): F[Response[F]] = {
-        val i = SeqToParams(InputValues(e.input, values.values)).asInstanceOf[I]
-        logic(i).map {
-          case Right(result) =>
-            makeResponse(Status.Ok, e.output, result)
-          case Left(err) =>
-            makeResponse(Status.BadRequest, e.errorOutput, err)
-        }
+        val i = SeqToParams(InputValues(se.endpoint.input, values.values)).asInstanceOf[I]
+        se.logic(i)
+          .map {
+            case Right(result) =>
+              makeResponse(se.endpoint, Status.Ok, se.endpoint.output, result)
+            case Left(err) =>
+              makeResponse(se.endpoint, Status.BadRequest, se.endpoint.errorOutput, err)
+          }
+          .onError {
+            case e: Exception =>
+              implicitly[Sync[F]].delay(serverOptions.loggingOptions.logicExceptionMsg(se.endpoint).foreach(log.error(e)(_)))
+          }
       }
 
-      OptionT(decodeBody(DecodeInputs(e.input, new Http4sDecodeInputsContext[F](req))).flatMap {
+      OptionT(decodeBody(DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values          => valuesToResponse(values).map(_.some)
-        case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(req, input, failure).pure[F]
+        case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, req, input, failure).pure[F]
       })
     }
 
     service
   }
 
-  private def statusCodeToHttp4sStatus(code: tapir.StatusCode): Status =
+  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[O])(
+      implicit serverOptions: Http4sServerOptions[F],
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E]
+  ): HttpRoutes[F] = {
+    def reifyFailedF(f: F[O]): F[Either[E, O]] = {
+      f.map(Right(_): Either[E, O]).recover {
+        case e: Throwable if eClassTag.runtimeClass.isInstance(e) => Left(e.asInstanceOf[E]): Either[E, O]
+      }
+    }
+
+    toRoutes(e.serverLogic(logic.andThen(reifyFailedF)))
+  }
+
+  def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] = {
+    NonEmptyList.fromList(serverEndpoints.map(se => toRoutes(se))) match {
+      case Some(routes) => routes.reduceK
+      case None         => HttpRoutes.empty
+    }
+  }
+
+  private def statusCodeToHttp4sStatus(code: tapir.model.StatusCode): Status =
     Status.fromInt(code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
 
-  private def makeResponse[O](defaultStatusCode: org.http4s.Status, output: EndpointOutput[O], v: O): Response[F] = {
+  private def makeResponse[O](
+      e: Endpoint[_, _, _, _],
+      defaultStatusCode: org.http4s.Status,
+      output: EndpointOutput[O],
+      v: O
+  ): Response[F] = {
     val responseValues = new OutputToHttp4sResponse[F](serverOptions).apply(output, v)
     val statusCode = responseValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(defaultStatusCode)
 
-    val headers = Headers(responseValues.headers: _*)
+    serverOptions.loggingOptions.requestHandledMsg(e, statusCode.code).foreach(log.debug(_))
+
+    val headers = Headers.of(responseValues.headers: _*)
     responseValues.body match {
       case Some(entity) => Response(status = statusCode, headers = headers, body = entity)
       case None         => Response(status = statusCode, headers = headers)
     }
   }
 
-  private def handleDecodeFailure[I](req: Request[F], input: EndpointInput.Single[_], failure: DecodeFailure): Option[Response[F]] = {
+  private def handleDecodeFailure[I](
+      e: Endpoint[_, _, _, _],
+      req: Request[F],
+      input: EndpointInput.Single[_],
+      failure: DecodeFailure
+  ): Option[Response[F]] = {
     val handling = serverOptions.decodeFailureHandler(req, input, failure)
     handling match {
-      case DecodeFailureHandling.NoMatch => None
+      case DecodeFailureHandling.NoMatch =>
+        serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(log.debug(_))
+        None
       case DecodeFailureHandling.RespondWithResponse(statusCode, body, codec) =>
+        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, statusCode).foreach(log.debug(_))
         val (entity, header) = new OutputToHttp4sResponse(serverOptions).rawValueToEntity(codec.meta, codec.encode(body))
-        Some(Response(status = statusCodeToHttp4sStatus(statusCode), headers = Headers(header), body = entity))
+        Some(Response(status = statusCodeToHttp4sStatus(statusCode), headers = Headers.of(header), body = entity))
     }
   }
 }

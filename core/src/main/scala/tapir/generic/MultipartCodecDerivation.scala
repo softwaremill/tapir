@@ -6,13 +6,15 @@ import scala.reflect.macros.blackbox
 
 trait MultipartCodecDerivation {
   implicit def multipartCaseClassCodec[T <: Product with Serializable](
-      implicit conf: Configuration): Codec[T, MediaType.MultipartFormData, Seq[AnyPart]] =
+      implicit conf: Configuration
+  ): Codec[T, MediaType.MultipartFormData, Seq[AnyPart]] =
     macro MultipartCodecDerivation.generateForCaseClass[T]
 }
 
 object MultipartCodecDerivation {
-  def generateForCaseClass[T: c.WeakTypeTag](c: blackbox.Context)(
-      conf: c.Expr[Configuration]): c.Expr[Codec[T, MediaType.MultipartFormData, Seq[AnyPart]]] = {
+  def generateForCaseClass[T: c.WeakTypeTag](
+      c: blackbox.Context
+  )(conf: c.Expr[Configuration]): c.Expr[Codec[T, MediaType.MultipartFormData, Seq[AnyPart]]] = {
 
     import c.universe._
 

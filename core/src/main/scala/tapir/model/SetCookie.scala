@@ -9,13 +9,15 @@ import scala.collection.JavaConverters._
 
 // TODO: consider a typed model for headers - also Authorization (basic/bearer) etc.?
 // TODO: make value a T & generic?
-case class SetCookie(name: String,
-                     value: String,
-                     maxAge: Option[Long] = None,
-                     domain: Option[String] = None,
-                     path: Option[String] = None,
-                     secure: Boolean = false,
-                     httpOnly: Boolean = false) {
+case class SetCookie(
+    name: String,
+    value: String,
+    maxAge: Option[Long] = None,
+    domain: Option[String] = None,
+    path: Option[String] = None,
+    secure: Boolean = false,
+    httpOnly: Boolean = false
+) {
 
   def toHeaderValue: String = {
     var r = s"$name=$value"
@@ -59,12 +61,14 @@ object SetCookie {
   }
 }
 
-case class SetCookieValue(value: String,
-                          maxAge: Option[Long] = None,
-                          domain: Option[String] = None,
-                          path: Option[String] = None,
-                          secure: Boolean = false,
-                          httpOnly: Boolean = false) {
+case class SetCookieValue(
+    value: String,
+    maxAge: Option[Long] = None,
+    domain: Option[String] = None,
+    path: Option[String] = None,
+    secure: Boolean = false,
+    httpOnly: Boolean = false
+) {
   def toSetCookie(name: String): SetCookie = SetCookie(name, value, maxAge, domain, path, secure, httpOnly)
 }
 

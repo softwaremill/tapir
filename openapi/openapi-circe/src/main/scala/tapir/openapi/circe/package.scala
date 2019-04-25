@@ -54,6 +54,7 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderContact: Encoder[Contact] = deriveMagnoliaEncoder[Contact]
   implicit val encoderLicense: Encoder[License] = deriveMagnoliaEncoder[License]
   implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveMagnoliaEncoder[OpenAPI]
+  implicit val encoderDiscriminator: Encoder[Discriminator] = deriveMagnoliaEncoder[Discriminator]
   implicit def encodeList[T: Encoder]: Encoder[List[T]] = {
     case Nil        => Json.Null
     case l: List[T] => Json.arr(l.map(i => implicitly[Encoder[T]].apply(i)): _*)

@@ -29,10 +29,12 @@ object InputValues {
     }
   }
 
-  private def handleMapped[II, T](wrapped: EndpointInput[II],
-                                  f: II => T,
-                                  inputsTail: Vector[EndpointInput.Single[_]],
-                                  values: Map[EndpointInput.Basic[_], Any]): List[Any] = {
+  private def handleMapped[II, T](
+      wrapped: EndpointInput[II],
+      f: II => T,
+      inputsTail: Vector[EndpointInput.Single[_]],
+      values: Map[EndpointInput.Basic[_], Any]
+  ): List[Any] = {
     val wrappedValue = apply(wrapped.asVectorOfSingleInputs, values)
     f.asInstanceOf[Any => Any].apply(SeqToParams(wrappedValue)) :: apply(inputsTail, values)
   }

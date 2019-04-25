@@ -5,7 +5,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
-import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue}
+import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue, StatusCode}
 
 import scala.reflect.ClassTag
 
@@ -50,10 +50,12 @@ trait Tapir extends TapirDerivedInputs {
   def binaryBody[T](implicit codec: CodecForOptional[T, MediaType.OctetStream, _]): EndpointIO.Body[T, MediaType.OctetStream, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
   def formBody[T](
-      implicit codec: CodecForOptional[T, MediaType.XWwwFormUrlencoded, _]): EndpointIO.Body[T, MediaType.XWwwFormUrlencoded, _] =
+      implicit codec: CodecForOptional[T, MediaType.XWwwFormUrlencoded, _]
+  ): EndpointIO.Body[T, MediaType.XWwwFormUrlencoded, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
   def multipartBody[T](
-      implicit codec: CodecForOptional[T, MediaType.MultipartFormData, _]): EndpointIO.Body[T, MediaType.MultipartFormData, _] =
+      implicit codec: CodecForOptional[T, MediaType.MultipartFormData, _]
+  ): EndpointIO.Body[T, MediaType.MultipartFormData, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
 
   def streamBody[S](schema: Schema, mediaType: MediaType): StreamingEndpointIO.Body[S, mediaType.type] =
@@ -97,5 +99,6 @@ trait TapirDerivedInputs { this: Tapir =>
           .flatMap(_.split(",").headOption)
           .orElse(request.header("Remote-Address"))
           .orElse(request.header("X-Real-Ip"))
-          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.toString))))
+          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.toString)))
+    )
 }

@@ -2,12 +2,12 @@ package tapir.json.circe
 
 import java.nio.charset.StandardCharsets
 
-import tapir.DecodeResult.{Error, Value}
-import tapir.{CodecMeta, DecodeResult, MediaType, StringValueType}
+import io.circe._
 import io.circe.syntax._
-import io.circe.{Decoder, Encoder, Printer}
 import tapir.Codec.JsonCodec
-import tapir.SchemaFor
+import tapir.DecodeResult.{Error, Value}
+import tapir.Schema._
+import tapir._
 
 trait TapirJsonCirce {
   implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
@@ -21,4 +21,13 @@ trait TapirJsonCirce {
   }
 
   def jsonPrinter: Printer = Printer.noSpaces
+
+  implicit val tapirSchemaForCirceJson: SchemaFor[Json] =
+    SchemaFor(
+      SObject(
+        SObjectInfo("Json", "io.circe.Json"),
+        List.empty,
+        List.empty
+      )
+    )
 }

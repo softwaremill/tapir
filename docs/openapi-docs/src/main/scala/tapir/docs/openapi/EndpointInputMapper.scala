@@ -2,8 +2,10 @@ package tapir.docs.openapi
 import tapir.{EndpointIO, EndpointInput}
 
 // ideally the parameters would be polymporphic functions returning EI[I] => EI[I]
-private[openapi] class EndpointInputMapper[S](inputMapping: PartialFunction[(EndpointInput.Single[_], S), (EndpointInput.Single[_], S)],
-                                              ioMapping: PartialFunction[(EndpointIO.Single[_], S), (EndpointIO.Single[_], S)]) {
+private[openapi] class EndpointInputMapper[S](
+    inputMapping: PartialFunction[(EndpointInput.Single[_], S), (EndpointInput.Single[_], S)],
+    ioMapping: PartialFunction[(EndpointIO.Single[_], S), (EndpointIO.Single[_], S)]
+) {
 
   def mapInput(ei: EndpointInput[_], s: S): (EndpointInput[_], S) = ei match {
     case single: EndpointInput.Single[_] => mapInputSingle(single, s)
