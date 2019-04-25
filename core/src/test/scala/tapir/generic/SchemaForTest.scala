@@ -8,6 +8,9 @@ import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
+case class StringValueClass(value: String) extends AnyVal
+case class IntegerValueClass(value: Int) extends AnyVal
+
 class SchemaForTest extends FlatSpec with Matchers {
 
   "SchemaFor" should "find schema for simple types" in {
@@ -20,6 +23,16 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[Float]].schema shouldBe SNumber
     implicitly[SchemaFor[Double]].schema shouldBe SNumber
     implicitly[SchemaFor[Boolean]].schema shouldBe SBoolean
+  }
+
+  it should "find schema for value classes" in {
+    implicitly[SchemaFor[StringValueClass]].schema shouldBe SString
+    implicitly[SchemaFor[IntegerValueClass]].schema shouldBe SInteger
+  }
+
+  it should "find schema for collections of value classes" in {
+    implicitly[SchemaFor[Array[StringValueClass]]].schema shouldBe SArray(SString)
+    implicitly[SchemaFor[Array[IntegerValueClass]]].schema shouldBe SArray(SInteger)
   }
 
   it should "find schema for optional types" in {
