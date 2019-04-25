@@ -21,7 +21,7 @@ trait SchemaForMagnoliaDerivation {
       } else {
         try {
           cache.add(cacheKey)
-          if(ctx.isValueClass) {
+          if (ctx.isValueClass) {
             new SchemaFor[T] {
               override val schema: Schema = ctx.parameters.head.typeclass.schema
             }

@@ -25,9 +25,14 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[Boolean]].schema shouldBe SBoolean
   }
 
-  "SchemaFor" should "find schema for value classes" in {
+  it should "find schema for value classes" in {
     implicitly[SchemaFor[StringValueClass]].schema shouldBe SString
     implicitly[SchemaFor[IntegerValueClass]].schema shouldBe SInteger
+  }
+
+  it should "find schema for collections of value classes" in {
+    implicitly[SchemaFor[Array[StringValueClass]]].schema shouldBe SArray(SString)
+    implicitly[SchemaFor[Array[IntegerValueClass]]].schema shouldBe SArray(SInteger)
   }
 
   it should "find schema for optional types" in {
