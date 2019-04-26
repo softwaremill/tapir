@@ -54,6 +54,12 @@ val SwaggerYml = "swagger.yml"
 private val redirectToIndex: Route =
   redirect(s"/swagger/index.html?url=/swagger/$SwaggerYml", StatusCodes.PermanentRedirect) 
 
+private val swaggerVersion = {
+  val p = new Properties()
+  p.load(getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties"))
+  p.getProperty("version")
+}
+
 val routes: Route =
   path("swagger") {
     redirectToIndex
@@ -65,6 +71,6 @@ val routes: Route =
         path(SwaggerYml) {
           complete(yml)
         } ~
-        getFromResourceDirectory("META-INF/resources/webjars/swagger-ui/3.22.0/")
+        getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
     }
 ```

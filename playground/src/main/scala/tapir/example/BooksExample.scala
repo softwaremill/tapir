@@ -1,5 +1,7 @@
 package tapir.example
 
+import java.util.Properties
+
 import com.typesafe.scalalogging.StrictLogging
 import tapir.example.Endpoints.Limit
 
@@ -150,6 +152,12 @@ class SwaggerUI(yml: String) {
   private val redirectToIndex: Route =
     redirect(s"/swagger/index.html?url=/swagger/$SwaggerYml", StatusCodes.PermanentRedirect) //
 
+  private val swaggerVersion = {
+    val p = new Properties()
+    p.load(getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties"))
+    p.getProperty("version")
+  }
+
   val routes: Route =
     path("swagger") {
       redirectToIndex
@@ -161,7 +169,7 @@ class SwaggerUI(yml: String) {
           path(SwaggerYml) {
             complete(yml)
           } ~
-          getFromResourceDirectory("META-INF/resources/webjars/swagger-ui/3.22.0/")
+          getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
       }
 }
 
