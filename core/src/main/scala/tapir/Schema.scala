@@ -33,15 +33,15 @@ object Schema {
     def show: String = "date-time"
   }
 
-  case class SRef(fullName: String) extends Schema {
-    def show: String = s"ref($fullName)"
+  case class SRef(info: SObjectInfo) extends Schema {
+    def show: String = s"ref($info)"
   }
 
   case class SCoproduct(schemas: Set[Schema], discriminator: Option[Discriminator]) extends Schema {
     override def show: String = "oneOf:" + schemas.mkString(",")
   }
 
-  case class SObjectInfo(shortName: String, fullName: String)
+  case class SObjectInfo(fullName: String, typeParameterShortNames: List[String] = Nil)
 
   case class Discriminator(propertyName: String, mappingOverride: Map[String, SRef])
 }

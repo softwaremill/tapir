@@ -39,7 +39,7 @@ lazy val core: Project = (project in file("core"))
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
-      "com.propensive" %% "magnolia" % "0.10.0",
+      "com.softwaremill" %% "magnolia" % "0.11.0-sml",
       scalaTest % "test"
     )
   )
@@ -86,7 +86,7 @@ lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-parser" % circeVersion,
-      "io.circe" %% "circe-magnolia-derivation" % "0.4.0"
+      "io.circe" %% "circe-generic" % circeVersion
     ),
     name := "tapir-openapi-circe"
   )

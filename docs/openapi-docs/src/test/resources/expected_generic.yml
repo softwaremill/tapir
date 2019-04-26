@@ -1,0 +1,45 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /p1:
+    get:
+      operationId: getP1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/G_String'
+        required: true
+      responses:
+        '200':
+          description: ''
+  /p2:
+    get:
+      operationId: getP2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/G_Int'
+        required: true
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    G_String:
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: string
+    G_Int:
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: integer

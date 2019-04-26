@@ -22,10 +22,10 @@ trait TapirJsonCirce {
 
   def jsonPrinter: Printer = Printer.noSpaces
 
-  implicit val tapirSchemaForCirceJson: SchemaFor[Json] =
+  implicit val schemaForCirceJson: SchemaFor[Json] =
     SchemaFor(
       SObject(
-        SObjectInfo("Json", "io.circe.Json"),
+        SObjectInfo("io.circe.Json"),
         List.empty,
         List.empty
       )
