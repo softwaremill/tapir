@@ -2,7 +2,6 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
-import tapir.Schema.SCoproduct
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -138,7 +137,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     // work-around for #10: unsupported sealed trait families
     implicit val schemaForErrorInfo: SchemaFor[ErrorInfo] = new SchemaFor[ErrorInfo] {
-      override def schema: Schema = Schema.SObject(Schema.SObjectInfo("ErrorInfo", "ErrorInfo"), Nil, Nil)
+      override def schema: Schema = Schema.SObject(Schema.SObjectInfo("ErrorInfo"), Nil, Nil)
     }
 
     val e = endpoint.errorOut(
@@ -245,6 +244,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should differentiate when a generic type is used multiple times") {
+    val expectedYaml = loadYaml("expected_generic.yml")
+
+    val actualYaml = List(endpoint.in("p1" and jsonBody[G[String]]), endpoint.in("p2" and jsonBody[G[Int]]))
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    println(actualYaml)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromResource(fileName).getLines().mkString("\n"))
   }
@@ -253,6 +264,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 }
 
 case class F1(data: List[F1])
+case class G[T](data: T)
 
 case class NestedEntity(entity: Entity)
 

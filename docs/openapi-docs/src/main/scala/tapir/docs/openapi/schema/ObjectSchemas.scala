@@ -11,7 +11,7 @@ class ObjectSchemas(
 ) {
   def apply(schema: TSchema): ReferenceOr[OSchema] = {
     schema match {
-      case TSchema.SObject(info, _, _) => Left(schemaReferenceMapper.map(info.fullName))
+      case TSchema.SObject(info, _, _) => Left(schemaReferenceMapper.map(info))
       case TSchema.SCoproduct(schemas, d) =>
         Right(OSchema.apply(schemas.map(apply).toList, d.map(discriminatorToOpenApi.apply)))
       case _ => tschemaToOSchema(schema)
