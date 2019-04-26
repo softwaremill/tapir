@@ -1,6 +1,6 @@
 package tapir.openapi
 
-import io.circe.magnolia.derivation.encoder.semiauto._
+import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Encoder, Json}
@@ -18,25 +18,25 @@ trait TapirOpenAPICirceEncoders {
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
-  implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveMagnoliaEncoder[OAuthFlow]
-  implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveMagnoliaEncoder[OAuthFlows]
-  implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveMagnoliaEncoder[SecurityScheme]
+  implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveEncoder[OAuthFlow]
+  implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveEncoder[OAuthFlows]
+  implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveEncoder[SecurityScheme]
   implicit val encoderExampleValue: Encoder[ExampleValue] = { ev: ExampleValue =>
-    parse(ev.value).toOption.getOrElse(Json.fromString(ev.value))
+    parse(ev.value).right.getOrElse(Json.fromString(ev.value))
   }
   implicit val encoderSchemaFormat: Encoder[SchemaFormat.SchemaFormat] = Encoder.enumEncoder(SchemaFormat)
   implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.enumEncoder(SchemaType)
-  implicit val encoderSchema: Encoder[Schema] = deriveMagnoliaEncoder[Schema]
-  implicit val encoderReference: Encoder[Reference] = deriveMagnoliaEncoder[Reference]
-  implicit val encoderHeader: Encoder[Header] = deriveMagnoliaEncoder[Header]
-  implicit val encoderExample: Encoder[Example] = deriveMagnoliaEncoder[Example]
-  implicit val encoderResponse: Encoder[Response] = deriveMagnoliaEncoder[Response]
-  implicit val encoderEncoding: Encoder[Encoding] = deriveMagnoliaEncoder[Encoding]
-  implicit val encoderMediaType: Encoder[MediaType] = deriveMagnoliaEncoder[MediaType]
-  implicit val encoderRequestBody: Encoder[RequestBody] = deriveMagnoliaEncoder[RequestBody]
+  implicit val encoderSchema: Encoder[Schema] = deriveEncoder[Schema]
+  implicit val encoderReference: Encoder[Reference] = deriveEncoder[Reference]
+  implicit val encoderHeader: Encoder[Header] = deriveEncoder[Header]
+  implicit val encoderExample: Encoder[Example] = deriveEncoder[Example]
+  implicit val encoderResponse: Encoder[Response] = deriveEncoder[Response]
+  implicit val encoderEncoding: Encoder[Encoding] = deriveEncoder[Encoding]
+  implicit val encoderMediaType: Encoder[MediaType] = deriveEncoder[MediaType]
+  implicit val encoderRequestBody: Encoder[RequestBody] = deriveEncoder[RequestBody]
   implicit val encoderParameterStyle: Encoder[ParameterStyle.ParameterStyle] = Encoder.enumEncoder(ParameterStyle)
   implicit val encoderParameterIn: Encoder[ParameterIn.ParameterIn] = Encoder.enumEncoder(ParameterIn)
-  implicit val encoderParameter: Encoder[Parameter] = deriveMagnoliaEncoder[Parameter]
+  implicit val encoderParameter: Encoder[Parameter] = deriveEncoder[Parameter]
   implicit val encoderResponseMap: Encoder[ListMap[ResponsesKey, ReferenceOr[Response]]] =
     (responses: ListMap[ResponsesKey, ReferenceOr[Response]]) => {
       val fields = responses.map {
@@ -46,15 +46,15 @@ trait TapirOpenAPICirceEncoders {
 
       Json.obj(fields.toSeq: _*)
     }
-  implicit val encoderOperation: Encoder[Operation] = deriveMagnoliaEncoder[Operation]
-  implicit val encoderPathItem: Encoder[PathItem] = deriveMagnoliaEncoder[PathItem]
-  implicit val encoderComponents: Encoder[Components] = deriveMagnoliaEncoder[Components]
-  implicit val encoderServer: Encoder[Server] = deriveMagnoliaEncoder[Server]
-  implicit val encoderInfo: Encoder[Info] = deriveMagnoliaEncoder[Info]
-  implicit val encoderContact: Encoder[Contact] = deriveMagnoliaEncoder[Contact]
-  implicit val encoderLicense: Encoder[License] = deriveMagnoliaEncoder[License]
-  implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveMagnoliaEncoder[OpenAPI]
-  implicit val encoderDiscriminator: Encoder[Discriminator] = deriveMagnoliaEncoder[Discriminator]
+  implicit val encoderOperation: Encoder[Operation] = deriveEncoder[Operation]
+  implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem]
+  implicit val encoderComponents: Encoder[Components] = deriveEncoder[Components]
+  implicit val encoderServer: Encoder[Server] = deriveEncoder[Server]
+  implicit val encoderInfo: Encoder[Info] = deriveEncoder[Info]
+  implicit val encoderContact: Encoder[Contact] = deriveEncoder[Contact]
+  implicit val encoderLicense: Encoder[License] = deriveEncoder[License]
+  implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveEncoder[OpenAPI]
+  implicit val encoderDiscriminator: Encoder[Discriminator] = deriveEncoder[Discriminator]
   implicit def encodeList[T: Encoder]: Encoder[List[T]] = {
     case Nil        => Json.Null
     case l: List[T] => Json.arr(l.map(i => implicitly[Encoder[T]].apply(i)): _*)

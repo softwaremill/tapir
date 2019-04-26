@@ -3,6 +3,7 @@ package tapir.server.http4s
 import cats.data._
 import cats.implicits._
 import cats.effect.{ContextShift, Sync}
+import cats.syntax.NestedFoldableOps
 import fs2.Chunk
 import org.http4s
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
@@ -85,8 +86,8 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
         toResponse(wrapped, g(vs(i)))
     }
-
-    states.sequence_
+    val sequence: State[ResponseValues, Unit] = new NestedFoldableOps[Vector, State[ResponseValues, ?], Unit](states).sequence_
+    sequence
   }
 
   def rawValueToEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): (EntityBody[F], Header) = {
