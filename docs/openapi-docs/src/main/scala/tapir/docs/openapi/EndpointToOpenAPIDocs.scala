@@ -25,6 +25,7 @@ object EndpointToOpenAPIDocs {
   private def apiToOpenApi(info: Info, componentsCreator: EndpointToOpenApiComponents): OpenAPI = {
     OpenAPI(
       info = info,
+      tags = List.empty,
       servers = List.empty,
       paths = ListMap.empty,
       components = componentsCreator.components,
