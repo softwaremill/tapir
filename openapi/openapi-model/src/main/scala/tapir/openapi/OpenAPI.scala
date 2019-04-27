@@ -4,7 +4,6 @@ import tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
 
 import scala.collection.immutable.ListMap
 
-// todo tags, externaldocs
 case class OpenAPI(
     openapi: String = "3.0.1",
     info: Info,
