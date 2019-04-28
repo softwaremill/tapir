@@ -55,9 +55,9 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
   }
 
-  implicit def schemaForMap[V]: SchemaFor[Map[String, V]] = macro SchemaForMapMacro.mapParameters[String, V, Map[String, V]]
+  implicit def schemaForMap[V]: SchemaFor[Map[String, V]] = macro SchemaForMapMacro.schemaForMap[String, V, Map[String, V]]
   implicit def schemaForMutableMap[V]: SchemaFor[collection.Map[String, V]] =
-    macro SchemaForMapMacro.mapParameters[String, V, collection.Map[String, V]]
+    macro SchemaForMapMacro.schemaForMap[String, V, collection.Map[String, V]]
 
   def oneOf[E, V](extractor: E => V, asString: V => String)(mapping: (V, SchemaFor[_])*): SchemaFor[E] = macro oneOfMacro[E, V]
 }

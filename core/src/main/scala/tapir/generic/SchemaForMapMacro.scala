@@ -5,7 +5,7 @@ import tapir.SchemaFor
 import scala.reflect.macros.blackbox
 
 object SchemaForMapMacro {
-  def mapParameters[K: c.WeakTypeTag, V: c.WeakTypeTag, M: c.WeakTypeTag](c: blackbox.Context): c.Expr[SchemaFor[M]] = {
+  def schemaForMap[K: c.WeakTypeTag, V: c.WeakTypeTag, M: c.WeakTypeTag](c: blackbox.Context): c.Expr[SchemaFor[M]] = {
     import c.universe._
 
     val k = weakTypeOf[K]
