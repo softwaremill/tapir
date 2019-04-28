@@ -135,6 +135,11 @@ class SchemaForTest extends FlatSpec with Matchers {
     val schema = implicitly[SchemaFor[H[A]]].schema
     schema shouldBe SObject(SObjectInfo("tapir.generic.H", List("A")), List(("data", expectedASchema)), List("data"))
   }
+
+  it should "find schema for map" in {
+    val schema = implicitly[SchemaFor[Map[String, Int]]].schema
+    schema shouldBe SObject(SObjectInfo("Map"), List.empty, List.empty)
+  }
 }
 
 case class A(f1: String, f2: Int, f3: Option[String])
