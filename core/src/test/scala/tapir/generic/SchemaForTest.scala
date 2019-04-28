@@ -138,20 +138,7 @@ class SchemaForTest extends FlatSpec with Matchers {
 
   it should "find schema for map" in {
     val schema = implicitly[SchemaFor[Map[String, Int]]].schema
-    schema shouldBe SObject(
-      SObjectInfo("scala.collection.immutable.Map", List("String", "Int")),
-      List.empty,
-      List.empty
-    )
-  }
-
-  it should "find schema for mutable map" in {
-    val schema = implicitly[SchemaFor[collection.Map[String, Int]]].schema
-    schema shouldBe SObject(
-      SObjectInfo("scala.collection.Map", List("String", "Int")),
-      List.empty,
-      List.empty
-    )
+    schema shouldBe SObject(SObjectInfo("Map"), List.empty, List.empty)
   }
 }
 

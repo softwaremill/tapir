@@ -8,7 +8,7 @@ import java.util.Date
 
 import tapir.Schema._
 import tapir.generic.OneOfMacro.oneOfMacro
-import tapir.generic.{SchemaForMagnoliaDerivation, SchemaForMapMacro}
+import tapir.generic.SchemaForMagnoliaDerivation
 import tapir.model.Part
 
 trait SchemaFor[T] {
@@ -55,9 +55,7 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
   }
 
-  implicit def schemaForMap[V]: SchemaFor[Map[String, V]] = macro SchemaForMapMacro.schemaForMap[String, V, Map[String, V]]
-  implicit def schemaForMutableMap[V]: SchemaFor[collection.Map[String, V]] =
-    macro SchemaForMapMacro.schemaForMap[String, V, collection.Map[String, V]]
+  implicit def schemaForMap[V: SchemaFor]: SchemaFor[Map[String, V]] = SchemaFor(SObject(SObjectInfo("Map"), List.empty, List.empty))
 
   def oneOf[E, V](extractor: E => V, asString: V => String)(mapping: (V, SchemaFor[_])*): SchemaFor[E] = macro oneOfMacro[E, V]
 }

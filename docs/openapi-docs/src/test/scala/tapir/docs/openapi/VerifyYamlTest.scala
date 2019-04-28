@@ -255,18 +255,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should differentiate when a map type is used multiple times") {
-    val expectedYaml = loadYaml("expected_maps.yml")
-
-    val actualYaml = List(endpoint.in("p1" and jsonBody[Map[String, Int]]), endpoint.in("p2" and jsonBody[Map[String, String]]))
-      .toOpenAPI(Info("Fruits", "1.0"))
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromResource(fileName).getLines().mkString("\n"))
   }
