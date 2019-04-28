@@ -2,15 +2,8 @@ package tapir.server.akkahttp
 import java.io.ByteArrayInputStream
 
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.{
-  complete,
-  extractExecutionContext,
-  extractMaterializer,
-  extractRequestContext,
-  onSuccess,
-  reject
-}
-import akka.http.scaladsl.server.{Directive1, RequestContext}
+import akka.http.scaladsl.server.Directives.{extractExecutionContext, extractMaterializer, extractRequestContext, onSuccess, reject}
+import akka.http.scaladsl.server.{Directive1, RequestContext, StandardRoute}
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
@@ -18,7 +11,7 @@ import akka.util.ByteString
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.model.Part
-import tapir.server.DecodeFailureHandling
+import tapir.server.{DecodeFailureHandling, ServerDefaults}
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -96,9 +89,9 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       case DecodeFailureHandling.NoMatch =>
         serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(ctx.log.debug)
         reject
-      case DecodeFailureHandling.RespondWithResponse(statusCode, body, codec) =>
-        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, statusCode).foreach(ctx.log.debug)
-        complete(HttpResponse(entity = OutputToAkkaResponse.rawValueToResponseEntity(codec.meta, codec.encode(body)), status = statusCode))
+      case DecodeFailureHandling.RespondWithResponse(output, value) =>
+        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach(ctx.log.debug)
+        StandardRoute(OutputToAkkaRoute(ServerDefaults.defaultErrorStatusCode, output, value))
     }
   }
 

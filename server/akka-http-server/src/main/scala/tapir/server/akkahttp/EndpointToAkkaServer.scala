@@ -1,13 +1,13 @@
 package tapir.server.akkahttp
 
-import akka.http.scaladsl.model.{HttpResponse, StatusCode => AkkaStatusCode, MediaType => _}
+import akka.http.scaladsl.model.{MediaType => _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import tapir._
 import tapir.model.StatusCodes
-import tapir.server.ServerEndpoint
+import tapir.server.{ServerDefaults, ServerEndpoint}
 import tapir.typelevel.ParamsToTuple
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -42,8 +42,8 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
           resp => { serverOptions.loggingOptions.requestHandledMsg(se.endpoint, resp.status.intValue()).foreach(log.debug); resp }
         ) {
           onComplete(se.logic(values)) {
-            case Success(Left(v))  => outputToRoute(StatusCodes.BadRequest, se.endpoint.errorOutput, v)
-            case Success(Right(v)) => outputToRoute(StatusCodes.Ok, se.endpoint.output, v)
+            case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.defaultErrorStatusCode, se.endpoint.errorOutput, v)
+            case Success(Right(v)) => OutputToAkkaRoute(StatusCodes.Ok, se.endpoint.output, v)
             case Failure(e) =>
               serverOptions.loggingOptions.logicExceptionMsg(se.endpoint).foreach(log.error(e, _))
               throw e
@@ -58,21 +58,4 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   }
 
   private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive1[I] = new EndpointToAkkaDirective(serverOptions)(e)
-
-  private def outputToRoute[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
-    val responseValues = OutputToAkkaResponse(output, v)
-
-    val statusCode = responseValues.statusCode.map(c => c: AkkaStatusCode).getOrElse(defaultStatusCode)
-
-    val completeRoute = responseValues.body match {
-      case Some(entity) => complete(HttpResponse(entity = entity, status = statusCode))
-      case None         => complete(HttpResponse(statusCode))
-    }
-
-    if (responseValues.headers.nonEmpty) {
-      respondWithHeaders(responseValues.headers: _*)(completeRoute)
-    } else {
-      completeRoute
-    }
-  }
 }
