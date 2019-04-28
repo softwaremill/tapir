@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.7.1"
-"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.7.1"
+"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.7.2"
+"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.7.2"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
