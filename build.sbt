@@ -5,19 +5,19 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalaVersion := scala2_12,
   scalafmtOnCompile := true,
   crossScalaVersions := Seq(scala2_11, scala2_12),
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
+  scalacOptions ++= 
+    (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, v)) if v <= 12 =>
         Seq(
           "-Xexperimental",
           "-Ywarn-nullary-unit",
           "-Ywarn-inaccessible",
-          "-Ywarn-adapted-args"
+          "-Ywarn-adapted-args",
+          "-Ypartial-unification"
         )
       case _ =>
         Nil
-    }
-  }
+    })
 )
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.7"

@@ -77,7 +77,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] = {
     NonEmptyList.fromList(serverEndpoints.map(se => toRoutes(se))) match {
       case Some(routes) => routes.reduceK
-      case None => HttpRoutes.empty
+      case None         => HttpRoutes.empty
     }
   }
 

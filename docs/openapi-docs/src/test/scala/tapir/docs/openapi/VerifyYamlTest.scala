@@ -2,7 +2,6 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
-import tapir.Schema.SCoproduct
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -145,9 +144,9 @@ class VerifyYamlTest extends FunSuite with Matchers {
       statusFrom(
         jsonBody[ErrorInfo],
         StatusCodes.BadRequest,
-        whenClass[ErrorInfo.NotFound] -> StatusCodes.NotFound,
-        whenClass[ErrorInfo.Unauthorized] -> StatusCodes.Unauthorized
-      ).defaultSchema(schemaFor[ErrorInfo.Unknown])
+        whenClass[NotFound] -> StatusCodes.NotFound,
+        whenClass[Unauthorized] -> StatusCodes.Unauthorized
+      ).defaultSchema(schemaFor[Unknown])
     )
 
     // when
@@ -246,7 +245,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   private def loadYaml(fileName: String): String = {
-    noIndentation(Source.fromResource(fileName).getLines().mkString("\n"))
+    noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
 
   private def noIndentation(s: String) = s.replaceAll("[ \t]", "").trim
@@ -263,8 +262,6 @@ case class Person(name: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
 
 sealed trait ErrorInfo
-object ErrorInfo {
-  case class NotFound(what: String) extends ErrorInfo
-  case class Unauthorized(realm: String) extends ErrorInfo
-  case class Unknown(code: Int, msg: String) extends ErrorInfo
-}
+case class NotFound(what: String) extends ErrorInfo
+case class Unauthorized(realm: String) extends ErrorInfo
+case class Unknown(code: Int, msg: String) extends ErrorInfo
