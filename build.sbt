@@ -10,9 +10,6 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       case Some((2, v)) if v <= 12 =>
         Seq(
           "-Xexperimental",
-          "-Ywarn-nullary-unit",
-          "-Ywarn-inaccessible",
-          "-Ywarn-adapted-args",
           "-Ypartial-unification"
         )
       case _ =>
