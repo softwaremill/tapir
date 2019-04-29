@@ -1,6 +1,7 @@
 package tapir.server.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
+import java.net.BindException
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -9,13 +10,13 @@ import cats.effect.{IO, Resource}
 import cats.implicits._
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
+import io.circe.generic.auto._
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import tapir._
+import tapir.json.circe._
 import tapir.model.{MultiQueryParams, Part, SetCookieValue, UsernamePassword}
 import tapir.tests.TestUtil._
 import tapir.tests._
-import tapir._
-import tapir.json.circe._
-import io.circe.generic.auto._
 
 import scala.reflect.ClassTag
 
@@ -441,7 +442,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
-    test(name)(resources.use(runTest).unsafeRunSync())
+    test(name)(resources.recoverWith { case _: BindException => resources }.use(runTest).unsafeRunSync())
   }
 
   //
