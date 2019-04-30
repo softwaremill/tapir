@@ -16,9 +16,9 @@ case class LoggingOptions(debugLogWhenHandled: Boolean, debugLogAllDecodeFailure
       Some(s"Request not handled by: ${e.show}; decode failure: $df, on input: ${input.show}")
     else None
 
-  def decodeFailureHandledMsg(e: Endpoint[_, _, _, _], df: DecodeFailure, input: EndpointInput[_], statusCode: Int): Option[String] =
+  def decodeFailureHandledMsg(e: Endpoint[_, _, _, _], df: DecodeFailure, input: EndpointInput[_], responseValue: Any): Option[String] =
     if (debugLogWhenHandled)
-      Some(s"Request handled by: ${e.show}; decode failure: $df, on input: ${input.show}; responding with code: $statusCode")
+      Some(s"Request handled by: ${e.show}; decode failure: $df, on input: ${input.show}; responding with: $responseValue")
     else None
 
   def logicExceptionMsg(e: Endpoint[_, _, _, _]): Option[String] =

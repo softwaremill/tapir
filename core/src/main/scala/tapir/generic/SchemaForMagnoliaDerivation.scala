@@ -16,7 +16,7 @@ trait SchemaForMagnoliaDerivation {
       val cacheKey = ctx.typeName.full
       if (cache.contains(cacheKey)) {
         new SchemaFor[T] {
-          override val schema: Schema = SRef(ctx.typeName.full)
+          override val schema: Schema = SRef(typeNameToObjectInfo(ctx.typeName))
         }
       } else {
         try {
@@ -28,7 +28,7 @@ trait SchemaForMagnoliaDerivation {
           } else {
             new SchemaFor[T] {
               override val schema: Schema = SObject(
-                SObjectInfo(ctx.typeName.short, ctx.typeName.full),
+                typeNameToObjectInfo(ctx.typeName),
                 ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
                 ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
               )
@@ -40,6 +40,9 @@ trait SchemaForMagnoliaDerivation {
       }
     }
   }
+
+  private def typeNameToObjectInfo(typeName: TypeName): Schema.SObjectInfo =
+    SObjectInfo(typeName.full, typeName.typeArguments.map(_.short).toList)
 
   private def withProgressCache[T](f: mutable.Set[String] => SchemaFor[T]): SchemaFor[T] = {
     var cache = deriveInProgress.get()

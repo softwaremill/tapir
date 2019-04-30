@@ -51,7 +51,7 @@ class SchemaForTest extends FlatSpec with Matchers {
   }
 
   val expectedASchema =
-    SObject(SObjectInfo("A", "tapir.generic.A"), List(("f1", SString), ("f2", SInteger), ("f3", SString)), List("f1", "f2"))
+    SObject(SObjectInfo("tapir.generic.A"), List(("f1", SString), ("f2", SInteger), ("f3", SString)), List("f1", "f2"))
 
   it should "find schema for collections of case classes" in {
     implicitly[SchemaFor[List[A]]].schema shouldBe SArray(expectedASchema)
@@ -61,7 +61,7 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[A]].schema shouldBe expectedASchema
   }
 
-  val expectedDSchema: SObject = SObject(SObjectInfo("D", "tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName"))
+  val expectedDSchema: SObject = SObject(SObjectInfo("tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName"))
 
   it should "find schema for a simple case class and use identity naming transformation" in {
     implicitly[SchemaFor[D]].schema shouldBe expectedDSchema
@@ -69,19 +69,19 @@ class SchemaForTest extends FlatSpec with Matchers {
 
   it should "find schema for a simple case class and use snake case naming transformation" in {
     val expectedSnakeCaseNaming = expectedDSchema.copy(fields = List(("some_field_name", SString)), required = List("some_field_name"))
-    implicit val customConf = Configuration.default.withSnakeCaseMemberNames
+    implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
     implicitly[SchemaFor[D]].schema shouldBe expectedSnakeCaseNaming
   }
 
   it should "find schema for a simple case class and use kebab case naming transformation" in {
     val expectedKebabCaseNaming = expectedDSchema.copy(fields = List(("some-field-name", SString)), required = List("some-field-name"))
-    implicit val customConf = Configuration.default.withKebabCaseMemberNames
+    implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
     implicitly[SchemaFor[D]].schema shouldBe expectedKebabCaseNaming
   }
 
   it should "find schema for a nested case class" in {
     implicitly[SchemaFor[B]].schema shouldBe SObject(
-      SObjectInfo("B", "tapir.generic.B"),
+      SObjectInfo("tapir.generic.B"),
       List(("g1", SString), ("g2", expectedASchema)),
       List("g1", "g2")
     )
@@ -89,7 +89,7 @@ class SchemaForTest extends FlatSpec with Matchers {
 
   it should "find schema for case classes with collections" in {
     implicitly[SchemaFor[C]].schema shouldBe SObject(
-      SObjectInfo("C", "tapir.generic.C"),
+      SObjectInfo("tapir.generic.C"),
       List(("h1", SArray(SString)), ("h2", SInteger)),
       List("h1")
     )
@@ -98,15 +98,19 @@ class SchemaForTest extends FlatSpec with Matchers {
   it should "find schema for recursive data structure" in {
     val schema = implicitly[SchemaFor[F]].schema
     schema shouldBe SObject(
-      SObjectInfo("F", "tapir.generic.F"),
-      List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)),
+      SObjectInfo("tapir.generic.F"),
+      List(("f1", SArray(SRef(SObjectInfo("tapir.generic.F")))), ("f2", SInteger)),
       List("f1", "f2")
     )
   }
 
   it should "find schema for recursive data structure when invoked from many threads" in {
     val expected =
-      SObject(SObjectInfo("F", "tapir.generic.F"), List(("f1", SArray(SRef("tapir.generic.F"))), ("f2", SInteger)), List("f1", "f2"))
+      SObject(
+        SObjectInfo("tapir.generic.F"),
+        List(("f1", SArray(SRef(SObjectInfo("tapir.generic.F")))), ("f2", SInteger)),
+        List("f1", "f2")
+      )
 
     val count = 100
     val futures = (1 until count).map { _ =>
@@ -124,12 +128,17 @@ class SchemaForTest extends FlatSpec with Matchers {
   it should "use custom schema for custom types" in {
     implicit val scustom: SchemaFor[Custom] = SchemaFor[Custom](Schema.SString)
     val schema = implicitly[SchemaFor[G]].schema
-    schema shouldBe SObject(SObjectInfo("G", "tapir.generic.G"), List(("f1", SInteger), ("f2", SString)), List("f1", "f2"))
+    schema shouldBe SObject(SObjectInfo("tapir.generic.G"), List(("f1", SInteger), ("f2", SString)), List("f1", "f2"))
   }
 
   it should "derive schema for parametrised type classes" in {
     val schema = implicitly[SchemaFor[H[A]]].schema
-    schema shouldBe SObject(SObjectInfo("H", "tapir.generic.H"), List(("data", expectedASchema)), List("data"))
+    schema shouldBe SObject(SObjectInfo("tapir.generic.H", List("A")), List(("data", expectedASchema)), List("data"))
+  }
+
+  it should "find schema for map" in {
+    val schema = implicitly[SchemaFor[Map[String, Int]]].schema
+    schema shouldBe SObject(SObjectInfo("Map"), List.empty, List.empty)
   }
 }
 

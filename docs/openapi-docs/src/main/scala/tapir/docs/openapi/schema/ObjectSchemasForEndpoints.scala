@@ -12,7 +12,7 @@ object ObjectSchemasForEndpoints {
     val sObjectsForEndpoints = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
     val sObjectsAll = sObjectsForEndpoints.flatMap(collectFieldObjects).map(replaceSObjectFieldsWithSRef)
     val infoToKey = calculateUniqueKeys(sObjectsAll.map(_.info))
-    val schemaReferences = new SchemaReferenceMapper(infoToKey.map { case (k, v) => k.fullName -> v })
+    val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences, discriminatorToOpenApi)
@@ -35,7 +35,7 @@ object ObjectSchemasForEndpoints {
   }
   private def replaceSObjectFieldsWithSRef(obj: TSchema.SObject): TSchema.SObject = {
     val newFields = obj.fields map {
-      case (s, o: TSchema.SObject) => (s, TSchema.SRef(o.info.fullName))
+      case (s, o: TSchema.SObject) => (s, TSchema.SRef(o.info))
       case x                       => x
     }
     obj.copy(fields = newFields)
@@ -46,7 +46,7 @@ object ObjectSchemasForEndpoints {
     infos
       .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) {
         case (SchemaKeyAssignment1(keyToInfo, infoToKey), objectInfo) =>
-          val key = uniqueName(objectInfo.shortName, n => !keyToInfo.contains(n) || keyToInfo.get(n).contains(objectInfo))
+          val key = uniqueName(objectInfoToName(objectInfo), n => !keyToInfo.contains(n) || keyToInfo.get(n).contains(objectInfo))
 
           SchemaKeyAssignment1(
             keyToInfo + (key -> objectInfo),
@@ -132,5 +132,22 @@ object ObjectSchemasForEndpoints {
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped) ++ forOutput(wrapped)
     }
+  }
+
+  private def objectInfoToName(info: TSchema.SObjectInfo): String = {
+    val lastDotIndex = info.fullName.lastIndexOf('.')
+    val shortName = if (lastDotIndex == -1) {
+      info.fullName
+    } else {
+      info.fullName.substring(lastDotIndex + 1)
+    }
+
+    val typeParams = if (info.typeParameterShortNames.nonEmpty) {
+      "_" + info.typeParameterShortNames.mkString("_")
+    } else {
+      ""
+    }
+
+    shortName + typeParams
   }
 }

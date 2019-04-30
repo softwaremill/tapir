@@ -3,7 +3,9 @@ package tapir.server.akkahttp
 import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
-import akka.http.scaladsl.model.{StatusCode => _, _}
+import akka.http.scaladsl.model.{StatusCode => AkkaStatusCode, _}
+import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.Directives._
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
 import tapir.internal._
@@ -23,7 +25,7 @@ import tapir.{
   StringValueType
 }
 
-private[akkahttp] object OutputToAkkaResponse {
+private[akkahttp] object OutputToAkkaRoute {
 
   case class ResponseValues(body: Option[ResponseEntity], headers: Vector[HttpHeader], statusCode: Option[StatusCode]) {
     def withBody(b: ResponseEntity): ResponseValues = {
@@ -39,9 +41,24 @@ private[akkahttp] object OutputToAkkaResponse {
     def withStatusCode(sc: StatusCode): ResponseValues = copy(statusCode = Some(sc))
   }
 
-  def apply(output: EndpointOutput[_], v: Any): ResponseValues = apply(output, v, ResponseValues(None, Vector.empty, None))
+  def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
+    val responseValues = toResponseValues(output, v, ResponseValues(None, Vector.empty, None))
 
-  private def apply(output: EndpointOutput[_], v: Any, initialResponseValues: ResponseValues): ResponseValues = {
+    val statusCode = responseValues.statusCode.map(c => c: AkkaStatusCode).getOrElse(defaultStatusCode)
+
+    val completeRoute = responseValues.body match {
+      case Some(entity) => complete(HttpResponse(entity = entity, status = statusCode))
+      case None         => complete(HttpResponse(statusCode))
+    }
+
+    if (responseValues.headers.nonEmpty) {
+      respondWithHeaders(responseValues.headers: _*)(completeRoute)
+    } else {
+      completeRoute
+    }
+  }
+
+  private def toResponseValues(output: EndpointOutput[_], v: Any, initialResponseValues: ResponseValues): ResponseValues = {
     val vs = ParamsToSeq(v)
     var rv = initialResponseValues
 
@@ -62,22 +79,22 @@ private[akkahttp] object OutputToAkkaResponse {
           .map(h => parseHeaderOrThrow(h._1, h._2))
           .foreach(h => rv = rv.withHeader(h))
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
-        rv = apply(wrapped, g(vs(i)), rv)
+        rv = toResponseValues(wrapped, g(vs(i)), rv)
 
       case (EndpointOutput.StatusCode(), i) =>
         rv = rv.withStatusCode(vs(i).asInstanceOf[StatusCode])
       case (EndpointOutput.StatusFrom(io, default, _, when), i) =>
         val v = vs(i)
         val sc = when.find(_._1.matches(v)).map(_._2).getOrElse(default)
-        rv = apply(io, v, rv.withStatusCode(sc))
+        rv = toResponseValues(io, v, rv.withStatusCode(sc))
       case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
-        rv = apply(wrapped, g(vs(i)), rv)
+        rv = toResponseValues(wrapped, g(vs(i)), rv)
     }
 
     rv
   }
 
-  def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): ResponseEntity = {
+  private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): ResponseEntity = {
     val ct = mediaTypeToContentType(codecMeta.mediaType)
     codecMeta.rawValueType match {
       case StringValueType(charset) =>

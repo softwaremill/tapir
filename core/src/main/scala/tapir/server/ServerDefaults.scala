@@ -1,7 +1,7 @@
 package tapir.server
 
-import tapir.model.StatusCodes
-import tapir.{DecodeResult, EndpointIO, EndpointInput}
+import tapir.model.{StatusCode, StatusCodes}
+import tapir._
 
 object ServerDefaults {
 
@@ -12,21 +12,26 @@ object ServerDefaults {
     * Otherwise (e.g. if the method, a path segment, or path capture is missing or there's a mismatch), a "no match" is
     * returned, which is a signal to try the next endpoint.
     */
-  def decodeFailureHandler[R]: DecodeFailureHandler[R] = (_, input, failure) => {
+  def decodeFailureHandler[REQUEST]: DecodeFailureHandler[REQUEST] = (_, input, failure) => {
     input match {
-      case EndpointInput.Query(name, _, _) =>
-        DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: query parameter $name")
-      case _: EndpointInput.QueryParams          => DecodeFailureHandling.response(StatusCodes.BadRequest, "Invalid value for: query parameters")
-      case EndpointInput.Cookie(name, _, _)      => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: cookie $name")
-      case EndpointIO.Header(name, _, _)         => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: header $name")
-      case _: EndpointIO.Headers                 => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: headers")
-      case _: EndpointIO.Body[_, _, _]           => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: body")
-      case _: EndpointIO.StreamBodyWrapper[_, _] => DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: body")
+      case EndpointInput.Query(name, _, _)       => defaultFailureResponse(StatusCodes.BadRequest, s"Invalid value for: query parameter $name")
+      case _: EndpointInput.QueryParams          => defaultFailureResponse(StatusCodes.BadRequest, "Invalid value for: query parameters")
+      case EndpointInput.Cookie(name, _, _)      => defaultFailureResponse(StatusCodes.BadRequest, s"Invalid value for: cookie $name")
+      case EndpointIO.Header(name, _, _)         => defaultFailureResponse(StatusCodes.BadRequest, s"Invalid value for: header $name")
+      case _: EndpointIO.Headers                 => defaultFailureResponse(StatusCodes.BadRequest, s"Invalid value for: headers")
+      case _: EndpointIO.Body[_, _, _]           => defaultFailureResponse(StatusCodes.BadRequest, s"Invalid value for: body")
+      case _: EndpointIO.StreamBodyWrapper[_, _] => defaultFailureResponse(StatusCodes.BadRequest, s"Invalid value for: body")
       case _: EndpointInput.PathCapture[_] if failure.isInstanceOf[DecodeResult.Error] =>
-        DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: path")
+        defaultFailureResponse(StatusCodes.BadRequest, s"Invalid value for: path")
       case _: EndpointInput.PathsCapture if failure.isInstanceOf[DecodeResult.Error] =>
-        DecodeFailureHandling.response(StatusCodes.BadRequest, s"Invalid value for: paths")
+        defaultFailureResponse(StatusCodes.BadRequest, s"Invalid value for: paths")
       case _ => DecodeFailureHandling.noMatch
     }
   }
+
+  private val defaultFailureOutput: EndpointOutput[(StatusCode, String)] = statusCode.and(stringBody)
+  private def defaultFailureResponse(statusCode: StatusCode, body: String): DecodeFailureHandling =
+    DecodeFailureHandling.response(defaultFailureOutput)((statusCode, body))
+
+  val defaultErrorStatusCode: StatusCode = StatusCodes.BadRequest
 }

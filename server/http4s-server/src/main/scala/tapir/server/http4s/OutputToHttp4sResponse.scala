@@ -88,7 +88,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     states.sequence_
   }
 
-  def rawValueToEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): (EntityBody[F], Header) = {
+  private def rawValueToEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): (EntityBody[F], Header) = {
     val ct: `Content-Type` = mediaTypeToContentType(codecMeta.mediaType)
 
     codecMeta.rawValueType match {

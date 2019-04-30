@@ -4,10 +4,10 @@ import tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
 
 import scala.collection.immutable.ListMap
 
-// todo tags, externaldocs
 case class OpenAPI(
     openapi: String = "3.0.1",
     info: Info,
+    tags: List[Tag],
     servers: List[Server],
     paths: ListMap[String, PathItem],
     components: Option[Components],
@@ -24,6 +24,8 @@ case class OpenAPI(
   }
 
   def servers(s: List[Server]): OpenAPI = copy(servers = s)
+
+  def tags(t: List[Tag]): OpenAPI = copy(tags = t)
 }
 
 object OpenAPI {
@@ -32,6 +34,10 @@ object OpenAPI {
   // here, we need them encoded as an empty array
   type SecurityRequirement = ListMap[String, Vector[String]]
 }
+
+case class Tag(name: String, description: Option[String] = None, externalDocs: Option[ExternalDocumentation] = None)
+
+case class ExternalDocumentation(url: String, description: Option[String] = None)
 
 case class Info(
     title: String,

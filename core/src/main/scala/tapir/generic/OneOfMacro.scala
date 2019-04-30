@@ -37,32 +37,12 @@ object OneOfMacro {
       }
     }
 
-    val coproducts: Set[Symbol] = {
-      val symbol = weakTypeOf[E].typeSymbol
-      if (!symbol.isClass)
-        c.abort(c.enclosingPosition, "Can only enumerate values of a sealed trait or class.")
-      else if (!symbol.asClass.isSealed)
-        c.abort(c.enclosingPosition, "Can only enumerate values of a sealed trait or class.")
-      else {
-        val children = symbol.asClass.knownDirectSubclasses
-        if (!children.forall(_.isClass))
-          c.abort(c.enclosingPosition, "All children must be objects.")
-        else {
-          children
-        }
-      }
-    }
-
-    val coproductSchemas = coproducts.map { coproduct =>
-      c.typecheck(q"implicitly[tapir.SchemaFor[$coproduct]].schema")
-    }
-
     val name = resolveFunctionName(extractor.tree.asInstanceOf[Function])
     val schemaForE =
       q"""import tapir.Schema._
           val rawMapping = Map(..$mapping)
-          val discriminator = Discriminator($name, rawMapping.collect{case (k, sf)=> $asString.apply(k) -> SRef(sf.schema.asInstanceOf[SObject].info.fullName)})
-          SchemaFor(SCoproduct($coproductSchemas, Some(discriminator)))"""
+          val discriminator = Discriminator($name, rawMapping.collect{case (k, sf)=> $asString.apply(k) -> SRef(sf.schema.asInstanceOf[SObject].info)})
+          SchemaFor(SCoproduct(rawMapping.values.map(_.schema).toSet, Some(discriminator)))"""
     c.Expr[SchemaFor[E]](schemaForE)
   }
 }
