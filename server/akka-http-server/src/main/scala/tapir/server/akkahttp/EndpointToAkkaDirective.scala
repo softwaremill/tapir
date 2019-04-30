@@ -91,7 +91,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         reject
       case DecodeFailureHandling.RespondWithResponse(output, value) =>
         serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach(ctx.log.debug)
-        StandardRoute(OutputToAkkaRoute(ServerDefaults.defaultErrorStatusCode, output, value))
+        StandardRoute(OutputToAkkaRoute(ServerDefaults.errorStatusCode, output, value))
     }
   }
 

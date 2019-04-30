@@ -44,7 +44,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
               makeResponse(Status.Ok, se.endpoint.output, result)
             case Left(err) =>
               makeResponse(
-                statusCodeToHttp4sStatus(ServerDefaults.defaultErrorStatusCode),
+                statusCodeToHttp4sStatus(ServerDefaults.errorStatusCode),
                 se.endpoint.errorOutput,
                 err
               )
@@ -119,7 +119,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
         Some(
           makeResponse(
-            statusCodeToHttp4sStatus(ServerDefaults.defaultErrorStatusCode),
+            statusCodeToHttp4sStatus(ServerDefaults.errorStatusCode),
             output,
             value
           )
