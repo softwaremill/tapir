@@ -31,5 +31,5 @@ case class LoggingOptions(debugLogWhenHandled: Boolean, debugLogAllDecodeFailure
 }
 
 object LoggingOptions {
-  val default: LoggingOptions = LoggingOptions(debugLogWhenHandled = true, debugLogAllDecodeFailures = true, errorLogLogicExceptions = true)
+  val default: LoggingOptions = LoggingOptions(debugLogWhenHandled = true, debugLogAllDecodeFailures = false, errorLogLogicExceptions = true)
 }
