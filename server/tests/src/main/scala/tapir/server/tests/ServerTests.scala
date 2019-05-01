@@ -441,11 +441,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       port <- Resource.liftF(IO(nextPort()))
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
-    test(name)(restartOnBindException(resources).use(runTest).unsafeRunSync())
-  }
 
-  private def restartOnBindException(r: Resource[IO, Uri]): Resource[IO, Uri] =
-    r.recoverWith { case e if e.getCause.isInstanceOf[BindException] => restartOnBindException(r) }
+    test(name)(resources.recoverWith { case _: BindException => resources }.use(runTest).unsafeRunSync())
+  }
 
   //
 
