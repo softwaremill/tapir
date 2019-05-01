@@ -7,7 +7,7 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   crossScalaVersions := Seq(scala2_11, scala2_12),
   scalacOptions ++= 
     (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, v)) if v <= 12 =>
+      case Some((2, 11)) =>
         Seq(
           "-Xexperimental",
           "-Ypartial-unification"
