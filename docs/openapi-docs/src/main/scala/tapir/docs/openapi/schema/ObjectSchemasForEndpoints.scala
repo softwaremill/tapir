@@ -9,34 +9,24 @@ import scala.collection.immutable.ListMap
 object ObjectSchemasForEndpoints {
 
   def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
-    val sObjectsForEndpoints = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
-    val sObjectsAll = sObjectsForEndpoints.flatMap(collectFieldObjects).map(replaceSObjectFieldsWithSRef)
-    val infoToKey = calculateUniqueKeys(sObjectsAll.map(_.info))
+    val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
+    val sObjectsRefsInFields = sObjects.map(replaceSObjectFieldsWithSRef)
+    val infoToKey = calculateUniqueKeys(sObjectsRefsInFields.map(_.info))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences, discriminatorToOpenApi)
-    val infosToSchema = sObjectsAll.map(so => (so.info, tschemaToOSchema(so))).toMap
+    val infosToSchema = sObjectsRefsInFields.map(so => (so.info, tschemaToOSchema(so))).toMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
   }
 
-  private def collectFieldObjects(schema: TSchema): List[TSchema.SObject] = {
-    schema match {
-      case o: TSchema.SObject =>
-        List(o) ++ o.fields
-          .map(_._2)
-          .flatMap(collectFieldObjects)
-          .toList
-      case c: TSchema.SCoproduct => c.schemas.flatMap(collectFieldObjects).toList
-      case _                     => List()
-    }
-  }
   private def replaceSObjectFieldsWithSRef(obj: TSchema.SObject): TSchema.SObject = {
     val newFields = obj.fields map {
-      case (s, o: TSchema.SObject) => (s, TSchema.SRef(o.info))
-      case x                       => x
+      case (s, o: TSchema.SObject)                 => (s, TSchema.SRef(o.info))
+      case (s, TSchema.SArray(o: TSchema.SObject)) => (s, TSchema.SArray(TSchema.SRef(o.info)))
+      case x                                       => x
     }
     obj.copy(fields = newFields)
   }
@@ -56,10 +46,15 @@ object ObjectSchemasForEndpoints {
       .infoToKey
   }
 
-  private def filterIsObjectSchema(schema: TSchema): List[TSchema.SObject] = {
+  private def objectSchemas(schema: TSchema): List[TSchema.SObject] = {
     schema match {
-      case s: TSchema.SObject =>
-        List(s)
+      case o: TSchema.SObject =>
+        List(o) ++ o.fields
+          .map(_._2)
+          .flatMap(objectSchemas)
+          .toList
+      case TSchema.SArray(o: TSchema.SObject) =>
+        List(o)
       case s: TSchema.SCoproduct =>
         s.schemas.collect { case so: TSchema.SObject => so }.toList
       case _ => List.empty
@@ -73,13 +68,13 @@ object ObjectSchemasForEndpoints {
       case EndpointInput.PathSegment(_) =>
         List.empty
       case EndpointInput.PathCapture(tm, _, _) =>
-        filterIsObjectSchema(tm.meta.schema)
+        objectSchemas(tm.meta.schema)
       case EndpointInput.PathsCapture(_) =>
         List.empty
       case EndpointInput.Query(_, tm, _) =>
-        filterIsObjectSchema(tm.meta.schema)
+        objectSchemas(tm.meta.schema)
       case EndpointInput.Cookie(_, tm, _) =>
-        filterIsObjectSchema(tm.meta.schema)
+        objectSchemas(tm.meta.schema)
       case EndpointInput.QueryParams(_) =>
         List.empty
       case _: EndpointInput.Auth[_] =>
@@ -97,9 +92,9 @@ object ObjectSchemasForEndpoints {
   private def forOutput(output: EndpointOutput[_]): List[TSchema.SObject] = {
     output match {
       case EndpointOutput.StatusFrom(wrapped, _, defaultSchema, whens) =>
-        val fromDefaultSchema = defaultSchema.toList.flatMap(filterIsObjectSchema)
+        val fromDefaultSchema = defaultSchema.toList.flatMap(objectSchemas)
         val fromWhens = whens.collect {
-          case (WhenClass(_, s), _) => filterIsObjectSchema(s)
+          case (WhenClass(_, s), _) => objectSchemas(s)
         }.flatten
         val fromInput = forOutput(wrapped)
 
@@ -122,13 +117,13 @@ object ObjectSchemasForEndpoints {
       case EndpointIO.Multiple(ios) =>
         ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
       case EndpointIO.Header(_, tm, _) =>
-        filterIsObjectSchema(tm.meta.schema)
+        objectSchemas(tm.meta.schema)
       case EndpointIO.Headers(_) =>
         List.empty
       case EndpointIO.Body(tm, _) =>
-        filterIsObjectSchema(tm.meta.schema)
+        objectSchemas(tm.meta.schema)
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) =>
-        filterIsObjectSchema(schema)
+        objectSchemas(schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped) ++ forOutput(wrapped)
     }

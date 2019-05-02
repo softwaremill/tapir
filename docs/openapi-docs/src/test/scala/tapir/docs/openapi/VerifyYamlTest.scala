@@ -244,6 +244,16 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should unfold arrays") {
+    val e = endpoint.in(jsonBody[List[FruitAmount]]).out(plainBody[String])
+    val expectedYaml = loadYaml("expected_unfolded_array.yml")
+
+    val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should differentiate when a generic type is used multiple times") {
     val expectedYaml = loadYaml("expected_generic.yml")
 
