@@ -1,6 +1,6 @@
 package tapir.internal;
 
-private[tapir] object SeqToParams {
+object SeqToParams {
   def apply[T](seq: Seq[T]): Any = {
     seq match {
       case Seq() => ()
