@@ -265,6 +265,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should unfold objects from unfolded arrays") {
+    val expectedYaml = loadYaml("expected_unfolded_object_unfolded_array.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[List[ObjectWrapper]])
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromResource(fileName).getLines().mkString("\n"))
   }
@@ -289,3 +301,5 @@ object ErrorInfo {
   case class Unauthorized(realm: String) extends ErrorInfo
   case class Unknown(code: Int, msg: String) extends ErrorInfo
 }
+
+case class ObjectWrapper(value: FruitAmount)

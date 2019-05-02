@@ -1,0 +1,36 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ObjectWrapper'
+components:
+  schemas:
+    ObjectWrapper:
+      required:
+        - value
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/FruitAmount'
+    FruitAmount:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
