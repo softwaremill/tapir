@@ -244,10 +244,32 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should unfold arrays") {
+    val e = endpoint.in(jsonBody[List[FruitAmount]]).out(plainBody[String])
+    val expectedYaml = loadYaml("expected_unfolded_array.yml")
+
+    val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should differentiate when a generic type is used multiple times") {
     val expectedYaml = loadYaml("expected_generic.yml")
 
     val actualYaml = List(endpoint.in("p1" and jsonBody[G[String]]), endpoint.in("p2" and jsonBody[G[Int]]))
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should unfold objects from unfolded arrays") {
+    val expectedYaml = loadYaml("expected_unfolded_object_unfolded_array.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[List[ObjectWrapper]])
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -274,6 +296,9 @@ case class Person(name: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
 
 sealed trait ErrorInfo
+
 case class NotFound(what: String) extends ErrorInfo
 case class Unauthorized(realm: String) extends ErrorInfo
 case class Unknown(code: Int, msg: String) extends ErrorInfo
+
+case class ObjectWrapper(value: FruitAmount)

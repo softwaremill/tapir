@@ -44,7 +44,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
               makeResponse(Status.Ok, se.endpoint.output, result)
             case Left(err) =>
               makeResponse(
-                statusCodeToHttp4sStatus(ServerDefaults.defaultErrorStatusCode),
+                statusCodeToHttp4sStatus(ServerDefaults.errorStatusCode),
                 se.endpoint.errorOutput,
                 err
               )
@@ -115,11 +115,14 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(log.debug(_))
         None
       case DecodeFailureHandling.RespondWithResponse(output, value) =>
-        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach(log.debug(_))
+        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
+          case (msg, Some(t)) => log.debug(t)(msg)
+          case (msg, None)    => log.debug(msg)
+        }
 
         Some(
           makeResponse(
-            statusCodeToHttp4sStatus(ServerDefaults.defaultErrorStatusCode),
+            statusCodeToHttp4sStatus(ServerDefaults.errorStatusCode),
             output,
             value
           )

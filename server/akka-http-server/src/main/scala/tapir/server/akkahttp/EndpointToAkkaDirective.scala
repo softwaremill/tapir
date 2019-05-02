@@ -90,8 +90,11 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(ctx.log.debug)
         reject
       case DecodeFailureHandling.RespondWithResponse(output, value) =>
-        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach(ctx.log.debug)
-        StandardRoute(OutputToAkkaRoute(ServerDefaults.defaultErrorStatusCode, output, value))
+        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
+          case (msg, Some(t)) => ctx.log.debug(s"$msg; exception: {}", t)
+          case (msg, None)    => ctx.log.debug(msg)
+        }
+        StandardRoute(OutputToAkkaRoute(ServerDefaults.errorStatusCode, output, value))
     }
   }
 

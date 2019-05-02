@@ -41,8 +41,10 @@ trait SchemaForMagnoliaDerivation {
     }
   }
 
-  private def typeNameToObjectInfo(typeName: TypeName): Schema.SObjectInfo =
-    SObjectInfo(typeName.full, typeName.typeArguments.map(_.short).toList)
+  private def typeNameToObjectInfo(typeName: TypeName): Schema.SObjectInfo = {
+    def allTypeArguments(tn: TypeName): Seq[TypeName] = tn.typeArguments.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
+    SObjectInfo(typeName.full, allTypeArguments(typeName).map(_.short).toList)
+  }
 
   private def withProgressCache[T](f: mutable.Set[String] => SchemaFor[T]): SchemaFor[T] = {
     var cache = deriveInProgress.get()

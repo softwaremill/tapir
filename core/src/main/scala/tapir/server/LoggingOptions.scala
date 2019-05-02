@@ -1,6 +1,6 @@
 package tapir.server
 
-import tapir.{DecodeFailure, Endpoint, EndpointInput}
+import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointInput}
 
 /**
   * @param debugLogWhenHandled Should information which endpoint handles a request, by providing a response, be
@@ -16,10 +16,25 @@ case class LoggingOptions(debugLogWhenHandled: Boolean, debugLogAllDecodeFailure
       Some(s"Request not handled by: ${e.show}; decode failure: $df, on input: ${input.show}")
     else None
 
-  def decodeFailureHandledMsg(e: Endpoint[_, _, _, _], df: DecodeFailure, input: EndpointInput[_], responseValue: Any): Option[String] =
+  def decodeFailureHandledMsg(
+      e: Endpoint[_, _, _, _],
+      df: DecodeFailure,
+      input: EndpointInput[_],
+      responseValue: Any
+  ): Option[(String, Option[Throwable])] = {
+    val failureThrowable = df match {
+      case DecodeResult.Error(_, error) => Some(error)
+      case _                            => None
+    }
     if (debugLogWhenHandled)
-      Some(s"Request handled by: ${e.show}; decode failure: $df, on input: ${input.show}; responding with: $responseValue")
+      Some(
+        (
+          s"Request handled by: ${e.show}; decode failure: $df, on input: ${input.show}; responding with: $responseValue",
+          failureThrowable
+        )
+      )
     else None
+  }
 
   def logicExceptionMsg(e: Endpoint[_, _, _, _]): Option[String] =
     if (errorLogLogicExceptions) Some(s"Exception when handling request by: ${e.show}") else None
@@ -31,5 +46,6 @@ case class LoggingOptions(debugLogWhenHandled: Boolean, debugLogAllDecodeFailure
 }
 
 object LoggingOptions {
-  val default: LoggingOptions = LoggingOptions(debugLogWhenHandled = true, debugLogAllDecodeFailures = true, errorLogLogicExceptions = true)
+  val default: LoggingOptions =
+    LoggingOptions(debugLogWhenHandled = true, debugLogAllDecodeFailures = false, errorLogLogicExceptions = true)
 }
