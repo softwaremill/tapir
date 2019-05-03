@@ -166,7 +166,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointIO.Headers(_) +: tail =>
         val headers = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[Seq[(String, String)]]
-        val req2 = headers.foldLeft(req) { case (r, (k, v)) => r.header(k, v) }
+        val req2 = headers.foldLeft(req) {
+          case (r, (k, v)) =>
+            val replaceExisting = HeaderNames.ContentType.equalsIgnoreCase(k) || HeaderNames.ContentLength.equalsIgnoreCase(k)
+            r.header(k, v, replaceExisting)
+        }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
       case EndpointInput.ExtractFromRequest(_) +: tail =>
         // ignoring
