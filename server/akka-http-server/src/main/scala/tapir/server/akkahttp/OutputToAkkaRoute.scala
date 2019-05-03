@@ -47,8 +47,9 @@ private[akkahttp] object OutputToAkkaRoute {
     val statusCode = responseValues.statusCode.map(c => c: AkkaStatusCode).getOrElse(defaultStatusCode)
 
     val completeRoute = responseValues.body match {
-      case Some(entity) => complete(HttpResponse(entity = entity, status = statusCode))
-      case None         => complete(HttpResponse(statusCode))
+      case Some(entity) =>
+        complete(HttpResponse(entity = overrideContentTypeIfDefined(entity, responseValues.headers), status = statusCode))
+      case None => complete(HttpResponse(statusCode))
     }
 
     if (responseValues.headers.nonEmpty) {
@@ -120,7 +121,7 @@ private[akkahttp] object OutputToAkkaRoute {
       }
 
       val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.body) match {
-        case b: BodyPartEntity => b
+        case b: BodyPartEntity => overrideContentTypeIfDefined(b, headers)
         case _                 => throw new IllegalArgumentException(s"${codecMeta.rawValueType} is not supported in multipart bodies")
       }
 
@@ -145,5 +146,15 @@ private[akkahttp] object OutputToAkkaRoute {
   private def parseHeaderOrThrow(k: String, v: String): HttpHeader = HttpHeader.parse(k, v) match {
     case ParsingResult.Ok(h, _)     => h
     case ParsingResult.Error(error) => throw new IllegalArgumentException(s"Cannot parse header ($k, $v): $error")
+  }
+
+  private def overrideContentTypeIfDefined[RE <: ResponseEntity](re: RE, headers: Seq[HttpHeader]): RE = {
+    import akka.http.scaladsl.model.headers.`Content-Type`
+    headers
+      .collectFirst {
+        case `Content-Type`(ct) => ct
+      }
+      .map(ct => re.withContentType(ct).asInstanceOf[RE])
+      .getOrElse(re)
   }
 }

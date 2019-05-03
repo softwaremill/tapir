@@ -130,6 +130,9 @@ package object tests {
   val in_string_out_status: Endpoint[String, Unit, StatusCode, Nothing] =
     endpoint.in(query[String]("fruit")).out(statusCode)
 
+  val in_string_out_content_type_string: Endpoint[String, Unit, (String, String), Nothing] =
+    endpoint.in("api" / "echo").in(stringBody).out(stringBody).out(header[String]("Content-Type"))
+
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 
   def writeToFile(s: String): File = {

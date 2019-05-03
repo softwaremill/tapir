@@ -3,7 +3,7 @@ package tapir.server.http4s
 import cats.data._
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
-import org.http4s.{EntityBody, Headers, HttpRoutes, Request, Response, Status}
+import org.http4s.{EntityBody, HttpRoutes, Request, Response, Status}
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.server.{DecodeFailureHandling, ServerDefaults, ServerEndpoint}
@@ -96,7 +96,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     val responseValues = new OutputToHttp4sResponse[F](serverOptions).apply(output, v)
     val statusCode = responseValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(defaultStatusCode)
 
-    val headers = Headers.of(responseValues.headers: _*)
+    val headers = responseValues.allHeaders
     responseValues.body match {
       case Some(entity) => Response(status = statusCode, headers = headers, body = entity)
       case None         => Response(status = statusCode, headers = headers)
