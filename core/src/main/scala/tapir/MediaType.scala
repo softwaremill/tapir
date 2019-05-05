@@ -8,6 +8,17 @@ trait MediaType {
 }
 
 object MediaType {
+
+  /**
+    * Create a custom media type.
+    */
+  def apply(mediaType: String): MediaType = {
+    val mt = mediaType
+    new MediaType {
+      override def mediaTypeNoParams: String = mt
+    }
+  }
+
   case class Json() extends MediaType {
     override val mediaTypeNoParams: String = "application/json"
   }
