@@ -123,7 +123,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     codec.decode(parts) shouldBe DecodeResult.Value(instance.copy(f1 = instance.f1.copy(name = "f1")))
   }
 
-  it should "generate a codec for a case class with file part metadata" in {
+  it should "generate a codec for a case class with file part" in {
     // given
     case class Test1(f1: File)
     val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
@@ -136,6 +136,30 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     } finally {
       f.delete()
     }
+  }
+
+  it should "use the right schema for an optional file part with metadata 2" in {
+    // given
+    case class Test1(f1: Part[Option[File]], f2: Int)
+    val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
+    val f = File.createTempFile("tapir", "test")
+
+    // when
+    try {
+      // when
+      codec.encode(Test1(Part("?", Map("a1" -> "b1"), Nil, Some(f)), 12)) shouldBe List(
+        Part("f1", Map("a1" -> "b1"), Nil, f),
+        Part("f2", "12")
+      )
+      codec.decode(List(Part("f1", Map("filename" -> f.getName), Nil, f), Part("f2", "12"))) shouldBe DecodeResult.Value(
+        Test1(Part("f1", Map("filename" -> f.getName), Nil, Some(f)), 12)
+      )
+    } finally {
+      f.delete()
+    }
+
+    codec.encode(Test1(Part("f1", None), 12)) shouldBe List(Part("f2", "12"))
+    codec.decode(List(Part("f2", "12"))) shouldBe DecodeResult.Value(Test1(Part("f1", None), 12))
   }
 
   private def toPartData(parts: Seq[RawPart]): Seq[(String, Any)] = parts.map(p => (p.name, p.body))

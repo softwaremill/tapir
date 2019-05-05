@@ -56,7 +56,7 @@ object MultipartCodecDerivation {
         val base = q"""$transformedName
                        tapir.model.Part(transformedName, o.$fieldName)"""
 
-        // if the field is a File/Path, and is not wrapped in a Path, during encoding adding the file's name
+        // if the field is a File/Path, and is not wrapped in a Part, during encoding adding the file's name
         val fieldTypeName = field.typeSignature.typeSymbol.fullName
         if (fieldTypeName.startsWith("java.io.File")) {
           q"$base.fileName(o.$fieldName.getName)"
