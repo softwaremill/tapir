@@ -12,11 +12,13 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/Person'
-                  - $ref: '#/components/schemas/Organization'
+                $ref: '#/components/schemas/Entity'
 components:
   schemas:
+    Entity:
+      oneOf:
+        - $ref: '#/components/schemas/Person'
+        - $ref: '#/components/schemas/Organization'
     Person:
       required:
         - name

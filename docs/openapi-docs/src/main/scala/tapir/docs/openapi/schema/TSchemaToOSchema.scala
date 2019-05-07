@@ -43,7 +43,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
       case TSchema.SRef(fullName) =>
         Left(schemaReferenceMapper.map(fullName))
-      case SCoproduct(schemas, d) =>
+      case SCoproduct(_, schemas, d) =>
         Right(
           OSchema.apply(
             schemas.collect { case s: TSchema.SObject => Left(schemaReferenceMapper.map(s.info)) }.toList,

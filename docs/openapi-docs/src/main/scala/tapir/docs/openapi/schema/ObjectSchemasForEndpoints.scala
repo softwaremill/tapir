@@ -15,20 +15,25 @@ object ObjectSchemasForEndpoints {
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
-    val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences, discriminatorToOpenApi)
+    val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
     val infosToSchema = sObjectsRefsInFields.map(so => (so.info, tschemaToOSchema(so))).toMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
   }
 
-  private def replaceSObjectFieldsWithSRef(obj: TSchema.SObject): TSchema.SObject = {
-    val newFields = obj.fields map {
-      case (s, o: TSchema.SObject)                 => (s, TSchema.SRef(o.info))
-      case (s, TSchema.SArray(o: TSchema.SObject)) => (s, TSchema.SArray(TSchema.SRef(o.info)))
-      case x                                       => x
+  private def replaceSObjectFieldsWithSRef(objectable: TSchema.SObjectable): TSchema.SObjectable = {
+    objectable match {
+      case obj: TSchema.SObject =>
+        val newFields = obj.fields map {
+          case (s, o: TSchema.SObject)                 => (s, TSchema.SRef(o.info))
+          case (s, TSchema.SArray(o: TSchema.SObject)) => (s, TSchema.SArray(TSchema.SRef(o.info)))
+          case (s, o: TSchema.SCoproduct)              => (s, TSchema.SRef(o.info))
+          case x                                       => x
+        }
+        obj.copy(fields = newFields)
+      case other => other
     }
-    obj.copy(fields = newFields)
   }
 
   private def calculateUniqueKeys(infos: Iterable[TSchema.SObjectInfo]): Map[TSchema.SObjectInfo, SchemaKey] = {
@@ -46,7 +51,7 @@ object ObjectSchemasForEndpoints {
       .infoToKey
   }
 
-  private def objectSchemas(schema: TSchema): List[TSchema.SObject] = {
+  private def objectSchemas(schema: TSchema): List[TSchema.SObjectable] = {
     schema match {
       case o: TSchema.SObject =>
         List(o) ++ o.fields
@@ -56,12 +61,12 @@ object ObjectSchemasForEndpoints {
       case TSchema.SArray(o) =>
         objectSchemas(o)
       case s: TSchema.SCoproduct =>
-        s.schemas.flatMap(objectSchemas).toList
+        s +: s.schemas.flatMap(objectSchemas).toList
       case _ => List.empty
     }
   }
 
-  private def forInput(input: EndpointInput[_]): List[TSchema.SObject] = {
+  private def forInput(input: EndpointInput[_]): List[TSchema.SObjectable] = {
     input match {
       case EndpointInput.RequestMethod(_) =>
         List.empty
@@ -89,7 +94,7 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forOutput(output: EndpointOutput[_]): List[TSchema.SObject] = {
+  private def forOutput(output: EndpointOutput[_]): List[TSchema.SObjectable] = {
     output match {
       case EndpointOutput.StatusFrom(wrapped, _, defaultSchema, whens) =>
         val fromDefaultSchema = defaultSchema.toList.flatMap(objectSchemas)
@@ -112,7 +117,7 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forIO(io: EndpointIO[_]): List[TSchema.SObject] = {
+  private def forIO(io: EndpointIO[_]): List[TSchema.SObjectable] = {
     io match {
       case EndpointIO.Multiple(ios) =>
         ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
