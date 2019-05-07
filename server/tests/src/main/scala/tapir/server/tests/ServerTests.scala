@@ -1,7 +1,6 @@
 package tapir.server.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
-import java.net.BindException
 import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -450,7 +449,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
-    test(name)(resources.recoverWith { case _: BindException => resources }.use(runTest).unsafeRunSync())
+    test(name)(resources.use(runTest).unsafeRunSync())
   }
 
   //
