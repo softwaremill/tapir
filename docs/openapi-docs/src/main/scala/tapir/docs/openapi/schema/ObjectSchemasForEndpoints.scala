@@ -10,30 +10,15 @@ object ObjectSchemasForEndpoints {
 
   def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
-    val sObjectsRefsInFields = sObjects.map(replaceSObjectFieldsWithSRef)
-    val infoToKey = calculateUniqueKeys(sObjectsRefsInFields.map(_.info))
+    val infoToKey = calculateUniqueKeys(sObjects.map(_.info))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
-    val infosToSchema = sObjectsRefsInFields.map(so => (so.info, tschemaToOSchema(so))).toMap
+    val infosToSchema = sObjects.map(so => (so.info, tschemaToOSchema(so))).toMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
-  }
-
-  private def replaceSObjectFieldsWithSRef(objectable: TSchema.SObjectable): TSchema.SObjectable = {
-    objectable match {
-      case obj: TSchema.SObject =>
-        val newFields = obj.fields map {
-          case (s, o: TSchema.SObject)                 => (s, TSchema.SRef(o.info))
-          case (s, TSchema.SArray(o: TSchema.SObject)) => (s, TSchema.SArray(TSchema.SRef(o.info)))
-          case (s, o: TSchema.SCoproduct)              => (s, TSchema.SRef(o.info))
-          case x                                       => x
-        }
-        obj.copy(fields = newFields)
-      case other => other
-    }
   }
 
   private def calculateUniqueKeys(infos: Iterable[TSchema.SObjectInfo]): Map[TSchema.SObjectInfo, SchemaKey] = {

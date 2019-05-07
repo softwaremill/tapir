@@ -24,6 +24,8 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
           OSchema(SchemaType.Object).copy(
             required = required.toList,
             properties = fields.map {
+              case (fieldName, s: TSchema.SObjectable) =>
+                fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
                 fieldName -> apply(fieldSchema)
             }.toListMap
