@@ -296,7 +296,6 @@ case class Person(name: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
 
 sealed trait ErrorInfo
-
 case class NotFound(what: String) extends ErrorInfo
 case class Unauthorized(realm: String) extends ErrorInfo
 case class Unknown(code: Int, msg: String) extends ErrorInfo

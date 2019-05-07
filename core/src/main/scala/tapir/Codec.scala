@@ -55,7 +55,7 @@ trait Codec[T, M <: MediaType, R] extends Decode[R, T] { outer =>
   def schema(s2: Schema): Codec[T, M, R] = withMeta(meta.copy(schema = s2))
 }
 
-object Codec extends FormCodecDerivation with MultipartCodecDerivation {
+object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   type PlainCodec[T] = Codec[T, MediaType.TextPlain, String]
   type JsonCodec[T] = Codec[T, MediaType.Json, String]
 
@@ -115,11 +115,13 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
       defaultCodec: Option[AnyCodecForMany]
   ): Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
     new Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] {
-      private val mvt = MultipartValueType(partCodecs, defaultCodec)
+      private val mvt = MultipartValueType(partCodecs.mapValues(_.meta), defaultCodec.map(_.meta))
+
+      private def partCodec(name: String): Option[AnyCodecForMany] = partCodecs.get(name).orElse(defaultCodec)
 
       override def encode(t: Seq[AnyPart]): Seq[RawPart] = {
         t.flatMap { part =>
-          mvt.partCodec(part.name).toList.flatMap { codec =>
+          partCodec(part.name).toList.flatMap { codec =>
             // a single value-part might yield multiple raw-parts (e.g. for repeated fields)
             val rawParts: Seq[RawPart] = codec.asInstanceOf[CodecForMany[Any, _, _]].encode(part.body).map { b =>
               part.copy(body = b)
@@ -138,7 +140,7 @@ object Codec extends FormCodecDerivation with MultipartCodecDerivation {
 
         // there might be multiple raw-parts for each name, yielding a single value-part
         val anyParts: List[DecodeResult[AnyPart]] = partNamesToDecode.map { name =>
-          val codec = mvt.partCodec(name).get
+          val codec = partCodec(name).get
           val rawParts = rawPartsByName.get(name).toList.flatten
           codec.asInstanceOf[CodecForMany[_, _, Any]].decode(rawParts.map(_.body)).map { body =>
             // we know there's at least one part. Using this part to create the value-part
@@ -304,10 +306,9 @@ case object ByteArrayValueType extends RawValueType[Array[Byte]]
 case object ByteBufferValueType extends RawValueType[ByteBuffer]
 case object InputStreamValueType extends RawValueType[InputStream]
 case object FileValueType extends RawValueType[File]
-case class MultipartValueType(partCodecs: Map[String, AnyCodecForMany], defaultCodec: Option[AnyCodecForMany])
+case class MultipartValueType(partCodecMetas: Map[String, AnyCodecMeta], defaultCodecMeta: Option[AnyCodecMeta])
     extends RawValueType[Seq[RawPart]] {
-  private[tapir] def partCodec(name: String): Option[AnyCodecForMany] = partCodecs.get(name).orElse(defaultCodec)
-  def partCodecMeta(name: String): Option[AnyCodecMeta] = partCodec(name).map(_.meta)
+  def partCodecMeta(name: String): Option[AnyCodecMeta] = partCodecMetas.get(name).orElse(defaultCodecMeta)
 }
 
 trait Decode[F, T] {

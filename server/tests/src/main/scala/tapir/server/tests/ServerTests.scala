@@ -250,6 +250,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
+  testServer(in_string_out_content_type_string, "dynamic content type")((b: String) => pureResult((b, "image/png").asRight[Unit])) {
+    baseUri =>
+      sttp.get(uri"$baseUri/api/echo").body("test").send().map { r =>
+        r.contentType shouldBe Some("image/png")
+        r.unsafeBody shouldBe "test"
+      }
+  }
+
   // path matching
 
   testServer(endpoint, "no path should match anything")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) { baseUri =>

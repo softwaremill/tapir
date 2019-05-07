@@ -27,22 +27,32 @@ import tapir.{
 
 class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
 
-  case class ResponseValues(body: Option[EntityBody[F]], headers: Vector[Header], statusCode: Option[StatusCode]) {
-    def withBody(b: EntityBody[F], h: Header): ResponseValues = {
-      if (body.isDefined) {
+  case class ResponseValues(bodyWithCtHeader: Option[(EntityBody[F], Header)], headers: List[Header], statusCode: Option[StatusCode]) {
+    def withBody(b: EntityBody[F], ctHeader: Header): ResponseValues = {
+      if (bodyWithCtHeader.isDefined) {
         throw new IllegalArgumentException("Body is already defined")
       }
 
-      copy(body = Some(b), headers = headers :+ h)
+      copy(bodyWithCtHeader = Some((b, ctHeader)))
     }
 
     def withHeaders(hs: Seq[Header]): ResponseValues = copy(headers = headers ++ hs)
 
     def withStatusCode(sc: StatusCode): ResponseValues = copy(statusCode = Some(sc))
+
+    def allHeaders: Headers = {
+      val shouldAddCtHeader = headers.exists(_.name == `Content-Type`.name)
+      bodyWithCtHeader match {
+        case Some((_, ctHeader)) if shouldAddCtHeader => Headers(headers :+ ctHeader)
+        case _                                        => Headers(headers)
+      }
+    }
+
+    def body: Option[EntityBody[F]] = bodyWithCtHeader.map(_._1)
   }
 
   def apply(output: EndpointOutput[_], v: Any): ResponseValues = {
-    toResponse(output, v).runS(ResponseValues(None, Vector.empty, None)).value
+    toResponse(output, v).runS(ResponseValues(None, Nil, None)).value
   }
 
   private def toResponse(output: EndpointOutput[_], v: Any): State[ResponseValues, Unit] = {
@@ -117,7 +127,14 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
       val contentDispositionHeader = `Content-Disposition`("form-data", part.otherDispositionParams + ("name" -> part.name))
 
-      multipart.Part(Headers(ctHeader :: contentDispositionHeader :: headers), entity)
+      val shouldAddCtHeader = headers.exists(_.name == `Content-Type`.name)
+      val allHeaders = if (shouldAddCtHeader) {
+        Headers(ctHeader :: contentDispositionHeader :: headers)
+      } else {
+        Headers(contentDispositionHeader :: headers)
+      }
+
+      multipart.Part(allHeaders, entity)
     }
   }
 
