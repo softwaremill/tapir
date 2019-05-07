@@ -188,9 +188,12 @@ lazy val playground: Project = (project in file("playground"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
+      "org.scalaz" %% "scalaz-zio" % "1.0-RC4",
+      "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC4",
+      "org.typelevel" %% "cats-effect" % "1.2.0",
       "org.webjars" % "swagger-ui" % "3.22.0"
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .dependsOn(akkaHttpServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)
