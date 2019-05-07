@@ -277,6 +277,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should unfold coproducts from unfolded arrays") {
+    val expectedYaml = loadYaml("expected_unfolded_coproduct_unfolded_array.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[List[Entity]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromResource(fileName).getLines().mkString("\n"))
   }

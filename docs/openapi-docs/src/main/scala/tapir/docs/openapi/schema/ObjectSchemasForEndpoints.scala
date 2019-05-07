@@ -53,10 +53,10 @@ object ObjectSchemasForEndpoints {
           .map(_._2)
           .flatMap(objectSchemas)
           .toList
-      case TSchema.SArray(o: TSchema.SObject) =>
+      case TSchema.SArray(o) =>
         objectSchemas(o)
       case s: TSchema.SCoproduct =>
-        s.schemas.collect { case so: TSchema.SObject => so }.toList
+        s.schemas.flatMap(objectSchemas).toList
       case _ => List.empty
     }
   }
