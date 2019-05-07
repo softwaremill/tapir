@@ -289,6 +289,17 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should differentiate when a generic coproduct type is used multiple times") {
+    val expectedYaml = loadYaml("expected_generic_coproduct.yml")
+
+    val actualYaml = List(endpoint.in("p1" and jsonBody[GenericEntity[String]]), endpoint.in("p2" and jsonBody[GenericEntity[Int]]))
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
@@ -313,3 +324,6 @@ case class Unauthorized(realm: String) extends ErrorInfo
 case class Unknown(code: Int, msg: String) extends ErrorInfo
 
 case class ObjectWrapper(value: FruitAmount)
+
+sealed trait GenericEntity[T]
+case class GenericPerson[T](data: T) extends GenericEntity[T]
