@@ -140,6 +140,41 @@ class SchemaForTest extends FlatSpec with Matchers {
     val schema = implicitly[SchemaFor[Map[String, Int]]].schema
     schema shouldBe SObject(SObjectInfo("Map"), List.empty, List.empty)
   }
+
+  it should "find schema for recursive coproduct type" in {
+    val schema = implicitly[SchemaFor[Node]].schema
+    schema shouldBe SCoproduct(
+      SObjectInfo("tapir.generic.Node", List.empty),
+      Set(
+        SObject(
+          SObjectInfo("tapir.generic.Edge"),
+          List(
+            "id" -> SInteger,
+            "source" ->
+              SCoproduct(
+                SObjectInfo("tapir.generic.Node", List.empty),
+                Set(
+                  SRef(SObjectInfo("tapir.generic.Edge")),
+                  SObject(
+                    SObjectInfo("tapir.generic.SimpleNode"),
+                    List("id" -> SInteger),
+                    List("id")
+                  )
+                ),
+                None
+              )
+          ),
+          List("id", "source")
+        ),
+        SObject(
+          SObjectInfo("tapir.generic.SimpleNode"),
+          List("id" -> SInteger),
+          List("id")
+        )
+      ),
+      None
+    )
+  }
 }
 
 case class A(f1: String, f2: Int, f3: Option[String])
@@ -152,3 +187,7 @@ class Custom(c: String)
 case class G(f1: Int, f2: Custom)
 
 case class H[T](data: T)
+
+sealed trait Node
+case class Edge(id: Long, source: Node) extends Node
+case class SimpleNode(id: Long) extends Node
