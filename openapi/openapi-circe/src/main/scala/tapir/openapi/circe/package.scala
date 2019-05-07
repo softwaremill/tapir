@@ -22,7 +22,7 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveEncoder[OAuthFlows]
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveEncoder[SecurityScheme]
   implicit val encoderExampleValue: Encoder[ExampleValue] = { ev: ExampleValue =>
-    parse(ev.value).toOption.getOrElse(Json.fromString(ev.value))
+    parse(ev.value).right.getOrElse(Json.fromString(ev.value))
   }
   implicit val encoderSchemaFormat: Encoder[SchemaFormat.SchemaFormat] = Encoder.enumEncoder(SchemaFormat)
   implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.enumEncoder(SchemaType)

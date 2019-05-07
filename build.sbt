@@ -1,7 +1,20 @@
+val scala2_11 = "2.11.12"
+val scala2_12 = "2.12.8"
 lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.tapir",
-  scalaVersion := "2.12.8",
-  scalafmtOnCompile := true
+  scalaVersion := scala2_12,
+  scalafmtOnCompile := true,
+  crossScalaVersions := Seq(scala2_11, scala2_12),
+  scalacOptions ++= 
+    (CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 11)) =>
+        Seq(
+          "-Xexperimental",
+          "-Ypartial-unification"
+        )
+      case _ =>
+        Nil
+    })
 )
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.7"
@@ -13,7 +26,7 @@ val sttpVersion = "1.5.12"
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
 )
 
 lazy val rootProject = (project in file("."))

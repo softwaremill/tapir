@@ -95,7 +95,6 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
         toResponse(wrapped, g(vs(i)))
     }
-
     states.sequence_
   }
 
