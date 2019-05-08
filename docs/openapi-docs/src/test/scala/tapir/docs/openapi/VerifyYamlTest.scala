@@ -2,6 +2,7 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
+import tapir.Schema.{SObject, SObjectInfo, SRef}
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -285,7 +286,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
-
+    println(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 
@@ -294,6 +295,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     val actualYaml = List(endpoint.in("p1" and jsonBody[GenericEntity[String]]), endpoint.in("p2" and jsonBody[GenericEntity[Int]]))
       .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should unfold arrays from object") {
+    val expectedYaml = loadYaml("expected_unfolded_array_unfolded_object.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[ObjectWithList])
+      .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
@@ -327,3 +340,5 @@ case class ObjectWrapper(value: FruitAmount)
 
 sealed trait GenericEntity[T]
 case class GenericPerson[T](data: T) extends GenericEntity[T]
+
+case class ObjectWithList(data: List[FruitAmount])

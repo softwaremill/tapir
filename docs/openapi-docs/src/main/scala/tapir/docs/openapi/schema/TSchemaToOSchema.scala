@@ -31,6 +31,12 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             }.toListMap
           )
         )
+      case TSchema.SArray(el: TSchema.SObjectable) =>
+        Right(
+          OSchema(SchemaType.Array).copy(
+            items = Some(Left(schemaReferenceMapper.map(el.info)))
+          )
+        )
       case TSchema.SArray(el) =>
         Right(
           OSchema(SchemaType.Array).copy(
