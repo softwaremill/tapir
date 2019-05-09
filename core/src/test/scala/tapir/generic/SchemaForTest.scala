@@ -51,7 +51,7 @@ class SchemaForTest extends FlatSpec with Matchers {
   }
 
   val expectedASchema =
-    SObject(SObjectInfo("tapir.generic.A"), List(("f1", SString), ("f2", SInteger), ("f3", SString)), List("f1", "f2"))
+    SProduct(SObjectInfo("tapir.generic.A"), List(("f1", SString), ("f2", SInteger), ("f3", SString)), List("f1", "f2"))
 
   it should "find schema for collections of case classes" in {
     implicitly[SchemaFor[List[A]]].schema shouldBe SArray(expectedASchema)
@@ -61,7 +61,7 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[A]].schema shouldBe expectedASchema
   }
 
-  val expectedDSchema: SObject = SObject(SObjectInfo("tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName"))
+  val expectedDSchema: SProduct = SProduct(SObjectInfo("tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName"))
 
   it should "find schema for a simple case class and use identity naming transformation" in {
     implicitly[SchemaFor[D]].schema shouldBe expectedDSchema
@@ -80,7 +80,7 @@ class SchemaForTest extends FlatSpec with Matchers {
   }
 
   it should "find schema for a nested case class" in {
-    implicitly[SchemaFor[B]].schema shouldBe SObject(
+    implicitly[SchemaFor[B]].schema shouldBe SProduct(
       SObjectInfo("tapir.generic.B"),
       List(("g1", SString), ("g2", expectedASchema)),
       List("g1", "g2")
@@ -88,7 +88,7 @@ class SchemaForTest extends FlatSpec with Matchers {
   }
 
   it should "find schema for case classes with collections" in {
-    implicitly[SchemaFor[C]].schema shouldBe SObject(
+    implicitly[SchemaFor[C]].schema shouldBe SProduct(
       SObjectInfo("tapir.generic.C"),
       List(("h1", SArray(SString)), ("h2", SInteger)),
       List("h1")
@@ -97,7 +97,7 @@ class SchemaForTest extends FlatSpec with Matchers {
 
   it should "find schema for recursive data structure" in {
     val schema = implicitly[SchemaFor[F]].schema
-    schema shouldBe SObject(
+    schema shouldBe SProduct(
       SObjectInfo("tapir.generic.F"),
       List(("f1", SArray(SRef(SObjectInfo("tapir.generic.F")))), ("f2", SInteger)),
       List("f1", "f2")
@@ -106,7 +106,7 @@ class SchemaForTest extends FlatSpec with Matchers {
 
   it should "find schema for recursive data structure when invoked from many threads" in {
     val expected =
-      SObject(
+      SProduct(
         SObjectInfo("tapir.generic.F"),
         List(("f1", SArray(SRef(SObjectInfo("tapir.generic.F")))), ("f2", SInteger)),
         List("f1", "f2")
@@ -128,17 +128,52 @@ class SchemaForTest extends FlatSpec with Matchers {
   it should "use custom schema for custom types" in {
     implicit val scustom: SchemaFor[Custom] = SchemaFor[Custom](Schema.SString)
     val schema = implicitly[SchemaFor[G]].schema
-    schema shouldBe SObject(SObjectInfo("tapir.generic.G"), List(("f1", SInteger), ("f2", SString)), List("f1", "f2"))
+    schema shouldBe SProduct(SObjectInfo("tapir.generic.G"), List(("f1", SInteger), ("f2", SString)), List("f1", "f2"))
   }
 
   it should "derive schema for parametrised type classes" in {
     val schema = implicitly[SchemaFor[H[A]]].schema
-    schema shouldBe SObject(SObjectInfo("tapir.generic.H", List("A")), List(("data", expectedASchema)), List("data"))
+    schema shouldBe SProduct(SObjectInfo("tapir.generic.H", List("A")), List(("data", expectedASchema)), List("data"))
   }
 
   it should "find schema for map" in {
     val schema = implicitly[SchemaFor[Map[String, Int]]].schema
-    schema shouldBe SObject(SObjectInfo("Map"), List.empty, List.empty)
+    schema shouldBe SProduct(SObjectInfo("Map"), List.empty, List.empty)
+  }
+
+  it should "find schema for recursive coproduct type" in {
+    val schema = implicitly[SchemaFor[Node]].schema
+    schema shouldBe SCoproduct(
+      SObjectInfo("tapir.generic.Node", List.empty),
+      Set(
+        SProduct(
+          SObjectInfo("tapir.generic.Edge"),
+          List(
+            "id" -> SInteger,
+            "source" ->
+              SCoproduct(
+                SObjectInfo("tapir.generic.Node", List.empty),
+                Set(
+                  SRef(SObjectInfo("tapir.generic.Edge")),
+                  SProduct(
+                    SObjectInfo("tapir.generic.SimpleNode"),
+                    List("id" -> SInteger),
+                    List("id")
+                  )
+                ),
+                None
+              )
+          ),
+          List("id", "source")
+        ),
+        SProduct(
+          SObjectInfo("tapir.generic.SimpleNode"),
+          List("id" -> SInteger),
+          List("id")
+        )
+      ),
+      None
+    )
   }
 }
 
@@ -152,3 +187,7 @@ class Custom(c: String)
 case class G(f1: Int, f2: Custom)
 
 case class H[T](data: T)
+
+sealed trait Node
+case class Edge(id: Long, source: Node) extends Node
+case class SimpleNode(id: Long) extends Node

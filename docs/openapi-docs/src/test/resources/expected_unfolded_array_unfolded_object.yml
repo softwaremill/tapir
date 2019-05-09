@@ -1,6 +1,6 @@
 openapi: 3.0.1
 info:
-  title: Fruits
+  title: Entities
   version: '1.0'
 paths:
   /:
@@ -12,27 +12,25 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Entity'
+                $ref: '#/components/schemas/ObjectWithList'
 components:
   schemas:
-    Entity:
-      oneOf:
-        - $ref: '#/components/schemas/Person'
-        - $ref: '#/components/schemas/Organization'
-    Person:
+    ObjectWithList:
       required:
-        - name
-        - age
+        - data
       type: object
       properties:
-        name:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FruitAmount'
+    FruitAmount:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
           type: string
-        age:
+        amount:
           type: integer
-    Organization:
-      required:
-        - name
-      type: object
-      properties:
-        name:
-          type: string

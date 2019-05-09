@@ -19,14 +19,22 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
         Right(OSchema(SchemaType.Boolean))
       case TSchema.SString =>
         Right(OSchema(SchemaType.String))
-      case TSchema.SObject(_, fields, required) =>
+      case TSchema.SProduct(_, fields, required) =>
         Right(
           OSchema(SchemaType.Object).copy(
             required = required.toList,
             properties = fields.map {
+              case (fieldName, s: TSchema.SObject) =>
+                fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
                 fieldName -> apply(fieldSchema)
             }.toListMap
+          )
+        )
+      case TSchema.SArray(el: TSchema.SObject) =>
+        Right(
+          OSchema(SchemaType.Array).copy(
+            items = Some(Left(schemaReferenceMapper.map(el.info)))
           )
         )
       case TSchema.SArray(el) =>
@@ -43,10 +51,10 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
       case TSchema.SRef(fullName) =>
         Left(schemaReferenceMapper.map(fullName))
-      case SCoproduct(schemas, d) =>
+      case SCoproduct(_, schemas, d) =>
         Right(
           OSchema.apply(
-            schemas.collect { case s: TSchema.SObject => Left(schemaReferenceMapper.map(s.info)) }.toList,
+            schemas.collect { case s: TSchema.SProduct => Left(schemaReferenceMapper.map(s.info)) }.toList,
             d.map(discriminatorToOpenApi.apply)
           )
         )

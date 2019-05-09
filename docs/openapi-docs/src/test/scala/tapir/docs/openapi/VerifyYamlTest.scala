@@ -2,6 +2,7 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
+import tapir.Schema.{SProduct, SObjectInfo, SRef}
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -137,7 +138,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     // work-around for #10: unsupported sealed trait families
     implicit val schemaForErrorInfo: SchemaFor[ErrorInfo] = new SchemaFor[ErrorInfo] {
-      override def schema: Schema = Schema.SObject(Schema.SObjectInfo("ErrorInfo"), Nil, Nil)
+      override def schema: Schema = Schema.SProduct(Schema.SObjectInfo("ErrorInfo"), Nil, Nil)
     }
 
     val e = endpoint.errorOut(
@@ -285,6 +286,29 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
+    println(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should differentiate when a generic coproduct type is used multiple times") {
+    val expectedYaml = loadYaml("expected_generic_coproduct.yml")
+
+    val actualYaml = List(endpoint.in("p1" and jsonBody[GenericEntity[String]]), endpoint.in("p2" and jsonBody[GenericEntity[Int]]))
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should unfold arrays from object") {
+    val expectedYaml = loadYaml("expected_unfolded_array_unfolded_object.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[ObjectWithList])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -313,3 +337,8 @@ case class Unauthorized(realm: String) extends ErrorInfo
 case class Unknown(code: Int, msg: String) extends ErrorInfo
 
 case class ObjectWrapper(value: FruitAmount)
+
+sealed trait GenericEntity[T]
+case class GenericPerson[T](data: T) extends GenericEntity[T]
+
+case class ObjectWithList(data: List[FruitAmount])

@@ -12,16 +12,18 @@ paths:
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/Person'
-                  - $ref: '#/components/schemas/Organization'
-                discriminator:
-                  propertyName: name
-                  mapping:
-                    john: '#/components/schemas/Person'
-                    sml: '#/components/schemas/Organization'
+                $ref: '#/components/schemas/Entity'
 components:
   schemas:
+    Entity:
+      oneOf:
+        - $ref: '#/components/schemas/Person'
+        - $ref: '#/components/schemas/Organization'
+      discriminator:
+        propertyName: name
+        mapping:
+          john: '#/components/schemas/Person'
+          sml: '#/components/schemas/Organization'
     Person:
       required:
         - name

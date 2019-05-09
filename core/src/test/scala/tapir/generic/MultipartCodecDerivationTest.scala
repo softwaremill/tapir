@@ -62,7 +62,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     val codec = implicitly[Codec[Test6, MediaType.MultipartFormData, Seq[RawPart]]]
 
     // when
-    codec.meta.schema shouldBe SObject(
+    codec.meta.schema shouldBe SProduct(
       SObjectInfo("tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"),
       List(("f1", SString), ("f2", SInteger)),
       List("f1", "f2")
@@ -75,7 +75,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
 
     // when
-    codec.meta.schema shouldBe SObject(
+    codec.meta.schema shouldBe SProduct(
       SObjectInfo("tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
       List(("f1", SBinary), ("f2", SInteger)),
       List("f1", "f2")
