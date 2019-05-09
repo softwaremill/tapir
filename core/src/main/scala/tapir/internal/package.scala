@@ -32,6 +32,10 @@ package object internal {
       traverseInputs {
         case i: EndpointInput.RequestMethod => Vector(i.m)
       }.headOption
+
+    def path: String = asVectorOfBasicInputs().sortByType.collect {
+      case EndpointInput.PathSegment(s) => s
+    }.mkString("/")
   }
 
   implicit class RichBasicEndpointInputs(inputs: Vector[EndpointInput.Basic[_]]) {
@@ -78,7 +82,7 @@ package object internal {
       }.headOption
   }
 
-  implicit class RichBasicEndpointOututs(outputs: Vector[EndpointOutput.Basic[_]]) {
+  implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
     def sortByType: Vector[EndpointOutput.Basic[_]] = outputs.sortBy {
       case _: EndpointOutput.StatusCode          => 0
       case _: EndpointIO.Header[_]               => 1
