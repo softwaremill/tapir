@@ -22,6 +22,7 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.7"
 val http4sVersion = "0.20.0"
 val circeVersion = "0.11.1"
 val sttpVersion = "1.5.12"
+val finatraVersion = "19.4.0"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -151,6 +152,14 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq("org.http4s" %% "http4s-blaze-server" % http4sVersion)
+  )
+  .dependsOn(core, serverTests % "test")
+
+lazy val finatraServer: Project = (project in file("server/finatra-server"))
+  .settings(commonSettings: _*)
+  .settings(
+      name := "tapir-finatra-server",
+    libraryDependencies ++= Seq("com.twitter" %% "finatra-http" % finatraVersion)
   )
   .dependsOn(core, serverTests % "test")
 
