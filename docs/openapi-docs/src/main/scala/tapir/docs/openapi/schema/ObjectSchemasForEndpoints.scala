@@ -38,8 +38,8 @@ object ObjectSchemasForEndpoints {
 
   private def objectSchemas(schema: TSchema): List[TSchema.SObject] = {
     schema match {
-      case o: TSchema.SProduct =>
-        List(o) ++ o.fields
+      case p: TSchema.SProduct =>
+        List(p) ++ p.fields
           .map(_._2)
           .flatMap(objectSchemas)
           .toList
