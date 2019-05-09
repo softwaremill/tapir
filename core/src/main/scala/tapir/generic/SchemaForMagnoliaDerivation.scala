@@ -27,7 +27,7 @@ trait SchemaForMagnoliaDerivation {
             }
           } else {
             new SchemaFor[T] {
-              override val schema: Schema = SObject(
+              override val schema: Schema = SProduct(
                 typeNameToObjectInfo(ctx.typeName),
                 ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
                 ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))

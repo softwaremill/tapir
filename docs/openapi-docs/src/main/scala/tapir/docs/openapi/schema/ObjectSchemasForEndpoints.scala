@@ -36,9 +36,9 @@ object ObjectSchemasForEndpoints {
       .infoToKey
   }
 
-  private def objectSchemas(schema: TSchema): List[TSchema.SObjectable] = {
+  private def objectSchemas(schema: TSchema): List[TSchema.SObject] = {
     schema match {
-      case o: TSchema.SObject =>
+      case o: TSchema.SProduct =>
         List(o) ++ o.fields
           .map(_._2)
           .flatMap(objectSchemas)
@@ -51,7 +51,7 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forInput(input: EndpointInput[_]): List[TSchema.SObjectable] = {
+  private def forInput(input: EndpointInput[_]): List[TSchema.SObject] = {
     input match {
       case EndpointInput.RequestMethod(_) =>
         List.empty
@@ -79,7 +79,7 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forOutput(output: EndpointOutput[_]): List[TSchema.SObjectable] = {
+  private def forOutput(output: EndpointOutput[_]): List[TSchema.SObject] = {
     output match {
       case EndpointOutput.StatusFrom(wrapped, _, defaultSchema, whens) =>
         val fromDefaultSchema = defaultSchema.toList.flatMap(objectSchemas)
@@ -102,7 +102,7 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forIO(io: EndpointIO[_]): List[TSchema.SObjectable] = {
+  private def forIO(io: EndpointIO[_]): List[TSchema.SObject] = {
     io match {
       case EndpointIO.Multiple(ios) =>
         ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))

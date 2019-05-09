@@ -10,11 +10,11 @@ class ObjectSchemas(
 ) {
   def apply(schema: TSchema): ReferenceOr[OSchema] = {
     schema match {
-      case TSchema.SArray(objectable: TSchema.SObjectable) =>
+      case TSchema.SArray(objectable: TSchema.SObject) =>
         Right(
           OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(objectable.info))))
         )
-      case s: TSchema.SObjectable => Left(schemaReferenceMapper.map(s.info))
+      case s: TSchema.SObject => Left(schemaReferenceMapper.map(s.info))
       case _                      => tschemaToOSchema(schema)
     }
   }

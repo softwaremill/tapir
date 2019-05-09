@@ -2,7 +2,7 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
-import tapir.Schema.{SObject, SObjectInfo, SRef}
+import tapir.Schema.{SProduct, SObjectInfo, SRef}
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -138,7 +138,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     // work-around for #10: unsupported sealed trait families
     implicit val schemaForErrorInfo: SchemaFor[ErrorInfo] = new SchemaFor[ErrorInfo] {
-      override def schema: Schema = Schema.SObject(Schema.SObjectInfo("ErrorInfo"), Nil, Nil)
+      override def schema: Schema = Schema.SProduct(Schema.SObjectInfo("ErrorInfo"), Nil, Nil)
     }
 
     val e = endpoint.errorOut(

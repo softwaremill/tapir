@@ -1,7 +1,7 @@
 package tapir.generic
 
 import org.scalatest.{FlatSpec, Matchers}
-import tapir.Schema.{SInteger, SObject, SObjectInfo, SString}
+import tapir.Schema.{SInteger, SProduct, SObjectInfo, SString}
 import tapir.util.CompileUtil
 import tapir.{Codec, DecodeResult, MediaType}
 
@@ -70,7 +70,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
     val codec = implicitly[Codec[Test6, MediaType.XWwwFormUrlencoded, String]]
 
     // when
-    codec.meta.schema shouldBe SObject(
+    codec.meta.schema shouldBe SProduct(
       SObjectInfo("tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
       List(("f1", SString), ("f2", SInteger)),
       List("f1", "f2")
