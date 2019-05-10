@@ -78,7 +78,7 @@ package object internal {
       }.headOption
   }
 
-  implicit class RichBasicEndpointOututs(outputs: Vector[EndpointOutput.Basic[_]]) {
+  implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
     def sortByType: Vector[EndpointOutput.Basic[_]] = outputs.sortBy {
       case _: EndpointOutput.StatusCode          => 0
       case _: EndpointIO.Header[_]               => 1
