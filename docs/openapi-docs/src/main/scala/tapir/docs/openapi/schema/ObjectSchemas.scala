@@ -15,7 +15,7 @@ class ObjectSchemas(
           OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(o.info))))
         )
       case o: TSchema.SObject => Left(schemaReferenceMapper.map(o.info))
-      case _                      => tschemaToOSchema(schema)
+      case _                  => tschemaToOSchema(schema)
     }
   }
 }
