@@ -31,7 +31,7 @@ val bookInput: EndpointIO[Book] = jsonBody[Book]
 ```
 
 To add support for other JSON libraries, see the 
-[sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/tapir/json/circe/JsonCirce.scala) 
+[sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/tapir/json/circe/TapirJsonCirce.scala) 
 for the Circe codec (which is just a couple of lines of code).
 
 ## Schemas
