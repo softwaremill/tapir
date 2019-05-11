@@ -33,9 +33,10 @@ package object internal {
         case i: EndpointInput.RequestMethod => Vector(i.m)
       }.headOption
 
-    def path: String = asVectorOfBasicInputs().sortByType.collect {
-      case EndpointInput.PathSegment(s) => s
-    }.mkString("/")
+    def path: String =
+      asVectorOfBasicInputs().collect {
+        case segment: EndpointInput.PathSegment => segment.show
+      }.mkString
   }
 
   implicit class RichBasicEndpointInputs(inputs: Vector[EndpointInput.Basic[_]]) {
