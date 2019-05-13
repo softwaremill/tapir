@@ -1,5 +1,6 @@
 package tapir.server
 import com.twitter.finagle.http.{Request, Response}
+import com.twitter.inject.Logging
 import com.twitter.util.Future
 import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import tapir.internal.SeqToParams
@@ -7,7 +8,7 @@ import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal._
 
 package object finatra {
-  implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) {
+  implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
     def toRoute(logic: I => Future[Either[E, O]]): FinatraRoute = {
 
       val handler = { request: Request =>
