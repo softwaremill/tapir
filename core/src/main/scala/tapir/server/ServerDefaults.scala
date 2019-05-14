@@ -15,8 +15,14 @@ object ServerDefaults {
         case EndpointInput.Cookie(name, _, _)      => response(StatusCodes.BadRequest, s"Invalid value for: cookie $name")
         case EndpointIO.Header(name, _, _)         => response(StatusCodes.BadRequest, s"Invalid value for: header $name")
         case _: EndpointIO.Headers                 => response(StatusCodes.BadRequest, s"Invalid value for: headers")
-        case _: EndpointIO.Body[_, _, _]           => response(StatusCodes.BadRequest, s"Invalid value for: body")
-        case _: EndpointIO.StreamBodyWrapper[_, _] => response(StatusCodes.BadRequest, s"Invalid value for: body")
+        case _: EndpointIO.Body[_, _, _] if failure.isInstanceOf[DecodeResult.Error] =>
+          response(StatusCodes.BadRequest, s"Invalid value for: body: ${failure.asInstanceOf[DecodeResult.Error].error}")
+        case _: EndpointIO.Body[_, _, _]           =>
+          response(StatusCodes.BadRequest, s"Invalid value for: body")
+        case _: EndpointIO.StreamBodyWrapper[_, _] if failure.isInstanceOf[DecodeResult.Error] =>
+          response(StatusCodes.BadRequest, s"Invalid value for: body: ${failure.asInstanceOf[DecodeResult.Error].error}")
+        case _: EndpointIO.StreamBodyWrapper[_, _] =>
+          response(StatusCodes.BadRequest, s"Invalid value for: body")
         case _: EndpointInput.PathCapture[_] if failure.isInstanceOf[DecodeResult.Error] =>
           response(StatusCodes.BadRequest, s"Invalid value for: path")
         case _: EndpointInput.PathsCapture if failure.isInstanceOf[DecodeResult.Error] =>
