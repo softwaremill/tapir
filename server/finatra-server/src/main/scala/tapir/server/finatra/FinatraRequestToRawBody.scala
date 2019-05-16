@@ -28,6 +28,7 @@ object FinatraRequestToRawBody {
     def asByteBuffer: ByteBuffer = {
       val buffer = ByteBuffer.allocate(request.content.length)
       request.content.write(buffer)
+      buffer.flip()
       buffer
     }
 
