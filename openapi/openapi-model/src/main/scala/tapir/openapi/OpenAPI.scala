@@ -257,10 +257,10 @@ case class SecurityScheme(
 )
 
 case class OAuthFlows(
-    `implicit`: Option[OAuthFlow],
-    password: Option[OAuthFlow],
-    clientCredentials: Option[OAuthFlow],
-    authorizationCode: Option[OAuthFlow]
+    `implicit`: Option[OAuthFlow] = None,
+    password: Option[OAuthFlow] = None,
+    clientCredentials: Option[OAuthFlow] = None,
+    authorizationCode: Option[OAuthFlow] = None
 )
 
 case class OAuthFlow(authorizationUrl: String, tokenUrl: String, refreshUrl: Option[String], scopes: ListMap[String, String])
