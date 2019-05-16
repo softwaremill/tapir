@@ -21,6 +21,16 @@ object OutputToFinatraResponse {
     val vs = ParamsToSeq(v)
     val response = r.getOrElse(Response())
 
+    // There should only be one content-type header, so if we're
+    // adding a content-type, use 'set' rather than 'add'.
+    def setOrAddHeader(name: String, value: String): Unit = {
+      if (name.toLowerCase() == "content-type") {
+        response.headerMap.set(name, value)
+      } else {
+        response.headerMap.add(name, value)
+      }
+    }
+
     output.asVectorOfSingleOutputs.zipWithIndex.foreach {
       case (EndpointIO.Body(codec, _), i) =>
         codec.encode(vs(i)).map(rawValueToBuf(codec.meta, _)) match {
@@ -37,11 +47,11 @@ object OutputToFinatraResponse {
       case (EndpointIO.Header(name, codec, _), i) =>
         codec
           .encode(vs(i))
-          .foreach((headerValue: String) => response.headerMap.add(name, headerValue))
+          .foreach((headerValue: String) => setOrAddHeader(name, headerValue))
 
       case (EndpointIO.Headers(_), i) =>
         vs(i).asInstanceOf[Seq[(String, String)]].foreach {
-          case (name, value) => response.headerMap.add(name, value)
+          case (name, value) => setOrAddHeader(name, value)
         }
 
       case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
