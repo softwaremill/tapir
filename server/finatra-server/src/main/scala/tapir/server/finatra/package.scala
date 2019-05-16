@@ -55,9 +55,7 @@ package object finatra {
         }
       }
 
-      val path = if (e.input.path.isEmpty) "/" else e.input.path
-
-      FinatraRoute(handler, path)
+      FinatraRoute(handler, e.input.path)
     }
   }
 }
