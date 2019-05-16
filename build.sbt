@@ -10,7 +10,8 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       case Some((2, 11)) =>
         Seq(
           "-Xexperimental",
-          "-Ypartial-unification"
+          "-Ypartial-unification",
+          "-Ylog-classpath"
         )
       case _ =>
         Nil
@@ -23,6 +24,7 @@ val http4sVersion = "0.20.0"
 val circeVersion = "0.11.1"
 val sttpVersion = "1.5.12"
 val finatraVersion = "19.4.0"
+val bijectionVersion = "0.9.5"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -160,8 +162,19 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(commonSettings: _*)
   .settings(
       name := "tapir-finatra-server",
-    libraryDependencies ++= Seq("com.twitter" %% "finatra-http" % finatraVersion)
-  )
+    libraryDependencies ++= Seq("com.twitter" %% "finatra-http" % finatraVersion,
+
+      // Testing
+      "com.twitter" %% "finatra-http" % finatraVersion % "test",
+      "com.twitter" %% "inject-server" % finatraVersion % "test",
+      "com.twitter" %% "inject-app" % finatraVersion % "test",
+      "com.twitter" %% "inject-core" % finatraVersion % "test",
+      "com.twitter" %% "inject-modules" % finatraVersion % "test",
+      "com.twitter" %% "finatra-http" % finatraVersion % "test" classifier "tests",
+      "com.twitter" %% "inject-server" % finatraVersion % "test" classifier "tests",
+      "com.twitter" %% "inject-app" % finatraVersion % "test" classifier "tests",
+      "com.twitter" %% "inject-core" % finatraVersion % "test" classifier "tests",
+      "com.twitter" %% "inject-modules" % finatraVersion % "test" classifier "tests"))
   .dependsOn(core, serverTests % "test")
 
 // client

@@ -2,10 +2,11 @@ package tapir.server.finatra
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
+import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
+import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.util.{Future, FuturePool}
 import tapir.Endpoint
 import tapir.server.tests.ServerTests
-
 import scala.reflect.ClassTag
 
 class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
@@ -25,7 +26,32 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
       implicit eClassTag: ClassTag[E]
   ): FinatraRoute = ???
 
-  override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = ???
+  override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = {
+    val bind = IO {
+      class TestController extends Controller with TapirController {
+        routes.toList.foreach(addTapirRoute)
+      }
+
+      class TestServer extends HttpServer {
+        override protected def configureHttp(router: HttpRouter): Unit = {
+          router.add(new TestController)
+        }
+      }
+
+      val server = new EmbeddedHttpServer(
+        new TestServer,
+        Map(
+          "http.port" -> s":$port"
+        )
+      )
+      server.start()
+      server
+    }
+
+    Resource
+      .make(bind)(httpServer => IO(httpServer.close()))
+      .map(_ => ())
+  }
 
   override def initialPort: Port = 8000
 }
