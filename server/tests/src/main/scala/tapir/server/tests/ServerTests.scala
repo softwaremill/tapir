@@ -116,6 +116,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
 
+  testServer(in_json_out_json, "content type")((fa: FruitAmount) => pureResult(fa.asRight[Unit])) { baseUri =>
+    sttp
+      .post(uri"$baseUri/api/echo")
+      .body("""{"fruit":"banana","amount":12}""")
+      .send()
+      .map(_.contentType shouldBe Some(MediaType.Json().mediaType))
+  }
+
   testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/api/echo").body("banana kiwi".getBytes).send().map(_.body shouldBe Right("banana kiwi"))
   }

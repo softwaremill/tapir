@@ -41,7 +41,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     def withStatusCode(sc: StatusCode): ResponseValues = copy(statusCode = Some(sc))
 
     def allHeaders: Headers = {
-      val shouldAddCtHeader = headers.exists(_.name == `Content-Type`.name)
+      val shouldAddCtHeader = !headers.exists(_.name == `Content-Type`.name)
       bodyWithCtHeader match {
         case Some((_, ctHeader)) if shouldAddCtHeader => Headers(headers :+ ctHeader)
         case _                                        => Headers(headers)
