@@ -54,9 +54,9 @@ val SwaggerYml = "swagger.yml"
 private val redirectToIndex: Route =
   redirect(s"/swagger/index.html?url=/swagger/$SwaggerYml", StatusCodes.PermanentRedirect) 
 
+// needed only if you use oauth2 authorization
 private def redirectToOath2(query: String): Route =
     redirect(s"/swagger/oauth2-redirect.html$query", StatusCodes.PermanentRedirect)
-
 
 private val swaggerVersion = {
   val p = new Properties()
@@ -64,15 +64,16 @@ private val swaggerVersion = {
   p.getProperty("version")
 }
 
-val routes: Route =
-    path("oauth2-redirect.html") { request => 
-      redirectToOath2(request.request.uri.rawQueryString.map(s => '?' + s).getOrElse(""))(request)
-    } ~
-      pathPrefix("swagger") {
-        pathEndOrSingleSlash {
-          redirectToIndex
-        } ~ path(SwaggerYml) {
-          complete(yml)
-        } ~ getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
-      }
+val routes: Route =   
+  pathPrefix("swagger") {
+    pathEndOrSingleSlash {
+      redirectToIndex
+    } ~ path(SwaggerYml) {
+      complete(yml)
+    } ~ getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
+  } ~
+  // needed only if you use oauth2 authorization
+  path("oauth2-redirect.html") { request => 
+    redirectToOath2(request.request.uri.rawQueryString.map(s => '?' + s).getOrElse(""))(request)
+  }
 ```

@@ -100,7 +100,7 @@ object EndpointInput {
         refreshUrl: Option[String] = None,
         input: EndpointInput.Single[String]
     ) extends Auth[String] {
-      def show = s"auth(bearer oauth2, via ${input.show})"
+      def show = s"auth(oauth2, via ${input.show})"
     }
   }
 

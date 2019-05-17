@@ -14,14 +14,16 @@ object TapirAuth {
   val basic: EndpointInput.Auth.Http[UsernamePassword] = httpAuth(BasicAuthType, usernamePasswordCodec(credentialsCodec(BasicAuthType)))
   val bearer: EndpointInput.Auth.Http[String] = httpAuth(BearerAuthType, credentialsCodec(BearerAuthType))
 
-  def oauth2(authorizationUrl: String, tokenUrl: String, scopes: ListMap[String, String], refreshUrl: Option[String] = None) =
-    EndpointInput.Auth.Oauth2(
-      authorizationUrl,
-      tokenUrl,
-      scopes,
-      refreshUrl,
-      header[String]("Authorization")(CodecForMany.fromCodec(credentialsCodec(BearerAuthType)))
-    )
+  object oauth2 {
+    def authorizationCode(authorizationUrl: String, tokenUrl: String, scopes: ListMap[String, String], refreshUrl: Option[String] = None) =
+      EndpointInput.Auth.Oauth2(
+        authorizationUrl,
+        tokenUrl,
+        scopes,
+        refreshUrl,
+        header[String]("Authorization")(CodecForMany.fromCodec(credentialsCodec(BearerAuthType)))
+      )
+  }
 
   private def httpAuth[T](authType: String, codec: PlainCodec[T]): EndpointInput.Auth.Http[T] =
     EndpointInput.Auth.Http(authType, header[T]("Authorization")(CodecForMany.fromCodec(codec)))
