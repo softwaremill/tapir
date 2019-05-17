@@ -7,6 +7,8 @@ import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal._
 
+import scala.util.control.NonFatal
+
 package object finatra {
   implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
     def toRoute(logic: I => Future[Either[E, O]]): FinatraRoute = {
@@ -33,11 +35,11 @@ package object finatra {
           val i = SeqToParams(InputValues(e.input, values.values)).asInstanceOf[I]
           logic(i)
             .map {
-              case Right(result) => OutputToFinatraResponse(e.output, result)
+              case Right(result) => OutputToFinatraResponse(e.output, result).toResponse
               case Left(_)       => ???
             }
             .onFailure {
-              case e: Exception =>
+              case NonFatal(e) =>
                 error(e)
             }
         }
