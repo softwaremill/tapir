@@ -1,7 +1,7 @@
 package tapir.docs.openapi
 
 import tapir.internal._
-import tapir.openapi.SecurityScheme
+import tapir.openapi.{OAuthFlow, OAuthFlows, SecurityScheme}
 import tapir.{Endpoint, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec
@@ -38,6 +38,17 @@ private[openapi] object SecuritySchemesForEndpoints {
       SecurityScheme("apiKey", None, Some(name), Some(in), None, None, None, None)
     case EndpointInput.Auth.Http(scheme, _) =>
       SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None)
+    case EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _) =>
+      SecurityScheme(
+        "oauth2",
+        None,
+        Some("Oauth2"),
+        Some("header"),
+        Some("bearer"),
+        None,
+        Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
+        None
+      )
   }
 
   private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) = input match {

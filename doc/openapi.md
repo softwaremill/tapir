@@ -54,6 +54,10 @@ val SwaggerYml = "swagger.yml"
 private val redirectToIndex: Route =
   redirect(s"/swagger/index.html?url=/swagger/$SwaggerYml", StatusCodes.PermanentRedirect) 
 
+private def redirectToOath2(query: String): Route =
+    redirect(s"/swagger/oauth2-redirect.html$query", StatusCodes.PermanentRedirect)
+
+
 private val swaggerVersion = {
   val p = new Properties()
   p.load(getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties"))
@@ -61,16 +65,14 @@ private val swaggerVersion = {
 }
 
 val routes: Route =
-  path("swagger") {
-    redirectToIndex
-  } ~
-    pathPrefix("swagger") {
-      path("") { // this is for trailing slash
-        redirectToIndex
-      } ~
-        path(SwaggerYml) {
+    path("oauth2-redirect.html") { request => 
+      redirectToOath2(request.request.uri.rawQueryString.map(s => '?' + s).getOrElse(""))(request)
+    } ~
+      pathPrefix("swagger") {
+        pathEndOrSingleSlash {
+          redirectToIndex
+        } ~ path(SwaggerYml) {
           complete(yml)
-        } ~
-        getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
-    }
+        } ~ getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
+      }
 ```

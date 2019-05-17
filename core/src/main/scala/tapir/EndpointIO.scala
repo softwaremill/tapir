@@ -7,6 +7,8 @@ import tapir.internal.ProductToParams
 import tapir.model.{Method, MultiQueryParams, ServerRequest}
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
+import scala.collection.immutable.ListMap
+
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
   def /[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
@@ -90,6 +92,15 @@ object EndpointInput {
     }
     case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
       def show = s"auth($scheme http, via ${input.show})"
+    }
+    case class Oauth2(
+        authorizationUrl: String,
+        tokenUrl: String,
+        scopes: ListMap[String, String],
+        refreshUrl: Option[String] = None,
+        input: EndpointInput.Single[String]
+    ) extends Auth[String] {
+      def show = s"auth(bearer oauth2, via ${input.show})"
     }
   }
 
