@@ -65,7 +65,8 @@ object FinatraRequestToRawBody {
                     .tail
                     .map(_.split("="))
                     .map(array => array(0) -> array(1))
-                    .toMap)
+                    .toMap
+                )
                 .getOrElse(Map.empty)
 
               val charset = multiPartItem.contentType.flatMap(
@@ -76,13 +77,15 @@ object FinatraRequestToRawBody {
                   .map(array => array(0) -> array(1))
                   .toMap
                   .get("charset")
-                  .map(Charset.forName))
+                  .map(Charset.forName)
+              )
 
               mvt
                 .partCodecMeta(name)
                 .map(codecMeta => apply(codecMeta.rawValueType, Buf.ByteArray.Owned(multiPartItem.data), charset, request))
-                .map(body =>
-                  Part(name, dispositionParams - "name", fileItemHeadersToSeq(multiPartItem.headers), body).asInstanceOf[RawPart])
+                .map(
+                  body => Part(name, dispositionParams - "name", fileItemHeadersToSeq(multiPartItem.headers), body).asInstanceOf[RawPart]
+                )
           }
           .toSeq
     }

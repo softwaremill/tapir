@@ -41,7 +41,7 @@ package object internal {
         case PathCapture(_, _, _)               => "/:param"
         case EndpointInput.PathsCapture(_)      => "/*"
       }.mkString
-      if (p.isEmpty) "/" else p
+      if (p.isEmpty) "/*" else p
     }
   }
 

@@ -32,7 +32,7 @@ case class FinatraResponse(
     status: Status,
     content: FinatraContent = FinatraContentBuf(Buf.Empty),
     contentType: String = "text/plain",
-    headerMap: Seq[(String, String)] = Seq.empty,
+    headerMap: Seq[(String, String)] = Seq.empty
 ) {
   def toResponse: Response = {
     val responseWithContent = content match {
@@ -61,10 +61,12 @@ case class FinatraResponse(
 }
 
 object OutputToFinatraResponse {
-  def apply[O, E](output: EndpointOutput[O],
-                  v: Any,
-                  startingResponse: Option[FinatraResponse] = None,
-                  defaultStatus: Status = Status.Ok): FinatraResponse = {
+  def apply[O, E](
+      output: EndpointOutput[O],
+      v: Any,
+      startingResponse: Option[FinatraResponse] = None,
+      defaultStatus: Status = Status.Ok
+  ): FinatraResponse = {
     val vs = ParamsToSeq(v)
 
     output.asVectorOfSingleOutputs.zipWithIndex.foldLeft(startingResponse.getOrElse(FinatraResponse(defaultStatus))) {
@@ -75,7 +77,7 @@ object OutputToFinatraResponse {
               case Some((content, contentType)) =>
                 finatraResponse.copy(content = content, contentType = contentType)
               case None =>
-                ???
+                finatraResponse
             }
 
           case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
@@ -161,8 +163,10 @@ object OutputToFinatraResponse {
 
     mvt.partCodecMeta(part.name).map { codecMeta =>
       FormBodyPartBuilder
-        .create(part.name,
-                rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.asInstanceOf[Part[Any]], part.body))
+        .create(
+          part.name,
+          rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.asInstanceOf[Part[Any]], part.body)
+        )
         .build()
     }
   }
