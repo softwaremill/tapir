@@ -185,13 +185,14 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings: _*)
   .settings(
-    name := "tapir-tests",
+    name := "tapir-playground",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
       "org.scalaz" %% "scalaz-zio" % "1.0-RC4",
       "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC4",
       "org.typelevel" %% "cats-effect" % "1.2.0",
-      "org.webjars" % "swagger-ui" % "3.22.0"
+      "org.webjars" % "swagger-ui" % "3.22.0",
+      "io.swagger" % "swagger-annotations" % "1.5.22"
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
