@@ -1,7 +1,10 @@
 package tapir.server
-import com.twitter.finagle.http.{Request, Response}
+import java.nio.charset.Charset
+
+import com.twitter.finagle.http.{Request, Response, Status}
 import com.twitter.inject.Logging
 import com.twitter.util.Future
+import tapir.DecodeResult.{Error, Mismatch, Missing, Multiple}
 import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
@@ -19,7 +22,8 @@ package object finatra {
             case values: DecodeInputsResult.Values =>
               values.bodyInput match {
                 case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
-                  val rawBody = FinatraRequestToRawBody(codec.meta.rawValueType, request)
+                  val rawBody =
+                    FinatraRequestToRawBody(codec.meta.rawValueType, request.content, request.charset.map(Charset.forName), request)
 
                   codec.safeDecode(Some(rawBody)) match {
                     case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
@@ -36,7 +40,7 @@ package object finatra {
           logic(i)
             .map {
               case Right(result) => OutputToFinatraResponse(e.output, result).toResponse
-              case Left(_)       => ???
+              case Left(err)     => OutputToFinatraResponse(e.errorOutput, err, None, Status.BadRequest).toResponse
             }
             .onFailure {
               case NonFatal(e) =>
@@ -44,12 +48,20 @@ package object finatra {
             }
         }
 
-        def handleDecodeFailure[I](
+        def handleDecodeFailure(
             e: Endpoint[_, _, _, _],
             req: Request,
             input: EndpointInput.Single[_],
             failure: DecodeFailure
-        ): Future[Response] = ???
+        ): Future[Response] = {
+          failure match {
+            case Missing                    => error(s"No decode failure message")
+            case Multiple(errs: Seq[_])     => errs.foreach(e => error(s"DecodeError: $e"))
+            case Error(original, e)         => error(s"DecodeError: original: $original", e)
+            case Mismatch(expected, actual) => error(s"Expected: $expected Actual: $actual")
+          }
+          Future.value(Response(Status.BadRequest))
+        }
 
         decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))) match {
           case values: DecodeInputsResult.Values          => valuesToResponse(values)

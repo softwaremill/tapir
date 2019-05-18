@@ -21,10 +21,10 @@ case class FinatraContentBuf(buf: Buf) extends FinatraContent
 case class FinatraContentReader(reader: Reader[Buf]) extends FinatraContent
 
 case class FinatraResponse(
+    status: Status,
     content: FinatraContent = FinatraContentBuf(Buf.Empty),
     contentType: String = "text/plain",
     headerMap: Seq[(String, String)] = Seq.empty,
-    status: Status = Status.Ok
 ) {
   def toResponse: Response = {
     val responseWithContent = content match {
@@ -53,10 +53,13 @@ case class FinatraResponse(
 }
 
 object OutputToFinatraResponse {
-  def apply[O, E](output: EndpointOutput[O], v: Any, startingResponse: Option[FinatraResponse] = None): FinatraResponse = {
+  def apply[O, E](output: EndpointOutput[O],
+                  v: Any,
+                  startingResponse: Option[FinatraResponse] = None,
+                  defaultStatus: Status = Status.Ok): FinatraResponse = {
     val vs = ParamsToSeq(v)
 
-    output.asVectorOfSingleOutputs.zipWithIndex.foldLeft(startingResponse.getOrElse(FinatraResponse())) {
+    output.asVectorOfSingleOutputs.zipWithIndex.foldLeft(startingResponse.getOrElse(FinatraResponse(defaultStatus))) {
       case (finatraResponse, input) =>
         input match {
           case (EndpointIO.Body(codec, _), i) =>
