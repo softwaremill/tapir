@@ -162,7 +162,9 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(commonSettings: _*)
   .settings(
       name := "tapir-finatra-server",
-    libraryDependencies ++= Seq("com.twitter" %% "finatra-http" % finatraVersion,
+    libraryDependencies ++= Seq(
+      "com.twitter" %% "finatra-http" % finatraVersion,
+      "org.apache.httpcomponents" % "httpmime" % "4.5.3",
 
       // Testing
       "com.twitter" %% "finatra-http" % finatraVersion % "test",

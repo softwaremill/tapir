@@ -1,7 +1,14 @@
 package tapir.server.finatra
+import java.io.{File, InputStream}
+import java.nio.ByteBuffer
+
 import com.twitter.finagle.http.{Response, Status, Version}
-import com.twitter.io.{Buf, BufReader, InputStreamReader, Reader}
+import com.twitter.io.{Buf, InputStreamReader, Reader}
+import org.apache.http.entity.ContentType
+import org.apache.http.entity.mime.content._
+import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import tapir.internal.{ParamsToSeq, _}
+import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -12,6 +19,7 @@ import tapir.{
   InputStreamValueType,
   MediaType,
   MultipartValueType,
+  RawPart,
   StreamingEndpointIO,
   StringValueType
 }
@@ -117,7 +125,45 @@ object OutputToFinatraResponse {
       case FileValueType =>
         ???
       case mvt: MultipartValueType =>
+        val entity = MultipartEntityBuilder.create()
+
+        (r: Seq[RawPart]).flatMap(rawPartToFormBodyPart(mvt, _)).foreach { formBodyPart: FormBodyPart =>
+          entity.addPart(formBodyPart)
+        }
+
+        FinatraContentReader(InputStreamReader(entity.build().getContent)) -> ct
+    }
+  }
+
+  private def rawValueToContentBody[M <: MediaType, R](codecMeta: CodecMeta[M, R], part: Part[R], r: R): ContentBody = {
+    val contentType: String = part.header("content-type").getOrElse("text/plain")
+
+    codecMeta.rawValueType match {
+      case StringValueType(charset) =>
+        new StringBody(r.toString, ContentType.create(contentType, charset))
+      case ByteArrayValueType =>
+        new ByteArrayBody(r: Array[Byte], ContentType.create(contentType), part.fileName.get)
+      case ByteBufferValueType =>
+        val array: Array[Byte] = new Array[Byte]((r: ByteBuffer).remaining)
+        (r: ByteBuffer).get(array)
+        new ByteArrayBody(array, ContentType.create(contentType), part.fileName.get)
+      case FileValueType =>
+        new FileBody(r: File, ContentType.create(contentType), part.fileName.get)
+      case InputStreamValueType =>
+        new InputStreamBody(r: InputStream, ContentType.create(contentType), part.fileName.get)
+      case _ =>
         ???
+    }
+  }
+
+  private def rawPartToFormBodyPart[R](mvt: MultipartValueType, part: Part[R]): Option[FormBodyPart] = {
+    val r = part.body
+
+    mvt.partCodecMeta(part.name).map { codecMeta =>
+      FormBodyPartBuilder
+        .create(part.name,
+                rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.asInstanceOf[Part[Any]], part.body))
+        .build()
     }
   }
 
