@@ -1,5 +1,5 @@
 package tapir.server.finatra
-import java.io.{File, InputStream}
+import java.io.{File, FileInputStream, InputStream}
 import java.nio.ByteBuffer
 
 import com.twitter.finagle.http.{Response, Status, Version}
@@ -125,7 +125,7 @@ object OutputToFinatraResponse {
       case InputStreamValueType =>
         FinatraContentReader(InputStreamReader(r)) -> ct
       case FileValueType =>
-        ???
+        FinatraContentReader(InputStreamReader(new FileInputStream(r: File))) -> ct
       case mvt: MultipartValueType =>
         val entity = MultipartEntityBuilder.create()
 
