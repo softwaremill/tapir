@@ -39,9 +39,9 @@ package object internal {
         case segment: EndpointInput.PathSegment => segment.show
         case PathCapture(_, Some(name), _)      => s"/:$name"
         case PathCapture(_, _, _)               => "/:param"
-        case EndpointInput.PathsCapture(_)      => "/*"
+        case EndpointInput.PathsCapture(_)      => "/:*"
       }.mkString
-      if (p.isEmpty) "/*" else p
+      if (p.isEmpty) "/:*" else p
     }
   }
 

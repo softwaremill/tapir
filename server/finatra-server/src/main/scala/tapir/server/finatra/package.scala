@@ -5,11 +5,11 @@ import com.twitter.finagle.http.{Request, Response, Status}
 import com.twitter.inject.Logging
 import com.twitter.util.Future
 import tapir.DecodeResult.{Error, Mismatch, Missing, Multiple}
-import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
-import tapir.internal.SeqToParams
+import tapir.internal.{SeqToParams, _}
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import tapir.internal._
+import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
+import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
 package object finatra {
@@ -70,6 +70,17 @@ package object finatra {
       }
 
       FinatraRoute(handler, e.input.path)
+    }
+
+    def toRouteRecoverErrors(logic: I => Future[O])(
+        implicit eIsThrowable: E <:< Throwable,
+        eClassTag: ClassTag[E]
+    ): FinatraRoute = {
+      e.toRoute { i: I =>
+        logic(i).map(Right(_)).handle {
+          case ex if eClassTag.runtimeClass.isInstance(ex) => Left(e.asInstanceOf[E])
+        }
+      }
     }
   }
 }

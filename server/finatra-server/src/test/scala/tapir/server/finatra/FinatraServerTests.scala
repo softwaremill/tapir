@@ -27,7 +27,9 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(
       implicit eClassTag: ClassTag[E]
-  ): FinatraRoute = ???
+  ): FinatraRoute = {
+    e.toRouteRecoverErrors(fn)
+  }
 
   override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = {
     val bind = IO {
