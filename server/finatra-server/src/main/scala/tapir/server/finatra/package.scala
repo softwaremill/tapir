@@ -3,6 +3,7 @@ import java.nio.charset.Charset
 
 import com.twitter.finagle.http.{Request, Response, Status}
 import com.twitter.inject.Logging
+import com.twitter.io.{Buf, Reader}
 import com.twitter.util.Future
 import tapir.DecodeResult.{Error, Mismatch, Missing, Multiple}
 import tapir.internal.{SeqToParams, _}
@@ -13,7 +14,7 @@ import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
 package object finatra {
-  implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
+  implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Reader[Buf]]) extends Logging {
     def toRoute(logic: I => Future[Either[E, O]]): FinatraRoute = {
 
       val handler = { request: Request =>

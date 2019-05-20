@@ -1,5 +1,5 @@
 package tapir.server.finatra
-import java.io.{File, FileInputStream, InputStream}
+import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 
 import com.twitter.finagle.http.{Response, Status, Version}
@@ -81,8 +81,7 @@ object OutputToFinatraResponse {
             }
 
           case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
-            finatraResponse.copy(contentType = mediaType.mediaType)
-            ???
+            finatraResponse.copy(contentType = mediaType.mediaType, content = FinatraContentReader(vs(i).asInstanceOf[Reader[Buf]]))
 
           case (EndpointIO.Header(name, codec, _), i) =>
             codec
@@ -123,9 +122,9 @@ object OutputToFinatraResponse {
       case ByteArrayValueType  => FinatraContentBuf(Buf.ByteArray.Owned(r)) -> ct
       case ByteBufferValueType => FinatraContentBuf(Buf.ByteBuffer.Owned(r)) -> ct
       case InputStreamValueType =>
-        FinatraContentReader(InputStreamReader(r)) -> ct
+        FinatraContentReader(Reader.fromStream(r: InputStream)) -> ct
       case FileValueType =>
-        FinatraContentReader(InputStreamReader(new FileInputStream(r: File))) -> ct
+        FinatraContentReader(Reader.fromFile(r: File)) -> ct
       case mvt: MultipartValueType =>
         val entity = MultipartEntityBuilder.create()
 
