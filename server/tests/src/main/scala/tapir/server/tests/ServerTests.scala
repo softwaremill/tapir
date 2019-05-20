@@ -212,7 +212,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     (fd: FruitData) =>
       pureResult(
         FruitData(Part(writeToFile(readFromFile(fd.data.body).reverse)).header("X-Auth", fd.data.header("X-Auth").toString)).asRight[Unit]
-    )
+      )
   ) { baseUri =>
     val file = writeToFile("peach mario")
     sttp

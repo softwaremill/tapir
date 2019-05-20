@@ -7,7 +7,7 @@ case class Part[T](name: String, otherDispositionParams: Map[String, String], he
   def fileName: Option[String] = otherDispositionParams.get(FileNameDispositionParam)
 
   def header(k: String, v: String): Part[T] = copy(headers = headers :+ ((k, v)))
-  def header(k: String): Option[String] = headers.find(_._1 == k).map(_._2)
+  def header(k: String): Option[String] = headers.find(_._1.toLowerCase == k.toLowerCase).map(_._2)
   def headersMap: Map[String, String] = headers.toMap
 }
 
