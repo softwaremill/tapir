@@ -78,7 +78,7 @@ package object finatra {
     ): FinatraRoute = {
       e.toRoute { i: I =>
         logic(i).map(Right(_)).handle {
-          case ex if eClassTag.runtimeClass.isInstance(ex) => Left(e.asInstanceOf[E])
+          case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
         }
       }
     }

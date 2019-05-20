@@ -3,7 +3,7 @@ package tapir.server.finatra
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import com.twitter.finagle.http.Request
-import com.twitter.finatra.http.filters.AccessLoggingFilter
+import com.twitter.finatra.http.filters.{AccessLoggingFilter, ExceptionMappingFilter}
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.util.{Future, FuturePool}
@@ -41,6 +41,7 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
         override protected def configureHttp(router: HttpRouter): Unit = {
           router
             .filter[AccessLoggingFilter[Request]]
+            .filter[ExceptionMappingFilter[Request]]
             .add(new TestController)
         }
       }

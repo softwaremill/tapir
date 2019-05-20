@@ -1,5 +1,5 @@
 package tapir.server.finatra
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, FileOutputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
@@ -11,6 +11,7 @@ import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
+  Defaults,
   FileValueType,
   InputStreamValueType,
   MultipartValueType,
@@ -43,7 +44,7 @@ object FinatraRequestToRawBody {
           headers.getHeaders(name).asScala.map(name -> _)
         }
         .toSeq
-        .filter(_._1.toLowerCase == "content-disposition")
+        .filter(_._1.toLowerCase != "content-disposition")
     }
 
     rawBodyType match {
@@ -51,8 +52,13 @@ object FinatraRequestToRawBody {
       case ByteArrayValueType              => asByteArray
       case ByteBufferValueType             => asByteBuffer
       case InputStreamValueType            => new ByteArrayInputStream(asByteArray)
-      case FileValueType =>
-        ???
+      case FileValueType                   =>
+        // TODO: Make this async
+        val file = Defaults.createTempFile()
+        val outputStream = new FileOutputStream(file)
+        outputStream.write(asByteArray)
+        outputStream.close()
+        file
       case mvt: MultipartValueType =>
         RequestUtils
           .multiParams(request)

@@ -150,7 +150,10 @@ object OutputToFinatraResponse {
         (r: ByteBuffer).get(array)
         new ByteArrayBody(array, ContentType.create(contentType), part.fileName.get)
       case FileValueType =>
-        new FileBody(r: File, ContentType.create(contentType), part.fileName.get)
+        part.fileName match {
+          case Some(filename) => new FileBody(r: File, ContentType.create(contentType), filename)
+          case None           => new FileBody(r: File, ContentType.create(contentType))
+        }
       case InputStreamValueType =>
         new InputStreamBody(r: InputStream, ContentType.create(contentType), part.fileName.get)
       case _ =>
@@ -159,15 +162,16 @@ object OutputToFinatraResponse {
   }
 
   private def rawPartToFormBodyPart[R](mvt: MultipartValueType, part: Part[R]): Option[FormBodyPart] = {
-    val r = part.body
-
     mvt.partCodecMeta(part.name).map { codecMeta =>
-      FormBodyPartBuilder
+      val builder = FormBodyPartBuilder
         .create(
           part.name,
           rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.asInstanceOf[Part[Any]], part.body)
         )
-        .build()
+
+      part.headers.foreach { case (name, value) => builder.addField(name, value) }
+
+      builder.build()
     }
   }
 
