@@ -33,16 +33,6 @@ package object internal {
       traverseInputs {
         case i: EndpointInput.RequestMethod => Vector(i.m)
       }.headOption
-
-    def path: String = {
-      val p = asVectorOfBasicInputs().collect {
-        case segment: EndpointInput.PathSegment => segment.show
-        case PathCapture(_, Some(name), _)      => s"/:$name"
-        case PathCapture(_, _, _)               => "/:param"
-        case EndpointInput.PathsCapture(_)      => "/:*"
-      }.mkString
-      if (p.isEmpty) "/:*" else p
-    }
   }
 
   implicit class RichBasicEndpointInputs(inputs: Vector[EndpointInput.Basic[_]]) {

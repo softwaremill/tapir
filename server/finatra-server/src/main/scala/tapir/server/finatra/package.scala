@@ -5,6 +5,7 @@ import com.twitter.finagle.http.{Request, Response, Status}
 import com.twitter.inject.Logging
 import com.twitter.util.Future
 import tapir.DecodeResult.{Error, Mismatch, Missing, Multiple}
+import tapir.EndpointInput.PathCapture
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{SeqToParams, _}
 import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
@@ -43,8 +44,8 @@ package object finatra {
               case Left(err)     => OutputToFinatraResponse(e.errorOutput, err, None, Status.BadRequest).toResponse
             }
             .onFailure {
-              case NonFatal(e) =>
-                error(e)
+              case NonFatal(ex) =>
+                error(ex)
             }
         }
 
@@ -81,6 +82,21 @@ package object finatra {
           case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
         }
       }
+    }
+  }
+
+  implicit class SuperRichEndpointInput[I](input: EndpointInput[I]) {
+    def path: String = {
+      val p = input
+        .asVectorOfBasicInputs()
+        .collect {
+          case segment: EndpointInput.PathSegment => segment.show
+          case PathCapture(_, Some(name), _)      => s"/:$name"
+          case PathCapture(_, _, _)               => "/:param"
+          case EndpointInput.PathsCapture(_)      => "/:*"
+        }
+        .mkString
+      if (p.isEmpty) "/:*" else p
     }
   }
 }
