@@ -81,7 +81,7 @@ object OutputToFinatraResponse {
             }
 
           case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
-            finatraResponse.copy(contentType = mediaType.mediaType, content = FinatraContentReader(vs(i).asInstanceOf[Reader[Buf]]))
+            finatraResponse.copy(contentType = mediaType.mediaType, content = FinatraContentBuf(vs(i).asInstanceOf[Buf]))
 
           case (EndpointIO.Header(name, codec, _), i) =>
             codec
