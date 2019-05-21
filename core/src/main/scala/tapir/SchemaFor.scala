@@ -27,6 +27,7 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   implicit val schemaForLong: SchemaFor[Long] = SchemaFor(SInteger)
   implicit val schemaForFloat: SchemaFor[Float] = SchemaFor(SNumber)
   implicit val schemaForDouble: SchemaFor[Double] = SchemaFor(SNumber)
+  implicit val schemaForBigDecimal: SchemaFor[BigDecimal] = SchemaFor(SNumber)
   implicit val schemaForBoolean: SchemaFor[Boolean] = SchemaFor(SBoolean)
   implicit val schemaForFile: SchemaFor[File] = SchemaFor(SBinary)
   implicit val schemaForPath: SchemaFor[Path] = SchemaFor(SBinary)
