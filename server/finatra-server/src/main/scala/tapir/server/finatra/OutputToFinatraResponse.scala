@@ -25,7 +25,7 @@ import tapir.{
 }
 
 object OutputToFinatraResponse {
-  def apply[O, E](
+  def apply[O](
       output: EndpointOutput[O],
       v: Any,
       startingResponse: Option[FinatraResponse] = None,
