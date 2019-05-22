@@ -10,8 +10,7 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       case Some((2, 11)) =>
         Seq(
           "-Xexperimental",
-          "-Ypartial-unification",
-          "-Ylog-classpath"
+          "-Ypartial-unification"
         )
       case _ =>
         Nil
