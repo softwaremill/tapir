@@ -1,5 +1,7 @@
 package tapir
-import tapir.model.Method
+import tapir.model.{Method, StatusCode}
+
+import scala.collection.immutable.ListMap
 
 package object internal {
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
@@ -58,24 +60,61 @@ package object internal {
       case m: EndpointIO.Multiple[_]     => m.ios
     }
 
-    def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] = output match {
+    // Outputs may differ basing on status code because of `statusOneOf`. This method extracts the status code
+    // mapping to the top-level.
+    type BasicOutputs = Vector[EndpointOutput.Basic[_]]
+    def asBasicOutputsMap: ListMap[Option[StatusCode], BasicOutputs] = asBasicOutputsOrMap match {
+      case Left(outputs) => ListMap(None -> outputs)
+      case Right(map)    => map
+    }
+
+    type BasicOutputsOrMap = Either[BasicOutputs, ListMap[Option[StatusCode], BasicOutputs]]
+    def asBasicOutputsOrMap: BasicOutputsOrMap = {
+
+      def throwMultipleOneOfMappings = throw new IllegalArgumentException(s"Multiple one-of mappings in output $output")
+
+      def mergeMultiple(v: Vector[BasicOutputsOrMap]): BasicOutputsOrMap = v.foldLeft(Left(Vector.empty): BasicOutputsOrMap) {
+        case (Left(os1), Left(os2))    => Left(os1 ++ os2)
+        case (Left(os1), Right(osMap)) => Right(osMap.map { case (sc, os2) => sc -> (os1 ++ os2) })
+        case (Right(osMap), Left(os2)) => Right(osMap.map { case (sc, os1) => sc -> (os1 ++ os2) })
+        case (Right(_), Right(_))      => throwMultipleOneOfMappings
+      }
+
+      output match {
+        case EndpointOutput.Multiple(outputs)        => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointIO.Multiple(outputs)            => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointOutput.Mapped(wrapped, _, _, _) => wrapped.asBasicOutputsOrMap
+        case EndpointIO.Mapped(wrapped, _, _, _)     => wrapped.asBasicOutputsOrMap
+        case s: EndpointOutput.StatusOneOf[_] =>
+          Right(
+            ListMap(
+              s.mappings
+                .map(c => (c.output.asBasicOutputsOrMap, c.statusCode))
+                .map {
+                  case (Left(basicOutputs), statusCode) => statusCode -> basicOutputs
+                  case (Right(_), _)                    => throwMultipleOneOfMappings
+                }: _*
+            )
+          )
+        case b: EndpointOutput.Basic[_] => Left(Vector(b))
+      }
+    }
+
+    private def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] = output match {
       case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
       case EndpointOutput.Multiple(outputs)              => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointIO.Multiple(outputs)                  => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointOutput.Mapped(wrapped, _, _, _)       => wrapped.traverseOutputs(handle)
       case EndpointIO.Mapped(wrapped, _, _, _)           => wrapped.traverseOutputs(handle)
-      case s: EndpointOutput.StatusFrom[_]               => s.output.traverseOutputs(handle)
+      case s: EndpointOutput.StatusOneOf[_]              => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
       case _                                             => Vector.empty
     }
 
-    def asVectorOfBasicOutputs: Vector[EndpointOutput.Basic[_]] = traverseOutputs {
-      case b: EndpointOutput.Basic[_] => Vector(b)
-    }
-
-    def bodyType: Option[RawValueType[_]] =
+    def bodyType: Option[RawValueType[_]] = {
       traverseOutputs[RawValueType[_]] {
         case b: EndpointIO.Body[_, _, _] => Vector(b.codec.meta.rawValueType)
       }.headOption
+    }
   }
 
   implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {

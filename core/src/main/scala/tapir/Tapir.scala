@@ -5,6 +5,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
+import tapir.EndpointOutput.StatusMapping
 import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue, StatusCode}
 
 import scala.reflect.ClassTag
@@ -69,15 +70,19 @@ trait Tapir extends TapirDerivedInputs {
     */
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] = EndpointInput.ExtractFromRequest(f)
 
-  // TODO
-  @deprecated
-  def statusFrom[I](io: EndpointIO[I], default: StatusCode, when: (When[I], StatusCode)*): EndpointOutput.StatusFrom[I] =
-    EndpointOutput.StatusFrom(io, default, None, when.toVector)
-
   def statusCode: EndpointOutput.StatusCode = EndpointOutput.StatusCode()
 
-  def whenClass[U: ClassTag: SchemaFor]: When[Any] = WhenClass(implicitly[ClassTag[U]], implicitly[SchemaFor[U]].schema)
-  def whenValue[U](p: U => Boolean): When[U] = WhenValue(p)
+  /**
+    * Maps status codes to outputs. All outputs must have a common supertype (`I`). Typically, the supertype is a sealed
+    * trait, and the mappings are implementing cases classes.
+    *
+    * Note that exhaustiveness of the mappings is not checked (that all subtypes of `I` are covered).
+    */
+  def statusOneOf[I](firstCase: StatusMapping[_ <: I], otherCases: StatusMapping[_ <: I]*): EndpointOutput.StatusOneOf[I] =
+    EndpointOutput.StatusOneOf[I](firstCase +: otherCases)
+  def statusMapping[O: ClassTag](output: EndpointOutput[O], statusCode: StatusCode): StatusMapping[O] =
+    StatusMapping(output, implicitly[ClassTag[O]], Some(statusCode))
+  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(output, implicitly[ClassTag[O]], None)
 
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 

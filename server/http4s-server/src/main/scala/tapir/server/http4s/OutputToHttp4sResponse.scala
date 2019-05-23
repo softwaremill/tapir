@@ -87,10 +87,13 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case (EndpointOutput.StatusCode(), i) =>
         State.modify[ResponseValues](rv => rv.withStatusCode(vs(i).asInstanceOf[StatusCode]))
 
-      case (EndpointOutput.StatusFrom(io, default, _, when), i) =>
+      case (EndpointOutput.StatusOneOf(mappings), i) =>
         val v = vs(i)
-        val sc = when.find(_._1.matches(v)).map(_._2).getOrElse(default)
-        toResponse(io, v).modify(_.withStatusCode(sc))
+        val mapping = mappings
+          .find(mapping => mapping.ct.runtimeClass.isInstance(v))
+          .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $v, in output: $output"))
+
+        toResponse(mapping.output, v).modify(rv => mapping.statusCode.map(rv.withStatusCode).getOrElse(rv))
 
       case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
         toResponse(wrapped, g(vs(i)))

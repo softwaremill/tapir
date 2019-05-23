@@ -88,8 +88,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         case EndpointOutput.StatusCode() =>
           meta.code
 
-        case EndpointOutput.StatusFrom(wrapped, _, _, _) =>
-          getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)
+        case EndpointOutput.StatusOneOf(mappings) =>
+          val mapping = mappings
+            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code))
+            .getOrElse(throw new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs ${outputs}"))
+          getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta)
 
         case EndpointOutput.Mapped(wrapped, f, _, _) =>
           f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta))

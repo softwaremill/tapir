@@ -142,12 +142,11 @@ class VerifyYamlTest extends FunSuite with Matchers {
     }
 
     val e = endpoint.errorOut(
-      statusFrom(
-        jsonBody[ErrorInfo],
-        StatusCodes.BadRequest,
-        whenClass[NotFound] -> StatusCodes.NotFound,
-        whenClass[Unauthorized] -> StatusCodes.Unauthorized
-      ).defaultSchema(schemaFor[Unknown])
+      statusOneOf(
+        statusMapping(jsonBody[NotFound].description("not found"), StatusCodes.NotFound),
+        statusMapping(jsonBody[Unauthorized].description("unauthorized"), StatusCodes.Unauthorized),
+        statusDefaultMapping(jsonBody[Unknown].description("unknown"))
+      )
     )
 
     // when
