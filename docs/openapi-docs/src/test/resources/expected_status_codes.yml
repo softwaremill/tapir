@@ -9,36 +9,26 @@ paths:
       responses:
         '200':
           description: ''
-        '400':
-          description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Unknown'
         '404':
-          description: ''
+          description: not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/NotFound'
         '401':
-          description: ''
+          description: unauthorized
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Unauthorized'
+        default:
+          description: unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unknown'
 components:
   schemas:
-    Unknown:
-      required:
-        - code
-        - msg
-      type: object
-      properties:
-        code:
-          type: integer
-        msg:
-          type: string
     NotFound:
       required:
         - what
@@ -52,4 +42,14 @@ components:
       type: object
       properties:
         realm:
+          type: string
+    Unknown:
+      required:
+        - code
+        - msg
+      type: object
+      properties:
+        code:
+          type: integer
+        msg:
           type: string

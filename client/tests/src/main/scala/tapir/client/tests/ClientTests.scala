@@ -75,7 +75,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     Right("Authorization=Some(Basic dGVkZHk6YmVhcg==); X-Api-Key=None; Query=None")
   )
   testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
-  testClient(in_string_out_status_from_string, "apple", Right("fruit: apple")) // status from should be a no-op from the client interpreter's point of view
+  testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
+  testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
   testClient(in_string_out_status, "apple", Right(StatusCodes.Ok))
 
   //
@@ -110,7 +111,11 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   private val service = HttpRoutes.of[IO] {
     case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
-      Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
+      if (f == "papaya") {
+        Accepted("29")
+      } else {
+        Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
+      }
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))

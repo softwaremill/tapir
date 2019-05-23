@@ -124,8 +124,15 @@ package object tests {
 
   val in_auth_bearer_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in("auth").in(auth.bearer).out(stringBody)
 
-  val in_string_out_status_from_string: Endpoint[String, Unit, String, Nothing] =
-    endpoint.in(query[String]("fruit")).out(statusFrom(stringBody, StatusCodes.Ok, whenValue[String](_ == "x") -> StatusCodes.Accepted))
+  val in_string_out_status_from_string: Endpoint[String, Unit, Either[Int, String], Nothing] =
+    endpoint
+      .in(query[String]("fruit"))
+      .out(
+        statusOneOf(
+          statusMapping(plainBody[Int].map(Left(_))(_.value), StatusCodes.Accepted),
+          statusMapping(plainBody[String].map(Right(_))(_.value), StatusCodes.Ok)
+        )
+      )
 
   val in_string_out_status: Endpoint[String, Unit, StatusCode, Nothing] =
     endpoint.in(query[String]("fruit")).out(statusCode)

@@ -7,15 +7,10 @@ import tapir.{MediaType => SMediaType, Schema => SSchema, _}
 import scala.collection.immutable.ListMap
 
 private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
-  def apply[T, M <: SMediaType](
-      o: CodecForOptional[T, M, _],
-      example: Option[T],
-      overrideSchema: Option[SSchema]
-  ): ListMap[String, OMediaType] = {
-    val schema = overrideSchema.getOrElse(o.meta.schema)
+  def apply[T, M <: SMediaType](o: CodecForOptional[T, M, _], example: Option[T]): ListMap[String, OMediaType] = {
     ListMap(
       o.meta.mediaType.mediaTypeNoParams -> OMediaType(
-        Some(objectSchemas(schema)),
+        Some(objectSchemas(o.meta.schema)),
         example.flatMap(exampleValue(o, _)),
         ListMap.empty,
         ListMap.empty

@@ -8,6 +8,7 @@ import tapir.model.{Method, MultiQueryParams, ServerRequest}
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
 import scala.collection.immutable.ListMap
+import scala.reflect.ClassTag
 
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
@@ -158,14 +159,10 @@ object EndpointOutput {
 
   //
 
-  case class StatusFrom[I](
-      output: EndpointOutput[I],
-      default: tapir.model.StatusCode,
-      defaultSchema: Option[Schema],
-      when: Vector[(When[I], tapir.model.StatusCode)]
-  ) extends Single[I] {
-    def defaultSchema(s: Schema): StatusFrom[I] = this.copy(defaultSchema = Some(s))
-    override def show: String = s"status from(${output.show}, $default or ${when.map(_._2).mkString("/")})"
+  case class StatusMapping[O](output: EndpointOutput[O], ct: ClassTag[O], statusCode: Option[tapir.model.StatusCode])
+
+  case class StatusOneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
+    override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
   }
 
   case class Mapped[I, T](wrapped: EndpointOutput[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {

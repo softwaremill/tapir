@@ -1,9 +1,12 @@
 package tapir
 
 import tapir.EndpointInput.RequestMethod
+import tapir.EndpointOutput.StatusMapping
 import tapir.model.Method
 import tapir.server.ServerEndpoint
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
+
+import scala.reflect.ClassTag
 
 /**
   * @tparam I Input parameter types.
@@ -78,12 +81,26 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def show: String = {
     import tapir.internal._
 
+    def showOutputs(o: EndpointOutput[_]): String = {
+      val basicOutputsMap = o.asBasicOutputsMap
+
+      basicOutputsMap.get(None) match {
+        case Some(defaultOutputs) if basicOutputsMap.size == 1 =>
+          EndpointOutput.Multiple(defaultOutputs.sortByType).show
+        case _ =>
+          val mappings = basicOutputsMap.map {
+            case (sc, os) => StatusMapping(EndpointOutput.Multiple(os.sortByType), ClassTag.Any, sc)
+          }
+          EndpointOutput.StatusOneOf(mappings.toSeq).show
+      }
+    }
+
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
     val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortByType).show
-    val showOutputs = EndpointOutput.Multiple(output.asVectorOfBasicOutputs.sortByType).show
-    val showErrorOutputs = EndpointOutput.Multiple(errorOutput.asVectorOfBasicOutputs.sortByType).show
+    val showSuccessOutputs = showOutputs(output)
+    val showErrorOutputs = showOutputs(errorOutput)
 
-    s"$namePrefix$showInputs -> $showErrorOutputs/$showOutputs"
+    s"$namePrefix$showInputs -> $showErrorOutputs/$showSuccessOutputs"
   }
 
   /**

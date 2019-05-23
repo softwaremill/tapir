@@ -6,6 +6,7 @@ import tapir.openapi.{Schema => OSchema}
 import tapir.{Schema => TSchema, _}
 
 import scala.collection.immutable.ListMap
+
 object ObjectSchemasForEndpoints {
 
   def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
@@ -81,17 +82,8 @@ object ObjectSchemasForEndpoints {
 
   private def forOutput(output: EndpointOutput[_]): List[TSchema.SObject] = {
     output match {
-      case EndpointOutput.StatusFrom(wrapped, _, defaultSchema, whens) =>
-        val fromDefaultSchema = defaultSchema.toList.flatMap(objectSchemas)
-        val fromWhens = whens.collect {
-          case (WhenClass(_, s), _) => objectSchemas(s)
-        }.flatten
-        val fromInput = forOutput(wrapped)
-
-        // if there's a default schema, we exclude the one from the input
-        val fromInputOrDefault = if (fromDefaultSchema.nonEmpty) fromDefaultSchema else fromInput
-
-        fromInputOrDefault ++ fromWhens
+      case EndpointOutput.StatusOneOf(mappings) =>
+        mappings.flatMap(mapping => forOutput(mapping.output)).toList
       case EndpointOutput.StatusCode() =>
         List.empty
       case EndpointOutput.Mapped(wrapped, _, _, _) =>
