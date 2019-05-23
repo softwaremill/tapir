@@ -68,8 +68,8 @@ package object internal {
       case Right(map)    => map
     }
 
-    type BasicOutputsOrMap = Either[BasicOutputs, ListMap[Option[StatusCode], BasicOutputs]]
-    def asBasicOutputsOrMap: BasicOutputsOrMap = {
+    private[internal] type BasicOutputsOrMap = Either[BasicOutputs, ListMap[Option[StatusCode], BasicOutputs]]
+    private[internal] def asBasicOutputsOrMap: BasicOutputsOrMap = {
 
       def throwMultipleOneOfMappings = throw new IllegalArgumentException(s"Multiple one-of mappings in output $output")
 
@@ -100,7 +100,7 @@ package object internal {
       }
     }
 
-    private def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] = output match {
+    private[internal] def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] = output match {
       case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
       case EndpointOutput.Multiple(outputs)              => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointIO.Multiple(outputs)                  => outputs.flatMap(_.traverseOutputs(handle))
