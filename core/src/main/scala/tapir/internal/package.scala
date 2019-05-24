@@ -60,7 +60,7 @@ package object internal {
       case m: EndpointIO.Multiple[_]     => m.ios
     }
 
-    // Outputs may differ basing on status code because of `statusOneOf`. This method extracts the status code
+    // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code
     // mapping to the top-level.
     type BasicOutputs = Vector[EndpointOutput.Basic[_]]
     def asBasicOutputsMap: ListMap[Option[StatusCode], BasicOutputs] = asBasicOutputsOrMap match {

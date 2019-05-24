@@ -140,7 +140,7 @@ case class Unauthorized(realm: String) extends ErrorInfo
 case class Unknown(code: Int, msg: String) extends ErrorInfo
 
 val baseEndpoint = endpoint.errorOut(
-  statusOneOf(
+  oneOf(
     statusMapping(jsonBody[NotFound].description("not found"), StatusCodes.NotFound),
     statusMapping(jsonBody[Unauthorized].description("unauthorized"), StatusCodes.Unauthorized),
     statusDefaultMapping(jsonBody[Unknown].description("unknown"))
