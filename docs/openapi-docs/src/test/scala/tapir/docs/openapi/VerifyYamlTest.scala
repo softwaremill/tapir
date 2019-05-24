@@ -143,8 +143,8 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     val e = endpoint.errorOut(
       tapir.oneOf(
-        statusMapping(jsonBody[NotFound].description("not found"), StatusCodes.NotFound),
-        statusMapping(jsonBody[Unauthorized].description("unauthorized"), StatusCodes.Unauthorized),
+        statusMapping(StatusCodes.NotFound, jsonBody[NotFound].description("not found")),
+        statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
         statusDefaultMapping(jsonBody[Unknown].description("unknown"))
       )
     )

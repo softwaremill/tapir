@@ -130,8 +130,8 @@ package object tests {
       .out(
         oneOf[Either[Int, String]](
           // a/b is used instead of value because of scala 2.11
-          statusMapping(plainBody[Int].map(Left(_))(_.a), StatusCodes.Accepted),
-          statusMapping(plainBody[String].map(Right(_))(_.b), StatusCodes.Ok)
+          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.a)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.b))
         )
       )
 

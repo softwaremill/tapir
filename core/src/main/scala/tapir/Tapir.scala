@@ -80,9 +80,9 @@ trait Tapir extends TapirDerivedInputs {
     */
   def oneOf[I](firstCase: StatusMapping[_ <: I], otherCases: StatusMapping[_ <: I]*): EndpointOutput.OneOf[I] =
     EndpointOutput.OneOf[I](firstCase +: otherCases)
-  def statusMapping[O: ClassTag](output: EndpointOutput[O], statusCode: StatusCode): StatusMapping[O] =
-    StatusMapping(output, implicitly[ClassTag[O]], Some(statusCode))
-  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(output, implicitly[ClassTag[O]], None)
+  def statusMapping[O: ClassTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
+    StatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)
+  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(None, implicitly[ClassTag[O]], output)
 
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 
