@@ -190,7 +190,7 @@ lazy val playground: Project = (project in file("playground"))
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
       "org.scalaz" %% "scalaz-zio" % "1.0-RC4",
       "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC4",
-      "org.typelevel" %% "cats-effect" % "1.2.0",
+      "org.typelevel" %% "cats-effect" % "1.3.0",
       "org.webjars" % "swagger-ui" % "3.22.1"
     ),
     libraryDependencies ++= loggerDependencies,
