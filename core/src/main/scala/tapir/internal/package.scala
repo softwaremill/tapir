@@ -85,7 +85,7 @@ package object internal {
         case EndpointIO.Multiple(outputs)            => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
         case EndpointOutput.Mapped(wrapped, _, _, _) => wrapped.asBasicOutputsOrMap
         case EndpointIO.Mapped(wrapped, _, _, _)     => wrapped.asBasicOutputsOrMap
-        case s: EndpointOutput.StatusOneOf[_] =>
+        case s: EndpointOutput.OneOf[_] =>
           Right(
             ListMap(
               s.mappings
@@ -106,7 +106,7 @@ package object internal {
       case EndpointIO.Multiple(outputs)                  => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointOutput.Mapped(wrapped, _, _, _)       => wrapped.traverseOutputs(handle)
       case EndpointIO.Mapped(wrapped, _, _, _)           => wrapped.traverseOutputs(handle)
-      case s: EndpointOutput.StatusOneOf[_]              => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
+      case s: EndpointOutput.OneOf[_]                    => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
       case _                                             => Vector.empty
     }
 

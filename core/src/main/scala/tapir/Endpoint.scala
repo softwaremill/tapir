@@ -91,7 +91,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
           val mappings = basicOutputsMap.map {
             case (sc, os) => StatusMapping(EndpointOutput.Multiple(os.sortByType), ClassTag.Any, sc)
           }
-          EndpointOutput.StatusOneOf(mappings.toSeq).show
+          EndpointOutput.OneOf(mappings.toSeq).show
       }
     }
 

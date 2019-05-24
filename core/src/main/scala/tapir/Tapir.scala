@@ -78,8 +78,8 @@ trait Tapir extends TapirDerivedInputs {
     *
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `I` are covered).
     */
-  def statusOneOf[I](firstCase: StatusMapping[_ <: I], otherCases: StatusMapping[_ <: I]*): EndpointOutput.StatusOneOf[I] =
-    EndpointOutput.StatusOneOf[I](firstCase +: otherCases)
+  def oneOf[I](firstCase: StatusMapping[_ <: I], otherCases: StatusMapping[_ <: I]*): EndpointOutput.OneOf[I] =
+    EndpointOutput.OneOf[I](firstCase +: otherCases)
   def statusMapping[O: ClassTag](output: EndpointOutput[O], statusCode: StatusCode): StatusMapping[O] =
     StatusMapping(output, implicitly[ClassTag[O]], Some(statusCode))
   def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(output, implicitly[ClassTag[O]], None)

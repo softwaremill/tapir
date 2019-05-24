@@ -161,7 +161,7 @@ object EndpointOutput {
 
   case class StatusMapping[O](output: EndpointOutput[O], ct: ClassTag[O], statusCode: Option[tapir.model.StatusCode])
 
-  case class StatusOneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
+  case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
   }
 

@@ -87,7 +87,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case (EndpointOutput.StatusCode(), i) =>
         State.modify[ResponseValues](rv => rv.withStatusCode(vs(i).asInstanceOf[StatusCode]))
 
-      case (EndpointOutput.StatusOneOf(mappings), i) =>
+      case (EndpointOutput.OneOf(mappings), i) =>
         val v = vs(i)
         val mapping = mappings
           .find(mapping => mapping.ct.runtimeClass.isInstance(v))

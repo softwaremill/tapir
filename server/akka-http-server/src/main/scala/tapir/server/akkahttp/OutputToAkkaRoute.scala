@@ -84,7 +84,7 @@ private[akkahttp] object OutputToAkkaRoute {
 
       case (EndpointOutput.StatusCode(), i) =>
         rv = rv.withStatusCode(vs(i).asInstanceOf[StatusCode])
-      case (EndpointOutput.StatusOneOf(mappings), i) =>
+      case (EndpointOutput.OneOf(mappings), i) =>
         val v = vs(i)
         val mapping = mappings
           .find(mapping => mapping.ct.runtimeClass.isInstance(v))

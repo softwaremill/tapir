@@ -82,7 +82,7 @@ object ObjectSchemasForEndpoints {
 
   private def forOutput(output: EndpointOutput[_]): List[TSchema.SObject] = {
     output match {
-      case EndpointOutput.StatusOneOf(mappings) =>
+      case EndpointOutput.OneOf(mappings) =>
         mappings.flatMap(mapping => forOutput(mapping.output)).toList
       case EndpointOutput.StatusCode() =>
         List.empty

@@ -128,7 +128,7 @@ package object tests {
     endpoint
       .in(query[String]("fruit"))
       .out(
-        statusOneOf[Either[Int, String]](
+        oneOf[Either[Int, String]](
           // a/b is used instead of value because of scala 2.11
           statusMapping(plainBody[Int].map(Left(_))(_.a), StatusCodes.Accepted),
           statusMapping(plainBody[String].map(Right(_))(_.b), StatusCodes.Ok)
