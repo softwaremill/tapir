@@ -109,7 +109,7 @@ lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yam
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-yaml" % "0.9.0"
+      "io.circe" %% "circe-yaml" % "0.10.0"
     ),
     name := "tapir-openapi-circe-yaml"
   )
