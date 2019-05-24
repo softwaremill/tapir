@@ -141,7 +141,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % "10.1.8",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.22"
+      "com.typesafe.akka" %% "akka-stream" % "2.5.23"
     )
   )
   .dependsOn(core, serverTests % "test")
