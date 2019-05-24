@@ -42,7 +42,7 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
       .bindHttp(port, "localhost")
       .withHttpApp(service)
       .resource
-      .map(_ => ())
+      .void
   }
 
   override val initialPort: Port = 34000

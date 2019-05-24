@@ -10,6 +10,7 @@ import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import com.softwaremill.sttp._
+import com.typesafe.scalalogging.StrictLogging
 import tapir.{Endpoint, endpoint, stringBody}
 import tapir.server.tests.ServerTests
 import tapir._
@@ -18,7 +19,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
 
-class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
+class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with StrictLogging {
 
   private implicit var actorSystem: ActorSystem = _
   private implicit var materializer: ActorMaterializer = _
@@ -45,8 +46,10 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] {
   }
 
   override def server(routes: NonEmptyList[Route], port: Port): Resource[IO, Unit] = {
-    val bind = IO.fromFuture(IO(Http().bindAndHandle(routes.toList.reduce(_ ~ _), "localhost", port)))
-    Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).map(_ => ())).map(_ => ())
+    val bind = IO.fromFuture(IO(Http().bindAndHandle(routes.toList.reduce(_ ~ _), "localhost", port)).onError {
+      case e: Exception => IO(logger.error(s"Bind to port $port failed because of ${e.getMessage}"))
+    })
+    Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).void
   }
 
   override def pureResult[T](t: T): Future[T] = Future.successful(t)
