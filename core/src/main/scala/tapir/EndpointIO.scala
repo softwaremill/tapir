@@ -38,11 +38,11 @@ object EndpointInput {
 
   sealed trait Basic[I] extends Single[I]
 
-  case class RequestMethod(m: Method) extends Basic[Unit] {
+  case class FixedMethod(m: Method) extends Basic[Unit] {
     def show: String = m.m
   }
 
-  case class PathSegment(s: String) extends Basic[Unit] {
+  case class FixedPath(s: String) extends Basic[Unit] {
     def show = s"/$s"
   }
 

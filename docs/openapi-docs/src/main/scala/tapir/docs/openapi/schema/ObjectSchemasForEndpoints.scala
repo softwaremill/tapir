@@ -54,9 +54,9 @@ object ObjectSchemasForEndpoints {
 
   private def forInput(input: EndpointInput[_]): List[TSchema.SObject] = {
     input match {
-      case EndpointInput.RequestMethod(_) =>
+      case EndpointInput.FixedMethod(_) =>
         List.empty
-      case EndpointInput.PathSegment(_) =>
+      case EndpointInput.FixedPath(_) =>
         List.empty
       case EndpointInput.PathCapture(tm, _, _) =>
         objectSchemas(tm.meta.schema)

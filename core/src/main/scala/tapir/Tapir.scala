@@ -11,7 +11,7 @@ import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue, StatusCode
 import scala.reflect.ClassTag
 
 trait Tapir extends TapirDerivedInputs {
-  implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.PathSegment(s)
+  implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.FixedPath(s)
 
   def path[T: PlainCodec]: EndpointInput.PathCapture[T] =
     EndpointInput.PathCapture(implicitly[PlainCodec[T]], None, EndpointIO.Info.empty)

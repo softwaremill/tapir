@@ -1,6 +1,6 @@
 package tapir
 
-import tapir.EndpointInput.RequestMethod
+import tapir.EndpointInput.FixedMethod
 import tapir.EndpointOutput.StatusMapping
 import tapir.model.Method
 import tapir.server.ServerEndpoint
@@ -16,16 +16,16 @@ import scala.reflect.ClassTag
   */
 case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointOutput[E], output: EndpointOutput[O], info: EndpointInfo) {
 
-  def get: Endpoint[I, E, O, S] = in(RequestMethod(Method.GET))
-  def post: Endpoint[I, E, O, S] = in(RequestMethod(Method.POST))
-  def head: Endpoint[I, E, O, S] = in(RequestMethod(Method.HEAD))
-  def put: Endpoint[I, E, O, S] = in(RequestMethod(Method.PUT))
-  def delete: Endpoint[I, E, O, S] = in(RequestMethod(Method.DELETE))
-  def options: Endpoint[I, E, O, S] = in(RequestMethod(Method.OPTIONS))
-  def patch: Endpoint[I, E, O, S] = in(RequestMethod(Method.PATCH))
-  def connect: Endpoint[I, E, O, S] = in(RequestMethod(Method.CONNECT))
-  def trace: Endpoint[I, E, O, S] = in(RequestMethod(Method.TRACE))
-  def method(m: String): Endpoint[I, E, O, S] = in(RequestMethod(Method(m)))
+  def get: Endpoint[I, E, O, S] = in(FixedMethod(Method.GET))
+  def post: Endpoint[I, E, O, S] = in(FixedMethod(Method.POST))
+  def head: Endpoint[I, E, O, S] = in(FixedMethod(Method.HEAD))
+  def put: Endpoint[I, E, O, S] = in(FixedMethod(Method.PUT))
+  def delete: Endpoint[I, E, O, S] = in(FixedMethod(Method.DELETE))
+  def options: Endpoint[I, E, O, S] = in(FixedMethod(Method.OPTIONS))
+  def patch: Endpoint[I, E, O, S] = in(FixedMethod(Method.PATCH))
+  def connect: Endpoint[I, E, O, S] = in(FixedMethod(Method.CONNECT))
+  def trace: Endpoint[I, E, O, S] = in(FixedMethod(Method.TRACE))
+  def method(m: String): Endpoint[I, E, O, S] = in(FixedMethod(Method(m)))
 
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S] =
     this.copy[IJ, E, O, S](input = input.and(i))

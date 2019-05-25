@@ -32,14 +32,14 @@ package object internal {
 
     def method: Option[Method] =
       traverseInputs {
-        case i: EndpointInput.RequestMethod => Vector(i.m)
+        case i: EndpointInput.FixedMethod => Vector(i.m)
       }.headOption
   }
 
   implicit class RichBasicEndpointInputs(inputs: Vector[EndpointInput.Basic[_]]) {
     def sortByType: Vector[EndpointInput.Basic[_]] = inputs.sortBy {
-      case _: EndpointInput.RequestMethod         => 0
-      case _: EndpointInput.PathSegment           => 1
+      case _: EndpointInput.FixedMethod           => 0
+      case _: EndpointInput.FixedPath             => 1
       case _: EndpointInput.PathCapture[_]        => 1
       case _: EndpointInput.PathsCapture          => 1
       case _: EndpointInput.Query[_]              => 2

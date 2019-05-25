@@ -122,7 +122,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     inputs
       .collect {
         case EndpointInput.PathCapture(_, name, _) => Left(name)
-        case EndpointInput.PathSegment(s)          => Right(s)
+        case EndpointInput.FixedPath(s)            => Right(s)
       }
       .foldLeft((Vector.empty[Either[String, String]], 1)) {
         case ((acc, i), component) =>

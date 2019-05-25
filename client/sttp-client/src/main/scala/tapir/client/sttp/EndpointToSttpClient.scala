@@ -132,9 +132,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
     inputs match {
       case Vector() => (uri, req)
-      case EndpointInput.RequestMethod(_) +: tail =>
+      case EndpointInput.FixedMethod(_) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri, req)
-      case EndpointInput.PathSegment(p) +: tail =>
+      case EndpointInput.FixedPath(p) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri.copy(path = uri.path :+ p), req)
       case EndpointInput.PathCapture(codec, _, _) +: tail =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)

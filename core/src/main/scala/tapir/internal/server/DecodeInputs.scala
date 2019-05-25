@@ -72,11 +72,11 @@ object DecodeInputs {
     inputs match {
       case Vector() => (values, ctx)
 
-      case (input @ EndpointInput.RequestMethod(m)) +: inputsTail =>
+      case (input @ EndpointInput.FixedMethod(m)) +: inputsTail =>
         if (m == ctx.method) apply(inputsTail, values, ctx)
         else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.m, ctx.method.m)), ctx)
 
-      case (input @ EndpointInput.PathSegment(ss)) +: inputsTail =>
+      case (input @ EndpointInput.FixedPath(ss)) +: inputsTail =>
         ctx.nextPathSegment match {
           case (Some(`ss`), ctx2)       => apply(inputsTail, values, ctx2)
           case (None, ctx2) if ss == "" => apply(inputsTail, values, ctx2) // root path
@@ -163,12 +163,12 @@ object DecodeInputs {
   }
 
   private val isRequestMethod: EndpointInput.Basic[_] => Boolean = {
-    case _: EndpointInput.RequestMethod => true
-    case _                              => false
+    case _: EndpointInput.FixedMethod => true
+    case _                            => false
   }
 
   private val isPath: EndpointInput.Basic[_] => Boolean = {
-    case _: EndpointInput.PathSegment    => true
+    case _: EndpointInput.FixedPath      => true
     case _: EndpointInput.PathCapture[_] => true
     case _: EndpointInput.PathsCapture   => true
     case _                               => false
