@@ -124,14 +124,25 @@ package object tests {
 
   val in_auth_bearer_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in("auth").in(auth.bearer).out(stringBody)
 
-  val in_string_out_status_from_string: Endpoint[String, Unit, String, Nothing] =
-    endpoint.in(query[String]("fruit")).out(statusFrom(stringBody, StatusCodes.Ok, whenValue[String](_ == "x") -> StatusCodes.Accepted))
+  val in_string_out_status_from_string: Endpoint[String, Unit, Either[Int, String], Nothing] =
+    endpoint
+      .in(query[String]("fruit"))
+      .out(
+        oneOf[Either[Int, String]](
+          // a/b is used instead of value because of scala 2.11
+          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.a)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.b))
+        )
+      )
 
   val in_string_out_status: Endpoint[String, Unit, StatusCode, Nothing] =
     endpoint.in(query[String]("fruit")).out(statusCode)
 
   val in_string_out_content_type_string: Endpoint[String, Unit, (String, String), Nothing] =
     endpoint.in("api" / "echo").in(stringBody).out(stringBody).out(header[String]("Content-Type"))
+
+  val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Nothing] =
+    endpoint.out(statusCode(StatusCodes.PermanentRedirect)).out(header[String]("Location"))
 
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 

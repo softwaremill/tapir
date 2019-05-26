@@ -4,96 +4,53 @@ import java.nio.charset.Charset
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
 import akka.http.scaladsl.model.{StatusCode => AkkaStatusCode, _}
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
-import tapir.internal._
-import tapir.model.{Part, StatusCode}
+import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
+  CodecForOptional,
   CodecMeta,
-  EndpointIO,
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
   MediaType,
   MultipartValueType,
   RawPart,
-  StreamingEndpointIO,
   StringValueType
 }
 
 private[akkahttp] object OutputToAkkaRoute {
 
-  case class ResponseValues(body: Option[ResponseEntity], headers: Vector[HttpHeader], statusCode: Option[StatusCode]) {
-    def withBody(b: ResponseEntity): ResponseValues = {
-      if (body.isDefined) {
-        throw new IllegalArgumentException("Body is already defined")
-      }
-
-      copy(body = Some(b))
-    }
-
-    def withHeader(h: HttpHeader): ResponseValues = copy(headers = headers :+ h)
-
-    def withStatusCode(sc: StatusCode): ResponseValues = copy(statusCode = Some(sc))
-  }
-
   def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
-    val responseValues = toResponseValues(output, v, ResponseValues(None, Vector.empty, None))
+    val outputValues = encodeOutputs(output, v, OutputValues.empty)
 
-    val statusCode = responseValues.statusCode.map(c => c: AkkaStatusCode).getOrElse(defaultStatusCode)
+    val statusCode = outputValues.statusCode.map(c => c: AkkaStatusCode).getOrElse(defaultStatusCode)
+    val akkaHeaders = parseHeadersOrThrow(outputValues.headers)
 
-    val completeRoute = responseValues.body match {
+    val completeRoute = outputValues.body match {
       case Some(entity) =>
-        complete(HttpResponse(entity = overrideContentTypeIfDefined(entity, responseValues.headers), status = statusCode))
+        complete(HttpResponse(entity = overrideContentTypeIfDefined(entity, akkaHeaders), status = statusCode))
       case None => complete(HttpResponse(statusCode))
     }
 
-    if (responseValues.headers.nonEmpty) {
-      respondWithHeaders(responseValues.headers: _*)(completeRoute)
+    if (akkaHeaders.nonEmpty) {
+      respondWithHeaders(akkaHeaders: _*)(completeRoute)
     } else {
       completeRoute
     }
   }
 
-  private def toResponseValues(output: EndpointOutput[_], v: Any, initialResponseValues: ResponseValues): ResponseValues = {
-    val vs = ParamsToSeq(v)
-    var rv = initialResponseValues
-
-    output.asVectorOfSingleOutputs.zipWithIndex.foreach {
-      case (EndpointIO.Body(codec, _), i) =>
-        codec.encode(vs(i)).map(rawValueToResponseEntity(codec.meta, _)).foreach(re => rv = rv.withBody(re))
-      case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
-        val re = HttpEntity(mediaTypeToContentType(mediaType), vs(i).asInstanceOf[AkkaStream])
-        rv = rv.withBody(re)
-      case (EndpointIO.Header(name, codec, _), i) =>
-        codec
-          .encode(vs(i))
-          .map(parseHeaderOrThrow(name, _))
-          .foreach(h => rv = rv.withHeader(h))
-      case (EndpointIO.Headers(_), i) =>
-        vs(i)
-          .asInstanceOf[Seq[(String, String)]]
-          .map(h => parseHeaderOrThrow(h._1, h._2))
-          .foreach(h => rv = rv.withHeader(h))
-      case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
-        rv = toResponseValues(wrapped, g(vs(i)), rv)
-
-      case (EndpointOutput.StatusCode(), i) =>
-        rv = rv.withStatusCode(vs(i).asInstanceOf[StatusCode])
-      case (EndpointOutput.StatusFrom(io, default, _, when), i) =>
-        val v = vs(i)
-        val sc = when.find(_._1.matches(v)).map(_._2).getOrElse(default)
-        rv = toResponseValues(io, v, rv.withStatusCode(sc))
-      case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
-        rv = toResponseValues(wrapped, g(vs(i)), rv)
-    }
-
-    rv
-  }
+  private val encodeOutputs: EncodeOutputs[ResponseEntity] = new EncodeOutputs(new EncodeOutputBody[ResponseEntity] {
+    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): ResponseEntity =
+      rawValueToResponseEntity(codec.meta, v)
+    override def streamValueToBody(v: Any, mediaType: MediaType): ResponseEntity =
+      HttpEntity(mediaTypeToContentType(mediaType), v.asInstanceOf[AkkaStream])
+  })
 
   private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): ResponseEntity = {
     val ct = mediaTypeToContentType(codecMeta.mediaType)
@@ -142,6 +99,10 @@ private[akkahttp] object OutputToAkkaRoute {
   }
 
   private def charsetToHttpCharset(charset: Charset): HttpCharset = HttpCharset.custom(charset.name())
+
+  private def parseHeadersOrThrow(kvs: Vector[(String, String)]): Vector[HttpHeader] = {
+    kvs.map { case (k, v) => parseHeaderOrThrow(k, v) }
+  }
 
   private def parseHeaderOrThrow(k: String, v: String): HttpHeader = HttpHeader.parse(k, v) match {
     case ParsingResult.Ok(h, _)     => h

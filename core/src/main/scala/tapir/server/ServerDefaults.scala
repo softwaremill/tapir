@@ -34,5 +34,6 @@ object ServerDefaults {
   private def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
     DecodeFailureHandling.response(failureOutput)((statusCode, message))
 
+  val successStatusCode: StatusCode = StatusCodes.Ok
   val errorStatusCode: StatusCode = StatusCodes.BadRequest
 }

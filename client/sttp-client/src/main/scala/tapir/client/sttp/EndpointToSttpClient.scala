@@ -68,31 +68,37 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private def getOutputParams(outputs: Vector[EndpointOutput.Single[_]], body: Any, meta: ResponseMetadata): Any = {
     val values = outputs
-      .map {
+      .flatMap {
         case EndpointIO.Body(codec, _) =>
           val so = if (codec.meta.isOptional && body == "") None else Some(body)
-          getOrThrow(codec.safeDecode(so))
+          Some(getOrThrow(codec.safeDecode(so)))
 
         case EndpointIO.StreamBodyWrapper(_) =>
-          body
+          Some(body)
 
         case EndpointIO.Header(name, codec, _) =>
-          getOrThrow(codec.safeDecode(meta.headers(name).toList))
+          Some(getOrThrow(codec.safeDecode(meta.headers(name).toList)))
 
         case EndpointIO.Headers(_) =>
-          meta.headers
+          Some(meta.headers)
 
         case EndpointIO.Mapped(wrapped, f, _, _) =>
-          f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta))
+          Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
 
         case EndpointOutput.StatusCode() =>
-          meta.code
+          Some(meta.code)
 
-        case EndpointOutput.StatusFrom(wrapped, _, _, _) =>
-          getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)
+        case EndpointOutput.FixedStatusCode(_) =>
+          None
+
+        case EndpointOutput.OneOf(mappings) =>
+          val mapping = mappings
+            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code))
+            .getOrElse(throw new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs"))
+          Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta))
 
         case EndpointOutput.Mapped(wrapped, f, _, _) =>
-          f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta))
+          Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
       }
 
     SeqToParams(values)
@@ -129,9 +135,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
     inputs match {
       case Vector() => (uri, req)
-      case EndpointInput.RequestMethod(_) +: tail =>
+      case EndpointInput.FixedMethod(_) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri, req)
-      case EndpointInput.PathSegment(p) +: tail =>
+      case EndpointInput.FixedPath(p) +: tail =>
         setInputParams(tail, params, paramsAsArgs, paramIndex, uri.copy(path = uri.path :+ p), req)
       case EndpointInput.PathCapture(codec, _, _) +: tail =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
