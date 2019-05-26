@@ -60,7 +60,7 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
     Future { t }
   }
 
-  override val initialPort: Port = 33000
+  override val initialPort: Port = 32000
 
   test("endpoint nested in a path directive") {
     val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => pureResult("ok".asRight[Unit]))
