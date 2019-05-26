@@ -12,7 +12,7 @@ The `tapir` package contains a number of convenience methods to define an input 
 For inputs, these are:
 
 * `path[T]`, which captures a path segment as an input parameter of type `T`
-* any string, which will be implicitly converted to a constant path segment. Path segments can be combined with the `/` 
+* any string, which will be implicitly converted to a fixed path segment. Path segments can be combined with the `/` 
   method, and don't map to any values (have type `EndpointInput[Unit]`)
 * `paths`, which maps to the whole remaining path as a `Seq[String]`
 * `query[T](name)` captures a query parameter with the given name
@@ -36,6 +36,7 @@ For both inputs/outputs:
 For outputs:
 
 * `statusCode` maps to the status code of the response
+* `statusCode(code)` maps to a fixed status code of the response
 
 ## Combining inputs and outputs
 
@@ -121,9 +122,11 @@ To match a path prefix, first define inputs which match the path prefix, and the
 
 ## Status codes
 
-To provide the status code of a server response, use the `statusCode` output, which maps to a
-`type tapir.model.StatusCode = Int` alias. The `tapir.model.StatusCodes` object contains known status codes as
-constants. This type of output is used only when interpreting the endpoint as a server.
+To provide a (varying) status code of a server response, use the `statusCode` output, which maps to a value of type
+`type tapir.model.StatusCode` (which is an alias for `Int`). The `tapir.model.StatusCodes` object contains known status 
+codes as constants. This type of output is used only when interpreting the endpoint as a server.
+
+Alternatively, a fixed status code can be specified using the `statusCode(code)` output.
 
 It is also possible to specify how status codes map to different outputs. All mappings should have a common supertype,
 which is also the type of the output. These mappings are used to determine the status code when interpreting an endpoint

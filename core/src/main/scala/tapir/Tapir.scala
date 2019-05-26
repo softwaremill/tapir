@@ -71,6 +71,7 @@ trait Tapir extends TapirDerivedInputs {
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] = EndpointInput.ExtractFromRequest(f)
 
   def statusCode: EndpointOutput.StatusCode = EndpointOutput.StatusCode()
+  def statusCode(statusCode: StatusCode): EndpointOutput.FixedStatusCode = EndpointOutput.FixedStatusCode(statusCode)
 
   /**
     * Maps status codes to outputs. All outputs must have a common supertype (`I`). Typically, the supertype is a sealed

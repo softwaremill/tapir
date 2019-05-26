@@ -340,6 +340,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/auth").auth.bearer("1234").send().map(_.unsafeBody shouldBe "1234")
   }
 
+  testServer(in_unit_out_header_redirect)(_ => pureResult("http://new.com".asRight[Unit])) { baseUri =>
+    sttp.followRedirects(false).get(uri"$baseUri").send().map { r =>
+      r.code shouldBe StatusCodes.PermanentRedirect
+      r.header("Location") shouldBe Some("http://new.com")
+    }
+  }
+
   //
 
   testServer(

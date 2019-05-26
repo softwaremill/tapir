@@ -157,6 +157,10 @@ object EndpointOutput {
     override def show: String = "{status code}"
   }
 
+  case class FixedStatusCode(statusCode: tapir.model.StatusCode) extends Basic[Unit] {
+    override def show: String = s"status code ($statusCode)"
+  }
+
   //
 
   case class StatusMapping[O](statusCode: Option[tapir.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])

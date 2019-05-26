@@ -61,7 +61,8 @@ package object internal {
     }
 
     // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code
-    // mapping to the top-level.
+    // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
+    // to the status code specified using `statusMapping` or `statusCode(_)`.
     type BasicOutputs = Vector[EndpointOutput.Basic[_]]
     def asBasicOutputsMap: ListMap[Option[StatusCode], BasicOutputs] = asBasicOutputsOrMap match {
       case Left(outputs) => ListMap(None -> outputs)
@@ -96,7 +97,8 @@ package object internal {
                 }: _*
             )
           )
-        case b: EndpointOutput.Basic[_] => Left(Vector(b))
+        case f: EndpointOutput.FixedStatusCode => Right(ListMap(Some(f.statusCode) -> Vector(f)))
+        case b: EndpointOutput.Basic[_]        => Left(Vector(b))
       }
     }
 
@@ -120,6 +122,7 @@ package object internal {
   implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
     def sortByType: Vector[EndpointOutput.Basic[_]] = outputs.sortBy {
       case _: EndpointOutput.StatusCode          => 0
+      case _: EndpointOutput.FixedStatusCode     => 0
       case _: EndpointIO.Header[_]               => 1
       case _: EndpointIO.Headers                 => 1
       case _: EndpointIO.Body[_, _, _]           => 2

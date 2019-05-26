@@ -43,7 +43,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
         ) {
           onComplete(se.logic(values)) {
             case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.errorStatusCode, se.endpoint.errorOutput, v)
-            case Success(Right(v)) => OutputToAkkaRoute(StatusCodes.Ok, se.endpoint.output, v)
+            case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.successStatusCode, se.endpoint.output, v)
             case Failure(e) =>
               serverOptions.loggingOptions.logicExceptionMsg(se.endpoint).foreach(log.error(e, _))
               throw e

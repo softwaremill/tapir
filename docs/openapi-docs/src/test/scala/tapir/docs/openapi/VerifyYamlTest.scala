@@ -285,7 +285,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
-    println(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 
@@ -305,6 +304,19 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     val actualYaml = endpoint
       .out(jsonBody[ObjectWithList])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use fixed status code output in response") {
+    val expectedYaml = loadYaml("expected_fixed_status_code.yml")
+
+    val actualYaml = endpoint
+      .out(statusCode(StatusCodes.PermanentRedirect))
+      .out(header[String]("Location"))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
