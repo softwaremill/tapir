@@ -78,6 +78,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
   testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
   testClient(in_string_out_status, "apple", Right(StatusCodes.Ok))
+  testClient(in_optional_json_out_optional_json.name("defined"), Some(FruitAmount("orange", 11)), Right(Some(FruitAmount("orange", 11))))
+  testClient(in_optional_json_out_optional_json.name("empty"), None, Right(None))
 
   //
 

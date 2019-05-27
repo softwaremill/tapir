@@ -1,5 +1,6 @@
 package tapir.server.akkahttp
 import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
 
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{extractExecutionContext, extractMaterializer, extractRequestContext, onSuccess, reject}
@@ -47,7 +48,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 rawBodyDirective(codec.meta.rawValueType)
                   .map { v =>
-                    codec.safeDecode(Some(v)) match {
+                    codec.safeDecode(DecodeInputs.rawBodyValueToOption(v, codec.meta.isOptional)) match {
                       case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
                       case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                     }

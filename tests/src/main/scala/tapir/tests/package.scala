@@ -144,6 +144,9 @@ package object tests {
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.out(statusCode(StatusCodes.PermanentRedirect)).out(header[String]("Location"))
 
+  val in_optional_json_out_optional_json: Endpoint[Option[FruitAmount], Unit, Option[FruitAmount], Nothing] =
+    endpoint.post.in("api" / "echo").in(jsonBody[Option[FruitAmount]]).out(jsonBody[Option[FruitAmount]])
+
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
 
   def writeToFile(s: String): File = {

@@ -265,6 +265,28 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
+  testServer(in_unit_out_header_redirect)(_ => pureResult("http://new.com".asRight[Unit])) { baseUri =>
+    sttp.followRedirects(false).get(uri"$baseUri").send().map { r =>
+      r.code shouldBe StatusCodes.PermanentRedirect
+      r.header("Location") shouldBe Some("http://new.com")
+    }
+  }
+
+  testServer(in_optional_json_out_optional_json)((fa: Option[FruitAmount]) => pureResult(fa.asRight[Unit])) { baseUri =>
+    sttp
+      .post(uri"$baseUri/api/echo")
+      .send()
+      .map { r =>
+        r.code shouldBe StatusCodes.Ok
+        r.body shouldBe Right("")
+      } >>
+      sttp
+        .post(uri"$baseUri/api/echo")
+        .body("""{"fruit":"orange","amount":11}""")
+        .send()
+        .map(_.body shouldBe Right("""{"fruit":"orange","amount":11}"""))
+  }
+
   // path matching
 
   testServer(endpoint, "no path should match anything")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) { baseUri =>
@@ -338,13 +360,6 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   testServer(in_auth_bearer_out_string)((s: String) => pureResult(s.asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri/auth").auth.bearer("1234").send().map(_.unsafeBody shouldBe "1234")
-  }
-
-  testServer(in_unit_out_header_redirect)(_ => pureResult("http://new.com".asRight[Unit])) { baseUri =>
-    sttp.followRedirects(false).get(uri"$baseUri").send().map { r =>
-      r.code shouldBe StatusCodes.PermanentRedirect
-      r.header("Location") shouldBe Some("http://new.com")
-    }
   }
 
   //

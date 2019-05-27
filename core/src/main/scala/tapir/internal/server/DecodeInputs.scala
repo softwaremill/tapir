@@ -185,4 +185,13 @@ object DecodeInputs {
       case _ => (values, ctx)
     }
   }
+
+  //
+
+  def rawBodyValueToOption(v: Any, allowsOption: Boolean): Option[Any] = {
+    v match {
+      case "" if allowsOption => None
+      case _                  => Some(v)
+    }
+  }
 }
