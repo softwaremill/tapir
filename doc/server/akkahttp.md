@@ -4,7 +4,7 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-akka-http-server" % "0.8.0"
+"com.softwaremill.tapir" %% "tapir-akka-http-server" % "0.8.1"
 ```
 
 and import the package:
