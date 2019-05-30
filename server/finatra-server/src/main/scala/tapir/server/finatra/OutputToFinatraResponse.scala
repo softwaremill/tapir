@@ -96,7 +96,10 @@ object OutputToFinatraResponse {
           entity.addPart(formBodyPart)
         }
 
-        FinatraContentReader(InputStreamReader(entity.build().getContent)) -> ct
+        // inputStream is split out into a val because otherwise it doesn't compile in 2.11
+        val inputStream: InputStream = entity.build().getContent
+
+        FinatraContentReader(InputStreamReader(inputStream)) -> ct
     }
   }
 
