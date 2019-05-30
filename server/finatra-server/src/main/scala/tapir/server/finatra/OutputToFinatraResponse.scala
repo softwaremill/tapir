@@ -119,8 +119,8 @@ object OutputToFinatraResponse {
         }
       case InputStreamValueType =>
         new InputStreamBody(r: InputStream, ContentType.create(contentType), part.fileName.get)
-      case _ =>
-        ???
+      case _: MultipartValueType =>
+        throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }
   }
 
