@@ -1,5 +1,4 @@
 package tapir
-import tapir.EndpointInput.PathCapture
 import tapir.model.Method
 
 package object internal {

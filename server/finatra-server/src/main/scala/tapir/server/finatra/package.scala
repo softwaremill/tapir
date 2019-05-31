@@ -4,7 +4,6 @@ import java.nio.charset.Charset
 import com.twitter.finagle.http.{Request, Response, Status}
 import com.twitter.inject.Logging
 import com.twitter.util.Future
-import tapir.DecodeResult.{Error, Mismatch, Missing, Multiple}
 import tapir.EndpointInput.PathCapture
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{SeqToParams, _}
@@ -15,24 +14,25 @@ import scala.util.control.NonFatal
 
 package object finatra {
   implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
-    def toRoute(logic: I => Future[Either[E, O]]): FinatraRoute = {
+    def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
 
       val handler = { request: Request =>
-        def decodeBody(result: DecodeInputsResult): DecodeInputsResult = {
+        def decodeBody(result: DecodeInputsResult): Future[DecodeInputsResult] = {
           result match {
             case values: DecodeInputsResult.Values =>
               values.bodyInput match {
                 case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
-                  val rawBody =
-                    FinatraRequestToRawBody(codec.meta.rawValueType, request.content, request.charset.map(Charset.forName), request)
-
-                  codec.safeDecode(Some(rawBody)) match {
-                    case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
-                    case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
-                  }
-                case None => values
+                  new FinatraRequestToRawBody(serverOptions)
+                    .apply(codec.meta.rawValueType, request.content, request.charset.map(Charset.forName), request)
+                    .map { rawBody =>
+                      codec.safeDecode(Some(rawBody)) match {
+                        case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
+                        case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                      }
+                    }
+                case None => Future.value(values)
               }
-            case failure: DecodeInputsResult.Failure => failure
+            case failure: DecodeInputsResult.Failure => Future.value(failure)
           }
         }
 
@@ -41,7 +41,7 @@ package object finatra {
           logic(i)
             .map {
               case Right(result) => OutputToFinatraResponse(e.output, result).toResponse
-              case Left(err)     => OutputToFinatraResponse(e.errorOutput, err, None, Status.BadRequest).toResponse
+              case Left(err)     => OutputToFinatraResponse(e.errorOutput, err, None, Status(ServerDefaults.errorStatusCode)).toResponse
             }
             .onFailure {
               case NonFatal(ex) =>
@@ -54,19 +54,26 @@ package object finatra {
             req: Request,
             input: EndpointInput.Single[_],
             failure: DecodeFailure
-        ): Future[Response] = {
-          failure match {
-            case Missing                    => error(s"No decode failure message")
-            case Multiple(errs: Seq[_])     => errs.foreach(e => error(s"DecodeError: $e"))
-            case Error(original, e)         => error(s"DecodeError: original: $original", e)
-            case Mismatch(expected, actual) => error(s"Expected: $expected Actual: $actual")
+        ): Response = {
+          val handling = serverOptions.decodeFailureHandler(req, input, failure)
+
+          handling match {
+            case DecodeFailureHandling.NoMatch =>
+              serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(debug(_))
+              Response(Status.BadRequest)
+            case DecodeFailureHandling.RespondWithResponse(output, value) =>
+              serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
+                case (msg, Some(t)) => debug(msg, t)
+                case (msg, None)    => debug(msg)
+              }
+
+              OutputToFinatraResponse(output, value, None, Status(ServerDefaults.errorStatusCode)).toResponse
           }
-          Future.value(Response(Status.BadRequest))
         }
 
-        decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))) match {
+        decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
           case values: DecodeInputsResult.Values          => valuesToResponse(values)
-          case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(e, request, input, failure)
+          case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, request, input, failure))
         }
       }
 
