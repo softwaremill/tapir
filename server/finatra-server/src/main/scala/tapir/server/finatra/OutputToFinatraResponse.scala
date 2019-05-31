@@ -2,74 +2,65 @@ package tapir.server.finatra
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 
-import com.twitter.finagle.http.Status
+import com.twitter.finagle.http.{Response, Status, Version}
 import com.twitter.io.{Buf, InputStreamReader, Reader}
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
-import tapir.internal.{ParamsToSeq, _}
+import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
+  CodecForOptional,
   CodecMeta,
-  EndpointIO,
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
   MediaType,
   MultipartValueType,
   RawPart,
-  StreamingEndpointIO,
   StringValueType
 }
 
 object OutputToFinatraResponse {
+
+  private val encodeOutputs: EncodeOutputs[(FinatraContent, String)] = new EncodeOutputs(new EncodeOutputBody[(FinatraContent, String)] {
+    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): (FinatraContent, String) =
+      rawValueToFinatraContent(codec.meta, v)
+    override def streamValueToBody(v: Any, mediaType: MediaType): (FinatraContent, String) = {
+      FinatraContentBuf(v.asInstanceOf[Buf]) -> mediaType.mediaType
+    }
+  })
+
   def apply[O](
+      defaultStatus: Status,
       output: EndpointOutput[O],
-      v: Any,
-      startingResponse: Option[FinatraResponse] = None,
-      defaultStatus: Status = Status.Ok
-  ): FinatraResponse = {
-    val vs = ParamsToSeq(v)
+      v: Any
+  ): Response = {
+    outputValuesToResponse(encodeOutputs(output, v, OutputValues.empty), defaultStatus)
+  }
 
-    output.asVectorOfSingleOutputs.zipWithIndex.foldLeft(startingResponse.getOrElse(FinatraResponse(defaultStatus))) {
-      case (finatraResponse, input) =>
-        input match {
-          case (EndpointIO.Body(codec, _), i) =>
-            codec.encode(vs(i)).map(rawValueToFinatraContent(codec.meta, _)) match {
-              case Some((content, contentType)) =>
-                finatraResponse.copy(content = content, contentType = contentType)
-              case None =>
-                finatraResponse
-            }
+  private def outputValuesToResponse(outputValues: OutputValues[(FinatraContent, String)], defaultStatus: Status): Response = {
+    val status = outputValues.statusCode.map(Status(_)).getOrElse(defaultStatus)
 
-          case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
-            finatraResponse.copy(contentType = mediaType.mediaType, content = FinatraContentBuf(vs(i).asInstanceOf[Buf]))
-
-          case (EndpointIO.Header(name, codec, _), i) =>
-            codec
-              .encode(vs(i))
-              .foldLeft(finatraResponse) {
-                case (fr, value) => fr.setOrAddHeader(name, value)
-              }
-
-          case (EndpointIO.Headers(_), i) =>
-            vs(i).asInstanceOf[Seq[(String, String)]].foldLeft(finatraResponse) {
-              case (fr, (name, value)) => fr.setOrAddHeader(name, value)
-            }
-
-          case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
-            apply(wrapped, g(vs(i)), Some(finatraResponse))
-
-          case (EndpointOutput.StatusCode(), i) =>
-            finatraResponse.copy(status = Status(vs(i).asInstanceOf[Int]))
-
-          case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
-            apply(wrapped, g(vs(i)), Some(finatraResponse))
-        }
+    val responseWithContent = outputValues.body match {
+      case Some((FinatraContentBuf(buf), ct)) =>
+        val response = Response(Version.Http11, status)
+        response.content = buf
+        response.contentType = ct
+        response
+      case Some((FinatraContentReader(reader), ct)) =>
+        val response = Response(Version.Http11, status, reader)
+        response.contentType = ct
+        response
+      case None =>
+        Response(Version.Http11, status)
     }
 
+    outputValues.headers.foreach { case (name, value) => responseWithContent.headerMap.add(name, value) }
+
+    responseWithContent
   }
 
   private def rawValueToFinatraContent[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): (FinatraContent, String) = {
