@@ -1,6 +1,5 @@
 package tapir.docs.openapi.schema
 
-import tapir.Schema.SCoproduct
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
 import tapir.{Schema => TSchema}
@@ -51,7 +50,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
         Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
       case TSchema.SRef(fullName) =>
         Left(schemaReferenceMapper.map(fullName))
-      case SCoproduct(_, schemas, d) =>
+      case TSchema.SCoproduct(_, schemas, d) =>
         Right(
           OSchema.apply(
             schemas.collect { case s: TSchema.SProduct => Left(schemaReferenceMapper.map(s.info)) }.toList,

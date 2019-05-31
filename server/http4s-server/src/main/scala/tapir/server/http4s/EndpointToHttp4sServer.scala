@@ -3,17 +3,18 @@ package tapir.server.http4s
 import cats.data._
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
-import org.http4s.{EntityBody, HttpRoutes, Request, Response, Status}
+import org.http4s.{EntityBody, HttpRoutes, Request, Response}
+import org.log4s._
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.server.{DecodeFailureHandling, ServerDefaults, ServerEndpoint}
-import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput}
-import org.log4s._
+import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.reflect.ClassTag
 
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   private val log = getLogger
+  private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
   def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] = {
 
@@ -24,7 +25,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
             values.bodyInput match {
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 new Http4sRequestToRawBody(serverOptions).apply(req.body, codec.meta.rawValueType, req.charset, req).map { v =>
-                  codec.safeDecode(Some(v)) match {
+                  codec.safeDecode(DecodeInputs.rawBodyValueToOption(v, codec.meta.isOptional)) match {
                     case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
                     case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                   }
@@ -40,14 +41,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         val i = SeqToParams(InputValues(se.endpoint.input, values.values)).asInstanceOf[I]
         se.logic(i)
           .map {
-            case Right(result) =>
-              makeResponse(Status.Ok, se.endpoint.output, result)
-            case Left(err) =>
-              makeResponse(
-                statusCodeToHttp4sStatus(ServerDefaults.errorStatusCode),
-                se.endpoint.errorOutput,
-                err
-              )
+            case Right(result) => outputToResponse(ServerDefaults.successStatusCode, se.endpoint.output, result)
+            case Left(err)     => outputToResponse(ServerDefaults.errorStatusCode, se.endpoint.errorOutput, err)
           }
           .map { response =>
             serverOptions.loggingOptions.requestHandledMsg(se.endpoint, response.status.code).foreach(log.debug(_))
@@ -89,20 +84,6 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  private def statusCodeToHttp4sStatus(code: tapir.model.StatusCode): Status =
-    Status.fromInt(code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
-
-  private def makeResponse[O](defaultStatusCode: org.http4s.Status, output: EndpointOutput[O], v: O): Response[F] = {
-    val responseValues = new OutputToHttp4sResponse[F](serverOptions).apply(output, v)
-    val statusCode = responseValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(defaultStatusCode)
-
-    val headers = responseValues.allHeaders
-    responseValues.body match {
-      case Some(entity) => Response(status = statusCode, headers = headers, body = entity)
-      case None         => Response(status = statusCode, headers = headers)
-    }
-  }
-
   private def handleDecodeFailure[I](
       e: Endpoint[_, _, _, _],
       req: Request[F],
@@ -120,13 +101,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           case (msg, None)    => log.debug(msg)
         }
 
-        Some(
-          makeResponse(
-            statusCodeToHttp4sStatus(ServerDefaults.errorStatusCode),
-            output,
-            value
-          )
-        )
+        Some(outputToResponse(ServerDefaults.errorStatusCode, output, value))
     }
   }
 }

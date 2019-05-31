@@ -17,11 +17,7 @@ object ServerDefaults {
         case _: EndpointIO.Headers                 => response(StatusCodes.BadRequest, s"Invalid value for: headers")
         case _: EndpointIO.Body[_, _, _]           => response(StatusCodes.BadRequest, s"Invalid value for: body")
         case _: EndpointIO.StreamBodyWrapper[_, _] => response(StatusCodes.BadRequest, s"Invalid value for: body")
-        case _: EndpointInput.PathCapture[_] if failure.isInstanceOf[DecodeResult.Error] =>
-          response(StatusCodes.BadRequest, s"Invalid value for: path")
-        case _: EndpointInput.PathsCapture if failure.isInstanceOf[DecodeResult.Error] =>
-          response(StatusCodes.BadRequest, s"Invalid value for: paths")
-        case _ => DecodeFailureHandling.noMatch
+        case _                                     => DecodeFailureHandling.noMatch
       }
     }
 
@@ -38,5 +34,6 @@ object ServerDefaults {
   private def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
     DecodeFailureHandling.response(failureOutput)((statusCode, message))
 
+  val successStatusCode: StatusCode = StatusCodes.Ok
   val errorStatusCode: StatusCode = StatusCodes.BadRequest
 }

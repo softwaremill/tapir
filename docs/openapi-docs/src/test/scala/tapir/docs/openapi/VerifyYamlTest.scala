@@ -142,12 +142,11 @@ class VerifyYamlTest extends FunSuite with Matchers {
     }
 
     val e = endpoint.errorOut(
-      statusFrom(
-        jsonBody[ErrorInfo],
-        StatusCodes.BadRequest,
-        whenClass[NotFound] -> StatusCodes.NotFound,
-        whenClass[Unauthorized] -> StatusCodes.Unauthorized
-      ).defaultSchema(schemaFor[Unknown])
+      tapir.oneOf(
+        statusMapping(StatusCodes.NotFound, jsonBody[NotFound].description("not found")),
+        statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+        statusDefaultMapping(jsonBody[Unknown].description("unknown"))
+      )
     )
 
     // when
@@ -286,7 +285,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
-    println(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 
@@ -306,6 +304,19 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     val actualYaml = endpoint
       .out(jsonBody[ObjectWithList])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use fixed status code output in response") {
+    val expectedYaml = loadYaml("expected_fixed_status_code.yml")
+
+    val actualYaml = endpoint
+      .out(statusCode(StatusCodes.PermanentRedirect))
+      .out(header[String]("Location"))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

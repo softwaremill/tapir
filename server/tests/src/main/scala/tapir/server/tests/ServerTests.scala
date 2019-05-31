@@ -116,6 +116,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
 
+  testServer(in_json_out_json, "content type")((fa: FruitAmount) => pureResult(fa.asRight[Unit])) { baseUri =>
+    sttp
+      .post(uri"$baseUri/api/echo")
+      .body("""{"fruit":"banana","amount":12}""")
+      .send()
+      .map(_.contentType shouldBe Some(MediaType.Json().mediaType))
+  }
+
   testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/api/echo").body("banana kiwi".getBytes).send().map(_.body shouldBe Right("banana kiwi"))
   }
@@ -262,6 +270,28 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
+  testServer(in_unit_out_header_redirect)(_ => pureResult("http://new.com".asRight[Unit])) { baseUri =>
+    sttp.followRedirects(false).get(uri"$baseUri").send().map { r =>
+      r.code shouldBe StatusCodes.PermanentRedirect
+      r.header("Location") shouldBe Some("http://new.com")
+    }
+  }
+
+  testServer(in_optional_json_out_optional_json)((fa: Option[FruitAmount]) => pureResult(fa.asRight[Unit])) { baseUri =>
+    sttp
+      .post(uri"$baseUri/api/echo")
+      .send()
+      .map { r =>
+        r.code shouldBe StatusCodes.Ok
+        r.body shouldBe Right("")
+      } >>
+      sttp
+        .post(uri"$baseUri/api/echo")
+        .body("""{"fruit":"orange","amount":11}""")
+        .send()
+        .map(_.body shouldBe Right("""{"fruit":"orange","amount":11}"""))
+  }
+
   // path matching
 
   testServer(endpoint, "no path should match anything")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) { baseUri =>
@@ -301,9 +331,10 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       sttp.get(uri"$baseUri/api/echo/").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
-  testServer(in_string_out_status_from_string)((v: String) => pureResult(v.reverse.asRight[Unit])) { baseUri =>
-    sttp.get(uri"$baseUri?fruit=x").send().map(_.code shouldBe StatusCodes.Accepted) >>
-      sttp.get(uri"$baseUri?fruit=y").send().map(_.code shouldBe StatusCodes.Ok)
+  testServer(in_string_out_status_from_string)((v: String) => pureResult((if (v == "apple") Right("x") else Left(10)).asRight[Unit])) {
+    baseUri =>
+      sttp.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCodes.Ok) >>
+        sttp.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCodes.Accepted)
   }
 
   testServer(in_extract_request_out_string)((v: String) => pureResult(v.asRight[Unit])) { baseUri =>

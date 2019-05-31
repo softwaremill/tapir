@@ -12,7 +12,7 @@ The `tapir` package contains a number of convenience methods to define an input 
 For inputs, these are:
 
 * `path[T]`, which captures a path segment as an input parameter of type `T`
-* any string, which will be implicitly converted to a constant path segment. Path segments can be combined with the `/` 
+* any string, which will be implicitly converted to a fixed path segment. Path segments can be combined with the `/` 
   method, and don't map to any values (have type `EndpointInput[Unit]`)
 * `paths`, which maps to the whole remaining path as a `Seq[String]`
 * `query[T](name)` captures a query parameter with the given name
@@ -36,6 +36,7 @@ For both inputs/outputs:
 For outputs:
 
 * `statusCode` maps to the status code of the response
+* `statusCode(code)` maps to a fixed status code of the response
 
 ## Combining inputs and outputs
 
@@ -121,31 +122,39 @@ To match a path prefix, first define inputs which match the path prefix, and the
 
 ## Status codes
 
-To provide the status code of a server response, use the `statusCode` output, which maps to a
-`type tapir.model.StatusCode = Int` alias. The `tapir.model.StatusCodes` object contains known status codes as
-constants. This type of output is used only when interpreting the endpoint as a server.
+To provide a (varying) status code of a server response, use the `statusCode` output, which maps to a value of type
+`type tapir.model.StatusCode` (which is an alias for `Int`). The `tapir.model.StatusCodes` object contains known status 
+codes as constants. This type of output is used only when interpreting the endpoint as a server.
 
-It is also possible to specify how to determine the status code basing on the value of an output (typically the body).
-This is used when interpreting the endpoint as a server and when generating documentation.
+Alternatively, a fixed status code can be specified using the `statusCode(code)` output.
 
-For example, below is a specification for an endpoint where the error output is fixed to be of type `ErrorInfo`; 
+It is also possible to specify how status codes map to different outputs. All mappings should have a common supertype,
+which is also the type of the output. These mappings are used to determine the status code when interpreting an endpoint
+as a server, as well as when generating documentation and to deserialise client responses to the appropriate type,
+basing on the status code.
+
+For example, below is a specification for an endpoint where the error output is a sealed trait `ErrorInfo`; 
 such a specification can then be refined and reused for other endpoints:
 
 ```scala
-case class ErrorInfo(errorType: ErrorType, msg: String)
+sealed trait ErrorInfo
+case class NotFound(what: String) extends ErrorInfo
+case class Unauthorized(realm: String) extends ErrorInfo
+case class Unknown(code: Int, msg: String) extends ErrorInfo
 
 val baseEndpoint = endpoint.errorOut(
-  statusFrom(
-    jsonBody[ErrorType],
-    StatusCodes.BadRequest,
-    whenValue[ErrorType](_.errorType == ErrorType.NotFound, StatusCodes.NotFound),
-    whenValue[ErrorType](_.errorType == ErrorType.Exception, StatusCodes.InternalServerError)
+  oneOf(
+    statusMapping(StatusCodes.NotFound, jsonBody[NotFound].description("not found")),
+    statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+    statusDefaultMapping(jsonBody[Unknown].description("unknown"))
   )
 )
 ```
 
-The `statusFrom` method takes as parameters: the wrapped output, default status code, and any number of specific
-status codes mappings based on the value (`whenValue`) or class (`whenClass`) of the output value.
+Each mapping, defined using the `statusMapping` method is a case class, containing the output description as well as
+the status code. Moreover, default mappings can be defined using `statusDefaultMapping`. For servers, the default
+status code for error outputs is `400`, and for normal outputs `200` (unless a `statusCode` is used in the
+nested output). For clients, a default mapping is a catch-all.
 
 ## Next
 

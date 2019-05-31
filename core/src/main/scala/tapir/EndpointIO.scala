@@ -7,6 +7,9 @@ import tapir.internal.ProductToParams
 import tapir.model.{Method, MultiQueryParams, ServerRequest}
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
 
+import scala.collection.immutable.ListMap
+import scala.reflect.ClassTag
+
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
   def /[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ] = and(other)
@@ -35,11 +38,11 @@ object EndpointInput {
 
   sealed trait Basic[I] extends Single[I]
 
-  case class RequestMethod(m: Method) extends Basic[Unit] {
+  case class FixedMethod(m: Method) extends Basic[Unit] {
     def show: String = m.m
   }
 
-  case class PathSegment(s: String) extends Basic[Unit] {
+  case class FixedPath(s: String) extends Basic[Unit] {
     def show = s"/$s"
   }
 
@@ -90,6 +93,15 @@ object EndpointInput {
     }
     case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
       def show = s"auth($scheme http, via ${input.show})"
+    }
+    case class Oauth2(
+        authorizationUrl: String,
+        tokenUrl: String,
+        scopes: ListMap[String, String],
+        refreshUrl: Option[String] = None,
+        input: EndpointInput.Single[String]
+    ) extends Auth[String] {
+      def show = s"auth(oauth2, via ${input.show})"
     }
   }
 
@@ -145,16 +157,16 @@ object EndpointOutput {
     override def show: String = "{status code}"
   }
 
+  case class FixedStatusCode(statusCode: tapir.model.StatusCode) extends Basic[Unit] {
+    override def show: String = s"status code ($statusCode)"
+  }
+
   //
 
-  case class StatusFrom[I](
-      output: EndpointOutput[I],
-      default: tapir.model.StatusCode,
-      defaultSchema: Option[Schema],
-      when: Vector[(When[I], tapir.model.StatusCode)]
-  ) extends Single[I] {
-    def defaultSchema(s: Schema): StatusFrom[I] = this.copy(defaultSchema = Some(s))
-    override def show: String = s"status from(${output.show}, $default or ${when.map(_._2).mkString("/")})"
+  case class StatusMapping[O](statusCode: Option[tapir.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])
+
+  case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
+    override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
   }
 
   case class Mapped[I, T](wrapped: EndpointOutput[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {

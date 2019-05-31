@@ -11,6 +11,9 @@ cookie or a query parameter
 * `auth.basic: EndpointInput[UsernamePassword]`: maps to the base64-encoded username/password pair in the 
 `Authorization` header
 * `auth.bearer: EndpointInput[String]`: maps to `Bearer [token]` in the `Authorization` header
+* `auth.oauth2.authorizationCode(authorizationUrl, tokenUrl, scopes, refreshUrl): EndpointInput[String]`: creates an 
+OAuth2 authorization using authorization code - sign in using an auth service (for documentation, requires defining also 
+the  `oauth2-redirect.html`, see [Generating OpenAPI documentation](../openapi.html))
 
 Multiple authentication inputs indicate that all of the given authentication values should be provided. Specifying
 alternative authentication methods (where only one value out of many needs to be provided) is currently not supported.

@@ -218,6 +218,7 @@ object CodecForOptional {
   * Should be used for inputs/outputs which allow multiple values.
   */
 @implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
+Did you specify the target type of the input/output?
 Did you define a codec for: ${T}?
 Did you import the codecs for: ${M}?
 Is there an implicit schema for: ${T}, and all of its components?

@@ -26,6 +26,12 @@ For example, `header[Option[String]]("X-Auth-Token")` describes an optional head
 `query[List[String]]("color")` allows multiple occurences of the `color` query parameter, with all values gathered
 into a list.
 
+Note that only textual bodies can be optional (optional binary/streaming bodies aren't supported). That's because a body
+cannot be missing - there's always *some* body. This is unlike e.g. a query parameter: for which a value can be present,
+a value can be empty (but defined!), or the parameter might be missing altogether - which corresponds to a `None`.
+That's why only strict (non-streaming) textual bodies, which are empty (`""`), will be considered as an empty value 
+(`None`), if the codec allows optional values. 
+
 ### Implementation note
 
 To support optional and multiple parameters, inputs/outputs don't require implicit `Codec` values (which represent

@@ -4,6 +4,8 @@ import java.util.Base64
 import tapir.Codec.PlainCodec
 import tapir.model.UsernamePassword
 
+import scala.collection.immutable.ListMap
+
 object TapirAuth {
   private val BasicAuthType = "Basic"
   private val BearerAuthType = "Bearer"
@@ -11,6 +13,17 @@ object TapirAuth {
   def apiKey[T](input: EndpointInput.Single[T]): EndpointInput.Auth.ApiKey[T] = EndpointInput.Auth.ApiKey[T](input)
   val basic: EndpointInput.Auth.Http[UsernamePassword] = httpAuth(BasicAuthType, usernamePasswordCodec(credentialsCodec(BasicAuthType)))
   val bearer: EndpointInput.Auth.Http[String] = httpAuth(BearerAuthType, credentialsCodec(BearerAuthType))
+
+  object oauth2 {
+    def authorizationCode(authorizationUrl: String, tokenUrl: String, scopes: ListMap[String, String], refreshUrl: Option[String] = None) =
+      EndpointInput.Auth.Oauth2(
+        authorizationUrl,
+        tokenUrl,
+        scopes,
+        refreshUrl,
+        header[String]("Authorization")(CodecForMany.fromCodec(credentialsCodec(BearerAuthType)))
+      )
+  }
 
   private def httpAuth[T](authType: String, codec: PlainCodec[T]): EndpointInput.Auth.Http[T] =
     EndpointInput.Auth.Http(authType, header[T]("Authorization")(CodecForMany.fromCodec(codec)))

@@ -1,102 +1,61 @@
 package tapir.server.http4s
 
-import cats.data._
-import cats.implicits._
 import cats.effect.{ContextShift, Sync}
+import cats.implicits._
 import fs2.Chunk
 import org.http4s
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.util.CaseInsensitiveString
-import org.http4s.{Charset, EntityBody, EntityEncoder, Header, Headers, multipart}
-import tapir.internal._
-import tapir.model.{Part, StatusCode}
+import org.http4s.{Charset, EntityBody, EntityEncoder, Header, Headers, Response, Status, multipart}
+import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
+  CodecForOptional,
   CodecMeta,
-  EndpointIO,
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
   MediaType,
   MultipartValueType,
   RawPart,
-  StreamingEndpointIO,
   StringValueType
 }
 
 class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
 
-  case class ResponseValues(bodyWithCtHeader: Option[(EntityBody[F], Header)], headers: List[Header], statusCode: Option[StatusCode]) {
-    def withBody(b: EntityBody[F], ctHeader: Header): ResponseValues = {
-      if (bodyWithCtHeader.isDefined) {
-        throw new IllegalArgumentException("Body is already defined")
-      }
+  def apply[O](defaultStatusCode: tapir.model.StatusCode, output: EndpointOutput[O], v: O): Response[F] = {
+    val outputValues = encodeOutputs(output, v, OutputValues.empty)
+    val statusCode = outputValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(statusCodeToHttp4sStatus(defaultStatusCode))
 
-      copy(bodyWithCtHeader = Some((b, ctHeader)))
+    val headers = allOutputHeaders(outputValues)
+    outputValues.body match {
+      case Some((entity, _)) => Response(status = statusCode, headers = headers, body = entity)
+      case None              => Response(status = statusCode, headers = headers)
     }
-
-    def withHeaders(hs: Seq[Header]): ResponseValues = copy(headers = headers ++ hs)
-
-    def withStatusCode(sc: StatusCode): ResponseValues = copy(statusCode = Some(sc))
-
-    def allHeaders: Headers = {
-      val shouldAddCtHeader = headers.exists(_.name == `Content-Type`.name)
-      bodyWithCtHeader match {
-        case Some((_, ctHeader)) if shouldAddCtHeader => Headers(headers :+ ctHeader)
-        case _                                        => Headers(headers)
-      }
-    }
-
-    def body: Option[EntityBody[F]] = bodyWithCtHeader.map(_._1)
   }
 
-  def apply(output: EndpointOutput[_], v: Any): ResponseValues = {
-    toResponse(output, v).runS(ResponseValues(None, Nil, None)).value
-  }
+  private def statusCodeToHttp4sStatus(code: tapir.model.StatusCode): Status =
+    Status.fromInt(code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
 
-  private def toResponse(output: EndpointOutput[_], v: Any): State[ResponseValues, Unit] = {
-    val vs = ParamsToSeq(v)
-
-    val states = output.asVectorOfSingleOutputs.zipWithIndex.map {
-      case (EndpointIO.Body(codec, _), i) =>
-        codec.encode(vs(i)).map(rawValueToEntity(codec.meta, _)) match {
-          case Some((entity, header)) => State.modify[ResponseValues](rv => rv.withBody(entity, header))
-          case None                   => State.pure[ResponseValues, Unit](())
-        }
-
-      case (EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)), i) =>
-        val ctHeader = mediaTypeToContentType(mediaType)
-        State.modify[ResponseValues](rv => rv.withBody(vs(i).asInstanceOf[EntityBody[F]], ctHeader))
-
-      case (EndpointIO.Header(name, codec, _), i) =>
-        codec
-          .encode(vs(i))
-          .map((headerValue: String) => Header.Raw(CaseInsensitiveString(name), headerValue)) match {
-          case Nil     => State.pure[ResponseValues, Unit](())
-          case headers => State.modify[ResponseValues](rv => rv.withHeaders(headers))
-        }
-
-      case (EndpointIO.Headers(_), i) =>
-        val headers = vs(i).asInstanceOf[Seq[(String, String)]].map(h => Header.Raw(CaseInsensitiveString(h._1), h._2))
-        State.modify[ResponseValues](rv => rv.withHeaders(headers))
-
-      case (EndpointIO.Mapped(wrapped, _, g, _), i) =>
-        toResponse(wrapped, g(vs(i)))
-
-      case (EndpointOutput.StatusCode(), i) =>
-        State.modify[ResponseValues](rv => rv.withStatusCode(vs(i).asInstanceOf[StatusCode]))
-
-      case (EndpointOutput.StatusFrom(io, default, _, when), i) =>
-        val v = vs(i)
-        val sc = when.find(_._1.matches(v)).map(_._2).getOrElse(default)
-        toResponse(io, v).modify(_.withStatusCode(sc))
-
-      case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
-        toResponse(wrapped, g(vs(i)))
+  private def allOutputHeaders(outputValues: OutputValues[(EntityBody[F], Header)]): Headers = {
+    val headers = outputValues.headers.map { case (k, v) => Header.Raw(CaseInsensitiveString(k), v) }
+    val shouldAddCtHeader = !headers.exists(_.name == `Content-Type`.name)
+    outputValues.body match {
+      case Some((_, ctHeader)) if shouldAddCtHeader => Headers.of(headers :+ ctHeader: _*)
+      case _                                        => Headers.of(headers: _*)
     }
-    states.sequence_
   }
+
+  private val encodeOutputs: EncodeOutputs[(EntityBody[F], Header)] = new EncodeOutputs(new EncodeOutputBody[(EntityBody[F], Header)] {
+    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): (EntityBody[F], Header) =
+      rawValueToEntity(codec.meta, v)
+    override def streamValueToBody(v: Any, mediaType: MediaType): (EntityBody[F], Header) = {
+      val ctHeader = mediaTypeToContentType(mediaType)
+      (v.asInstanceOf[EntityBody[F]], ctHeader)
+    }
+  })
 
   private def rawValueToEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): (EntityBody[F], Header) = {
     val ct: `Content-Type` = mediaTypeToContentType(codecMeta.mediaType)

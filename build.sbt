@@ -19,9 +19,9 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.7"
 
-val http4sVersion = "0.20.0"
+val http4sVersion = "0.20.1"
 val circeVersion = "0.11.1"
-val sttpVersion = "1.5.12"
+val sttpVersion = "1.5.17"
 val finatraVersion = "19.4.0"
 val bijectionVersion = "0.9.5"
 
@@ -112,7 +112,7 @@ lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yam
   .settings(commonSettings: _*)
   .settings(
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-yaml" % "0.9.0"
+      "io.circe" %% "circe-yaml" % "0.10.0"
     ),
     name := "tapir-openapi-circe-yaml"
   )
@@ -144,7 +144,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % "10.1.8",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.22"
+      "com.typesafe.akka" %% "akka-stream" % "2.5.23"
     )
   )
   .dependsOn(core, serverTests % "test")
@@ -209,13 +209,14 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings: _*)
   .settings(
-    name := "tapir-tests",
+    name := "tapir-playground",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
       "org.scalaz" %% "scalaz-zio" % "1.0-RC4",
       "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC4",
-      "org.typelevel" %% "cats-effect" % "1.2.0",
-      "org.webjars" % "swagger-ui" % "3.22.0"
+      "org.typelevel" %% "cats-effect" % "1.3.1",
+      "org.webjars" % "swagger-ui" % "3.22.1",
+      "io.swagger" % "swagger-annotations" % "1.5.22"
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false

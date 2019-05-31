@@ -5,7 +5,7 @@ needed for actual json parsing/printing. Currently, [Circe](https://github.com/c
 the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-json-circe" % "0.7.9"
+"com.softwaremill.tapir" %% "tapir-json-circe" % "0.8.1"
 ```
 
 Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.html)):
@@ -31,7 +31,7 @@ val bookInput: EndpointIO[Book] = jsonBody[Book]
 ```
 
 To add support for other JSON libraries, see the 
-[sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/tapir/json/circe/JsonCirce.scala) 
+[sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/tapir/json/circe/TapirJsonCirce.scala) 
 for the Circe codec (which is just a couple of lines of code).
 
 ## Schemas
