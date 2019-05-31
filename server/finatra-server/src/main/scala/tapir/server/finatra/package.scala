@@ -97,10 +97,10 @@ package object finatra {
       val p = input
         .asVectorOfBasicInputs()
         .collect {
-          case segment: EndpointInput.PathSegment => segment.show
-          case PathCapture(_, Some(name), _)      => s"/:$name"
-          case PathCapture(_, _, _)               => "/:param"
-          case EndpointInput.PathsCapture(_)      => "/:*"
+          case segment: EndpointInput.FixedPath => segment.show
+          case PathCapture(_, Some(name), _)    => s"/:$name"
+          case PathCapture(_, _, _)             => "/:param"
+          case EndpointInput.PathsCapture(_)    => "/:*"
         }
         .mkString
       if (p.isEmpty) "/:*" else p

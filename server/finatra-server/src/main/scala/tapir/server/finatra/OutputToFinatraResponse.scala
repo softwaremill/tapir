@@ -65,11 +65,6 @@ object OutputToFinatraResponse {
           case (EndpointOutput.StatusCode(), i) =>
             finatraResponse.copy(status = Status(vs(i).asInstanceOf[Int]))
 
-          case (EndpointOutput.StatusFrom(io, default, _, when), i) =>
-            val v = vs(i)
-            val sc = when.find(_._1.matches(v)).map(_._2).getOrElse(default)
-            apply(io, v).copy(status = Status(sc))
-
           case (EndpointOutput.Mapped(wrapped, _, g, _), i) =>
             apply(wrapped, g(vs(i)), Some(finatraResponse))
         }

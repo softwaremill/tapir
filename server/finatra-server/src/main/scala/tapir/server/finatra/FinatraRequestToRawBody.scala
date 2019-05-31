@@ -1,5 +1,5 @@
 package tapir.server.finatra
-import java.io.{ByteArrayInputStream, File, FileOutputStream}
+import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
@@ -12,7 +12,6 @@ import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
-  Defaults,
   FileValueType,
   InputStreamValueType,
   MultipartValueType,
