@@ -34,7 +34,7 @@ case class Unknown(code: Int, msg: String) extends ErrorInfo
 val baseEndpoint = endpoint.errorOut(
   oneOf(
     statusMapping(StatusCodes.NotFound, jsonBody[NotFound].description("not found")),
-    statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+    statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized]),
     statusDefaultMapping(jsonBody[Unknown].description("unknown"))
   )
 )
@@ -56,10 +56,10 @@ val e1: Endpoint[Unit, Either[String, Book], Nothing] = endpoint
 val e2: Endpoint[Unit, Either[ErrorInfo, Book], Nothing] = endpoint
   .out(either(
     statusCode(200) -> jsonBody[Book],
-    otherwise -> oneOf[ErrorInfo]( // otherwise in a static i/o which always matches
-      statusCode(404) -> jsonBody[BookNotFound], // BookNotFound extends ErrorInfo
-      statusCode(403) -> jsonBody[NotAuthorizedToAddBook],
-      statusCode(400) -> jsonBody[InvalidParameters]
+    otherwise -> oneOf[ErrorInfo]( 
+      statusCode(404) -> jsonBody[NotFound], 
+      statusCode(403) -> jsonBody[Unauthorized],
+      statusCode(400) -> jsonBody[Unknown]
     )))
 ```
 
