@@ -208,7 +208,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
       .send()
       .map { r: Response[String] =>
-        // TODO: Properly parse the multipart response
+        // TODO(https://github.com/softwaremill/tapir/issues/116): Properly parse the multipart response
         r.unsafeBody should include("name=\"fruit\"")
         r.unsafeBody should include("pineapple apple")
         r.unsafeBody should include("name=\"amount\"")
@@ -220,7 +220,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     (fd: FruitData) =>
       pureResult(
         FruitData(Part(writeToFile(readFromFile(fd.data.body).reverse)).header("X-Auth", fd.data.header("X-Auth").toString)).asRight[Unit]
-      )
+    )
   ) { baseUri =>
     val file = writeToFile("peach mario")
     sttp
