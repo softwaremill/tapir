@@ -85,4 +85,5 @@ which is a slight extension of the above.
 * [Clients: sttp interpreter](sttp.md)
 * [Documentation: openapi interpreter](openapi.md)
 * [Create your own tapir](mytapir.md)
+* [Design notes](design.md)
 * [Contributing](contributing.md)
