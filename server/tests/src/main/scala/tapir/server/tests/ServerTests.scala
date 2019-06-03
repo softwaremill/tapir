@@ -332,6 +332,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         sttp.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCodes.Accepted)
   }
 
+  testServer(in_string_out_status_from_string_one_empty)(
+    (v: String) => pureResult((if (v == "apple") Right("x") else Left(())).asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCodes.Accepted)
+  }
+
   testServer(in_extract_request_out_string)((v: String) => pureResult(v.asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri").send().map(_.unsafeBody shouldBe "GET") >>
       sttp.post(uri"$baseUri").send().map(_.unsafeBody shouldBe "POST")

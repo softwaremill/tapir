@@ -85,6 +85,11 @@ trait Tapir extends TapirDerivedInputs {
     StatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)
   def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(None, implicitly[ClassTag[O]], output)
 
+  /**
+    * An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
+    */
+  def emptyOutput: EndpointOutput[Unit] = EndpointOutput.Multiple(Vector.empty)
+
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 
   val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =

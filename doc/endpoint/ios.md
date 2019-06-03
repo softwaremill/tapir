@@ -141,11 +141,13 @@ sealed trait ErrorInfo
 case class NotFound(what: String) extends ErrorInfo
 case class Unauthorized(realm: String) extends ErrorInfo
 case class Unknown(code: Int, msg: String) extends ErrorInfo
+case object NoContent extends ErrorInfo
 
 val baseEndpoint = endpoint.errorOut(
   oneOf(
     statusMapping(StatusCodes.NotFound, jsonBody[NotFound].description("not found")),
     statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+    statusMapping(StatusCodes.NoContent, emptyOutput.map(_ => NoContent)(_ => ())),
     statusDefaultMapping(jsonBody[Unknown].description("unknown"))
   )
 )

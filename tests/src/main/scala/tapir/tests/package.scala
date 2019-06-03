@@ -135,6 +135,17 @@ package object tests {
         )
       )
 
+  val in_string_out_status_from_string_one_empty: Endpoint[String, Unit, Either[Unit, String], Nothing] =
+    endpoint
+      .in(query[String]("fruit"))
+      .out(
+        oneOf[Either[Unit, String]](
+          // a/b is used instead of value because of scala 2.11
+          statusMapping(StatusCodes.Accepted, emptyOutput.map(Left(_))(_.a)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.b))
+        )
+      )
+
   val in_string_out_status: Endpoint[String, Unit, StatusCode, Nothing] =
     endpoint.in(query[String]("fruit")).out(statusCode)
 
