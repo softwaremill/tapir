@@ -70,6 +70,8 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
 
     if (body.isDefined || headers.nonEmpty) {
       Some(Response(description, headers.toListMap, content))
+    } else if (outputs.nonEmpty) {
+      Some(Response("", ListMap.empty, ListMap.empty))
     } else {
       None
     }

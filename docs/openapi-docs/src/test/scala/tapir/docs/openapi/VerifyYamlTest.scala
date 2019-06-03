@@ -324,6 +324,19 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  // #118
+  test("use fixed status code output in response if it's the only output") {
+    val expectedYaml = loadYaml("expected_fixed_status_code_2.yml")
+
+    val actualYaml = endpoint
+      .out(statusCode(StatusCodes.NoContent))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
@@ -353,3 +366,11 @@ sealed trait GenericEntity[T]
 case class GenericPerson[T](data: T) extends GenericEntity[T]
 
 case class ObjectWithList(data: List[FruitAmount])
+
+object Robot {
+  case class Update(name: String)
+}
+
+object Nail {
+  case class Update(size: Int)
+}
