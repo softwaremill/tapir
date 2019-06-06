@@ -110,6 +110,6 @@ trait TapirDerivedInputs { this: Tapir =>
           .flatMap(_.split(",").headOption)
           .orElse(request.header("Remote-Address"))
           .orElse(request.header("X-Real-Ip"))
-          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.toString)))
+          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
     )
 }
