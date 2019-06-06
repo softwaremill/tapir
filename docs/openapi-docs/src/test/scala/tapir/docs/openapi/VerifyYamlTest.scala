@@ -366,11 +366,3 @@ sealed trait GenericEntity[T]
 case class GenericPerson[T](data: T) extends GenericEntity[T]
 
 case class ObjectWithList(data: List[FruitAmount])
-
-object Robot {
-  case class Update(name: String)
-}
-
-object Nail {
-  case class Update(size: Int)
-}
