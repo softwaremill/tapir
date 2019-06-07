@@ -21,7 +21,7 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.7"
 
 val http4sVersion = "0.20.1"
 val circeVersion = "0.11.1"
-val sttpVersion = "1.5.17"
+val sttpVersion = "1.5.18"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
