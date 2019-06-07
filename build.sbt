@@ -192,7 +192,8 @@ lazy val playground: Project = (project in file("playground"))
       "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC5",
       "org.typelevel" %% "cats-effect" % "1.3.1",
       "org.webjars" % "swagger-ui" % "3.22.2",
-      "io.swagger" % "swagger-annotations" % "1.5.22"
+      "io.swagger" % "swagger-annotations" % "1.5.22",
+      "org.http4s" %% "http4s-dsl" % http4sVersion
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
