@@ -28,7 +28,7 @@ object ZioExample extends App {
     }
   }
 
-  //
+  // Or, using server logic:
 
   val petServerEndpoint = petEndpoint.zioServerLogic { petId =>
     if (petId == 35) {
