@@ -1,5 +1,7 @@
 package tapir.generic
 
+import java.math.{BigDecimal => JBigDecimal}
+
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
 import tapir.{Schema, SchemaFor}
@@ -23,6 +25,8 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[Float]].schema shouldBe SNumber
     implicitly[SchemaFor[Double]].schema shouldBe SNumber
     implicitly[SchemaFor[Boolean]].schema shouldBe SBoolean
+    implicitly[SchemaFor[BigDecimal]].schema shouldBe SNumber
+    implicitly[SchemaFor[JBigDecimal]].schema shouldBe SNumber
   }
 
   it should "find schema for value classes" in {
