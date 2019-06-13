@@ -19,7 +19,7 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
 
-val http4sVersion = "0.20.1"
+val http4sVersion = "0.20.2"
 val circeVersion = "0.11.1"
 val sttpVersion = "1.5.19"
 
