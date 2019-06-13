@@ -65,7 +65,7 @@ lazy val tests: Project = (project in file("tests"))
     publishArtifact := false,
     libraryDependencies ++= Seq(
       scalaTest,
-      "com.softwaremill.macwire" %% "macros" % "2.3.2" % "provided"
+      "com.softwaremill.macwire" %% "macros" % "2.3.3" % "provided"
     ),
     libraryDependencies ++= loggerDependencies
   )
