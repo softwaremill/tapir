@@ -167,6 +167,13 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
   )
   .dependsOn(core, clientTests % "test")
 
+lazy val generatedClient: Project = (project in file("client/generated-client"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-generated-client"
+  )
+  .dependsOn(core, clientTests % "test")
+
 // other
 
 lazy val playground: Project = (project in file("playground"))
