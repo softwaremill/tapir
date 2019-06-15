@@ -60,7 +60,9 @@ private def redirectToOath2(query: String): Route =
 
 private val swaggerVersion = {
   val p = new Properties()
-  p.load(getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties"))
+  val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
+  try p.load(pomProperties)
+  finally pomProperties.close()
   p.getProperty("version")
 }
 
