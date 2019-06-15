@@ -12,7 +12,7 @@ To make requests using an endpoint definition using [sttp](https://github.com/so
 import tapir.client.sttp._
 ```
 
-This adds the `toRequest(Uri)` extension method to any `Endpoint` instance which, given the given base URI returns a 
+This adds the `toSttpRequest(Uri)` extension method to any `Endpoint` instance which, given the given base URI returns a 
 function:
 
 ```scala
