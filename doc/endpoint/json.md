@@ -30,6 +30,33 @@ case class Book(author: String, title: String, year: Int)
 val bookInput: EndpointIO[Book] = jsonBody[Book]
 ```
 
+Circe lets you select an instance of `io.circe.Printer` to configure the way JSON objects are rendered. By default Tapir uses `Printer.nospaces`, which would render
+```scala
+Json.obj(
+  "key1" -> Json.fromString("present"),
+  "key2" -> Json.Null
+)
+```
+as
+```
+{"key1":"present","key2":null}
+```
+Suppose we would instead want to omit `null`-values from the object and pretty-print it. 
+You can configure this by overriding the `jsonPrinter` in `tapir.circe.json.TapirJsonCirce`:
+```scala
+object MyTapirJsonCirce extends TapirJsonCirce {
+  override def jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
+}
+
+import MyTapirJsonCirce._
+```
+Now the above JSON object will render as 
+```
+{
+  "key1":"present"
+}
+```
+
 To add support for other JSON libraries, see the 
 [sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/tapir/json/circe/TapirJsonCirce.scala) 
 for the Circe codec (which is just a couple of lines of code).
