@@ -59,4 +59,20 @@ class RichToFutureOfEitherFunctionTest extends FunSuite with Matchers with Scala
     // then
     result shouldBe Left(Error("e2"))
   }
+
+  test("should compose two 1-arg functions") {
+    // given
+    def f1(p: String): Future[Either[Error, User]] = Future {
+      Right(User(p))
+    }
+    def f2(u: User): Future[Either[Error, Result]] = Future {
+      Right(Result(u.toString))
+    }
+
+    // when
+    val result = (f1 _).andThenFirstE(f2).apply("john").futureValue
+
+    // then
+    result shouldBe Right(Result("User(john)"))
+  }
 }
