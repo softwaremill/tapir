@@ -25,8 +25,8 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[Float]].schema shouldBe SNumber
     implicitly[SchemaFor[Double]].schema shouldBe SNumber
     implicitly[SchemaFor[Boolean]].schema shouldBe SBoolean
-    implicitly[SchemaFor[BigDecimal]].schema shouldBe SNumber
-    implicitly[SchemaFor[JBigDecimal]].schema shouldBe SNumber
+    implicitly[SchemaFor[BigDecimal]].schema shouldBe SString
+    implicitly[SchemaFor[JBigDecimal]].schema shouldBe SString
   }
 
   it should "find schema for value classes" in {
@@ -177,6 +177,41 @@ class SchemaForTest extends FlatSpec with Matchers {
         )
       ),
       None
+    )
+  }
+
+  it should "find the right schema for a case class with simple types" in {
+    // given
+    case class Test1(
+        f1: String,
+        f2: Byte,
+        f3: Short,
+        f4: Int,
+        f5: Long,
+        f6: Float,
+        f7: Double,
+        f8: Boolean,
+        f9: BigDecimal,
+        f10: JBigDecimal
+    )
+    val schema = implicitly[SchemaFor[Test1]]
+
+    // when
+    schema.schema shouldBe SProduct(
+      SObjectInfo("tapir.generic.SchemaForTest.<local SchemaForTest>.Test1"),
+      List(
+        ("f1", SString),
+        ("f2", SInteger),
+        ("f3", SInteger),
+        ("f4", SInteger),
+        ("f5", SInteger),
+        ("f6", SNumber),
+        ("f7", SNumber),
+        ("f8", SBoolean),
+        ("f9", SString),
+        ("f10", SString)
+      ),
+      List("f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10")
     )
   }
 }

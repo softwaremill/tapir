@@ -41,8 +41,8 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   implicit val schemaForLocalDateTime: SchemaFor[LocalDateTime] = SchemaFor(SDateTime)
   implicit val schemaForLocalDate: SchemaFor[LocalDate] = SchemaFor(SDate)
   implicit val schemaForUUID: SchemaFor[UUID] = SchemaFor(SString)
-  implicit val schemaForBigDecimal: SchemaFor[BigDecimal] = SchemaFor(SNumber)
-  implicit val schemaForJBigDecimal: SchemaFor[JBigDecimal] = SchemaFor(SNumber)
+  implicit val schemaForBigDecimal: SchemaFor[BigDecimal] = SchemaFor(SString)
+  implicit val schemaForJBigDecimal: SchemaFor[JBigDecimal] = SchemaFor(SString)
 
   implicit def schemaForOption[T: SchemaFor]: SchemaFor[Option[T]] = new SchemaFor[Option[T]] {
     override def schema: Schema = implicitly[SchemaFor[T]].schema

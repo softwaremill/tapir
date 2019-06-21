@@ -1,7 +1,6 @@
 package tapir.generic
 
 import java.io.File
-import java.math.{BigDecimal => JBigDecimal}
 
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
@@ -161,41 +160,6 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
 
     codec.encode(Test1(Part("f1", None), 12)) shouldBe List(Part("f2", "12"))
     codec.decode(List(Part("f2", "12"))) shouldBe DecodeResult.Value(Test1(Part("f1", None), 12))
-  }
-
-  it should "use the right schema for a case class with simple types" in {
-    // given
-    case class Test1(
-        f1: String,
-        f2: Byte,
-        f3: Short,
-        f4: Int,
-        f5: Long,
-        f6: Float,
-        f7: Double,
-        f8: Boolean,
-        f9: BigDecimal,
-        f10: JBigDecimal
-    )
-    val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
-
-    // when
-    codec.meta.schema shouldBe SProduct(
-      SObjectInfo("tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
-      List(
-        ("f1", SString),
-        ("f2", SInteger),
-        ("f3", SInteger),
-        ("f4", SInteger),
-        ("f5", SInteger),
-        ("f6", SNumber),
-        ("f7", SNumber),
-        ("f8", SBoolean),
-        ("f9", SNumber),
-        ("f10", SNumber)
-      ),
-      List("f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10")
-    )
   }
 
   private def toPartData(parts: Seq[RawPart]): Seq[(String, Any)] = parts.map(p => (p.name, p.body))

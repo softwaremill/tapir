@@ -69,8 +69,8 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   implicit val doublePlainCodec: PlainCodec[Double] = plainCodec[Double](_.toDouble, Schema.SNumber)
   implicit val booleanPlainCodec: PlainCodec[Boolean] = plainCodec[Boolean](_.toBoolean, Schema.SBoolean)
   implicit val uuidPlainCodec: PlainCodec[UUID] = plainCodec[UUID](UUID.fromString, Schema.SString)
-  implicit val bigDecimalPlainCodec: PlainCodec[BigDecimal] = plainCodec[BigDecimal](BigDecimal(_), Schema.SNumber)
-  implicit val javaBigDecimalPlainCodec: PlainCodec[JBigDecimal] = plainCodec[JBigDecimal](new JBigDecimal(_), Schema.SNumber)
+  implicit val bigDecimalPlainCodec: PlainCodec[BigDecimal] = plainCodec[BigDecimal](BigDecimal(_), Schema.SString)
+  implicit val javaBigDecimalPlainCodec: PlainCodec[JBigDecimal] = plainCodec[JBigDecimal](new JBigDecimal(_), Schema.SString)
 
   def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, Schema.SString, charset)
 
