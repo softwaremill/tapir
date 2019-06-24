@@ -81,4 +81,30 @@ class EndpointTest extends FlatSpec with Matchers {
       testShowEndpoint.show shouldBe expectedShowResult
     }
   }
+
+  val renderTestData = List(
+    (endpoint, "/"),
+    (endpoint.in("p1"), "/p1"),
+    (endpoint.in("p1" / "p2"), "/p1/p2"),
+    (endpoint.in("p1" / path[String]), "/p1/{param1}"),
+    (endpoint.in("p1" / path[String].name("par")), "/p1/{par}"),
+    (endpoint.in("p1" / query[String]("par")), "/p1?par={par}"),
+    (endpoint.in("p1" / query[String]("par1") / query[String]("par2")), "/p1?par1={par1}&par2={par2}"),
+    (endpoint.in("p1" / path[String].name("par1") / query[String]("par2")), "/p1/{par1}?par2={par2}")
+  )
+
+  for ((testEndpoint, expectedRenderPath) <- renderTestData) {
+    s"renderPath for ${testEndpoint.showDetail}" should s"be $expectedRenderPath" in {
+      testEndpoint.renderPath() shouldBe expectedRenderPath
+    }
+  }
+
+  "renderPath" should "keep param count in render functions" in {
+    val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
+    testEndpoint.renderPath(
+      renderPathComponent = (index, _) => s"{param$index}",
+      renderQueryComponent = Some((index, query) => s"${query.name}={param$index}")
+    ) shouldBe "/p1/{param1}?param={param2}"
+  }
+
 }

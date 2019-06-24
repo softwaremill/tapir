@@ -21,13 +21,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     val pathComponents = namedPathComponents(inputs)
     val method = e.input.method.getOrElse(Method.GET)
 
-    val pathComponentsForId = pathComponents.map(_.fold(identity, identity))
-    val defaultId = options.operationIdGenerator(pathComponentsForId, method)
-
-    val pathComponentForPath = pathComponents.map {
-      case Left(p)  => s"{$p}"
-      case Right(p) => p
-    }
+    val defaultId = options.operationIdGenerator(pathComponents, method)
 
     val operation = Some(endpointToOperation(defaultId, e, inputs))
     val pathItem = PathItem(
@@ -45,7 +39,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       parameters = List.empty
     )
 
-    ("/" + pathComponentForPath.mkString("/"), pathItem)
+    (e.renderPath(renderQueryComponent = None), pathItem)
   }
 
   private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_]]): Operation = {
@@ -115,21 +109,18 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     )
   }
 
-  /**
-    * @return `Left` if the component is a capture, `Right` if it is a segment
-    */
-  private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[Either[String, String]] = {
+  private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
     inputs
       .collect {
         case EndpointInput.PathCapture(_, name, _) => Left(name)
         case EndpointInput.FixedPath(s)            => Right(s)
       }
-      .foldLeft((Vector.empty[Either[String, String]], 1)) {
+      .foldLeft((Vector.empty[String], 1)) {
         case ((acc, i), component) =>
           component match {
-            case Left(None)    => (acc :+ Left(s"param$i"), i + 1)
-            case Left(Some(p)) => (acc :+ Left(p), i)
-            case Right(p)      => (acc :+ Right(p), i)
+            case Left(None)    => (acc :+ s"param$i", i + 1)
+            case Left(Some(p)) => (acc :+ p, i)
+            case Right(p)      => (acc :+ p, i)
           }
       }
       ._1
