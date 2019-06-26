@@ -83,6 +83,7 @@ which is a slight extension of the above.
 * [Servers: common](server/common.md)
 * [Servers: debugging](server/debugging.md)
 * [Clients: sttp interpreter](sttp.md)
+* [Other interpreters](other_interpreters.md)
 * [Documentation: openapi interpreter](openapi.md)
 * [Create your own tapir](mytapir.md)
 * [FAQ](faq.md)
