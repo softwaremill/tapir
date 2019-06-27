@@ -61,7 +61,6 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   type JsonCodec[T] = Codec[T, MediaType.Json, String]
 
   implicit val stringPlainCodecUtf8: PlainCodec[String] = stringCodec(StandardCharsets.UTF_8)
-  implicit val textHtmlCodecUtf8 = stringPlainCodecUtf8.mediaType(MediaType.TextHtml())
   implicit val bytePlainCodec: PlainCodec[Byte] = plainCodec[Byte](_.toByte, Schema.SInteger)
   implicit val shortPlainCodec: PlainCodec[Short] = plainCodec[Short](_.toShort, Schema.SInteger)
   implicit val intPlainCodec: PlainCodec[Int] = plainCodec[Int](_.toInt, Schema.SInteger)
@@ -72,6 +71,8 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   implicit val uuidPlainCodec: PlainCodec[UUID] = plainCodec[UUID](UUID.fromString, Schema.SString)
   implicit val bigDecimalPlainCodec: PlainCodec[BigDecimal] = plainCodec[BigDecimal](BigDecimal(_), Schema.SString)
   implicit val javaBigDecimalPlainCodec: PlainCodec[JBigDecimal] = plainCodec[JBigDecimal](new JBigDecimal(_), Schema.SString)
+
+  implicit val textHtmlCodecUtf8: Codec[String, MediaType.TextHtml, String] = stringPlainCodecUtf8.mediaType(MediaType.TextHtml())
 
   def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, Schema.SString, charset)
 
