@@ -61,6 +61,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   type JsonCodec[T] = Codec[T, MediaType.Json, String]
 
   implicit val stringPlainCodecUtf8: PlainCodec[String] = stringCodec(StandardCharsets.UTF_8)
+  implicit val textHtmlCodecUtf8 = stringPlainCodecUtf8.mediaType(MediaType.TextHtml())
   implicit val bytePlainCodec: PlainCodec[Byte] = plainCodec[Byte](_.toByte, Schema.SInteger)
   implicit val shortPlainCodec: PlainCodec[Short] = plainCodec[Short](_.toShort, Schema.SInteger)
   implicit val intPlainCodec: PlainCodec[Int] = plainCodec[Int](_.toInt, Schema.SInteger)

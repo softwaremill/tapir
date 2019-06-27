@@ -44,6 +44,9 @@ trait Tapir extends TapirDerivedInputs {
   def stringBody(charset: Charset): EndpointIO.Body[String, MediaType.TextPlain, String] =
     EndpointIO.Body(CodecForOptional.fromCodec(Codec.stringCodec(charset)), EndpointIO.Info.empty)
 
+  val htmlBodyUtf8: EndpointIO.Body[String, MediaType.TextHtml, String] =
+    EndpointIO.Body(CodecForOptional.fromCodec(Codec.textHtmlCodecUtf8), EndpointIO.Info.empty)
+
   def plainBody[T](implicit codec: CodecForOptional[T, MediaType.TextPlain, _]): EndpointIO.Body[T, MediaType.TextPlain, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
   def jsonBody[T](implicit codec: CodecForOptional[T, MediaType.Json, _]): EndpointIO.Body[T, MediaType.Json, _] =
