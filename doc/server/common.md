@@ -82,10 +82,10 @@ conventions, that an endpoint is uniquely identified by the method and served pa
   malformed. A `400 Bad Request` response is returned if a query parameter, header or body is missing / decoding fails, 
   or if the decoding a path capture fails with an error (but not a "missing" decode result).
 
-This can be customised by providing an implicit instance of `tapir.server.DecodeFailureHandler`, which basing on the 
+This can be customised by providing an implicit instance of `tapir.server.DecodeFailureHandling`, which basing on the 
 request, failing input and failure description can decide, whether to return a "no match" or a specific response.
 
-Only the first failure is passed to the `DecodeFailureHandler`. Inputs are decoded in the following order: method, 
+Only the first failure is passed to the `DecodeFailureHandling`. Inputs are decoded in the following order: method, 
 path, query, header, body.
 
 ## Extracting common route logic
