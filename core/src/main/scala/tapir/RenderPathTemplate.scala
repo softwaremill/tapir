@@ -3,20 +3,20 @@ package tapir
 import tapir.EndpointInput.{PathCapture, Query}
 
 object RenderPathTemplate {
-  type PathParamRendering = (Int, PathCapture[_]) => String
-  type QueryParamRendering = (Int, Query[_]) => String
+  type RenderPathParam = (Int, PathCapture[_]) => String
+  type RenderQueryParam = (Int, Query[_]) => String
 
   object Defaults {
-    val path: PathParamRendering = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}")
-    val query: QueryParamRendering = (_, q) => s"${q.name}={${q.name}}"
+    val path: RenderPathParam = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}")
+    val query: RenderQueryParam = (_, q) => s"${q.name}={${q.name}}"
   }
 
-  def apply(e: Endpoint[_, _, _, _])(pathParamRendering: PathParamRendering, queryParamRendering: Option[QueryParamRendering]): String = {
+  def apply(e: Endpoint[_, _, _, _])(renderPathParam: RenderPathParam, renderQueryParam: Option[RenderQueryParam]): String = {
     import tapir.internal._
 
     val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
-    val (pathComponents, pathParamCount) = renderedPathComponents(inputs, pathParamRendering)
-    val queryComponents = queryParamRendering
+    val (pathComponents, pathParamCount) = renderedPathComponents(inputs, renderPathParam)
+    val queryComponents = renderQueryParam
       .map(renderedQueryComponents(inputs, _, pathParamCount))
       .map(_.mkString("&"))
       .getOrElse("")
@@ -26,7 +26,7 @@ object RenderPathTemplate {
 
   private def renderedPathComponents(
       inputs: Vector[EndpointInput.Basic[_]],
-      pathParamRendering: PathParamRendering
+      pathParamRendering: RenderPathParam
   ): (Vector[String], Int) =
     inputs.foldLeft((Vector.empty[String], 1)) {
       case ((acc, index), component) =>
@@ -38,9 +38,9 @@ object RenderPathTemplate {
     }
 
   private def renderedQueryComponents(
-      inputs: Vector[EndpointInput.Basic[_]],
-      queryParamRendering: QueryParamRendering,
-      pathParamCount: Int
+                                       inputs: Vector[EndpointInput.Basic[_]],
+                                       queryParamRendering: RenderQueryParam,
+                                       pathParamCount: Int
   ): Vector[String] =
     inputs
       .foldLeft((Vector.empty[String], pathParamCount)) {

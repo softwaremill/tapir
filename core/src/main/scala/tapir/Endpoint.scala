@@ -2,7 +2,7 @@ package tapir
 
 import tapir.EndpointInput.{FixedMethod, PathCapture, Query}
 import tapir.EndpointOutput.StatusMapping
-import tapir.RenderPathTemplate.{PathParamRendering, QueryParamRendering}
+import tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import tapir.model.Method
 import tapir.server.ServerEndpoint
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
@@ -126,10 +126,10 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     * returns `/p1/{param1}?par2={par2}`
     */
   def renderPathTemplate(
-      pathParamRendering: PathParamRendering = RenderPathTemplate.Defaults.path,
-      queryParamRendering: Option[QueryParamRendering] = Some(RenderPathTemplate.Defaults.query)
+      renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
+      renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query)
   ): String =
-    RenderPathTemplate(this)(pathParamRendering, queryParamRendering)
+    RenderPathTemplate(this)(renderPathParam, renderQueryParam)
 
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
 }

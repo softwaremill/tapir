@@ -102,8 +102,8 @@ class EndpointTest extends FlatSpec with Matchers {
   "renderPath" should "keep param count in render functions" in {
     val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
     testEndpoint.renderPathTemplate(
-      pathParamRendering = (index, _) => s"{par$index}",
-      queryParamRendering = Some((index, query) => s"${query.name}={par$index}")
+      renderPathParam = (index, _) => s"{par$index}",
+      renderQueryParam = Some((index, query) => s"${query.name}={par$index}")
     ) shouldBe "/p1/{par1}?param={par2}"
   }
 

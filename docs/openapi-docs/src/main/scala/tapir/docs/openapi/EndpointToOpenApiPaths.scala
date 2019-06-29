@@ -39,7 +39,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       parameters = List.empty
     )
 
-    (e.renderPathTemplate(queryParamRendering = None), pathItem)
+    (e.renderPathTemplate(renderQueryParam = None), pathItem)
   }
 
   private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_]]): Operation = {
