@@ -1,7 +1,8 @@
 package tapir
 
-import tapir.EndpointInput.FixedMethod
+import tapir.EndpointInput.{FixedMethod, PathCapture, Query}
 import tapir.EndpointOutput.StatusMapping
+import tapir.EndpointPathTemplate.{PathParamRendering, QueryParamRendering}
 import tapir.model.Method
 import tapir.server.ServerEndpoint
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
@@ -116,7 +117,73 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     */
   def showRaw: String = toString
 
+  /**
+    * Renders endpoint path, by default all parametrised path and query components are replaced by {param_name} or {paramN}, e.g. for
+    * {{{
+    * endpoint.in("p1" / path[String] / query[String]("par2"))
+    * }}}
+    * returns `/p1/{param1}?par2={par2}`
+    */
+  def renderPathTemplate(
+      pathParamRendering: PathParamRendering = EndpointPathTemplate.Defaults.path,
+      queryParamRendering: Option[QueryParamRendering] = Some(EndpointPathTemplate.Defaults.query)
+  ): String =
+    EndpointPathTemplate.renderPathTemplate(this)(pathParamRendering, queryParamRendering)
+
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
+}
+
+object EndpointPathTemplate {
+  type PathParamRendering = (Int, PathCapture[_]) => String
+  type QueryParamRendering = (Int, Query[_]) => String
+
+  object Defaults {
+    val path: PathParamRendering = (index, pc) => pc.name.map(name => s"{$name}").getOrElse(s"{param$index}")
+    val query: QueryParamRendering = (_, q) => s"${q.name}={${q.name}}"
+  }
+
+  def renderPathTemplate(
+      e: Endpoint[_, _, _, _]
+  )(pathParamRendering: PathParamRendering, queryParamRendering: Option[QueryParamRendering]): String = {
+    import tapir.internal._
+
+    val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
+    val (pathComponents, pathParamCount) = renderedPathComponents(inputs, pathParamRendering)
+    val queryComponents = queryParamRendering
+      .map(renderedQueryComponents(inputs, _, pathParamCount))
+      .map(_.mkString("&"))
+      .getOrElse("")
+
+    "/" + pathComponents.mkString("/") + (if (queryComponents.isEmpty) "" else "?" + queryComponents)
+  }
+
+  private def renderedPathComponents(
+      inputs: Vector[EndpointInput.Basic[_]],
+      pathParamRendering: PathParamRendering
+  ): (Vector[String], Int) =
+    inputs.foldLeft((Vector.empty[String], 1)) {
+      case ((acc, index), component) =>
+        component match {
+          case p: EndpointInput.PathCapture[_] => (acc :+ pathParamRendering(index, p), index + 1)
+          case EndpointInput.FixedPath(s)      => (acc :+ s, index)
+          case _                               => (acc, index)
+        }
+    }
+
+  private def renderedQueryComponents(
+      inputs: Vector[EndpointInput.Basic[_]],
+      queryParamRendering: QueryParamRendering,
+      pathParamCount: Int
+  ): Vector[String] =
+    inputs
+      .foldLeft((Vector.empty[String], pathParamCount)) {
+        case ((acc, index), component) =>
+          component match {
+            case q: EndpointInput.Query[_] => (acc :+ queryParamRendering(index, q), index + 1)
+            case _                         => (acc, index)
+          }
+      }
+      ._1
 }
 
 case class EndpointInfo(name: Option[String], summary: Option[String], description: Option[String], tags: Vector[String]) {
