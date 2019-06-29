@@ -38,9 +38,9 @@ object RenderPathTemplate {
     }
 
   private def renderedQueryComponents(
-                                       inputs: Vector[EndpointInput.Basic[_]],
-                                       queryParamRendering: RenderQueryParam,
-                                       pathParamCount: Int
+      inputs: Vector[EndpointInput.Basic[_]],
+      queryParamRendering: RenderQueryParam,
+      pathParamCount: Int
   ): Vector[String] =
     inputs
       .foldLeft((Vector.empty[String], pathParamCount)) {
