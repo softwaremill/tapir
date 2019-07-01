@@ -16,7 +16,9 @@ import tapir.json.circe._
 
 This will bring into scope `Codec`s which, given an in-scope circe `Encoder`/`Decoder` and a `SchemaFor`, will create a
 codec using the json media type. Circe includes a couple of approaches to generating encoders/decoders (manual,
-semi-auto and auto), so you may choose whatever suits you.
+semi-auto and auto), so you may choose whatever suits you. 
+
+Note that when using Circe's auto derivation, any encoders/decoders for custom types must be in scope as well.
 
 For example, to automatically generate a JSON codec for a case class:
 
