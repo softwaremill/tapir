@@ -26,7 +26,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 new Http4sRequestToRawBody(serverOptions).apply(req.body, codec.meta.rawValueType, req.charset, req).map { v =>
                   codec.safeDecode(DecodeInputs.rawBodyValueToOption(v, codec.meta.isOptional)) match {
-                    case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
+                    case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
                     case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                   }
                 }
@@ -38,7 +38,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       }
 
       def valuesToResponse(values: DecodeInputsResult.Values): F[Response[F]] = {
-        val i = SeqToParams(InputValues(se.endpoint.input, values.values)).asInstanceOf[I]
+        val i = SeqToParams(InputValues(se.endpoint.input, values)).asInstanceOf[I]
         se.logic(i)
           .map {
             case Right(result) => outputToResponse(ServerDefaults.successStatusCode, se.endpoint.output, result)

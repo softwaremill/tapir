@@ -1,6 +1,6 @@
 package tapir
 
-import tapir.EndpointInput.{FixedMethod, PathCapture, Query}
+import tapir.EndpointInput.FixedMethod
 import tapir.EndpointOutput.StatusMapping
 import tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import tapir.model.Method

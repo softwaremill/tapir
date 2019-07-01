@@ -1,15 +1,40 @@
 package tapir.internal.server
 
 import tapir.model.{Cookie, Method, MultiQueryParams, ServerRequest}
-import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
+import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, MediaType}
 import tapir.internal._
 
 import scala.annotation.tailrec
 
 trait DecodeInputsResult
 object DecodeInputsResult {
-  case class Values(values: Map[EndpointInput.Basic[_], Any], bodyInput: Option[EndpointIO.Body[_, _, _]]) extends DecodeInputsResult {
-    def value(i: EndpointInput.Basic[_], v: Any): Values = copy(values = values + (i -> v))
+
+  /**
+    * @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint.
+    */
+  case class Values(basicInputsValues: Vector[Any], bodyInputWithIndex: Option[(EndpointIO.Body[_, _, _], Int)])
+      extends DecodeInputsResult {
+
+    def addBodyInput(input: EndpointIO.Body[_, _ <: MediaType, _]): Values = {
+      if (bodyInputWithIndex.isDefined) {
+        throw new IllegalStateException(s"Double body definition: $input")
+      }
+
+      val bodyIndex = basicInputsValues.size
+      // we're using null as a placeholder for the future body value (which will be determined by interpreter-specific code)
+      copy(bodyInputWithIndex = Some((input, bodyIndex)), basicInputsValues = basicInputsValues :+ null)
+    }
+    def bodyInput: Option[EndpointIO.Body[_, _, _]] = bodyInputWithIndex.map(_._1)
+
+    /**
+      * Sets the value of the body input, once it is known, if a body input is defined.
+      */
+    def setBodyInputValue(v: Any): Values = bodyInputWithIndex match {
+      case Some((_, i)) => copy(basicInputsValues = basicInputsValues.updated(i, v))
+      case None         => this
+    }
+
+    def addBasicInputValue(v: Any): Values = copy(basicInputsValues = basicInputsValues :+ v)
   }
   case class Failure(input: EndpointInput.Basic[_], failure: DecodeFailure) extends DecodeInputsResult
 }
@@ -61,7 +86,7 @@ object DecodeInputs {
           case Some(failure) => (failure, ctx)
         },
       apply(otherInputs, _, _)
-    )(DecodeInputsResult.Values(Map(), None), ctx)._1
+    )(DecodeInputsResult.Values(Vector.empty, None), ctx)._1
   }
 
   private def apply(
@@ -88,13 +113,13 @@ object DecodeInputs {
         ctx.nextPathSegment match {
           case (Some(s), ctx2) =>
             codec.safeDecode(s) match {
-              case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx2)
+              case DecodeResult.Value(v)  => apply(inputsTail, values.addBasicInputValue(v), ctx2)
               case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
             }
           case (None, _) => (DecodeInputsResult.Failure(input, DecodeResult.Missing), ctx)
         }
 
-      case (input @ EndpointInput.PathsCapture(_)) +: inputsTail =>
+      case EndpointInput.PathsCapture(_) +: inputsTail =>
         @tailrec
         def remainingPath(acc: Vector[String], c: DecodeInputsContext): (Vector[String], DecodeInputsContext) = c.nextPathSegment match {
           case (Some(s), c2) => remainingPath(acc :+ s, c2)
@@ -103,43 +128,43 @@ object DecodeInputs {
 
         val (ps, ctx2) = remainingPath(Vector.empty, ctx)
 
-        apply(inputsTail, values.value(input, ps), ctx2)
+        apply(inputsTail, values.addBasicInputValue(ps), ctx2)
 
       case (input @ EndpointInput.Query(name, codec, _)) +: inputsTail =>
         codec.safeDecode(ctx.queryParameter(name).toList) match {
-          case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
+          case DecodeResult.Value(v)  => apply(inputsTail, values.addBasicInputValue(v), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
 
-      case (input @ EndpointInput.QueryParams(_)) +: inputsTail =>
-        apply(inputsTail, values.value(input, MultiQueryParams.fromMultiMap(ctx.queryParameters)), ctx)
+      case EndpointInput.QueryParams(_) +: inputsTail =>
+        apply(inputsTail, values.addBasicInputValue(MultiQueryParams.fromMultiMap(ctx.queryParameters)), ctx)
 
       case (input @ EndpointInput.Cookie(name, codec, _)) +: inputsTail =>
         val allCookies = DecodeResult.sequence(ctx.headers.filter(_._1 == Cookie.HeaderName).map(p => Cookie.parse(p._2)).toList)
         val cookieValue =
           allCookies.map(_.flatten.find(_.name == name)).flatMap(cookie => codec.safeDecode(cookie.map(_.value)))
         cookieValue match {
-          case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
+          case DecodeResult.Value(v)  => apply(inputsTail, values.addBasicInputValue(v), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
 
       case (input @ EndpointIO.Header(name, codec, _)) +: inputsTail =>
         codec.safeDecode(ctx.header(name)) match {
-          case DecodeResult.Value(v)  => apply(inputsTail, values.value(input, v), ctx)
+          case DecodeResult.Value(v)  => apply(inputsTail, values.addBasicInputValue(v), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
 
-      case (input @ EndpointIO.Headers(_)) +: inputsTail =>
-        apply(inputsTail, values.value(input, ctx.headers), ctx)
+      case EndpointIO.Headers(_) +: inputsTail =>
+        apply(inputsTail, values.addBasicInputValue(ctx.headers), ctx)
 
-      case (input @ EndpointInput.ExtractFromRequest(f)) +: inputsTail =>
-        apply(inputsTail, values.value(input, f(ctx.serverRequest)), ctx)
+      case EndpointInput.ExtractFromRequest(f) +: inputsTail =>
+        apply(inputsTail, values.addBasicInputValue(f(ctx.serverRequest)), ctx)
 
       case (input @ EndpointIO.Body(_, _)) +: inputsTail =>
-        apply(inputsTail, values.copy(bodyInput = Some(input)), ctx)
+        apply(inputsTail, values.addBodyInput(input), ctx)
 
-      case (input @ EndpointIO.StreamBodyWrapper(_)) +: inputsTail =>
-        apply(inputsTail, values.value(input, ctx.bodyStream), ctx)
+      case EndpointIO.StreamBodyWrapper(_) +: inputsTail =>
+        apply(inputsTail, values.addBasicInputValue(ctx.bodyStream), ctx)
     }
   }
 
