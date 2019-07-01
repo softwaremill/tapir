@@ -11,10 +11,12 @@ object RenderPathTemplate {
     val query: RenderQueryParam = (_, q) => s"${q.name}={${q.name}}"
   }
 
-  def apply(e: Endpoint[_, _, _, _])(renderPathParam: RenderPathParam, renderQueryParam: Option[RenderQueryParam]): String = {
+  def apply(
+      e: Endpoint[_, _, _, _]
+  )(renderPathParam: RenderPathParam, renderQueryParam: Option[RenderQueryParam], includeAuth: Boolean): String = {
     import tapir.internal._
 
-    val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
+    val inputs = e.input.asVectorOfBasicInputs(includeAuth)
     val (pathComponents, pathParamCount) = renderedPathComponents(inputs, renderPathParam)
     val queryComponents = renderQueryParam
       .map(renderedQueryComponents(inputs, _, pathParamCount))

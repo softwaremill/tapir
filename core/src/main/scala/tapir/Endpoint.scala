@@ -124,12 +124,15 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     * endpoint.in("p1" / path[String] / query[String]("par2"))
     * }}}
     * returns `/p1/{param1}?par2={par2}`
+    *
+    * @param includeAuth Should authentication inputs be included in the result.
     */
   def renderPathTemplate(
       renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
-      renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query)
+      renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
+      includeAuth: Boolean = true
   ): String =
-    RenderPathTemplate(this)(renderPathParam, renderQueryParam)
+    RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
 
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
 }
