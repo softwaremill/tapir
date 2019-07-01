@@ -59,6 +59,15 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/fruit/orange/amount/20").send().map(_.body shouldBe Right("orange 20"))
   }
 
+  testServer(in_two_path_capture, "capturing two path parameters with the same specification") {
+    case (a: Int, b: Int) => pureResult(Right((a, b)))
+  } { baseUri =>
+    sttp.get(uri"$baseUri/in/12/23").send().map { response =>
+      response.header("a") shouldBe Some("12")
+      response.header("b") shouldBe Some("23")
+    }
+  }
+
   testServer(in_string_out_string)((b: String) => pureResult(b.asRight[Unit])) { baseUri =>
     sttp.post(uri"$baseUri/api/echo").body("Sweet").send().map(_.body shouldBe Right("Sweet"))
   }

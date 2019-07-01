@@ -22,6 +22,9 @@ package object tests {
   val in_path_path_out_string: Endpoint[(String, Int), Unit, String, Nothing] =
     endpoint.in("fruit" / path[String] / "amount" / path[Int]).out(stringBody)
 
+  val in_two_path_capture: Endpoint[(Int, Int), Unit, (Int, Int), Nothing] = endpoint
+    .in("in" / path[Int] / path[Int])
+    .out(header[Int]("a") and header[Int]("b"))
   val in_string_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
 
   val in_mapped_query_out_string: Endpoint[List[Char], Unit, String, Nothing] =
