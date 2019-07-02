@@ -108,6 +108,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
+  testServer(in_header_before_path, "Header input before path capture input"){ case (str: String, i: Int) => pureResult((i, str).asRight[Unit])} { baseUri =>
+    sttp.get(uri"$baseUri/12").header("SomeHeader", "hello").send().map { response =>
+      response.body shouldBe Right("hello")
+      response.header("IntHeader") shouldBe Some(12)
+    }
+  }
+
   testServer(in_json_out_json)((fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " banana", fa.amount * 2).asRight[Unit])) { baseUri =>
     sttp
       .post(uri"$baseUri/api/echo")

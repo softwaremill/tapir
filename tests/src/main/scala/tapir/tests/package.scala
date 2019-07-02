@@ -48,6 +48,12 @@ package object tests {
     .in(query[String]("fruit"))
     .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
 
+  val in_header_before_path: Endpoint[(String, Int), Unit, (Int, String), Nothing] = endpoint
+    .in(header[String]("SomeHeader"))
+    .in(path[Int])
+    .out(header[Int]("IntHeader") and stringBody)
+
+
   val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
     endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
 
