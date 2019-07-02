@@ -23,6 +23,12 @@ val docs: OpenAPI = booksListing.toOpenAPI("My Bookshop", "1.0")
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
 class structure such as the `OpenAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
 
+Multiple endpoints can be converted to an `OpenAPI` instance by calling the extension method on a list of endpoints:
+
+```scala
+List(addBook, booksListing, booksListingByGenre).toOpenAPI("My Bookshop", "1.0")
+```
+
 The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala
