@@ -53,7 +53,6 @@ package object tests {
     .in(path[Int])
     .out(header[Int]("IntHeader") and stringBody)
 
-
   val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
     endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
 

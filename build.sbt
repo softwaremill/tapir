@@ -5,7 +5,7 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalaVersion := scala2_12,
   scalafmtOnCompile := true,
   crossScalaVersions := Seq(scala2_11, scala2_12),
-  scalacOptions ++= 
+  scalacOptions ++=
     (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, 11)) =>
         Seq(
@@ -22,6 +22,7 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
 val http4sVersion = "0.20.3"
 val circeVersion = "0.11.1"
 val sttpVersion = "1.6.0"
+val playVersion = "2.7.4"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -32,18 +33,21 @@ lazy val loggerDependencies = Seq(
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
   .settings(publishArtifact := false, name := "tapir")
-  .aggregate(core,
-             circeJson,
-             openapiModel,
-             openapiCirce,
-             openapiCirceYaml,
-             openapiDocs,
-             serverTests,
-             akkaHttpServer,
-             http4sServer,
-             sttpClient,
-             tests,
-             playground)
+  .aggregate(
+    core,
+    circeJson,
+    openapiModel,
+    openapiCirce,
+    openapiCirceYaml,
+    openapiDocs,
+    serverTests,
+    akkaHttpServer,
+    http4sServer,
+    sttpClient,
+    tests,
+    playground,
+    playJson
+  )
 
 // core
 
@@ -80,7 +84,17 @@ lazy val circeJson: Project = (project in file("json/circe"))
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion
+    )
+  )
+  .dependsOn(core)
+
+lazy val playJson: Project = (project in file("json/playjson"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-json-play",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-json" % playVersion
     )
   )
   .dependsOn(core)
