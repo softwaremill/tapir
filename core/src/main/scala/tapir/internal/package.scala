@@ -36,21 +36,19 @@ package object internal {
       }.headOption
   }
 
-  implicit class RichBasicEndpointInputs(inputs: Vector[EndpointInput.Basic[_]]) {
-    def sortByType: Vector[EndpointInput.Basic[_]] = inputs.sortBy {
-      case _: EndpointInput.FixedMethod           => 0
-      case _: EndpointInput.FixedPath             => 1
-      case _: EndpointInput.PathCapture[_]        => 1
-      case _: EndpointInput.PathsCapture          => 1
-      case _: EndpointInput.Query[_]              => 2
-      case _: EndpointInput.QueryParams           => 2
-      case _: EndpointInput.Cookie[_]             => 3
-      case _: EndpointIO.Header[_]                => 3
-      case _: EndpointIO.Headers                  => 3
-      case _: EndpointInput.ExtractFromRequest[_] => 4
-      case _: EndpointIO.Body[_, _, _]            => 6
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
-    }
+  def basicInputSortIndex(i: EndpointInput.Basic[_]): Int = i match {
+    case _: EndpointInput.FixedMethod           => 0
+    case _: EndpointInput.FixedPath             => 1
+    case _: EndpointInput.PathCapture[_]        => 1
+    case _: EndpointInput.PathsCapture          => 1
+    case _: EndpointInput.Query[_]              => 2
+    case _: EndpointInput.QueryParams           => 2
+    case _: EndpointInput.Cookie[_]             => 3
+    case _: EndpointIO.Header[_]                => 3
+    case _: EndpointIO.Headers                  => 3
+    case _: EndpointInput.ExtractFromRequest[_] => 4
+    case _: EndpointIO.Body[_, _, _]            => 6
+    case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
   }
 
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {

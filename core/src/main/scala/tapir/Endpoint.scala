@@ -97,7 +97,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     }
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
-    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortByType).show
+    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortBy(basicInputSortIndex)).show
     val showSuccessOutputs = showOutputs(output)
     val showErrorOutputs = showOutputs(errorOutput)
 

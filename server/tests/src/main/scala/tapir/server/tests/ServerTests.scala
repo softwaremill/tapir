@@ -108,10 +108,12 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
-  testServer(in_header_before_path, "Header input before path capture input"){ case (str: String, i: Int) => pureResult((i, str).asRight[Unit])} { baseUri =>
+  testServer(in_header_before_path, "Header input before path capture input") {
+    case (str: String, i: Int) => pureResult((i, str).asRight[Unit])
+  } { baseUri =>
     sttp.get(uri"$baseUri/12").header("SomeHeader", "hello").send().map { response =>
       response.body shouldBe Right("hello")
-      response.header("IntHeader") shouldBe Some(12)
+      response.header("IntHeader") shouldBe Some("12")
     }
   }
 
