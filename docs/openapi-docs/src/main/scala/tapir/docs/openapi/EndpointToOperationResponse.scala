@@ -2,7 +2,6 @@ package tapir.docs.openapi
 
 import tapir.internal._
 import tapir.docs.openapi.schema.ObjectSchemas
-import tapir.model.StatusCode
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi._
 import tapir.{Schema => SSchema, _}
@@ -66,7 +65,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     val body = bodies.headOption
 
     val descriptions = outputs.collect {
-      case EndpointOutput.FixedStatusCode(sc, info) if info.description.isDefined => info.description.get
+      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(description), _)) => description
     }
 
     val description = body.flatMap(_._1).getOrElse(descriptions.headOption.getOrElse(""))

@@ -1,7 +1,6 @@
 package tapir.internal.server
 
 import tapir.CodecForMany.PlainCodecForMany
-import tapir.EndpointIO.Info
 import tapir.{CodecForOptional, EndpointIO, EndpointOutput, MediaType, StreamingEndpointIO}
 import tapir.internal._
 import tapir.model.StatusCode
@@ -60,7 +59,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
   }
 }
 
-case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], statusCode: Option[StatusCode], info: Option[Info[Unit]]) {
+case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], statusCode: Option[StatusCode]) {
   def withBody(b: B): OutputValues[B] = {
     if (body.isDefined) {
       throw new IllegalArgumentException("Body is already defined")
@@ -74,7 +73,7 @@ case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], s
   def withStatusCode(sc: StatusCode): OutputValues[B] = copy(statusCode = Some(sc))
 }
 object OutputValues {
-  def empty[B]: OutputValues[B] = OutputValues[B](None, Vector.empty, None, None)
+  def empty[B]: OutputValues[B] = OutputValues[B](None, Vector.empty, None)
 }
 
 trait EncodeOutputBody[B] {
