@@ -13,7 +13,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     def run(outputs: Vector[EndpointOutput.Single[_]], ov: OutputValues[B], vs: Seq[Any]): OutputValues[B] = {
       (outputs, vs) match {
         case (Vector(), Seq()) => ov
-        case (EndpointOutput.FixedStatusCode(sc) +: outputsTail, _) =>
+        case (EndpointOutput.FixedStatusCode(sc, _) +: outputsTail, _) =>
           run(outputsTail, ov.withStatusCode(sc), vs)
         case (outputsHead +: outputsTail, vsHead +: vsTail) =>
           val ov2 = outputsHead match {
@@ -39,7 +39,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
               apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
             case EndpointOutput.StatusCode() =>
               ov.withStatusCode(vsHead.asInstanceOf[StatusCode])
-            case EndpointOutput.FixedStatusCode(_) =>
+            case EndpointOutput.FixedStatusCode(_, _) =>
               throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
             case EndpointOutput.OneOf(mappings) =>
               val mapping = mappings

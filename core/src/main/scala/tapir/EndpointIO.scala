@@ -3,6 +3,7 @@ package tapir
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
+import tapir.EndpointIO.Info
 import tapir.internal.ProductToParams
 import tapir.model.{Method, MultiQueryParams, ServerRequest}
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
@@ -157,7 +158,9 @@ object EndpointOutput {
     override def show: String = "{status code}"
   }
 
-  case class FixedStatusCode(statusCode: tapir.model.StatusCode) extends Basic[Unit] {
+  case class FixedStatusCode(statusCode: tapir.model.StatusCode, info: Info[Unit]) extends Basic[Unit] {
+    def description(d: String): FixedStatusCode = copy(info = info.description(d))
+
     override def show: String = s"status code ($statusCode)"
   }
 
