@@ -64,11 +64,11 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     }
     val body = bodies.headOption
 
-    val descriptions = outputs.collect {
-      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(description), _)) => description
+    val statusCodeDescriptions = outputs.collect {
+      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _)) => desc
     }
 
-    val description = body.flatMap(_._1).getOrElse(descriptions.headOption.getOrElse(""))
+    val description = body.flatMap(_._1).getOrElse(statusCodeDescriptions.headOption.getOrElse(""))
 
     val content = body.map(_._2).getOrElse(ListMap.empty)
 
