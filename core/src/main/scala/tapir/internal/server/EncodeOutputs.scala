@@ -1,6 +1,7 @@
 package tapir.internal.server
 
 import tapir.CodecForMany.PlainCodecForMany
+import tapir.EndpointIO.Info
 import tapir.{CodecForOptional, EndpointIO, EndpointOutput, MediaType, StreamingEndpointIO}
 import tapir.internal._
 import tapir.model.StatusCode
@@ -13,7 +14,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     def run(outputs: Vector[EndpointOutput.Single[_]], ov: OutputValues[B], vs: Seq[Any]): OutputValues[B] = {
       (outputs, vs) match {
         case (Vector(), Seq()) => ov
-        case (EndpointOutput.FixedStatusCode(sc) +: outputsTail, _) =>
+        case (EndpointOutput.FixedStatusCode(sc, _) +: outputsTail, _) =>
           run(outputsTail, ov.withStatusCode(sc), vs)
         case (outputsHead +: outputsTail, vsHead +: vsTail) =>
           val ov2 = outputsHead match {
@@ -39,7 +40,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
               apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
             case EndpointOutput.StatusCode() =>
               ov.withStatusCode(vsHead.asInstanceOf[StatusCode])
-            case EndpointOutput.FixedStatusCode(_) =>
+            case EndpointOutput.FixedStatusCode(_, _) =>
               throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
             case EndpointOutput.OneOf(mappings) =>
               val mapping = mappings
@@ -59,7 +60,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
   }
 }
 
-case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], statusCode: Option[StatusCode]) {
+case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], statusCode: Option[StatusCode], info: Option[Info[Unit]]) {
   def withBody(b: B): OutputValues[B] = {
     if (body.isDefined) {
       throw new IllegalArgumentException("Body is already defined")
@@ -73,7 +74,7 @@ case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], s
   def withStatusCode(sc: StatusCode): OutputValues[B] = copy(statusCode = Some(sc))
 }
 object OutputValues {
-  def empty[B]: OutputValues[B] = OutputValues[B](None, Vector.empty, None)
+  def empty[B]: OutputValues[B] = OutputValues[B](None, Vector.empty, None, None)
 }
 
 trait EncodeOutputBody[B] {

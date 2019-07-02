@@ -86,7 +86,7 @@ object ObjectSchemasForEndpoints {
         mappings.flatMap(mapping => forOutput(mapping.output)).toList
       case EndpointOutput.StatusCode() =>
         List.empty
-      case EndpointOutput.FixedStatusCode(_) =>
+      case EndpointOutput.FixedStatusCode(_, _) =>
         List.empty
       case EndpointOutput.Mapped(wrapped, _, _, _) =>
         forOutput(wrapped)

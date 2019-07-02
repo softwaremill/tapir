@@ -88,7 +88,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         case EndpointOutput.StatusCode() =>
           Some(meta.code)
 
-        case EndpointOutput.FixedStatusCode(_) =>
+        case EndpointOutput.FixedStatusCode(_, _) =>
           None
 
         case EndpointOutput.OneOf(mappings) =>

@@ -65,13 +65,18 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     }
     val body = bodies.headOption
 
-    val description = body.flatMap(_._1).getOrElse("")
+    val descriptions = outputs.collect {
+      case EndpointOutput.FixedStatusCode(sc, info) if info.description.isDefined => info.description.get
+    }
+
+    val description = body.flatMap(_._1).getOrElse(descriptions.headOption.getOrElse(""))
+
     val content = body.map(_._2).getOrElse(ListMap.empty)
 
     if (body.isDefined || headers.nonEmpty) {
       Some(Response(description, headers.toListMap, content))
     } else if (outputs.nonEmpty) {
-      Some(Response("", ListMap.empty, ListMap.empty))
+      Some(Response(description, ListMap.empty, ListMap.empty))
     } else {
       None
     }

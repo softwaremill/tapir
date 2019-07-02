@@ -55,6 +55,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FruitAmount'
+  /api/delete:
+    delete:
+      operationId: deleteApiDelete
+    responses:
+      '200':
+        description: ok
 components:
   schemas:
     FruitAmount:
