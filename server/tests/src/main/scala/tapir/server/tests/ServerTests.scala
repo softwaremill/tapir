@@ -59,6 +59,12 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/fruit/orange/amount/20").send().map(_.body shouldBe Right("orange 20"))
   }
 
+  testServer(in_path_with_always_success_codec, "Empty path should not be passed to path capture decoding") { _ =>
+    pureResult(Right(()))
+  } { baseUri =>
+    sttp.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCodes.BadRequest)
+  }
+
   testServer(in_two_path_capture, "capturing two path parameters with the same specification") {
     case (a: Int, b: Int) => pureResult(Right((a, b)))
   } { baseUri =>
@@ -334,13 +340,62 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCodes.Ok)
   }
 
+  testServer(in_paths_before_path_capture, "Capturing paths before single path capture should always fail") { _ =>
+    pureResult(Either.right[Unit, Unit](()))
+  } { baseUri =>
+    sttp.get(uri"$baseUri/some/path/str").send().map { r =>
+      r.code shouldBe StatusCodes.BadRequest
+      r.body shouldBe Left("Invalid path parameter /[cap]")
+    }
+  }
+
+  testServer(in_paths_after_capture, "Capturing paths after path capture") {
+    case (i, paths) =>
+      pureResult(Right((i, paths.mkString(","))))
+  } { baseUri =>
+    sttp.get(uri"$baseUri/api/15/and/some/more/path").send().map { r =>
+      r.code shouldBe StatusCodes.Ok
+      r.header("IntPath") shouldBe Some("15")
+      r.body shouldBe Right("some,more,path")
+    }
+  }
+
+  testServer(in_paths_after_capture, "Capturing paths after path capture (when empty)") {
+    case (i, paths) =>
+      pureResult(Right((i, paths.mkString(","))))
+  } { baseUri =>
+    sttp.get(uri"$baseUri/api/15/and/").send().map { r =>
+      r.code shouldBe StatusCodes.Ok
+      r.header("IntPath") shouldBe Some("15")
+      r.body shouldBe Right("")
+    }
+  }
+
+  testServer(in_path_multiple_capture, "Returns 400 if path 'shape' matches, but failed to parse a path parameter")(
+    _ => pureResult(Either.right[Unit, Unit](()))
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/customer/asd/orders/2").send().map { response =>
+      response.body shouldBe Left("Invalid path parameter /[customer_id]")
+      response.code shouldBe 400
+    }
+  }
+
+  testServer(in_path_multiple_capture, "Returns 404 if path 'shape' doesn't match")(
+    _ => pureResult(Either.right[Unit, Unit](()))
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/customer/asd").send().map { response =>
+      println(response.body)
+      response.code shouldBe 404
+    }
+  }
+
   testServer(in_single_path, "single path should not match root path")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) { baseUri =>
     sttp.get(uri"$baseUri").send().map(_.code shouldBe StatusCodes.NotFound) >>
       sttp.get(uri"$baseUri/").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
   testServer(in_single_path, "single path should not match larger path")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) { baseUri =>
-    sttp.get(uri"$baseUri/api/echo").send().map(_.code shouldBe StatusCodes.NotFound) >>
+    sttp.get(uri"$baseUri/api/echo/hello").send().map(_.code shouldBe StatusCodes.NotFound) >>
       sttp.get(uri"$baseUri/api/echo/").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 

@@ -25,7 +25,10 @@ package object tests {
   val in_two_path_capture: Endpoint[(Int, Int), Unit, (Int, Int), Nothing] = endpoint
     .in("in" / path[Int] / path[Int])
     .out(header[Int]("a") and header[Int]("b"))
+
   val in_string_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
+
+  val in_path_with_always_success_codec: Endpoint[AlwaysSuccess, Unit, Unit, Nothing] = endpoint.get.in("api").in(path[AlwaysSuccess])
 
   val in_mapped_query_out_string: Endpoint[List[Char], Unit, String, Nothing] =
     endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody)
@@ -85,6 +88,14 @@ package object tests {
 
   val in_paths_out_string: Endpoint[Seq[String], Unit, String, Nothing] =
     endpoint.get.in(paths).out(stringBody)
+
+  val in_paths_before_path_capture: Endpoint[(Seq[String], String), Unit, Unit, Nothing] = endpoint.get.in(paths).in(path[String]("cap"))
+
+  val in_paths_after_capture: Endpoint[(Int, Seq[String]), Unit, (Int, String), Nothing] =
+    endpoint.get.in("api").in(path[Int]).in("and").in(paths).out(header[Int]("IntPath") and stringBody)
+
+  val in_path_multiple_capture: Endpoint[(Int, Int), Unit, Unit, Nothing] =
+    endpoint.get.in("customer" / path[Int]("customer_id") / "orders" / path[Int]("order_id"))
 
   val in_query_list_out_header_list: Endpoint[List[String], Unit, List[String], Nothing] =
     endpoint.get.in("api" / "echo" / "param-to-header").in(query[List[String]]("qq")).out(header[List[String]]("hh"))

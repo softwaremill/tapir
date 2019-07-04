@@ -8,7 +8,7 @@ object ServerDefaults {
   def decodeFailureHandlerUsingResponse[REQUEST](
       response: (StatusCode, String) => DecodeFailureHandling
   ): DecodeFailureHandler[REQUEST] =
-    (_, input, failure) => {
+    (_, input, _) => {
       input match {
         case EndpointInput.Query(name, _, _)       => response(StatusCodes.BadRequest, s"Invalid value for: query parameter $name")
         case _: EndpointInput.QueryParams          => response(StatusCodes.BadRequest, "Invalid value for: query parameters")
@@ -17,6 +17,7 @@ object ServerDefaults {
         case _: EndpointIO.Headers                 => response(StatusCodes.BadRequest, s"Invalid value for: headers")
         case _: EndpointIO.Body[_, _, _]           => response(StatusCodes.BadRequest, s"Invalid value for: body")
         case _: EndpointIO.StreamBodyWrapper[_, _] => response(StatusCodes.BadRequest, s"Invalid value for: body")
+        case in: EndpointInput.PathCapture[_]      => response(StatusCodes.BadRequest, s"Invalid path parameter ${in.show}")
         case _                                     => DecodeFailureHandling.noMatch
       }
     }
