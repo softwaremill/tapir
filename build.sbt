@@ -182,6 +182,24 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
 
 // other
 
+lazy val examples: Project = (project in file("examples"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-examples",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp" %% "core" % sttpVersion,
+      "org.scalaz" %% "scalaz-zio" % "1.0-RC5",
+      "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC5",
+      "org.typelevel" %% "cats-effect" % "1.3.1",
+      "org.webjars" % "swagger-ui" % "3.22.2",
+      "io.swagger" % "swagger-annotations" % "1.5.22",
+      "org.http4s" %% "http4s-dsl" % http4sVersion
+    ),
+    libraryDependencies ++= loggerDependencies,
+    publishArtifact := false
+  )
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)
+
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings: _*)
   .settings(
