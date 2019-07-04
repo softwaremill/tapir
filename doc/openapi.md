@@ -37,6 +37,11 @@ import tapir.openapi.circe.yaml._
 println(docs.toYaml)
 ```
 
+Each endpoint corresponds to an operation in the OpenAPI format and should have a unique operation id. By default,
+the `name` of endpoint is used as the operation id, and if this is not available, the operation id is auto-generated
+by concatenating (using camel-case) the request method and path. This can be customised by providing an implicit
+instance of `OpenAPIDocsOptions`.
+
 ## Exposing OpenAPI documentation
 
 Exposing the OpenAPI documentation can be very application-specific. For example, to expose the docs using the
