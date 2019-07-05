@@ -77,10 +77,10 @@ object SwaggerAkka {
   import akka.http.scaladsl.server.Directives._
   import akka.http.scaladsl.model.StatusCodes
 
-  val SwaggerYml = "swagger.yml"
+  val DocsYaml = "docs.yml"
 
   private val redirectToIndex: Route =
-    redirect(s"/docs/index.html?url=/docs/$SwaggerYml", StatusCodes.PermanentRedirect)
+    redirect(s"/docs/index.html?url=/docs/$DocsYaml", StatusCodes.PermanentRedirect)
 
   // needed only if you use oauth2 authorization
   private def redirectToOath2(query: String): Route =
@@ -98,7 +98,7 @@ object SwaggerAkka {
     pathPrefix("docs") {
       pathEndOrSingleSlash {
         redirectToIndex
-      } ~ path(SwaggerYml) {
+      } ~ path(DocsYaml) {
         complete(yml)
       } ~ getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
     } ~
