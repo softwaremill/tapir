@@ -70,6 +70,7 @@ which is a slight extension of the above.
 ## Contents
 
 * [Quickstart](quickstart.md)
+* [Examples](examples.md)
 * [Goals of the project](goals.md)
 * [Endpoints: basics](endpoint/basics.md)
 * [Endpoints: inputs/outputs](endpoint/ios.md)
