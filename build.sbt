@@ -5,7 +5,7 @@ lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalaVersion := scala2_12,
   scalafmtOnCompile := true,
   crossScalaVersions := Seq(scala2_11, scala2_12),
-  scalacOptions ++= 
+  scalacOptions ++=
     (CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, 11)) =>
         Seq(
@@ -32,18 +32,21 @@ lazy val loggerDependencies = Seq(
 lazy val rootProject = (project in file("."))
   .settings(commonSettings: _*)
   .settings(publishArtifact := false, name := "tapir")
-  .aggregate(core,
-             circeJson,
-             openapiModel,
-             openapiCirce,
-             openapiCirceYaml,
-             openapiDocs,
-             serverTests,
-             akkaHttpServer,
-             http4sServer,
-             sttpClient,
-             tests,
-             playground)
+  .aggregate(
+    core,
+    circeJson,
+    openapiModel,
+    openapiCirce,
+    openapiCirceYaml,
+    openapiDocs,
+    serverTests,
+    akkaHttpServer,
+    http4sServer,
+    sttpClient,
+    tests,
+    examples,
+    playground
+  )
 
 // core
 
@@ -80,7 +83,7 @@ lazy val circeJson: Project = (project in file("json/circe"))
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % circeVersion,
       "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion
     )
   )
   .dependsOn(core)
