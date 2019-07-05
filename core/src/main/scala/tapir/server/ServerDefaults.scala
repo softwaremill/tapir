@@ -10,10 +10,10 @@ object ServerDefaults {
     * of the request matches, but decoding some path segment fails. This assumes that the only way decoding a path
     * segment might fail is with a DecodeResult.Error.
     */
-  def decodeFailureHandlerUsingResponse[REQUEST](
+  def decodeFailureHandlerUsingResponse(
       response: (StatusCode, String) => DecodeFailureHandling,
       badRequestOnPathFailureIfPathShapeMatches: Boolean
-  ): DecodeFailureHandler[REQUEST] =
+  ): DecodeFailureHandler[Any] =
     (_, input, failure) => {
       input match {
         case EndpointInput.Query(name, _, _)       => response(StatusCodes.BadRequest, s"Invalid value for: query parameter $name")
@@ -24,7 +24,7 @@ object ServerDefaults {
         case _: EndpointIO.Body[_, _, _]           => response(StatusCodes.BadRequest, s"Invalid value for: body")
         case _: EndpointIO.StreamBodyWrapper[_, _] => response(StatusCodes.BadRequest, s"Invalid value for: body")
         // we assume that the only decode failure that might happen during path segment decoding is an error
-        // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indisinguishable from
+        // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
         // a path shape mismatch
         case EndpointInput.PathCapture(_, name, _)
             if badRequestOnPathFailureIfPathShapeMatches && failure.isInstanceOf[DecodeResult.Error] =>
@@ -40,8 +40,8 @@ object ServerDefaults {
     * Otherwise (e.g. if the method, a path segment, or path capture is missing or there's a mismatch), a "no match" is
     * returned, which is a signal to try the next endpoint.
     */
-  def decodeFailureHandler[REQUEST]: DecodeFailureHandler[REQUEST] =
-    decodeFailureHandlerUsingResponse[REQUEST](failureResponse, badRequestOnPathFailureIfPathShapeMatches = true)
+  def decodeFailureHandler: DecodeFailureHandler[Any] =
+    decodeFailureHandlerUsingResponse(failureResponse, badRequestOnPathFailureIfPathShapeMatches = false)
 
   val failureOutput: EndpointOutput[(StatusCode, String)] = statusCode.and(stringBody)
   def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =

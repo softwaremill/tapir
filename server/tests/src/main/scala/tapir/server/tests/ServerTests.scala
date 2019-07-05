@@ -14,6 +14,7 @@ import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
 import tapir._
 import tapir.json.circe._
 import tapir.model.{MultiQueryParams, Part, SetCookieValue, UsernamePassword}
+import tapir.server.{DecodeFailureHandler, ServerDefaults}
 import tapir.tests.TestUtil._
 import tapir.tests._
 
@@ -399,7 +400,16 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   // path shape matching
 
-  testServer(in_path_fixed_capture_fixed_capture, "Returns 400 if path 'shape' matches, but failed to parse a path parameter")(
+  val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler[Any] = ServerDefaults.decodeFailureHandlerUsingResponse(
+    ServerDefaults.failureResponse,
+    badRequestOnPathFailureIfPathShapeMatches = true
+  )
+
+  testServer(
+    in_path_fixed_capture_fixed_capture,
+    "Returns 400 if path 'shape' matches, but failed to parse a path parameter",
+    Some(decodeFailureHandlerBadRequestOnPathFailure)
+  )(
     _ => pureResult(Either.right[Unit, Unit](()))
   ) { baseUri =>
     sttp.get(uri"$baseUri/customer/asd/orders/2").send().map { response =>
@@ -408,7 +418,11 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
-  testServer(in_path_fixed_capture_fixed_capture, "Returns 404 if path 'shape' doesn't match")(
+  testServer(
+    in_path_fixed_capture_fixed_capture,
+    "Returns 404 if path 'shape' doesn't match",
+    Some(decodeFailureHandlerBadRequestOnPathFailure)
+  )(
     _ => pureResult(Either.right[Unit, Unit](()))
   ) { baseUri =>
     sttp.get(uri"$baseUri/customer").send().map(response => response.code shouldBe StatusCodes.NotFound) >>
@@ -534,17 +548,28 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def pureResult[T](t: T): R[T]
   def suspendResult[T](t: => T): R[T]
 
-  def route[I, E, O](e: Endpoint[I, E, O, S], fn: I => R[Either[E, O]]): ROUTE
+  def route[I, E, O](
+      e: Endpoint[I, E, O, S],
+      fn: I => R[Either[E, O]],
+      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+  ): ROUTE
 
   def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, S], fn: I => R[O])(implicit eClassTag: ClassTag[E]): ROUTE
 
   def server(routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
 
-  def testServer[I, E, O](e: Endpoint[I, E, O, S], testNameSuffix: String = "")(
+  def testServer[I, E, O](
+      e: Endpoint[I, E, O, S],
+      testNameSuffix: String = "",
+      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+  )(
       fn: I => R[Either[E, O]]
   )(runTest: Uri => IO[Assertion]): Unit = {
 
-    testServer(e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix), NonEmptyList.of(route(e, fn)))(runTest)
+    testServer(
+      e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
+      NonEmptyList.of(route(e, fn, decodeFailureHandler))
+    )(runTest)
   }
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {

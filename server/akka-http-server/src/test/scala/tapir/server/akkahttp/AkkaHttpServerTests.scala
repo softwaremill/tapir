@@ -14,6 +14,7 @@ import com.typesafe.scalalogging.StrictLogging
 import tapir.{Endpoint, endpoint, stringBody}
 import tapir.server.tests.ServerTests
 import tapir._
+import tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -35,7 +36,14 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
     super.afterAll()
   }
 
-  override def route[I, E, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[Either[E, O]]): Route = {
+  override def route[I, E, O](
+      e: Endpoint[I, E, O, AkkaStream],
+      fn: I => Future[Either[E, O]],
+      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+  ): Route = {
+    implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
+      decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
+    )
     e.toRoute(fn)
   }
 

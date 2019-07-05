@@ -11,6 +11,7 @@ import tapir.server.tests.ServerTests
 import tapir.Endpoint
 import tapir._
 import com.softwaremill.sttp._
+import tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
@@ -24,7 +25,16 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
   override def pureResult[T](t: T): IO[T] = IO.pure(t)
   override def suspendResult[T](t: => T): IO[T] = IO.apply(t)
 
-  override def route[I, E, O](e: Endpoint[I, E, O, EntityBody[IO]], fn: I => IO[Either[E, O]]): HttpRoutes[IO] = {
+  override def route[I, E, O](
+      e: Endpoint[I, E, O, EntityBody[IO]],
+      fn: I => IO[Either[E, O]],
+      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+  ): HttpRoutes[IO] = {
+    implicit val serverOptions: Http4sServerOptions[IO] = Http4sServerOptions
+      .default[IO]
+      .copy(
+        decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
+      )
     e.toRoutes(fn)
   }
 
