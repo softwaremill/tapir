@@ -169,5 +169,5 @@ object BooksExample extends App with StrictLogging {
   logger.info("Making a request to the listing endpoint ...")
   makeClientRequest()
 
-  logger.info("Try out the API by opening the Swagger UI: http://localhost:8080/swagger")
+  logger.info("Try out the API by opening the Swagger UI: http://localhost:8080/docs")
 }
