@@ -86,6 +86,16 @@ object DecodeInputs {
     )(DecodeInputsResult.Values(Vector.fill(basicInputs.size)(null), None), ctx)._1
   }
 
+  /**
+    * We're decoding paths differently than other inputs. We first map all path segments to their decoding results
+    * (not checking if this is a successful or failed decoding at this stage). This is collected as the
+    * `decodedPathInputs` value.
+    *
+    * Once this is done, we check if there are remaining path segments. If yes - the decoding fails with a `Mismatch`.
+    *
+    * Hence, a failure due to a mismatch in the number of segments takes **priority** over any potential failures in
+    * decoding the segments.
+    */
   private def matchPath(
       pathInputs: Vector[IndexedBasicInput],
       decodeValues: DecodeInputsResult.Values,
@@ -95,13 +105,13 @@ object DecodeInputs {
       case Vector() =>
         // Match everything if no path input is specified
         (decodeValues, ctx)
-      case in +: _ =>
+      case _ :+ last =>
         matchPathInner(
           pathInputs = pathInputs,
           ctx = ctx,
           decodeValues = decodeValues,
-          thunks = Vector.empty,
-          in
+          decodedPathInputs = Vector.empty,
+          last
         )
     }
   }
@@ -110,8 +120,8 @@ object DecodeInputs {
       pathInputs: Vector[IndexedBasicInput],
       ctx: DecodeInputsContext,
       decodeValues: DecodeInputsResult.Values,
-      thunks: Vector[() => (IndexedBasicInput, DecodeResult[_])],
-      fallbackPathInput: IndexedBasicInput
+      decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
+      lastPathInput: IndexedBasicInput
   ): (DecodeInputsResult, DecodeInputsContext) = {
     pathInputs match {
       case (idxInput @ IndexedBasicInput(in, idx)) +: restInputs =>
@@ -121,7 +131,7 @@ object DecodeInputs {
             nextSegment match {
               case Some(seg) =>
                 if (seg == expectedSegment) {
-                  matchPathInner(restInputs, newCtx, decodeValues, thunks, idxInput)
+                  matchPathInner(restInputs, newCtx, decodeValues, decodedPathInputs, idxInput)
                 } else {
                   val failure = DecodeInputsResult.Failure(in, DecodeResult.Mismatch(expectedSegment, seg))
                   (failure, newCtx)
@@ -129,7 +139,7 @@ object DecodeInputs {
               case None =>
                 if (expectedSegment.isEmpty) {
                   // FixedPath("") matches an empty path
-                  matchPathInner(restInputs, newCtx, decodeValues, thunks, idxInput)
+                  matchPathInner(restInputs, newCtx, decodeValues, decodedPathInputs, idxInput)
                 } else {
                   val failure = DecodeInputsResult.Failure(in, DecodeResult.Missing)
                   (failure, newCtx)
@@ -139,17 +149,15 @@ object DecodeInputs {
             val (nextSegment, newCtx) = ctx.nextPathSegment
             nextSegment match {
               case Some(seg) =>
-                val newThunks = thunks :+ { () =>
-                  (idxInput, i.codec.safeDecode(seg))
-                }
-                matchPathInner(restInputs, newCtx, decodeValues, newThunks, idxInput)
+                val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.safeDecode(seg)))
+                matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput)
               case None =>
                 val failure = DecodeInputsResult.Failure(in, DecodeResult.Missing)
                 (failure, newCtx)
             }
           case _: EndpointInput.PathsCapture =>
             val (paths, newCtx) = collectRemainingPath(Vector.empty, ctx)
-            matchPathInner(restInputs, newCtx, decodeValues.setBasicInputValue(paths, idx), thunks, idxInput)
+            matchPathInner(restInputs, newCtx, decodeValues.setBasicInputValue(paths, idx), decodedPathInputs, idxInput)
           case _ =>
             throw new IllegalStateException(s"Unexpected EndpointInput ${in.show} encountered. This is most likely a bug in the library")
         }
@@ -157,25 +165,27 @@ object DecodeInputs {
         val (extraSegmentOpt, newCtx) = ctx.nextPathSegment
         extraSegmentOpt match {
           case Some(extraSegment) =>
-            val failure = DecodeInputsResult.Failure(fallbackPathInput.input, DecodeResult.Mismatch("", extraSegment))
+            // there are more segments in the request path than expeted by that input. Reporting a failure on the
+            // last path input.
+            val failure = DecodeInputsResult.Failure(lastPathInput.input, DecodeResult.Mismatch("", extraSegment))
             (failure, newCtx)
           case None =>
-            (evaluatePathDecodingThunks(decodeValues, thunks), newCtx)
+            (foldDecodedPathInputs(decodedPathInputs, decodeValues), newCtx)
         }
     }
   }
 
   @tailrec
-  private def evaluatePathDecodingThunks(
-      values: DecodeInputsResult.Values,
-      thunks: Vector[() => (IndexedBasicInput, DecodeResult[_])]
+  private def foldDecodedPathInputs(
+      decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
+      acc: DecodeInputsResult.Values
   ): DecodeInputsResult = {
-    thunks match {
-      case Vector() => values
+    decodedPathInputs match {
+      case Vector() => acc
       case t +: ts =>
-        t() match {
+        t match {
           case (indexedInput, failure: DecodeFailure) => DecodeInputsResult.Failure(indexedInput.input, failure)
-          case (indexedInput, DecodeResult.Value(v))  => evaluatePathDecodingThunks(values.setBasicInputValue(v, indexedInput.index), ts)
+          case (indexedInput, DecodeResult.Value(v))  => foldDecodedPathInputs(ts, acc.setBasicInputValue(v, indexedInput.index))
         }
     }
   }
