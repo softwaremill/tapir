@@ -141,6 +141,7 @@ object DecodeInputs {
                   // FixedPath("") matches an empty path
                   matchPathInner(restInputs, newCtx, decodeValues, decodedPathInputs, idxInput)
                 } else {
+                  // shape path mismatch - input path too short
                   val failure = DecodeInputsResult.Failure(in, DecodeResult.Missing)
                   (failure, newCtx)
                 }
@@ -164,10 +165,10 @@ object DecodeInputs {
       case Vector() =>
         val (extraSegmentOpt, newCtx) = ctx.nextPathSegment
         extraSegmentOpt match {
-          case Some(extraSegment) =>
-            // there are more segments in the request path than expeted by that input. Reporting a failure on the
-            // last path input.
-            val failure = DecodeInputsResult.Failure(lastPathInput.input, DecodeResult.Mismatch("", extraSegment))
+          case Some(_) =>
+            // shape path mismatch - input path too long; there are more segments in the request path than expected by
+            // that input. Reporting a failure on the last path input.
+            val failure = DecodeInputsResult.Failure(lastPathInput.input, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
             (failure, newCtx)
           case None =>
             (foldDecodedPathInputs(decodedPathInputs, decodeValues), newCtx)

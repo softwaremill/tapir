@@ -59,10 +59,10 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/fruit/orange/amount/20").send().map(_.body shouldBe Right("orange 20"))
   }
 
-  testServer(in_path_with_always_success_codec, "Empty path should not be passed to path capture decoding") { _ =>
+  testServer(in_path, "Empty path should not be passed to path capture decoding") { _ =>
     pureResult(Right(()))
   } { baseUri =>
-    sttp.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCodes.BadRequest)
+    sttp.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
   testServer(in_two_path_capture, "capturing two path parameters with the same specification") {
@@ -340,16 +340,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCodes.Ok)
   }
 
-  testServer(in_paths_before_path_capture, "Capturing paths before single path capture should always fail") { _ =>
-    pureResult(Either.right[Unit, Unit](()))
-  } { baseUri =>
-    sttp.get(uri"$baseUri/some/path/str").send().map { r =>
-      r.code shouldBe StatusCodes.BadRequest
-      r.body shouldBe Left("Invalid path parameter /[cap]")
-    }
-  }
-
-  testServer(in_paths_after_capture, "Capturing paths after path capture") {
+  testServer(in_path_paths_out_header_body, "Capturing paths after path capture") {
     case (i, paths) =>
       pureResult(Right((i, paths.mkString(","))))
   } { baseUri =>
@@ -360,7 +351,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
-  testServer(in_paths_after_capture, "Capturing paths after path capture (when empty)") {
+  testServer(in_path_paths_out_header_body, "Capturing paths after path capture (when empty)") {
     case (i, paths) =>
       pureResult(Right((i, paths.mkString(","))))
   } { baseUri =>
@@ -368,24 +359,6 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       r.code shouldBe StatusCodes.Ok
       r.header("IntPath") shouldBe Some("15")
       r.body shouldBe Right("")
-    }
-  }
-
-  testServer(in_path_multiple_capture, "Returns 400 if path 'shape' matches, but failed to parse a path parameter")(
-    _ => pureResult(Either.right[Unit, Unit](()))
-  ) { baseUri =>
-    sttp.get(uri"$baseUri/customer/asd/orders/2").send().map { response =>
-      response.body shouldBe Left("Invalid path parameter /[customer_id]")
-      response.code shouldBe 400
-    }
-  }
-
-  testServer(in_path_multiple_capture, "Returns 404 if path 'shape' doesn't match")(
-    _ => pureResult(Either.right[Unit, Unit](()))
-  ) { baseUri =>
-    sttp.get(uri"$baseUri/customer/asd").send().map { response =>
-      println(response.body)
-      response.code shouldBe 404
     }
   }
 
@@ -422,6 +395,25 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   ) { baseUri =>
     sttp.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCodes.Accepted) >>
       sttp.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCodes.NotFound)
+  }
+
+  // path shape matching
+
+  testServer(in_path_fixed_capture_fixed_capture, "Returns 400 if path 'shape' matches, but failed to parse a path parameter")(
+    _ => pureResult(Either.right[Unit, Unit](()))
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/customer/asd/orders/2").send().map { response =>
+      response.body shouldBe Left("Invalid value for: path parameter customer_id")
+      response.code shouldBe StatusCodes.BadRequest
+    }
+  }
+
+  testServer(in_path_fixed_capture_fixed_capture, "Returns 404 if path 'shape' doesn't match")(
+    _ => pureResult(Either.right[Unit, Unit](()))
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/customer").send().map(response => response.code shouldBe StatusCodes.NotFound) >>
+      sttp.get(uri"$baseUri/customer/asd").send().map(response => response.code shouldBe StatusCodes.NotFound) >>
+      sttp.get(uri"$baseUri/customer/asd/orders/2/xyz").send().map(response => response.code shouldBe StatusCodes.NotFound)
   }
 
   // auth
@@ -561,8 +553,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
-    test(name)(resources.use(runTest).unsafeRunSync())
+    if (testNameFilter forall name.contains) {
+      test(name)(resources.use(runTest).unsafeRunSync())
+    }
   }
+
+  // define to run a single test (in development)
+  def testNameFilter: Option[String] = None
 
   //
 
