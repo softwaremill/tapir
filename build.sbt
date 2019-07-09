@@ -191,8 +191,8 @@ lazy val examples: Project = (project in file("examples"))
     name := "tapir-examples",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "core" % sttpVersion,
-      "org.scalaz" %% "scalaz-zio" % "1.0-RC5",
-      "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC5",
+      "dev.zio" %% "zio" % "1.0.0-RC9-4",
+      "dev.zio" %% "zio-interop-cats" % "1.3.1.0-RC3",
       "org.typelevel" %% "cats-effect" % "1.3.1",
       "org.webjars" % "swagger-ui" % "3.22.2",
       "io.swagger" % "swagger-annotations" % "1.5.22",
@@ -209,8 +209,8 @@ lazy val playground: Project = (project in file("playground"))
     name := "tapir-playground",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
-      "org.scalaz" %% "scalaz-zio" % "1.0-RC5",
-      "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC5",
+      "dev.zio" %% "zio" % "1.0.0-RC9-4",
+      "dev.zio" %% "zio-interop-cats" % "1.3.1.0-RC3",
       "org.typelevel" %% "cats-effect" % "1.3.1",
       "org.webjars" % "swagger-ui" % "3.22.2",
       "io.swagger" % "swagger-annotations" % "1.5.22",

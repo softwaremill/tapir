@@ -4,9 +4,9 @@ import org.http4s._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import scalaz.zio.interop.catz._
-import scalaz.zio.interop.catz.implicits._
-import scalaz.zio.{DefaultRuntime, IO, Task, UIO}
+import zio.interop.catz._
+import zio.interop.catz.implicits._
+import zio.{DefaultRuntime, IO, Task, UIO}
 import tapir._
 import tapir.server.ServerEndpoint
 import tapir.server.http4s._

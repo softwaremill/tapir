@@ -1,10 +1,10 @@
 package tapir.example
 
 import org.http4s.{EntityBody, HttpRoutes}
-import scalaz.zio.{IO, Task}
+import _root_.zio.{IO, Task}
 import tapir.Endpoint
 import tapir.server.http4s.Http4sServerOptions
-import scalaz.zio.interop.catz._
+import _root_.zio.interop.catz._
 import tapir.server.ServerEndpoint
 
 package object zio {
