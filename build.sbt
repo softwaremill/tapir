@@ -22,6 +22,8 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
 val http4sVersion = "0.20.4"
 val circeVersion = "0.11.1"
 val sttpVersion = "1.6.1"
+val akkaHttpVersion = "10.1.8"
+val swaggerUiVersion = "3.22.2"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -127,6 +129,26 @@ lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   )
   .dependsOn(openapiModel, core, tests % "test", openapiCirceYaml % "test")
 
+lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-swagger-ui-akka-http",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "org.webjars" % "swagger-ui" % swaggerUiVersion
+    )
+  )
+
+lazy val swaggerUiHttp4s: Project = (project in file("docs/swagger-ui-http4s"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-swagger-ui-http4s",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-dsl" % http4sVersion,
+      "org.webjars" % "swagger-ui" % swaggerUiVersion
+    )
+  )
+
 // server
 
 lazy val serverTests: Project = (project in file("server/tests"))
@@ -143,7 +165,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % "10.1.8",
+      "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
       "com.typesafe.akka" %% "akka-stream" % "2.5.23"
     )
   )
@@ -190,18 +212,15 @@ lazy val examples: Project = (project in file("examples"))
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "core" % sttpVersion,
       "dev.zio" %% "zio" % "1.0.0-RC9-4",
       "dev.zio" %% "zio-interop-cats" % "1.3.1.0-RC3",
       "org.typelevel" %% "cats-effect" % "1.3.1",
-      "org.webjars" % "swagger-ui" % "3.22.2",
-      "io.swagger" % "swagger-annotations" % "1.5.22",
       "org.http4s" %% "http4s-dsl" % http4sVersion
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
 
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings: _*)
@@ -212,11 +231,9 @@ lazy val playground: Project = (project in file("playground"))
       "dev.zio" %% "zio" % "1.0.0-RC9-4",
       "dev.zio" %% "zio-interop-cats" % "1.3.1.0-RC3",
       "org.typelevel" %% "cats-effect" % "1.3.1",
-      "org.webjars" % "swagger-ui" % "3.22.2",
-      "io.swagger" % "swagger-annotations" % "1.5.22",
-      "org.http4s" %% "http4s-dsl" % http4sVersion
+      "io.swagger" % "swagger-annotations" % "1.5.22"
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)

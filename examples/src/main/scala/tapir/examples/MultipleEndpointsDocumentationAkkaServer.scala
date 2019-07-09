@@ -1,19 +1,18 @@
 package tapir.examples
 
-import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import tapir._
-import tapir.server.akkahttp._
-import tapir.json.circe._
 import io.circe.generic.auto._
+import tapir._
 import tapir.docs.openapi._
+import tapir.json.circe._
 import tapir.openapi.OpenAPI
 import tapir.openapi.circe.yaml._
+import tapir.server.akkahttp._
+import tapir.swagger.akkahttp.SwaggerAkka
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -61,7 +60,7 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   try {
     import akka.http.scaladsl.server.Directives._
-    Await.result(Http().bindAndHandle(booksListingRoute ~ addBookRoute ~ SwaggerAkka.routes(openApiYml), "localhost", 8080), 1.minute)
+    Await.result(Http().bindAndHandle(booksListingRoute ~ addBookRoute ~ new SwaggerAkka(openApiYml).routes, "localhost", 8080), 1.minute)
 
     // testing
     println("Go to: http://localhost:8080/docs")
@@ -71,39 +70,4 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
     // cleanup
     actorSystem.terminate()
   }
-}
-
-object SwaggerAkka {
-  import akka.http.scaladsl.server.Directives._
-  import akka.http.scaladsl.model.StatusCodes
-
-  val DocsYaml = "docs.yml"
-
-  private val redirectToIndex: Route =
-    redirect(s"/docs/index.html?url=/docs/$DocsYaml", StatusCodes.PermanentRedirect)
-
-  // needed only if you use oauth2 authorization
-  private def redirectToOath2(query: String): Route =
-    redirect(s"/docs/oauth2-redirect.html$query", StatusCodes.PermanentRedirect)
-
-  private val swaggerVersion = {
-    val p = new Properties()
-    val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
-    try p.load(pomProperties)
-    finally pomProperties.close()
-    p.getProperty("version")
-  }
-
-  def routes(yml: String): Route =
-    pathPrefix("docs") {
-      pathEndOrSingleSlash {
-        redirectToIndex
-      } ~ path(DocsYaml) {
-        complete(yml)
-      } ~ getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
-    } ~
-      // needed only if you use oauth2 authorization
-      path("oauth2-redirect.html") { request =>
-        redirectToOath2(request.request.uri.rawQueryString.map(s => '?' + s).getOrElse(""))(request)
-      }
 }

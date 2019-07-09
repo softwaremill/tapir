@@ -44,49 +44,24 @@ instance of `OpenAPIDocsOptions`.
 
 ## Exposing OpenAPI documentation
 
-Exposing the OpenAPI documentation can be very application-specific. For example, to expose the docs using the
-Swagger UI and akka-http:
+Exposing the OpenAPI documentation can be very application-specific. However, tapir contains two modules which contain
+akka-http/http4s routes for exposing documentation using the swagger ui:
 
-* add `libraryDependencies += "org.webjars" % "swagger-ui" % "3.22.2"` to `build.sbt` (or newer)
-* generate the yaml content to serve as a `String` using tapir: 
+```scala
+"com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http" % "0.8.10"
+"com.softwaremill.tapir" %% "tapir-swagger-ui-http4s" % "0.8.10"
+```
+
+Usage example for akka-http:
 
 ```scala
 import tapir.docs.openapi._
 import tapir.openapi.circe.yaml._
+import tapir.swagger.akkahttp.SwaggerAkka
 
 val docsAsYaml: String = myEndpoints.toOpenAPI("My App", "1.0").toYaml
+// add to your akka routes
+new SwaggerAkka(docsAsYaml).routes
 ```
 
-* add the following routes to your server:
-
-```scala
-val SwaggerYml = "swagger.yml"
-
-private val redirectToIndex: Route =
-  redirect(s"/swagger/index.html?url=/swagger/$SwaggerYml", StatusCodes.PermanentRedirect) 
-
-// needed only if you use oauth2 authorization
-private def redirectToOath2(query: String): Route =
-    redirect(s"/swagger/oauth2-redirect.html$query", StatusCodes.PermanentRedirect)
-
-private val swaggerVersion = {
-  val p = new Properties()
-  val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
-  try p.load(pomProperties)
-  finally pomProperties.close()
-  p.getProperty("version")
-}
-
-val routes: Route =   
-  pathPrefix("swagger") {
-    pathEndOrSingleSlash {
-      redirectToIndex
-    } ~ path(SwaggerYml) {
-      complete(yml)
-    } ~ getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
-  } ~
-  // needed only if you use oauth2 authorization
-  path("oauth2-redirect.html") { request => 
-    redirectToOath2(request.request.uri.rawQueryString.map(s => '?' + s).getOrElse(""))(request)
-  }
-```
+For http4s, use the `SwaggerHttp4s` class.

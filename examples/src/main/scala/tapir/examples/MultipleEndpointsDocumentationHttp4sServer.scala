@@ -1,23 +1,21 @@
 package tapir.examples
 
-import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
 import cats.effect._
 import cats.implicits._
 import io.circe.generic.auto._
-import org.http4s.dsl.Http4sDsl
-import org.http4s.headers.Location
+import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import org.http4s.{HttpRoutes, StaticFile, Uri}
 import tapir._
 import tapir.docs.openapi._
 import tapir.json.circe._
 import tapir.openapi.OpenAPI
 import tapir.openapi.circe.yaml._
 import tapir.server.http4s._
+import tapir.swagger.http4s.SwaggerHttp4s
 
 import scala.concurrent.ExecutionContext
 
@@ -41,6 +39,10 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
     )
 
   // server-side logic
+  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
+  implicit val timer: Timer[IO] = IO.timer(ec)
+
   val books = new AtomicReference(
     Vector(
       Book("The Sorrows of Young Werther", 1774, Author("Johann Wolfgang von Goethe")),
@@ -61,13 +63,9 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
   val openApiYml: String = openApiDocs.toYaml
 
   // starting the server
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit val timer: Timer[IO] = IO.timer(ec)
-
   BlazeServerBuilder[IO]
     .bindHttp(8080, "localhost")
-    .withHttpApp(Router("/" -> routes, "/docs" -> SwaggerHttp4s.routes[IO](openApiYml)).orNotFound)
+    .withHttpApp(Router("/" -> routes, "/docs" -> new SwaggerHttp4s(openApiYml).routes[IO]).orNotFound)
     .resource
     .use { _ =>
       IO {
@@ -77,33 +75,4 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
       }
     }
     .unsafeRunSync()
-}
-
-object SwaggerHttp4s {
-  private val DocsContext = "docs"
-  private val DocsYaml = "docs.yml"
-
-  private val swaggerVersion = {
-    val p = new Properties()
-    val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
-    try p.load(pomProperties)
-    finally pomProperties.close()
-    p.getProperty("version")
-  }
-
-  def routes[F[_]: ContextShift: Sync](yml: String): HttpRoutes[F] = {
-    val dsl = Http4sDsl[F]
-    import dsl._
-
-    HttpRoutes.of[F] {
-      case GET -> Root =>
-        PermanentRedirect(Location(Uri.fromString(s"/$DocsContext/index.html?url=/$DocsContext/$DocsYaml").right.get))
-      case GET -> Root / DocsYaml =>
-        Ok(yml)
-      case r =>
-        StaticFile
-          .fromResource(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo}", ExecutionContext.global)
-          .getOrElseF(NotFound())
-    }
-  }
 }

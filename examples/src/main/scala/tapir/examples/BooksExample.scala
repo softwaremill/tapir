@@ -1,6 +1,7 @@
 package tapir.examples
 
 import com.typesafe.scalalogging.StrictLogging
+import tapir.swagger.akkahttp.SwaggerAkka
 
 object BooksExample extends App with StrictLogging {
 
@@ -137,7 +138,7 @@ object BooksExample extends App with StrictLogging {
 
     import scala.concurrent.Await
     import scala.concurrent.duration._
-    val routes = route ~ SwaggerAkka.routes(yaml)
+    val routes = route ~ new SwaggerAkka(yaml).routes
     implicit val actorSystem: ActorSystem = ActorSystem()
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     Await.result(Http().bindAndHandle(routes, "localhost", 8080), 1.minute)
