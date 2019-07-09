@@ -23,6 +23,7 @@ val http4sVersion = "0.20.4"
 val circeVersion = "0.11.1"
 val sttpVersion = "1.6.1"
 val akkaHttpVersion = "10.1.8"
+val akkaStreamsVersion = "2.5.23"
 val swaggerUiVersion = "3.22.2"
 
 lazy val loggerDependencies = Seq(
@@ -135,6 +136,7 @@ lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
     name := "tapir-swagger-ui-akka-http",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
+      "com.typesafe.akka" %% "akka-stream" % akkaStreamsVersion,
       "org.webjars" % "swagger-ui" % swaggerUiVersion
     )
   )
@@ -166,7 +168,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % akkaHttpVersion,
-      "com.typesafe.akka" %% "akka-stream" % "2.5.23"
+      "com.typesafe.akka" %% "akka-stream" % akkaStreamsVersion
     )
   )
   .dependsOn(core, serverTests % "test")
