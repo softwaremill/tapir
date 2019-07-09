@@ -42,6 +42,8 @@ lazy val rootProject = (project in file("."))
     openapiCirce,
     openapiCirceYaml,
     openapiDocs,
+    swaggerUiAkka,
+    swaggerUiHttp4s,
     serverTests,
     akkaHttpServer,
     http4sServer,
