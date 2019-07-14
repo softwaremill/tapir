@@ -146,9 +146,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          // a/b is used instead of value because of scala 2.11
-          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.a)),
-          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.b))
+          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.value)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.value))
         )
       )
 
@@ -157,9 +156,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          // a/b is used instead of value because of scala 2.11
-          statusMapping(StatusCodes.Accepted, emptyOutput.map(Left(_))(_.a)),
-          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.b))
+          statusMapping(StatusCodes.Accepted, emptyOutput.map(Left(_))(_.value)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.value))
         )
       )
 
