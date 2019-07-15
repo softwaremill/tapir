@@ -21,7 +21,7 @@ val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
 
 val http4sVersion = "0.20.6"
 val circeVersion = "0.11.1"
-val sttpVersion = "1.6.2"
+val sttpVersion = "1.6.3"
 val akkaHttpVersion = "10.1.8"
 val akkaStreamsVersion = "2.5.23"
 val swaggerUiVersion = "3.22.2"
