@@ -1,14 +1,26 @@
 val scala2_12 = "2.12.8"
 val scala2_13 = "2.13.0"
-def commonSettings(scalaVersions: Seq[String] = Seq(scala2_12, scala2_13)) =
-  commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-    organization := "com.softwaremill.tapir",
-    scalaVersion := scala2_12,
-    scalafmtOnCompile := true,
-    crossScalaVersions := scalaVersions
-  )
 
-def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID) *): Seq[ModuleID] =
+lazy val is2_12 = settingKey[Boolean]("Is the scala version 2.12.")
+
+// an ugly work-around for https://github.com/sbt/sbt/issues/3465
+// even if a project is 2.12-only, we fake that it's also 2.13-compatible
+val only2_12settings = Seq(
+  publishArtifact := is2_12.value,
+  skip := !is2_12.value,
+  skip in publish := !is2_12.value,
+  libraryDependencies := (if (is2_12.value) libraryDependencies.value else Nil)
+)
+
+val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
+  organization := "com.softwaremill.tapir",
+  scalaVersion := scala2_12,
+  scalafmtOnCompile := true,
+  crossScalaVersions := Seq(scala2_12, scala2_13),
+  is2_12 := scalaVersion.value.startsWith("2.12.")
+)
+
+def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
@@ -20,7 +32,7 @@ lazy val loggerDependencies = Seq(
 )
 
 lazy val rootProject = (project in file("."))
-  .settings(commonSettings(Nil): _*)
+  .settings(commonSettings)
   .settings(publishArtifact := false, name := "tapir")
   .aggregate(
     core,
@@ -43,7 +55,7 @@ lazy val rootProject = (project in file("."))
 // core
 
 lazy val core: Project = (project in file("core"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
@@ -54,7 +66,7 @@ lazy val core: Project = (project in file("core"))
   .enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
 lazy val tests: Project = (project in file("tests"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-tests",
     publishArtifact := false,
@@ -69,7 +81,7 @@ lazy val tests: Project = (project in file("tests"))
 // json
 
 lazy val circeJson: Project = (project in file("json/circe"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-json-circe",
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
@@ -83,13 +95,13 @@ lazy val circeJson: Project = (project in file("json/circe"))
 // openapi
 
 lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-openapi-model"
   )
 
 lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
       "io.circe" %% "circe-core" % Versions.circe(_),
@@ -101,7 +113,7 @@ lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
   .dependsOn(openapiModel)
 
 lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yaml"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
       "io.circe" %% "circe-yaml" % Versions.circeYaml(_)
@@ -113,14 +125,14 @@ lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yam
 // docs
 
 lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-openapi-docs"
   )
   .dependsOn(openapiModel, core, tests % "test", openapiCirceYaml % "test")
 
 lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-swagger-ui-akka-http",
     libraryDependencies ++= Seq(
@@ -131,7 +143,7 @@ lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
   )
 
 lazy val swaggerUiHttp4s: Project = (project in file("docs/swagger-ui-http4s"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-swagger-ui-http4s",
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
@@ -143,7 +155,7 @@ lazy val swaggerUiHttp4s: Project = (project in file("docs/swagger-ui-http4s"))
 // server
 
 lazy val serverTests: Project = (project in file("server/tests"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-server-tests",
     publishArtifact := false,
@@ -153,7 +165,7 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .dependsOn(tests)
 
 lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
@@ -164,7 +176,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .dependsOn(core, serverTests % "test")
 
 lazy val http4sServer: Project = (project in file("server/http4s-server"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-http4s-server",
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
@@ -176,7 +188,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
 // client
 
 lazy val clientTests: Project = (project in file("client/tests"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-client-tests",
     publishArtifact := false,
@@ -189,7 +201,7 @@ lazy val clientTests: Project = (project in file("client/tests"))
   .dependsOn(tests)
 
 lazy val sttpClient: Project = (project in file("client/sttp-client"))
-  .settings(commonSettings(): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
@@ -202,7 +214,7 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
 // other
 
 lazy val examples: Project = (project in file("examples"))
-  .settings(commonSettings(Seq(scala2_12)): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
@@ -214,10 +226,11 @@ lazy val examples: Project = (project in file("examples"))
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
+  .settings(only2_12settings)
   .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
 
 lazy val playground: Project = (project in file("playground"))
-  .settings(commonSettings(Seq(scala2_12)): _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-playground",
     libraryDependencies ++= Seq(
@@ -230,4 +243,5 @@ lazy val playground: Project = (project in file("playground"))
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
+  .settings(only2_12settings)
   .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
