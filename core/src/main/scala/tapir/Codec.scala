@@ -8,7 +8,7 @@ import java.nio.file.Path
 import java.util.UUID
 
 import tapir.DecodeResult._
-import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
+import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation, Validator}
 import tapir.internal.UrlencodedData
 import tapir.model.Part
 
@@ -32,16 +32,18 @@ Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
 schemas are looked up as implicit values of type SchemaFor[${T}])
 """)
-trait Codec[T, M <: MediaType, R] extends Decode[R, T] { outer =>
+trait Codec[T, M <: MediaType, R] extends Validate[R, T] { outer =>
   def encode(t: T): R
   def decode(s: R): DecodeResult[T]
   def meta: CodecMeta[M, R]
+  def validator: Validator[T]
 
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): Codec[TT, M, R] =
     new Codec[TT, M, R] {
       override def encode(t: TT): R = outer.encode(g(t))
       override def decode(s: R): DecodeResult[TT] = outer.decode(s).flatMap(f)
       override val meta: CodecMeta[M, R] = outer.meta
+      override def validator: Validator[TT] = outer.validator.map(g)
     }
 
   def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
@@ -50,6 +52,7 @@ trait Codec[T, M <: MediaType, R] extends Decode[R, T] { outer =>
     override def encode(t: T): R = outer.encode(t)
     override def decode(s: R): DecodeResult[T] = outer.decode(s)
     override val meta: CodecMeta[M2, R] = meta2
+    override def validator: Validator[T] = outer.validator
   }
 
   def mediaType[M2 <: MediaType](m2: M2): Codec[T, M2, R] = withMeta[M2](meta.copy[M2, R](mediaType = m2))
@@ -85,6 +88,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
           case e: Exception => Error(s, e)
         }
       override val meta: CodecMeta[MediaType.TextPlain, String] = CodecMeta(_schema, MediaType.TextPlain(charset), StringValueType(charset))
+      override def validator: Validator[T] = Validator.rejecting
     }
 
   implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] = binaryCodec(ByteArrayValueType)
@@ -97,13 +101,16 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
     override def encode(b: T): T = b
     override def decode(b: T): DecodeResult[T] = Value(b)
     override val meta: CodecMeta[MediaType.OctetStream, T] = CodecMeta(Schema.SBinary, MediaType.OctetStream(), _rawValueType)
+    override val validator: Validator[T] = Validator.passing
   }
 
-  implicit val formSeqCodecUtf8: Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] = formSeqCodec(StandardCharsets.UTF_8)
-  implicit val formMapCodecUtf8: Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] = formMapCodec(StandardCharsets.UTF_8)
+  implicit def formSeqCodecUtf8: Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] = formSeqCodec(StandardCharsets.UTF_8)
+  implicit def formMapCodecUtf8: Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] = formMapCodec(StandardCharsets.UTF_8)
 
   def formSeqCodec(charset: Charset): Codec[Seq[(String, String)], MediaType.XWwwFormUrlencoded, String] =
-    stringCodec(charset).map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset)).mediaType(MediaType.XWwwFormUrlencoded())
+    stringCodec(charset)
+      .map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset))
+      .mediaType(MediaType.XWwwFormUrlencoded())
   def formMapCodec(charset: Charset): Codec[Map[String, String], MediaType.XWwwFormUrlencoded, String] =
     formSeqCodec(charset).map(_.toMap)(_.toSeq)
 
@@ -161,6 +168,8 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       }
       override val meta: CodecMeta[MediaType.MultipartFormData, Seq[RawPart]] =
         CodecMeta(Schema.SBinary, MediaType.MultipartFormData(), mvt)
+
+      override def validator: Validator[Seq[AnyPart]] = Validator.passing
     }
 }
 
@@ -178,16 +187,18 @@ Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
 schemas are looked up as implicit values of type SchemaFor[${T}])
 """)
-trait CodecForOptional[T, M <: MediaType, R] extends Decode[Option[R], T] { outer =>
+trait CodecForOptional[T, M <: MediaType, R] extends Validate[Option[R], T] { outer =>
   def encode(t: T): Option[R]
   def decode(s: Option[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
+  def validator: Validator[T]
 
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): CodecForOptional[TT, M, R] =
     new CodecForOptional[TT, M, R] {
       override def encode(t: TT): Option[R] = outer.encode(g(t))
       override def decode(s: Option[R]): DecodeResult[TT] = outer.decode(s).flatMap(f)
       override val meta: CodecMeta[M, R] = outer.meta
+      override def validator: Validator[TT] = outer.validator.map(g)
     }
 
   def map[TT](f: T => TT)(g: TT => T): CodecForOptional[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
@@ -196,16 +207,18 @@ trait CodecForOptional[T, M <: MediaType, R] extends Decode[Option[R], T] { oute
 object CodecForOptional {
   type PlainCodecForOptional[T] = CodecForOptional[T, MediaType.TextPlain, String]
 
-  implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecForOptional[T, M, R] = new CodecForOptional[T, M, R] {
-    override def encode(t: T): Option[R] = Some(c.encode(t))
-    override def decode(s: Option[R]): DecodeResult[T] = s match {
-      case None    => DecodeResult.Missing
-      case Some(h) => c.decode(h)
+  implicit def fromCodec[T, M <: MediaType, R](implicit c: Codec[T, M, R]): CodecForOptional[T, M, R] =
+    new CodecForOptional[T, M, R] {
+      override def encode(t: T): Option[R] = Some(c.encode(t))
+      override def decode(s: Option[R]): DecodeResult[T] = s match {
+        case None    => DecodeResult.Missing
+        case Some(h) => c.decode(h)
+      }
+      override val meta: CodecMeta[M, R] = c.meta
+      override def validator: Validator[T] = c.validator
     }
-    override val meta: CodecMeta[M, R] = c.meta
-  }
 
-  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForOptional[Option[T], M, R] =
+  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R], v: Validator[T]): CodecForOptional[Option[T], M, R] =
     new CodecForOptional[Option[T], M, R] {
       override def encode(t: Option[T]): Option[R] = t.map(v => tm.encode(v))
       override def decode(s: Option[R]): DecodeResult[Option[T]] = s match {
@@ -213,6 +226,8 @@ object CodecForOptional {
         case Some(ss) => tm.decode(ss).map(Some(_))
       }
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
+
+      override def validator: Validator[Option[T]] = v.forOption
     }
 }
 
@@ -231,16 +246,18 @@ Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
 schemas are looked up as implicit values of type SchemaFor[${T}])
 """)
-trait CodecForMany[T, M <: MediaType, R] extends Decode[Seq[R], T] { outer =>
+trait CodecForMany[T, M <: MediaType, R] extends Validate[Seq[R], T] { outer =>
   def encode(t: T): Seq[R]
   def decode(s: Seq[R]): DecodeResult[T]
   def meta: CodecMeta[M, R]
+  def validator: Validator[T]
 
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): CodecForMany[TT, M, R] =
     new CodecForMany[TT, M, R] {
       override def encode(t: TT): Seq[R] = outer.encode(g(t))
       override def decode(s: Seq[R]): DecodeResult[TT] = outer.decode(s).flatMap(f)
       override val meta: CodecMeta[M, R] = outer.meta
+      override def validator: Validator[TT] = outer.validator.map(g)
     }
 
   def map[TT](f: T => TT)(g: TT => T): CodecForMany[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
@@ -257,6 +274,8 @@ object CodecForMany {
       case l       => DecodeResult.Multiple(l)
     }
     override val meta: CodecMeta[M, R] = c.meta
+
+    override def validator: Validator[T] = c.validator
   }
 
   implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Option[T], M, R] =
@@ -268,6 +287,7 @@ object CodecForMany {
         case l       => DecodeResult.Multiple(l)
       }
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
+      override def validator: Validator[Option[T]] = tm.validator.forOption
     }
 
   // collections
@@ -277,6 +297,7 @@ object CodecForMany {
       override def encode(t: Seq[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[Seq[T]] = DecodeResult.sequence(s.map(tm.decode))
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
+      override def validator: Validator[Seq[T]] = Validator.rejecting
     }
 
   implicit def forList[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[List[T], M, R] =
@@ -284,6 +305,7 @@ object CodecForMany {
       override def encode(t: List[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toList)
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
+      override def validator: Validator[List[T]] = Validator.passing
     }
 
   implicit def forVector[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Vector[T], M, R] =
@@ -291,6 +313,7 @@ object CodecForMany {
       override def encode(t: Vector[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[Vector[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toVector)
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
+      override def validator: Validator[Vector[T]] = Validator.passing
     }
 
   implicit def forSet[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Set[T], M, R] =
@@ -298,6 +321,7 @@ object CodecForMany {
       override def encode(t: Set[T]): Seq[R] = t.map(v => tm.encode(v)).toSeq
       override def decode(s: Seq[R]): DecodeResult[Set[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toSet)
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
+      override def validator: Validator[Set[T]] = Validator.passing
     }
 }
 
@@ -328,6 +352,23 @@ trait Decode[F, T] {
     Try(decode(f)) match {
       case Success(r) => r
       case Failure(e) => DecodeResult.Error(f.toString, e)
+    }
+  }
+}
+
+trait Validate[F, T] extends Decode[F, T] {
+
+  def validator: Validator[T]
+
+  def safeDecode2(f: F): DecodeResult[T] = {
+    safeDecode(f) match {
+      case DecodeResult.Value(v) =>
+        if (validator.validate(v)) {
+          DecodeResult.Value(v)
+        } else {
+          DecodeResult.InvalidValue()
+        }
+      case r => r
     }
   }
 }

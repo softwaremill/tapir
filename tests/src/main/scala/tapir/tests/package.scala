@@ -6,11 +6,14 @@ import java.nio.ByteBuffer
 import io.circe.generic.auto._
 import tapir.json.circe._
 import com.softwaremill.macwire._
+import tapir.generic.{Constraint, Validator, ValueValidator}
 import tapir.model._
 
 import scala.io.Source
 
 package object tests {
+
+  implicit val v: Validator[String] = ValueValidator(List(Constraint.Pattern("apple|banana")))
 
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 

@@ -8,9 +8,10 @@ import tapir.Codec.JsonCodec
 import tapir.DecodeResult.{Error, Value}
 import tapir.Schema._
 import tapir._
+import tapir.generic.Validator
 
 trait TapirJsonCirce {
-  implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
+  implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor: Validator]: JsonCodec[T] = new JsonCodec[T] {
     override def encode(t: T): String = jsonPrinter.pretty(t.asJson)
     override def decode(s: String): DecodeResult[T] = io.circe.parser.decode[T](s) match {
       case Left(error) => Error(s, error)
@@ -18,6 +19,7 @@ trait TapirJsonCirce {
     }
     override def meta: CodecMeta[MediaType.Json, String] =
       CodecMeta(implicitly[SchemaFor[T]].schema, MediaType.Json(), StringValueType(StandardCharsets.UTF_8))
+    override def validator: Validator[T] = implicitly[Validator[T]]
   }
 
   def jsonPrinter: Printer = Printer.noSpaces
