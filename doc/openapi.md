@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.8.11"
-"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.8.11"
+"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.9.0"
+"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.9.0"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -48,8 +48,8 @@ Exposing the OpenAPI documentation can be very application-specific. However, ta
 akka-http/http4s routes for exposing documentation using the swagger ui:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http" % "0.8.11"
-"com.softwaremill.tapir" %% "tapir-swagger-ui-http4s" % "0.8.11"
+"com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http" % "0.9.0"
+"com.softwaremill.tapir" %% "tapir-swagger-ui-http4s" % "0.9.0"
 ```
 
 Usage example for akka-http:
