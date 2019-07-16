@@ -17,5 +17,5 @@ object Versions {
   val sttp = "1.6.3"
   val akkaHttp = "10.1.8"
   val akkaStreams = "2.5.23"
-  val swaggerUi = "3.22.2"
+  val swaggerUi = "3.23.0"
 }
