@@ -7,9 +7,11 @@ trait ValidateMagnoliaDerivation extends LowPriorityValidators {
 
   def combine[T](ctx: CaseClass[Validator, T]): Validator[T] = {
     ProductValidator(ctx.parameters.map { p =>
-      FieldValidator({ t: T =>
-        p.dereference(t)
-      }, p.typeclass)
+      new FieldValidator[T] {
+        override type fType = p.PType
+        override def get(t: T): fType = { p.dereference(t) }
+        override def validator: Typeclass[fType] = p.typeclass
+      }
     }.toList)
   }
 
@@ -37,17 +39,18 @@ object Validator extends ValidateMagnoliaDerivation {
   def rejecting[T]: Validator[T] = (t: T) => false
 }
 
-case class ProductValidator[T](fields: List[FieldValidator[T, _]]) extends Validator[T] {
+case class ProductValidator[T](fields: List[FieldValidator[T]]) extends Validator[T] {
   override def validate(t: T): Boolean = {
     fields.forall { f =>
-      val fTyped: FieldValidator[T, f.fType] = f.asInstanceOf[FieldValidator[T, f.fType]]
-      fTyped.validator.validate(fTyped.accessor(t))
+      f.validator.validate(f.get(t))
     }
   }
 }
 
-case class FieldValidator[T, U](accessor: T => U, validator: Validator[U]) {
-  type fType = U
+trait FieldValidator[T] {
+  type fType
+  def get(t: T): fType
+  def validator: Validator[fType]
 }
 
 case class ValueValidator[T](constraints: List[Constraint[T]]) extends Validator[T] {
