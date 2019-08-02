@@ -86,6 +86,9 @@ package object tests {
   val in_headers_out_headers: Endpoint[Seq[(String, String)], Unit, Seq[(String, String)], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(headers).out(headers)
 
+  val in_json_out_headers: Endpoint[FruitAmount, Unit, Seq[(String, String)], Nothing] =
+    endpoint.get.in("api" / "echo" / "headers").in(jsonBody[FruitAmount]).out(headers)
+
   val in_paths_out_string: Endpoint[Seq[String], Unit, String, Nothing] =
     endpoint.get.in(paths).out(stringBody)
 

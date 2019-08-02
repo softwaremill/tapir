@@ -194,7 +194,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     codec
       .encode(v)
       .map { t =>
-        codec.meta.rawValueType match {
+        val req2 = codec.meta.rawValueType match {
           case StringValueType(charset) => req.body(t, charset.name())
           case ByteArrayValueType       => req.body(t)
           case ByteBufferValueType      => req.body(t)
@@ -211,6 +211,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
             req.multipartBody(parts.toList)
         }
+
+        req2.header(HeaderNames.ContentType, codec.meta.mediaType.mediaType, replaceExisting = false)
       }
       .getOrElse(req)
   }

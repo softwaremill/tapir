@@ -93,6 +93,13 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       .get should contain allOf (("X-Fruit", "elppa"), ("Y-Fruit", "egnarO"))
   }
 
+  test(in_json_out_headers.showDetail) {
+    send(in_json_out_headers, port, FruitAmount("apple", 10))
+      .unsafeRunSync()
+      .right
+      .get should contain(("Content-Type", "application/json".reverse))
+  }
+
   //
 
   def mkStream(s: String): S
