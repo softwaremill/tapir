@@ -112,6 +112,9 @@ package object tests {
   val in_simple_multipart_out_string: Endpoint[FruitAmount, Unit, String, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitAmount]).out(stringBody)
 
+  val in_simple_multipart_out_raw_string: Endpoint[FruitAmountWrapper, Unit, String, Nothing] =
+    endpoint.post.in("api" / "echo").in(multipartBody[FruitAmountWrapper]).out(stringBody)
+
   val in_file_multipart_out_multipart: Endpoint[FruitData, Unit, FruitData, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
 

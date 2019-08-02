@@ -100,6 +100,25 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       .get should contain(("Content-Type", "application/json".reverse))
   }
 
+  test(in_simple_multipart_out_raw_string.showDetail) {
+    val result = send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
+      .unsafeRunSync()
+      .right
+      .get
+
+    val indexOfJson = result.indexOf("{\"fruit")
+    val beforeJson = result.substring(0, indexOfJson)
+    val afterJson = result.substring(indexOfJson)
+
+    beforeJson should include("""Content-Disposition: form-data; name="fruitAmount"""")
+    beforeJson should include("Content-Type: application/json")
+    beforeJson should not include ("Content-Type: text/plain")
+
+    afterJson should include("""Content-Disposition: form-data; name="notes"""")
+    afterJson should include("Content-Type: text/plain; charset=UTF-8")
+    afterJson should not include ("Content-Type: application/json")
+  }
+
   //
 
   def mkStream(s: String): S

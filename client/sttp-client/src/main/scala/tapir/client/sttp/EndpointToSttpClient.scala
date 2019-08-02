@@ -202,10 +202,18 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           case FileValueType            => req.body(t)
           case mvt: MultipartValueType =>
             val parts: Seq[Multipart] = (t: Seq[RawPart]).flatMap { p =>
-              mvt.partCodecMeta(p.name).map { codec =>
-                val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], codec.asInstanceOf[CodecMeta[_, Any]])
-                val sttpPart2 = p.headers.foldLeft(sttpPart1) { case (sp, (hk, hv)) => sp.header(hk, hv) }
-                p.fileName.map(sttpPart2.fileName).getOrElse(sttpPart2)
+              mvt.partCodecMeta(p.name).map { partCodecMeta =>
+                val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], partCodecMeta.asInstanceOf[CodecMeta[_, Any]])
+                val sttpPart2 = sttpPart1.contentType(partCodecMeta.mediaType.mediaTypeNoParams)
+                val sttpPart3 = p.headers.foldLeft(sttpPart2) {
+                  case (sp, (hk, hv)) =>
+                    if (hk.equalsIgnoreCase(HeaderNames.ContentType)) {
+                      sp.contentType(hv)
+                    } else {
+                      sp.header(hk, hv)
+                    }
+                }
+                p.fileName.map(sttpPart3.fileName).getOrElse(sttpPart3)
               }
             }
 
