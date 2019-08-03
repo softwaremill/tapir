@@ -1,3 +1,5 @@
+import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
+
 val scala2_12 = "2.12.9"
 val scala2_13 = "2.13.0"
 
@@ -35,8 +37,8 @@ lazy val rootProject = (project in file("."))
   .settings(commonSettings)
   .settings(publishArtifact := false, name := "tapir")
   .aggregate(
-    core,
-    circeJson,
+    core.jvm,
+    circeJson.jvm,
     uPickleJson,
     openapiModel,
     openapiCirce,
@@ -47,26 +49,31 @@ lazy val rootProject = (project in file("."))
     serverTests,
     akkaHttpServer,
     http4sServer,
-    sttpClient,
-    tests,
+    sttpClient.jvm,
+    tests.jvm,
     examples,
     playground
   )
 
 // core
 
-lazy val core: Project = (project in file("core"))
+lazy val core = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("core"))
   .settings(commonSettings)
   .settings(
     name := "tapir-core",
+    boilerplateSource in Compile := baseDirectory.value.getParentFile / "src" / "main" / "boilerplate",
     libraryDependencies ++= Seq(
-      "com.propensive" %% "magnolia" % "0.11.0",
+      "com.propensive" %%% "magnolia" % "0.11.0",
       scalaTest % "test"
     )
   )
   .enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
-lazy val tests: Project = (project in file("tests"))
+lazy val tests = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-tests",
@@ -81,7 +88,9 @@ lazy val tests: Project = (project in file("tests"))
 
 // json
 
-lazy val circeJson: Project = (project in file("json/circe"))
+lazy val circeJson = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("json/circe"))
   .settings(commonSettings)
   .settings(
     name := "tapir-json-circe",
@@ -140,7 +149,7 @@ lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   .settings(
     name := "tapir-openapi-docs"
   )
-  .dependsOn(openapiModel, core, tests % "test", openapiCirceYaml % "test")
+  .dependsOn(openapiModel, core.jvm, tests.jvm % "test", openapiCirceYaml % "test")
 
 lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
   .settings(commonSettings)
@@ -173,7 +182,7 @@ lazy val serverTests: Project = (project in file("server/tests"))
     libraryDependencies ++=
       Seq("com.softwaremill.sttp" %% "async-http-client-backend-cats" % Versions.sttp)
   )
-  .dependsOn(tests)
+  .dependsOn(tests.jvm)
 
 lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
   .settings(commonSettings)
@@ -184,7 +193,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
     )
   )
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(core.jvm, serverTests % "test")
 
 lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings)
@@ -194,11 +203,13 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_)
     )
   )
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(core.jvm, serverTests % "test")
 
 // client
 
-lazy val clientTests: Project = (project in file("client/tests"))
+lazy val clientTests = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("client/tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-client-tests",
@@ -211,7 +222,9 @@ lazy val clientTests: Project = (project in file("client/tests"))
   )
   .dependsOn(tests)
 
-lazy val sttpClient: Project = (project in file("client/sttp-client"))
+lazy val sttpClient = crossProject(JSPlatform, JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("client/sttp-client"))
   .settings(commonSettings)
   .settings(
     name := "tapir-sttp-client",
@@ -238,7 +251,7 @@ lazy val examples: Project = (project in file("examples"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient.jvm, openapiCirceYaml, openapiDocs, circeJson.jvm, swaggerUiAkka, swaggerUiHttp4s)
 
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings)
@@ -255,4 +268,4 @@ lazy val playground: Project = (project in file("playground"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient.jvm, openapiCirceYaml, openapiDocs, circeJson.jvm, swaggerUiAkka, swaggerUiHttp4s)
