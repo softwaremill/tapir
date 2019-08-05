@@ -37,6 +37,7 @@ lazy val rootProject = (project in file("."))
   .aggregate(
     core,
     circeJson,
+    uPickleJson,
     openapiModel,
     openapiCirce,
     openapiCirceYaml,
@@ -76,7 +77,7 @@ lazy val tests: Project = (project in file("tests"))
     ),
     libraryDependencies ++= loggerDependencies
   )
-  .dependsOn(core, circeJson)
+  .dependsOn(core, circeJson, uPickleJson)
 
 // json
 
@@ -89,6 +90,14 @@ lazy val circeJson: Project = (project in file("json/circe"))
       "io.circe" %% "circe-generic" % Versions.circe(_),
       "io.circe" %% "circe-parser" % Versions.circe(_)
     )
+  )
+  .dependsOn(core)
+
+lazy val uPickleJson: Project = (project in file("json/upickle"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-upickle",
+    libraryDependencies ++= Seq("com.lihaoyi" %% "upickle" % Versions.upickle)
   )
   .dependsOn(core)
 
@@ -227,7 +236,7 @@ lazy val examples: Project = (project in file("examples"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, uPickleJson, swaggerUiAkka, swaggerUiHttp4s)
 
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings)
@@ -244,4 +253,4 @@ lazy val playground: Project = (project in file("playground"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, uPickleJson, swaggerUiAkka, swaggerUiHttp4s)
