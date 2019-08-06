@@ -10,7 +10,7 @@ import upickle.default.{read, write}
 
 trait TapirJsonuPickle {
 
-  implicit def encoderDecoderCodec[T: RW: SchemaFor, M]: JsonCodec[T] = new JsonCodec[T] {
+  implicit def encoderDecoderCodec[T: RW: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
 
     def encode(t: T): String = write(t)
 
