@@ -31,6 +31,9 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S] =
     this.copy[IJ, E, O, S](input = input.and(i))
 
+  def prependIn[J, JI](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[J, I, JI]): Endpoint[JI, E, O, S] =
+    this.copy[JI, E, O, S](input = i.and(input))
+
   def in[J, IJ, S2 >: S](i: StreamingEndpointIO[J, S2])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S2] =
     this.copy[IJ, E, O, S2](input = input.and(i.toEndpointIO))
 
