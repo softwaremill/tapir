@@ -336,6 +336,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render ordinary map") {
+    val expectedYaml = loadYaml("expected_ordinary_map.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[Map[String, String]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   // #118
   test("use fixed status code output in response if it's the only output") {
     val expectedYaml = loadYaml("expected_fixed_status_code_2.yml")
