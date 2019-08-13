@@ -57,6 +57,13 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             d.map(discriminatorToOpenApi.apply)
           )
         )
+      case TSchema.SOpenProduct(_, additionalProperty) =>
+        Right(
+          OSchema(SchemaType.Object).copy(
+            required = List.empty,
+            additionalProperties = additionalProperty.map(ap => Left(schemaReferenceMapper.map(ap.info)))
+          )
+        )
     }
   }
 }
