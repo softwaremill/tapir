@@ -25,6 +25,8 @@ trait Tapir extends TapirDerivedInputs {
 
   def header[T: PlainCodecForMany](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[PlainCodecForMany[T]], EndpointIO.Info.empty)
+  def header(name: String, value: String): EndpointIO.FixedHeader =
+    EndpointIO.FixedHeader(name, value, EndpointIO.Info.empty)
   def headers: EndpointIO.Headers = EndpointIO.Headers(EndpointIO.Info.empty)
 
   def cookie[T: PlainCodecForOptional](name: String): EndpointInput.Cookie[T] =

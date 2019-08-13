@@ -110,6 +110,8 @@ object ObjectSchemasForEndpoints {
         objectSchemas(schema)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped) ++ forOutput(wrapped)
+      case EndpointIO.FixedHeader(_, _, _) =>
+        List.empty
     }
   }
 

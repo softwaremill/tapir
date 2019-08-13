@@ -2,7 +2,6 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
-import tapir.Schema.{SProduct, SObjectInfo, SRef}
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -346,6 +345,30 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("use fixed header output in response") {
+    val expectedYaml = loadYaml("expected_fixed_header_output_response.yml")
+
+    val actualYaml = endpoint
+      .out(header("Location", "Poland"))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use fixed header input in request") {
+    val expectedYaml = loadYaml("expected_fixed_header_input_request.yml")
+
+    val actualYaml = endpoint
+      .in(header("Location", "Poland"))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    println(actualYamlNoIndent)
+    actualYamlNoIndent shouldBe expectedYaml
   }
 
   private def loadYaml(fileName: String): String = {

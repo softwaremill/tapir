@@ -9,6 +9,8 @@ import tapir.client.tests.ClientTests
 import tapir.typelevel.ParamsAsArgs
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.fs2.AsyncHttpClientFs2Backend
+import tapir.model.StatusCodes
+import tapir.tests.in_fixed_header_out_string
 
 import scala.concurrent.ExecutionContext
 

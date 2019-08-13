@@ -1,11 +1,11 @@
 package tapir.docs.openapi
 
+import tapir._
 import tapir.docs.openapi.schema.ObjectSchemas
+import tapir.internal._
 import tapir.model.Method
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi._
-import tapir.internal._
-import tapir._
+import tapir.openapi.{Schema, _}
 
 import scala.collection.immutable.ListMap
 
@@ -80,6 +80,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
       case h: EndpointIO.Header[_]         => headerToParameter(h)
       case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
+      case f: EndpointIO.FixedHeader       => fixedHeaderToParameter(f)
     }
   }
 
@@ -90,6 +91,15 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       header.info.example.flatMap(exampleValue(header.codec, _))
     )
   }
+
+  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader) = {
+    EndpointInputToParameterConverter.from(
+      header,
+      Right(Schema(SchemaType.String)),
+      header.info.example.map(_ => exampleValue(header.value))
+    )
+  }
+
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
     EndpointInputToParameterConverter.from(
       cookie,
