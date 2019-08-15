@@ -38,15 +38,15 @@ trait Codec[T, M <: MediaType, R] extends Validate[R, T] { outer =>
   def meta: CodecMeta[M, R]
   def validator: Validator[T]
 
-  def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): Codec[TT, M, R] =
+  def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T)(implicit v: Validator[TT]): Codec[TT, M, R] =
     new Codec[TT, M, R] {
       override def encode(t: TT): R = outer.encode(g(t))
       override def decode(s: R): DecodeResult[TT] = outer.decode(s).flatMap(f)
       override val meta: CodecMeta[M, R] = outer.meta
-      override def validator: Validator[TT] = outer.validator.map(g)
+      override def validator: Validator[TT] = v
     }
 
-  def map[TT](f: T => TT)(g: TT => T): Codec[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
+  def map[TT](f: T => TT)(g: TT => T)(implicit v: Validator[TT]): Codec[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)(v)
 
   private def withMeta[M2 <: MediaType](meta2: CodecMeta[M2, R]): Codec[T, M2, R] = new Codec[T, M2, R] {
     override def encode(t: T): R = outer.encode(t)
@@ -88,7 +88,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
           case e: Exception => Error(s, e)
         }
       override val meta: CodecMeta[MediaType.TextPlain, String] = CodecMeta(_schema, MediaType.TextPlain(charset), StringValueType(charset))
-      override def validator: Validator[T] = Validator.rejecting
+      override def validator: Validator[T] = Validator.passing
     }
 
   implicit val byteArrayCodec: Codec[Array[Byte], MediaType.OctetStream, Array[Byte]] = binaryCodec(ByteArrayValueType)
@@ -193,15 +193,15 @@ trait CodecForOptional[T, M <: MediaType, R] extends Validate[Option[R], T] { ou
   def meta: CodecMeta[M, R]
   def validator: Validator[T]
 
-  def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): CodecForOptional[TT, M, R] =
+  def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T)(implicit v: Validator[TT]): CodecForOptional[TT, M, R] =
     new CodecForOptional[TT, M, R] {
       override def encode(t: TT): Option[R] = outer.encode(g(t))
       override def decode(s: Option[R]): DecodeResult[TT] = outer.decode(s).flatMap(f)
       override val meta: CodecMeta[M, R] = outer.meta
-      override def validator: Validator[TT] = outer.validator.map(g)
+      override def validator: Validator[TT] = v
     }
 
-  def map[TT](f: T => TT)(g: TT => T): CodecForOptional[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
+  def map[TT: Validator](f: T => TT)(g: TT => T): CodecForOptional[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
 }
 
 object CodecForOptional {

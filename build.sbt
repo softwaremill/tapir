@@ -72,6 +72,7 @@ lazy val tests: Project = (project in file("tests"))
     name := "tapir-tests",
     publishArtifact := false,
     libraryDependencies ++= Seq(
+      "com.softwaremill.common" %% "tagging" % "2.2.1",
       scalaTest,
       "com.softwaremill.macwire" %% "macros" % "2.3.3" % "provided"
     ),

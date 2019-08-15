@@ -7,12 +7,12 @@ trait ValidateMagnoliaDerivation extends LowPriorityValidators {
 
   def combine[T](ctx: CaseClass[Validator, T]): Validator[T] = {
     ProductValidator(ctx.parameters.map { p =>
-      new FieldValidator[T] {
+      p.label -> new FieldValidator[T] {
         override type fType = p.PType
         override def get(t: T): fType = { p.dereference(t) }
         override def validator: Typeclass[fType] = p.typeclass
       }
-    }.toList)
+    }.toMap)
   }
 
   def dispatch[T](ctx: SealedTrait[Validator, T]): Validator[T] = Validator.rejecting
@@ -39,9 +39,9 @@ object Validator extends ValidateMagnoliaDerivation {
   def rejecting[T]: Validator[T] = (t: T) => false
 }
 
-case class ProductValidator[T](fields: List[FieldValidator[T]]) extends Validator[T] {
+case class ProductValidator[T](fields: Map[String, FieldValidator[T]]) extends Validator[T] {
   override def validate(t: T): Boolean = {
-    fields.forall { f =>
+    fields.values.forall { f =>
       f.validator.validate(f.get(t))
     }
   }
@@ -66,9 +66,15 @@ object Constraint {
     override def check(actual: T): Boolean = implicitly[Numeric[T]].gteq(actual, value)
   }
 
-  case class Pattern(value: String) extends Constraint[String] {
-    override def check(t: String): Boolean = {
+  case class Pattern[T <: String](value: String) extends Constraint[T] {
+    override def check(t: T): Boolean = {
       t.matches(value)
+    }
+  }
+
+  case class MinSize[T <: Iterable[_]](value: Int) extends Constraint[T] {
+    override def check(t: T): Boolean = {
+      t.size >= value
     }
   }
 }

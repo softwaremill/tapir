@@ -6,14 +6,35 @@ import java.nio.ByteBuffer
 import io.circe.generic.auto._
 import tapir.json.circe._
 import com.softwaremill.macwire._
+import com.softwaremill.tagging.{@@, Tagger}
+import io.circe.{Decoder, Encoder}
+import tapir.Codec.PlainCodec
 import tapir.generic.{Constraint, Validator, ValueValidator}
 import tapir.model._
 
 import scala.io.Source
-
+import tapir.json.circe._
 package object tests {
 
-  implicit val v: Validator[String] = ValueValidator(List(Constraint.Pattern("apple|banana")))
+  implicit val v: Validator[String @@ Tapir] = ValueValidator(List(Constraint.Pattern("apple|banana")))
+
+  val in_valid_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] =
+    endpoint.in(query[String @@ Tapir]("fruit"))
+
+  implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+  implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+  implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+  val in_valid_json_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] =
+    endpoint.in(jsonBody[IntWrapper])
+
+  implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
+    uc.map(IntWrapper.apply)(_.v)(ValueValidator[Int](List(Constraint.Minimum[Int](1))).map(_.v))
+
+  val in_valid_query_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] =
+    endpoint.in(query[IntWrapper]("amount"))
+
+  implicit def taggedPlainCodec[U, T](implicit uc: PlainCodec[U], v: Validator[U @@ T]): PlainCodec[U @@ T] =
+    uc.map(_.taggedWith[T])(identity)(v)
 
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 

@@ -1,5 +1,6 @@
 package tapir.docs.openapi.schema
 
+import tapir.generic.{Constraint, Validator, ValueValidator}
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
 import tapir.{Schema => TSchema}
@@ -8,10 +9,10 @@ import tapir.{Schema => TSchema}
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
-  def apply(schema: TSchema): ReferenceOr[OSchema] = {
+  def apply(schema: (TSchema,Validator[_])): ReferenceOr[OSchema] = {
     schema match {
-      case TSchema.SInteger =>
-        Right(OSchema(SchemaType.Integer))
+      case (TSchema.SInteger, ValueValidator(constraints)) =>
+        Right(OSchema(SchemaType.Integer).copy(minimum = constraints.collectFirst { case Constraint.Minimum(v) => v }))
       case TSchema.SNumber =>
         Right(OSchema(SchemaType.Number))
       case TSchema.SBoolean =>
