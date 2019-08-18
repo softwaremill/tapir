@@ -1,7 +1,7 @@
 package tapir.json.upickle
 
 import upickle.default._
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.{FlatSpec, Matchers, Assertion}
 import java.util.Date
 import tapir._
 import tapir.DecodeResult._
@@ -18,46 +18,37 @@ class TapirJsonuPickleTests extends FlatSpec with Matchers {
 
   val customerDecoder = TapirJsonuPickleCodec.encoderDecoderCodec[Customer]
 
+  // Helper to test encoding then decoding an object is the same as the original
+  def testEncodeDecode[T: ReadWriter: SchemaFor](original: T): Assertion = {
+    val codec = TapirJsonuPickleCodec.encoderDecoderCodec[T]
+
+    val encoded = codec.encode(original)
+    codec.decode(encoded) match {
+      case Value(d) =>
+        d shouldBe original
+      case f: DecodeFailure =>
+        fail(f.toString)
+    }
+  }
+
   it should "encode and decode Scala case class with non-empty Option elements" in {
 
     val customer = Customer("Alita", 1985, Some(1566150331L))
-    val encoded = customerDecoder.encode(customer)
-
-    customerDecoder.decode(encoded).map { decoded =>
-      decoded shouldBe customer
-    }
+    testEncodeDecode(customer)
   }
 
   it should "encode and decode Scala case class with empty Option elements" in {
 
     val customer = Customer("Alita", 1985, None)
-    val encoded = customerDecoder.encode(customer)
-
-    customerDecoder.decode(encoded).map { decoded =>
-      decoded shouldBe customer
-    }
+    testEncodeDecode(customer)
   }
 
   it should "encode and decode String type" in {
-
-    val codec = TapirJsonuPickleCodec.encoderDecoderCodec[String]
-
-    val s = "Hello world!"
-    val encoded = codec.encode(s)
-    codec.decode(encoded).map { decoded =>
-      decoded shouldBe s
-    }
+    testEncodeDecode("Hello, World!")
   }
 
   it should "encode and decode Long type" in {
-
-    val codec = TapirJsonuPickleCodec.encoderDecoderCodec[Long]
-
-    val l = 1566150331L
-    val encoded = codec.encode(l)
-    codec.decode(encoded).map { decoded =>
-      decoded shouldBe l
-    }
+    testEncodeDecode(1566150331L)
   }
 
   // Custom Date serialization
@@ -83,17 +74,8 @@ class TapirJsonuPickleTests extends FlatSpec with Matchers {
   it should "encode and decode using custom Date serializer" in {
 
     import DateConversionUtil._
-
-    val codec = TapirJsonuPickleCodec.encoderDecoderCodec[Date]
     val d = new Date
-    val encoded = codec.encode(d)
-
-    codec.decode(encoded) match {
-      case f: DecodeFailure =>
-        fail(f.toString)
-      case Value(decoded) =>
-        decoded.compareTo(d) shouldBe 0
-    }
+    testEncodeDecode(d)
   }
 
   it should "Fail to encode a badly formatted date" in {
