@@ -1,6 +1,6 @@
 import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
 
-val scala2_12 = "2.12.8"
+val scala2_12 = "2.12.9"
 val scala2_13 = "2.13.0"
 
 lazy val is2_12 = settingKey[Boolean]("Is the scala version 2.12.")
