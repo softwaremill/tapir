@@ -56,13 +56,12 @@ lazy val rootProject = (project in file("."))
 
 // core
 
-lazy val core = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val core = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("core"))
   .settings(commonSettings)
   .settings(
     name := "tapir-core",
-    boilerplateSource in Compile := baseDirectory.value.getParentFile / "src" / "main" / "boilerplate",
     libraryDependencies ++= Seq(
       "com.propensive" %%% "magnolia" % "0.11.0",
       scalaTest % "test"
@@ -70,7 +69,7 @@ lazy val core = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   )
   .enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
-lazy val tests = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val tests = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("tests"))
   .settings(commonSettings)
