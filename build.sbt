@@ -77,7 +77,7 @@ lazy val tests: Project = (project in file("tests"))
     ),
     libraryDependencies ++= loggerDependencies
   )
-  .dependsOn(core, circeJson, uPickleJson)
+  .dependsOn(core, circeJson)
 
 // json
 
@@ -238,7 +238,7 @@ lazy val examples: Project = (project in file("examples"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, uPickleJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
 
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings)
@@ -255,4 +255,4 @@ lazy val playground: Project = (project in file("playground"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, uPickleJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
