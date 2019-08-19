@@ -229,7 +229,7 @@ lazy val examples: Project = (project in file("examples"))
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      _ => "dev.zio" %% "zio" % "1.0.0-RC10-1",
+      _ => "dev.zio" %% "zio" % "1.0.0-RC11-1",
       _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC2",
       _ => "org.typelevel" %% "cats-effect" % "1.3.1",
       "org.http4s" %% "http4s-dsl" % Versions.http4s(_)
