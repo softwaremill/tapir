@@ -142,20 +142,32 @@ class SchemaForTest extends FlatSpec with Matchers {
 
   it should "find schema for map" in {
     val schema = implicitly[SchemaFor[Map[String, Int]]].schema
-    schema shouldBe SOpenProduct(SObjectInfo("Map"), None)
+    schema shouldBe SOpenProduct(SObjectInfo("Map", List("Int")), Schema.SInteger)
   }
 
   it should "find schema for map of products" in {
     val schema = implicitly[SchemaFor[Map[String, D]]].schema
     schema shouldBe SOpenProduct(
       SObjectInfo("Map", List("D")),
-      Some(SProduct(SObjectInfo("tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName")))
+      SProduct(SObjectInfo("tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName"))
+    )
+  }
+
+  it should "find schema for map of generic products" in {
+    val schema = implicitly[SchemaFor[Map[String, H[D]]]].schema
+    schema shouldBe SOpenProduct(
+      SObjectInfo("Map", List("H", "D")),
+      SProduct(
+        SObjectInfo("tapir.generic.H", List("D")),
+        List(("data", SProduct(SObjectInfo("tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName")))),
+        List("data")
+      )
     )
   }
 
   it should "find schema for map of value classes" in {
     val schema = implicitly[SchemaFor[Map[String, IntegerValueClass]]].schema
-    schema shouldBe SOpenProduct(SObjectInfo("Map"), None)
+    schema shouldBe SOpenProduct(SObjectInfo("Map", List("IntegerValueClass")), Schema.SInteger)
   }
 
   it should "find schema for recursive coproduct type" in {

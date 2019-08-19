@@ -49,7 +49,7 @@ object ObjectSchemasForEndpoints {
       case s: TSchema.SCoproduct =>
         s +: s.schemas.flatMap(objectSchemas).toList
       case s: TSchema.SOpenProduct =>
-        s +: s.additionalProperty.toList.flatMap(objectSchemas)
+        s +: objectSchemas(s.additionalProperty)
       case _ => List.empty
     }
   }

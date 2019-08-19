@@ -12,8 +12,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Map'
+                $ref: '#/components/schemas/Map_String'
 components:
   schemas:
-    Map:
+    Map_String:
       type: object
+      additionalProperties:
+        type: string

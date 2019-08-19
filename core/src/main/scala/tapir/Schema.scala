@@ -39,7 +39,7 @@ object Schema {
   case class SCoproduct(info: SObjectInfo, schemas: Set[Schema], discriminator: Option[Discriminator]) extends SObject {
     override def show: String = "oneOf:" + schemas.mkString(",")
   }
-  case class SOpenProduct(info: SObjectInfo, additionalProperty: Option[Schema.SObject]) extends SObject {
+  case class SOpenProduct(info: SObjectInfo, additionalProperty: Schema) extends SObject {
     override def show: String = s"map"
   }
 

@@ -61,7 +61,10 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
         Right(
           OSchema(SchemaType.Object).copy(
             required = List.empty,
-            additionalProperties = additionalProperty.map(ap => Left(schemaReferenceMapper.map(ap.info)))
+            additionalProperties = Some(additionalProperty match {
+              case so: TSchema.SObject => Left(schemaReferenceMapper.map(so.info))
+              case s                   => apply(s)
+            })
           )
         )
     }
