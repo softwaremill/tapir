@@ -56,7 +56,7 @@ lazy val rootProject = (project in file("."))
 
 // core
 
-lazy val core = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val core = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("core"))
   .settings(commonSettings)
@@ -70,7 +70,7 @@ lazy val core = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   )
   .enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
-lazy val tests = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val tests = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("tests"))
   .settings(commonSettings)
@@ -87,7 +87,7 @@ lazy val tests = crossProject(JSPlatform, JVMPlatform, NativePlatform)
 
 // json
 
-lazy val circeJson = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val circeJson = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("json/circe"))
   .settings(commonSettings)
@@ -196,7 +196,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
 
 // client
 
-lazy val clientTests = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val clientTests = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("client/tests"))
   .settings(commonSettings)
@@ -211,7 +211,7 @@ lazy val clientTests = crossProject(JSPlatform, JVMPlatform, NativePlatform)
   )
   .dependsOn(tests)
 
-lazy val sttpClient = crossProject(JSPlatform, JVMPlatform, NativePlatform)
+lazy val sttpClient = crossProject(JSPlatform, JVMPlatform)
   .crossType(CrossType.Pure)
   .in(file("client/sttp-client"))
   .settings(commonSettings)
