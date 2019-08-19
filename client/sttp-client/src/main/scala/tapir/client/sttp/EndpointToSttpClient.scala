@@ -183,7 +183,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointIO.FixedHeader(name, value, _) +: tail =>
         val req2 = Seq(value)
           .foldLeft(req) { case (r, v) => r.header(name, v) }
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+        setInputParams(tail, params, paramsAsArgs, paramIndex, uri, req2)
       case EndpointInput.ExtractFromRequest(_) +: tail =>
         // ignoring
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req)
