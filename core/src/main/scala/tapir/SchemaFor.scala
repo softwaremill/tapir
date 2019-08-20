@@ -60,7 +60,7 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
   }
 
-  implicit def schemaForMap[V: SchemaFor]: SchemaFor[Map[String, V]] = SchemaFor(SProduct(SObjectInfo("Map"), List.empty, List.empty))
+  implicit def schemaForMap[V: SchemaFor]: SchemaFor[Map[String, V]] = macro generic.SchemaForMapMacro.schemaForMap[Map[String, V], V]
 
   def oneOf[E, V](extractor: E => V, asString: V => String)(mapping: (V, SchemaFor[_])*): SchemaFor[E] = macro oneOfMacro[E, V]
 }
