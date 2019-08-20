@@ -46,6 +46,7 @@ package object internal {
     case _: EndpointInput.Cookie[_]             => 3
     case _: EndpointIO.Header[_]                => 3
     case _: EndpointIO.Headers                  => 3
+    case _: EndpointIO.FixedHeader              => 3
     case _: EndpointInput.ExtractFromRequest[_] => 4
     case _: EndpointIO.Body[_, _, _]            => 6
     case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
@@ -123,6 +124,7 @@ package object internal {
       case _: EndpointOutput.FixedStatusCode     => 0
       case _: EndpointIO.Header[_]               => 1
       case _: EndpointIO.Headers                 => 1
+      case _: EndpointIO.FixedHeader             => 1
       case _: EndpointIO.Body[_, _, _]           => 2
       case _: EndpointIO.StreamBodyWrapper[_, _] => 2
     }

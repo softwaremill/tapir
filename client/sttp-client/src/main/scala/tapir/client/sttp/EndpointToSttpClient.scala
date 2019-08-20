@@ -90,6 +90,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
         case EndpointOutput.FixedStatusCode(_, _) =>
           None
+        case EndpointIO.FixedHeader(_, _, _) =>
+          None
 
         case EndpointOutput.OneOf(mappings) =>
           val mapping = mappings
@@ -178,6 +180,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             r.header(k, v, replaceExisting)
         }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+      case EndpointIO.FixedHeader(name, value, _) +: tail =>
+        val req2 = Seq(value)
+          .foldLeft(req) { case (r, v) => r.header(name, v) }
+        setInputParams(tail, params, paramsAsArgs, paramIndex, uri, req2)
       case EndpointInput.ExtractFromRequest(_) +: tail =>
         // ignoring
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req)

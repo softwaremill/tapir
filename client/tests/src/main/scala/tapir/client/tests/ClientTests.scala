@@ -119,6 +119,11 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     afterJson should not include ("Content-Type: application/json")
   }
 
+  test(in_fixed_header_out_string.showDetail) {
+    send(in_fixed_header_out_string, port, ())
+      .unsafeRunSync() shouldBe Right("Location: secret")
+  }
+
   //
 
   def mkStream(s: String): S
@@ -168,6 +173,12 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       r.headers.get(CaseInsensitiveString("X-Role")) match {
         case None    => Ok()
         case Some(h) => Ok("Role: " + h.value)
+      }
+
+    case r @ GET -> Root / "secret" =>
+      r.headers.get(CaseInsensitiveString("Location")) match {
+        case None    => BadRequest()
+        case Some(h) => Ok("Location: " + h.value)
       }
 
     case DELETE -> Root / "api" / "delete" => Ok()
