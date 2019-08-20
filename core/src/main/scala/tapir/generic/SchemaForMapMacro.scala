@@ -6,7 +6,10 @@ import scala.reflect.macros.blackbox
 
 object SchemaForMapMacro {
 
-  def schemaForMap[M: c.WeakTypeTag, V: c.WeakTypeTag](c: blackbox.Context)(ev: c.Expr[SchemaFor[V]]): c.Expr[SchemaFor[Map[String, V]]] = {
+  /*
+    Extract name and generic type parameters of map value type for object info creation
+   */
+  def schemaForMap[M: c.WeakTypeTag, V: c.WeakTypeTag](c: blackbox.Context)(schemaForV: c.Expr[SchemaFor[V]]): c.Expr[SchemaFor[Map[String, V]]] = {
     import c.universe._
 
     def extractTypeArguments(weakType: c.Type): List[String] = {
@@ -15,10 +18,9 @@ object SchemaForMapMacro {
     }
 
     val weakTypeV = weakTypeOf[V]
-    val schemaForV = c.typecheck(q"${ev}.schema")
     val genericTypeParametersM = List(weakTypeV.typeSymbol.name.decodedName.toString) ++ extractTypeArguments(weakTypeV)
     val schemaForMap =
-      q"""tapir.SchemaFor(tapir.Schema.SOpenProduct(tapir.Schema.SObjectInfo("Map", ${genericTypeParametersM}), $schemaForV))"""
+      q"""tapir.SchemaFor(tapir.Schema.SOpenProduct(tapir.Schema.SObjectInfo("Map", ${genericTypeParametersM}), ${schemaForV}.schema))"""
     c.Expr[SchemaFor[Map[String, V]]](schemaForMap)
   }
 }
