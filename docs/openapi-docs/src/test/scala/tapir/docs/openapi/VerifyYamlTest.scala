@@ -337,6 +337,17 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should support prepending inputs") {
+    val expectedYaml = loadYaml("expected_prepended_input.yml")
+
+    val actualYaml = in_query_query_out_string
+      .in("add")
+      .prependIn("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
