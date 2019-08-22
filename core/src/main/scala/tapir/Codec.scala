@@ -201,7 +201,7 @@ trait CodecForOptional[T, M <: MediaType, R] extends Validate[Option[R], T] { ou
       override def validator: Validator[TT] = v
     }
 
-  def map[TT: Validator](f: T => TT)(g: TT => T): CodecForOptional[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)
+  def map[TT](f: T => TT)(g: TT => T)(implicit v: Validator[TT]): CodecForOptional[TT, M, R] = mapDecode[TT](f.andThen(Value.apply))(g)(v)
 }
 
 object CodecForOptional {
