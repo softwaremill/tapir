@@ -9,7 +9,9 @@ object SchemaForMapMacro {
   /*
     Extract name and generic type parameters of map value type for object info creation
    */
-  def schemaForMap[M: c.WeakTypeTag, V: c.WeakTypeTag](c: blackbox.Context)(schemaForV: c.Expr[SchemaFor[V]]): c.Expr[SchemaFor[Map[String, V]]] = {
+  def schemaForMap[M: c.WeakTypeTag, V: c.WeakTypeTag](
+      c: blackbox.Context
+  )(schemaForV: c.Expr[SchemaFor[V]]): c.Expr[SchemaFor[Map[String, V]]] = {
     import c.universe._
 
     def extractTypeArguments(weakType: c.Type): List[String] = {
