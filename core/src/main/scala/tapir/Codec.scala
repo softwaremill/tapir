@@ -8,7 +8,7 @@ import java.nio.file.Path
 import java.util.UUID
 
 import tapir.DecodeResult._
-import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation, Validator}
+import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
 import tapir.internal.UrlencodedData
 import tapir.model.Part
 
@@ -218,7 +218,7 @@ object CodecForOptional {
       override def validator: Validator[T] = c.validator
     }
 
-  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R], v: Validator[T]): CodecForOptional[Option[T], M, R] =
+  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R], v: Validator[Option[T]]): CodecForOptional[Option[T], M, R] =
     new CodecForOptional[Option[T], M, R] {
       override def encode(t: Option[T]): Option[R] = t.map(v => tm.encode(v))
       override def decode(s: Option[R]): DecodeResult[Option[T]] = s match {
@@ -227,7 +227,7 @@ object CodecForOptional {
       }
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
 
-      override def validator: Validator[Option[T]] = v.forOption
+      override def validator: Validator[Option[T]] = v
     }
 }
 
@@ -278,7 +278,7 @@ object CodecForMany {
     override def validator: Validator[T] = c.validator
   }
 
-  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Option[T], M, R] =
+  implicit def forOption[T, M <: MediaType, R](implicit tm: Codec[T, M, R], v: Validator[Option[T]]): CodecForMany[Option[T], M, R] =
     new CodecForMany[Option[T], M, R] {
       override def encode(t: Option[T]): Seq[R] = t.map(v => tm.encode(v)).toList
       override def decode(s: Seq[R]): DecodeResult[Option[T]] = s match {
@@ -287,41 +287,41 @@ object CodecForMany {
         case l       => DecodeResult.Multiple(l)
       }
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true)
-      override def validator: Validator[Option[T]] = tm.validator.forOption
+      override def validator: Validator[Option[T]] = v
     }
 
   // collections
 
-  implicit def forSeq[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Seq[T], M, R] =
+  implicit def forSeq[T, M <: MediaType, R](implicit tm: Codec[T, M, R], v: Validator[Seq[T]]): CodecForMany[Seq[T], M, R] =
     new CodecForMany[Seq[T], M, R] {
       override def encode(t: Seq[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[Seq[T]] = DecodeResult.sequence(s.map(tm.decode))
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
-      override def validator: Validator[Seq[T]] = Validator.rejecting
+      override def validator: Validator[Seq[T]] = v
     }
 
-  implicit def forList[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[List[T], M, R] =
+  implicit def forList[T, M <: MediaType, R](implicit tm: Codec[T, M, R], v: Validator[List[T]]): CodecForMany[List[T], M, R] =
     new CodecForMany[List[T], M, R] {
       override def encode(t: List[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toList)
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
-      override def validator: Validator[List[T]] = Validator.passing
+      override def validator: Validator[List[T]] = v
     }
 
-  implicit def forVector[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Vector[T], M, R] =
+  implicit def forVector[T, M <: MediaType, R](implicit tm: Codec[T, M, R], v: Validator[Vector[T]]): CodecForMany[Vector[T], M, R] =
     new CodecForMany[Vector[T], M, R] {
       override def encode(t: Vector[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[Vector[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toVector)
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
-      override def validator: Validator[Vector[T]] = Validator.passing
+      override def validator: Validator[Vector[T]] = v
     }
 
-  implicit def forSet[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Set[T], M, R] =
+  implicit def forSet[T, M <: MediaType, R](implicit tm: Codec[T, M, R], v: Validator[Set[T]]): CodecForMany[Set[T], M, R] =
     new CodecForMany[Set[T], M, R] {
       override def encode(t: Set[T]): Seq[R] = t.map(v => tm.encode(v)).toSeq
       override def decode(s: Seq[R]): DecodeResult[Set[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toSet)
       override val meta: CodecMeta[M, R] = tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema))
-      override def validator: Validator[Set[T]] = Validator.passing
+      override def validator: Validator[Set[T]] = v
     }
 }
 

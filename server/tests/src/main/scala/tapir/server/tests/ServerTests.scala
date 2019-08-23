@@ -12,7 +12,6 @@ import com.softwaremill.sttp.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import io.circe.generic.auto._
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
 import tapir._
-import tapir.generic.{Constraint, Validator, ValueValidator}
 import tapir.json.circe._
 import tapir.model.{MultiQueryParams, Part, SetCookieValue, UsernamePassword}
 import tapir.server.{DecodeFailureHandler, ServerDefaults}

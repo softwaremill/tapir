@@ -9,7 +9,7 @@ import tapir.{Schema => TSchema}
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
-  def apply(schema: (TSchema,Validator[_])): ReferenceOr[OSchema] = {
+  def apply(schema: (TSchema, Validator[_])): ReferenceOr[OSchema] = {
     schema match {
       case (TSchema.SInteger, ValueValidator(constraints)) =>
         Right(OSchema(SchemaType.Integer).copy(minimum = constraints.collectFirst { case Constraint.Minimum(v) => v }))

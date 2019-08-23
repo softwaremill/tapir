@@ -9,7 +9,6 @@ import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
 import tapir.Codec.PlainCodec
-import tapir.generic.{Constraint, Validator, ValueValidator}
 import tapir.model._
 
 import scala.io.Source

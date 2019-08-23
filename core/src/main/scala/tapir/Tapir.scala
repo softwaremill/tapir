@@ -6,7 +6,6 @@ import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
 import tapir.EndpointOutput.StatusMapping
-import tapir.generic.Validator
 import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue, StatusCode}
 
 import scala.reflect.ClassTag

@@ -8,7 +8,6 @@ import tapir.Codec.JsonCodec
 import tapir.DecodeResult.{Error, Value}
 import tapir.Schema._
 import tapir._
-import tapir.generic.Validator
 
 trait TapirJsonCirce {
   implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor: Validator]: JsonCodec[T] = new JsonCodec[T] {
