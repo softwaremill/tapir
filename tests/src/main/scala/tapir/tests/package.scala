@@ -14,8 +14,10 @@ import tapir.model._
 import scala.io.Source
 import tapir.json.circe._
 package object tests {
+  type MyTaggedString = String @@ Tapir
 
-  implicit val v: Validator[String @@ Tapir] = ValueValidator(List(Constraint.Pattern("apple|banana")))
+  implicit def plainCodecForMyTaggedString(implicit uc: PlainCodec[String]): PlainCodec[MyTaggedString] =
+    uc.map(_.taggedWith[Tapir])(identity).validate(ValueValidator(List(Constraint.Pattern("apple|banana"))))
 
   val in_valid_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] =
     endpoint.in(query[String @@ Tapir]("fruit"))
@@ -27,13 +29,13 @@ package object tests {
     endpoint.in(jsonBody[IntWrapper])
 
   implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
-    uc.map(IntWrapper.apply)(_.v)(ValueValidator[Int](List(Constraint.Minimum[Int](1))).map(_.v))
+    uc.map(IntWrapper.apply)(_.v).validate(ValueValidator[Int](List(Constraint.Minimum[Int](1))).contramap(_.v))
 
   val in_valid_query_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] =
     endpoint.in(query[IntWrapper]("amount"))
 
-  implicit def taggedPlainCodec[U, T](implicit uc: PlainCodec[U], v: Validator[U @@ T]): PlainCodec[U @@ T] =
-    uc.map(_.taggedWith[T])(identity)(v)
+//  implicit def taggedPlainCodec[U, T](implicit uc: PlainCodec[U], v: Validator[U @@ T]): PlainCodec[U @@ T] =
+//    uc.map(_.taggedWith[T])(identity)
 
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 

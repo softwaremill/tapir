@@ -3,9 +3,9 @@ package tapir.generic
 import java.math.{BigDecimal => JBigDecimal}
 
 import org.scalatest.{FlatSpec, Matchers}
-import tapir.Schema.{SInteger, SProduct, SObjectInfo, SString}
+import tapir.Schema.{SInteger, SObjectInfo, SProduct, SString}
 import tapir.util.CompileUtil
-import tapir.{Codec, DecodeResult, MediaType}
+import tapir.{Codec, DecodeResult, MediaType, Validator}
 
 class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
@@ -112,6 +112,17 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
     codec.decode("") shouldBe DecodeResult.Value(Test1(Nil))
     codec.decode("f1=10") shouldBe DecodeResult.Value(Test1(List(10)))
     codec.decode("f1=10&f1=12") shouldBe DecodeResult.Value(Test1(List(10, 12)))
+  }
+
+  it should "generate a codec for a one-arg case class using implicit validator" in {
+    // given
+    case class Test1(f1: Int)
+    implicit val v: Validator[Int] = Validator.rejecting
+    val codec = implicitly[Codec[Test1, MediaType.XWwwFormUrlencoded, String]]
+
+    // when
+    codec.encode(Test1(10)) shouldBe "f1=10"
+    codec.decodeAndValidate("f1=10") shouldBe DecodeResult.InvalidValue()
   }
 
   it should "generate a codec for a case class with simple types" in {

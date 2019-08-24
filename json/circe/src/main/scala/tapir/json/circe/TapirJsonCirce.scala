@@ -18,7 +18,8 @@ trait TapirJsonCirce {
     }
     override def meta: CodecMeta[MediaType.Json, String] =
       CodecMeta(implicitly[SchemaFor[T]].schema, MediaType.Json(), StringValueType(StandardCharsets.UTF_8))
-    override def validator: Validator[T] = implicitly[Validator[T]]
+
+    override private[tapir] val validator: Validator[T] = implicitly[Validator[T]]
   }
 
   def jsonPrinter: Printer = Printer.noSpaces

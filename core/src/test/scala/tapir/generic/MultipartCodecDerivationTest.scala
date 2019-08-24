@@ -6,7 +6,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
 import tapir.model.Part
 import tapir.util.CompileUtil
-import tapir.{Codec, DecodeResult, MediaType, RawPart}
+import tapir.{Codec, DecodeResult, MediaType, RawPart, Validator}
 
 class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
@@ -160,6 +160,17 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
 
     codec.encode(Test1(Part("f1", None), 12)) shouldBe List(Part("f2", "12"))
     codec.decode(List(Part("f2", "12"))) shouldBe DecodeResult.Value(Test1(Part("f1", None), 12))
+  }
+
+  it should "generate a codec for a one-arg case class with implicit validator" in {
+    // given
+    implicit val v: Validator[Int] = Validator.rejecting
+    case class Test1(f1: Int)
+    val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
+
+    // when
+    toPartData(codec.encode(Test1(10))) shouldBe List(("f1", "10"))
+    codec.decodeAndValidate(createStringParts(List(("f1", "10")))) shouldBe DecodeResult.InvalidValue()
   }
 
   private def toPartData(parts: Seq[RawPart]): Seq[(String, Any)] = parts.map(p => (p.name, p.body))
