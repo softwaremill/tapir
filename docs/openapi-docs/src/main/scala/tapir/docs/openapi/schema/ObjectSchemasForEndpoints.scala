@@ -44,11 +44,6 @@ object ObjectSchemasForEndpoints {
         List(p -> v) ++ schemaWithValidatorForFields(p, v)
           .flatMap(k => objectSchemas(k._1, k._2))
           .toList
-      case (p: TSchema.SProduct, v: Validator[_]) =>
-        List(p -> v) ++ p.fields
-          .map(f => f._2 -> Validator.passing[f.type])
-          .flatMap(k => objectSchemas(k._1, k._2))
-          .toList
       case (TSchema.SArray(o), v: ValueValidator[_]) =>
         objectSchemas(o, v)
       case (s: TSchema.SCoproduct, v) =>
