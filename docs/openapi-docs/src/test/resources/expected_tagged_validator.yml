@@ -12,7 +12,7 @@ paths:
           required: true
           schema:
             type: string
-            pattern: 'apple|banana'
+            pattern: apple|banana
       responses:
         '200':
           description: ''

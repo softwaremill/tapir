@@ -345,6 +345,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml
+
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 

@@ -40,11 +40,11 @@ object ObjectSchemasForEndpoints {
 
   private def objectSchemas(schema: TSchema, validator: Validator[_]): List[(TSchema.SObject, Validator[_])] = {
     (schema, validator) match {
-      case (p: TSchema.SProduct, v: Validator[_]) =>
+      case (p: TSchema.SProduct, v) =>
         List(p -> v) ++ schemaWithValidatorForFields(p, v)
           .flatMap(k => objectSchemas(k._1, k._2))
           .toList
-      case (TSchema.SArray(o), v: ValueValidator[_]) =>
+      case (TSchema.SArray(o), v) =>
         objectSchemas(o, v)
       case (s: TSchema.SCoproduct, v) =>
         (s -> v) +: s.schemas.flatMap(c => objectSchemas(c, Validator.passing)).toList

@@ -50,7 +50,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             None,
             None,
             None,
-            Some(objectSchemas(codec.meta.schema)),
+            Some(objectSchemas(codec.meta.schema -> codec.validator)),
             info.example.flatMap(exampleValue(codec, _)),
             ListMap.empty,
             ListMap.empty
@@ -59,8 +59,9 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     }
 
     val bodies = outputs.collect {
-      case EndpointIO.Body(m, i)                                            => (i.description, codecToMediaType(m, i.example))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) => (i.description, codecToMediaType(s, mt, i.example))
+      case EndpointIO.Body(m, i) => (i.description, codecToMediaType(m, i.example))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
+        (i.description, codecToMediaType(s, mt, i.example, Validator.passing[Any]))
     }
     val body = bodies.headOption
 
