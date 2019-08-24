@@ -1,11 +1,11 @@
 package tapir.docs.openapi.schema
 
 import tapir.docs.openapi.uniqueName
-import tapir.generic.{ProductValidator, Validator, ValueValidator}
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema}
 import tapir.{Schema => TSchema, _}
 
+import scala.collection.immutable
 import scala.collection.immutable.ListMap
 
 object ObjectSchemasForEndpoints {
@@ -40,12 +40,13 @@ object ObjectSchemasForEndpoints {
 
   private def objectSchemas(schema: TSchema, validator: Validator[_]): List[(TSchema.SObject, Validator[_])] = {
     (schema, validator) match {
-      case (p: TSchema.SProduct, v: ProductValidator[_]) =>
-        val fieldsValidators: Iterable[(TSchema, Validator[_])] = p.fields
-          .map { f =>
-            f._2 -> v.fields(f._1).validator
-          }
-        List(p -> v) ++ fieldsValidators
+      case (p: TSchema.SProduct, v: Validator[_]) =>
+        List(p -> v) ++ schemaWithValidatorForFields(p, v)
+          .flatMap(k => objectSchemas(k._1, k._2))
+          .toList
+      case (p: TSchema.SProduct, v: Validator[_]) =>
+        List(p -> v) ++ p.fields
+          .map(f => f._2 -> Validator.passing[f.type])
           .flatMap(k => objectSchemas(k._1, k._2))
           .toList
       case (TSchema.SArray(o), v: ValueValidator[_]) =>
@@ -53,6 +54,16 @@ object ObjectSchemasForEndpoints {
       case (s: TSchema.SCoproduct, v) =>
         (s -> v) +: s.schemas.flatMap(c => objectSchemas(c, Validator.passing)).toList
       case _ => List.empty
+    }
+  }
+
+  private def schemaWithValidatorForFields(p: TSchema.SProduct, v: Validator[_]): immutable.Seq[(TSchema, Validator[_])] = {
+    v match {
+      case ProductValidator(fields) =>
+        p.fields.map { f =>
+          f._2 -> fields(f._1).validator
+        }.toList
+      case _ => p.fields.map(f => f._2 -> Validator.passing[f.type]).toList
     }
   }
 
