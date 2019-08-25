@@ -22,6 +22,7 @@ object Validator extends ValidateMagnoliaDerivation {
   implicit def validatorForOption[T: Validator]: Validator[Option[T]] = implicitly[Validator[T]].toOption
   implicit def validatorForArray[T: Validator]: Validator[Array[T]] = implicitly[Validator[T]].toArray
   implicit def validatorForIterable[T: Validator, C[_] <: Iterable[_]]: Validator[C[T]] = implicitly[Validator[T]].toIterable[C]
+  implicit def validatorForMap[T: Validator]: Validator[Map[String, T]] = OpenProductValidator(implicitly[Validator[T]])
 }
 
 case class ProductValidator[T](fields: Map[String, FieldValidator[T]]) extends Validator[T] {
@@ -68,5 +69,11 @@ case class ArrayValidator[E: Validator, C[_] <: Array[_]](elementValidator: Vali
     t.asInstanceOf[Array[E]].forall { e: E =>
       elementValidator.validate(e)
     } && constraints.forall(_.check(t))
+  }
+}
+
+case class OpenProductValidator[E](elementValidator: Validator[E]) extends Validator[Map[String, E]] {
+  override def validate(t: Map[String, E]): Boolean = {
+    t.values.forall(elementValidator.validate)
   }
 }

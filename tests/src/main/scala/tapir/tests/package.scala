@@ -53,6 +53,14 @@ package object tests {
     endpoint.in(jsonBody[BasketOfFruits])
   }
 
+  val in_valid_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Nothing] = {
+    implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+    implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+    implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+    implicit val v: Validator[IntWrapper] = ValueValidator(List(Constraint.Minimum(1))).contramap(_.v)
+    endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
+  }
+
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 
   val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String, Nothing] =

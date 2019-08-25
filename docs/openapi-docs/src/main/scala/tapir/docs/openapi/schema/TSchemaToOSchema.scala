@@ -2,7 +2,16 @@ package tapir.docs.openapi.schema
 
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
-import tapir.{BaseCollectionValidator, CollectionValidator, Constraint, ProductValidator, Validator, ValueValidator, Schema => TSchema}
+import tapir.{
+  BaseCollectionValidator,
+  CollectionValidator,
+  Constraint,
+  OpenProductValidator,
+  ProductValidator,
+  Validator,
+  ValueValidator,
+  Schema => TSchema
+}
 
 /**
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
@@ -62,13 +71,13 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             d.map(discriminatorToOpenApi.apply)
           )
         )
-      case (TSchema.SOpenProduct(_, valueSchema), v) =>
+      case (TSchema.SOpenProduct(_, valueSchema), v: OpenProductValidator[_]) =>
         Right(
           OSchema(SchemaType.Object).copy(
             required = List.empty,
             additionalProperties = Some(valueSchema match {
               case so: TSchema.SObject => Left(schemaReferenceMapper.map(so.info))
-              case s                   => apply(s -> Validator.passing)
+              case s                   => apply(s -> v.elementValidator)
             })
           )
         )

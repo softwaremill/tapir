@@ -48,8 +48,8 @@ object ObjectSchemasForEndpoints {
         objectSchemas(o, v.elementValidator)
       case (s: TSchema.SCoproduct, v) =>
         (s -> v) +: s.schemas.flatMap(c => objectSchemas(c, Validator.passing)).toList
-      case (s: TSchema.SOpenProduct, v) =>
-        (s -> v) +: objectSchemas(s.valueSchema, Validator.passing)
+      case (s: TSchema.SOpenProduct, v: OpenProductValidator[_]) =>
+        (s -> v) +: objectSchemas(s.valueSchema, v.elementValidator)
       case _ => List.empty
     }
   }
