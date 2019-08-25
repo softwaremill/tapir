@@ -8,7 +8,7 @@ import tapir.json.circe._
 import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
-import tapir.Codec.{JsonCodec, PlainCodec}
+import tapir.Codec.PlainCodec
 import tapir.model._
 
 import scala.io.Source
