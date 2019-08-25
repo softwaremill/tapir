@@ -20,7 +20,7 @@ trait TapirJsonuPickle {
       }
     }
 
-    def meta: CodecMeta[MediaType.Json, String] = {
+    def meta: CodecMeta[T, MediaType.Json, String] = {
       CodecMeta(implicitly[SchemaFor[T]].schema, MediaType.Json(), StringValueType(StandardCharsets.UTF_8))
     }
   }
