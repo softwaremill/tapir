@@ -70,7 +70,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       case EndpointIO.Body(codec, info) =>
         Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional)))
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
-        Right(RequestBody(i.description, codecToMediaType(s, mt, i.example, Validator.passing[Any]), Some(true)))
+        Right(RequestBody(i.description, codecToMediaType(s, mt, i.example), Some(true)))
     }
   }
 

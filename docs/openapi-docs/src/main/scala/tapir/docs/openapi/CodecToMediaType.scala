@@ -21,12 +21,11 @@ private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
   def apply[M <: SMediaType](
       schema: SSchema,
       mediaType: M,
-      example: Option[String],
-      validator: Validator[_]
+      example: Option[String]
   ): ListMap[String, OMediaType] = {
     ListMap(
       mediaType.mediaTypeNoParams -> OMediaType(
-        Some(objectSchemas(schema -> validator)),
+        Some(objectSchemas(schema -> Validator.passing)),
         example.map(ExampleValue),
         ListMap.empty,
         ListMap.empty
