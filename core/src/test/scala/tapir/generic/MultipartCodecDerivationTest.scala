@@ -170,7 +170,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
 
     // when
     toPartData(codec.encode(Test1(10))) shouldBe List(("f1", "10"))
-    codec.decodeAndValidate(createStringParts(List(("f1", "10")))) shouldBe DecodeResult.InvalidValue()
+    codec.safeDecode(createStringParts(List(("f1", "10")))) shouldBe DecodeResult.InvalidValue()
   }
 
   private def toPartData(parts: Seq[RawPart]): Seq[(String, Any)] = parts.map(p => (p.name, p.body))

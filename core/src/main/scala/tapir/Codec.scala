@@ -377,8 +377,8 @@ trait Validate[F, T] extends Decode[F, T] {
 
   private[tapir] def validator: Validator[T] = Validator.passing
 
-  def decodeAndValidate(f: F): DecodeResult[T] = {
-    safeDecode(f) match {
+  override def safeDecode(f: F): DecodeResult[T] = {
+    super.safeDecode(f) match {
       case DecodeResult.Value(v) =>
         if (validator.validate(v)) {
           DecodeResult.Value(v)

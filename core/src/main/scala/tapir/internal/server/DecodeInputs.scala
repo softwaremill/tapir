@@ -150,7 +150,7 @@ object DecodeInputs {
             val (nextSegment, newCtx) = ctx.nextPathSegment
             nextSegment match {
               case Some(seg) =>
-                val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.decodeAndValidate(seg)))
+                val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.safeDecode(seg)))
                 matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput)
               case None =>
                 val failure = DecodeInputsResult.Failure(in, DecodeResult.Missing)
@@ -212,7 +212,7 @@ object DecodeInputs {
         else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.m, ctx.method.m)), ctx)
 
       case IndexedBasicInput(input @ EndpointInput.Query(name, codec, _), index) +: inputsTail =>
-        codec.decodeAndValidate(ctx.queryParameter(name).toList) match {
+        codec.safeDecode(ctx.queryParameter(name).toList) match {
           case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
@@ -223,14 +223,14 @@ object DecodeInputs {
       case IndexedBasicInput(input @ EndpointInput.Cookie(name, codec, _), index) +: inputsTail =>
         val allCookies = DecodeResult.sequence(ctx.headers.filter(_._1 == Cookie.HeaderName).map(p => Cookie.parse(p._2)).toList)
         val cookieValue =
-          allCookies.map(_.flatten.find(_.name == name)).flatMap(cookie => codec.decodeAndValidate(cookie.map(_.value)))
+          allCookies.map(_.flatten.find(_.name == name)).flatMap(cookie => codec.safeDecode(cookie.map(_.value)))
         cookieValue match {
           case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
 
       case IndexedBasicInput(input @ EndpointIO.Header(name, codec, _), index) +: inputsTail =>
-        codec.decodeAndValidate(ctx.header(name)) match {
+        codec.safeDecode(ctx.header(name)) match {
           case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
         }
