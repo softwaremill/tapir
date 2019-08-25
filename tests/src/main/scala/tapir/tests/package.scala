@@ -19,8 +19,10 @@ package object tests {
   implicit def plainCodecForMyTaggedString(implicit uc: PlainCodec[String]): PlainCodec[MyTaggedString] =
     uc.map(_.taggedWith[Tapir])(identity).validate(ValueValidator(List(Constraint.Pattern("apple|banana"))))
 
-  val in_valid_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] =
+  val in_valid_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] = {
+    val p = implicitly[PlainCodec[String @@ Tapir]]
     endpoint.in(query[String @@ Tapir]("fruit"))
+  }
 
   implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
   implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)

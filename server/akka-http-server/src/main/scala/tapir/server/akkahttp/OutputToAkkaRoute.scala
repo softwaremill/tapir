@@ -52,7 +52,7 @@ private[akkahttp] object OutputToAkkaRoute {
       HttpEntity(mediaTypeToContentType(mediaType), v.asInstanceOf[AkkaStream])
   })
 
-  private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): ResponseEntity = {
+  private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], r: R): ResponseEntity = {
     val ct = mediaTypeToContentType(codecMeta.mediaType)
     codecMeta.rawValueType match {
       case StringValueType(charset) =>
@@ -77,7 +77,7 @@ private[akkahttp] object OutputToAkkaRoute {
         case (hk, hv) => parseHeaderOrThrow(hk, hv)
       }
 
-      val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.body) match {
+      val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body) match {
         case b: BodyPartEntity => overrideContentTypeIfDefined(b, headers)
         case _                 => throw new IllegalArgumentException(s"${codecMeta.rawValueType} is not supported in multipart bodies")
       }

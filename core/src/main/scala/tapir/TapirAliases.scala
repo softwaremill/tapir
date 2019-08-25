@@ -15,7 +15,7 @@ trait TapirAliases {
   type CodecForMany[T, M <: MediaType, R] = tapir.CodecForMany[T, M, R]
   val CodecForMany = tapir.CodecForMany
 
-  type CodecMeta[M <: MediaType, R] = tapir.CodecMeta[M, R]
+  type CodecMeta[T, M <: MediaType, R] = tapir.CodecMeta[T, M, R]
   val CodecMeta = tapir.CodecMeta
 
   type RawValueType[R] = tapir.RawValueType[R]

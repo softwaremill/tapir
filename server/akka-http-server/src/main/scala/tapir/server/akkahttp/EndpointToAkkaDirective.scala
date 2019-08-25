@@ -132,7 +132,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     }
   }
 
-  private def toRawPart[R](part: Multipart.FormData.BodyPart, codecMeta: CodecMeta[_, R], ctx: RequestContext)(
+  private def toRawPart[R](part: Multipart.FormData.BodyPart, codecMeta: CodecMeta[_, _, R], ctx: RequestContext)(
       implicit mat: Materializer,
       ec: ExecutionContext
   ): Future[Part[R]] = {

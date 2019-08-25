@@ -16,10 +16,8 @@ trait TapirJsonCirce {
       case Left(error) => Error(s, error)
       case Right(v)    => Value(v)
     }
-    override def meta: CodecMeta[MediaType.Json, String] =
+    override def meta: CodecMeta[T, MediaType.Json, String] =
       CodecMeta(implicitly[SchemaFor[T]].schema, MediaType.Json(), StringValueType(StandardCharsets.UTF_8))
-
-    override private[tapir] val validator: Validator[T] = implicitly[Validator[T]]
   }
 
   def jsonPrinter: Printer = Printer.noSpaces
