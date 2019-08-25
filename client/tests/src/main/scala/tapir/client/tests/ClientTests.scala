@@ -93,6 +93,37 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       .get should contain allOf (("X-Fruit", "elppa"), ("Y-Fruit", "egnarO"))
   }
 
+  test(in_json_out_headers.showDetail) {
+    send(in_json_out_headers, port, FruitAmount("apple", 10))
+      .unsafeRunSync()
+      .right
+      .get should contain(("Content-Type", "application/json".reverse))
+  }
+
+  test(in_simple_multipart_out_raw_string.showDetail) {
+    val result = send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
+      .unsafeRunSync()
+      .right
+      .get
+
+    val indexOfJson = result.indexOf("{\"fruit")
+    val beforeJson = result.substring(0, indexOfJson)
+    val afterJson = result.substring(indexOfJson)
+
+    beforeJson should include("""Content-Disposition: form-data; name="fruitAmount"""")
+    beforeJson should include("Content-Type: application/json")
+    beforeJson should not include ("Content-Type: text/plain")
+
+    afterJson should include("""Content-Disposition: form-data; name="notes"""")
+    afterJson should include("Content-Type: text/plain; charset=UTF-8")
+    afterJson should not include ("Content-Type: application/json")
+  }
+
+  test(in_fixed_header_out_string.showDetail) {
+    send(in_fixed_header_out_string, port, ())
+      .unsafeRunSync() shouldBe Right("Location: secret")
+  }
+
   //
 
   def mkStream(s: String): S
@@ -142,6 +173,12 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       r.headers.get(CaseInsensitiveString("X-Role")) match {
         case None    => Ok()
         case Some(h) => Ok("Role: " + h.value)
+      }
+
+    case r @ GET -> Root / "secret" =>
+      r.headers.get(CaseInsensitiveString("Location")) match {
+        case None    => BadRequest()
+        case Some(h) => Ok("Location: " + h.value)
       }
 
     case DELETE -> Root / "api" / "delete" => Ok()

@@ -297,6 +297,12 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
+  testServer(in_unit_out_fixed_header)(_ => pureResult(().asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri").send().map { r =>
+      r.header("Location") shouldBe Some("Poland")
+    }
+  }
+
   testServer(in_optional_json_out_optional_json)((fa: Option[FruitAmount]) => pureResult(fa.asRight[Unit])) { baseUri =>
     sttp
       .post(uri"$baseUri/api/echo")

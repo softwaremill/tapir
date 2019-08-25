@@ -16,7 +16,7 @@ trait ValidateMagnoliaDerivation {
     }.toMap)
   }
 
-  def dispatch[T](ctx: SealedTrait[Validator, T]): Validator[T] = Validator.rejecting
+  def dispatch[T](ctx: SealedTrait[Validator, T]): Validator[T] = Validator.passing
 
   implicit def gen[T]: Validator[T] = macro Magnolia.gen[T]
 

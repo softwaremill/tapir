@@ -62,14 +62,24 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             d.map(discriminatorToOpenApi.apply)
           )
         )
+      case (TSchema.SOpenProduct(_, valueSchema), v) =>
+        Right(
+          OSchema(SchemaType.Object).copy(
+            required = List.empty,
+            additionalProperties = Some(valueSchema match {
+              case so: TSchema.SObject => Left(schemaReferenceMapper.map(so.info))
+              case s                   => apply(s -> Validator.passing)
+            })
+          )
+        )
     }
   }
 
   private def constraints[T](v: Validator[T]): List[Constraint[_]] = {
     v.unwrap match {
-      case ValueValidator(c)         => c
+      case ValueValidator(c)             => c
       case BaseCollectionValidator(_, c) => c
-      case _                         => List.empty
+      case _                             => List.empty
     }
   }
   private def minimum(constraints: List[Constraint[_]]): Option[Int] = {

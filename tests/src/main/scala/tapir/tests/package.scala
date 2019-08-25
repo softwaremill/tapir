@@ -71,6 +71,9 @@ package object tests {
 
   val in_path: Endpoint[String, Unit, Unit, Nothing] = endpoint.get.in("api").in(path[String])
 
+  val in_fixed_header_out_string: Endpoint[Unit, Unit, String, Nothing] =
+    endpoint.in("secret").in(header("location", "secret")).out(stringBody)
+
   val in_mapped_query_out_string: Endpoint[List[Char], Unit, String, Nothing] =
     endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody)
 
@@ -127,6 +130,9 @@ package object tests {
   val in_headers_out_headers: Endpoint[Seq[(String, String)], Unit, Seq[(String, String)], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(headers).out(headers)
 
+  val in_json_out_headers: Endpoint[FruitAmount, Unit, Seq[(String, String)], Nothing] =
+    endpoint.get.in("api" / "echo" / "headers").in(jsonBody[FruitAmount]).out(headers)
+
   val in_paths_out_string: Endpoint[Seq[String], Unit, String, Nothing] =
     endpoint.get.in(paths).out(stringBody)
 
@@ -149,6 +155,9 @@ package object tests {
 
   val in_simple_multipart_out_string: Endpoint[FruitAmount, Unit, String, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitAmount]).out(stringBody)
+
+  val in_simple_multipart_out_raw_string: Endpoint[FruitAmountWrapper, Unit, String, Nothing] =
+    endpoint.post.in("api" / "echo").in(multipartBody[FruitAmountWrapper]).out(stringBody)
 
   val in_file_multipart_out_multipart: Endpoint[FruitData, Unit, FruitData, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
@@ -187,9 +196,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          // a/b is used instead of value because of scala 2.11
-          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.a)),
-          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.b))
+          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.value)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.value))
         )
       )
 
@@ -198,9 +206,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          // a/b is used instead of value because of scala 2.11
-          statusMapping(StatusCodes.Accepted, emptyOutput.map(Left(_))(_.a)),
-          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.b))
+          statusMapping(StatusCodes.Accepted, emptyOutput.map(Left(_))(_.value)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.value))
         )
       )
 
@@ -215,6 +222,9 @@ package object tests {
 
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.out(statusCode(StatusCodes.PermanentRedirect)).out(header[String]("Location"))
+
+  val in_unit_out_fixed_header: Endpoint[Unit, Unit, Unit, Nothing] =
+    endpoint.out(header("Location", "Poland"))
 
   val in_optional_json_out_optional_json: Endpoint[Option[FruitAmount], Unit, Option[FruitAmount], Nothing] =
     endpoint.post.in("api" / "echo").in(jsonBody[Option[FruitAmount]]).out(jsonBody[Option[FruitAmount]])

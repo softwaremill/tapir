@@ -48,6 +48,8 @@ object ObjectSchemasForEndpoints {
         objectSchemas(o, v.elementValidator)
       case (s: TSchema.SCoproduct, v) =>
         (s -> v) +: s.schemas.flatMap(c => objectSchemas(c, Validator.passing)).toList
+      case (s: TSchema.SOpenProduct, v) =>
+        (s -> v) +: objectSchemas(s.valueSchema, Validator.passing)
       case _ => List.empty
     }
   }
@@ -120,23 +122,13 @@ object ObjectSchemasForEndpoints {
         objectSchemas(schema, Validator.passing)
       case EndpointIO.Mapped(wrapped, _, _, _) =>
         forInput(wrapped) ++ forOutput(wrapped)
+      case EndpointIO.FixedHeader(_, _, _) =>
+        List.empty
     }
   }
 
   private def objectInfoToName(info: TSchema.SObjectInfo): String = {
-    val lastDotIndex = info.fullName.lastIndexOf('.')
-    val shortName = if (lastDotIndex == -1) {
-      info.fullName
-    } else {
-      info.fullName.substring(lastDotIndex + 1)
-    }
-
-    val typeParams = if (info.typeParameterShortNames.nonEmpty) {
-      "_" + info.typeParameterShortNames.mkString("_")
-    } else {
-      ""
-    }
-
-    shortName + typeParams
+    val shortName = info.fullName.split('.').last
+    (shortName +: info.typeParameterShortNames).mkString("_")
   }
 }

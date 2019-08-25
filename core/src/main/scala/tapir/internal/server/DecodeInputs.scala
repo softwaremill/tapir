@@ -1,8 +1,8 @@
 package tapir.internal.server
 
+import tapir.internal._
 import tapir.model.{Cookie, Method, MultiQueryParams, ServerRequest}
 import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, MediaType}
-import tapir.internal._
 
 import scala.annotation.tailrec
 
@@ -211,6 +211,10 @@ object DecodeInputs {
         if (m == ctx.method) matchOthers(inputsTail, values, ctx)
         else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.m, ctx.method.m)), ctx)
 
+      case IndexedBasicInput(input @ EndpointIO.FixedHeader(n, v, _), _) +: inputsTail =>
+        if (List(v) == ctx.header(n)) matchOthers(inputsTail, values, ctx)
+        else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(List(v).mkString, ctx.header(n).mkString)), ctx)
+
       case IndexedBasicInput(input @ EndpointInput.Query(name, codec, _), index) +: inputsTail =>
         codec.safeDecode(ctx.queryParameter(name).toList) match {
           case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
@@ -294,6 +298,7 @@ object DecodeInputs {
       case Vector()                                   => acc
       case (input: EndpointInput.FixedMethod) +: tail => assignInputIndexes(tail, nextIndex, acc :+ IndexedBasicInput(input, NoIndex))
       case (input: EndpointInput.FixedPath) +: tail   => assignInputIndexes(tail, nextIndex, acc :+ IndexedBasicInput(input, NoIndex))
+      case (input: EndpointIO.FixedHeader) +: tail    => assignInputIndexes(tail, nextIndex, acc :+ IndexedBasicInput(input, NoIndex))
       case input +: tail                              => assignInputIndexes(tail, nextIndex + 1, acc :+ IndexedBasicInput(input, nextIndex))
     }
   }

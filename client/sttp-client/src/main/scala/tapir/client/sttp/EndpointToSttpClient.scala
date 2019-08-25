@@ -90,6 +90,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
         case EndpointOutput.FixedStatusCode(_, _) =>
           None
+        case EndpointIO.FixedHeader(_, _, _) =>
+          None
 
         case EndpointOutput.OneOf(mappings) =>
           val mapping = mappings
@@ -178,6 +180,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             r.header(k, v, replaceExisting)
         }
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+      case EndpointIO.FixedHeader(name, value, _) +: tail =>
+        val req2 = Seq(value)
+          .foldLeft(req) { case (r, v) => r.header(name, v) }
+        setInputParams(tail, params, paramsAsArgs, paramIndex, uri, req2)
       case EndpointInput.ExtractFromRequest(_) +: tail =>
         // ignoring
         setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req)
@@ -194,7 +200,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     codec
       .encode(v)
       .map { t =>
-        codec.meta.rawValueType match {
+        val req2 = codec.meta.rawValueType match {
           case StringValueType(charset) => req.body(t, charset.name())
           case ByteArrayValueType       => req.body(t)
           case ByteBufferValueType      => req.body(t)
@@ -202,15 +208,25 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           case FileValueType            => req.body(t)
           case mvt: MultipartValueType =>
             val parts: Seq[Multipart] = (t: Seq[RawPart]).flatMap { p =>
-              mvt.partCodecMeta(p.name).map { codec =>
-                val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], codec.asInstanceOf[CodecMeta[_, Any]])
-                val sttpPart2 = p.headers.foldLeft(sttpPart1) { case (sp, (hk, hv)) => sp.header(hk, hv) }
-                p.fileName.map(sttpPart2.fileName).getOrElse(sttpPart2)
+              mvt.partCodecMeta(p.name).map { partCodecMeta =>
+                val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], partCodecMeta.asInstanceOf[CodecMeta[_, Any]])
+                val sttpPart2 = sttpPart1.contentType(partCodecMeta.mediaType.mediaTypeNoParams)
+                val sttpPart3 = p.headers.foldLeft(sttpPart2) {
+                  case (sp, (hk, hv)) =>
+                    if (hk.equalsIgnoreCase(HeaderNames.ContentType)) {
+                      sp.contentType(hv)
+                    } else {
+                      sp.header(hk, hv)
+                    }
+                }
+                p.fileName.map(sttpPart3.fileName).getOrElse(sttpPart3)
               }
             }
 
             req.multipartBody(parts.toList)
         }
+
+        req2.header(HeaderNames.ContentType, codec.meta.mediaType.mediaType, replaceExisting = false)
       }
       .getOrElse(req)
   }

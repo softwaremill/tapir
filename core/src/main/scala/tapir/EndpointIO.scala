@@ -224,6 +224,11 @@ object EndpointIO {
     def show = s"{body as stream, ${wrapped.mediaType.mediaType}}"
   }
 
+  case class FixedHeader(name: String, value: String, info: Info[Unit]) extends Basic[Unit] {
+    def description(d: String): FixedHeader = copy(info = info.description(d))
+    def show = s"{header $name: $value}"
+  }
+
   case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Basic[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))

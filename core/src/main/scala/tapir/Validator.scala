@@ -21,7 +21,7 @@ object Validator extends ValidateMagnoliaDerivation {
 
   implicit def validatorForOption[T: Validator]: Validator[Option[T]] = implicitly[Validator[T]].toOption
   implicit def validatorForArray[T: Validator]: Validator[Array[T]] = implicitly[Validator[T]].toArray
-  implicit def validatorForIterable[T: Validator, C[_] <: Iterable[T]]: Validator[C[T]] = implicitly[Validator[T]].toIterable[C]
+  implicit def validatorForIterable[T: Validator, C[_] <: Iterable[_]]: Validator[C[T]] = implicitly[Validator[T]].toIterable[C]
 }
 
 case class ProductValidator[T](fields: Map[String, FieldValidator[T]]) extends Validator[T] {
@@ -48,7 +48,7 @@ sealed trait BaseCollectionValidator[E, C[_]] extends Validator[C[E]] {
 }
 
 object BaseCollectionValidator {
-  def unapply[E, C[_]](arg: BaseCollectionValidator[E, C]): Option[(Validator[E], List[Constraint[C[E]]])] = {
+  def unapply(arg: BaseCollectionValidator[_, CC forSome { type CC[_] }]): Option[(Validator[_], List[Constraint[_]])] = {
     Some(arg.elementValidator -> arg.constraints)
   }
 }

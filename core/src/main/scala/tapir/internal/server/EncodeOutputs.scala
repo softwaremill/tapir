@@ -1,9 +1,9 @@
 package tapir.internal.server
 
 import tapir.CodecForMany.PlainCodecForMany
-import tapir.{CodecForOptional, EndpointIO, EndpointOutput, MediaType, StreamingEndpointIO}
 import tapir.internal._
 import tapir.model.StatusCode
+import tapir.{CodecForOptional, EndpointIO, EndpointOutput, MediaType, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 
@@ -15,6 +15,8 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
         case (Vector(), Seq()) => ov
         case (EndpointOutput.FixedStatusCode(sc, _) +: outputsTail, _) =>
           run(outputsTail, ov.withStatusCode(sc), vs)
+        case (EndpointIO.FixedHeader(name, value, _) +: outputsTail, _) =>
+          run(outputsTail, ov.withHeader(name -> value), vs)
         case (outputsHead +: outputsTail, vsHead +: vsTail) =>
           val ov2 = outputsHead match {
             case EndpointIO.Body(codec, _) =>
@@ -40,6 +42,8 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
             case EndpointOutput.StatusCode() =>
               ov.withStatusCode(vsHead.asInstanceOf[StatusCode])
             case EndpointOutput.FixedStatusCode(_, _) =>
+              throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
+            case EndpointIO.FixedHeader(_, _, _) =>
               throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
             case EndpointOutput.OneOf(mappings) =>
               val mapping = mappings
