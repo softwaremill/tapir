@@ -2,7 +2,7 @@ package tapir.docs.openapi.schema
 
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
-import tapir.{Constraint, ProductValidator, Validator, ValueValidator, Schema => TSchema}
+import tapir.{BaseCollectionValidator, CollectionValidator, Constraint, ProductValidator, Validator, ValueValidator, Schema => TSchema}
 
 /**
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
@@ -10,7 +10,7 @@ import tapir.{Constraint, ProductValidator, Validator, ValueValidator, Schema =>
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
   def apply(schemaWithValidator: (TSchema, Validator[_])): ReferenceOr[OSchema] = {
     schemaWithValidator match {
-      case (TSchema.SInteger, v: Validator[Int]) =>
+      case (TSchema.SInteger, v) =>
         Right(OSchema(SchemaType.Integer).copy(minimum = minimum(constraints(v))))
       case (TSchema.SNumber, _) =>
         Right(OSchema(SchemaType.Number))
@@ -33,16 +33,18 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             }.toListMap
           )
         )
-      case (TSchema.SArray(el: TSchema.SObject), _) =>
+      case (TSchema.SArray(el: TSchema.SObject), v: BaseCollectionValidator[_, _]) =>
         Right(
           OSchema(SchemaType.Array).copy(
-            items = Some(Left(schemaReferenceMapper.map(el.info)))
+            items = Some(Left(schemaReferenceMapper.map(el.info))),
+            minSize = minSize(constraints(v))
           )
         )
-      case (TSchema.SArray(el), _) =>
+      case (TSchema.SArray(el), v: BaseCollectionValidator[_, _]) =>
         Right(
           OSchema(SchemaType.Array).copy(
-            items = Some(apply(el -> Validator.passing[Any]))
+            items = Some(apply(el -> v.elementValidator)),
+            minSize = minSize(constraints(v))
           )
         )
       case (TSchema.SBinary, _) =>
@@ -65,8 +67,9 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
 
   private def constraints[T](v: Validator[T]): List[Constraint[_]] = {
     v.unwrap match {
-      case ValueValidator(c) => c
-      case _                 => List.empty
+      case ValueValidator(c)         => c
+      case BaseCollectionValidator(_, c) => c
+      case _                         => List.empty
     }
   }
   private def minimum(constraints: List[Constraint[_]]): Option[Int] = {
@@ -74,5 +77,8 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
   }
   private def pattern(constraints: List[Constraint[_]]): Option[String] = {
     constraints.collectFirst { case Constraint.Pattern(v: String) => v }
+  }
+  private def minSize(constraints: List[Constraint[_]]): Option[Int] = {
+    constraints.collectFirst { case Constraint.MinSize(v) => v }
   }
 }

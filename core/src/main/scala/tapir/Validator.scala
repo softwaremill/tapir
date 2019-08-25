@@ -10,28 +10,18 @@ trait Validator[T] { outer =>
     override def unwrap: Validator[_] = outer.unwrap
   }
 
-  def forOption: Validator[Option[T]] = (t: Option[T]) => t.forall(outer.validate)
-
-  def forSeq: Validator[Seq[T]] = (t: Seq[T]) => t.forall(outer.validate)
-
-  def forVector: Validator[Vector[T]] = (t: Vector[T]) => t.forall(outer.validate)
-
-  def forList: Validator[List[T]] = (t: List[T]) => t.forall(outer.validate)
-
-  def forArray: Validator[Array[T]] = (t: Array[T]) => t.forall(outer.validate)
-
-  def forSet: Validator[Set[T]] = (t: Set[T]) => t.forall(outer.validate)
-
-  def forIterable[C[_] <: Iterable[T]]: Validator[C[T]] = (t: C[T]) => t.forall(outer.validate)
+  def toOption: Validator[Option[T]] = (t: Option[T]) => t.forall(outer.validate)
+  def toArray: Validator[Array[T]] = ArrayValidator(outer, List.empty[Constraint[Array[T]]])(outer)
+  def toIterable[C[_] <: Iterable[_]]: Validator[C[T]] = CollectionValidator[T, C](outer, List.empty[Constraint[C[T]]])(outer)
 }
 
 object Validator extends ValidateMagnoliaDerivation {
   def passing[T]: Validator[T] = (_: T) => true
   def rejecting[T]: Validator[T] = (_: T) => false
 
-  implicit def validatorForOption[T: Validator]: Validator[Option[T]] = implicitly[Validator[T]].forOption
-  implicit def validatorForArray[T: Validator]: Validator[Array[T]] = implicitly[Validator[T]].forArray
-  implicit def validatorForIterable[T: Validator, C[_] <: Iterable[T]]: Validator[C[T]] = implicitly[Validator[T]].forIterable[C]
+  implicit def validatorForOption[T: Validator]: Validator[Option[T]] = implicitly[Validator[T]].toOption
+  implicit def validatorForArray[T: Validator]: Validator[Array[T]] = implicitly[Validator[T]].toArray
+  implicit def validatorForIterable[T: Validator, C[_] <: Iterable[T]]: Validator[C[T]] = implicitly[Validator[T]].toIterable[C]
 }
 
 case class ProductValidator[T](fields: Map[String, FieldValidator[T]]) extends Validator[T] {
@@ -50,4 +40,33 @@ trait FieldValidator[T] {
 
 case class ValueValidator[T](constraints: List[Constraint[T]]) extends Validator[T] {
   override def validate(t: T): Boolean = constraints.forall(_.check(t))
+}
+
+sealed trait BaseCollectionValidator[E, C[_]] extends Validator[C[E]] {
+  def elementValidator: Validator[E]
+  def constraints: List[Constraint[C[E]]]
+}
+
+object BaseCollectionValidator {
+  def unapply[E, C[_]](arg: BaseCollectionValidator[E, C]): Option[(Validator[E], List[Constraint[C[E]]])] = {
+    Some(arg.elementValidator -> arg.constraints)
+  }
+}
+
+case class CollectionValidator[E: Validator, C[_] <: Iterable[_]](elementValidator: Validator[E], constraints: List[Constraint[C[E]]])
+    extends BaseCollectionValidator[E, C] {
+  override def validate(t: C[E]): Boolean = {
+    t.asInstanceOf[Iterable[E]].forall { e: E =>
+      elementValidator.validate(e)
+    } && constraints.forall(_.check(t))
+  }
+}
+
+case class ArrayValidator[E: Validator, C[_] <: Array[_]](elementValidator: Validator[E], constraints: List[Constraint[C[E]]])
+    extends BaseCollectionValidator[E, C] {
+  override def validate(t: C[E]): Boolean = {
+    t.asInstanceOf[Array[E]].forall { e: E =>
+      elementValidator.validate(e)
+    } && constraints.forall(_.check(t))
+  }
 }

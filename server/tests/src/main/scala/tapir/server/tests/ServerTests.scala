@@ -564,6 +564,17 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       sttp.get(uri"$baseUri?amount=1").send().map(_.code shouldBe StatusCodes.Ok)
   }
 
+  testServer(
+    "support jsonBody validation with list of wrapped type",
+    NonEmptyList.of(
+      route(in_valid_json_collection, (_: BasketOfFruits) => pureResult(().asRight[Unit]))
+    )
+  ) { baseUri =>
+    sttp.get(uri"$baseUri").body("""{"fruits":[{"fruit":"orange","amount":11}]}""").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri").body("""{"fruits": []}""").send().map(_.code shouldBe StatusCodes.BadRequest) >>
+      sttp.get(uri"$baseUri").body("""{fruits":[{"fruit":"orange","amount":0}]}""").send().map(_.code shouldBe StatusCodes.BadRequest)
+  }
+
   //
 
   implicit lazy val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)

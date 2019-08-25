@@ -230,7 +230,7 @@ object CodecForOptional {
         case None     => DecodeResult.Value(None)
         case Some(ss) => tm.decode(ss).map(Some(_))
       }
-      override val meta: CodecMeta[Option[T], M, R] = tm.meta.copy(isOptional = true, validator = tm.validator.forOption)
+      override val meta: CodecMeta[Option[T], M, R] = tm.meta.copy(isOptional = true, validator = tm.validator.toOption)
 
     }
 }
@@ -293,7 +293,7 @@ object CodecForMany {
         case List(h) => tm.decode(h).map(Some(_))
         case l       => DecodeResult.Multiple(l)
       }
-      override val meta: CodecMeta[Option[T], M, R] = tm.meta.copy(isOptional = true, validator = tm.meta.validator.forOption)
+      override val meta: CodecMeta[Option[T], M, R] = tm.meta.copy(isOptional = true, validator = tm.meta.validator.toOption)
     }
 
   // collections
@@ -303,7 +303,7 @@ object CodecForMany {
       override def encode(t: Seq[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[Seq[T]] = DecodeResult.sequence(s.map(tm.decode))
       override val meta: CodecMeta[Seq[T], M, R] =
-        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.forSeq)
+        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.toIterable[Seq])
     }
 
   implicit def forList[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[List[T], M, R] =
@@ -311,7 +311,7 @@ object CodecForMany {
       override def encode(t: List[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toList)
       override val meta: CodecMeta[List[T], M, R] =
-        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.forList)
+        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.toIterable[List])
     }
 
   implicit def forVector[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Vector[T], M, R] =
@@ -319,7 +319,7 @@ object CodecForMany {
       override def encode(t: Vector[T]): Seq[R] = t.map(v => tm.encode(v))
       override def decode(s: Seq[R]): DecodeResult[Vector[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toVector)
       override val meta: CodecMeta[Vector[T], M, R] =
-        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.forVector)
+        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.toIterable[Vector])
     }
 
   implicit def forSet[T, M <: MediaType, R](implicit tm: Codec[T, M, R]): CodecForMany[Set[T], M, R] =
@@ -327,7 +327,7 @@ object CodecForMany {
       override def encode(t: Set[T]): Seq[R] = t.map(v => tm.encode(v)).toSeq
       override def decode(s: Seq[R]): DecodeResult[Set[T]] = DecodeResult.sequence(s.map(tm.decode)).map(_.toSet)
       override val meta: CodecMeta[Set[T], M, R] =
-        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.forSet)
+        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.toIterable[Set])
     }
 }
 

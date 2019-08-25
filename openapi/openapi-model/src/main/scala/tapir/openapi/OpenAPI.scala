@@ -207,14 +207,34 @@ case class Schema(
     oneOf: Option[List[ReferenceOr[Schema]]],
     discriminator: Option[Discriminator],
     pattern: Option[String],
-    minimum: Option[Int]
+    minimum: Option[Int],
+    minSize: Option[Int]
 )
 
 case class Discriminator(propertyName: String, mapping: Option[ListMap[String, String]])
 
 object Schema {
   def apply(`type`: SchemaType.SchemaType): Schema =
-    Schema(None, List.empty, Some(`type`), None, ListMap.empty, None, None, None, None, None, None, None, None, None, None, None, None)
+    Schema(
+      None,
+      List.empty,
+      Some(`type`),
+      None,
+      ListMap.empty,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None
+    )
 
   def apply(references: List[ReferenceOr[Schema]], discriminator: Option[Discriminator]): Schema =
     Schema(
@@ -233,6 +253,7 @@ object Schema {
       None,
       Some(references),
       discriminator,
+      None,
       None,
       None
     )

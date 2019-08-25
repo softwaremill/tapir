@@ -38,6 +38,21 @@ package object tests {
     endpoint.in(query[IntWrapper]("amount"))
   }
 
+  val in_valid_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Nothing] = {
+    implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+    implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+    implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+    implicit val v: Validator[IntWrapper] = ValueValidator(List(Constraint.Minimum(1))).contramap(_.v)
+
+    import tapir.tests.BasketOfFruits._
+    implicit def listEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)
+    implicit def listDecoder[T: Decoder]: Decoder[ValidatedList[T]] = implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
+    implicit def schemaForIntList[T: SchemaFor]: SchemaFor[ValidatedList[T]] = SchemaFor(Schema.SArray(implicitly[SchemaFor[T]].schema))
+    implicit def validatorList[T: Validator]: Validator[ValidatedList[T]] =
+      CollectionValidator[T, ValidatedList](implicitly[Validator[T]], List(Constraint.MinSize(1)))
+    endpoint.in(jsonBody[BasketOfFruits])
+  }
+
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 
   val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String, Nothing] =
