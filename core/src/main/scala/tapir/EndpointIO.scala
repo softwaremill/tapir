@@ -217,7 +217,7 @@ object EndpointIO {
   case class Body[T, M <: MediaType, R](codec: CodecForOptional[T, M, R], info: Info[T]) extends Basic[T] {
     def description(d: String): Body[T, M, R] = copy(info = info.description(d))
     def example(t: T): Body[T, M, R] = copy(info = info.example(t))
-    def show = s"{body as ${codec.meta.mediaType.mediaType}"
+    def show = s"{body as ${codec.meta.mediaType.mediaType}}"
   }
 
   case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Basic[S] {
