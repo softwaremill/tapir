@@ -532,7 +532,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(
-    "support query validation with tagget type",
+    "support query validation with tagged type",
     NonEmptyList.of(
       route(in_valid_query_tagged, (_: String) => pureResult(().asRight[Unit]))
     )
@@ -543,7 +543,18 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(
-    "support query validation with value type",
+    "support jsonBody validation with wrapped type",
+    NonEmptyList.of(
+      route(in_valid_json_wrapper, (_: ValidFruitAmount) => pureResult(().asRight[Unit]))
+    )
+  ) { baseUri =>
+    sttp.get(uri"$baseUri").body("""{"fruit":"orange","amount":11}""").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri").body("""{"fruit":"orange","amount":0}""").send().map(_.code shouldBe StatusCodes.BadRequest) >>
+      sttp.get(uri"$baseUri").body("""{"fruit":"orange","amount":1}""").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(
+    "support query validation with wrapper type",
     NonEmptyList.of(
       route(in_valid_query_wrapper, (_: IntWrapper) => pureResult(().asRight[Unit]))
     )

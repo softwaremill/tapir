@@ -2,7 +2,8 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
-import tapir.Schema.{SProduct, SObjectInfo, SRef}
+import tapir.Codec.{JsonCodec, PlainCodec}
+import tapir.Schema.{SObjectInfo, SProduct, SRef}
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -333,19 +334,40 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
-
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("validator") {
-    val expectedYaml = loadYaml("expected_tagged_validator.yml")
+  test("validator with tagged type in query") {
+    val expectedYaml = loadYaml("expected_valid_query_tagged.yml")
 
     val actualYaml = in_valid_query_tagged
       .in("add")
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 
+  test("validator with wrapper type in body") {
+    val expectedYaml = loadYaml("expected_valid_body_wrapped.yml")
+
+    val actualYaml = in_valid_json_wrapper
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    println(actualYaml)
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("validator with wrapper type in query") {
+    val expectedYaml = loadYaml("expected_valid_query_wrapped.yml")
+
+    val actualYaml = in_valid_query_wrapper
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 

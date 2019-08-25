@@ -339,8 +339,13 @@ case class CodecMeta[T, M <: MediaType, R] private (
     validator: Validator[T]
 )
 object CodecMeta {
-  def apply[T, M <: MediaType, R](schema: Schema, mediaType: M, rawValueType: RawValueType[R]): CodecMeta[T, M, R] =
-    CodecMeta(isOptional = false, schema, mediaType, rawValueType, Validator.passing)
+  def apply[T, M <: MediaType, R](
+      schema: Schema,
+      mediaType: M,
+      rawValueType: RawValueType[R],
+      validator: Validator[T] = Validator.passing[T]
+  ): CodecMeta[T, M, R] =
+    CodecMeta(isOptional = false, schema, mediaType, rawValueType, validator)
 }
 
 sealed trait RawValueType[R]

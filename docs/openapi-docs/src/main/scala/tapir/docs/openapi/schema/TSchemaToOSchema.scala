@@ -8,10 +8,10 @@ import tapir.{Constraint, ProductValidator, Validator, ValueValidator, Schema =>
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
-  def apply(schema: (TSchema, Validator[_])): ReferenceOr[OSchema] = {
-    schema match {
+  def apply(schemaWithValidator: (TSchema, Validator[_])): ReferenceOr[OSchema] = {
+    schemaWithValidator match {
       case (TSchema.SInteger, v: Validator[Int]) =>
-        Right(OSchema(SchemaType.Integer).copy(minimum = minimum[Int](constraints(v))))
+        Right(OSchema(SchemaType.Integer).copy(minimum = minimum(constraints(v))))
       case (TSchema.SNumber, _) =>
         Right(OSchema(SchemaType.Number))
       case (TSchema.SBoolean, _) =>
@@ -63,16 +63,16 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
     }
   }
 
-  private def constraints[T](v: Validator[T]): List[Constraint[T]] = {
-    v match {
+  private def constraints[T](v: Validator[T]): List[Constraint[_]] = {
+    v.unwrap match {
       case ValueValidator(c) => c
       case _                 => List.empty
     }
   }
-  private def minimum[T: Numeric](constraints: List[Constraint[T]]): Option[T] = {
-    constraints.collectFirst { case Constraint.Minimum(v) => v }
+  private def minimum(constraints: List[Constraint[_]]): Option[Int] = {
+    constraints.collectFirst { case Constraint.Minimum(v: Int) => v }
   }
-  private def pattern(constraints: List[Constraint[String]]): Option[String] = {
-    constraints.collectFirst { case Constraint.Pattern(v) => v }
+  private def pattern(constraints: List[Constraint[_]]): Option[String] = {
+    constraints.collectFirst { case Constraint.Pattern(v: String) => v }
   }
 }

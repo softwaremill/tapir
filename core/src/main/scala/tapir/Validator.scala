@@ -4,28 +4,25 @@ import tapir.generic.ValidateMagnoliaDerivation
 
 trait Validator[T] { outer =>
   def validate(t: T): Boolean
-  def contramap[TT](g: TT => T): Validator[TT] = (t: TT) => {
-    outer.validate(g(t))
+  def unwrap: Validator[_] = outer
+  def contramap[TT](g: TT => T): Validator[TT] = new Validator[TT] {
+    override def validate(t: TT): Boolean = outer.validate(g(t))
+    override def unwrap: Validator[_] = outer.unwrap
   }
-  def forOption: Validator[Option[T]] = (t: Option[T]) => {
-    t.forall(outer.validate)
-  }
-  def forSeq: Validator[Seq[T]] = (t: Seq[T]) => {
-    t.forall(outer.validate)
-  }
-  def forVector: Validator[Vector[T]] = (t: Vector[T]) => {
-    t.forall(outer.validate)
-  }
-  def forList: Validator[List[T]] = (t: List[T]) => {
-    t.forall(outer.validate)
-  }
-  def forArray: Validator[Array[T]] = (t: Array[T]) => {
-    t.forall(outer.validate)
-  }
-  def forSet: Validator[Set[T]] = (t: Set[T]) => {
-    t.forall(outer.validate)
-  }
-  def forIterable[C[_] <: Iterable[T]]: Validator[C[T]] = (t: C[T]) => t.forall(x => outer.validate(x))
+
+  def forOption: Validator[Option[T]] = (t: Option[T]) => t.forall(outer.validate)
+
+  def forSeq: Validator[Seq[T]] = (t: Seq[T]) => t.forall(outer.validate)
+
+  def forVector: Validator[Vector[T]] = (t: Vector[T]) => t.forall(outer.validate)
+
+  def forList: Validator[List[T]] = (t: List[T]) => t.forall(outer.validate)
+
+  def forArray: Validator[Array[T]] = (t: Array[T]) => t.forall(outer.validate)
+
+  def forSet: Validator[Set[T]] = (t: Set[T]) => t.forall(outer.validate)
+
+  def forIterable[C[_] <: Iterable[T]]: Validator[C[T]] = (t: C[T]) => t.forall(outer.validate)
 }
 
 object Validator extends ValidateMagnoliaDerivation {
