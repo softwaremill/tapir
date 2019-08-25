@@ -87,7 +87,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
     EndpointInputToParameterConverter.from(
       header,
-      objectSchemas(header.codec.meta.schema -> header.codec.validator),
+      objectSchemas(header.codec.meta.schema, header.codec.validator),
       header.info.example.flatMap(exampleValue(header.codec, _))
     )
   }
@@ -103,14 +103,14 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
     EndpointInputToParameterConverter.from(
       cookie,
-      objectSchemas(cookie.codec.meta.schema -> cookie.codec.validator),
+      objectSchemas(cookie.codec.meta.schema, cookie.codec.validator),
       cookie.info.example.flatMap(exampleValue(cookie.codec, _))
     )
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
     EndpointInputToParameterConverter.from(
       p,
-      objectSchemas(p.codec.meta.schema -> p.codec.validator),
+      objectSchemas(p.codec.meta.schema, p.codec.validator),
       p.info.example.flatMap(exampleValue(p.codec, _))
     )
   }
@@ -118,7 +118,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
     EndpointInputToParameterConverter.from(
       query,
-      objectSchemas(query.codec.meta.schema -> query.codec.validator),
+      objectSchemas(query.codec.meta.schema, query.codec.validator),
       query.info.example.flatMap(exampleValue(query.codec, _))
     )
   }

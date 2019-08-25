@@ -10,7 +10,7 @@ private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
   def apply[T, M <: SMediaType](o: CodecForOptional[T, M, _], example: Option[T]): ListMap[String, OMediaType] = {
     ListMap(
       o.meta.mediaType.mediaTypeNoParams -> OMediaType(
-        Some(objectSchemas(o.meta.schema -> o.validator)),
+        Some(objectSchemas(o.meta.schema, o.validator)),
         example.flatMap(exampleValue(o, _)),
         ListMap.empty,
         ListMap.empty
@@ -25,7 +25,7 @@ private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
   ): ListMap[String, OMediaType] = {
     ListMap(
       mediaType.mediaTypeNoParams -> OMediaType(
-        Some(objectSchemas(schema -> Validator.passing)),
+        Some(objectSchemas(schema, Validator.passing)),
         example.map(ExampleValue),
         ListMap.empty,
         ListMap.empty

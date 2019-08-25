@@ -2,23 +2,14 @@ package tapir.docs.openapi.schema
 
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
-import tapir.{
-  BaseCollectionValidator,
-  CollectionValidator,
-  Constraint,
-  OpenProductValidator,
-  ProductValidator,
-  Validator,
-  ValueValidator,
-  Schema => TSchema
-}
+import tapir.{BaseCollectionValidator, Constraint, OpenProductValidator, ProductValidator, Validator, ValueValidator, Schema => TSchema}
 
 /**
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
-  def apply(schemaWithValidator: (TSchema, Validator[_])): ReferenceOr[OSchema] = {
-    schemaWithValidator match {
+  def apply(schema: TSchema, validator: Validator[_]): ReferenceOr[OSchema] = {
+    (schema, validator.unwrap) match {
       case (TSchema.SInteger, v) =>
         Right(OSchema(SchemaType.Integer).copy(minimum = minimum(constraints(v))))
       case (TSchema.SNumber, _) =>
@@ -35,7 +26,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
               case (fieldName, s: TSchema.SObject) =>
                 fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(fieldSchema -> (v match {
+                fieldName -> apply(fieldSchema, (v match {
                   case ProductValidator(vFields) => vFields(fieldName).validator
                   case _                         => Validator.passing
                 }))
@@ -52,7 +43,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case (TSchema.SArray(el), v: BaseCollectionValidator[_, _]) =>
         Right(
           OSchema(SchemaType.Array).copy(
-            items = Some(apply(el -> v.elementValidator)),
+            items = Some(apply(el, v.elementValidator)),
             minSize = minSize(constraints(v))
           )
         )
@@ -77,7 +68,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             required = List.empty,
             additionalProperties = Some(valueSchema match {
               case so: TSchema.SObject => Left(schemaReferenceMapper.map(so.info))
-              case s                   => apply(s -> v.elementValidator)
+              case s                   => apply(s, v.elementValidator)
             })
           )
         )

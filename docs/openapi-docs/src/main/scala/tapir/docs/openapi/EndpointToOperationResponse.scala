@@ -50,7 +50,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             None,
             None,
             None,
-            Some(objectSchemas(codec.meta.schema -> codec.validator)),
+            Some(objectSchemas(codec.meta.schema, codec.validator)),
             info.example.flatMap(exampleValue(codec, _)),
             ListMap.empty,
             ListMap.empty

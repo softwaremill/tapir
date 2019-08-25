@@ -17,7 +17,7 @@ object ObjectSchemasForEndpoints {
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
-    val infosToSchema = sObjects.map(so => (so._1.info, tschemaToOSchema(so))).toMap
+    val infosToSchema = sObjects.map(so => (so._1.info, tschemaToOSchema(so._1, so._2))).toMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
@@ -39,7 +39,7 @@ object ObjectSchemasForEndpoints {
   }
 
   private def objectSchemas(schema: TSchema, validator: Validator[_]): List[(TSchema.SObject, Validator[_])] = {
-    (schema, validator) match {
+    (schema, validator.unwrap) match {
       case (p: TSchema.SProduct, v) =>
         List(p -> v) ++ schemaWithValidatorForFields(p, v)
           .flatMap(k => objectSchemas(k._1, k._2))
