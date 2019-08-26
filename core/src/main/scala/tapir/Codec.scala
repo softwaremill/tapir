@@ -379,10 +379,11 @@ trait Validate[F, T] extends Decode[F, T] {
   override def safeDecode(f: F): DecodeResult[T] = {
     super.safeDecode(f) match {
       case DecodeResult.Value(v) =>
-        if (validator.validate(v)) {
+        val validationErrors = validator.validate(v)
+        if (validationErrors.isEmpty) {
           DecodeResult.Value(v)
         } else {
-          DecodeResult.InvalidValue()
+          DecodeResult.InvalidValue(validationErrors)
         }
       case r => r
     }
