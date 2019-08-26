@@ -2,23 +2,19 @@ package tapir.docs.openapi.schema
 
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
-import tapir.{BaseCollectionValidator, Constraint, OpenProductValidator, ProductValidator, Validator, ValueValidator, Schema => TSchema}
+import tapir.{Validator, Schema => TSchema}
 
 /**
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
   def apply(schema: TSchema, validator: Validator[_]): ReferenceOr[OSchema] = {
-    (schema, validator.unwrap) match {
-      case (TSchema.SInteger, v) =>
-        Right(OSchema(SchemaType.Integer).copy(minimum = minimum(constraints(v))))
-      case (TSchema.SNumber, _) =>
-        Right(OSchema(SchemaType.Number))
-      case (TSchema.SBoolean, _) =>
-        Right(OSchema(SchemaType.Boolean))
-      case (TSchema.SString, v: Validator[String]) =>
-        Right(OSchema(SchemaType.String).copy(pattern = pattern(constraints(v))))
-      case (TSchema.SProduct(_, fields, required), v: Validator[_]) =>
+    val result = schema match {
+      case TSchema.SInteger => Right(OSchema(SchemaType.Integer))
+      case TSchema.SNumber  => Right(OSchema(SchemaType.Number))
+      case TSchema.SBoolean => Right(OSchema(SchemaType.Boolean))
+      case TSchema.SString  => Right(OSchema(SchemaType.String))
+      case TSchema.SProduct(_, fields, required) =>
         Right(
           OSchema(SchemaType.Object).copy(
             required = required.toList,
@@ -26,69 +22,58 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
               case (fieldName, s: TSchema.SObject) =>
                 fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(fieldSchema, (v match {
-                  case ProductValidator(vFields) => vFields(fieldName).validator
-                  case _                         => Validator.passing
-                }))
+                fieldName -> apply(fieldSchema, fieldValidator(validator, fieldName))
             }.toListMap
           )
         )
-      case (TSchema.SArray(el: TSchema.SObject), v: BaseCollectionValidator[_, _]) =>
-        Right(
-          OSchema(SchemaType.Array).copy(
-            items = Some(Left(schemaReferenceMapper.map(el.info))),
-            minSize = minSize(constraints(v))
-          )
-        )
-      case (TSchema.SArray(el), v: BaseCollectionValidator[_, _]) =>
-        Right(
-          OSchema(SchemaType.Array).copy(
-            items = Some(apply(el, v.elementValidator)),
-            minSize = minSize(constraints(v))
-          )
-        )
-      case (TSchema.SBinary, _) =>
-        Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
-      case (TSchema.SDate, _) =>
-        Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
-      case (TSchema.SDateTime, _) =>
-        Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
-      case (TSchema.SRef(fullName), _) =>
-        Left(schemaReferenceMapper.map(fullName))
-      case (TSchema.SCoproduct(_, schemas, d), _) =>
+      case TSchema.SArray(el: TSchema.SObject) =>
+        Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(el.info)))))
+      case TSchema.SArray(el)     => Right(OSchema(SchemaType.Array).copy(items = Some(apply(el, elementValidator(validator)))))
+      case TSchema.SBinary        => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
+      case TSchema.SDate          => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
+      case TSchema.SDateTime      => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
+      case TSchema.SRef(fullName) => Left(schemaReferenceMapper.map(fullName))
+      case TSchema.SCoproduct(_, schemas, d) =>
         Right(
           OSchema.apply(
             schemas.collect { case s: TSchema.SProduct => Left(schemaReferenceMapper.map(s.info)) }.toList,
             d.map(discriminatorToOpenApi.apply)
           )
         )
-      case (TSchema.SOpenProduct(_, valueSchema), v: OpenProductValidator[_]) =>
+      case TSchema.SOpenProduct(_, valueSchema) =>
         Right(
           OSchema(SchemaType.Object).copy(
             required = List.empty,
             additionalProperties = Some(valueSchema match {
               case so: TSchema.SObject => Left(schemaReferenceMapper.map(so.info))
-              case s                   => apply(s, v.elementValidator)
+              case s                   => apply(s, elementValidator(validator))
             })
           )
         )
     }
+
+    result.map(addConstraints(_, asPrimitiveValidators(validator), schema.isInstanceOf[TSchema.SInteger.type]))
   }
 
-  private def constraints[T](v: Validator[T]): List[Constraint[_]] = {
-    v.unwrap match {
-      case ValueValidator(c)             => c
-      case BaseCollectionValidator(_, c) => c
-      case _                             => List.empty
+  private def addConstraints(oschema: OSchema, vs: Seq[Validator.Primitive[_]], wholeNumbers: Boolean): OSchema =
+    vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers))
+
+  private def addConstraints(oschema: OSchema, v: Validator.Primitive[_], wholeNumbers: Boolean): OSchema = {
+    v match {
+      case m @ Validator.Min(v)     => oschema.copy(minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
+      case Validator.Pattern(value) => oschema.copy(pattern = Some(value))
+      case Validator.MinSize(value) => oschema.copy(minSize = Some(value))
+      case Validator.Custom(_)      => oschema
     }
   }
-  private def minimum(constraints: List[Constraint[_]]): Option[Int] = {
-    constraints.collectFirst { case Constraint.Minimum(v: Int) => v }
+
+  private def toBigDecimal[N](v: N, vIsNumeric: Numeric[N], wholeNumber: Boolean): BigDecimal = {
+    if (wholeNumber) BigDecimal(vIsNumeric.toLong(v)) else BigDecimal(vIsNumeric.toDouble(v))
   }
-  private def pattern(constraints: List[Constraint[_]]): Option[String] = {
-    constraints.collectFirst { case Constraint.Pattern(v: String) => v }
-  }
-  private def minSize(constraints: List[Constraint[_]]): Option[Int] = {
-    constraints.collectFirst { case Constraint.MinSize(v) => v }
+
+  private def fieldValidator(v: Validator[_], fieldName: String): Validator[_] = {
+    Validator.all(asSingleValidators(v).collect {
+      case Validator.Product(fields) if fields.isDefinedAt(fieldName) => fields(fieldName).validator
+    }: _*)
   }
 }

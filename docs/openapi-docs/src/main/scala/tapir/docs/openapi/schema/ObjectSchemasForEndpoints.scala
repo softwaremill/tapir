@@ -38,92 +38,69 @@ object ObjectSchemasForEndpoints {
       .infoToKey
   }
 
-  private def objectSchemas(schema: TSchema, validator: Validator[_]): List[(TSchema.SObject, Validator[_])] = {
-    (schema, validator.unwrap) match {
-      case (p: TSchema.SProduct, v) =>
-        List(p -> v) ++ schemaWithValidatorForFields(p, v)
+  private def objectSchemas(schema: TSchema, v: Validator[_]): List[(TSchema.SObject, Validator[_])] = {
+    schema match {
+      case p: TSchema.SProduct =>
+        List(p -> v) ++ fieldsSchemaWithValidator(p, v)
           .flatMap(k => objectSchemas(k._1, k._2))
           .toList
-      case (TSchema.SArray(o), v: BaseCollectionValidator[_, _]) =>
-        objectSchemas(o, v.elementValidator)
-      case (s: TSchema.SCoproduct, v) =>
-        (s -> v) +: s.schemas.flatMap(c => objectSchemas(c, Validator.passing)).toList
-      case (s: TSchema.SOpenProduct, v: OpenProductValidator[_]) =>
-        (s -> v) +: objectSchemas(s.valueSchema, v.elementValidator)
+      case TSchema.SArray(o) =>
+        objectSchemas(o, elementValidator(v))
+      case s: TSchema.SCoproduct =>
+        (s -> v) +: s.schemas.flatMap(c => objectSchemas(c, Validator.pass)).toList
+      case s: TSchema.SOpenProduct =>
+        (s -> v) +: objectSchemas(s.valueSchema, elementValidator(v))
       case _ => List.empty
     }
   }
 
-  private def schemaWithValidatorForFields(p: TSchema.SProduct, v: Validator[_]): immutable.Seq[(TSchema, Validator[_])] = {
+  private def fieldsSchemaWithValidator(p: TSchema.SProduct, v: Validator[_]): immutable.Seq[(TSchema, Validator[_])] = {
     v match {
-      case ProductValidator(fields) =>
+      case Validator.Product(validatedFields) =>
         p.fields.map { f =>
-          f._2 -> fields(f._1).validator
+          f._2 -> validatedFields.get(f._1).map(_.validator).getOrElse(Validator.pass)
         }.toList
-      case _ => p.fields.map(f => f._2 -> Validator.passing[f.type]).toList
+      case _ => p.fields.map(f => f._2 -> Validator.pass).toList
     }
   }
 
   private def forInput(input: EndpointInput[_]): List[(TSchema.SObject, Validator[_])] = {
     input match {
-      case EndpointInput.FixedMethod(_) =>
-        List.empty
-      case EndpointInput.FixedPath(_) =>
-        List.empty
-      case EndpointInput.PathCapture(tm, _, _) =>
-        objectSchemas(tm.meta.schema, tm.validator)
-      case EndpointInput.PathsCapture(_) =>
-        List.empty
-      case EndpointInput.Query(_, tm, _) =>
-        objectSchemas(tm.meta.schema, tm.validator)
-      case EndpointInput.Cookie(_, tm, _) =>
-        objectSchemas(tm.meta.schema, tm.validator)
-      case EndpointInput.QueryParams(_) =>
-        List.empty
-      case _: EndpointInput.Auth[_] =>
-        List.empty
-      case _: EndpointInput.ExtractFromRequest[_] =>
-        List.empty
-      case EndpointInput.Mapped(wrapped, _, _, _) =>
-        forInput(wrapped)
-      case EndpointInput.Multiple(inputs) =>
-        inputs.toList.flatMap(forInput)
-      case op: EndpointIO[_] => forIO(op)
+      case EndpointInput.FixedMethod(_)           => List.empty
+      case EndpointInput.FixedPath(_)             => List.empty
+      case EndpointInput.PathCapture(tm, _, _)    => objectSchemas(tm.meta.schema, tm.validator)
+      case EndpointInput.PathsCapture(_)          => List.empty
+      case EndpointInput.Query(_, tm, _)          => objectSchemas(tm.meta.schema, tm.validator)
+      case EndpointInput.Cookie(_, tm, _)         => objectSchemas(tm.meta.schema, tm.validator)
+      case EndpointInput.QueryParams(_)           => List.empty
+      case _: EndpointInput.Auth[_]               => List.empty
+      case _: EndpointInput.ExtractFromRequest[_] => List.empty
+      case EndpointInput.Mapped(wrapped, _, _, _) => forInput(wrapped)
+      case EndpointInput.Multiple(inputs)         => inputs.toList.flatMap(forInput)
+      case op: EndpointIO[_]                      => forIO(op)
     }
   }
 
   private def forOutput(output: EndpointOutput[_]): List[(TSchema.SObject, Validator[_])] = {
     output match {
-      case EndpointOutput.OneOf(mappings) =>
-        mappings.flatMap(mapping => forOutput(mapping.output)).toList
-      case EndpointOutput.StatusCode() =>
-        List.empty
-      case EndpointOutput.FixedStatusCode(_, _) =>
-        List.empty
-      case EndpointOutput.Mapped(wrapped, _, _, _) =>
-        forOutput(wrapped)
-      case EndpointOutput.Multiple(outputs) =>
-        outputs.toList.flatMap(forOutput)
-      case op: EndpointIO[_] => forIO(op)
+      case EndpointOutput.OneOf(mappings)          => mappings.flatMap(mapping => forOutput(mapping.output)).toList
+      case EndpointOutput.StatusCode()             => List.empty
+      case EndpointOutput.FixedStatusCode(_, _)    => List.empty
+      case EndpointOutput.Mapped(wrapped, _, _, _) => forOutput(wrapped)
+      case EndpointOutput.Multiple(outputs)        => outputs.toList.flatMap(forOutput)
+      case op: EndpointIO[_]                       => forIO(op)
     }
   }
 
   private def forIO(io: EndpointIO[_]): List[(TSchema.SObject, Validator[_])] = {
     io match {
-      case EndpointIO.Multiple(ios) =>
-        ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
-      case EndpointIO.Header(_, tm, _) =>
-        objectSchemas(tm.meta.schema, tm.validator)
-      case EndpointIO.Headers(_) =>
-        List.empty
-      case EndpointIO.Body(tm, _) =>
-        objectSchemas(tm.meta.schema, tm.validator)
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) =>
-        objectSchemas(schema, Validator.passing)
-      case EndpointIO.Mapped(wrapped, _, _, _) =>
-        forInput(wrapped) ++ forOutput(wrapped)
-      case EndpointIO.FixedHeader(_, _, _) =>
-        List.empty
+      case EndpointIO.Multiple(ios)                                             => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
+      case EndpointIO.Header(_, tm, _)                                          => objectSchemas(tm.meta.schema, tm.validator)
+      case EndpointIO.Headers(_)                                                => List.empty
+      case EndpointIO.Body(tm, _)                                               => objectSchemas(tm.meta.schema, tm.validator)
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) => objectSchemas(schema, Validator.pass)
+      case EndpointIO.Mapped(wrapped, _, _, _)                                  => forInput(wrapped) ++ forOutput(wrapped)
+      case EndpointIO.FixedHeader(_, _, _)                                      => List.empty
     }
   }
 

@@ -9,13 +9,11 @@ class ObjectSchemas(
     schemaReferenceMapper: SchemaReferenceMapper
 ) {
   def apply(schema: TSchema, validator: Validator[_]): ReferenceOr[OSchema] = {
-    (schema, validator.unwrap) match {
-      case (TSchema.SArray(o: TSchema.SObject), _) =>
-        Right(
-          OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(o.info))))
-        )
-      case (o: TSchema.SObject, _) => Left(schemaReferenceMapper.map(o.info))
-      case _                       => tschemaToOSchema(schema, validator)
+    schema match {
+      case TSchema.SArray(o: TSchema.SObject) =>
+        Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(o.info)))))
+      case o: TSchema.SObject => Left(schemaReferenceMapper.map(o.info))
+      case _                  => tschemaToOSchema(schema, validator)
     }
   }
 }

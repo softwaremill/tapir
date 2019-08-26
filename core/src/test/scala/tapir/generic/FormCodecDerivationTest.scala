@@ -117,12 +117,13 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class using implicit validator" in {
     // given
     case class Test1(f1: Int)
-    implicit val v: Validator[Int] = Validator.rejecting
+    implicit val v: Validator[Int] = Validator.min(5)
     val codec = implicitly[Codec[Test1, MediaType.XWwwFormUrlencoded, String]]
 
     // when
     codec.encode(Test1(10)) shouldBe "f1=10"
-    codec.safeDecode("f1=10") shouldBe DecodeResult.InvalidValue()
+    codec.safeDecode("f1=0") shouldBe DecodeResult.InvalidValue()
+    codec.safeDecode("f1=10") shouldBe DecodeResult.Value(Test1(10))
   }
 
   it should "generate a codec for a case class with simple types" in {

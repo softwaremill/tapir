@@ -18,7 +18,7 @@ package object tests {
 
   val in_valid_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] = {
     implicit def plainCodecForMyTaggedString(implicit uc: PlainCodec[String]): PlainCodec[MyTaggedString] =
-      uc.map(_.taggedWith[Tapir])(identity).validate(ValueValidator(List(Constraint.Pattern("apple|banana"))))
+      uc.map(_.taggedWith[Tapir])(identity).validate(Validator.pattern("apple|banana"))
 
     endpoint.in(query[String @@ Tapir]("fruit"))
   }
@@ -27,14 +27,14 @@ package object tests {
     implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
     implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
     implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
-    implicit val v: Validator[IntWrapper] = ValueValidator(List(Constraint.Minimum(1))).contramap(_.v)
+    implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
     endpoint.in(jsonBody[ValidFruitAmount])
   }
 
   val in_valid_query_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
     implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
     implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
-      uc.map(IntWrapper.apply)(_.v).validate(ValueValidator[Int](List(Constraint.Minimum[Int](1))).contramap(_.v))
+      uc.map(IntWrapper.apply)(_.v).validate(Validator.min(1).contramap(_.v))
     endpoint.in(query[IntWrapper]("amount"))
   }
 
@@ -42,14 +42,16 @@ package object tests {
     implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
     implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
     implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
-    implicit val v: Validator[IntWrapper] = ValueValidator(List(Constraint.Minimum(1))).contramap(_.v)
+    implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
 
     import tapir.tests.BasketOfFruits._
-    implicit def listEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)
-    implicit def listDecoder[T: Decoder]: Decoder[ValidatedList[T]] = implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
-    implicit def schemaForIntList[T: SchemaFor]: SchemaFor[ValidatedList[T]] = SchemaFor(Schema.SArray(implicitly[SchemaFor[T]].schema))
-    implicit def validatorList[T: Validator]: Validator[ValidatedList[T]] =
-      CollectionValidator[T, ValidatedList](implicitly[Validator[T]], List(Constraint.MinSize(1)))
+    implicit def validatedListEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)
+    implicit def validatedListDecoder[T: Decoder]: Decoder[ValidatedList[T]] =
+      implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
+    implicit def schemaForValidatedList[T: SchemaFor]: SchemaFor[ValidatedList[T]] =
+      SchemaFor(Schema.SArray(implicitly[SchemaFor[T]].schema))
+    implicit def validatorForValidatedList[T: Validator]: Validator[ValidatedList[T]] =
+      implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minSize(1).contramap(identity))
     endpoint.in(jsonBody[BasketOfFruits])
   }
 
@@ -57,7 +59,7 @@ package object tests {
     implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
     implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
     implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
-    implicit val v: Validator[IntWrapper] = ValueValidator(List(Constraint.Minimum(1))).contramap(_.v)
+    implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
     endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
   }
 

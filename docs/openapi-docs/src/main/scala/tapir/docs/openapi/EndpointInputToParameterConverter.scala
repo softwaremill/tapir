@@ -1,6 +1,6 @@
 package tapir.docs.openapi
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi.{ExampleValue, Parameter, ParameterIn, Schema, SchemaType}
+import tapir.openapi.{ExampleValue, Parameter, ParameterIn, Schema}
 import tapir.{EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap

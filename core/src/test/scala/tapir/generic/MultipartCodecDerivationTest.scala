@@ -164,13 +164,15 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
 
   it should "generate a codec for a one-arg case class with implicit validator" in {
     // given
-    implicit val v: Validator[Int] = Validator.rejecting
+    implicit val v: Validator[Int] = Validator.min(5)
     case class Test1(f1: Int)
     val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
 
     // when
     toPartData(codec.encode(Test1(10))) shouldBe List(("f1", "10"))
-    codec.safeDecode(createStringParts(List(("f1", "10")))) shouldBe DecodeResult.InvalidValue()
+
+    codec.safeDecode(createStringParts(List(("f1", "0")))) shouldBe DecodeResult.InvalidValue()
+    codec.safeDecode(createStringParts(List(("f1", "10")))) shouldBe DecodeResult.Value(Test1(10))
   }
 
   private def toPartData(parts: Seq[RawPart]): Seq[(String, Any)] = parts.map(p => (p.name, p.body))
