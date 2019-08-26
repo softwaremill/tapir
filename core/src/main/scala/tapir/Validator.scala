@@ -46,9 +46,9 @@ case class ProductValidator[T](fields: Map[String, FieldValidator[T]]) extends V
 }
 
 trait FieldValidator[T] {
-  type fType
-  def get(t: T): fType
-  def validator: Validator[fType]
+  type FieldType
+  def get(t: T): FieldType
+  def validator: Validator[FieldType]
 }
 
 case class ValueValidator[T](constraints: List[Constraint[T]]) extends Validator[T] {

@@ -9,9 +9,9 @@ trait ValidateMagnoliaDerivation {
   def combine[T](ctx: CaseClass[Validator, T]): Validator[T] = {
     ProductValidator(ctx.parameters.map { p =>
       p.label -> new FieldValidator[T] {
-        override type fType = p.PType
-        override def get(t: T): fType = { p.dereference(t) }
-        override def validator: Typeclass[fType] = p.typeclass
+        override type FieldType = p.PType
+        override def get(t: T): FieldType = { p.dereference(t) }
+        override def validator: Typeclass[FieldType] = p.typeclass
       }
     }.toMap)
   }
