@@ -1,5 +1,4 @@
 package tapir.docs.openapi
-import tapir.Schema.SString
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{ExampleValue, Parameter, ParameterIn, Schema, SchemaType}
 import tapir.{EndpointIO, EndpointInput}
