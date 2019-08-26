@@ -30,7 +30,7 @@ case class PassingValidator[T]() extends Validator[T] {
 }
 
 case class RejectingValidator[T]() extends Validator[T] {
-  override def validate(t: T): Boolean = true
+  override def validate(t: T): Boolean = false
 }
 
 case class OptionValidator[T](inner: Validator[T]) extends Validator[Option[T]] {
