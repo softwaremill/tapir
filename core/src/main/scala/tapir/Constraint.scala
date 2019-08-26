@@ -1,6 +1,6 @@
 package tapir
 
-trait Constraint[T] {
+sealed trait Constraint[T] {
   def check(t: T): Boolean
 }
 
