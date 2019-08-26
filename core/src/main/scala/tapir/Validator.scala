@@ -36,11 +36,17 @@ object Validator extends ValidateMagnoliaDerivation {
   case class Min[T](value: T)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
     override def validate(actual: T): Boolean = implicitly[Numeric[T]].gteq(actual, value)
   }
+  case class Max[T](value: T)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
+    override def validate(actual: T): Boolean = implicitly[Numeric[T]].lteq(actual, value)
+  }
   case class Pattern[T <: String](value: String) extends Primitive[T] {
     override def validate(t: T): Boolean = t.matches(value)
   }
   case class MinSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
     override def validate(t: C[T]): Boolean = t.size >= value
+  }
+  case class MaxSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
+    override def validate(t: C[T]): Boolean = t.size <= value
   }
   case class Custom[T](doValidate: T => Boolean) extends Primitive[T] {
     override def validate(t: T): Boolean = doValidate(t)
