@@ -2,7 +2,7 @@ package tapir
 
 import tapir.generic.ValidateMagnoliaDerivation
 
-trait Validator[T] { outer =>
+sealed trait Validator[T] { outer =>
   def validate(t: T): Boolean
   def unwrap: Validator[_] = outer
   def contramap[TT](g: TT => T): Validator[TT] = new Validator[TT] {
@@ -10,19 +10,31 @@ trait Validator[T] { outer =>
     override def unwrap: Validator[_] = outer.unwrap
   }
 
-  def toOption: Validator[Option[T]] = (t: Option[T]) => t.forall(outer.validate)
+  def toOption: Validator[Option[T]] = OptionValidator(outer)
   def toArray: Validator[Array[T]] = ArrayValidator(outer, List.empty[Constraint[Array[T]]])(outer)
   def toIterable[C[_] <: Iterable[_]]: Validator[C[T]] = CollectionValidator[T, C](outer, List.empty[Constraint[C[T]]])(outer)
 }
 
 object Validator extends ValidateMagnoliaDerivation {
-  def passing[T]: Validator[T] = (_: T) => true
-  def rejecting[T]: Validator[T] = (_: T) => false
+  def passing[T]: Validator[T] = PassingValidator()
+  def rejecting[T]: Validator[T] = RejectingValidator()
 
   implicit def validatorForOption[T: Validator]: Validator[Option[T]] = implicitly[Validator[T]].toOption
   implicit def validatorForArray[T: Validator]: Validator[Array[T]] = implicitly[Validator[T]].toArray
   implicit def validatorForIterable[T: Validator, C[_] <: Iterable[_]]: Validator[C[T]] = implicitly[Validator[T]].toIterable[C]
   implicit def validatorForMap[T: Validator]: Validator[Map[String, T]] = OpenProductValidator(implicitly[Validator[T]])
+}
+
+case class PassingValidator[T]() extends Validator[T] {
+  override def validate(t: T): Boolean = true
+}
+
+case class RejectingValidator[T]() extends Validator[T] {
+  override def validate(t: T): Boolean = true
+}
+
+case class OptionValidator[T](inner: Validator[T]) extends Validator[Option[T]] {
+  override def validate(t: Option[T]): Boolean = t.forall(inner.validate)
 }
 
 case class ProductValidator[T](fields: Map[String, FieldValidator[T]]) extends Validator[T] {
