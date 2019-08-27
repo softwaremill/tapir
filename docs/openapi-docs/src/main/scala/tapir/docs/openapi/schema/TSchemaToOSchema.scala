@@ -63,7 +63,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case m @ Validator.Min(v)     => oschema.copy(minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
       case Validator.Pattern(value) => oschema.copy(pattern = Some(value))
       case Validator.MinSize(value) => oschema.copy(minSize = Some(value))
-      case Validator.Custom(_)      => oschema
+      case Validator.Custom(_, _)   => oschema
     }
   }
 
