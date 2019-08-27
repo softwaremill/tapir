@@ -1,6 +1,7 @@
 package tapir
 
-import tapir.generic.ValidateMagnoliaDerivation
+import tapir.generic.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
+
 import scala.collection.immutable
 
 sealed trait Validator[T] {
@@ -16,7 +17,7 @@ sealed trait Validator[T] {
   def or(other: Validator[T]): Validator[T] = Validator.any(this, other)
 }
 
-object Validator extends ValidateMagnoliaDerivation {
+object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   def all[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else All[T](v.toList)
   def any[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else Any[T](v.toList)
 
@@ -29,7 +30,8 @@ object Validator extends ValidateMagnoliaDerivation {
   def minSize[T, C[_] <: Iterable[_]](value: Int): Validator[C[T]] = MinSize(value)
   def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator[C[T]] = MaxSize(value)
   def custom[T](doValidate: T => Boolean, message: String): Validator[T] = Custom(doValidate, message)
-
+  def enum[T]: Validator[T] = macro validatorForEnum[T]
+  def enum[T](possibleValues: List[T]) = Enum(possibleValues)
   //
 
   sealed trait Single[T] extends Validator[T]
@@ -85,7 +87,17 @@ object Validator extends ValidateMagnoliaDerivation {
       if (doValidate(t)) {
         List.empty
       } else {
-        List(ValidationError(s"Expected $t to pass custom validation: $message"))
+        List(ValidationError(s"Expected '$t' to pass custom validation: $message"))
+      }
+    }
+  }
+
+  case class Enum[T](possibleValues: List[T]) extends Primitive[T] {
+    override def validate(t: T): List[ValidationError] = {
+      if (possibleValues.contains(t)) {
+        List.empty
+      } else {
+        List(ValidationError(s"Expected '$t' to be within $possibleValues"))
       }
     }
   }

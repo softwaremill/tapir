@@ -63,6 +63,26 @@ package object tests {
     endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
   }
 
+  val in_valid_enum_class: Endpoint[Color, Unit, Unit, Nothing] = {
+    implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+    implicit def plainCodecForColor: PlainCodec[Color] = {
+      Codec.stringPlainCodecUtf8
+        .map[Color]({
+          case "Red"  => Red
+          case "Blue" => Blue
+        })(_.toString)
+        .validate(Validator.enum)
+    }
+    endpoint.in(query[Color]("color"))
+  }
+
+  val in_valid_enum_values: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
+    implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+    implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
+      uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(1, 2)).contramap(_.v))
+    endpoint.in(query[IntWrapper]("amount"))
+  }
+
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 
   val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String, Nothing] =
@@ -250,3 +270,7 @@ package object tests {
 
   def readFromFile(f: File): String = Source.fromFile(f).mkString
 }
+
+sealed trait Color
+case object Blue extends Color
+case object Red extends Color

@@ -1,0 +1,20 @@
+openapi: 3.0.1
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: color
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - Red
+              - Blue
+      responses:
+        '200':
+          description: ''

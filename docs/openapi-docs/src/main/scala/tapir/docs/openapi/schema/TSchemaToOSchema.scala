@@ -64,6 +64,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case Validator.Pattern(value) => oschema.copy(pattern = Some(value))
       case Validator.MinSize(value) => oschema.copy(minSize = Some(value))
       case Validator.Custom(_, _)   => oschema
+      case Validator.Enum(v)        => oschema.copy(enum = Some(v))
     }
   }
 

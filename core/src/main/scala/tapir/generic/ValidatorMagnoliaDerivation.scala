@@ -3,7 +3,7 @@ package tapir.generic
 import magnolia.{CaseClass, Magnolia, SealedTrait}
 import tapir.Validator
 
-trait ValidateMagnoliaDerivation {
+trait ValidatorMagnoliaDerivation {
   type Typeclass[T] = Validator[T]
 
   def combine[T](ctx: CaseClass[Validator, T]): Validator[T] = {

@@ -64,7 +64,7 @@ class ValidatorTest extends FlatSpec with Matchers {
       .custom({ x: Int =>
         x > 5
       }, "X has to be greater than 5!")
-      .validate(0) shouldBe List(ValidationError("Expected 0 to pass custom validation: X has to be greater than 5!"))
+      .validate(0) shouldBe List(ValidationError("Expected '0' to pass custom validation: X has to be greater than 5!"))
   }
 
   it should "validate openProduct" in {
@@ -107,4 +107,17 @@ class ValidatorTest extends FlatSpec with Matchers {
     validator.validate(Person("ImportantButYoung", 15)) shouldBe List(ValidationError("Expected 15 to be greater than or equal to 18"))
     validator.validate(Person("ImportantAndOld", 21)) shouldBe empty
   }
+
+  it should "validate enum" in {
+    Validator.enum[Color].validate(Blue) shouldBe empty
+  }
+
+  it should "validate closed set of ints" in {
+    Validator.enum(List(1, 2, 3, 4)).validate(1) shouldBe empty
+    Validator.enum(List(1, 2, 3, 4)).validate(0) shouldBe List(ValidationError("Expected '0' to be within List(1, 2, 3, 4)"))
+  }
 }
+
+sealed trait Color
+case object Blue extends Color
+case object Red extends Color
