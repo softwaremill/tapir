@@ -6,7 +6,7 @@ import tapir.internal._
 import tapir.model.Method
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema, _}
-
+import tapir.docs.openapi.EncodingSupport._
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {

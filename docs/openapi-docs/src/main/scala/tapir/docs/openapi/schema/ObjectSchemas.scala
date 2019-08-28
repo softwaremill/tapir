@@ -3,6 +3,7 @@ package tapir.docs.openapi.schema
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{SchemaType, Schema => OSchema}
 import tapir.{Validator, Schema => TSchema}
+import tapir.docs.openapi.EncodingSupport._
 
 class ObjectSchemas(
     tschemaToOSchema: TSchemaToOSchema,

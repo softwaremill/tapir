@@ -6,7 +6,7 @@ import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
 import tapir._
-
+import tapir.docs.openapi.EncodingSupport._
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas, codecToMediaType: CodecToMediaType) {

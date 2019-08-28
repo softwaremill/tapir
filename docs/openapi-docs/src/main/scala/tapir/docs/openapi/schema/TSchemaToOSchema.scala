@@ -3,6 +3,7 @@ package tapir.docs.openapi.schema
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
 import tapir.{Validator, Schema => TSchema}
+import tapir.docs.openapi.EncodingSupport._
 
 /**
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
@@ -70,7 +71,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case Validator.Pattern(value) => oschema.copy(pattern = Some(value))
       case Validator.MinSize(value) => oschema.copy(minSize = Some(value))
       case Validator.MaxSize(value) => oschema.copy(maxSize = Some(value))
-      case Validator.Custom(_, _) => oschema
+      case Validator.Custom(_, _)   => oschema
       case Validator.Enum(v) =>
         codec
           .map(c => oschema.copy(enum = Some(v.flatMap(x => c.asInstanceOf[Any => Option[Any]].apply(x)).map(_.toString))))

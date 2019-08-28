@@ -1,6 +1,7 @@
 package tapir.docs.openapi
 
-import tapir.docs.openapi.schema.{EncodeAny, ObjectSchemas}
+import tapir.docs.openapi.EncodingSupport._
+import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.openapi.{MediaType => OMediaType, _}
 import tapir.{MediaType => SMediaType, Schema => SSchema, _}
 

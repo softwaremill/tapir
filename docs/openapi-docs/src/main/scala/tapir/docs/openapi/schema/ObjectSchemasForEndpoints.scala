@@ -9,6 +9,7 @@ import tapir.{Schema => TSchema, _}
 
 import scala.collection.immutable
 import scala.collection.immutable.ListMap
+import tapir.docs.openapi.EncodingSupport._
 
 object ObjectSchemasForEndpoints {
 
