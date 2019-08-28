@@ -130,7 +130,7 @@ package object internal {
     }
   }
 
-  private[tapir] def addShowValidator(s: String, v: Validator[_]): String = {
+  private[tapir] def addValidatorShow(s: String, v: Validator[_]): String = {
     v.show match {
       case None     => s
       case Some(sv) => s"$s($sv)"

@@ -52,7 +52,7 @@ object EndpointInput {
     def description(d: String): PathCapture[T] = copy(info = info.description(d))
     def example(t: T): PathCapture[T] = copy(info = info.example(t))
     def validate(v: Validator[T]): PathCapture[T] = copy(codec = codec.validate(v))
-    def show: String = addShowValidator(s"/[${name.getOrElse("")}]", codec.validator)
+    def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.validator)
   }
 
   case class PathsCapture(info: EndpointIO.Info[Seq[String]]) extends Basic[Seq[String]] {
@@ -65,7 +65,7 @@ object EndpointInput {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
     def validate(v: Validator[T]): Query[T] = copy(codec = codec.validate(v))
-    def show: String = addShowValidator(s"?$name", codec.validator)
+    def show: String = addValidatorShow(s"?$name", codec.validator)
   }
 
   case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Basic[MultiQueryParams] {
@@ -78,7 +78,7 @@ object EndpointInput {
     def description(d: String): Cookie[T] = copy(info = info.description(d))
     def example(t: T): Cookie[T] = copy(info = info.example(t))
     def validate(v: Validator[T]): Cookie[T] = copy(codec = codec.validate(v))
-    def show: String = addShowValidator(s"{cookie $name}", codec.validator)
+    def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
   }
 
   case class ExtractFromRequest[T](f: ServerRequest => T) extends Basic[T] {
@@ -221,7 +221,7 @@ object EndpointIO {
     def description(d: String): Body[T, M, R] = copy(info = info.description(d))
     def example(t: T): Body[T, M, R] = copy(info = info.example(t))
     def validate(v: Validator[T]): Body[T, M, R] = copy(codec = codec.validate(v))
-    def show: String = addShowValidator(s"{body as ${codec.meta.mediaType.mediaType}}", codec.validator)
+    def show: String = addValidatorShow(s"{body as ${codec.meta.mediaType.mediaType}}", codec.validator)
   }
 
   case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Basic[S] {
@@ -237,7 +237,7 @@ object EndpointIO {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
     def validate(v: Validator[T]): Header[T] = copy(codec = codec.validate(v))
-    def show: String = addShowValidator(s"{header $name}", codec.validator)
+    def show: String = addValidatorShow(s"{header $name}", codec.validator)
   }
 
   case class Headers(info: Info[Seq[(String, String)]]) extends Basic[Seq[(String, String)]] {
