@@ -89,16 +89,6 @@ lazy val circeJson: Project = (project in file("json/circe"))
   )
   .dependsOn(core)
 
-lazy val playJson: Project = (project in file("json/playjson"))
-  .settings(commonSettings: _*)
-  .settings(
-    name := "tapir-json-play",
-    libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-json" % playVersion
-    )
-  )
-  .dependsOn(core)
-
 // openapi
 
 lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
