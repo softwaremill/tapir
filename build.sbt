@@ -109,7 +109,10 @@ lazy val uPickleJson: Project = (project in file("json/upickle"))
   .settings(commonSettings)
   .settings(
     name := "tapir-json-upickle",
-    libraryDependencies ++= Seq("com.lihaoyi" %% "upickle" % Versions.upickle, scalaTest % "test")
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %% "upickle" % Versions.upickle,
+      scalaTest % "test"
+    )
   )
   .dependsOn(core)
 
