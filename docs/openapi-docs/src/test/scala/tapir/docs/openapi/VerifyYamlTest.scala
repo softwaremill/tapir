@@ -397,7 +397,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("validator with tagged type in query") {
     val expectedYaml = loadYaml("expected_valid_query_tagged.yml")
 
-    val actualYaml = in_valid_query_tagged
+    val actualYaml = Validation.in_query_tagged
       .in("add")
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
@@ -408,7 +408,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("validator with wrapper type in body") {
     val expectedYaml = loadYaml("expected_valid_body_wrapped.yml")
 
-    val actualYaml = in_valid_json_wrapper
+    val actualYaml = Validation.in_json_wrapper
       .in("add")
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
@@ -420,7 +420,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("validator with wrapper type in query") {
     val expectedYaml = loadYaml("expected_valid_query_wrapped.yml")
 
-    val actualYaml = in_valid_query_wrapper
+    val actualYaml = Validation.in_query_wrapper
       .in("add")
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
@@ -431,7 +431,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("validator with list") {
     val expectedYaml = loadYaml("expected_valid_body_collection.yml")
 
-    val actualYaml = in_valid_json_collection
+    val actualYaml = Validation.in_json_collection
       .in("add")
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
@@ -442,7 +442,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("render validator for additional properties of map") {
     val expectedYaml = loadYaml("expected_valid_additional_properties.yml")
 
-    val actualYaml = in_valid_map
+    val actualYaml = Validation.in_map
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -452,7 +452,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("render enum validator for classes") {
     val expectedYaml = loadYaml("expected_valid_enum_class.yml")
 
-    val actualYaml = in_valid_enum_class
+    val actualYaml = Validation.in_enum_class
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -462,7 +462,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("render enum validator for values") {
     val expectedYaml = loadYaml("expected_valid_enum_values.yml")
 
-    val actualYaml = in_valid_enum_values
+    val actualYaml = Validation.in_enum_values
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

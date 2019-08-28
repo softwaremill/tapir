@@ -14,79 +14,6 @@ import tapir.model._
 import scala.io.Source
 import tapir.json.circe._
 package object tests {
-  type MyTaggedString = String @@ Tapir
-
-  val in_valid_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] = {
-    implicit def plainCodecForMyTaggedString(implicit uc: PlainCodec[String]): PlainCodec[MyTaggedString] =
-      uc.map(_.taggedWith[Tapir])(identity).validate(Validator.pattern("apple|banana"))
-
-    endpoint.in(query[String @@ Tapir]("fruit"))
-  }
-
-  val in_valid_query: Endpoint[StatusCode, Unit, Unit, Nothing] = {
-    endpoint.in(query[Int]("amount").validate(Validator.min(0)))
-  }
-
-  val in_valid_json_wrapper: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
-    implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
-    implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
-    implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
-    implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
-    endpoint.in(jsonBody[ValidFruitAmount])
-  }
-
-  val in_valid_query_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
-    implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
-    implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
-      uc.map(IntWrapper.apply)(_.v).validate(Validator.min(1).contramap(_.v))
-    endpoint.in(query[IntWrapper]("amount"))
-  }
-
-  val in_valid_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Nothing] = {
-    implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
-    implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
-    implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
-    implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
-
-    import tapir.tests.BasketOfFruits._
-    implicit def validatedListEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)
-    implicit def validatedListDecoder[T: Decoder]: Decoder[ValidatedList[T]] =
-      implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
-    implicit def schemaForValidatedList[T: SchemaFor]: SchemaFor[ValidatedList[T]] =
-      SchemaFor(Schema.SArray(implicitly[SchemaFor[T]].schema))
-    implicit def validatorForValidatedList[T: Validator]: Validator[ValidatedList[T]] =
-      implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minSize(1).contramap(identity))
-    endpoint.in(jsonBody[BasketOfFruits])
-  }
-
-  val in_valid_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Nothing] = {
-    implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
-    implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
-    implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
-    implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
-    endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
-  }
-
-  val in_valid_enum_class: Endpoint[Color, Unit, Unit, Nothing] = {
-    implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
-    implicit def plainCodecForColor: PlainCodec[Color] = {
-      Codec.stringPlainCodecUtf8
-        .map[Color]({
-          case "red"  => Red
-          case "blue" => Blue
-        })(_.toString.toLowerCase)
-        .validate(Validator.enum)
-    }
-    endpoint.in(query[Color]("color"))
-  }
-
-  val in_valid_enum_values: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
-    implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
-    implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
-      uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
-    endpoint.in(query[IntWrapper]("amount"))
-  }
-
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 
   val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String, Nothing] =
@@ -263,7 +190,88 @@ package object tests {
   val in_optional_json_out_optional_json: Endpoint[Option[FruitAmount], Unit, Option[FruitAmount], Nothing] =
     endpoint.post.in("api" / "echo").in(jsonBody[Option[FruitAmount]]).out(jsonBody[Option[FruitAmount]])
 
-  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
+  //
+
+  object Validation {
+    type MyTaggedString = String @@ Tapir
+
+    val in_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] = {
+      implicit def plainCodecForMyTaggedString(implicit uc: PlainCodec[String]): PlainCodec[MyTaggedString] =
+        uc.map(_.taggedWith[Tapir])(identity).validate(Validator.pattern("apple|banana"))
+
+      endpoint.in(query[String @@ Tapir]("fruit"))
+    }
+
+    val in_query: Endpoint[StatusCode, Unit, Unit, Nothing] = {
+      endpoint.in(query[Int]("amount").validate(Validator.min(0)))
+    }
+
+    val in_json_wrapper: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+      endpoint.in(jsonBody[ValidFruitAmount])
+    }
+
+    val in_query_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
+        uc.map(IntWrapper.apply)(_.v).validate(Validator.min(1).contramap(_.v))
+      endpoint.in(query[IntWrapper]("amount"))
+    }
+
+    val in_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+
+      import tapir.tests.BasketOfFruits._
+      implicit def validatedListEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)
+      implicit def validatedListDecoder[T: Decoder]: Decoder[ValidatedList[T]] =
+        implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
+      implicit def schemaForValidatedList[T: SchemaFor]: SchemaFor[ValidatedList[T]] =
+        SchemaFor(Schema.SArray(implicitly[SchemaFor[T]].schema))
+      implicit def validatorForValidatedList[T: Validator]: Validator[ValidatedList[T]] =
+        implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minSize(1).contramap(identity))
+      endpoint.in(jsonBody[BasketOfFruits])
+    }
+
+    val in_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+      endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
+    }
+
+    val in_enum_class: Endpoint[Color, Unit, Unit, Nothing] = {
+      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def plainCodecForColor: PlainCodec[Color] = {
+        Codec.stringPlainCodecUtf8
+          .map[Color]({
+            case "red"  => Red
+            case "blue" => Blue
+          })(_.toString.toLowerCase)
+          .validate(Validator.enum)
+      }
+      endpoint.in(query[Color]("color"))
+    }
+
+    val in_enum_values: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
+        uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
+      endpoint.in(query[IntWrapper]("amount"))
+    }
+
+    val allEndpoints = wireSet[Endpoint[_, _, _, _]]
+  }
+
+  //
+
+  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]] ++ Validation.allEndpoints
 
   def writeToFile(s: String): File = {
     val f = File.createTempFile("test", "tapir")
