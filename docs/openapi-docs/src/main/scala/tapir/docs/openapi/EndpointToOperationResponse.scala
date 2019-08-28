@@ -1,10 +1,10 @@
 package tapir.docs.openapi
 
-import tapir.internal._
+import tapir._
 import tapir.docs.openapi.schema.ObjectSchemas
+import tapir.internal._
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
-import tapir._
 
 import scala.collection.immutable.ListMap
 
@@ -50,7 +50,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             None,
             None,
             None,
-            Some(objectSchemas(codec.meta.schema)),
+            Some(objectSchemas(codec)),
             info.example.flatMap(exampleValue(codec, _)),
             ListMap.empty,
             ListMap.empty
@@ -75,8 +75,9 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     }
 
     val bodies = outputs.collect {
-      case EndpointIO.Body(m, i)                                            => (i.description, codecToMediaType(m, i.example))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) => (i.description, codecToMediaType(s, mt, i.example))
+      case EndpointIO.Body(m, i) => (i.description, codecToMediaType(m, i.example))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
+        (i.description, codecToMediaType(s, mt, i.example))
     }
     val body = bodies.headOption
 

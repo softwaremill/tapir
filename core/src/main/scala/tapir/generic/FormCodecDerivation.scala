@@ -38,7 +38,7 @@ object FormCodecMacros {
       case (field, codec) =>
         val fieldName = field.name.decodedName.toString
         q"""val transformedName = $conf.transformMemberName($fieldName)
-           $codec.safeDecode(paramsMap.get(transformedName).toList.flatten)"""
+           $codec.decode(paramsMap.get(transformedName).toList.flatten)"""
     }
 
     val codecTree = q"""
@@ -55,6 +55,7 @@ object FormCodecMacros {
         tapir.Codec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
           .schema(${util.schema}.schema)
+          .validate(implicitly[tapir.Validator[$t]])
       }
      """
 

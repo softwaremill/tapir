@@ -47,7 +47,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 rawBodyDirective(codec.meta.rawValueType)
                   .map { v =>
-                    codec.safeDecode(DecodeInputs.rawBodyValueToOption(v, codec.meta.isOptional)) match {
+                    codec.decode(DecodeInputs.rawBodyValueToOption(v, codec.meta.isOptional)) match {
                       case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
                       case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                     }
@@ -132,7 +132,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     }
   }
 
-  private def toRawPart[R](part: Multipart.FormData.BodyPart, codecMeta: CodecMeta[_, R], ctx: RequestContext)(
+  private def toRawPart[R](part: Multipart.FormData.BodyPart, codecMeta: CodecMeta[_, _, R], ctx: RequestContext)(
       implicit mat: Materializer,
       ec: ExecutionContext
   ): Future[Part[R]] = {

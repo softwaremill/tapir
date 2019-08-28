@@ -8,5 +8,5 @@ package object tapir extends Tapir {
   // mainly used in multipart codecs
   type AnyCodec = Codec[_, _ <: MediaType, _]
   type AnyCodecForMany = CodecForMany[_, _ <: MediaType, _]
-  type AnyCodecMeta = CodecMeta[_ <: MediaType, _]
+  type AnyCodecMeta = CodecMeta[_, _ <: MediaType, _]
 }

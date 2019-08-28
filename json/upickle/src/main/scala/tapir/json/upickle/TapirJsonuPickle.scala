@@ -13,14 +13,14 @@ trait TapirJsonuPickle {
 
     def encode(t: T): String = write(t)
 
-    def decode(s: String): DecodeResult[T] = {
+    def rawDecode(s: String): DecodeResult[T] = {
       Try(read[T](s)) match {
         case Success(v) => Value(v)
         case Failure(e) => Error("upickle decoder failed", e)
       }
     }
 
-    def meta: CodecMeta[MediaType.Json, String] = {
+    def meta: CodecMeta[T, MediaType.Json, String] = {
       CodecMeta(implicitly[SchemaFor[T]].schema, MediaType.Json(), StringValueType(StandardCharsets.UTF_8))
     }
   }

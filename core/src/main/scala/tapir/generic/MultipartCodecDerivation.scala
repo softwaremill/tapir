@@ -91,6 +91,7 @@ object MultipartCodecDerivation {
         tapir.Codec.multipartCodec($partCodecs, None)
           .map(decode _)(encode _)
           .schema(${util.schema}.schema)
+          .validate(implicitly[Validator[$t]])
       }
      """
 
