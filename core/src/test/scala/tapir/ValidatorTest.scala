@@ -114,7 +114,7 @@ class ValidatorTest extends FlatSpec with Matchers {
     case class Person(name: String, age: Int)
     implicit val nameValidator: Validator[String] = Validator.pattern("^[A-Z].*")
     implicit val ageValidator: Validator[Int] = Validator.min(18)
-    val validator = Validator.gen[Person]
+    val validator = Validator.validatorForCaseClass[Person]
     validator.validate(Person("notImportantButOld", 21)) shouldBe List(ValidationError(Validator.pattern("^[A-Z].*"), "notImportantButOld"))
     validator.validate(Person("notImportantAndYoung", 15)) shouldBe List(
       ValidationError(Validator.pattern("^[A-Z].*"), "notImportantAndYoung"),
