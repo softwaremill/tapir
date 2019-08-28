@@ -32,6 +32,12 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   def minSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
   def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
   def custom[T](doValidate: T => Boolean, message: String): Validator.Primitive[T] = Custom(doValidate, message)
+
+  /**
+    * Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s.
+    * This enumeration will only be used for documentation, as a value outside of the allowed values will not be
+    * decoded in the first place (the decoder has no other option than to fail).
+    */
   def enum[T]: Validator.Primitive[T] = macro validatorForEnum[T]
   def enum[T](possibleValues: List[T]): Validator.Primitive[T] = Enum(possibleValues)
   //
