@@ -32,7 +32,7 @@ Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
 schemas are looked up as implicit values of type SchemaFor[${T}])
 """)
-trait Codec[T, M <: MediaType, R] extends Decode[R, T] { outer =>
+trait Codec[T, M <: MediaType, R] extends Decode[T, R] { outer =>
   def encode(t: T): R
   def rawDecode(s: R): DecodeResult[T]
   def meta: CodecMeta[T, M, R]
@@ -189,7 +189,7 @@ Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
 schemas are looked up as implicit values of type SchemaFor[${T}])
 """)
-trait CodecForOptional[T, M <: MediaType, R] extends Decode[Option[R], T] { outer =>
+trait CodecForOptional[T, M <: MediaType, R] extends Decode[T, Option[R]] { outer =>
   def encode(t: T): Option[R]
   def rawDecode(s: Option[R]): DecodeResult[T]
   def meta: CodecMeta[T, M, R]
@@ -250,7 +250,7 @@ Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${M}, _];
 schemas are looked up as implicit values of type SchemaFor[${T}])
 """)
-trait CodecForMany[T, M <: MediaType, R] extends Decode[Seq[R], T] { outer =>
+trait CodecForMany[T, M <: MediaType, R] extends Decode[T, Seq[R]] { outer =>
   def encode(t: T): Seq[R]
   def rawDecode(s: Seq[R]): DecodeResult[T]
   def meta: CodecMeta[T, M, R]
@@ -359,7 +359,7 @@ case class MultipartValueType(partCodecMetas: Map[String, AnyCodecMeta], default
   def partCodecMeta(name: String): Option[AnyCodecMeta] = partCodecMetas.get(name).orElse(defaultCodecMeta)
 }
 
-trait Decode[F, T] {
+trait Decode[T, F] {
   def rawDecode(s: F): DecodeResult[T]
 
   private[tapir] def validator: Validator[T]
