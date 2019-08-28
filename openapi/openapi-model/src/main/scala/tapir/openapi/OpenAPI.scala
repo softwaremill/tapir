@@ -209,7 +209,9 @@ case class Schema(
     additionalProperties: Option[ReferenceOr[Schema]] = None,
     pattern: Option[String] = None,
     minimum: Option[BigDecimal] = None,
+    maximum: Option[BigDecimal] = None,
     minSize: Option[Int] = None,
+    maxSize: Option[Int] = None,
     enum: Option[List[String]] = None
 )
 

@@ -66,9 +66,11 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
   private def addConstraints(oschema: OSchema, v: Validator.Primitive[_], wholeNumbers: Boolean, codec: Option[EncodeAny[_]]): OSchema = {
     v match {
       case m @ Validator.Min(v)     => oschema.copy(minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
+      case m @ Validator.Max(v)     => oschema.copy(maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
       case Validator.Pattern(value) => oschema.copy(pattern = Some(value))
       case Validator.MinSize(value) => oschema.copy(minSize = Some(value))
-      case Validator.Custom(_, _)   => oschema
+      case Validator.MaxSize(value) => oschema.copy(maxSize = Some(value))
+      case Validator.Custom(_, _) => oschema
       case Validator.Enum(v) =>
         codec
           .map(c => oschema.copy(enum = Some(v.flatMap(x => c.asInstanceOf[Any => Option[Any]].apply(x)).map(_.toString))))
