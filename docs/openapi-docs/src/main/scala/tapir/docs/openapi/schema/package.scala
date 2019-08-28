@@ -1,9 +1,12 @@
 package tapir.docs.openapi
 
-import tapir.Validator
+import tapir.{Validator, Schema => TSchema}
 
 package object schema {
   type SchemaKey = String
+
+  type ObjectTypeData[T] = TypeData[TSchema.SObject, T]
+  type AnyTypeData[T] = TypeData[TSchema, T]
 
   private[schema] def elementValidator(v: Validator[_]): Validator[_] = {
     val result = asSingleValidators(v).collect {

@@ -9,18 +9,17 @@ import tapir.{Schema => TSchema, _}
 
 import scala.collection.immutable
 import scala.collection.immutable.ListMap
-import tapir.docs.openapi.EncodingSupport._
 
 object ObjectSchemasForEndpoints {
 
   def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
-    val infoToKey = calculateUniqueKeys(sObjects.map(_._1.info))
+    val infoToKey = calculateUniqueKeys(sObjects.map(_.schema.info))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
-    val infosToSchema = sObjects.map(so => (so._1.info, tschemaToOSchema(so._1, so._2, so._3))).toMap
+    val infosToSchema = sObjects.map(td => (td.schema.info, tschemaToOSchema(td))).toMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
@@ -41,47 +40,40 @@ object ObjectSchemasForEndpoints {
       .infoToKey
   }
 
-  private def objectSchemas(
-      schema: TSchema,
-      validator: Validator[_],
-      encode: Option[EncodeAny[_]]
-  ): List[(TSchema.SObject, Validator[_], Option[EncodeAny[_]])] = {
-    schema match {
-      case p: TSchema.SProduct =>
-        List((p, validator, encode)) ++ fieldsSchemaWithValidator(p, validator)
-          .flatMap(k => objectSchemas(k._1, k._2, Option.empty[EncodeAny[_]]))
+  private def objectSchemas(typeData: AnyTypeData[_]): List[ObjectTypeData[_]] = {
+    typeData match {
+      case TypeData(s: TSchema.SProduct, validator, encode) =>
+        List(TypeData(s, validator, encode): ObjectTypeData[_]) ++ fieldsSchemaWithValidator(s, validator)
+          .flatMap(objectSchemas)
           .toList
-      case TSchema.SArray(o) =>
-        objectSchemas(o, elementValidator(validator), Option.empty[EncodeAny[_]])
-      case s: TSchema.SCoproduct =>
-        (s, validator, encode) +: s.schemas.flatMap(c => objectSchemas(c, Validator.pass, None)).toList
-      case s: TSchema.SOpenProduct =>
-        (s, validator, Option.empty[EncodeAny[_]]) +: objectSchemas(s.valueSchema, elementValidator(validator), Option.empty[EncodeAny[_]])
+      case TypeData(TSchema.SArray(o), validator, _) =>
+        objectSchemas(TypeData(o, elementValidator(validator)))
+      case TypeData(s: TSchema.SCoproduct, validator, encode) =>
+        (TypeData(s, validator, encode): ObjectTypeData[_]) +: s.schemas.flatMap(c => objectSchemas(TypeData(c, Validator.pass))).toList
+      case TypeData(s: TSchema.SOpenProduct, validator, encode) =>
+        (TypeData(s, validator, encode): ObjectTypeData[_]) +: objectSchemas(TypeData(s.valueSchema, elementValidator(validator)))
       case _ => List.empty
     }
   }
 
-  private def fieldsSchemaWithValidator(
-      p: TSchema.SProduct,
-      v: Validator[_]
-  ): immutable.Seq[(TSchema, Validator[_], Option[EncodeAny[_]])] = {
+  private def fieldsSchemaWithValidator(p: TSchema.SProduct, v: Validator[_]): immutable.Seq[AnyTypeData[_]] = {
     v match {
       case Validator.Product(validatedFields) =>
         p.fields.map { f =>
-          (f._2, validatedFields.get(f._1).map(_.validator).getOrElse(Validator.pass), Option.empty[EncodeAny[_]])
+          TypeData(f._2, validatedFields.get(f._1).map(_.validator).getOrElse(Validator.pass))
         }.toList
-      case _ => p.fields.map(f => (f._2, Validator.pass, Option.empty[EncodeAny[_]])).toList
+      case _ => p.fields.map(f => TypeData(f._2, Validator.pass)).toList
     }
   }
 
-  private def forInput(input: EndpointInput[_]): List[(TSchema.SObject, Validator[_], Option[EncodeAny[_]])] = {
+  private def forInput(input: EndpointInput[_]): List[ObjectTypeData[_]] = {
     input match {
       case EndpointInput.FixedMethod(_)           => List.empty
       case EndpointInput.FixedPath(_)             => List.empty
-      case EndpointInput.PathCapture(tm, _, _)    => forCodec(tm)
+      case EndpointInput.PathCapture(codec, _, _) => forCodec(codec)
       case EndpointInput.PathsCapture(_)          => List.empty
-      case EndpointInput.Query(_, tm, _)          => forCodec(tm)
-      case EndpointInput.Cookie(_, tm, _)         => forCodec(tm)
+      case EndpointInput.Query(_, codec, _)       => forCodec(codec)
+      case EndpointInput.Cookie(_, codec, _)      => forCodec(codec)
       case EndpointInput.QueryParams(_)           => List.empty
       case _: EndpointInput.Auth[_]               => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
@@ -90,7 +82,7 @@ object ObjectSchemasForEndpoints {
       case op: EndpointIO[_]                      => forIO(op)
     }
   }
-  private def forOutput(output: EndpointOutput[_]): List[(TSchema.SObject, Validator[_], Option[EncodeAny[_]])] = {
+  private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData[_]] = {
     output match {
       case EndpointOutput.OneOf(mappings)          => mappings.flatMap(mapping => forOutput(mapping.output)).toList
       case EndpointOutput.StatusCode()             => List.empty
@@ -101,35 +93,21 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forIO(io: EndpointIO[_]): List[(TSchema.SObject, Validator[_], Option[EncodeAny[_]])] = {
+  private def forIO(io: EndpointIO[_]): List[ObjectTypeData[_]] = {
     io match {
-      case EndpointIO.Multiple(ios)    => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
-      case EndpointIO.Header(_, tm, _) => forCodec(tm)
-      case EndpointIO.Headers(_)       => List.empty
-      case EndpointIO.Body(tm, _)      => forCodec(tm)
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) =>
-        objectSchemas(schema, Validator.pass, Option.empty[EncodeAny[_]])
-      case EndpointIO.Mapped(wrapped, _, _, _) => forInput(wrapped) ++ forOutput(wrapped)
-      case EndpointIO.FixedHeader(_, _, _)     => List.empty
+      case EndpointIO.Multiple(ios)                                             => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
+      case EndpointIO.Header(_, codec, _)                                       => forCodec(codec)
+      case EndpointIO.Headers(_)                                                => List.empty
+      case EndpointIO.Body(codec, _)                                            => forCodec(codec)
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) => objectSchemas(TypeData(schema, Validator.pass))
+      case EndpointIO.Mapped(wrapped, _, _, _)                                  => forInput(wrapped) ++ forOutput(wrapped)
+      case EndpointIO.FixedHeader(_, _, _)                                      => List.empty
     }
   }
 
-  private def forCodec[T](tm: CodecForOptional[T, _, _]): List[(TSchema.SObject, Validator[_], Option[EncodeAny[_]])] = {
-    objectSchemas(tm.meta.schema, tm.validator, Option({ t: T =>
-      encodeValue(tm, t)
-    }))
-  }
-
-  private def forCodec[T](tm: PlainCodec[T]): List[(TSchema.SObject, Validator[_], Option[EncodeAny[_]])] = {
-    objectSchemas(tm.meta.schema, tm.validator, Option({ t: T =>
-      encodeValue(tm, t)
-    }))
-  }
-  private def forCodec[T](tm: PlainCodecForMany[T]): List[(TSchema.SObject, Validator[_], Option[EncodeAny[_]])] = {
-    objectSchemas(tm.meta.schema, tm.validator, Option({ t: T =>
-      encodeValue(tm, t)
-    }))
-  }
+  private def forCodec[T](codec: CodecForOptional[T, _, _]): List[ObjectTypeData[_]] = objectSchemas(TypeData(codec))
+  private def forCodec[T](codec: PlainCodec[T]): List[ObjectTypeData[_]] = objectSchemas(TypeData(codec))
+  private def forCodec[T](codec: PlainCodecForMany[T]): List[ObjectTypeData[_]] = objectSchemas(TypeData(codec))
 
   private def objectInfoToName(info: TSchema.SObjectInfo): String = {
     val shortName = info.fullName.split('.').last

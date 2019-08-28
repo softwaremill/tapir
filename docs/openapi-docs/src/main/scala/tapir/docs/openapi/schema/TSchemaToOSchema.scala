@@ -1,16 +1,16 @@
 package tapir.docs.openapi.schema
 
+import tapir.docs.openapi.EncodeToAny
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
 import tapir.{Validator, Schema => TSchema}
-import tapir.docs.openapi.EncodingSupport._
 
 /**
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
-  def apply(schema: TSchema, validator: Validator[_], encode: Option[EncodeAny[_]]): ReferenceOr[OSchema] = {
-    val result = schema match {
+  def apply(typeData: TypeData[_, _]): ReferenceOr[OSchema] = {
+    val result = typeData.schema match {
       case TSchema.SInteger => Right(OSchema(SchemaType.Integer))
       case TSchema.SNumber  => Right(OSchema(SchemaType.Number))
       case TSchema.SBoolean => Right(OSchema(SchemaType.Boolean))
@@ -23,13 +23,14 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
               case (fieldName, s: TSchema.SObject) =>
                 fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(fieldSchema, fieldValidator(validator, fieldName), None)
+                fieldName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName)))
             }.toListMap
           )
         )
       case TSchema.SArray(el: TSchema.SObject) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(el.info)))))
-      case TSchema.SArray(el)     => Right(OSchema(SchemaType.Array).copy(items = Some(apply(el, elementValidator(validator), None))))
+      case TSchema.SArray(el) =>
+        Right(OSchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
       case TSchema.SBinary        => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
       case TSchema.SDate          => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
       case TSchema.SDateTime      => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
@@ -47,24 +48,25 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             required = List.empty,
             additionalProperties = Some(valueSchema match {
               case so: TSchema.SObject => Left(schemaReferenceMapper.map(so.info))
-              case s                   => apply(s, elementValidator(validator), None)
+              case s                   => apply(TypeData(s, elementValidator(typeData.validator)))
             })
           )
         )
     }
 
-    result.map(addConstraints(_, asPrimitiveValidators(validator), schema.isInstanceOf[TSchema.SInteger.type], encode))
+    result.map(
+      addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schema.isInstanceOf[TSchema.SInteger.type], typeData.encode)
+    )
   }
 
   private def addConstraints(
       oschema: OSchema,
       vs: Seq[Validator.Primitive[_]],
       wholeNumbers: Boolean,
-      codec: Option[EncodeAny[_]]
-  ): OSchema =
-    vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers, codec))
+      codec: EncodeToAny[_]
+  ): OSchema = vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers, codec))
 
-  private def addConstraints(oschema: OSchema, v: Validator.Primitive[_], wholeNumbers: Boolean, codec: Option[EncodeAny[_]]): OSchema = {
+  private def addConstraints(oschema: OSchema, v: Validator.Primitive[_], wholeNumbers: Boolean, encode: EncodeToAny[_]): OSchema = {
     v match {
       case m @ Validator.Min(v, exclusive) =>
         if (exclusive) {
@@ -83,9 +85,8 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case Validator.MaxSize(value) => oschema.copy(maxSize = Some(value))
       case Validator.Custom(_, _)   => oschema
       case Validator.Enum(v) =>
-        codec
-          .map(c => oschema.copy(enum = Some(v.flatMap(x => c.asInstanceOf[Any => Option[Any]].apply(x)).map(_.toString))))
-          .getOrElse(oschema)
+        val values = v.flatMap(x => encode.asInstanceOf[Any => Option[Any]].apply(x)).map(_.toString)
+        oschema.copy(enum = if (values.nonEmpty) Some(values) else None)
     }
   }
 
