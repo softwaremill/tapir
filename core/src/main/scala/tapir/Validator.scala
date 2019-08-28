@@ -15,6 +15,8 @@ sealed trait Validator[T] {
 
   def and(other: Validator[T]): Validator[T] = Validator.all(this, other)
   def or(other: Validator[T]): Validator[T] = Validator.any(this, other)
+
+  def show: Option[String]
 }
 
 object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
@@ -45,6 +47,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(s"Expected $actual to be greater than or equal to $value"))
       }
     }
+    override def show: Option[String] = Some(s">=$value")
   }
   case class Max[T](value: T)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
     override def validate(actual: T): List[ValidationError] = {
@@ -54,6 +57,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(s"Expected $actual to be lower than or equal to $value"))
       }
     }
+    override def show: Option[String] = Some(s"<=$value")
   }
   case class Pattern[T <: String](value: String) extends Primitive[T] {
     override def validate(t: T): List[ValidationError] = {
@@ -63,6 +67,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(s"Expected '$t' to match '$value'"))
       }
     }
+    override def show: Option[String] = Some(s"~$value")
   }
   case class MinSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
     override def validate(t: C[T]): List[ValidationError] = {
@@ -72,6 +77,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(s"Expected collection size(${t.size}) to be greater or equal to $value"))
       }
     }
+    override def show: Option[String] = Some(s"size>=$value")
   }
   case class MaxSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
     override def validate(t: C[T]): List[ValidationError] = {
@@ -81,6 +87,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(s"Expected collection size(${t.size}) to be lower or equal to $value"))
       }
     }
+    override def show: Option[String] = Some(s"size<=$value")
   }
   case class Custom[T](doValidate: T => Boolean, message: String) extends Primitive[T] {
     override def validate(t: T): List[ValidationError] = {
@@ -90,6 +97,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(s"Expected '$t' to pass custom validation: $message"))
       }
     }
+    override def show: Option[String] = Some(s"valid")
   }
 
   case class Enum[T](possibleValues: List[T]) extends Primitive[T] {
@@ -100,6 +108,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(s"Expected '$t' to be within $possibleValues"))
       }
     }
+    override def show: Option[String] = Some(s"in(${possibleValues.mkString(",")}")
   }
 
   //
@@ -111,6 +120,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     override def validate(t: C[E]): List[ValidationError] = {
       toIterable(t).flatMap(elementValidator.validate).toList
     }
+    override def show: Option[String] = elementValidator.show.map(se => s"elements($se)")
   }
 
   trait ProductField[T] {
@@ -124,22 +134,37 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         f.validator.validate(f.get(t))
       }
     }.toList
+    override def show: Option[String] =
+      fields.flatMap {
+        case (n, f) =>
+          f.validator.show.map(n -> _)
+      }.toList match {
+        case Nil => None
+        case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
+      }
   }
 
   case class OpenProduct[E](elementValidator: Validator[E]) extends Single[Map[String, E]] {
     override def validate(t: Map[String, E]): List[ValidationError] = {
       t.values.flatMap(elementValidator.validate)
     }.toList
+    override def show: Option[String] = elementValidator.show.map(se => s"elements($se)")
   }
 
   case class Mapped[TT, T](wrapped: Validator[T], g: TT => T) extends Single[TT] {
     override def validate(t: TT): List[ValidationError] = wrapped.validate(g(t))
+    override def show: Option[String] = wrapped.show
   }
 
   //
 
   case class All[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def validate(t: T): List[ValidationError] = validators.flatMap(_.validate(t)).toList
+    override def show: Option[String] = validators.flatMap(_.show) match {
+      case immutable.Seq()  => None
+      case immutable.Seq(s) => Some(s)
+      case ss               => Some(s"all(${ss.mkString(",")})")
+    }
   }
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def validate(t: T): List[ValidationError] = {
@@ -149,6 +174,11 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       } else {
         results.flatten.toList
       }
+    }
+    override def show: Option[String] = validators.flatMap(_.show) match {
+      case immutable.Seq()  => Some("reject")
+      case immutable.Seq(s) => Some(s)
+      case ss               => Some(s"any(${ss.mkString(",")})")
     }
   }
 

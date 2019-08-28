@@ -129,4 +129,11 @@ package object internal {
       case _: EndpointIO.StreamBodyWrapper[_, _] => 2
     }
   }
+
+  private[tapir] def addShowValidator(s: String, v: Validator[_]): String = {
+    v.show match {
+      case None     => s
+      case Some(sv) => s"$s($sv)"
+    }
+  }
 }
