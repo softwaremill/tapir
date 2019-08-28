@@ -2,7 +2,7 @@ package tapir.docs.openapi
 
 import tapir.{Codec, CodecForMany, CodecForOptional}
 
-object EncodingSupport {
+private [openapi] object EncodingSupport {
   type EncodeAny[T] = T => Option[Any]
 
   private def encodeValue[T](v: Any): Any = v.toString

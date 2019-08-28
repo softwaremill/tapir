@@ -1,12 +1,11 @@
 package tapir.docs.openapi
 
-import tapir.CodecForMany.PlainCodecForMany
-import tapir.internal._
+import tapir._
 import tapir.docs.openapi.schema.ObjectSchemas
+import tapir.internal._
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
-import tapir._
-import tapir.docs.openapi.EncodingSupport._
+
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas, codecToMediaType: CodecToMediaType) {
@@ -51,7 +50,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             None,
             None,
             None,
-            Some(createSchemaFromCodec(codec)),
+            Some(objectSchemas(codec)),
             info.example.flatMap(exampleValue(codec, _)),
             ListMap.empty,
             ListMap.empty
@@ -97,11 +96,5 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     } else {
       None
     }
-  }
-
-  private def createSchemaFromCodec[T](codec: PlainCodecForMany[T]): ReferenceOr[OSchema] = {
-    objectSchemas(codec.meta.schema, codec.validator, Option({ t: T =>
-      encodeValue(codec, t)
-    }))
   }
 }
