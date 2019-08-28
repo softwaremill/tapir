@@ -60,7 +60,7 @@ trait Codec[T, M <: MediaType, R] extends Decode[T, R] { outer =>
   def validate(v: Validator[T]): Codec[T, M, R] = new Codec[T, M, R] {
     override def encode(t: T): R = outer.encode(t)
     override def rawDecode(s: R): DecodeResult[T] = outer.rawDecode(s)
-    override def meta: CodecMeta[T, M, R] = outer.meta.copy(validator = v)
+    override def meta: CodecMeta[T, M, R] = outer.meta.validate(v)
   }
 }
 
@@ -198,7 +198,7 @@ trait CodecForOptional[T, M <: MediaType, R] extends Decode[T, Option[R]] { oute
   def validate(v: Validator[T]): CodecForOptional[T, M, R] = new CodecForOptional[T, M, R] {
     override def encode(t: T): Option[R] = outer.encode(t)
     override def rawDecode(s: Option[R]): DecodeResult[T] = outer.rawDecode(s)
-    override def meta: CodecMeta[T, M, R] = outer.meta.copy(validator = v)
+    override def meta: CodecMeta[T, M, R] = outer.meta.validate(v)
   }
 
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): CodecForOptional[TT, M, R] =
@@ -259,7 +259,7 @@ trait CodecForMany[T, M <: MediaType, R] extends Decode[T, Seq[R]] { outer =>
   def validate(v: Validator[T]): CodecForMany[T, M, R] = new CodecForMany[T, M, R] {
     override def encode(t: T): Seq[R] = outer.encode(t)
     override def rawDecode(s: Seq[R]): DecodeResult[T] = outer.rawDecode(s)
-    override def meta: CodecMeta[T, M, R] = outer.meta.copy(validator = v)
+    override def meta: CodecMeta[T, M, R] = outer.meta.validate(v)
   }
 
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): CodecForMany[TT, M, R] =
@@ -337,7 +337,9 @@ case class CodecMeta[T, M <: MediaType, R] private (
     mediaType: M,
     rawValueType: RawValueType[R],
     validator: Validator[T]
-)
+) {
+  def validate(v: Validator[T]): CodecMeta[T, M, R] = copy(validator = validator.and(v))
+}
 object CodecMeta {
   def apply[T, M <: MediaType, R](
       schema: Schema,

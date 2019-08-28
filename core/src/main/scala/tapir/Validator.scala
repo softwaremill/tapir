@@ -165,6 +165,8 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       case immutable.Seq(s) => Some(s)
       case ss               => Some(s"all(${ss.mkString(",")})")
     }
+
+    override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
   }
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def validate(t: T): List[ValidationError] = {
@@ -180,6 +182,8 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       case immutable.Seq(s) => Some(s)
       case ss               => Some(s"any(${ss.mkString(",")})")
     }
+
+    override def or(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else Any(validators :+ other)
   }
 
   //
