@@ -36,13 +36,6 @@ trait Codec[T, M <: MediaType, R] extends Validate[R, T] { outer =>
   def encode(t: T): R
   def decode(s: R): DecodeResult[T]
   def meta: CodecMeta[T, M, R]
-  private[tapir] override def validator: Validator[T] = meta.validator
-
-  def validate(v: Validator[T]): Codec[T, M, R] = new Codec[T, M, R] {
-    override def encode(t: T): R = outer.encode(t)
-    override def decode(s: R): DecodeResult[T] = outer.decode(s)
-    override def meta: CodecMeta[T, M, R] = outer.meta.copy(validator = v)
-  }
 
   def mapDecode[TT](f: T => DecodeResult[TT])(g: TT => T): Codec[TT, M, R] =
     new Codec[TT, M, R] {
@@ -61,6 +54,14 @@ trait Codec[T, M <: MediaType, R] extends Validate[R, T] { outer =>
 
   def mediaType[M2 <: MediaType](m2: M2): Codec[T, M2, R] = withMeta[M2](meta.copy[T, M2, R](mediaType = m2))
   def schema(s2: Schema): Codec[T, M, R] = withMeta(meta.copy(schema = s2))
+
+  private[tapir] def validator: Validator[T] = meta.validator
+
+  def validate(v: Validator[T]): Codec[T, M, R] = new Codec[T, M, R] {
+    override def encode(t: T): R = outer.encode(t)
+    override def decode(s: R): DecodeResult[T] = outer.decode(s)
+    override def meta: CodecMeta[T, M, R] = outer.meta.copy(validator = v)
+  }
 }
 
 object Codec extends MultipartCodecDerivation with FormCodecDerivation {
@@ -374,7 +375,7 @@ trait Decode[F, T] {
 
 trait Validate[F, T] extends Decode[F, T] {
 
-  private[tapir] def validator: Validator[T] = Validator.pass
+  private[tapir] def validator: Validator[T]
 
   override def safeDecode(f: F): DecodeResult[T] = {
     super.safeDecode(f) match {
