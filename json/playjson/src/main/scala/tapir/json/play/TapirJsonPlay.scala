@@ -12,7 +12,7 @@ import play.api.libs.json.JsResultException
 import play.api.libs.json.JsValue
 
 trait TapirJsonPlay {
-  implicit def readsWriteCoded[T: Reads: Writes: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
+  implicit def readsWritesCodec[T: Reads: Writes: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
     override def decode(s: String): DecodeResult[T] = implicitly[Reads[T]].reads(Json.parse(s)) match {
       case JsError(errors)     => Error(s, JsResultException(errors))
       case JsSuccess(value, _) => Value(value)

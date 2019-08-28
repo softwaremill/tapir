@@ -99,7 +99,8 @@ lazy val playJson: Project = (project in file("json/playjson"))
   .settings(
     name := "tapir-json-play",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-json" % Versions.playJson
+      "com.typesafe.play" %% "play-json" % Versions.playJson,
+      scalaTest % "test"
     )
   )
   .dependsOn(core)
