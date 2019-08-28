@@ -122,8 +122,8 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
 
     // when
     codec.encode(Test1(10)) shouldBe "f1=10"
-    codec.safeDecode("f1=0") shouldBe an[DecodeResult.InvalidValue]
-    codec.safeDecode("f1=10") shouldBe DecodeResult.Value(Test1(10))
+    codec.decode("f1=0") shouldBe an[DecodeResult.InvalidValue]
+    codec.decode("f1=10") shouldBe DecodeResult.Value(Test1(10))
   }
 
   it should "generate a codec for a case class with simple types" in {

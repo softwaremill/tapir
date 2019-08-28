@@ -6,7 +6,6 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import tapir._
-import tapir.model.StatusCodes
 import tapir.server.{ServerDefaults, ServerEndpoint}
 import tapir.typelevel.ParamsToTuple
 

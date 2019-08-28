@@ -13,7 +13,7 @@ trait TapirJsonuPickle {
 
     def encode(t: T): String = write(t)
 
-    def decode(s: String): DecodeResult[T] = {
+    def rawDecode(s: String): DecodeResult[T] = {
       Try(read[T](s)) match {
         case Success(v) => Value(v)
         case Failure(e) => Error("upickle decoder failed", e)
