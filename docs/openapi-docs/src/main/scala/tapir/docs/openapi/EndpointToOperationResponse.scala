@@ -1,5 +1,6 @@
 package tapir.docs.openapi
 
+import tapir.CodecForMany.PlainCodecForMany
 import tapir.internal._
 import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.openapi.OpenAPI.ReferenceOr
@@ -50,7 +51,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             None,
             None,
             None,
-            Some(objectSchemas(codec.meta.schema, codec.validator)),
+            Some(createSchemaFromCodec(codec)),
             info.example.flatMap(exampleValue(codec, _)),
             ListMap.empty,
             ListMap.empty
@@ -96,5 +97,11 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     } else {
       None
     }
+  }
+
+  private def createSchemaFromCodec[T](codec: PlainCodecForMany[T]): ReferenceOr[OSchema] = {
+    objectSchemas(codec.meta.schema, codec.validator, Option({ t: T =>
+      encodeValue(codec, t)
+    }))
   }
 }

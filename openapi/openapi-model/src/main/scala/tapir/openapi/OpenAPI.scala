@@ -210,7 +210,7 @@ case class Schema(
     pattern: Option[String] = None,
     minimum: Option[BigDecimal] = None,
     minSize: Option[Int] = None,
-    enum: Option[List[Any]] = None
+    enum: Option[List[String]] = None
 )
 
 case class Discriminator(propertyName: String, mapping: Option[ListMap[String, String]])

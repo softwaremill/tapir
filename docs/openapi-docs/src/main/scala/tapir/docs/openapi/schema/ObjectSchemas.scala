@@ -8,12 +8,12 @@ class ObjectSchemas(
     tschemaToOSchema: TSchemaToOSchema,
     schemaReferenceMapper: SchemaReferenceMapper
 ) {
-  def apply(schema: TSchema, validator: Validator[_]): ReferenceOr[OSchema] = {
+  def apply(schema: TSchema, validator: Validator[_], encode: Option[EncodeAny[_]]): ReferenceOr[OSchema] = {
     schema match {
       case TSchema.SArray(o: TSchema.SObject) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(o.info)))))
       case o: TSchema.SObject => Left(schemaReferenceMapper.map(o.info))
-      case _                  => tschemaToOSchema(schema, validator)
+      case _                  => tschemaToOSchema(schema, validator, encode)
     }
   }
 }

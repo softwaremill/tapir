@@ -2,7 +2,7 @@ package tapir.docs.openapi
 
 import tapir.Validator
 
-package object schema {
+package object schema extends EncodeValueHack {
   type SchemaKey = String
 
   private[schema] def elementValidator(v: Validator[_]): Validator[_] = {

@@ -8,7 +8,7 @@ import tapir.{Validator, Schema => TSchema}
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
-  def apply(schema: TSchema, validator: Validator[_]): ReferenceOr[OSchema] = {
+  def apply(schema: TSchema, validator: Validator[_], encode: Option[EncodeAny[_]]): ReferenceOr[OSchema] = {
     val result = schema match {
       case TSchema.SInteger => Right(OSchema(SchemaType.Integer))
       case TSchema.SNumber  => Right(OSchema(SchemaType.Number))
@@ -22,13 +22,13 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
               case (fieldName, s: TSchema.SObject) =>
                 fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(fieldSchema, fieldValidator(validator, fieldName))
+                fieldName -> apply(fieldSchema, fieldValidator(validator, fieldName), None)
             }.toListMap
           )
         )
       case TSchema.SArray(el: TSchema.SObject) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(el.info)))))
-      case TSchema.SArray(el)     => Right(OSchema(SchemaType.Array).copy(items = Some(apply(el, elementValidator(validator)))))
+      case TSchema.SArray(el)     => Right(OSchema(SchemaType.Array).copy(items = Some(apply(el, elementValidator(validator), None))))
       case TSchema.SBinary        => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
       case TSchema.SDate          => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
       case TSchema.SDateTime      => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
@@ -46,25 +46,33 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             required = List.empty,
             additionalProperties = Some(valueSchema match {
               case so: TSchema.SObject => Left(schemaReferenceMapper.map(so.info))
-              case s                   => apply(s, elementValidator(validator))
+              case s                   => apply(s, elementValidator(validator), None)
             })
           )
         )
     }
 
-    result.map(addConstraints(_, asPrimitiveValidators(validator), schema.isInstanceOf[TSchema.SInteger.type]))
+    result.map(addConstraints(_, asPrimitiveValidators(validator), schema.isInstanceOf[TSchema.SInteger.type], encode))
   }
 
-  private def addConstraints(oschema: OSchema, vs: Seq[Validator.Primitive[_]], wholeNumbers: Boolean): OSchema =
-    vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers))
+  private def addConstraints(
+      oschema: OSchema,
+      vs: Seq[Validator.Primitive[_]],
+      wholeNumbers: Boolean,
+      codec: Option[EncodeAny[_]]
+  ): OSchema =
+    vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers, codec))
 
-  private def addConstraints(oschema: OSchema, v: Validator.Primitive[_], wholeNumbers: Boolean): OSchema = {
+  private def addConstraints(oschema: OSchema, v: Validator.Primitive[_], wholeNumbers: Boolean, codec: Option[EncodeAny[_]]): OSchema = {
     v match {
       case m @ Validator.Min(v)     => oschema.copy(minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
       case Validator.Pattern(value) => oschema.copy(pattern = Some(value))
       case Validator.MinSize(value) => oschema.copy(minSize = Some(value))
       case Validator.Custom(_, _)   => oschema
-      case Validator.Enum(v)        => oschema.copy(enum = Some(v))
+      case Validator.Enum(v) =>
+        codec
+          .map(c => oschema.copy(enum = Some(v.flatMap(x => c.asInstanceOf[Any => Option[Any]].apply(x)).map(_.toString))))
+          .getOrElse(oschema)
     }
   }
 

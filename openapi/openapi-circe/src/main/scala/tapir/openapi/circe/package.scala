@@ -67,5 +67,4 @@ trait TapirOpenAPICirceEncoders {
       val properties = m.mapValues(v => implicitly[Encoder[V]].apply(v)).toList
       Json.obj(properties: _*)
   }
-  implicit val encoderAny: Encoder[Any] = Encoder.encodeString.contramap(_.toString)
 }

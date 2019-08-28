@@ -13,8 +13,8 @@ paths:
           schema:
             type: string
             enum:
-              - Red
-              - Blue
+              - red
+              - blue
       responses:
         '200':
           description: ''

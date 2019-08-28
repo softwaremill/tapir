@@ -68,9 +68,9 @@ package object tests {
     implicit def plainCodecForColor: PlainCodec[Color] = {
       Codec.stringPlainCodecUtf8
         .map[Color]({
-          case "Red"  => Red
-          case "Blue" => Blue
-        })(_.toString)
+          case "red"  => Red
+          case "blue" => Blue
+        })(_.toString.toLowerCase)
         .validate(Validator.enum)
     }
     endpoint.in(query[Color]("color"))
@@ -79,7 +79,7 @@ package object tests {
   val in_valid_enum_values: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
     implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
     implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
-      uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(1, 2)).contramap(_.v))
+      uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
     endpoint.in(query[IntWrapper]("amount"))
   }
 
