@@ -12,7 +12,7 @@ import tapir.Codec.PlainCodec
 import tapir.model._
 
 import scala.io.Source
-import tapir.json.circe._
+
 package object tests {
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 
@@ -266,7 +266,7 @@ package object tests {
       endpoint.in(query[IntWrapper]("amount"))
     }
 
-    val allEndpoints = wireSet[Endpoint[_, _, _, _]]
+    val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
   }
 
   //
@@ -280,7 +280,14 @@ package object tests {
     f
   }
 
-  def readFromFile(f: File): String = Source.fromFile(f).mkString
+  def readFromFile(f: File): String = {
+    val s = Source.fromFile(f)
+    try {
+      s.mkString
+    } finally {
+      s.close()
+    }
+  }
 }
 
 sealed trait Color
