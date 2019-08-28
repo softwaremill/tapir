@@ -47,8 +47,8 @@ object OneOfMacro {
     val schemaForE =
       q"""import tapir.Schema._
           val rawMapping = Map(..$mapping)
-          val discriminator = Discriminator($name, rawMapping.collect{case (k, sf)=> $asString.apply(k) -> SRef(sf.schema.asInstanceOf[SObject].info)})
-          SchemaFor(SCoproduct(SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)}) ,rawMapping.values.map(_.schema).toSet, Some(discriminator)))"""
+          val discriminator = Discriminator($name, rawMapping.map{case (k, sf)=> $asString.apply(k) -> SRef(sf.schema.asInstanceOf[SObject].info)})
+          SchemaFor(SCoproduct(SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)}), rawMapping.values.map(_.schema).toSet, Some(discriminator)))"""
     c.Expr[SchemaFor[E]](schemaForE)
   }
 }

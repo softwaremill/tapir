@@ -3,6 +3,7 @@ package tapir
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
+import tapir.EndpointIO.Info
 import tapir.internal.ProductToParams
 import tapir.model.{Method, MultiQueryParams, ServerRequest}
 import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
@@ -157,7 +158,9 @@ object EndpointOutput {
     override def show: String = "{status code}"
   }
 
-  case class FixedStatusCode(statusCode: tapir.model.StatusCode) extends Basic[Unit] {
+  case class FixedStatusCode(statusCode: tapir.model.StatusCode, info: Info[Unit]) extends Basic[Unit] {
+    def description(d: String): FixedStatusCode = copy(info = info.description(d))
+
     override def show: String = s"status code ($statusCode)"
   }
 
@@ -219,6 +222,11 @@ object EndpointIO {
 
   case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Basic[S] {
     def show = s"{body as stream, ${wrapped.mediaType.mediaType}}"
+  }
+
+  case class FixedHeader(name: String, value: String, info: Info[Unit]) extends Basic[Unit] {
+    def description(d: String): FixedHeader = copy(info = info.description(d))
+    def show = s"{header $name: $value}"
   }
 
   case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Basic[T] {

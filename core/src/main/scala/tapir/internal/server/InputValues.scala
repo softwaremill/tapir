@@ -25,6 +25,8 @@ object InputValues {
         apply(inputsTail, basicInputValues)
       case (_: EndpointInput.FixedPath) +: inputsTail =>
         apply(inputsTail, basicInputValues)
+      case (_: EndpointIO.FixedHeader) +: inputsTail =>
+        apply(inputsTail, basicInputValues)
       case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
         handleMapped(wrapped, f, inputsTail, basicInputValues)
       case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>

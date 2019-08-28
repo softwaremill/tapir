@@ -4,11 +4,12 @@ import org.http4s._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import scalaz.zio.interop.catz._
-import scalaz.zio.interop.catz.implicits._
-import scalaz.zio.{DefaultRuntime, IO, Task, UIO}
+import zio.interop.catz._
+import zio.interop.catz.implicits._
+import zio.{DefaultRuntime, IO, Task, UIO}
 import tapir._
 import tapir.server.http4s._
+import tapir.swagger.http4s.SwaggerHttp4s
 
 object ZioExample extends App {
 
@@ -51,7 +52,7 @@ object ZioExample extends App {
 
     val serve = BlazeServerBuilder[Task]
       .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> service, "/docs" -> new SwaggerUI[Task](yaml).routes).orNotFound)
+      .withHttpApp(Router("/" -> service, "/docs" -> new SwaggerHttp4s(yaml).routes[Task]).orNotFound)
       .serve
       .compile
       .drain

@@ -13,6 +13,7 @@ object MyTapir extends Tapir
   with TapirSttpClient
   with TapirCirceJson
   with TapirOpenAPICirceYaml
+  with TapirAliases
 ```
 
 Then, a single `import MyTapir._` and all Tapir data types and extensions methods will be in scope!

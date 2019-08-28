@@ -1,6 +1,7 @@
 package tapir.docs.openapi
+import tapir.Schema.SString
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi.{ExampleValue, Parameter, ParameterIn, Schema}
+import tapir.openapi.{ExampleValue, Parameter, ParameterIn, Schema, SchemaType}
 import tapir.{EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
@@ -49,6 +50,24 @@ private[openapi] object EndpointInputToParameterConverter {
       ParameterIn.Header,
       header.info.description,
       Some(!header.codec.meta.isOptional),
+      None,
+      None,
+      None,
+      None,
+      None,
+      schema,
+      example,
+      ListMap.empty,
+      ListMap.empty
+    )
+  }
+
+  def from[T](header: EndpointIO.FixedHeader, schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+    Parameter(
+      header.name,
+      ParameterIn.Header,
+      header.info.description,
+      Some(true),
       None,
       None,
       None,

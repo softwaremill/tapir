@@ -2,10 +2,9 @@ package tapir.docs.openapi
 
 import tapir.internal._
 import tapir.docs.openapi.schema.ObjectSchemas
-import tapir.model.StatusCode
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi._
-import tapir.{Schema => SSchema, _}
+import tapir.openapi.{Schema => OSchema, _}
+import tapir._
 
 import scala.collection.immutable.ListMap
 
@@ -57,6 +56,22 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             ListMap.empty
           )
         )
+      case EndpointIO.FixedHeader(name, _, info) =>
+        name -> Right(
+          Header(
+            info.description,
+            Some(true),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Option(Right(OSchema(SchemaType.String))),
+            None,
+            ListMap.empty,
+            ListMap.empty
+          )
+        )
     }
 
     val bodies = outputs.collect {
@@ -65,13 +80,18 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     }
     val body = bodies.headOption
 
-    val description = body.flatMap(_._1).getOrElse("")
+    val statusCodeDescriptions = outputs.collect {
+      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _)) => desc
+    }
+
+    val description = body.flatMap(_._1).getOrElse(statusCodeDescriptions.headOption.getOrElse(""))
+
     val content = body.map(_._2).getOrElse(ListMap.empty)
 
     if (body.isDefined || headers.nonEmpty) {
       Some(Response(description, headers.toListMap, content))
     } else if (outputs.nonEmpty) {
-      Some(Response("", ListMap.empty, ListMap.empty))
+      Some(Response(description, ListMap.empty, ListMap.empty))
     } else {
       None
     }

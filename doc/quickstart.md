@@ -3,13 +3,13 @@
 To use tapir, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-core" % "0.8.6"
+"com.softwaremill.tapir" %% "tapir-core" % "0.9.3"
 ```
 
 This will import only the core classes needed to create endpoint descriptions. To generate a server or a client, you
 will need to add further dependencies.
 
-Most of tapir functionalities are grouped package objects which provide builder and extensions methods, hence it's
+Most of tapir functionalities are grouped into package objects which provide builder and extensions methods, hence it's
 easiest to work with tapir if you import whole packages, e.g.:
 
 ```scala
@@ -30,14 +30,6 @@ endpoint.
 ```
 
 and see where auto-complete gets you!
-
-## Example usages
-
-To see an example project using Tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) 
-using tapir and http4s.
-
-Also check out the simple [runnable example](https://github.com/softwaremill/tapir/blob/master/playground/src/main/scala/tapir/example/BooksExample.scala)
-which is available in the repository.
 
 ## StackOverflowException during compilation
 

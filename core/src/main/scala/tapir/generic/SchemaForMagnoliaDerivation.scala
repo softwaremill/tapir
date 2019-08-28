@@ -70,5 +70,5 @@ trait SchemaForMagnoliaDerivation {
 }
 
 object SchemaForMagnoliaDerivation {
-  private[generic] val deriveInProgress: ThreadLocal[mutable.Set[String]] = ThreadLocal.withInitial(() => mutable.Set[String]())
+  private[generic] val deriveInProgress: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
 }

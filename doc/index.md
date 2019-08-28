@@ -70,6 +70,7 @@ which is a slight extension of the above.
 ## Contents
 
 * [Quickstart](quickstart.md)
+* [Examples](examples.md)
 * [Goals of the project](goals.md)
 * [Endpoints: basics](endpoint/basics.md)
 * [Endpoints: inputs/outputs](endpoint/ios.md)
@@ -80,7 +81,9 @@ which is a slight extension of the above.
 * [Endpoints: implicits guide](endpoint/implicits.md)
 * [Servers: akka-http interpreter](server/akkahttp.md)
 * [Servers: http4s interpreter](server/http4s.md)
-* [Servers: common](server/common.md)
+* [Servers: options](server/options.md)
+* [Servers: logic](server/logic.md)
+* [Servers: error handling](server/errors.md)
 * [Servers: debugging](server/debugging.md)
 * [Clients: sttp interpreter](sttp.md)
 * [Other interpreters](other_interpreters.md)

@@ -25,6 +25,8 @@ trait Tapir extends TapirDerivedInputs {
 
   def header[T: PlainCodecForMany](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[PlainCodecForMany[T]], EndpointIO.Info.empty)
+  def header(name: String, value: String): EndpointIO.FixedHeader =
+    EndpointIO.FixedHeader(name, value, EndpointIO.Info.empty)
   def headers: EndpointIO.Headers = EndpointIO.Headers(EndpointIO.Info.empty)
 
   def cookie[T: PlainCodecForOptional](name: String): EndpointInput.Cookie[T] =
@@ -74,7 +76,7 @@ trait Tapir extends TapirDerivedInputs {
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] = EndpointInput.ExtractFromRequest(f)
 
   def statusCode: EndpointOutput.StatusCode = EndpointOutput.StatusCode()
-  def statusCode(statusCode: StatusCode): EndpointOutput.FixedStatusCode = EndpointOutput.FixedStatusCode(statusCode)
+  def statusCode(statusCode: StatusCode): EndpointOutput.FixedStatusCode = EndpointOutput.FixedStatusCode(statusCode, EndpointIO.Info.empty)
 
   /**
     * Maps status codes to outputs. All outputs must have a common supertype (`I`). Typically, the supertype is a sealed

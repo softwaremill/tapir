@@ -14,6 +14,7 @@ import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
 import tapir._
 import tapir.json.circe._
 import tapir.model.{MultiQueryParams, Part, SetCookieValue, UsernamePassword}
+import tapir.server.{DecodeFailureHandler, ServerDefaults}
 import tapir.tests.TestUtil._
 import tapir.tests._
 
@@ -57,6 +58,12 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   testServer(in_path_path_out_string) { case (fruit: String, amount: Int) => pureResult(s"$fruit $amount".asRight[Unit]) } { baseUri =>
     sttp.get(uri"$baseUri/fruit/orange/amount/20").send().map(_.body shouldBe Right("orange 20"))
+  }
+
+  testServer(in_path, "Empty path should not be passed to path capture decoding") { _ =>
+    pureResult(Right(()))
+  } { baseUri =>
+    sttp.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
   testServer(in_two_path_capture, "capturing two path parameters with the same specification") {
@@ -113,7 +120,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   } { baseUri =>
     sttp.get(uri"$baseUri/12").header("SomeHeader", "hello").send().map { response =>
       response.body shouldBe Right("hello")
-      response.header("IntHeader") shouldBe Some(12)
+      response.header("IntHeader") shouldBe Some("12")
     }
   }
 
@@ -290,6 +297,12 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
+  testServer(in_unit_out_fixed_header)(_ => pureResult(().asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri").send().map { r =>
+      r.header("Location") shouldBe Some("Poland")
+    }
+  }
+
   testServer(in_optional_json_out_optional_json)((fa: Option[FruitAmount]) => pureResult(fa.asRight[Unit])) { baseUri =>
     sttp
       .post(uri"$baseUri/api/echo")
@@ -334,13 +347,35 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCodes.Ok)
   }
 
+  testServer(in_path_paths_out_header_body, "Capturing paths after path capture") {
+    case (i, paths) =>
+      pureResult(Right((i, paths.mkString(","))))
+  } { baseUri =>
+    sttp.get(uri"$baseUri/api/15/and/some/more/path").send().map { r =>
+      r.code shouldBe StatusCodes.Ok
+      r.header("IntPath") shouldBe Some("15")
+      r.body shouldBe Right("some,more,path")
+    }
+  }
+
+  testServer(in_path_paths_out_header_body, "Capturing paths after path capture (when empty)") {
+    case (i, paths) =>
+      pureResult(Right((i, paths.mkString(","))))
+  } { baseUri =>
+    sttp.get(uri"$baseUri/api/15/and/").send().map { r =>
+      r.code shouldBe StatusCodes.Ok
+      r.header("IntPath") shouldBe Some("15")
+      r.body shouldBe Right("")
+    }
+  }
+
   testServer(in_single_path, "single path should not match root path")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) { baseUri =>
     sttp.get(uri"$baseUri").send().map(_.code shouldBe StatusCodes.NotFound) >>
       sttp.get(uri"$baseUri/").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
   testServer(in_single_path, "single path should not match larger path")((_: Unit) => pureResult(Either.right[Unit, Unit](()))) { baseUri =>
-    sttp.get(uri"$baseUri/api/echo").send().map(_.code shouldBe StatusCodes.NotFound) >>
+    sttp.get(uri"$baseUri/api/echo/hello").send().map(_.code shouldBe StatusCodes.NotFound) >>
       sttp.get(uri"$baseUri/api/echo/").send().map(_.code shouldBe StatusCodes.NotFound)
   }
 
@@ -367,6 +402,38 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   ) { baseUri =>
     sttp.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCodes.Accepted) >>
       sttp.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCodes.NotFound)
+  }
+
+  // path shape matching
+
+  val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler[Any] = ServerDefaults.decodeFailureHandlerUsingResponse(
+    ServerDefaults.failureResponse,
+    badRequestOnPathFailureIfPathShapeMatches = true
+  )
+
+  testServer(
+    in_path_fixed_capture_fixed_capture,
+    "Returns 400 if path 'shape' matches, but failed to parse a path parameter",
+    Some(decodeFailureHandlerBadRequestOnPathFailure)
+  )(
+    _ => pureResult(Either.right[Unit, Unit](()))
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/customer/asd/orders/2").send().map { response =>
+      response.body shouldBe Left("Invalid value for: path parameter customer_id")
+      response.code shouldBe StatusCodes.BadRequest
+    }
+  }
+
+  testServer(
+    in_path_fixed_capture_fixed_capture,
+    "Returns 404 if path 'shape' doesn't match",
+    Some(decodeFailureHandlerBadRequestOnPathFailure)
+  )(
+    _ => pureResult(Either.right[Unit, Unit](()))
+  ) { baseUri =>
+    sttp.get(uri"$baseUri/customer").send().map(response => response.code shouldBe StatusCodes.NotFound) >>
+      sttp.get(uri"$baseUri/customer/asd").send().map(response => response.code shouldBe StatusCodes.NotFound) >>
+      sttp.get(uri"$baseUri/customer/asd/orders/2/xyz").send().map(response => response.code shouldBe StatusCodes.NotFound)
   }
 
   // auth
@@ -487,17 +554,28 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def pureResult[T](t: T): R[T]
   def suspendResult[T](t: => T): R[T]
 
-  def route[I, E, O](e: Endpoint[I, E, O, S], fn: I => R[Either[E, O]]): ROUTE
+  def route[I, E, O](
+      e: Endpoint[I, E, O, S],
+      fn: I => R[Either[E, O]],
+      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+  ): ROUTE
 
   def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, S], fn: I => R[O])(implicit eClassTag: ClassTag[E]): ROUTE
 
   def server(routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
 
-  def testServer[I, E, O](e: Endpoint[I, E, O, S], testNameSuffix: String = "")(
+  def testServer[I, E, O](
+      e: Endpoint[I, E, O, S],
+      testNameSuffix: String = "",
+      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+  )(
       fn: I => R[Either[E, O]]
   )(runTest: Uri => IO[Assertion]): Unit = {
 
-    testServer(e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix), NonEmptyList.of(route(e, fn)))(runTest)
+    testServer(
+      e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
+      NonEmptyList.of(route(e, fn, decodeFailureHandler))
+    )(runTest)
   }
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
@@ -506,8 +584,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
-    test(name)(resources.use(runTest).unsafeRunSync())
+    if (testNameFilter forall name.contains) {
+      test(name)(resources.use(runTest).unsafeRunSync())
+    }
   }
+
+  // define to run a single test (in development)
+  def testNameFilter: Option[String] = None
 
   //
 

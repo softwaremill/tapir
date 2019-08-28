@@ -31,17 +31,29 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S] =
     this.copy[IJ, E, O, S](input = input.and(i))
 
+  def prependIn[J, JI](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[J, I, JI]): Endpoint[JI, E, O, S] =
+    this.copy[JI, E, O, S](input = i.and(input))
+
   def in[J, IJ, S2 >: S](i: StreamingEndpointIO[J, S2])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S2] =
     this.copy[IJ, E, O, S2](input = input.and(i.toEndpointIO))
 
+  def prependIn[J, JI, S2 >: S](i: StreamingEndpointIO[J, S2])(implicit ts: ParamConcat.Aux[J, I, JI]): Endpoint[JI, E, O, S2] =
+    this.copy[JI, E, O, S2](input = i.toEndpointIO.and(input))
+
   def out[P, OP](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[O, P, OP]): Endpoint[I, E, OP, S] =
     this.copy[I, E, OP, S](output = output.and(i))
+
+  def prependOut[P, PO](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[P, O, PO]): Endpoint[I, E, PO, S] =
+    this.copy[I, E, PO, S](output = i.and(output))
 
   def out[P, OP, S2 >: S](i: StreamingEndpointIO[P, S2])(implicit ts: ParamConcat.Aux[O, P, OP]): Endpoint[I, E, OP, S2] =
     this.copy[I, E, OP, S2](output = output.and(i.toEndpointIO))
 
   def errorOut[F, EF](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): Endpoint[I, EF, O, S] =
     this.copy[I, EF, O, S](errorOutput = errorOutput.and(i))
+
+  def prependErrorOut[F, FE](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[F, E, FE]): Endpoint[I, FE, O, S] =
+    this.copy[I, FE, O, S](errorOutput = i.and(errorOutput))
 
   def mapIn[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[II, E, O, S] =
     this.copy[II, E, O, S](input = input.map(f)(g))
@@ -97,7 +109,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     }
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
-    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortByType).show
+    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortBy(basicInputSortIndex)).show
     val showSuccessOutputs = showOutputs(output)
     val showErrorOutputs = showOutputs(errorOutput)
 

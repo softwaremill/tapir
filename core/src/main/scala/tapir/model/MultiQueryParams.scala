@@ -10,7 +10,9 @@ class MultiQueryParams(ps: Map[String, Seq[String]]) {
 }
 
 object MultiQueryParams {
-  def fromMap(m: Map[String, String]): MultiQueryParams = new MultiQueryParams(m.mapValues(List(_)))
-  def fromSeq(s: Seq[(String, String)]): MultiQueryParams = new MultiQueryParams(s.groupBy(_._1).mapValues(_.map(_._2)))
+  def fromMap(m: Map[String, String]): MultiQueryParams = new MultiQueryParams(m.mapValues(List(_)).toMap)
+  def fromSeq(s: Seq[(String, String)]): MultiQueryParams =
+    // use groupMap in scala 2.13 instead of groupBy, mapValues
+    new MultiQueryParams(s.groupBy(_._1).mapValues(_.map(_._2)).toMap)
   def fromMultiMap(m: Map[String, Seq[String]]): MultiQueryParams = new MultiQueryParams(m)
 }

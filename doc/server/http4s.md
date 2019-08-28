@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-http4s-server" % "0.8.6"
+"com.softwaremill.tapir" %% "tapir-http4s-server" % "0.9.3"
 ```
 
 and import the package:
@@ -68,11 +68,11 @@ response bodies and reading request bodies. Usage: `streamBody[Stream[F, Byte]](
 ## Configuration
 
 The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see
-[common server configuration](common.html) for details.
+[server options](options.html) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.
 
 ## Defining an endpoint together with the server logic
 
 It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[common server configuration](common.html) for details.
+[server logic](logic.html) for details.

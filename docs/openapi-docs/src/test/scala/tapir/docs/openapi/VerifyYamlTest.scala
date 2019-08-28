@@ -2,7 +2,6 @@ package tapir.docs.openapi
 
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
-import tapir.Schema.{SProduct, SObjectInfo, SRef}
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -26,7 +25,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml") {
     val expectedYaml = loadYaml("expected.yml")
 
-    val actualYaml = List(in_query_query_out_string, all_the_way).toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYaml = List(in_query_query_out_string, all_the_way, delete_endpoint).toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -324,12 +323,70 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render additional properties for map") {
+    val expectedYaml = loadYaml("expected_additional_properties.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[Map[String, Person]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render map with plain values") {
+    val expectedYaml = loadYaml("expected_map_with_plain_values.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[Map[String, String]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   // #118
   test("use fixed status code output in response if it's the only output") {
     val expectedYaml = loadYaml("expected_fixed_status_code_2.yml")
 
     val actualYaml = endpoint
       .out(statusCode(StatusCodes.NoContent))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support prepending inputs") {
+    val expectedYaml = loadYaml("expected_prepended_input.yml")
+
+    val actualYaml = in_query_query_out_string
+      .in("add")
+      .prependIn("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("use fixed header output in response") {
+    val expectedYaml = loadYaml("expected_fixed_header_output_response.yml")
+
+    val actualYaml = endpoint
+      .out(header("Location", "Poland"))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use fixed header input in request") {
+    val expectedYaml = loadYaml("expected_fixed_header_input_request.yml")
+
+    val actualYaml = endpoint
+      .in(header("Location", "Poland"))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

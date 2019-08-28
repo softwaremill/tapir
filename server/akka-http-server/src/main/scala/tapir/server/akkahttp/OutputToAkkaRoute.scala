@@ -39,7 +39,7 @@ private[akkahttp] object OutputToAkkaRoute {
     }
 
     if (akkaHeaders.nonEmpty) {
-      respondWithHeaders(akkaHeaders: _*)(completeRoute)
+      respondWithHeaders(akkaHeaders)(completeRoute)
     } else {
       completeRoute
     }
