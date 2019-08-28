@@ -23,6 +23,10 @@ package object tests {
     endpoint.in(query[String @@ Tapir]("fruit"))
   }
 
+  val in_valid_query: Endpoint[StatusCode, Unit, Unit, Nothing] = {
+    endpoint.in(query[Int]("amount").validate(Validator.min(0)))
+  }
+
   val in_valid_json_wrapper: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
     implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
     implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)

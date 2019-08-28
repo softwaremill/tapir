@@ -548,6 +548,11 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       sttp.get(uri"$baseUri?fruit=banana").send().map(_.code shouldBe StatusCodes.Ok)
   }
 
+  testServer(in_valid_query, "support query validation")((_: Int) => pureResult(().asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri?amount=3").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri?amount=-3").send().map(_.code shouldBe StatusCodes.BadRequest)
+  }
+
   testServer(
     "support jsonBody validation with wrapped type",
     NonEmptyList.of(

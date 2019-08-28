@@ -51,6 +51,7 @@ object EndpointInput {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
     def description(d: String): PathCapture[T] = copy(info = info.description(d))
     def example(t: T): PathCapture[T] = copy(info = info.example(t))
+    def validate(v: Validator[T]): PathCapture[T] = copy(codec = codec.validate(v))
     def show = s"/[${name.getOrElse("")}]"
   }
 
@@ -63,6 +64,7 @@ object EndpointInput {
   case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
+    def validate(v: Validator[T]): Query[T] = copy(codec = codec.validate(v))
     def show = s"?$name"
   }
 
@@ -75,6 +77,7 @@ object EndpointInput {
   case class Cookie[T](name: String, codec: PlainCodecForOptional[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Cookie[T] = copy(info = info.description(d))
     def example(t: T): Cookie[T] = copy(info = info.example(t))
+    def validate(v: Validator[T]): Cookie[T] = copy(codec = codec.validate(v))
     def show = s"{cookie $name}"
   }
 
@@ -217,6 +220,7 @@ object EndpointIO {
   case class Body[T, M <: MediaType, R](codec: CodecForOptional[T, M, R], info: Info[T]) extends Basic[T] {
     def description(d: String): Body[T, M, R] = copy(info = info.description(d))
     def example(t: T): Body[T, M, R] = copy(info = info.example(t))
+    def validate(v: Validator[T]): Body[T, M, R] = copy(codec = codec.validate(v))
     def show = s"{body as ${codec.meta.mediaType.mediaType}}"
   }
 
@@ -232,6 +236,7 @@ object EndpointIO {
   case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Basic[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
+    def validate(v: Validator[T]): Header[T] = copy(codec = codec.validate(v))
     def show = s"{header $name}"
   }
 
