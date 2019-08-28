@@ -26,8 +26,8 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   def pass[T]: Validator[T] = all()
   def reject[T]: Validator[T] = any()
 
-  def min[T: Numeric](value: T): Validator.Primitive[T] = Min(value)
-  def max[T: Numeric](value: T): Validator.Primitive[T] = Max(value)
+  def min[T: Numeric](value: T, exclusive: Boolean = false): Validator.Primitive[T] = Min(value, exclusive)
+  def max[T: Numeric](value: T, exclusive: Boolean = false): Validator.Primitive[T] = Max(value, exclusive)
   def pattern[T <: String](value: String): Validator.Primitive[T] = Pattern(value)
   def minSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
   def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
@@ -39,25 +39,25 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   sealed trait Single[T] extends Validator[T]
   sealed trait Primitive[T] extends Single[T]
 
-  case class Min[T](value: T)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
+  case class Min[T](value: T, exclusive: Boolean)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {
-      if (implicitly[Numeric[T]].gteq(t, value)) {
+      if (implicitly[Numeric[T]].gt(t, value) || (!exclusive && implicitly[Numeric[T]].equiv(t, value))) {
         List.empty
       } else {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s">=$value")
+    override def show: Option[String] = Some(s"${if (exclusive) ">" else ">="}$value")
   }
-  case class Max[T](value: T)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
+  case class Max[T](value: T, exclusive: Boolean)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {
-      if (implicitly[Numeric[T]].lteq(t, value)) {
+      if (implicitly[Numeric[T]].lt(t, value) || (!exclusive && implicitly[Numeric[T]].equiv(t, value))) {
         List.empty
       } else {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"<=$value")
+    override def show: Option[String] = Some(s"${if (exclusive) "<" else "<="}$value")
   }
   case class Pattern[T <: String](value: String) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {

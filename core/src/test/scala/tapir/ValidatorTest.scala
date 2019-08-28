@@ -4,31 +4,52 @@ import org.scalatest.{FlatSpec, Matchers}
 
 class ValidatorTest extends FlatSpec with Matchers {
   it should "validate for min value" in {
-    val expected = 1
+    val min = 1
     val wrong = 0
-    Validator.min(expected).validate(wrong) shouldBe List(ValidationError(Validator.min(expected), wrong))
-    Validator.min(expected).validate(expected) shouldBe empty
+    val v = Validator.min(min)
+    v.validate(wrong) shouldBe List(ValidationError(v, wrong))
+    v.validate(min) shouldBe empty
+  }
+
+  it should "validate for min value (exclusive)" in {
+    val min = 1
+    val wrong = 0
+    val v = Validator.min(min, exclusive = true)
+    v.validate(wrong) shouldBe List(ValidationError(v, wrong))
+    v.validate(min) shouldBe List(ValidationError(v, min))
+    v.validate(min + 1) shouldBe empty
   }
 
   it should "validate for max value" in {
-    val expected = 0
+    val max = 0
     val wrong = 1
-    Validator.max(expected).validate(wrong) shouldBe List(ValidationError(Validator.max(expected), wrong))
-    Validator.max(expected).validate(expected) shouldBe empty
+    val v = Validator.max(max)
+    v.validate(wrong) shouldBe List(ValidationError(v, wrong))
+    v.validate(max) shouldBe empty
+  }
+
+  it should "validate for max value (exclusive)" in {
+    val max = 0
+    val wrong = 1
+    val v = Validator.max(max, exclusive = true)
+    v.validate(wrong) shouldBe List(ValidationError(v, wrong))
+    v.validate(max) shouldBe List(ValidationError(v, max))
+    v.validate(max - 1) shouldBe empty
   }
 
   it should "validate for maxSize of collection" in {
     val expected = 1
     val actual = List(1, 2, 3)
-    Validator.maxSize(expected).validate(actual) shouldBe List(ValidationError(Validator.maxSize[Int, List](expected), actual))
-    Validator.maxSize(expected).validate(List(1)) shouldBe empty
+    val v = Validator.maxSize[Int, List](expected)
+    v.validate(actual) shouldBe List(ValidationError(v, actual))
+    v.validate(List(1)) shouldBe empty
   }
 
   it should "validate for minSize of collection" in {
     val expected = 3
-    val actual = List(1, 2)
-    Validator.minSize(expected).validate(actual) shouldBe List(ValidationError(Validator.minSize[Int, List](expected), actual))
-    Validator.minSize(expected).validate(List(1, 2, 3)) shouldBe empty
+    val v = Validator.minSize[Int, List](expected)
+    v.validate(List(1, 2)) shouldBe List(ValidationError(v, List(1, 2)))
+    v.validate(List(1, 2, 3)) shouldBe empty
   }
 
   it should "validate for matching regex pattern" in {
