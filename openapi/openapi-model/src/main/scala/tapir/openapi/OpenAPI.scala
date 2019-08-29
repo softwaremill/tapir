@@ -206,7 +206,15 @@ case class Schema(
     deprecated: Option[Boolean] = None,
     oneOf: Option[List[ReferenceOr[Schema]]] = None,
     discriminator: Option[Discriminator] = None,
-    additionalProperties: Option[ReferenceOr[Schema]] = None
+    additionalProperties: Option[ReferenceOr[Schema]] = None,
+    pattern: Option[String] = None,
+    minimum: Option[BigDecimal] = None,
+    exclusiveMinimum: Option[BigDecimal] = None,
+    maximum: Option[BigDecimal] = None,
+    exclusiveMaximum: Option[BigDecimal] = None,
+    minSize: Option[Int] = None,
+    maxSize: Option[Int] = None,
+    enum: Option[List[String]] = None
 )
 
 case class Discriminator(propertyName: String, mapping: Option[ListMap[String, String]])

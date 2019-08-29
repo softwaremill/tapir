@@ -54,7 +54,7 @@ class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  private def toRawPart[R](part: multipart.Part[F], codecMeta: CodecMeta[_, R], req: Request[F]): F[Part[R]] = {
+  private def toRawPart[R](part: multipart.Part[F], codecMeta: CodecMeta[_, _, R], req: Request[F]): F[Part[R]] = {
     val dispositionParams = part.headers.get(`Content-Disposition`).map(_.parameters).getOrElse(Map.empty)
     val charset = part.headers.get(`Content-Type`).flatMap(_.charset)
     apply(part.body, codecMeta.rawValueType, charset, req)

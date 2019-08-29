@@ -6,7 +6,6 @@ import tapir.internal._
 import tapir.model.Method
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema, _}
-
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
@@ -87,7 +86,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
     EndpointInputToParameterConverter.from(
       header,
-      objectSchemas(header.codec.meta.schema),
+      objectSchemas(header.codec),
       header.info.example.flatMap(exampleValue(header.codec, _))
     )
   }
@@ -103,18 +102,22 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
     EndpointInputToParameterConverter.from(
       cookie,
-      objectSchemas(cookie.codec.meta.schema),
+      objectSchemas(cookie.codec),
       cookie.info.example.flatMap(exampleValue(cookie.codec, _))
     )
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    EndpointInputToParameterConverter.from(p, objectSchemas(p.codec.meta.schema), p.info.example.flatMap(exampleValue(p.codec, _)))
+    EndpointInputToParameterConverter.from(
+      p,
+      objectSchemas(p.codec),
+      p.info.example.flatMap(exampleValue(p.codec, _))
+    )
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
     EndpointInputToParameterConverter.from(
       query,
-      objectSchemas(query.codec.meta.schema),
+      objectSchemas(query.codec),
       query.info.example.flatMap(exampleValue(query.codec, _))
     )
   }

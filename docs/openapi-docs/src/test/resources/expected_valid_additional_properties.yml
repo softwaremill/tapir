@@ -1,0 +1,34 @@
+openapi: 3.0.1
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Map_ValidFruitAmount'
+        required: true
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    Map_ValidFruitAmount:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/ValidFruitAmount'
+    ValidFruitAmount:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
+          minimum: 1

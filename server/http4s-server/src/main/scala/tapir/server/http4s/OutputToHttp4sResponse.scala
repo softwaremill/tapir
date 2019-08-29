@@ -57,7 +57,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   })
 
-  private def rawValueToEntity[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): (EntityBody[F], Header) = {
+  private def rawValueToEntity[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], r: R): (EntityBody[F], Header) = {
     val ct: `Content-Type` = mediaTypeToContentType(codecMeta.mediaType)
 
     codecMeta.rawValueType match {
@@ -82,7 +82,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         case (hk, hv) => Header.Raw(CaseInsensitiveString(hk), hv)
       }.toList
 
-      val (entity, ctHeader) = rawValueToEntity(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.body)
+      val (entity, ctHeader) = rawValueToEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body)
 
       val contentDispositionHeader = `Content-Disposition`("form-data", part.otherDispositionParams + ("name" -> part.name))
 

@@ -71,13 +71,13 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       .flatMap {
         case EndpointIO.Body(codec, _) =>
           val so = if (codec.meta.isOptional && body == "") None else Some(body)
-          Some(getOrThrow(codec.safeDecode(so)))
+          Some(getOrThrow(codec.rawDecode(so)))
 
         case EndpointIO.StreamBodyWrapper(_) =>
           Some(body)
 
         case EndpointIO.Header(name, codec, _) =>
-          Some(getOrThrow(codec.safeDecode(meta.headers(name).toList)))
+          Some(getOrThrow(codec.rawDecode(meta.headers(name).toList)))
 
         case EndpointIO.Headers(_) =>
           Some(meta.headers)
@@ -209,7 +209,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           case mvt: MultipartValueType =>
             val parts: Seq[Multipart] = (t: Seq[RawPart]).flatMap { p =>
               mvt.partCodecMeta(p.name).map { partCodecMeta =>
-                val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], partCodecMeta.asInstanceOf[CodecMeta[_, Any]])
+                val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], partCodecMeta.asInstanceOf[CodecMeta[_, _, Any]])
                 val sttpPart2 = sttpPart1.contentType(partCodecMeta.mediaType.mediaTypeNoParams)
                 val sttpPart3 = p.headers.foldLeft(sttpPart2) {
                   case (sp, (hk, hv)) =>
@@ -231,7 +231,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       .getOrElse(req)
   }
 
-  private def partToSttpPart[R](p: Part[R], codecMeta: CodecMeta[_, R]): Multipart = codecMeta.rawValueType match {
+  private def partToSttpPart[R](p: Part[R], codecMeta: CodecMeta[_, _, R]): Multipart = codecMeta.rawValueType match {
     case StringValueType(charset) => multipart(p.name, p.body, charset.toString)
     case ByteArrayValueType       => multipart(p.name, p.body)
     case ByteBufferValueType      => multipart(p.name, p.body)

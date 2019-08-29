@@ -408,7 +408,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler[Any] = ServerDefaults.decodeFailureHandlerUsingResponse(
     ServerDefaults.failureResponse,
-    badRequestOnPathFailureIfPathShapeMatches = true
+    badRequestOnPathFailureIfPathShapeMatches = true,
+    ServerDefaults.validationErrorToMessage
   )
 
   testServer(
@@ -535,6 +536,41 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         r.code shouldBe StatusCodes.InternalServerError
         r.body shouldBe 'left
       }
+  }
+
+  testServer(Validation.in_query_tagged, "support query validation with tagged type")((_: String) => pureResult(().asRight[Unit])) {
+    baseUri =>
+      sttp.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCodes.Ok) >>
+        sttp.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCodes.BadRequest) >>
+        sttp.get(uri"$baseUri?fruit=banana").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(Validation.in_query, "support query validation")((_: Int) => pureResult(().asRight[Unit])) { baseUri =>
+    sttp.get(uri"$baseUri?amount=3").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri?amount=-3").send().map(_.code shouldBe StatusCodes.BadRequest)
+  }
+
+  testServer(Validation.in_json_wrapper, "support jsonBody validation with wrapped type")(
+    (_: ValidFruitAmount) => pureResult(().asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri").body("""{"fruit":"orange","amount":11}""").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri").body("""{"fruit":"orange","amount":0}""").send().map(_.code shouldBe StatusCodes.BadRequest) >>
+      sttp.get(uri"$baseUri").body("""{"fruit":"orange","amount":1}""").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(Validation.in_query_wrapper, "support query validation with wrapper type")((_: IntWrapper) => pureResult(().asRight[Unit])) {
+    baseUri =>
+      sttp.get(uri"$baseUri?amount=11").send().map(_.code shouldBe StatusCodes.Ok) >>
+        sttp.get(uri"$baseUri?amount=0").send().map(_.code shouldBe StatusCodes.BadRequest) >>
+        sttp.get(uri"$baseUri?amount=1").send().map(_.code shouldBe StatusCodes.Ok)
+  }
+
+  testServer(Validation.in_json_collection, "support jsonBody validation with list of wrapped type")(
+    (_: BasketOfFruits) => pureResult(().asRight[Unit])
+  ) { baseUri =>
+    sttp.get(uri"$baseUri").body("""{"fruits":[{"fruit":"orange","amount":11}]}""").send().map(_.code shouldBe StatusCodes.Ok) >>
+      sttp.get(uri"$baseUri").body("""{"fruits": []}""").send().map(_.code shouldBe StatusCodes.BadRequest) >>
+      sttp.get(uri"$baseUri").body("""{fruits":[{"fruit":"orange","amount":0}]}""").send().map(_.code shouldBe StatusCodes.BadRequest)
   }
 
   //

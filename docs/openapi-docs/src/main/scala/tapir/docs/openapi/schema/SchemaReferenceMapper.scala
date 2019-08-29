@@ -1,7 +1,7 @@
 package tapir.docs.openapi.schema
 
 import tapir.openapi.Reference
-import tapir.{Schema => TSchema, _}
+import tapir.{Schema => TSchema}
 
 class SchemaReferenceMapper(fullNameToKey: Map[TSchema.SObjectInfo, SchemaKey]) {
   def map(objectInfo: TSchema.SObjectInfo): Reference = {

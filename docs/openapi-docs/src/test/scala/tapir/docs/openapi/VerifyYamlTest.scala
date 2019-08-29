@@ -394,6 +394,81 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("validator with tagged type in query") {
+    val expectedYaml = loadYaml("expected_valid_query_tagged.yml")
+
+    val actualYaml = Validation.in_query_tagged
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("validator with wrapper type in body") {
+    val expectedYaml = loadYaml("expected_valid_body_wrapped.yml")
+
+    val actualYaml = Validation.in_json_wrapper
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    println(actualYaml)
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("validator with wrapper type in query") {
+    val expectedYaml = loadYaml("expected_valid_query_wrapped.yml")
+
+    val actualYaml = Validation.in_query_wrapper
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("validator with list") {
+    val expectedYaml = loadYaml("expected_valid_body_collection.yml")
+
+    val actualYaml = Validation.in_json_collection
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("render validator for additional properties of map") {
+    val expectedYaml = loadYaml("expected_valid_additional_properties.yml")
+
+    val actualYaml = Validation.in_map
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render enum validator for classes") {
+    val expectedYaml = loadYaml("expected_valid_enum_class.yml")
+
+    val actualYaml = Validation.in_enum_class
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render enum validator for values") {
+    val expectedYaml = loadYaml("expected_valid_enum_values.yml")
+
+    val actualYaml = Validation.in_enum_values
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
