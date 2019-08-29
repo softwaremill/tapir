@@ -8,7 +8,7 @@ needed for actual json parsing/printing. Currently, [Circe](https://github.com/c
 To use Circe add the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-json-circe" % "0.10.0"
+"com.softwaremill.tapir" %% "tapir-json-circe" % "0.10.1"
 ```
 
 Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.html)):
@@ -67,7 +67,7 @@ Now the above JSON object will render as
 To use µPickle add the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-json-upickle" % "0.10.0"
+"com.softwaremill.tapir" %% "tapir-json-upickle" % "0.10.1"
 ```
 
 Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.html) and add `TapirJsonuPickle` not `TapirCirceJson`):
@@ -101,7 +101,7 @@ For more examples, including making a custom encoder/decoder, see [TapirJsonuPic
 To use µPickle add the following dependency to your project:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-json-play" % "0.10.0"
+"com.softwaremill.tapir" %% "tapir-json-play" % "0.10.1"
 ```
 
 Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.html) and add `TapirJsonPlay` not `TapirCirceJson`):
