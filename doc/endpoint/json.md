@@ -105,7 +105,7 @@ For more examples, including making a custom encoder/decoder, see [TapirJsonuPic
 
 ## Play JSON
 
-To use µPickle add the following dependency to your project:
+To use Play JSON add the following dependency to your project:
 
 ```scala
 "com.softwaremill.tapir" %% "tapir-json-play" % "0.10.1"
