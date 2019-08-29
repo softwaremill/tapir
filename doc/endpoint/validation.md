@@ -6,7 +6,7 @@ dedicated error output (the `E` in `Endpoint[I, E, O, S]`) to report errors.
 
 ## Single type validation
 
-Validation rules are part of the [codec](codec.html) for a given type. They can be specified when creating the codec
+Validation rules are part of the [codec](codecs.html) for a given type. They can be specified when creating the codec
 (using the `Codec.validate()` method):
  
 ```scala
@@ -59,6 +59,9 @@ words, decoding failures should be reported for format failures, not business va
  
 Decoding failures should be reported when the input is in an incorrect low-level format, when parsing a "raw value"
 fails. In other words, decoding failures should be reported for format failures, not business validation errors.
+
+To customise error messages that are returned upon validation/decode failures by the server, see 
+[error handling](../errors.html).
 
 ## Next
 

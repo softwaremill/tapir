@@ -54,8 +54,21 @@ Automatic codec derivation usually requires other implicits, such as:
 * codecs for individual form fields
 * schema of the custom type, through the `SchemaFor[T]` implicit
 
-`SchemaFor[_]` implicit values are also automatically derived for case classes. You might need to provide implicit
-`SchemaFor[_]` values for any nested custom types, that occur in the case classes, for derivation to work properly.
+For case classes types, `SchemaFor[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
+that schemas are defined for all of the case class's fields. It is possible to configure the automatic derivation to use
+snake-case, kebab-case or a custom field naming policy, by providing an implicit `tapir.generic.Configuration` value:
+
+```scala
+implicit val customConfiguration: Configuration =
+  Configuration.default.withSnakeCaseMemberNames
+```
+
+Alternatively, `SchemaFor` values can be defined by hand, either for whole case classes, or only for some of its fields.
+For example, here we state that the schema for `MyCustomType` is a `String`:
+
+```scala
+implicit val schemaForMyCustomType: SchemaFor[MyCustomType] = SchemaFor(Schema.SString)
+```
 
 ## Next
 

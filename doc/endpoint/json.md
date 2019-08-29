@@ -1,7 +1,8 @@
 # Working with JSON
 
 Json values are supported through codecs which encode/decode values to json strings. However, third-party libraries are
-needed for actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe) and [µPickle](http://www.lihaoyi.com/upickle/) are supported.
+needed for actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe), 
+[µPickle](http://www.lihaoyi.com/upickle/) and [Play JSON](https://github.com/playframework/play-json) are supported.
 
 ## Circe
 
@@ -17,9 +18,9 @@ Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](..
 import tapir.json.circe._
 ```
 
-This will bring into scope `Codec`s which, given an in-scope circe `Encoder`/`Decoder` and a `SchemaFor`, will create a
-codec using the json media type. Circe includes a couple of approaches to generating encoders/decoders (manual,
-semi-auto and auto), so you may choose whatever suits you.
+This will allow automatically deriving `Codec`s which, given an in-scope circe `Encoder`/`Decoder` and a `SchemaFor`, 
+will create a codec using the json media type. Circe includes a couple of approaches to generating encoders/decoders 
+(manual, semi-auto and auto), so you may choose whatever suits you.
 
 Note that when using Circe's auto derivation, any encoders/decoders for custom types must be in scope as well.
 
@@ -35,19 +36,25 @@ case class Book(author: String, title: String, year: Int)
 val bookInput: EndpointIO[Book] = jsonBody[Book]
 ```
 
-Circe lets you select an instance of `io.circe.Printer` to configure the way JSON objects are rendered. By default Tapir uses `Printer.nospaces`, which would render
+Circe lets you select an instance of `io.circe.Printer` to configure the way JSON objects are rendered. By default 
+Tapir uses `Printer.nospaces`, which would render:
+
 ```scala
 Json.obj(
   "key1" -> Json.fromString("present"),
   "key2" -> Json.Null
 )
 ```
+
 as
+
 ```
 {"key1":"present","key2":null}
 ```
-Suppose we would instead want to omit `null`-values from the object and pretty-print it.
-You can configure this by overriding the `jsonPrinter` in `tapir.circe.json.TapirJsonCirce`:
+
+Suppose we would instead want to omit `null`-values from the object and pretty-print it. You can configure this by 
+overriding the `jsonPrinter` in `tapir.circe.json.TapirJsonCirce`:
+
 ```scala
 object MyTapirJsonCirce extends TapirJsonCirce {
   override def jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
@@ -55,11 +62,11 @@ object MyTapirJsonCirce extends TapirJsonCirce {
 
 import MyTapirJsonCirce._
 ```
+
 Now the above JSON object will render as
+
 ```
-{
-  "key1":"present"
-}
+{"key1":"present"}
 ```
 
 ## µPickle
@@ -120,25 +127,11 @@ for the Circe codec (which is just a couple of lines of code).
 
 ## Schemas
 
-To create a json codec automatically, not only a circe `Encoder`/`Decoder` is needed, but also an implicit
-`SchemaFor[T]` value, which provides a mapping between a type `T` and its schema. A schema-for value contains a single
-`schema: Schema` field.
+To derive json codecs automatically, not only implicits from the base library are needed (e.g. a circe 
+`Encoder`/`Decoder`), but also an implicit `SchemaFor[T]` value, which provides a mapping between a type `T` and its 
+schema. A schema-for value contains a single `schema: Schema` field.
 
-For custom types, schemas are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
-that schemas are defined for all of the case class's fields. It is possible to configure the automatic derivation to use
-snake-case, kebab-case or a custom field naming policy, by providing an implicit `tapir.generic.Configuration` value:
-
-```scala
-implicit val customConfiguration: Configuration =
-  Configuration.default.withSnakeCaseMemberNames
-```
-
-Alternatively, `SchemaFor` values can be defined by hand, either for whole case classes, or only for some of its fields.
-For example, here we state that the schema for `MyCustomType` is a `String`:
-
-```
-implicit val schemaForMyCustomType: SchemaFor[MyCustomType] = SchemaFor(Schema.SString)
-```
+See [custom types](customtypes.html) for details.
 
 ## Next
 

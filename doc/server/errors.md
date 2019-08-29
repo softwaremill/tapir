@@ -75,7 +75,8 @@ def myFailureResponse(statusCode: StatusCode, message: String): DecodeFailureHan
   
 val myDecodeFailureHandler = ServerDefaults.decodeFailureHandlerUsingResponse(
   myFailureResponse,
-  badRequestOnPathFailureIfPathShapeMatches = false
+  badRequestOnPathFailureIfPathShapeMatches = false,
+  validationErrorToMessage
 )
 ```
 
@@ -86,3 +87,6 @@ The default decode failure handler also has the option to return a `400 Bad Requ
 leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
 and endpoint's paths are the same), but when decoding some part of the path fails. By default, any kind of decode 
 failure in the path will result in a no-match being returned.
+
+Finally, you can provide custom error messages for validation errors. By default, these messages are appended to the
+decode failure message (see the `validationErrorToMessage` method in `ServerDefaults`).

@@ -80,7 +80,6 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * [Endpoints: working with JSON](endpoint/json.md)
 * [Endpoints: forms](endpoint/forms.md)
 * [Endpoints: authentication](endpoint/auth.md)
-* [Endpoints: implicits guide](endpoint/implicits.md)
 * [Servers: akka-http interpreter](server/akkahttp.md)
 * [Servers: http4s interpreter](server/http4s.md)
 * [Servers: options](server/options.md)
