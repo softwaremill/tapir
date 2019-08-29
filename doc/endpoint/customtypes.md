@@ -10,7 +10,7 @@ Which of these approaches can be taken, depends on the context in which the code
 To create a custom codec, you can either directly implement the `Codec` trait, which requires to provide the following
 information:
 
-* `encode` and `decode` methods
+* `encode` and `rawDecode` methods
 * codec meta-data (`CodecMeta`) consisting of:
   * schema of the type (for documentation)
   * validator for the type
@@ -21,7 +21,7 @@ This might be quite a lot of work, that's why it's usually easier to map over an
 need to provide two mappings: 
 
 * an `encode` method which encodes the custom type into the base type
-* a `decode` method which decodes the base type into the custom type, optionally reporting decode errors (the return
+* a `rawDecode` method which decodes the base type into the custom type, optionally reporting decode errors (the return
 type is a `DecodeResult`)
 
 For example, to support a custom id type:
