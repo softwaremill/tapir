@@ -51,7 +51,7 @@ For primitive types, the schema values are built-in, and include values such as 
 The schema is left unchanged when mapping over a codec, as the underlying representation of the value doesn't change.
 
 When codecs are derived for complex types, e.g. for json mapping, schemas are looked up through implicit
-`SchemaFor[T]` values. See [json support](json.html) for more details.
+`SchemaFor[T]` values. See [custom types](customtypes.html) for more details.
 
 Tapir supports schema generation for coproduct types of the box. In order to extend openApi schema
 representation a discriminator object can be specified. 
