@@ -106,6 +106,10 @@ val paging: EndpointInput[Paging] =
 Mapping methods can also be called on an endpoint (which is useful if inputs/outputs are accumulated, for example).
 The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the ones above.
 
+> Note that this kind of mapping is only meant for isomorphic transformations and grouping inputs/outputs into custom
+> types. To support custom types, where one of the transformations might fail, see [codecs](codecs.md) and 
+> [validation](validation.md).
+
 ## Path matching
 
 By default (as with all other types of inputs), if no path input/path segments are defined, any path will match.

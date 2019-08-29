@@ -13,6 +13,9 @@ interpreted as:
 
 Tapir is licensed under Apache2, the source code is [available of GitHub](https://github.com/softwaremill/tapir).
 
+Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
+for a more detailed description of how tapir works!
+
 ## Code teaser
 
 ```scala
@@ -64,9 +67,6 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
   .apply(BooksFromYear("SF", 2016), 20, "xyz-abc-123")
 ```
 
-Also check out the [runnable example](https://github.com/softwaremill/tapir/blob/master/playground/src/main/scala/tapir/example/BooksExample.scala) 
-which is a slight extension of the above.
-
 ## Contents
 
 * [Quickstart](quickstart.md)
@@ -75,6 +75,8 @@ which is a slight extension of the above.
 * [Endpoints: basics](endpoint/basics.md)
 * [Endpoints: inputs/outputs](endpoint/ios.md)
 * [Endpoints: codecs](endpoint/codecs.md)
+* [Endpoints: custom types](endpoint/customtypes.md)
+* [Endpoints: validation](endpoint/validation.md)
 * [Endpoints: working with JSON](endpoint/json.md)
 * [Endpoints: forms](endpoint/forms.md)
 * [Endpoints: authentication](endpoint/auth.md)

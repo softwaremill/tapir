@@ -12,13 +12,14 @@ object EndpointWithCustomTypes {
   }
   class MyIdImpl(val id: String) extends MyId
 
-  // Custom type as a path or query parameter: encoding and decoding is fully handled by tapir. We need a custom Codec
+  // Custom type as a path or query parameter: encoding and decoding is fully handled by tapir. We need to provide
+  // a custom implicit Codec
   implicit val myIdCodec: Codec[MyId, MediaType.TextPlain, String] =
     Codec.stringPlainCodecUtf8.map[MyId](s => new MyIdImpl(s))(myId => myId.id)
   val endpointWithMyId: Endpoint[MyId, Unit, Unit, Nothing] = endpoint.in("find" / path[MyId])
 
-  // Custom type as part of a case class, mapped to json: encoding and decoding is handled by circe. We need a custom
-  // schema for documentation
+  // Custom type mapped to json: encoding and decoding is handled by circe. The Codec is automatically derived from a
+  // circe Encoder and Decoder. We also need the schema (through the SchemaFor implicit) for documentation.
   case class Person(id: MyId, name: String)
 
   implicit val myIdSchema: SchemaFor[MyId] = SchemaFor(Schema.SString)
