@@ -64,7 +64,7 @@ Decoding failures should be reported when the input is in an incorrect low-level
 fails. In other words, decoding failures should be reported for format failures, not business validation errors.
 
 To customise error messages that are returned upon validation/decode failures by the server, see 
-[error handling](../errors.html).
+[error handling](../server/errors.html).
 
 ## Next
 
