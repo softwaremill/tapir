@@ -20,7 +20,10 @@ implicit val myIdCodec: Codec[MyId, TextPlain, _] = Codec.stringPlainCodecUtf8
 Or added to individual inputs/outputs:
 
 ```scala
-val e = endpoint.in(query[Int]("amount").validate(Validator.min(0)).validate(Validator.max(100)))
+val e = endpoint.in(
+  query[Int]("amount")
+    .validate(Validator.min(0))
+    .validate(Validator.max(100)))
 ``` 
 
 Validation rules added using the built-in validators are translated to [OpenAPI](../openapi.html) documentation.
