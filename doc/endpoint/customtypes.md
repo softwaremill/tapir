@@ -12,10 +12,10 @@ information:
 
 * `encode` and `decode` methods
 * codec meta-data (`CodecMeta`) consisting of:
-** schema of the type (for documentation)
-** validator for the type
-** media type (`text/plain`, `application/json` etc.)
-** type of the raw value, to which data is serialised (`String`, `Int` etc.)
+  * schema of the type (for documentation)
+  * validator for the type
+  * media type (`text/plain`, `application/json` etc.)
+  * type of the raw value, to which data is serialised (`String`, `Int` etc.)
 
 This might be quite a lot of work, that's why it's usually easier to map over an existing codec. To do that, you'll 
 need to provide two mappings: 
