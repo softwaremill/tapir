@@ -96,6 +96,22 @@ Like Circe, µPickle allows you to control the rendered json output. Please see 
 
 For more examples, including making a custom encoder/decoder, see [TapirJsonuPickleTests.scala](https://github.com/softwaremill/tapir/blob/master/json/upickle/src/test/scala/tapir/json/upickle/TapirJsonuPickleTests.scala)
 
+## Play JSON
+
+To use µPickle add the following dependency to your project:
+
+```scala
+"com.softwaremill.tapir" %% "tapir-json-play" % "0.10.0"
+```
+
+Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.html) and add `TapirJsonPlay` not `TapirCirceJson`):
+
+```scala
+import tapir.json.play._
+```
+
+Play JSON requires `Reads` and `Writes` implicit values in scope for each type you want to serialize. 
+
 ## Other JSON libraries
 
 To add support for additional JSON libraries, see the
