@@ -21,7 +21,7 @@ This might be quite a lot of work, that's why it's usually easier to map over an
 need to provide two mappings: 
 
 * an `encode` method which encodes the custom type into the base type
-* a `rawDecode` method which decodes the base type into the custom type, optionally reporting decode errors (the return
+* a `decode` method which decodes the base type into the custom type, optionally reporting decode errors (the return
 type is a `DecodeResult`)
 
 For example, to support a custom id type:
