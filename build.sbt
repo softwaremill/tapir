@@ -250,7 +250,7 @@ lazy val playground: Project = (project in file("playground"))
       "dev.zio" %% "zio" % "1.0.0-RC10-1",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC2",
       "org.typelevel" %% "cats-effect" % "1.3.1",
-      "io.swagger" % "swagger-annotations" % "1.5.22"
+      "io.swagger" % "swagger-annotations" % "1.5.23"
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
