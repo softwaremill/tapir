@@ -260,7 +260,7 @@ lazy val playground: Project = (project in file("playground"))
     name := "tapir-playground",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp,
-      "dev.zio" %% "zio" % "1.0.0-RC10-1",
+      "dev.zio" %% "zio" % "1.0.0-RC12",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC2",
       "org.typelevel" %% "cats-effect" % "1.3.1",
       "io.swagger" % "swagger-annotations" % "1.5.23"
