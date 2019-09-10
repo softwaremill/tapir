@@ -6,7 +6,6 @@ import cats.effect.{ContextShift, IO}
 import cats.implicits._
 import tapir.Endpoint
 import tapir.client.tests.ClientTests
-import tapir.typelevel.ParamsAsArgs
 import com.softwaremill.sttp._
 import com.softwaremill.sttp.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 
@@ -24,11 +23,8 @@ class SttpClientTests extends ClientTests[fs2.Stream[IO, ByteBuffer]] {
       .foldMonoid
       .unsafeRunSync()
 
-  override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, fs2.Stream[IO, ByteBuffer]], port: Port, args: I)(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]
-  ): IO[Either[E, O]] = {
-
-    paramsAsArgs.applyFn(e.toSttpRequest(uri"http://localhost:$port"), args).send().map(_.unsafeBody)
+  override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, fs2.Stream[IO, ByteBuffer]], port: Port, args: I): IO[Either[E, O]] = {
+    e.toSttpRequest(uri"http://localhost:$port").apply(args).send().map(_.unsafeBody)
   }
 
   override protected def afterAll(): Unit = {

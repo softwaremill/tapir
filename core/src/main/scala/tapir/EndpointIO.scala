@@ -6,7 +6,7 @@ import tapir.CodecForOptional.PlainCodecForOptional
 import tapir.EndpointIO.Info
 import tapir.internal._
 import tapir.model.{Method, MultiQueryParams, ServerRequest}
-import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
+import tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.collection.immutable.ListMap
 import scala.reflect.ClassTag
@@ -17,13 +17,13 @@ sealed trait EndpointInput[I] {
 
   def show: String
 
-  def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[II] =
-    EndpointInput.Mapped(this, f, g, paramsAsArgs)
+  def map[II](f: I => II)(g: II => I): EndpointInput[II] =
+    EndpointInput.Mapped(this, f, g)
 
   def mapTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): EndpointInput[CASE_CLASS] = {
+    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])
   }
 }
 
@@ -111,7 +111,7 @@ object EndpointInput {
 
   //
 
-  case class Mapped[I, T](wrapped: EndpointInput[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
+  case class Mapped[I, T](wrapped: EndpointInput[I], f: I => T, g: T => I) extends Single[T] {
     override def show: String = s"map(${wrapped.show})"
   }
 
@@ -133,13 +133,13 @@ sealed trait EndpointOutput[I] {
 
   def show: String
 
-  def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[II] =
-    EndpointOutput.Mapped(this, f, g, paramsAsArgs)
+  def map[II](f: I => II)(g: II => I): EndpointOutput[II] =
+    EndpointOutput.Mapped(this, f, g)
 
   def mapTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): EndpointOutput[CASE_CLASS] = {
+    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])
   }
 }
 
@@ -175,7 +175,7 @@ object EndpointOutput {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
   }
 
-  case class Mapped[I, T](wrapped: EndpointOutput[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
+  case class Mapped[I, T](wrapped: EndpointOutput[I], f: I => T, g: T => I) extends Single[T] {
     override def show: String = s"map(${wrapped.show})"
   }
 
@@ -196,13 +196,13 @@ sealed trait EndpointIO[I] extends EndpointInput[I] with EndpointOutput[I] {
   def and[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ]
 
   def show: String
-  override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
-    EndpointIO.Mapped(this, f, g, paramsAsArgs)
+  override def map[II](f: I => II)(g: II => I): EndpointIO[II] =
+    EndpointIO.Mapped(this, f, g)
 
   override def mapTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): EndpointIO[CASE_CLASS] = {
+    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])
   }
 }
 
@@ -246,7 +246,7 @@ object EndpointIO {
     def show = s"{multiple headers}"
   }
 
-  case class Mapped[I, T](wrapped: EndpointIO[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
+  case class Mapped[I, T](wrapped: EndpointIO[I], f: I => T, g: T => I) extends Single[T] {
     override def show: String = s"map(${wrapped.show})"
   }
 
@@ -298,8 +298,8 @@ information. The `EndpointIO.StreamBodyWrapper` should only be used internally, 
 factory method in `Tapir` which would directly create an instance of it.
  */
 sealed trait StreamingEndpointIO[I, +S] {
-  def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): StreamingEndpointIO[II, S] =
-    StreamingEndpointIO.Mapped(this, f, g, paramsAsArgs)
+  def map[II](f: I => II)(g: II => I): StreamingEndpointIO[II, S] =
+    StreamingEndpointIO.Mapped(this, f, g)
 
   private[tapir] def toEndpointIO: EndpointIO[I]
 }
@@ -312,8 +312,7 @@ object StreamingEndpointIO {
     private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, M] = EndpointIO.StreamBodyWrapper(this)
   }
 
-  case class Mapped[I, T, S](wrapped: StreamingEndpointIO[I, S], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I])
-      extends StreamingEndpointIO[T, S] {
+  case class Mapped[I, T, S](wrapped: StreamingEndpointIO[I, S], f: I => T, g: T => I) extends StreamingEndpointIO[T, S] {
     private[tapir] override def toEndpointIO: EndpointIO[T] = wrapped.toEndpointIO.map(f)(g)
   }
 }

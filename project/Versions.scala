@@ -14,10 +14,10 @@ object Versions {
     case Some((2, 13)) => "0.11.0-M1"
     case _             => "0.10.0"
   }
-  val sttp = "1.6.4"
+  val sttp = "1.6.6"
   val akkaHttp = "10.1.9"
   val akkaStreams = "2.5.25"
-  val swaggerUi = "3.23.5"
+  val swaggerUi = "3.23.8"
   val upickle = "0.7.5"
   val playJson = "2.7.4"
 }

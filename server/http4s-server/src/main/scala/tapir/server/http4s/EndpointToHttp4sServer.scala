@@ -64,8 +64,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   }
 
   def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[O])(
-      implicit serverOptions: Http4sServerOptions[F],
-      eIsThrowable: E <:< Throwable,
+      implicit eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
   ): HttpRoutes[F] = {
     def reifyFailedF(f: F[O]): F[Either[E, O]] = {

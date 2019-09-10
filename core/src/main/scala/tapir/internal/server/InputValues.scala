@@ -27,9 +27,9 @@ object InputValues {
         apply(inputsTail, basicInputValues)
       case (_: EndpointIO.FixedHeader) +: inputsTail =>
         apply(inputsTail, basicInputValues)
-      case EndpointInput.Mapped(wrapped, f, _, _) +: inputsTail =>
+      case EndpointInput.Mapped(wrapped, f, _) +: inputsTail =>
         handleMapped(wrapped, f, inputsTail, basicInputValues)
-      case EndpointIO.Mapped(wrapped, f, _, _) +: inputsTail =>
+      case EndpointIO.Mapped(wrapped, f, _) +: inputsTail =>
         handleMapped(wrapped, f, inputsTail, basicInputValues)
       case (auth: EndpointInput.Auth[_]) +: inputsTail =>
         apply(auth.input +: inputsTail, basicInputValues)

@@ -15,8 +15,8 @@ package object internal {
       case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
       case EndpointInput.Multiple(inputs)               => inputs.flatMap(_.traverseInputs(handle))
       case EndpointIO.Multiple(inputs)                  => inputs.flatMap(_.traverseInputs(handle))
-      case EndpointInput.Mapped(wrapped, _, _, _)       => wrapped.traverseInputs(handle)
-      case EndpointIO.Mapped(wrapped, _, _, _)          => wrapped.traverseInputs(handle)
+      case EndpointInput.Mapped(wrapped, _, _)          => wrapped.traverseInputs(handle)
+      case EndpointIO.Mapped(wrapped, _, _)             => wrapped.traverseInputs(handle)
       case a: EndpointInput.Auth[_]                     => a.input.traverseInputs(handle)
       case _                                            => Vector.empty
     }
@@ -81,10 +81,10 @@ package object internal {
       }
 
       output match {
-        case EndpointOutput.Multiple(outputs)        => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
-        case EndpointIO.Multiple(outputs)            => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
-        case EndpointOutput.Mapped(wrapped, _, _, _) => wrapped.asBasicOutputsOrMap
-        case EndpointIO.Mapped(wrapped, _, _, _)     => wrapped.asBasicOutputsOrMap
+        case EndpointOutput.Multiple(outputs)     => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointIO.Multiple(outputs)         => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointOutput.Mapped(wrapped, _, _) => wrapped.asBasicOutputsOrMap
+        case EndpointIO.Mapped(wrapped, _, _)     => wrapped.asBasicOutputsOrMap
         case s: EndpointOutput.OneOf[_] =>
           Right(
             ListMap(
@@ -105,8 +105,8 @@ package object internal {
       case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
       case EndpointOutput.Multiple(outputs)              => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointIO.Multiple(outputs)                  => outputs.flatMap(_.traverseOutputs(handle))
-      case EndpointOutput.Mapped(wrapped, _, _, _)       => wrapped.traverseOutputs(handle)
-      case EndpointIO.Mapped(wrapped, _, _, _)           => wrapped.traverseOutputs(handle)
+      case EndpointOutput.Mapped(wrapped, _, _)          => wrapped.traverseOutputs(handle)
+      case EndpointIO.Mapped(wrapped, _, _)              => wrapped.traverseOutputs(handle)
       case s: EndpointOutput.OneOf[_]                    => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
       case _                                             => Vector.empty
     }

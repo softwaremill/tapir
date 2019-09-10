@@ -5,7 +5,7 @@ import tapir.EndpointOutput.StatusMapping
 import tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import tapir.model.Method
 import tapir.server.ServerEndpoint
-import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
+import tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.reflect.ClassTag
 
@@ -55,29 +55,29 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def prependErrorOut[F, FE](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[F, E, FE]): Endpoint[I, FE, O, S] =
     this.copy[I, FE, O, S](errorOutput = i.and(errorOutput))
 
-  def mapIn[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): Endpoint[II, E, O, S] =
+  def mapIn[II](f: I => II)(g: II => I): Endpoint[II, E, O, S] =
     this.copy[II, E, O, S](input = input.map(f)(g))
 
   def mapInTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): Endpoint[CASE_CLASS, E, O, S] =
-    this.copy[CASE_CLASS, E, O, S](input = input.mapTo(c)(fc, paramsAsArgs))
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): Endpoint[CASE_CLASS, E, O, S] =
+    this.copy[CASE_CLASS, E, O, S](input = input.mapTo(c)(fc))
 
-  def mapErrorOut[EE](f: E => EE)(g: EE => E)(implicit paramsAsArgs: ParamsAsArgs[E]): Endpoint[I, EE, O, S] =
+  def mapErrorOut[EE](f: E => EE)(g: EE => E): Endpoint[I, EE, O, S] =
     this.copy[I, EE, O, S](errorOutput = errorOutput.map(f)(g))
 
   def mapErrorOutTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, E, CASE_CLASS], paramsAsArgs: ParamsAsArgs[E]): Endpoint[I, CASE_CLASS, O, S] =
-    this.copy[I, CASE_CLASS, O, S](errorOutput = errorOutput.mapTo(c)(fc, paramsAsArgs))
+  )(implicit fc: FnComponents[COMPANION, E, CASE_CLASS]): Endpoint[I, CASE_CLASS, O, S] =
+    this.copy[I, CASE_CLASS, O, S](errorOutput = errorOutput.mapTo(c)(fc))
 
-  def mapOut[OO](f: O => OO)(g: OO => O)(implicit paramsAsArgs: ParamsAsArgs[O]): Endpoint[I, E, OO, S] =
+  def mapOut[OO](f: O => OO)(g: OO => O): Endpoint[I, E, OO, S] =
     this.copy[I, E, OO, S](output = output.map(f)(g))
 
   def mapOutTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, O, CASE_CLASS], paramsAsArgs: ParamsAsArgs[O]): Endpoint[I, E, CASE_CLASS, S] =
-    this.copy[I, E, CASE_CLASS, S](output = output.mapTo(c)(fc, paramsAsArgs))
+  )(implicit fc: FnComponents[COMPANION, O, CASE_CLASS]): Endpoint[I, E, CASE_CLASS, S] =
+    this.copy[I, E, CASE_CLASS, S](output = output.mapTo(c)(fc))
 
   def name(n: String): Endpoint[I, E, O, S] = copy(info = info.name(n))
   def summary(s: String): Endpoint[I, E, O, S] = copy(info = info.summary(s))

@@ -21,9 +21,9 @@ private[openapi] class EndpointInputMapper[S](
 
   private def mapInputSingle(ei: EndpointInput.Single[_], s: S): (EndpointInput.Single[_], S) = ei match {
     case _ if inputMapping.isDefinedAt((ei, s)) => inputMapping((ei, s))
-    case EndpointInput.Mapped(wrapped, f, g, paramsAsArgs) =>
+    case EndpointInput.Mapped(wrapped, f, g) =>
       val (wrapped2, s2) = mapInput(wrapped, s)
-      (EndpointInput.Mapped(wrapped2.asInstanceOf[EndpointInput[Any]], f, g, paramsAsArgs), s2)
+      (EndpointInput.Mapped(wrapped2.asInstanceOf[EndpointInput[Any]], f, g), s2)
     case _ => (ei, s)
   }
 
@@ -40,9 +40,9 @@ private[openapi] class EndpointInputMapper[S](
 
   private def mapIOSingle(ei: EndpointIO.Single[_], s: S): (EndpointIO.Single[_], S) = ei match {
     case _ if ioMapping.isDefinedAt((ei, s)) => ioMapping((ei, s))
-    case EndpointIO.Mapped(wrapped, f, g, paramsAsArgs) =>
+    case EndpointIO.Mapped(wrapped, f, g) =>
       val (wrapped2, s2) = mapIO(wrapped, s)
-      (EndpointIO.Mapped(wrapped2.asInstanceOf[EndpointIO[Any]], f, g, paramsAsArgs), s2)
+      (EndpointIO.Mapped(wrapped2.asInstanceOf[EndpointIO[Any]], f, g), s2)
     case _ => (ei, s)
   }
 }

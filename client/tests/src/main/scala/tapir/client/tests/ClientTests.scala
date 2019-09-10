@@ -17,7 +17,6 @@ import org.http4s.util.CaseInsensitiveString
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import tapir._
 import tapir.tests._
-import tapir.typelevel.ParamsAsArgs
 import TestUtil._
 import org.http4s.multipart
 import tapir.model.{MultiQueryParams, StatusCodes, UsernamePassword}
@@ -195,12 +194,9 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   type Port = Int
 
-  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): IO[Either[E, O]]
+  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[Either[E, O]]
 
-  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]
-  ): Unit = {
-
+  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Either[Any, Any] = {

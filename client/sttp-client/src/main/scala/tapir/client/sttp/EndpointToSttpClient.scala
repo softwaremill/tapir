@@ -6,64 +6,58 @@ import java.nio.ByteBuffer
 import com.softwaremill.sttp.{Method => SttpMethod, _}
 import tapir.Codec.PlainCodec
 import tapir.internal._
-import tapir.typelevel.ParamsAsArgs
 import tapir._
 import tapir.model.{MultiQueryParams, Part, Method}
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   // don't look. The code is really, really ugly.
 
-  def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri)(
-      implicit paramsAsArgs: ParamsAsArgs[I]
-  ): paramsAsArgs.FN[Request[Either[E, O], S]] = {
-    paramsAsArgs.toFn(params => {
-      val baseReq = sttp
-        .response(ignore)
-        .mapResponse(Right(_): Either[Any, Any])
+  def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
+    val baseReq = sttp
+      .response(ignore)
+      .mapResponse(Right(_): Either[Any, Any])
 
-      val (uri, req) = setInputParams(e.input.asVectorOfSingleInputs, params, paramsAsArgs, 0, baseUri, baseReq)
+    val (uri, req) = setInputParams(e.input.asVectorOfSingleInputs, paramsTupleToParams(params), 0, baseUri, baseReq)
 
-      var req2 = req.copy[Id, Either[Any, Any], Any](method = SttpMethod(e.input.method.getOrElse(Method.GET).m), uri = uri)
+    var req2 = req.copy[Id, Either[Any, Any], Any](method = SttpMethod(e.input.method.getOrElse(Method.GET).m), uri = uri)
 
-      if (e.output.asVectorOfSingleOutputs.nonEmpty || e.errorOutput.asVectorOfSingleOutputs.nonEmpty) {
-        // by default, reading the body as specified by the output, and optionally adjusting to the error output
-        // if there's no body in the output, reading the body as specified by the error output
-        // otherwise, ignoring
-        val outputBodyType = e.output.bodyType
-        val errorOutputBodyType = e.errorOutput.bodyType
-        val baseResponseAs1 = outputBodyType
-          .orElse(errorOutputBodyType)
-          .map {
-            case StringValueType(charset) => asString(charset.name())
-            case ByteArrayValueType       => asByteArray
-            case ByteBufferValueType      => asByteArray.map(ByteBuffer.wrap)
-            case InputStreamValueType     => asByteArray.map(new ByteArrayInputStream(_))
-            case FileValueType =>
-              asFile(clientOptions.createFile(), overwrite = true) // TODO: use factory ResponseMetadata => File once available
-            case MultipartValueType(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
-          }
-          .getOrElse(ignore)
-
-        val baseResponseAs2 = if (bodyIsStream(e.output)) asStream[Any] else baseResponseAs1
-
-        val responseAs = baseResponseAs2.mapWithMetadata {
-          (body, meta) =>
-            val outputs = if (meta.isSuccess) e.output.asVectorOfSingleOutputs else e.errorOutput.asVectorOfSingleOutputs
-
-            // the body type of the success output takes priority; that's why it might not match
-            val adjustedBody =
-              if (meta.isSuccess || outputBodyType.isEmpty || outputBodyType == errorOutputBodyType) body
-              else errorOutputBodyType.map(adjustBody(body, _)).getOrElse(body)
-
-            val params = getOutputParams(outputs, adjustedBody, meta)
-            if (meta.isSuccess) Right(params) else Left(params)
+    if (e.output.asVectorOfSingleOutputs.nonEmpty || e.errorOutput.asVectorOfSingleOutputs.nonEmpty) {
+      // by default, reading the body as specified by the output, and optionally adjusting to the error output
+      // if there's no body in the output, reading the body as specified by the error output
+      // otherwise, ignoring
+      val outputBodyType = e.output.bodyType
+      val errorOutputBodyType = e.errorOutput.bodyType
+      val baseResponseAs1 = outputBodyType
+        .orElse(errorOutputBodyType)
+        .map {
+          case StringValueType(charset) => asString(charset.name())
+          case ByteArrayValueType       => asByteArray
+          case ByteBufferValueType      => asByteArray.map(ByteBuffer.wrap)
+          case InputStreamValueType     => asByteArray.map(new ByteArrayInputStream(_))
+          case FileValueType =>
+            asFile(clientOptions.createFile(), overwrite = true) // TODO: use factory ResponseMetadata => File once available
+          case MultipartValueType(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
         }
+        .getOrElse(ignore)
 
-        req2 = req2.response(responseAs.asInstanceOf[ResponseAs[Either[Any, Any], S]]).parseResponseIf(_ => true)
+      val baseResponseAs2 = if (bodyIsStream(e.output)) asStream[Any] else baseResponseAs1
+
+      val responseAs = baseResponseAs2.mapWithMetadata { (body, meta) =>
+        val outputs = if (meta.isSuccess) e.output.asVectorOfSingleOutputs else e.errorOutput.asVectorOfSingleOutputs
+
+        // the body type of the success output takes priority; that's why it might not match
+        val adjustedBody =
+          if (meta.isSuccess || outputBodyType.isEmpty || outputBodyType == errorOutputBodyType) body
+          else errorOutputBodyType.map(adjustBody(body, _)).getOrElse(body)
+
+        val params = getOutputParams(outputs, adjustedBody, meta)
+        if (meta.isSuccess) Right(params) else Left(params)
       }
 
-      req2.asInstanceOf[Request[Either[E, O], S]]
-    })
+      req2 = req2.response(responseAs.asInstanceOf[ResponseAs[Either[Any, Any], S]]).parseResponseIf(_ => true)
+    }
+
+    req2.asInstanceOf[Request[Either[E, O], S]]
   }
 
   private def getOutputParams(outputs: Vector[EndpointOutput.Single[_]], body: Any, meta: ResponseMetadata): Any = {
@@ -82,7 +76,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         case EndpointIO.Headers(_) =>
           Some(meta.headers)
 
-        case EndpointIO.Mapped(wrapped, f, _, _) =>
+        case EndpointIO.Mapped(wrapped, f, _) =>
           Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
 
         case EndpointOutput.StatusCode() =>
@@ -99,7 +93,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             .getOrElse(throw new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs"))
           Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta))
 
-        case EndpointOutput.Mapped(wrapped, f, _, _) =>
+        case EndpointOutput.Mapped(wrapped, f, _) =>
           Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
       }
 
@@ -108,91 +102,89 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private type PartialAnyRequest = PartialRequest[Either[Any, Any], Any]
 
+  private def paramsTupleToParams[I](params: I): Vector[Any] = ParamsToSeq(params).toVector
+
   private def setInputParams[I](
       inputs: Vector[EndpointInput.Single[_]],
-      params: I,
-      paramsAsArgs: ParamsAsArgs[I],
+      params: Vector[Any],
       paramIndex: Int,
       uri: Uri,
       req: PartialAnyRequest
   ): (Uri, PartialAnyRequest) = {
-
     def handleMapped[II, T](
         wrapped: EndpointInput[II],
         g: T => II,
-        wrappedParamsAsArgs: ParamsAsArgs[II],
         tail: Vector[EndpointInput.Single[_]]
     ): (Uri, PartialAnyRequest) = {
       val (uri2, req2) = setInputParams(
         wrapped.asVectorOfSingleInputs,
-        g(paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[T]),
-        wrappedParamsAsArgs,
+        paramsTupleToParams(g(params(paramIndex).asInstanceOf[T])),
         0,
         uri,
         req
       )
 
-      setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req2)
+      setInputParams(tail, params, paramIndex + 1, uri2, req2)
     }
 
     inputs match {
       case Vector() => (uri, req)
       case EndpointInput.FixedMethod(_) +: tail =>
-        setInputParams(tail, params, paramsAsArgs, paramIndex, uri, req)
+        setInputParams(tail, params, paramIndex, uri, req)
       case EndpointInput.FixedPath(p) +: tail =>
-        setInputParams(tail, params, paramsAsArgs, paramIndex, uri.copy(path = uri.path :+ p), req)
+        setInputParams(tail, params, paramIndex, uri.copy(path = uri.path :+ p), req)
       case EndpointInput.PathCapture(codec, _, _) +: tail =>
-        val v = codec.asInstanceOf[PlainCodec[Any]].encode(paramsAsArgs.paramAt(params, paramIndex): Any)
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path :+ v), req)
+        val v = codec.asInstanceOf[PlainCodec[Any]].encode(params(paramIndex): Any)
+        setInputParams(tail, params, paramIndex + 1, uri.copy(path = uri.path :+ v), req)
       case EndpointInput.PathsCapture(_) +: tail =>
-        val ps = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[Seq[String]]
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri.copy(path = uri.path ++ ps), req)
+        val ps = params(paramIndex).asInstanceOf[Seq[String]]
+        setInputParams(tail, params, paramIndex + 1, uri.copy(path = uri.path ++ ps), req)
       case EndpointInput.Query(name, codec, _) +: tail =>
         val uri2 = codec
-          .encode(paramsAsArgs.paramAt(params, paramIndex))
+          .encode(params(paramIndex))
           .foldLeft(uri) { case (u, v) => u.param(name, v) }
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
+        setInputParams(tail, params, paramIndex + 1, uri2, req)
       case EndpointInput.Cookie(name, codec, _) +: tail =>
         val req2 = codec
-          .encode(paramsAsArgs.paramAt(params, paramIndex))
+          .encode(params(paramIndex))
           .foldLeft(req) { case (r, v) => r.cookie(name, v) }
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+        setInputParams(tail, params, paramIndex + 1, uri, req2)
       case EndpointInput.QueryParams(_) +: tail =>
-        val mqp = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[MultiQueryParams]
+        val mqp = params(paramIndex).asInstanceOf[MultiQueryParams]
         val uri2 = uri.params(mqp.toSeq: _*)
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri2, req)
+        setInputParams(tail, params, paramIndex + 1, uri2, req)
       case EndpointIO.Body(codec, _) +: tail =>
-        val req2 = setBody(paramsAsArgs.paramAt(params, paramIndex), codec, req)
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+        val req2 = setBody(params(paramIndex), codec, req)
+        setInputParams(tail, params, paramIndex + 1, uri, req2)
       case EndpointIO.StreamBodyWrapper(_) +: tail =>
-        val req2 = req.streamBody(paramsAsArgs.paramAt(params, paramIndex))
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+        val req2 = req.streamBody(params(paramIndex))
+        setInputParams(tail, params, paramIndex + 1, uri, req2)
       case EndpointIO.Header(name, codec, _) +: tail =>
         val req2 = codec
-          .encode(paramsAsArgs.paramAt(params, paramIndex))
+          .encode(params(paramIndex))
           .foldLeft(req) { case (r, v) => r.header(name, v) }
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+        setInputParams(tail, params, paramIndex + 1, uri, req2)
       case EndpointIO.Headers(_) +: tail =>
-        val headers = paramsAsArgs.paramAt(params, paramIndex).asInstanceOf[Seq[(String, String)]]
+        val headers = params(paramIndex).asInstanceOf[Seq[(String, String)]]
         val req2 = headers.foldLeft(req) {
           case (r, (k, v)) =>
             val replaceExisting = HeaderNames.ContentType.equalsIgnoreCase(k) || HeaderNames.ContentLength.equalsIgnoreCase(k)
             r.header(k, v, replaceExisting)
         }
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req2)
+        setInputParams(tail, params, paramIndex + 1, uri, req2)
       case EndpointIO.FixedHeader(name, value, _) +: tail =>
         val req2 = Seq(value)
           .foldLeft(req) { case (r, v) => r.header(name, v) }
-        setInputParams(tail, params, paramsAsArgs, paramIndex, uri, req2)
+        setInputParams(tail, params, paramIndex, uri, req2)
       case EndpointInput.ExtractFromRequest(_) +: tail =>
         // ignoring
-        setInputParams(tail, params, paramsAsArgs, paramIndex + 1, uri, req)
+        setInputParams(tail, params, paramIndex + 1, uri, req)
       case (a: EndpointInput.Auth[_]) +: tail =>
-        setInputParams(a.input +: tail, params, paramsAsArgs, paramIndex, uri, req)
-      case EndpointInput.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
-        handleMapped(wrapped, g, wrappedParamsAsArgs, tail)
-      case EndpointIO.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
-        handleMapped(wrapped, g, wrappedParamsAsArgs, tail)
+        setInputParams(a.input +: tail, params, paramIndex, uri, req)
+      case EndpointInput.Mapped(wrapped, _, g) +: tail =>
+        handleMapped(wrapped, g, tail)
+      case EndpointIO.Mapped(wrapped, _, g) +: tail =>
+        handleMapped(wrapped, g, tail)
     }
   }
 
@@ -242,12 +234,12 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Boolean = {
     out match {
-      case _: EndpointIO.StreamBodyWrapper[_, _]   => true
-      case EndpointIO.Multiple(inputs)             => inputs.exists(i => bodyIsStream(i))
-      case EndpointOutput.Multiple(inputs)         => inputs.exists(i => bodyIsStream(i))
-      case EndpointIO.Mapped(wrapped, _, _, _)     => bodyIsStream(wrapped)
-      case EndpointOutput.Mapped(wrapped, _, _, _) => bodyIsStream(wrapped)
-      case _                                       => false
+      case _: EndpointIO.StreamBodyWrapper[_, _] => true
+      case EndpointIO.Multiple(inputs)           => inputs.exists(i => bodyIsStream(i))
+      case EndpointOutput.Multiple(inputs)       => inputs.exists(i => bodyIsStream(i))
+      case EndpointIO.Mapped(wrapped, _, _)      => bodyIsStream(wrapped)
+      case EndpointOutput.Mapped(wrapped, _, _)  => bodyIsStream(wrapped)
+      case _                                     => false
     }
   }
 

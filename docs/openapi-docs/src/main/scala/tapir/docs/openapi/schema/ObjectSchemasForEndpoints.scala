@@ -77,19 +77,19 @@ object ObjectSchemasForEndpoints {
       case EndpointInput.QueryParams(_)           => List.empty
       case _: EndpointInput.Auth[_]               => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
-      case EndpointInput.Mapped(wrapped, _, _, _) => forInput(wrapped)
+      case EndpointInput.Mapped(wrapped, _, _)    => forInput(wrapped)
       case EndpointInput.Multiple(inputs)         => inputs.toList.flatMap(forInput)
       case op: EndpointIO[_]                      => forIO(op)
     }
   }
   private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData[_]] = {
     output match {
-      case EndpointOutput.OneOf(mappings)          => mappings.flatMap(mapping => forOutput(mapping.output)).toList
-      case EndpointOutput.StatusCode()             => List.empty
-      case EndpointOutput.FixedStatusCode(_, _)    => List.empty
-      case EndpointOutput.Mapped(wrapped, _, _, _) => forOutput(wrapped)
-      case EndpointOutput.Multiple(outputs)        => outputs.toList.flatMap(forOutput)
-      case op: EndpointIO[_]                       => forIO(op)
+      case EndpointOutput.OneOf(mappings)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
+      case EndpointOutput.StatusCode()          => List.empty
+      case EndpointOutput.FixedStatusCode(_, _) => List.empty
+      case EndpointOutput.Mapped(wrapped, _, _) => forOutput(wrapped)
+      case EndpointOutput.Multiple(outputs)     => outputs.toList.flatMap(forOutput)
+      case op: EndpointIO[_]                    => forIO(op)
     }
   }
 
@@ -100,7 +100,7 @@ object ObjectSchemasForEndpoints {
       case EndpointIO.Headers(_)                                                => List.empty
       case EndpointIO.Body(codec, _)                                            => forCodec(codec)
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) => objectSchemas(TypeData(schema, Validator.pass))
-      case EndpointIO.Mapped(wrapped, _, _, _)                                  => forInput(wrapped) ++ forOutput(wrapped)
+      case EndpointIO.Mapped(wrapped, _, _)                                     => forInput(wrapped) ++ forOutput(wrapped)
       case EndpointIO.FixedHeader(_, _, _)                                      => List.empty
     }
   }

@@ -90,6 +90,5 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * [Other interpreters](other_interpreters.md)
 * [Documentation: openapi interpreter](openapi.md)
 * [Create your own tapir](mytapir.md)
-* [FAQ](faq.md)
 * [Design notes](design.md)
 * [Contributing](contributing.md)
