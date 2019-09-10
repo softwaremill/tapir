@@ -25,5 +25,5 @@ single type, a tuple, or a case class, depending on the endpoint description.
 After providing the input parameters, a description of the request to be made is returned. This can be further 
 customised and sent using any sttp backend.
 
-See  the [runnable example](https://github.com/softwaremill/tapir/blob/master/playground/src/main/scala/tapir/example/BooksExample.scala)
+See  the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/BooksExample.scala)
 for example usage.
