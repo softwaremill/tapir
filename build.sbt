@@ -245,7 +245,7 @@ lazy val examples: Project = (project in file("examples"))
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
       _ => "dev.zio" %% "zio" % "1.0.0-RC12-1",
       _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC2",
-      _ => "org.typelevel" %% "cats-effect" % "1.3.1",
+      _ => "org.typelevel" %% "cats-effect" % "2.0.0",
       "org.http4s" %% "http4s-dsl" % Versions.http4s(_)
     ),
     libraryDependencies ++= loggerDependencies,
@@ -262,7 +262,7 @@ lazy val playground: Project = (project in file("playground"))
       "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp,
       "dev.zio" %% "zio" % "1.0.0-RC12",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC2",
-      "org.typelevel" %% "cats-effect" % "1.3.1",
+      "org.typelevel" %% "cats-effect" % "2.0.0",
       "io.swagger" % "swagger-annotations" % "1.5.23"
     ),
     libraryDependencies ++= loggerDependencies,
