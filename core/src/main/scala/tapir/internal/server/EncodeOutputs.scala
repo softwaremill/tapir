@@ -37,7 +37,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
               vsHead
                 .asInstanceOf[Seq[(String, String)]]
                 .foldLeft(ov)(_.withHeader(_))
-            case EndpointIO.Mapped(wrapped, _, g, _) =>
+            case EndpointIO.Mapped(wrapped, _, g) =>
               apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
             case EndpointOutput.StatusCode() =>
               ov.withStatusCode(vsHead.asInstanceOf[StatusCode])
@@ -50,7 +50,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
                 .find(mapping => mapping.ct.runtimeClass.isInstance(vsHead))
                 .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $vsHead, in output: $output"))
               apply(mapping.output, vsHead, mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
-            case EndpointOutput.Mapped(wrapped, _, g, _) =>
+            case EndpointOutput.Mapped(wrapped, _, g) =>
               apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
           }
           run(outputsTail, ov2, vsTail)

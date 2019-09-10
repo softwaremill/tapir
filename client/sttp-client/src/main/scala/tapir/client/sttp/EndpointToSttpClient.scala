@@ -76,7 +76,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         case EndpointIO.Headers(_) =>
           Some(meta.headers)
 
-        case EndpointIO.Mapped(wrapped, f, _, _) =>
+        case EndpointIO.Mapped(wrapped, f, _) =>
           Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
 
         case EndpointOutput.StatusCode() =>
@@ -93,7 +93,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             .getOrElse(throw new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs"))
           Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta))
 
-        case EndpointOutput.Mapped(wrapped, f, _, _) =>
+        case EndpointOutput.Mapped(wrapped, f, _) =>
           Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
       }
 
@@ -181,9 +181,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         setInputParams(tail, params, paramIndex + 1, uri, req)
       case (a: EndpointInput.Auth[_]) +: tail =>
         setInputParams(a.input +: tail, params, paramIndex, uri, req)
-      case EndpointInput.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
+      case EndpointInput.Mapped(wrapped, _, g) +: tail =>
         handleMapped(wrapped, g, tail)
-      case EndpointIO.Mapped(wrapped, _, g, wrappedParamsAsArgs) +: tail =>
+      case EndpointIO.Mapped(wrapped, _, g) +: tail =>
         handleMapped(wrapped, g, tail)
     }
   }
@@ -234,12 +234,12 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Boolean = {
     out match {
-      case _: EndpointIO.StreamBodyWrapper[_, _]   => true
-      case EndpointIO.Multiple(inputs)             => inputs.exists(i => bodyIsStream(i))
-      case EndpointOutput.Multiple(inputs)         => inputs.exists(i => bodyIsStream(i))
-      case EndpointIO.Mapped(wrapped, _, _, _)     => bodyIsStream(wrapped)
-      case EndpointOutput.Mapped(wrapped, _, _, _) => bodyIsStream(wrapped)
-      case _                                       => false
+      case _: EndpointIO.StreamBodyWrapper[_, _] => true
+      case EndpointIO.Multiple(inputs)           => inputs.exists(i => bodyIsStream(i))
+      case EndpointOutput.Multiple(inputs)       => inputs.exists(i => bodyIsStream(i))
+      case EndpointIO.Mapped(wrapped, _, _)      => bodyIsStream(wrapped)
+      case EndpointOutput.Mapped(wrapped, _, _)  => bodyIsStream(wrapped)
+      case _                                     => false
     }
   }
 
