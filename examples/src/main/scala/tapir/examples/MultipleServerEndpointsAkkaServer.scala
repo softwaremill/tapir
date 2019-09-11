@@ -25,10 +25,10 @@ object MultipleServerEndpointsAkkaServer extends App {
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  try {
-    Await.result(Http().bindAndHandle(route, "localhost", 8080), 1.minute)
 
+  val bindAndCheck = Http().bindAndHandle(route, "localhost", 8080).map { _ =>
     // testing
     implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
 
@@ -39,8 +39,9 @@ object MultipleServerEndpointsAkkaServer extends App {
     val result2: String = sttp.get(uri"http://localhost:8080/endpoint2/apple").send().unsafeBody
     println("Got result (2): " + result2)
     assert(result2 == "ok2: apple")
-  } finally {
-    // cleanup
-    actorSystem.terminate()
   }
+
+  Await.result(bindAndCheck.transformWith { r =>
+    actorSystem.terminate().transform(_ => r)
+  }, 1.minute)
 }

@@ -35,10 +35,10 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  try {
-    Await.result(Http().bindAndHandle(amountRoute, "localhost", 8080), 1.minute)
 
+  val bindAndCheck = Http().bindAndHandle(amountRoute, "localhost", 8080).map { _ =>
     // testing
     implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
 
@@ -51,8 +51,9 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
     val result2: Either[String, String] = sttp.get(uri"http://localhost:8080/?amount=xyz").send().body
     println("Got result: " + result2)
     assert(result2 == Left("Incorrect format!!!"))
-  } finally {
-    // cleanup
-    actorSystem.terminate()
   }
+
+  Await.result(bindAndCheck.transformWith { r =>
+    actorSystem.terminate().transform(_ => r)
+  }, 1.minute)
 }

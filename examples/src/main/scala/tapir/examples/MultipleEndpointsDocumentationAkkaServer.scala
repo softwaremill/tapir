@@ -57,17 +57,23 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  try {
-    import akka.http.scaladsl.server.Directives._
-    Await.result(Http().bindAndHandle(booksListingRoute ~ addBookRoute ~ new SwaggerAkka(openApiYml).routes, "localhost", 8080), 1.minute)
 
+  val routes = {
+    import akka.http.scaladsl.server.Directives._
+    booksListingRoute ~ addBookRoute ~ new SwaggerAkka(openApiYml).routes
+  }
+
+  val bindAndCheck = Http().bindAndHandle(routes, "localhost", 8080).map { _ =>
     // testing
     println("Go to: http://localhost:8080/docs")
     println("Press any key to exit ...")
     scala.io.StdIn.readLine()
-  } finally {
-    // cleanup
-    actorSystem.terminate()
   }
+
+  // cleanup
+  Await.result(bindAndCheck.transformWith { r =>
+    actorSystem.terminate().transform(_ => r)
+  }, 1.minute)
 }

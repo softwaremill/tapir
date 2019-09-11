@@ -9,6 +9,7 @@ import tapir._
 import tapir.server.akkahttp._
 import tapir.json.circe._
 import io.circe.generic.auto._
+import tapir.examples.CustomErrorsOnDecodeFailureAkkaServer.{actorSystem, bindAndCheck}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -31,10 +32,10 @@ object ErrorOutputsAkkaServer extends App {
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
+  import actorSystem.dispatcher
   implicit val materializer: ActorMaterializer = ActorMaterializer()
-  try {
-    Await.result(Http().bindAndHandle(errorOrJsonRoute, "localhost", 8080), 1.minute)
 
+  val bindAndCheck = Http().bindAndHandle(errorOrJsonRoute, "localhost", 8080).map { _ =>
     // testing
     implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
 
@@ -45,8 +46,9 @@ object ErrorOutputsAkkaServer extends App {
     val result2: Either[String, String] = sttp.get(uri"http://localhost:8080?amount=21").send().body
     println("Got result (2): " + result2)
     assert(result2 == Right("""{"result":42}"""))
-  } finally {
-    // cleanup
-    actorSystem.terminate()
   }
+
+  Await.result(bindAndCheck.transformWith { r =>
+    actorSystem.terminate().transform(_ => r)
+  }, 1.minute)
 }

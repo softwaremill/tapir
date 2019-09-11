@@ -9,8 +9,8 @@ import tapir.server.akkahttp._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-
 import com.softwaremill.sttp._
+import tapir.examples.CustomErrorsOnDecodeFailureAkkaServer.{actorSystem, bindAndCheck}
 
 object HelloWorldAkkaServer extends App {
   // the endpoint: single fixed path input ("hello"), single query parameter
@@ -23,18 +23,19 @@ object HelloWorldAkkaServer extends App {
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  try {
-    Await.result(Http().bindAndHandle(helloWorldRoute, "localhost", 8080), 1.minute)
+  import actorSystem.dispatcher
 
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
+  val bindAndCheck = Http().bindAndHandle(helloWorldRoute, "localhost", 8080).map { _ =>
     // testing
     implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
     val result: String = sttp.get(uri"http://localhost:8080/hello?name=Frodo").send().unsafeBody
     println("Got result: " + result)
 
     assert(result == "Hello, Frodo!")
-  } finally {
-    // cleanup
-    actorSystem.terminate()
   }
+
+  Await.result(bindAndCheck.transformWith { r =>
+    actorSystem.terminate().transform(_ => r)
+  }, 1.minute)
 }
