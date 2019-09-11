@@ -54,6 +54,8 @@ Automatic codec derivation usually requires other implicits, such as:
 * codecs for individual form fields
 * schema of the custom type, through the `SchemaFor[T]` implicit
 
+### Schema derivation
+
 For case classes types, `SchemaFor[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
 that schemas are defined for all of the case class's fields. It is possible to configure the automatic derivation to use
 snake-case, kebab-case or a custom field naming policy, by providing an implicit `tapir.generic.Configuration` value:
@@ -68,6 +70,39 @@ For example, here we state that the schema for `MyCustomType` is a `String`:
 
 ```scala
 implicit val schemaForMyCustomType: SchemaFor[MyCustomType] = SchemaFor(Schema.SString)
+```
+
+If you have a case class which contains some non-standard types (other than strings, number, other case classes, 
+collections), you only need to provide the schema for the non-standard types. Using these schemas, the rest will
+be derived automatically.
+
+#### Sealed traits / coproducts
+
+Tapir supports schema generation for coproduct types (sealed trait hierarchies) of the box, but they need to be defined
+by hand (as implicit values). To properly reflect the schema in [OpenAPI](../openapi.html) documentation, a 
+discriminator object can be specified. 
+
+For example, given following coproduct:
+
+```scala
+sealed trait Entity{
+  def kind: String
+} 
+case class Person(firstName:String, lastName:String) extends Entity {
+  def kind: String = "person"
+}
+case class Organization(name: String) extends Entity {
+  def kind: String = "org"  
+}
+```
+
+The schema may look like this:
+
+```scala
+val sPerson = implicitly[SchemaFor[Person]]
+val sOrganization = implicitly[SchemaFor[Organization]]
+implicit val sEntity: SchemaFor[Entity] = 
+    SchemaFor.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```
 
 ## Next

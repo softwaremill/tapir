@@ -86,8 +86,16 @@ trait Tapir extends TapirDerivedInputs {
     */
   def oneOf[I](firstCase: StatusMapping[_ <: I], otherCases: StatusMapping[_ <: I]*): EndpointOutput.OneOf[I] =
     EndpointOutput.OneOf[I](firstCase +: otherCases)
+
+  /**
+    * Create a mapping to be used in [[oneOf]] output descriptions.
+    */
   def statusMapping[O: ClassTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
     StatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)
+
+  /**
+    * Create a fallback mapping to be used in [[oneOf]] output descriptions.
+    */
   def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(None, implicitly[ClassTag[O]], output)
 
   /**
