@@ -1,11 +1,13 @@
 package tapir.server.akkahttp
 
+import com.github.ghik.silencer.silent
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FunSuite, Matchers}
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
+@silent("never used")
 class RichToFutureOfEitherFunctionTest extends FunSuite with Matchers with ScalaFutures {
 
   case class Error(r: String)

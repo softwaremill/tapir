@@ -1,5 +1,6 @@
 package tapir.docs.openapi
 
+import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import tapir._
@@ -136,6 +137,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_status_codes.yml")
 
     // work-around for #10: unsupported sealed trait families
+    @silent("never used") // it is used
     implicit val schemaForErrorInfo: SchemaFor[ErrorInfo] = new SchemaFor[ErrorInfo] {
       override def schema: Schema = Schema.SProduct(Schema.SObjectInfo("ErrorInfo"), Nil, Nil)
     }
@@ -208,6 +210,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml when using nested coproduct types with discriminator") {
     val sPerson = implicitly[SchemaFor[Person]]
     val sOrganization = implicitly[SchemaFor[Organization]]
+    @silent("never used") // it is used
     implicit val sEntity: SchemaFor[Entity] = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator_nested.yml")
