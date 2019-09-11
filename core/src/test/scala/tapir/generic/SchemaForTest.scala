@@ -2,6 +2,7 @@ package tapir.generic
 
 import java.math.{BigDecimal => JBigDecimal}
 
+import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
 import tapir.{Schema, SchemaFor}
@@ -13,6 +14,7 @@ import scala.concurrent.{Await, Future}
 case class StringValueClass(value: String) extends AnyVal
 case class IntegerValueClass(value: Int) extends AnyVal
 
+@silent("never used")
 class SchemaForTest extends FlatSpec with Matchers {
 
   "SchemaFor" should "find schema for simple types" in {
@@ -247,6 +249,7 @@ case class C(h1: List[String], h2: Option[Int])
 case class D(someFieldName: String)
 case class F(f1: List[F], f2: Int)
 
+@silent("never used")
 class Custom(c: String)
 case class G(f1: Int, f2: Custom)
 

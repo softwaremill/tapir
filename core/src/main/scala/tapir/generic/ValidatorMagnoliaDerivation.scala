@@ -1,5 +1,6 @@
 package tapir.generic
 
+import com.github.ghik.silencer.silent
 import magnolia.{CaseClass, Magnolia, SealedTrait}
 import tapir.Validator
 
@@ -16,6 +17,7 @@ trait ValidatorMagnoliaDerivation {
     }.toMap)
   }
 
+  @silent("never used")
   def dispatch[T](ctx: SealedTrait[Validator, T]): Validator[T] = Validator.pass
 
   implicit def validatorForCaseClass[T]: Validator[T] = macro Magnolia.gen[T]

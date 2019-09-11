@@ -18,7 +18,11 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalafmtOnCompile := true,
   crossScalaVersions := Seq(scala2_12, scala2_13),
   is2_12 := scalaVersion.value.startsWith("2.12."),
-  libraryDependencies += compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.3")
+  libraryDependencies ++= Seq(
+    compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.3"),
+    compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
+    "com.github.ghik" % "silencer-lib" % Versions.silencer % Provided cross CrossVersion.full
+  )
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =

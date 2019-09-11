@@ -2,11 +2,13 @@ package tapir.generic
 
 import java.math.{BigDecimal => JBigDecimal}
 
+import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema.{SInteger, SObjectInfo, SProduct, SString}
 import tapir.util.CompileUtil
 import tapir.{Codec, DecodeResult, MediaType, Validator}
 
+@silent("never used")
 class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given

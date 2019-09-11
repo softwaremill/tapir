@@ -2,12 +2,15 @@ package tapir.generic
 
 import java.io.File
 
+import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
 import tapir.model.Part
 import tapir.util.CompileUtil
 import tapir.{Codec, DecodeResult, MediaType, RawPart, Validator}
 
+@silent("discarded")
+@silent("never used")
 class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given

@@ -1,7 +1,9 @@
 package tapir
 
+import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
 
+@silent("never used")
 class ValidatorTest extends FlatSpec with Matchers {
   it should "validate for min value" in {
     val min = 1

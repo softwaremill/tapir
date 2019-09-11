@@ -1,5 +1,6 @@
 package tapir.generic
 
+import com.github.ghik.silencer.silent
 import magnolia._
 import tapir.Schema._
 import tapir.generic.SchemaForMagnoliaDerivation.deriveInProgress
@@ -11,6 +12,7 @@ import scala.language.experimental.macros
 trait SchemaForMagnoliaDerivation {
   type Typeclass[T] = SchemaFor[T]
 
+  @silent("discarded")
   def combine[T](ctx: CaseClass[SchemaFor, T])(implicit genericDerivationConfig: Configuration): SchemaFor[T] = {
     withProgressCache { cache =>
       val cacheKey = ctx.typeName.full

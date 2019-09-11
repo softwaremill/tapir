@@ -23,11 +23,11 @@ object OneOfMacro {
           resolveFunctionName(t)
 
         // an application of a function and extracting the name
-        case t: Apply if t.fun.isInstanceOf[Select] =>
+        case t: Apply if t.fun.isInstanceOf[Select @unchecked] =>
           t.fun.asInstanceOf[Select].name.decodedName.toString
 
         // curried lambda
-        case t: Block if t.expr.isInstanceOf[Function] =>
+        case t: Block if t.expr.isInstanceOf[Function @unchecked] =>
           val func = t.expr.asInstanceOf[Function]
 
           resolveFunctionName(func)
