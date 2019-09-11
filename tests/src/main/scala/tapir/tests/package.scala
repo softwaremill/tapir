@@ -16,6 +16,9 @@ import scala.io.Source
 package object tests {
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
 
+  val in_query_out_infallible_string: Endpoint[String, Nothing, String, Nothing] =
+    infallibleEndpoint.in(query[String]("fruit")).out(stringBody).name("infallible")
+
   val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String, Nothing] =
     endpoint.in(query[String]("fruit")).in(query[Option[Int]]("amount")).out(stringBody)
 

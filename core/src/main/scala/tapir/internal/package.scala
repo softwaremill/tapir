@@ -55,6 +55,7 @@ package object internal {
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
     def asVectorOfSingleOutputs: Vector[EndpointOutput.Single[_]] = output match {
       case s: EndpointOutput.Single[_]   => Vector(s)
+      case _: EndpointOutput.Void        => Vector()
       case m: EndpointOutput.Multiple[_] => m.outputs
       case m: EndpointIO.Multiple[_]     => m.ios
     }
@@ -85,6 +86,7 @@ package object internal {
         case EndpointIO.Multiple(outputs)         => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
         case EndpointOutput.Mapped(wrapped, _, _) => wrapped.asBasicOutputsOrMap
         case EndpointIO.Mapped(wrapped, _, _)     => wrapped.asBasicOutputsOrMap
+        case _: EndpointOutput.Void               => Left(Vector.empty)
         case s: EndpointOutput.OneOf[_] =>
           Right(
             ListMap(

@@ -148,6 +148,7 @@ object EndpointOutput {
     def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointOutput[IJ] =
       other match {
         case s: Single[_]             => Multiple(Vector(this, s))
+        case Void()                   => this.asInstanceOf[EndpointOutput[IJ]]
         case Multiple(outputs)        => Multiple(this +: outputs)
         case EndpointIO.Multiple(ios) => Multiple(this +: ios)
       }
@@ -181,10 +182,16 @@ object EndpointOutput {
 
   //
 
+  case class Void() extends EndpointOutput[Nothing] {
+    override def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[Nothing, J, IJ]): EndpointOutput[IJ] =
+      other.asInstanceOf[EndpointOutput[IJ]]
+    def show: String = "void"
+  }
   case class Multiple[I](outputs: Vector[Single[_]]) extends EndpointOutput[I] {
     override def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointOutput.Multiple[IJ] =
       other match {
         case s: Single[_]           => Multiple(outputs :+ s)
+        case Void()                 => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
         case Multiple(m)            => Multiple(outputs ++ m)
         case EndpointIO.Multiple(m) => Multiple(outputs ++ m)
       }
@@ -262,6 +269,7 @@ object EndpointIO {
     override def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointOutput.Multiple[IJ] =
       other match {
         case s: EndpointOutput.Single[_] => EndpointOutput.Multiple((ios: Vector[EndpointOutput.Single[_]]) :+ s)
+        case EndpointOutput.Void()       => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
         case EndpointOutput.Multiple(m)  => EndpointOutput.Multiple((ios: Vector[EndpointOutput.Single[_]]) ++ m)
         case EndpointIO.Multiple(m)      => EndpointOutput.Multiple((ios: Vector[EndpointOutput.Single[_]]) ++ m)
       }

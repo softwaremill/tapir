@@ -17,7 +17,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   scalaVersion := scala2_12,
   scalafmtOnCompile := true,
   crossScalaVersions := Seq(scala2_12, scala2_13),
-  is2_12 := scalaVersion.value.startsWith("2.12.")
+  is2_12 := scalaVersion.value.startsWith("2.12."),
+  libraryDependencies += compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.3")
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =

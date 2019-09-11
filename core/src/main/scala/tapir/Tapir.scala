@@ -97,13 +97,15 @@ trait Tapir extends TapirDerivedInputs {
 
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 
-  val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
-    Endpoint[Unit, Unit, Unit, Nothing](
+  val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing] =
+    Endpoint[Unit, Nothing, Unit, Nothing](
       EndpointInput.Multiple(Vector.empty),
-      EndpointOutput.Multiple(Vector.empty),
+      EndpointOutput.Void(),
       EndpointOutput.Multiple(Vector.empty),
       EndpointInfo(None, None, None, Vector.empty)
     )
+
+  val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = infallibleEndpoint.copy(errorOutput = EndpointOutput.Multiple(Vector.empty))
 }
 
 trait TapirDerivedInputs { this: Tapir =>

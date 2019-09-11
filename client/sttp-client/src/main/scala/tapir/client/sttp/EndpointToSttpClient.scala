@@ -43,7 +43,12 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       val baseResponseAs2 = if (bodyIsStream(e.output)) asStream[Any] else baseResponseAs1
 
       val responseAs = baseResponseAs2.mapWithMetadata { (body, meta) =>
-        val outputs = if (meta.isSuccess) e.output.asVectorOfSingleOutputs else e.errorOutput.asVectorOfSingleOutputs
+        val output = if (meta.isSuccess) e.output else e.errorOutput
+        if (output == EndpointOutput.Void()) {
+          throw new IllegalStateException(s"Got response: $meta, cannot map to a void output of: $e.")
+        }
+
+        val outputs = output.asVectorOfSingleOutputs
 
         // the body type of the success output takes priority; that's why it might not match
         val adjustedBody =

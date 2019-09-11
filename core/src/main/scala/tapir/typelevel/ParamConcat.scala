@@ -9,10 +9,12 @@ trait ParamConcat[T, U] {
 
 object ParamConcat extends LowPriorityTupleConcat3 {
   implicit def concatUnitLeft[U]: Aux[Unit, U, U] = null
+  implicit def concatNothingLeft[U]: Aux[Nothing, U, U] = null // for void outputs
 }
 
 trait LowPriorityTupleConcat3 extends LowPriorityTupleConcat2 {
   implicit def concatUnitRight[U]: Aux[U, Unit, U] = null
+  implicit def concatNothingRight[U]: Aux[U, Nothing, U] = null // for void outputs
 }
 
 trait LowPriorityTupleConcat2 extends LowPriorityTupleConcat1 {
