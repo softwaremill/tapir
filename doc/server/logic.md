@@ -100,4 +100,4 @@ f2: (U, A1, A2, ...) => Future[Either[E, O]]
 ## Status codes
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
-this can be customised by specifying how an [output maps to the status code](../endpoint/ios.html#status-codes).
+this can be customised by specifying how an [output maps to the status code](../endpoint/statuscodes.html).

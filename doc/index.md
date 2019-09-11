@@ -74,6 +74,7 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * [Goals of the project](goals.md)
 * [Endpoints: basics](endpoint/basics.md)
 * [Endpoints: inputs/outputs](endpoint/ios.md)
+* [Endpoints: status codes](endpoint/statuscodes.md)
 * [Endpoints: codecs](endpoint/codecs.md)
 * [Endpoints: custom types](endpoint/customtypes.md)
 * [Endpoints: validation](endpoint/validation.md)
