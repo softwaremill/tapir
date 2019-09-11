@@ -176,11 +176,14 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
 }
 
 /**
-  * A codec which can encode to optional raw values / decode from optional raw values.
+  * A [[Codec]] which can encode to optional raw values / decode from optional *raw* values.
   * An optional raw value specifies if the raw value should be included in the output, or not.
   * Depending on the codec, decoding from an optional value might yield [[DecodeResult.Missing]].
   *
-  * Should be used for inputs/outputs which allow optional values.
+  * Should be used for inputs/outputs which can be mapped to an optional value.
+  *
+  * The main difference comparing to [[Codec]] is the signature of the `encode` and `rawDecode` methods. For each
+  * [[Codec]], a [[CodecForOptional]] can be derived.
   */
 @implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
 Did you define a codec for: ${T}?
@@ -236,11 +239,14 @@ object CodecForOptional {
 }
 
 /**
-  * A codec which can encode to multiple (0..n) raw values / decode from multiple raw values.
+  * A [[Codec]] which can encode to multiple (0..n) raw values / decode from multiple raw values.
   * An multiple raw value specifies that the raw values should be included in the output multiple times.
   * Depending on the codec, decoding from a multiple value might yield [[DecodeResult.Missing]] or [[DecodeResult.Multiple]].
   *
-  * Should be used for inputs/outputs which allow multiple values.
+  * Should be used for inputs/outputs which can be mapped to a multiple values.
+  *
+  * The main difference comparing to [[Codec]] is the signature of the `encode` and `rawDecode` methods. For each
+  * [[Codec]], a [[CodecForMany]] can be derived.
   */
 @implicitNotFound(msg = """Cannot find a codec for type: ${T} and media type: ${M}.
 Did you specify the target type of the input/output?
@@ -331,6 +337,11 @@ object CodecForMany {
     }
 }
 
+/**
+  * Contains meta-data for a [[Codec]], between type `T` and a raw value `R`.
+  *
+  * The meta-data consists of the schema for type `T`, validator, optionality and reified type of the raw value.
+  */
 case class CodecMeta[T, M <: MediaType, R] private (
     isOptional: Boolean,
     schema: Schema,
