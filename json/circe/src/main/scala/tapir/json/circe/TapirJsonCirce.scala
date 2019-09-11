@@ -11,7 +11,7 @@ import tapir._
 
 trait TapirJsonCirce {
   implicit def encoderDecoderCodec[T: Encoder: Decoder: SchemaFor: Validator]: JsonCodec[T] = new JsonCodec[T] {
-    override def encode(t: T): String = jsonPrinter.pretty(t.asJson)
+    override def encode(t: T): String = jsonPrinter.print(t.asJson)
     override def rawDecode(s: String): DecodeResult[T] = io.circe.parser.decode[T](s) match {
       case Left(error) => Error(s, error)
       case Right(v)    => Value(v)
