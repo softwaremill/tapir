@@ -10,7 +10,6 @@ import tapir.server.akkahttp._
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import com.softwaremill.sttp._
-import tapir.examples.CustomErrorsOnDecodeFailureAkkaServer.{actorSystem, bindAndCheck}
 
 object HelloWorldAkkaServer extends App {
   // the endpoint: single fixed path input ("hello"), single query parameter

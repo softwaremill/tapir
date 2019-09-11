@@ -18,13 +18,15 @@ object HelloWorldHttp4sServer extends App {
   val helloWorld: Endpoint[String, Unit, String, Nothing] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
+  // mandatory implicits
+  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
+  implicit val timer: Timer[IO] = IO.timer(ec)
+
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
   val helloWorldRoutes: HttpRoutes[IO] = helloWorld.toRoutes(name => IO(s"Hello, $name!".asRight[Unit]))
 
   // starting the server
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit val timer: Timer[IO] = IO.timer(ec)
 
   BlazeServerBuilder[IO]
     .bindHttp(8080, "localhost")

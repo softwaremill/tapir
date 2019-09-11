@@ -9,7 +9,6 @@ import tapir._
 import tapir.server.akkahttp._
 import tapir.json.circe._
 import io.circe.generic.auto._
-import tapir.examples.CustomErrorsOnDecodeFailureAkkaServer.{actorSystem, bindAndCheck}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
