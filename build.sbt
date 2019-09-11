@@ -88,10 +88,10 @@ lazy val circeJson: Project = (project in file("json/circe"))
   .settings(commonSettings)
   .settings(
     name := "tapir-json-circe",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "io.circe" %% "circe-core" % Versions.circe(_),
-      "io.circe" %% "circe-generic" % Versions.circe(_),
-      "io.circe" %% "circe-parser" % Versions.circe(_)
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %% "circe-parser" % Versions.circe
     )
   )
   .dependsOn(core)
@@ -129,10 +129,10 @@ lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
 lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
   .settings(commonSettings)
   .settings(
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "io.circe" %% "circe-core" % Versions.circe(_),
-      "io.circe" %% "circe-parser" % Versions.circe(_),
-      "io.circe" %% "circe-generic" % Versions.circe(_)
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-parser" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe
     ),
     name := "tapir-openapi-circe"
   )
@@ -141,9 +141,7 @@ lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
 lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yaml"))
   .settings(commonSettings)
   .settings(
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "io.circe" %% "circe-yaml" % Versions.circeYaml(_)
-    ),
+    libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
     name := "tapir-openapi-circe-yaml"
   )
   .dependsOn(openapiCirce)
@@ -261,7 +259,7 @@ lazy val playground: Project = (project in file("playground"))
     name := "tapir-playground",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp,
-      "dev.zio" %% "zio" % "1.0.0-RC12",
+      "dev.zio" %% "zio" % "1.0.0-RC12-1",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC3",
       "org.typelevel" %% "cats-effect" % "2.0.0",
       "io.swagger" % "swagger-annotations" % "1.5.23"
