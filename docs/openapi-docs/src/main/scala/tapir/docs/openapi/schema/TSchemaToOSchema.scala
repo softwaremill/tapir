@@ -80,10 +80,10 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
         } else {
           oschema.copy(maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
         }
-      case Validator.Pattern(value) => oschema.copy(pattern = Some(value))
-      case Validator.MinSize(value) => oschema.copy(minSize = Some(value))
-      case Validator.MaxSize(value) => oschema.copy(maxSize = Some(value))
-      case Validator.Custom(_, _)   => oschema
+      case Validator.Pattern(value)  => oschema.copy(pattern = Some(value))
+      case Validator.MinItems(value) => oschema.copy(minItems = Some(value))
+      case Validator.MaxItems(value) => oschema.copy(maxItems = Some(value))
+      case Validator.Custom(_, _)    => oschema
       case Validator.Enum(v) =>
         val values = v.flatMap(x => encode.asInstanceOf[Any => Option[Any]].apply(x)).map(_.toString)
         oschema.copy(enum = if (values.nonEmpty) Some(values) else None)

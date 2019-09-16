@@ -42,14 +42,14 @@ class ValidatorTest extends FlatSpec with Matchers {
   it should "validate for maxSize of collection" in {
     val expected = 1
     val actual = List(1, 2, 3)
-    val v = Validator.maxSize[Int, List](expected)
+    val v = Validator.maxItems[Int, List](expected)
     v.validate(actual) shouldBe List(ValidationError(v, actual))
     v.validate(List(1)) shouldBe empty
   }
 
-  it should "validate for minSize of collection" in {
+  it should "validate for minItems of collection" in {
     val expected = 3
-    val v = Validator.minSize[Int, List](expected)
+    val v = Validator.minItems[Int, List](expected)
     v.validate(List(1, 2)) shouldBe List(ValidationError(v, List(1, 2)))
     v.validate(List(1, 2, 3)) shouldBe empty
   }

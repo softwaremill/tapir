@@ -239,7 +239,7 @@ package object tests {
       implicit def schemaForValidatedList[T: SchemaFor]: SchemaFor[ValidatedList[T]] =
         SchemaFor(Schema.SArray(implicitly[SchemaFor[T]].schema))
       implicit def validatorForValidatedList[T: Validator]: Validator[ValidatedList[T]] =
-        implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minSize(1).contramap(identity))
+        implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minItems(1).contramap(identity))
       endpoint.in(jsonBody[BasketOfFruits])
     }
 
