@@ -56,6 +56,8 @@ object ServerDefaults {
     case Validator.Min(value, exclusive) => s"expected ${ve.invalidValue} to be greater than ${if (exclusive) "" else "or equal to "}$value"
     case Validator.Max(value, exclusive) => s"expected ${ve.invalidValue} to be less than ${if (exclusive) "" else "or equal to "}$value"
     case Validator.Pattern(value)        => s"expected '${ve.invalidValue}' to match '$value'"
+    case Validator.MinLength(value)      => s"expected size of ${ve.invalidValue} to be greater than or equal to $value "
+    case Validator.MaxLength(value)      => s"expected size of ${ve.invalidValue} to be less than or equal to $value "
     case Validator.MinSize(value)        => s"expected collection (${ve.invalidValue}) to be greater than or equal to $value"
     case Validator.MaxSize(value)        => s"expected collection (${ve.invalidValue}) to be less than or equal to $value"
     case Validator.Custom(_, message)    => s"expected '${ve.invalidValue}' to pass custom validation: $message"

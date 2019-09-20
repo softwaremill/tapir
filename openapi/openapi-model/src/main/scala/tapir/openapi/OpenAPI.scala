@@ -208,6 +208,8 @@ case class Schema(
     discriminator: Option[Discriminator] = None,
     additionalProperties: Option[ReferenceOr[Schema]] = None,
     pattern: Option[String] = None,
+    minLength: Option[Int] = None,
+    maxLength: Option[Int] = None,
     minimum: Option[BigDecimal] = None,
     exclusiveMinimum: Option[BigDecimal] = None,
     maximum: Option[BigDecimal] = None,
