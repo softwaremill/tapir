@@ -213,9 +213,12 @@ package object tests {
 
     val in_json_wrapper: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
-      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
-      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
-      implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+      implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
+      implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
+      implicit val intValidator: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+      implicit val stringValidator: Validator[StringWrapper] = Validator.minLength(4).contramap(_.v)
       endpoint.in(jsonBody[ValidFruitAmount])
     }
 
@@ -231,6 +234,10 @@ package object tests {
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+
+      implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
+      implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
+      implicit val stringValidator: Validator[StringWrapper] = Validator.minLength(4).contramap(_.v)
 
       import tapir.tests.BasketOfFruits._
       implicit def validatedListEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)

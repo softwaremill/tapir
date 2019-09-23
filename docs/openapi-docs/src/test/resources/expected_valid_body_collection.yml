@@ -35,6 +35,7 @@ components:
       properties:
         fruit:
           type: string
+          minLength: 4
         amount:
           type: integer
           minimum: 1

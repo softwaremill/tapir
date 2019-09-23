@@ -61,6 +61,20 @@ class ValidatorTest extends FlatSpec with Matchers {
     Validator.pattern(expected).validate("banana") shouldBe empty
   }
 
+  it should "validate for minLength of string" in {
+    val expected = 3
+    val v = Validator.minLength[String](expected)
+    v.validate("ab") shouldBe List(ValidationError(v, "ab"))
+    v.validate("abc") shouldBe empty
+  }
+
+  it should "validate for maxLength of string" in {
+    val expected = 1
+    val v = Validator.maxLength[String](expected)
+    v.validate("ab") shouldBe List(ValidationError(v, "ab"))
+    v.validate("a") shouldBe empty
+  }
+
   it should "validate with any of validators" in {
     val validator = Validator.any(Validator.max(5), Validator.max(10))
     validator.validate(4) shouldBe empty
