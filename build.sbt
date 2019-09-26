@@ -187,8 +187,9 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     publishArtifact := false,
-    libraryDependencies ++=
-      Seq("com.softwaremill.sttp" %% "async-http-client-backend-cats" % Versions.sttp)
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "com.softwaremill.sttp" %% "async-http-client-backend-cats" % Versions.sttp(_)
+    )
   )
   .dependsOn(tests)
 
@@ -232,9 +233,9 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings)
   .settings(
     name := "tapir-sttp-client",
-    libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "core" % Versions.sttp,
-      "com.softwaremill.sttp" %% "async-http-client-backend-fs2" % Versions.sttp % "test"
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "com.softwaremill.sttp" %% "core" % Versions.sttp(_),
+      "com.softwaremill.sttp" %% "async-http-client-backend-fs2" % Versions.sttp(_) % "test"
     )
   )
   .dependsOn(core, clientTests % "test")
@@ -246,8 +247,8 @@ lazy val examples: Project = (project in file("examples"))
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      _ => "dev.zio" %% "zio" % "1.0.0-RC12-1",
-      _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC3",
+      _ => "dev.zio" %% "zio" % "1.0.0-RC13",
+      _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC4",
       _ => "org.typelevel" %% "cats-effect" % "2.0.0",
       "org.http4s" %% "http4s-dsl" % Versions.http4s(_)
     ),
@@ -262,11 +263,13 @@ lazy val playground: Project = (project in file("playground"))
   .settings(
     name := "tapir-playground",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp,
-      "dev.zio" %% "zio" % "1.0.0-RC12-1",
-      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC3",
+      "dev.zio" %% "zio" % "1.0.0-RC13",
+      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC4",
       "org.typelevel" %% "cats-effect" % "2.0.0",
       "io.swagger" % "swagger-annotations" % "1.5.23"
+    ),
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp(_),
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false

@@ -29,6 +29,8 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   def min[T: Numeric](value: T, exclusive: Boolean = false): Validator.Primitive[T] = Min(value, exclusive)
   def max[T: Numeric](value: T, exclusive: Boolean = false): Validator.Primitive[T] = Max(value, exclusive)
   def pattern[T <: String](value: String): Validator.Primitive[T] = Pattern(value)
+  def minLength[T <: String](value: Int): Validator.Primitive[T] = MinLength(value)
+  def maxLength[T <: String](value: Int): Validator.Primitive[T] = MaxLength(value)
   def minSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
   def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
   def custom[T](doValidate: T => Boolean, message: String): Validator.Primitive[T] = Custom(doValidate, message)
@@ -74,6 +76,26 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       }
     }
     override def show: Option[String] = Some(s"~$value")
+  }
+  case class MinLength[T <: String](value: Int) extends Primitive[T] {
+    override def validate(t: T): List[ValidationError[_]] = {
+      if (t.size >= value) {
+        List.empty
+      } else {
+        List(ValidationError(this, t))
+      }
+    }
+    override def show: Option[String] = Some(s"length>=$value")
+  }
+  case class MaxLength[T <: String](value: Int) extends Primitive[T] {
+    override def validate(t: T): List[ValidationError[_]] = {
+      if (t.size <= value) {
+        List.empty
+      } else {
+        List(ValidationError(this, t))
+      }
+    }
+    override def show: Option[String] = Some(s"length<=$value")
   }
   case class MinSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
     override def validate(t: C[T]): List[ValidationError[_]] = {
