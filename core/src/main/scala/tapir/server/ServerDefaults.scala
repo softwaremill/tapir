@@ -53,15 +53,15 @@ object ServerDefaults {
     decodeFailureHandlerUsingResponse(failureResponse, badRequestOnPathFailureIfPathShapeMatches = false, validationErrorToMessage)
 
   def validationErrorToMessage(ve: ValidationError[_]): String = ve.validator match {
-    case Validator.Min(value, exclusive) => s"expected ${ve.invalidValue} to be greater than ${if (exclusive) "" else "or equal to "}$value"
-    case Validator.Max(value, exclusive) => s"expected ${ve.invalidValue} to be less than ${if (exclusive) "" else "or equal to "}$value"
-    case Validator.Pattern(value)        => s"expected '${ve.invalidValue}' to match '$value'"
-    case Validator.MinLength(value)      => s"expected length of ${ve.invalidValue} to be greater than or equal to $value "
-    case Validator.MaxLength(value)      => s"expected length of ${ve.invalidValue} to be less than or equal to $value "
-    case Validator.MinSize(value)        => s"expected size of collection (${ve.invalidValue}) to be greater than or equal to $value"
-    case Validator.MaxSize(value)        => s"expected size of collection (${ve.invalidValue}) to be less than or equal to $value"
-    case Validator.Custom(_, message)    => s"expected '${ve.invalidValue}' to pass custom validation: $message"
-    case Validator.Enum(possibleValues)  => s"expected '${ve.invalidValue}' to be within $possibleValues"
+    case Validator.Min(value, exclusive)   => s"expected ${ve.invalidValue} to be greater than ${if (exclusive) "" else "or equal to "}$value"
+    case Validator.Max(value, exclusive)   => s"expected ${ve.invalidValue} to be less than ${if (exclusive) "" else "or equal to "}$value"
+    case Validator.Pattern(value)          => s"expected '${ve.invalidValue}' to match '$value'"
+    case Validator.MinLength(value)        => s"expected length of ${ve.invalidValue} to be greater than or equal to $value "
+    case Validator.MaxLength(value)        => s"expected length of ${ve.invalidValue} to be less than or equal to $value "
+    case Validator.MinSize(value)          => s"expected size of collection (${ve.invalidValue}) to be greater than or equal to $value"
+    case Validator.MaxSize(value)          => s"expected size of collection (${ve.invalidValue}) to be less than or equal to $value"
+    case Validator.Custom(_, message)      => s"expected '${ve.invalidValue}' to pass custom validation: $message"
+    case Validator.Enum(possibleValues, _) => s"expected '${ve.invalidValue}' to be within $possibleValues"
   }
 
   val failureOutput: EndpointOutput[(StatusCode, String)] = statusCode.and(stringBody)

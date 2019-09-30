@@ -271,17 +271,19 @@ package object tests {
       endpoint.in(query[Color]("color"))
     }
 
-
     val out_enum_object: Endpoint[Unit, Unit, ColorValue, Nothing] = {
       implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
       implicit def plainCodecForColor: PlainCodec[Color] = {
         Codec.stringPlainCodecUtf8
           .map[Color]({
-          case "red"  => Red
-          case "blue" => Blue
-        })(_.toString.toLowerCase)
+            case "red"  => Red
+            case "blue" => Blue
+          })(_.toString.toLowerCase)
       }
-      implicit def validatorForColor: Validator[Color] = Validator.enum
+      implicit def validatorForColor: Validator[Color] =
+        Validator.enum(List(Blue, Red), { c =>
+          Some(plainCodecForColor.encode(c))
+        })
       endpoint.out(jsonBody[ColorValue])
     }
 

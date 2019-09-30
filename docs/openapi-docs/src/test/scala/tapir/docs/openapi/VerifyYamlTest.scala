@@ -478,11 +478,9 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val actualYaml = Validation.out_enum_object
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
-    println(actualYaml)
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
-
 
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))

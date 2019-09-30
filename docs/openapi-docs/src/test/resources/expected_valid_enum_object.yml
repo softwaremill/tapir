@@ -28,3 +28,4 @@ components:
             - red
         value:
           type: integer
+  
