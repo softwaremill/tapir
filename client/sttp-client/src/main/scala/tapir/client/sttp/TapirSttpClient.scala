@@ -1,6 +1,7 @@
 package tapir.client.sttp
 
-import com.softwaremill.sttp.{Request, Uri}
+import sttp.client.Request
+import sttp.model.Uri
 import tapir.Endpoint
 
 trait TapirSttpClient {

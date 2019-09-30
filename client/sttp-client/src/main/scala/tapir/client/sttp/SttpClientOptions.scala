@@ -2,10 +2,11 @@ package tapir.client.sttp
 
 import java.io.File
 
+import sttp.client.ResponseMetadata
 import tapir.Defaults
 
-case class SttpClientOptions(createFile: () => File) // TODO: change to ResponseMetadata once available
+case class SttpClientOptions(createFile: ResponseMetadata => File)
 
 object SttpClientOptions {
-  implicit val default: SttpClientOptions = SttpClientOptions(Defaults.createTempFile)
+  implicit val default: SttpClientOptions = SttpClientOptions(_ => Defaults.createTempFile())
 }

@@ -67,6 +67,7 @@ lazy val core: Project = (project in file("core"))
     name := "tapir-core",
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.11.0",
+      "com.softwaremill.sttp.client" %% "model" % Versions.sttp,
       scalaTest % "test"
     )
   )
@@ -188,7 +189,7 @@ lazy val serverTests: Project = (project in file("server/tests"))
     name := "tapir-server-tests",
     publishArtifact := false,
     libraryDependencies ++=
-      Seq("com.softwaremill.sttp" %% "async-http-client-backend-cats" % Versions.sttp)
+      Seq("com.softwaremill.sttp.client" %% "async-http-client-backend-cats" % Versions.sttp)
   )
   .dependsOn(tests)
 
@@ -233,8 +234,8 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "core" % Versions.sttp,
-      "com.softwaremill.sttp" %% "async-http-client-backend-fs2" % Versions.sttp % "test"
+      "com.softwaremill.sttp.client" %% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client" %% "async-http-client-backend-fs2" % Versions.sttp % "test"
     )
   )
   .dependsOn(core, clientTests % "test")
@@ -262,7 +263,7 @@ lazy val playground: Project = (project in file("playground"))
   .settings(
     name := "tapir-playground",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp,
+      "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp,
       "dev.zio" %% "zio" % "1.0.0-RC13",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC4",
       "org.typelevel" %% "cats-effect" % "2.0.0",
