@@ -9,7 +9,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import com.softwaremill.sttp._
+import sttp.client._
 import com.typesafe.scalalogging.StrictLogging
 import tapir.{Endpoint, endpoint, stringBody}
 import tapir.server.tests.ServerTests
@@ -76,7 +76,7 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
       val port = nextPort()
       val route = Directives.pathPrefix("api")(e.toRoute)
       server(NonEmptyList.of(route), port).use { _ =>
-        sttp.get(uri"http://localhost:$port/api/test/directive").send().map(_.body shouldBe Right("ok"))
+        basicRequest.get(uri"http://localhost:$port/api/test/directive").send().map(_.body shouldBe Right("ok"))
       }.unsafeRunSync
     }
   }

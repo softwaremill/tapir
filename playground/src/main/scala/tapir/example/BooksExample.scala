@@ -112,16 +112,16 @@ object BooksExample extends App with StrictLogging {
 
   def makeClientRequest(): Unit = {
 
-    import com.softwaremill.sttp._
+    import sttp.client._
     import tapir.client.sttp._
 
-    implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
 
     val booksListingRequest: Request[Either[String, Vector[Book]], Nothing] = booksListing
       .toSttpRequest(uri"http://localhost:8080")
       .apply(Option(3))
 
-    val result: Either[String, Vector[Book]] = booksListingRequest.send().unsafeBody
+    val result: Either[String, Vector[Book]] = booksListingRequest.send().body
 
     logger.info("Result of listing request with limit 3: " + result)
   }

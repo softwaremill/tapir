@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import com.softwaremill.sttp._
+import sttp.client._
 import tapir._
 import tapir.server.akkahttp._
 import tapir.json.circe._
@@ -36,13 +36,13 @@ object ErrorOutputsAkkaServer extends App {
 
   val bindAndCheck = Http().bindAndHandle(errorOrJsonRoute, "localhost", 8080).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
 
-    val result1: Either[String, String] = sttp.get(uri"http://localhost:8080?amount=-5").send().body
+    val result1: Either[String, String] = basicRequest.get(uri"http://localhost:8080?amount=-5").send().body
     println("Got result (1): " + result1)
     assert(result1 == Left("Invalid parameter, smaller than 0!"))
 
-    val result2: Either[String, String] = sttp.get(uri"http://localhost:8080?amount=21").send().body
+    val result2: Either[String, String] = basicRequest.get(uri"http://localhost:8080?amount=21").send().body
     println("Got result (2): " + result2)
     assert(result2 == Right("""{"result":42}"""))
   }

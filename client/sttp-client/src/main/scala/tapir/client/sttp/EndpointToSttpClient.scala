@@ -11,8 +11,6 @@ import tapir.internal._
 import tapir.model.{Method, MultiQueryParams, Part}
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
-  // don't look. The code is really, really ugly.
-
   def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
     val (uri, req1) =
       setInputParams(e.input.asVectorOfSingleInputs, paramsTupleToParams(params), 0, baseUri, basicRequest.asInstanceOf[PartialAnyRequest])

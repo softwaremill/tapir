@@ -10,7 +10,7 @@ import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import tapir.server.tests.ServerTests
 import tapir.Endpoint
 import tapir._
-import com.softwaremill.sttp._
+import sttp.client._
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import scala.concurrent.ExecutionContext
@@ -68,7 +68,7 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
         .withHttpApp(Router("/api" -> routes).orNotFound)
         .resource
         .use { _ =>
-          sttp.get(uri"http://localhost:$port/api/test/router").send().map(_.body shouldBe Right("ok"))
+          basicRequest.get(uri"http://localhost:$port/api/test/router").send().map(_.body shouldBe Right("ok"))
         }
         .unsafeRunSync()
     }

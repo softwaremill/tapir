@@ -9,7 +9,7 @@ import tapir.server.akkahttp._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import com.softwaremill.sttp._
+import sttp.client._
 
 object HelloWorldAkkaServer extends App {
   // the endpoint: single fixed path input ("hello"), single query parameter
@@ -27,8 +27,8 @@ object HelloWorldAkkaServer extends App {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   val bindAndCheck = Http().bindAndHandle(helloWorldRoute, "localhost", 8080).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
-    val result: String = sttp.get(uri"http://localhost:8080/hello?name=Frodo").send().unsafeBody
+    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
+    val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send().body
     println("Got result: " + result)
 
     assert(result == "Hello, Frodo!")

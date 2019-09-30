@@ -6,7 +6,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import com.softwaremill.sttp._
+import sttp.client._
 import tapir._
 import tapir.model.Part
 import tapir.server.akkahttp._
@@ -47,12 +47,13 @@ object MultipartFormUploadAkkaServer extends App {
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()
 
     // testing
-    implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
-    val result: String = sttp
+    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
+    val result: String = basicRequest
+      .response(asStringAlways)
       .get(uri"http://localhost:8080/user/profile")
       .multipartBody(multipart("name", "Frodo"), multipart("hobby", "hiking"), multipart("age", "33"), multipartFile("photo", testFile))
       .send()
-      .unsafeBody
+      .body
     println("Got result: " + result)
 
     assert(result == s"Received: Frodo / Some(hiking) / 33 / Some(${testFile.getName}) (19)")
