@@ -1,0 +1,30 @@
+openapi: 3.0.1
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ColorValue'
+components:
+  schemas:
+    ColorValue:
+      required:
+        - color
+        - value
+      type: object
+      properties:
+        color:
+          type: string
+          enum:
+            - blue
+            - red
+        value:
+          type: integer
