@@ -11,10 +11,10 @@ import sttp.client._
 import sttp.client.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import io.circe.generic.auto._
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
-import sttp.model.{Cookie, Header, HeaderNames, MediaTypes, StatusCode, Uri}
+import sttp.model.{Cookie, Header, HeaderNames, MediaTypes, MultiQueryParams, Part, StatusCode, Uri}
 import tapir._
 import tapir.json.circe._
-import tapir.model.{MultiQueryParams, Part, SetCookieValue, UsernamePassword}
+import tapir.model.{SetCookieValue, UsernamePassword}
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
 import tapir.tests.TestUtil._
 import tapir.tests._
@@ -249,7 +249,10 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   testServer(in_file_multipart_out_multipart)(
     (fd: FruitData) =>
       pureResult(
-        FruitData(Part(writeToFile(readFromFile(fd.data.body).reverse)).header("X-Auth", fd.data.header("X-Auth").toString)).asRight[Unit]
+        FruitData(
+          Part("", writeToFile(readFromFile(fd.data.body).reverse))
+            .header("X-Auth", fd.data.additionalHeaders.find(_.name == "X-Auth").map(_.value).toString)
+        ).asRight[Unit]
       )
   ) { baseUri =>
     val file = writeToFile("peach mario")
@@ -258,6 +261,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .multipartBody(multipartFile("data", file).fileName("fruit-data.txt").header("X-Auth", "12"))
       .send()
       .map { r =>
+        r.code shouldBe StatusCode.Ok
         r.body should include regex "name=\"data\"\\s*X-Auth: Some\\(12\\)\\s*oiram hcaep"
       }
   }
@@ -406,7 +410,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(in_string_out_status)(
-    (v: String) => pureResult((if (v == "apple") StatusCode.Accepted.code else StatusCode.NotFound.code).asRight[Unit])
+    (v: String) => pureResult((if (v == "apple") StatusCode.Accepted else StatusCode.NotFound).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCode.Accepted) >>
       basicRequest.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCode.NotFound)

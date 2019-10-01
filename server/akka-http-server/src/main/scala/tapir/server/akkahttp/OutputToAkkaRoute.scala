@@ -8,8 +8,8 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
+import sttp.model.{Header, Part}
 import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -29,7 +29,7 @@ private[akkahttp] object OutputToAkkaRoute {
   def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
     val outputValues = encodeOutputs(output, v, OutputValues.empty)
 
-    val statusCode = outputValues.statusCode.map(c => c: AkkaStatusCode).getOrElse(defaultStatusCode)
+    val statusCode = outputValues.statusCode.map(c => AkkaStatusCode.int2StatusCode(c.code)).getOrElse(defaultStatusCode)
     val akkaHeaders = parseHeadersOrThrow(outputValues.headers)
 
     val completeRoute = outputValues.body match {
@@ -73,8 +73,8 @@ private[akkahttp] object OutputToAkkaRoute {
 
   private def rawPartToBodyPart[T](mvt: MultipartValueType, part: Part[T]): Option[Multipart.FormData.BodyPart] = {
     mvt.partCodecMeta(part.name).map { codecMeta =>
-      val headers = part.headers.map {
-        case (hk, hv) => parseHeaderOrThrow(hk, hv)
+      val headers = part.additionalHeaders.map {
+        case Header(hk, hv) => parseHeaderOrThrow(hk, hv)
       }
 
       val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body) match {
@@ -82,7 +82,8 @@ private[akkahttp] object OutputToAkkaRoute {
         case _                 => throw new IllegalArgumentException(s"${codecMeta.rawValueType} is not supported in multipart bodies")
       }
 
-      Multipart.FormData.BodyPart(part.name, body, part.otherDispositionParams, headers.toList)
+      val dispositionParams = part.fileName.map("filename" -> _).toMap ++ part.otherDispositionParams
+      Multipart.FormData.BodyPart(part.name, body, dispositionParams, headers.toList)
     }
   }
 

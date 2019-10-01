@@ -7,8 +7,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
 import sttp.client._
+import sttp.model.Part
 import tapir._
-import tapir.model.Part
 import tapir.server.akkahttp._
 
 import scala.concurrent.{Await, Future}

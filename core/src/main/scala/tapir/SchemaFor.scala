@@ -7,10 +7,10 @@ import java.nio.file.Path
 import java.time._
 import java.util.{Date, UUID}
 
+import sttp.model.Part
 import tapir.Schema._
 import tapir.generic.OneOfMacro.oneOfMacro
 import tapir.generic.SchemaForMagnoliaDerivation
-import tapir.model.Part
 
 trait SchemaFor[T] {
   def schema: Schema

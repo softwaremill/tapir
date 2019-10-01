@@ -27,7 +27,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
         outputsToResponse(outputs)
           .map { response =>
             // using the "default" response key, if no status code is provided
-            val responseKey = sc.map(ResponsesCodeKey).getOrElse(defaultResponseKey)
+            val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
             responseKey -> Right(response)
           }
     }

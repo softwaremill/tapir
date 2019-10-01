@@ -3,7 +3,8 @@ import java.net.URI
 
 import org.http4s.Request
 import org.http4s.util.CaseInsensitiveString
-import tapir.model.{ConnectionInfo, Method, ServerRequest}
+import sttp.model.Method
+import tapir.model.{ConnectionInfo, ServerRequest}
 
 class Http4sServerRequest[F[_]](req: Request[F]) extends ServerRequest {
   override def method: Method = Method(req.method.name.toUpperCase)

@@ -1,11 +1,12 @@
 package tapir
 
+import sttp.model.{Method, MultiQueryParams}
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
 import tapir.EndpointIO.Info
 import tapir.internal._
-import tapir.model.{Method, MultiQueryParams, ServerRequest}
+import tapir.model.ServerRequest
 import tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.collection.immutable.ListMap
@@ -40,7 +41,7 @@ object EndpointInput {
   sealed trait Basic[I] extends Single[I]
 
   case class FixedMethod(m: Method) extends Basic[Unit] {
-    def show: String = m.m
+    def show: String = m.method
   }
 
   case class FixedPath(s: String) extends Basic[Unit] {
@@ -158,11 +159,11 @@ object EndpointOutput {
 
   //
 
-  case class StatusCode() extends Basic[tapir.model.StatusCode] {
+  case class StatusCode() extends Basic[sttp.model.StatusCode] {
     override def show: String = "{status code}"
   }
 
-  case class FixedStatusCode(statusCode: tapir.model.StatusCode, info: Info[Unit]) extends Basic[Unit] {
+  case class FixedStatusCode(statusCode: sttp.model.StatusCode, info: Info[Unit]) extends Basic[Unit] {
     def description(d: String): FixedStatusCode = copy(info = info.description(d))
 
     override def show: String = s"status code ($statusCode)"
@@ -170,7 +171,7 @@ object EndpointOutput {
 
   //
 
-  case class StatusMapping[O](statusCode: Option[tapir.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])
+  case class StatusMapping[O](statusCode: Option[sttp.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])
 
   case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"

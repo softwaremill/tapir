@@ -2,11 +2,12 @@ package tapir
 
 import java.nio.charset.{Charset, StandardCharsets}
 
+import sttp.model.StatusCode
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
 import tapir.EndpointOutput.StatusMapping
-import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue, StatusCode}
+import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue}
 
 import scala.reflect.ClassTag
 

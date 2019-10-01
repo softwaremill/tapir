@@ -1,8 +1,9 @@
 package tapir.internal.server
 
 import org.scalatest.{FlatSpec, Matchers}
+import sttp.model.Method
 import tapir.Codec.PlainCodec
-import tapir.model.{Method, ServerRequest}
+import tapir.model.ServerRequest
 import tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 
 class DecodeInputsTest extends FlatSpec with Matchers {

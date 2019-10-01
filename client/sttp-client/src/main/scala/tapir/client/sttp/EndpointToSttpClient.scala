@@ -4,18 +4,17 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
 import sttp.client._
-import sttp.model.{HeaderNames, Uri, Part => SttpPart}
+import sttp.model.{HeaderNames, Method, MultiQueryParams, Part, Uri}
 import tapir.Codec.PlainCodec
 import tapir._
 import tapir.internal._
-import tapir.model.{Method, MultiQueryParams, Part}
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
     val (uri, req1) =
       setInputParams(e.input.asVectorOfSingleInputs, paramsTupleToParams(params), 0, baseUri, basicRequest.asInstanceOf[PartialAnyRequest])
 
-    val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).m), uri = uri)
+    val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
 
     val responseAs = fromMetadata { meta =>
       val output = if (meta.isSuccess) e.output else e.errorOutput
@@ -53,7 +52,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
 
         case EndpointOutput.StatusCode() =>
-          Some(meta.code.code)
+          Some(meta.code)
 
         case EndpointOutput.FixedStatusCode(_, _) =>
           None
@@ -62,7 +61,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
         case EndpointOutput.OneOf(mappings) =>
           val mapping = mappings
-            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code.code))
+            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code))
             .getOrElse(throw new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs"))
           Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta))
 
@@ -172,19 +171,13 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           case InputStreamValueType     => req.body(t)
           case FileValueType            => req.body(t)
           case mvt: MultipartValueType =>
-            val parts: Seq[SttpPart[BasicRequestBody]] = (t: Seq[RawPart]).flatMap { p =>
+            val parts: Seq[Part[BasicRequestBody]] = (t: Seq[RawPart]).flatMap { p =>
               mvt.partCodecMeta(p.name).map { partCodecMeta =>
                 val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], partCodecMeta.asInstanceOf[CodecMeta[_, _, Any]])
                 val sttpPart2 = sttpPart1.contentType(partCodecMeta.mediaType.mediaTypeNoParams)
-                val sttpPart3 = p.headers.foldLeft(sttpPart2) {
-                  case (sp, (hk, hv)) =>
-                    if (hk.equalsIgnoreCase(HeaderNames.ContentType)) {
-                      sp.contentType(hv)
-                    } else {
-                      sp.header(hk, hv)
-                    }
-                }
-                p.fileName.map(sttpPart3.fileName).getOrElse(sttpPart3)
+                val sttpPart3 = p.contentType.map(sttpPart2.contentType(_)).getOrElse(sttpPart2)
+                val sttpPart4 = p.additionalHeaders.foldLeft(sttpPart3)(_.header(_))
+                p.fileName.map(sttpPart4.fileName(_)).getOrElse(sttpPart4)
               }
             }
 
@@ -196,7 +189,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       .getOrElse(req)
   }
 
-  private def partToSttpPart[R](p: Part[R], codecMeta: CodecMeta[_, _, R]): SttpPart[BasicRequestBody] = codecMeta.rawValueType match {
+  private def partToSttpPart[R](p: Part[R], codecMeta: CodecMeta[_, _, R]): Part[BasicRequestBody] = codecMeta.rawValueType match {
     case StringValueType(charset) => multipart(p.name, p.body, charset.toString)
     case ByteArrayValueType       => multipart(p.name, p.body)
     case ByteBufferValueType      => multipart(p.name, p.body)

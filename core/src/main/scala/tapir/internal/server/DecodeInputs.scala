@@ -1,7 +1,8 @@
 package tapir.internal.server
 
+import sttp.model.{Method, MultiQueryParams}
 import tapir.internal._
-import tapir.model.{Cookie, Method, MultiQueryParams, ServerRequest}
+import tapir.model.{Cookie, ServerRequest}
 import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, MediaType}
 
 import scala.annotation.tailrec
@@ -210,7 +211,7 @@ object DecodeInputs {
 
       case IndexedBasicInput(input @ EndpointInput.FixedMethod(m), _) +: inputsTail =>
         if (m == ctx.method) matchOthers(inputsTail, values, ctx)
-        else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.m, ctx.method.m)), ctx)
+        else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.method, ctx.method.method)), ctx)
 
       case IndexedBasicInput(input @ EndpointIO.FixedHeader(n, v, _), _) +: inputsTail =>
         if (List(v) == ctx.header(n)) matchOthers(inputsTail, values, ctx)

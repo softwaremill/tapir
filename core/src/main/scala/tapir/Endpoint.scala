@@ -1,9 +1,9 @@
 package tapir
 
+import sttp.model.Method
 import tapir.EndpointInput.FixedMethod
 import tapir.EndpointOutput.StatusMapping
 import tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
-import tapir.model.Method
 import tapir.server.ServerEndpoint
 import tapir.typelevel.{FnComponents, ParamConcat}
 

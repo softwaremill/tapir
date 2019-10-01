@@ -1,4 +1,4 @@
-import tapir.model.Part
+import sttp.model.Part
 
 package object tapir extends Tapir {
 

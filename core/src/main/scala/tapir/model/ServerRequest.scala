@@ -2,6 +2,8 @@ package tapir.model
 
 import java.net.{InetSocketAddress, URI}
 
+import sttp.model.Method
+
 trait ServerRequest {
   def method: Method
   def protocol: String

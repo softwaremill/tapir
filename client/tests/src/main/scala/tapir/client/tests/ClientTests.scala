@@ -19,7 +19,8 @@ import tapir._
 import tapir.tests._
 import TestUtil._
 import org.http4s.multipart
-import tapir.model.{MultiQueryParams, StatusCodes, UsernamePassword}
+import sttp.model.{MultiQueryParams, StatusCode}
+import tapir.model.UsernamePassword
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -76,7 +77,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
   testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
   testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
-  testClient(in_string_out_status, "apple", Right(StatusCodes.Ok))
+  testClient(in_string_out_status, "apple", Right(StatusCode.Ok))
 
   testClient(delete_endpoint, (), Right(()))
 

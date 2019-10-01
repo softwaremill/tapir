@@ -7,10 +7,10 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 import java.util.UUID
 
+import sttp.model.Part
 import tapir.DecodeResult._
 import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
 import tapir.internal.UrlencodedData
-import tapir.model.Part
 
 import scala.annotation.implicitNotFound
 import scala.util.{Failure, Success, Try}
@@ -132,7 +132,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       defaultCodec: Option[AnyCodecForMany]
   ): Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
     new Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] {
-      private val mvt = MultipartValueType(partCodecs.mapValues(_.meta).toMap, defaultCodec.map(_.meta))
+      private val mvt = MultipartValueType(partCodecs.mapValues(_.meta), defaultCodec.map(_.meta))
 
       private def partCodec(name: String): Option[AnyCodecForMany] = partCodecs.get(name).orElse(defaultCodec)
 
