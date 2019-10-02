@@ -174,10 +174,15 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             val parts: Seq[Part[BasicRequestBody]] = (t: Seq[RawPart]).flatMap { p =>
               mvt.partCodecMeta(p.name).map { partCodecMeta =>
                 val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], partCodecMeta.asInstanceOf[CodecMeta[_, _, Any]])
-                val sttpPart2 = sttpPart1.contentType(partCodecMeta.mediaType.mediaTypeNoParams)
-                val sttpPart3 = p.contentType.map(sttpPart2.contentType(_)).getOrElse(sttpPart2)
-                val sttpPart4 = p.additionalHeaders.foldLeft(sttpPart3)(_.header(_))
-                p.fileName.map(sttpPart4.fileName(_)).getOrElse(sttpPart4)
+                val sttpPart2 =
+                  if (!p.headers.exists(_.is(HeaderNames.ContentType))) {
+                    // TODO
+                    sttpPart1
+                      .copy(headers = sttpPart1.headers.filterNot(_.is(HeaderNames.ContentType)))
+                      .contentType(partCodecMeta.mediaType.mediaTypeNoParams)
+                  } else sttpPart1
+                val sttpPart3 = p.headers.foldLeft(sttpPart2)(_.header(_))
+                p.fileName.map(sttpPart3.fileName).getOrElse(sttpPart3)
               }
             }
 

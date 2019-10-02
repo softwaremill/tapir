@@ -143,9 +143,8 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
           Part(
             part.name,
             r,
-            fileName = part.filename,
-            otherDispositionParams = part.additionalDispositionParams - "filename", // TODO
-            additionalHeaders = part.headers.map(h => Header(h.name, h.value))
+            otherDispositionParams = part.additionalDispositionParams,
+            headers = part.additionalHeaders.map(h => Header(h.name, h.value))
           )
       )
   }

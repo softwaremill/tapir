@@ -2,12 +2,12 @@ package tapir
 
 import java.nio.charset.{Charset, StandardCharsets}
 
-import sttp.model.StatusCode
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, HeaderNames, StatusCode}
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
 import tapir.EndpointOutput.StatusMapping
-import tapir.model.{Cookie, ServerRequest, SetCookie, SetCookieValue}
+import tapir.model.ServerRequest
 
 import scala.reflect.ClassTag
 
@@ -32,12 +32,12 @@ trait Tapir extends TapirDerivedInputs {
 
   def cookie[T: PlainCodecForOptional](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly[PlainCodecForOptional[T]], EndpointIO.Info.empty)
-  def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](Cookie.HeaderName)
-  def setCookie(name: String): EndpointIO.Header[SetCookieValue] = {
-    implicit val codec: Codec[SetCookieValue, MediaType.TextPlain, String] = SetCookieValue.setCookieValueCodec(name)
-    header[SetCookieValue](SetCookie.HeaderName)
+  def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](HeaderNames.Cookie)
+  def setCookie(name: String): EndpointIO.Header[CookieValueWithMeta] = {
+    implicit val codec: CodecForMany[CookieValueWithMeta, MediaType.TextPlain, String] = CodecForMany.cookieValueWithMetaCodecForMany(name)
+    header[CookieValueWithMeta](HeaderNames.SetCookie)
   }
-  def setCookies: EndpointIO.Header[List[SetCookie]] = header[List[SetCookie]](SetCookie.HeaderName)
+  def setCookies: EndpointIO.Header[List[CookieWithMeta]] = header[List[CookieWithMeta]](HeaderNames.SetCookie)
 
   def body[T, M <: MediaType](implicit tm: CodecForOptional[T, M, _]): EndpointIO.Body[T, M, _] =
     EndpointIO.Body(tm, EndpointIO.Info.empty)

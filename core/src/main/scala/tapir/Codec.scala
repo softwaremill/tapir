@@ -7,7 +7,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 import java.util.UUID
 
-import sttp.model.Part
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part}
 import tapir.DecodeResult._
 import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
 import tapir.internal.UrlencodedData
@@ -173,6 +173,19 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       override val meta: CodecMeta[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
         CodecMeta(Schema.SBinary, MediaType.MultipartFormData(), mvt)
     }
+
+  //
+
+  implicit def cookieCodec: Codec[List[Cookie], MediaType.TextPlain, String] =
+    implicitly[Codec[String, MediaType.TextPlain, String]].map(Cookie.parseHeaderValue)(Cookie.asHeaderValue)
+
+  private[tapir] def decodeCookie(cookie: String): DecodeResult[CookieWithMeta] = CookieWithMeta.parseHeaderValue(cookie) match {
+    case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
+    case Right(r) => DecodeResult.Value(r)
+  }
+
+  implicit def cookieWithMetaCodec: Codec[CookieWithMeta, MediaType.TextPlain, String] =
+    implicitly[Codec[String, MediaType.TextPlain, String]].mapDecode(decodeCookie)(_.asHeaderValue)
 }
 
 /**
@@ -335,6 +348,26 @@ object CodecForMany {
       override val meta: CodecMeta[Set[T], M, R] =
         tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.asIterableElements)
     }
+
+  //
+
+  implicit def cookiePairCodecForMany: CodecForMany[List[Cookie], MediaType.TextPlain, String] =
+    implicitly[CodecForMany[List[List[Cookie]], MediaType.TextPlain, String]].map(_.flatten)(List(_))
+
+  implicit def cookieValueWithMetaCodecForMany(name: String): CodecForMany[CookieValueWithMeta, MediaType.TextPlain, String] = {
+    def findNamed(name: String)(cs: Seq[CookieWithMeta]): DecodeResult[CookieValueWithMeta] = {
+      cs.filter(_.name == name) match {
+        case Nil     => DecodeResult.Missing
+        case List(c) => DecodeResult.Value(c.valueWithMeta)
+        case l       => DecodeResult.Multiple(l.map(_.asHeaderValue))
+      }
+    }
+
+    implicitly[CodecForMany[List[String], MediaType.TextPlain, String]]
+      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookie)).flatMap(findNamed(name)))(
+        cv => List(CookieWithMeta(name, cv).asHeaderValue)
+      )
+  }
 }
 
 /**

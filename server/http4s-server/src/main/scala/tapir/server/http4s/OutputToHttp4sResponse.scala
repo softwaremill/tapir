@@ -79,14 +79,13 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
   private def rawPartToBodyPart[T](mvt: MultipartValueType, part: Part[T]): Option[multipart.Part[F]] = {
     mvt.partCodecMeta(part.name).map { codecMeta =>
-      val headers = part.additionalHeaders.map {
+      val headers = part.headers.map {
         case SttpHeader(hk, hv) => Header.Raw(CaseInsensitiveString(hk), hv)
       }.toList
 
       val (entity, ctHeader) = rawValueToEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body)
 
-      // TODO
-      val dispositionParams = List(Some("name" -> part.name), part.fileName.map("filename" -> _)).flatten.toMap ++ part.otherDispositionParams
+      val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
       val contentDispositionHeader = `Content-Disposition`("form-data", dispositionParams)
 
       val shouldAddCtHeader = headers.exists(_.name == `Content-Type`.name)

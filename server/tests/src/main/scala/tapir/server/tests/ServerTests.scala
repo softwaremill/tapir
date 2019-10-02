@@ -11,10 +11,10 @@ import sttp.client._
 import sttp.client.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import io.circe.generic.auto._
 import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
-import sttp.model.{Cookie, Header, HeaderNames, MediaTypes, MultiQueryParams, Part, StatusCode, Uri}
+import sttp.model._
 import tapir._
 import tapir.json.circe._
-import tapir.model.{SetCookieValue, UsernamePassword}
+import tapir.model.UsernamePassword
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
 import tapir.tests.TestUtil._
 import tapir.tests._
@@ -251,7 +251,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       pureResult(
         FruitData(
           Part("", writeToFile(readFromFile(fd.data.body).reverse))
-            .header("X-Auth", fd.data.additionalHeaders.find(_.name == "X-Auth").map(_.value).toString)
+            .header("X-Auth", fd.data.headers.find(_.name == "X-Auth").map(_.value).toString)
         ).asRight[Unit]
       )
   ) { baseUri =>
@@ -278,20 +278,21 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(in_cookies_out_cookies)(
-    (cs: List[tapir.model.Cookie]) => pureResult(cs.map(c => tapir.model.SetCookie(c.name, c.value.reverse)).asRight[Unit])
+    (cs: List[sttp.model.Cookie]) => pureResult(cs.map(c => sttp.model.CookieWithMeta(c.name, c.value.reverse)).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send().map { r =>
       r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
     }
   }
 
-  testServer(in_set_cookie_value_out_set_cookie_value)((c: SetCookieValue) => pureResult(c.copy(value = c.value.reverse).asRight[Unit])) {
-    baseUri =>
-      basicRequest.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send().map { r =>
-        r.cookies.toList shouldBe List(
-          Cookie("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true)
-        )
-      }
+  testServer(in_set_cookie_value_out_set_cookie_value)(
+    (c: CookieValueWithMeta) => pureResult(c.copy(value = c.value.reverse).asRight[Unit])
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send().map { r =>
+      r.cookies.toList shouldBe List(
+        CookieWithMeta("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true)
+      )
+    }
   }
 
   testServer(in_string_out_content_type_string, "dynamic content type")((b: String) => pureResult((b, "image/png").asRight[Unit])) {

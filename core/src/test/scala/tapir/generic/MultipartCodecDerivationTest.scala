@@ -115,9 +115,9 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     case class Test1(f1: Part[Int], f2: String)
     val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
 
-    val instance = Test1(Part("?", 10, otherDispositionParams = Map("a1" -> "b1"), additionalHeaders = List(Header("X-Y", "a-b"))), "v2")
+    val instance = Test1(Part("?", 10, otherDispositionParams = Map("a1" -> "b1"), headers = List(Header("X-Y", "a-b"))), "v2")
     val parts = List(
-      Part("f1", "10", otherDispositionParams = Map("a1" -> "b1"), additionalHeaders = List(Header("X-Y", "a-b"))),
+      Part("f1", "10", otherDispositionParams = Map("a1" -> "b1"), headers = List(Header("X-Y", "a-b"))),
       Part("f2", "v2")
     )
 
@@ -134,7 +134,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
 
     try {
       // when
-      codec.encode(Test1(f)) shouldBe List(Part("f1", f, Some(f.getName)))
+      codec.encode(Test1(f)) shouldBe List(Part("f1", f, fileName = Some(f.getName)))
       codec.decode(List(Part("f1", f, Some(f.getName)))) shouldBe DecodeResult.Value(Test1(f))
     } finally {
       f.delete()

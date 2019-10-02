@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
-import sttp.model.{Header, Part}
+import sttp.model.{Header, HeaderNames, Part}
 import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import tapir.{
   ByteArrayValueType,
@@ -73,7 +73,7 @@ private[akkahttp] object OutputToAkkaRoute {
 
   private def rawPartToBodyPart[T](mvt: MultipartValueType, part: Part[T]): Option[Multipart.FormData.BodyPart] = {
     mvt.partCodecMeta(part.name).map { codecMeta =>
-      val headers = part.additionalHeaders.map {
+      val headers = part.headers.map {
         case Header(hk, hv) => parseHeaderOrThrow(hk, hv)
       }
 
@@ -82,8 +82,8 @@ private[akkahttp] object OutputToAkkaRoute {
         case _                 => throw new IllegalArgumentException(s"${codecMeta.rawValueType} is not supported in multipart bodies")
       }
 
-      val dispositionParams = part.fileName.map("filename" -> _).toMap ++ part.otherDispositionParams
-      Multipart.FormData.BodyPart(part.name, body, dispositionParams, headers.toList)
+      Multipart.FormData
+        .BodyPart(part.name, body, part.otherDispositionParams, headers.filterNot(_.is(HeaderNames.ContentType.toLowerCase)).toList)
     }
   }
 

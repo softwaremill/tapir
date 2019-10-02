@@ -9,7 +9,7 @@ import tapir.json.circe._
 import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
-import sttp.model.{MultiQueryParams, StatusCode}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, MultiQueryParams, StatusCode}
 import tapir.Codec.PlainCodec
 import tapir.model._
 
@@ -135,10 +135,10 @@ package object tests {
       .in(cookie[String]("c2"))
       .out(header[List[String]]("Cookie"))
 
-  val in_cookies_out_cookies: Endpoint[List[Cookie], Unit, List[SetCookie], Nothing] =
+  val in_cookies_out_cookies: Endpoint[List[Cookie], Unit, List[CookieWithMeta], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(cookies).out(setCookies)
 
-  val in_set_cookie_value_out_set_cookie_value: Endpoint[SetCookieValue, Unit, SetCookieValue, Nothing] =
+  val in_set_cookie_value_out_set_cookie_value: Endpoint[CookieValueWithMeta, Unit, CookieValueWithMeta, Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(setCookie("c1")).out(setCookie("c1"))
 
   val in_root_path: Endpoint[Unit, Unit, Unit, Nothing] = endpoint.get.in("")
