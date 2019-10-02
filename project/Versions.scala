@@ -17,5 +17,5 @@ object Versions {
   val swaggerUi = "3.23.8"
   val upickle = "0.7.5"
   val playJson = "2.7.4"
-  val silencer = "1.4.3"
+  val silencer = "1.4.4"
 }
