@@ -1,5 +1,6 @@
 package tapir.docs
 
+import tapir.Validator.EncodeToAny
 import tapir.{Codec, CodecForMany, CodecForOptional, EndpointInput}
 import tapir.openapi.{ExampleValue, SecurityScheme}
 
@@ -16,11 +17,6 @@ package object openapi extends TapirOpenAPIDocs {
     }
     result
   }
-
-  /**
-    * Used to encode examples and enum values
-    */
-  type EncodeToAny[T] = T => Option[Any]
 
   private def encodeValue[T](v: Any): Any = v.toString
   private[openapi] def encodeAny[T](codec: Codec[T, _, _]): EncodeToAny[T] = e => Some(encodeValue(codec.encode(e)))
