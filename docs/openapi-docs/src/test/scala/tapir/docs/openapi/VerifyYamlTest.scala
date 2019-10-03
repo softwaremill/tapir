@@ -462,6 +462,17 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render enum validator for classes wrapped in option") {
+    val expectedYaml = loadYaml("expected_valid_enum_class.yml")
+
+    val actualYaml = Validation.in_optional_enum_class
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    println(actualYaml)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("render enum validator for values") {
     val expectedYaml = loadYaml("expected_valid_enum_values.yml")
 
