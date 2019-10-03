@@ -416,11 +416,10 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml
-    println(actualYaml)
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
-  test("validator with wrapper type in query") {
+  test("validator with wrappers type in query") {
     val expectedYaml = loadYaml("expected_valid_query_wrapped.yml")
 
     val actualYaml = Validation.in_query_wrapper
@@ -463,12 +462,11 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("render enum validator for classes wrapped in option") {
-    val expectedYaml = loadYaml("expected_valid_enum_class.yml")
+    val expectedYaml = loadYaml("expected_valid_enum_class_wrapped_in_option.yml")
 
     val actualYaml = Validation.in_optional_enum_class
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
-    println(actualYaml)
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
