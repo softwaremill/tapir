@@ -66,6 +66,21 @@ fails. In other words, decoding failures should be reported for format failures,
 To customise error messages that are returned upon validation/decode failures by the server, see 
 [error handling](../server/errors.html).
 
+## Enum validators
+
+Validators for enumerations can be created using the `Validator.enum` method, which either:
+
+* takes a type parameter, which should be an abstract, sealed base type, and using a macro determines the possible 
+  implementations
+* takes the list of possible values
+
+To properly represent possible values in documentation, an `encode` method needs to be provided, which converts
+the enum value to a raw type (string, number, ...). This method is inferred if the validator is directly added to 
+a codec (without any mapping etc.).
+
+Like other validators, enum validators need to be added to a codec, or through an implicit value, if the codec and
+validator is automatically derived. 
+
 ## Next
 
 Read on about [json support](json.html).
