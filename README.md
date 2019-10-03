@@ -74,7 +74,7 @@ tapir documentation is available at [tapir-scala.readthedocs.io](http://tapir-sc
 Add the following dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-core" % "0.11.3"
+"com.softwaremill.tapir" %% "tapir-core" % "0.11.4"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
