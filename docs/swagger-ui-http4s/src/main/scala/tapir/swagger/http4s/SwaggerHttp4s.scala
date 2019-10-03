@@ -21,6 +21,7 @@ import scala.concurrent.ExecutionContext
   * @param yamlName    The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
   */
 class SwaggerHttp4s(yaml: String, contextPath: String = "docs", yamlName: String = "docs.yaml") {
+
   private val swaggerVersion = {
     val p = new Properties()
     val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
@@ -36,11 +37,11 @@ class SwaggerHttp4s(yaml: String, contextPath: String = "docs", yamlName: String
     HttpRoutes.of[F] {
       case GET -> Root =>
         PermanentRedirect(Location(Uri.fromString(s"/$contextPath/index.html?url=/$contextPath/$yamlName").right.get))
-      case GET -> Root / `yamlName` =>
+      case GET -> Root / `contextPath` / `yamlName` =>
         Ok(yaml)
       case r =>
         StaticFile
-          .fromResource(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo}", ExecutionContext.global)
+          .fromResource(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo.drop(contextPath.length + 1)}", ExecutionContext.global)
           .getOrElseF(NotFound())
     }
   }
