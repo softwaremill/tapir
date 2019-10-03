@@ -197,6 +197,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       case ss               => Some(s"all(${ss.mkString(",")})")
     }
 
+    override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) All(Nil) else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
   }
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
@@ -214,6 +215,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       case ss               => Some(s"any(${ss.mkString(",")})")
     }
 
+    override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) Any(Nil) else super.contramap(g)
     override def or(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else Any(validators :+ other)
   }
 
