@@ -1,5 +1,6 @@
 package tapir.docs.openapi.schema
 
+import tapir.docs.openapi.rawToString
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
 import tapir.{Validator, Schema => TSchema}
@@ -86,7 +87,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case Validator.Custom(_, _)     => oschema
       case Validator.Enum(_, None)    => oschema
       case Validator.Enum(v, Some(encode)) =>
-        val values = v.flatMap(x => encode(x).map(_.toString))
+        val values = v.flatMap(x => encode(x).map(rawToString))
         oschema.copy(enum = if (values.nonEmpty) Some(values) else None)
     }
   }

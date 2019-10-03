@@ -61,14 +61,11 @@ trait Codec[T, M <: MediaType, R] extends Decode[T, R] { outer =>
     override def encode(t: T): R = outer.encode(t)
     override def rawDecode(s: R): DecodeResult[T] = outer.rawDecode(s)
     override def meta: CodecMeta[T, M, R] = {
-      val withEnumValidator = (outer.meta.rawValueType, v) match {
-        case (_: StringValueType, v @ Validator.Enum(_, None)) =>
-          v.copy(encode = Some({ s: T =>
-            Some(encode(s))
-          }))
-        case _ => v
+      val withEncodeEnumValidator = v match {
+        case v @ Validator.Enum(_, None) => v.encode((s: T) => Some(encode(s)))
+        case _                           => v
       }
-      outer.meta.validate(withEnumValidator)
+      outer.meta.validate(withEncodeEnumValidator)
     }
   }
 }
