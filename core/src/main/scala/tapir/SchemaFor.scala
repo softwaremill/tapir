@@ -40,6 +40,8 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   implicit val schemaForDate: SchemaFor[Date] = SchemaFor(SDateTime)
   implicit val schemaForLocalDateTime: SchemaFor[LocalDateTime] = SchemaFor(SDateTime)
   implicit val schemaForLocalDate: SchemaFor[LocalDate] = SchemaFor(SDate)
+  implicit val schemaForJavaDuration: SchemaFor[Duration] = SchemaFor(SString)
+  implicit val schemaForScalaDuration: SchemaFor[scala.concurrent.duration.Duration] = SchemaFor(SString)
   implicit val schemaForUUID: SchemaFor[UUID] = SchemaFor(SString)
   implicit val schemaForBigDecimal: SchemaFor[BigDecimal] = SchemaFor(SString)
   implicit val schemaForJBigDecimal: SchemaFor[JBigDecimal] = SchemaFor(SString)
