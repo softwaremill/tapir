@@ -50,6 +50,7 @@ lazy val rootProject = (project in file("."))
     openapiDocs,
     swaggerUiAkka,
     swaggerUiHttp4s,
+    redocHttp4s,
     serverTests,
     akkaHttpServer,
     http4sServer,
@@ -178,6 +179,13 @@ lazy val swaggerUiHttp4s: Project = (project in file("docs/swagger-ui-http4s"))
       "org.http4s" %% "http4s-dsl" % Versions.http4s(_),
       _ => "org.webjars" % "swagger-ui" % Versions.swaggerUi
     )
+  )
+
+lazy val redocHttp4s: Project = (project in file("docs/redoc-http4s"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-redoc-http4s",
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)("org.http4s" %% "http4s-dsl" % Versions.http4s(_))
   )
 
 // server
