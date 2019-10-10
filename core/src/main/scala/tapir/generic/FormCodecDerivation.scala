@@ -38,13 +38,13 @@ object FormCodecMacros {
       case (field, codec) =>
         val fieldName = field.name.decodedName.toString
         q"""val transformedName = $conf.transformMemberName($fieldName)
-           $codec.safeDecode(paramsMap.get(transformedName).toList.flatten)"""
+           $codec.decode(paramsMap.get(transformedName).toList.flatten)"""
     }
 
     val codecTree = q"""
       {
         def decode(params: Seq[(String, String)]): DecodeResult[$t] = {
-          val paramsMap: Map[String, Seq[String]] = params.groupBy(_._1).mapValues(_.map(_._2))
+          val paramsMap: Map[String, Seq[String]] = params.groupBy(_._1).mapValues(_.map(_._2)).toMap
           val decodeResults = List(..$decodeParams)
           tapir.DecodeResult.sequence(decodeResults).map { values =>
             ${util.instanceFromValues}
@@ -55,6 +55,7 @@ object FormCodecMacros {
         tapir.Codec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
           .schema(${util.schema}.schema)
+          .validate(implicitly[tapir.Validator[$t]])
       }
      """
 

@@ -1,10 +1,14 @@
 package tapir.generic
 
-import org.scalatest.{FlatSpec, Matchers}
-import tapir.Schema.{SInteger, SProduct, SObjectInfo, SString}
-import tapir.util.CompileUtil
-import tapir.{Codec, DecodeResult, MediaType}
+import java.math.{BigDecimal => JBigDecimal}
 
+import com.github.ghik.silencer.silent
+import org.scalatest.{FlatSpec, Matchers}
+import tapir.Schema.{SInteger, SObjectInfo, SProduct, SString}
+import tapir.util.CompileUtil
+import tapir.{Codec, DecodeResult, MediaType, Validator}
+
+@silent("never used")
 class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
@@ -110,6 +114,51 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
     codec.decode("") shouldBe DecodeResult.Value(Test1(Nil))
     codec.decode("f1=10") shouldBe DecodeResult.Value(Test1(List(10)))
     codec.decode("f1=10&f1=12") shouldBe DecodeResult.Value(Test1(List(10, 12)))
+  }
+
+  it should "generate a codec for a one-arg case class using implicit validator" in {
+    // given
+    case class Test1(f1: Int)
+    implicit val v: Validator[Int] = Validator.min(5)
+    val codec = implicitly[Codec[Test1, MediaType.XWwwFormUrlencoded, String]]
+
+    // when
+    codec.encode(Test1(10)) shouldBe "f1=10"
+    codec.decode("f1=0") shouldBe an[DecodeResult.InvalidValue]
+    codec.decode("f1=10") shouldBe DecodeResult.Value(Test1(10))
+  }
+
+  it should "generate a codec for a case class with simple types" in {
+    // given
+    case class Test1(
+        f1: String,
+        f2: Byte,
+        f3: Short,
+        f4: Int,
+        f5: Long,
+        f6: Float,
+        f7: Double,
+        f8: Boolean,
+        f9: BigDecimal,
+        f10: JBigDecimal
+    )
+    val test1 = Test1(
+      f1 = "str",
+      f2 = 42,
+      f3 = 228,
+      f4 = 322,
+      f5 = 69,
+      f6 = 27,
+      f7 = 33,
+      f8 = true,
+      f9 = BigDecimal("1337.7331"),
+      f10 = new JBigDecimal("31337.73313")
+    )
+    val codec = implicitly[Codec[Test1, MediaType.XWwwFormUrlencoded, String]]
+
+    // when
+    codec.encode(test1) shouldBe "f1=str&f2=42&f3=228&f4=322&f5=69&f6=27.0&f7=33.0&f8=true&f9=1337.7331&f10=31337.73313"
+    codec.decode("f1=str&f2=42&f3=228&f4=322&f5=69&f6=27.0&f7=33.0&f8=true&f9=1337.7331&f10=31337.73313") shouldBe DecodeResult.Value(test1)
   }
 }
 

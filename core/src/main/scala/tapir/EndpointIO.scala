@@ -3,9 +3,10 @@ package tapir
 import tapir.Codec.PlainCodec
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.CodecForOptional.PlainCodecForOptional
-import tapir.internal.ProductToParams
+import tapir.EndpointIO.Info
+import tapir.internal._
 import tapir.model.{Method, MultiQueryParams, ServerRequest}
-import tapir.typelevel.{FnComponents, ParamConcat, ParamsAsArgs}
+import tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.collection.immutable.ListMap
 import scala.reflect.ClassTag
@@ -16,13 +17,13 @@ sealed trait EndpointInput[I] {
 
   def show: String
 
-  def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointInput[II] =
-    EndpointInput.Mapped(this, f, g, paramsAsArgs)
+  def map[II](f: I => II)(g: II => I): EndpointInput[II] =
+    EndpointInput.Mapped(this, f, g)
 
   def mapTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointInput[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): EndpointInput[CASE_CLASS] = {
+    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])
   }
 }
 
@@ -50,7 +51,8 @@ object EndpointInput {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
     def description(d: String): PathCapture[T] = copy(info = info.description(d))
     def example(t: T): PathCapture[T] = copy(info = info.example(t))
-    def show = s"/[${name.getOrElse("")}]"
+    def validate(v: Validator[T]): PathCapture[T] = copy(codec = codec.validate(v))
+    def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.validator)
   }
 
   case class PathsCapture(info: EndpointIO.Info[Seq[String]]) extends Basic[Seq[String]] {
@@ -62,7 +64,8 @@ object EndpointInput {
   case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
-    def show = s"?$name"
+    def validate(v: Validator[T]): Query[T] = copy(codec = codec.validate(v))
+    def show: String = addValidatorShow(s"?$name", codec.validator)
   }
 
   case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Basic[MultiQueryParams] {
@@ -74,7 +77,8 @@ object EndpointInput {
   case class Cookie[T](name: String, codec: PlainCodecForOptional[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Cookie[T] = copy(info = info.description(d))
     def example(t: T): Cookie[T] = copy(info = info.example(t))
-    def show = s"{cookie $name}"
+    def validate(v: Validator[T]): Cookie[T] = copy(codec = codec.validate(v))
+    def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
   }
 
   case class ExtractFromRequest[T](f: ServerRequest => T) extends Basic[T] {
@@ -107,7 +111,7 @@ object EndpointInput {
 
   //
 
-  case class Mapped[I, T](wrapped: EndpointInput[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
+  case class Mapped[I, T](wrapped: EndpointInput[I], f: I => T, g: T => I) extends Single[T] {
     override def show: String = s"map(${wrapped.show})"
   }
 
@@ -129,13 +133,13 @@ sealed trait EndpointOutput[I] {
 
   def show: String
 
-  def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[II] =
-    EndpointOutput.Mapped(this, f, g, paramsAsArgs)
+  def map[II](f: I => II)(g: II => I): EndpointOutput[II] =
+    EndpointOutput.Mapped(this, f, g)
 
   def mapTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointOutput[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): EndpointOutput[CASE_CLASS] = {
+    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])
   }
 }
 
@@ -144,6 +148,7 @@ object EndpointOutput {
     def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointOutput[IJ] =
       other match {
         case s: Single[_]             => Multiple(Vector(this, s))
+        case Void()                   => this.asInstanceOf[EndpointOutput[IJ]]
         case Multiple(outputs)        => Multiple(this +: outputs)
         case EndpointIO.Multiple(ios) => Multiple(this +: ios)
       }
@@ -157,7 +162,9 @@ object EndpointOutput {
     override def show: String = "{status code}"
   }
 
-  case class FixedStatusCode(statusCode: tapir.model.StatusCode) extends Basic[Unit] {
+  case class FixedStatusCode(statusCode: tapir.model.StatusCode, info: Info[Unit]) extends Basic[Unit] {
+    def description(d: String): FixedStatusCode = copy(info = info.description(d))
+
     override def show: String = s"status code ($statusCode)"
   }
 
@@ -169,16 +176,22 @@ object EndpointOutput {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
   }
 
-  case class Mapped[I, T](wrapped: EndpointOutput[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
+  case class Mapped[I, T](wrapped: EndpointOutput[I], f: I => T, g: T => I) extends Single[T] {
     override def show: String = s"map(${wrapped.show})"
   }
 
   //
 
+  case class Void() extends EndpointOutput[Nothing] {
+    override def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[Nothing, J, IJ]): EndpointOutput[IJ] =
+      other.asInstanceOf[EndpointOutput[IJ]]
+    def show: String = "void"
+  }
   case class Multiple[I](outputs: Vector[Single[_]]) extends EndpointOutput[I] {
     override def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointOutput.Multiple[IJ] =
       other match {
         case s: Single[_]           => Multiple(outputs :+ s)
+        case Void()                 => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
         case Multiple(m)            => Multiple(outputs ++ m)
         case EndpointIO.Multiple(m) => Multiple(outputs ++ m)
       }
@@ -190,13 +203,13 @@ sealed trait EndpointIO[I] extends EndpointInput[I] with EndpointOutput[I] {
   def and[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ]
 
   def show: String
-  override def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): EndpointIO[II] =
-    EndpointIO.Mapped(this, f, g, paramsAsArgs)
+  override def map[II](f: I => II)(g: II => I): EndpointIO[II] =
+    EndpointIO.Mapped(this, f, g)
 
   override def mapTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS], paramsAsArgs: ParamsAsArgs[I]): EndpointIO[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])(paramsAsArgs)
+  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): EndpointIO[CASE_CLASS] = {
+    map[CASE_CLASS](fc.tupled(c).apply)(ProductToParams(_, fc.arity).asInstanceOf[I])
   }
 }
 
@@ -214,17 +227,24 @@ object EndpointIO {
   case class Body[T, M <: MediaType, R](codec: CodecForOptional[T, M, R], info: Info[T]) extends Basic[T] {
     def description(d: String): Body[T, M, R] = copy(info = info.description(d))
     def example(t: T): Body[T, M, R] = copy(info = info.example(t))
-    def show = s"{body as ${codec.meta.mediaType.mediaType}}"
+    def validate(v: Validator[T]): Body[T, M, R] = copy(codec = codec.validate(v))
+    def show: String = addValidatorShow(s"{body as ${codec.meta.mediaType.mediaType}}", codec.validator)
   }
 
   case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Basic[S] {
     def show = s"{body as stream, ${wrapped.mediaType.mediaType}}"
   }
 
+  case class FixedHeader(name: String, value: String, info: Info[Unit]) extends Basic[Unit] {
+    def description(d: String): FixedHeader = copy(info = info.description(d))
+    def show = s"{header $name: $value}"
+  }
+
   case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Basic[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
-    def show = s"{header $name}"
+    def validate(v: Validator[T]): Header[T] = copy(codec = codec.validate(v))
+    def show: String = addValidatorShow(s"{header $name}", codec.validator)
   }
 
   case class Headers(info: Info[Seq[(String, String)]]) extends Basic[Seq[(String, String)]] {
@@ -233,7 +253,7 @@ object EndpointIO {
     def show = s"{multiple headers}"
   }
 
-  case class Mapped[I, T](wrapped: EndpointIO[I], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I]) extends Single[T] {
+  case class Mapped[I, T](wrapped: EndpointIO[I], f: I => T, g: T => I) extends Single[T] {
     override def show: String = s"map(${wrapped.show})"
   }
 
@@ -249,6 +269,7 @@ object EndpointIO {
     override def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointOutput.Multiple[IJ] =
       other match {
         case s: EndpointOutput.Single[_] => EndpointOutput.Multiple((ios: Vector[EndpointOutput.Single[_]]) :+ s)
+        case EndpointOutput.Void()       => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
         case EndpointOutput.Multiple(m)  => EndpointOutput.Multiple((ios: Vector[EndpointOutput.Single[_]]) ++ m)
         case EndpointIO.Multiple(m)      => EndpointOutput.Multiple((ios: Vector[EndpointOutput.Single[_]]) ++ m)
       }
@@ -285,8 +306,8 @@ information. The `EndpointIO.StreamBodyWrapper` should only be used internally, 
 factory method in `Tapir` which would directly create an instance of it.
  */
 sealed trait StreamingEndpointIO[I, +S] {
-  def map[II](f: I => II)(g: II => I)(implicit paramsAsArgs: ParamsAsArgs[I]): StreamingEndpointIO[II, S] =
-    StreamingEndpointIO.Mapped(this, f, g, paramsAsArgs)
+  def map[II](f: I => II)(g: II => I): StreamingEndpointIO[II, S] =
+    StreamingEndpointIO.Mapped(this, f, g)
 
   private[tapir] def toEndpointIO: EndpointIO[I]
 }
@@ -299,8 +320,7 @@ object StreamingEndpointIO {
     private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, M] = EndpointIO.StreamBodyWrapper(this)
   }
 
-  case class Mapped[I, T, S](wrapped: StreamingEndpointIO[I, S], f: I => T, g: T => I, paramsAsArgs: ParamsAsArgs[I])
-      extends StreamingEndpointIO[T, S] {
+  case class Mapped[I, T, S](wrapped: StreamingEndpointIO[I, S], f: I => T, g: T => I) extends StreamingEndpointIO[T, S] {
     private[tapir] override def toEndpointIO: EndpointIO[T] = wrapped.toEndpointIO.map(f)(g)
   }
 }

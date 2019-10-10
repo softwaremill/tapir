@@ -1,9 +1,9 @@
 package tapir.internal.server
 
 import tapir.CodecForMany.PlainCodecForMany
-import tapir.{CodecForOptional, EndpointIO, EndpointOutput, MediaType, StreamingEndpointIO}
 import tapir.internal._
 import tapir.model.StatusCode
+import tapir.{CodecForOptional, EndpointIO, EndpointOutput, MediaType, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 
@@ -13,8 +13,10 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     def run(outputs: Vector[EndpointOutput.Single[_]], ov: OutputValues[B], vs: Seq[Any]): OutputValues[B] = {
       (outputs, vs) match {
         case (Vector(), Seq()) => ov
-        case (EndpointOutput.FixedStatusCode(sc) +: outputsTail, _) =>
+        case (EndpointOutput.FixedStatusCode(sc, _) +: outputsTail, _) =>
           run(outputsTail, ov.withStatusCode(sc), vs)
+        case (EndpointIO.FixedHeader(name, value, _) +: outputsTail, _) =>
+          run(outputsTail, ov.withHeader(name -> value), vs)
         case (outputsHead +: outputsTail, vsHead +: vsTail) =>
           val ov2 = outputsHead match {
             case EndpointIO.Body(codec, _) =>
@@ -35,18 +37,20 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
               vsHead
                 .asInstanceOf[Seq[(String, String)]]
                 .foldLeft(ov)(_.withHeader(_))
-            case EndpointIO.Mapped(wrapped, _, g, _) =>
+            case EndpointIO.Mapped(wrapped, _, g) =>
               apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
             case EndpointOutput.StatusCode() =>
               ov.withStatusCode(vsHead.asInstanceOf[StatusCode])
-            case EndpointOutput.FixedStatusCode(_) =>
+            case EndpointOutput.FixedStatusCode(_, _) =>
+              throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
+            case EndpointIO.FixedHeader(_, _, _) =>
               throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
             case EndpointOutput.OneOf(mappings) =>
               val mapping = mappings
                 .find(mapping => mapping.ct.runtimeClass.isInstance(vsHead))
                 .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $vsHead, in output: $output"))
               apply(mapping.output, vsHead, mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
-            case EndpointOutput.Mapped(wrapped, _, g, _) =>
+            case EndpointOutput.Mapped(wrapped, _, g) =>
               apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
           }
           run(outputsTail, ov2, vsTail)

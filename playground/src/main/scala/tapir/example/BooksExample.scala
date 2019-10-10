@@ -1,9 +1,8 @@
 package tapir.example
 
-import java.util.Properties
-
 import com.typesafe.scalalogging.StrictLogging
 import tapir.example.Endpoints.Limit
+import tapir.swagger.akkahttp.SwaggerAkka
 
 case class Country(name: String)
 case class Author(name: String, country: Country)
@@ -103,7 +102,7 @@ object BooksExample extends App with StrictLogging {
 
     import scala.concurrent.Await
     import scala.concurrent.duration._
-    val routes = route ~ new SwaggerUI(yaml).routes
+    val routes = route ~ new SwaggerAkka(yaml).routes
     implicit val actorSystem: ActorSystem = ActorSystem()
     implicit val materializer: ActorMaterializer = ActorMaterializer()
     Await.result(Http().bindAndHandle(routes, "localhost", 8080), 1.minute)
@@ -136,41 +135,6 @@ object BooksExample extends App with StrictLogging {
   makeClientRequest()
 
   logger.info("Try out the API by opening the Swagger UI: http://localhost:8080/swagger")
-}
-
-/**
-  * Defines akka-http routes which serve the swagger ui (read from the webjar dependency) and the given yaml with
-  * description of the book endpoints.
-  */
-class SwaggerUI(yml: String) {
-  import akka.http.scaladsl.model.StatusCodes
-  import akka.http.scaladsl.server.Directives._
-  import akka.http.scaladsl.server.Route
-
-  val SwaggerYml = "swagger.yml"
-
-  private val redirectToIndex: Route =
-    redirect(s"/swagger/index.html?url=/swagger/$SwaggerYml", StatusCodes.PermanentRedirect) //
-
-  private val swaggerVersion = {
-    val p = new Properties()
-    p.load(getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties"))
-    p.getProperty("version")
-  }
-
-  val routes: Route =
-    path("swagger") {
-      redirectToIndex
-    } ~
-      pathPrefix("swagger") {
-        path("") { // this is for trailing slash
-          redirectToIndex
-        } ~
-          path(SwaggerYml) {
-            complete(yml)
-          } ~
-          getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
-      }
 }
 
 object Library {

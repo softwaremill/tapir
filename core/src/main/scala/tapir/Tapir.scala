@@ -25,6 +25,8 @@ trait Tapir extends TapirDerivedInputs {
 
   def header[T: PlainCodecForMany](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[PlainCodecForMany[T]], EndpointIO.Info.empty)
+  def header(name: String, value: String): EndpointIO.FixedHeader =
+    EndpointIO.FixedHeader(name, value, EndpointIO.Info.empty)
   def headers: EndpointIO.Headers = EndpointIO.Headers(EndpointIO.Info.empty)
 
   def cookie[T: PlainCodecForOptional](name: String): EndpointInput.Cookie[T] =
@@ -43,6 +45,9 @@ trait Tapir extends TapirDerivedInputs {
   def stringBody(charset: String): EndpointIO.Body[String, MediaType.TextPlain, String] = stringBody(Charset.forName(charset))
   def stringBody(charset: Charset): EndpointIO.Body[String, MediaType.TextPlain, String] =
     EndpointIO.Body(CodecForOptional.fromCodec(Codec.stringCodec(charset)), EndpointIO.Info.empty)
+
+  val htmlBodyUtf8: EndpointIO.Body[String, MediaType.TextHtml, String] =
+    EndpointIO.Body(CodecForOptional.fromCodec(Codec.textHtmlCodecUtf8), EndpointIO.Info.empty)
 
   def plainBody[T](implicit codec: CodecForOptional[T, MediaType.TextPlain, _]): EndpointIO.Body[T, MediaType.TextPlain, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
@@ -71,7 +76,7 @@ trait Tapir extends TapirDerivedInputs {
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] = EndpointInput.ExtractFromRequest(f)
 
   def statusCode: EndpointOutput.StatusCode = EndpointOutput.StatusCode()
-  def statusCode(statusCode: StatusCode): EndpointOutput.FixedStatusCode = EndpointOutput.FixedStatusCode(statusCode)
+  def statusCode(statusCode: StatusCode): EndpointOutput.FixedStatusCode = EndpointOutput.FixedStatusCode(statusCode, EndpointIO.Info.empty)
 
   /**
     * Maps status codes to outputs. All outputs must have a common supertype (`I`). Typically, the supertype is a sealed
@@ -81,19 +86,34 @@ trait Tapir extends TapirDerivedInputs {
     */
   def oneOf[I](firstCase: StatusMapping[_ <: I], otherCases: StatusMapping[_ <: I]*): EndpointOutput.OneOf[I] =
     EndpointOutput.OneOf[I](firstCase +: otherCases)
+
+  /**
+    * Create a mapping to be used in [[oneOf]] output descriptions.
+    */
   def statusMapping[O: ClassTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
     StatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)
+
+  /**
+    * Create a fallback mapping to be used in [[oneOf]] output descriptions.
+    */
   def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(None, implicitly[ClassTag[O]], output)
+
+  /**
+    * An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
+    */
+  def emptyOutput: EndpointOutput[Unit] = EndpointOutput.Multiple(Vector.empty)
 
   def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
 
-  val endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
-    Endpoint[Unit, Unit, Unit, Nothing](
+  val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing] =
+    Endpoint[Unit, Nothing, Unit, Nothing](
       EndpointInput.Multiple(Vector.empty),
-      EndpointOutput.Multiple(Vector.empty),
+      EndpointOutput.Void(),
       EndpointOutput.Multiple(Vector.empty),
       EndpointInfo(None, None, None, Vector.empty)
     )
+
+  val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = infallibleEndpoint.copy(errorOutput = EndpointOutput.Multiple(Vector.empty))
 }
 
 trait TapirDerivedInputs { this: Tapir =>
@@ -105,6 +125,6 @@ trait TapirDerivedInputs { this: Tapir =>
           .flatMap(_.split(",").headOption)
           .orElse(request.header("Remote-Address"))
           .orElse(request.header("X-Real-Ip"))
-          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.toString)))
+          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
     )
 }

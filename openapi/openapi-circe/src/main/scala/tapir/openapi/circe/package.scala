@@ -1,5 +1,6 @@
 package tapir.openapi
 
+import com.github.ghik.silencer.silent
 import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
@@ -13,6 +14,7 @@ package object circe extends TapirOpenAPICirceEncoders
 trait TapirOpenAPICirceEncoders {
   // note: these are strict val-s, order matters!
 
+  @silent("possible missing interpolator")
   implicit def encoderReferenceOr[T: Encoder]: Encoder[ReferenceOr[T]] = {
     case Left(Reference(ref)) => Json.obj(("$ref", Json.fromString(ref)))
     case Right(t)             => implicitly[Encoder[T]].apply(t)
@@ -24,8 +26,8 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderExampleValue: Encoder[ExampleValue] = { ev: ExampleValue =>
     parse(ev.value).right.getOrElse(Json.fromString(ev.value))
   }
-  implicit val encoderSchemaFormat: Encoder[SchemaFormat.SchemaFormat] = Encoder.enumEncoder(SchemaFormat)
-  implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.enumEncoder(SchemaType)
+  implicit val encoderSchemaFormat: Encoder[SchemaFormat.SchemaFormat] = Encoder.encodeEnumeration(SchemaFormat)
+  implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.encodeEnumeration(SchemaType)
   implicit val encoderSchema: Encoder[Schema] = deriveEncoder[Schema]
   implicit val encoderReference: Encoder[Reference] = deriveEncoder[Reference]
   implicit val encoderHeader: Encoder[Header] = deriveEncoder[Header]
@@ -34,8 +36,8 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderEncoding: Encoder[Encoding] = deriveEncoder[Encoding]
   implicit val encoderMediaType: Encoder[MediaType] = deriveEncoder[MediaType]
   implicit val encoderRequestBody: Encoder[RequestBody] = deriveEncoder[RequestBody]
-  implicit val encoderParameterStyle: Encoder[ParameterStyle.ParameterStyle] = Encoder.enumEncoder(ParameterStyle)
-  implicit val encoderParameterIn: Encoder[ParameterIn.ParameterIn] = Encoder.enumEncoder(ParameterIn)
+  implicit val encoderParameterStyle: Encoder[ParameterStyle.ParameterStyle] = Encoder.encodeEnumeration(ParameterStyle)
+  implicit val encoderParameterIn: Encoder[ParameterIn.ParameterIn] = Encoder.encodeEnumeration(ParameterIn)
   implicit val encoderParameter: Encoder[Parameter] = deriveEncoder[Parameter]
   implicit val encoderResponseMap: Encoder[ListMap[ResponsesKey, ReferenceOr[Response]]] =
     (responses: ListMap[ResponsesKey, ReferenceOr[Response]]) => {

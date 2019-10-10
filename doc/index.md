@@ -14,6 +14,9 @@ interpreted as:
 
 Tapir is licensed under Apache2, the source code is [available of GitHub](https://github.com/softwaremill/tapir).
 
+Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
+for a more detailed description of how tapir works!
+
 ## Code teaser
 
 ```scala
@@ -65,25 +68,29 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
   .apply(BooksFromYear("SF", 2016), 20, "xyz-abc-123")
 ```
 
-Also check out the [runnable example](https://github.com/softwaremill/tapir/blob/master/playground/src/main/scala/tapir/example/BooksExample.scala) 
-which is a slight extension of the above.
-
 ## Contents
 
 * [Quickstart](quickstart.md)
+* [Examples](examples.md)
 * [Goals of the project](goals.md)
 * [Endpoints: basics](endpoint/basics.md)
 * [Endpoints: inputs/outputs](endpoint/ios.md)
+* [Endpoints: status codes](endpoint/statuscodes.md)
 * [Endpoints: codecs](endpoint/codecs.md)
+* [Endpoints: custom types](endpoint/customtypes.md)
+* [Endpoints: validation](endpoint/validation.md)
 * [Endpoints: working with JSON](endpoint/json.md)
 * [Endpoints: forms](endpoint/forms.md)
 * [Endpoints: authentication](endpoint/auth.md)
-* [Endpoints: implicits guide](endpoint/implicits.md)
 * [Servers: akka-http interpreter](server/akkahttp.md)
 * [Servers: http4s interpreter](server/http4s.md)
-* [Servers: common](server/common.md)
+* [Servers: options](server/options.md)
+* [Servers: logic](server/logic.md)
+* [Servers: error handling](server/errors.md)
 * [Servers: debugging](server/debugging.md)
 * [Clients: sttp interpreter](sttp.md)
+* [Other interpreters](other_interpreters.md)
 * [Documentation: openapi interpreter](openapi.md)
 * [Create your own tapir](mytapir.md)
+* [Design notes](design.md)
 * [Contributing](contributing.md)

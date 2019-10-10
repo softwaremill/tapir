@@ -61,6 +61,24 @@ private[openapi] object EndpointInputToParameterConverter {
     )
   }
 
+  def from[T](header: EndpointIO.FixedHeader, schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+    Parameter(
+      header.name,
+      ParameterIn.Header,
+      header.info.description,
+      Some(true),
+      None,
+      None,
+      None,
+      None,
+      None,
+      schema,
+      example,
+      ListMap.empty,
+      ListMap.empty
+    )
+  }
+
   def from[T](cookie: EndpointInput.Cookie[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
     Parameter(
       cookie.name,

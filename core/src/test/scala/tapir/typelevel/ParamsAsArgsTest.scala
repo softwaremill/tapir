@@ -1,4 +1,5 @@
 package tapir.typelevel
+
 import org.scalatest.{FlatSpec, Matchers}
 
 class ParamsAsArgsTest extends FlatSpec with Matchers {
@@ -18,13 +19,11 @@ class ParamsAsArgsTest extends FlatSpec with Matchers {
 
   it should "convert single param to args" in {
     val singleAsFn = implicitly[ParamsAsArgs[String]].toFn((x: String) => x.length)
-    singleAsFn shouldBe a[String => Int]
     singleAsFn.asInstanceOf[String => Int].apply("xxx") shouldBe 3
   }
 
   it should "convert two params to args" in {
     val singleAsFn = implicitly[ParamsAsArgs[(String, Int)]].toFn { case (x: String, y: Int) => x.length + y }
-    singleAsFn shouldBe a[(String, Int) => Int]
     singleAsFn.asInstanceOf[(String, Int) => Int].apply("xxx", 2) shouldBe 5
   }
 }

@@ -39,6 +39,9 @@ object Schema {
   case class SCoproduct(info: SObjectInfo, schemas: Set[Schema], discriminator: Option[Discriminator]) extends SObject {
     override def show: String = "oneOf:" + schemas.mkString(",")
   }
+  case class SOpenProduct(info: SObjectInfo, valueSchema: Schema) extends SObject {
+    override def show: String = s"map"
+  }
 
   case class SRef(info: SObjectInfo) extends Schema {
     def show: String = s"ref($info)"

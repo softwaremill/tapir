@@ -28,6 +28,11 @@ object MediaType {
     override val mediaType: String = s"$mediaTypeNoParams; charset=${charset.name()}"
   }
 
+  case class TextHtml(charset: Charset = StandardCharsets.UTF_8) extends MediaType {
+    override val mediaTypeNoParams: String = s"text/html"
+    override val mediaType: String = s"$mediaTypeNoParams; charset=${charset.name()}"
+  }
+
   case class OctetStream() extends MediaType {
     override val mediaTypeNoParams: String = "application/octet-stream"
   }

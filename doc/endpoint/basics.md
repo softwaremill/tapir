@@ -30,6 +30,13 @@ Endpoint[(UUID, Int), String, User, Nothing]
 You can think of an endpoint as a function, which takes input parameters of type `I` and returns a result of type 
 `Either[E, O]`, where inputs or outputs can contain streaming bodies of type `S`.
 
+### Infallible endpoints
+
+Note that the empty `endpoint` description maps no values to either error and success outputs, however errors
+are still represented and allow to occur. If you would prefer to use an endpoint description, where
+errors can not happen, use `infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing]`. This might be useful when
+interpreting endpoints [as a client](../sttp.html).
+
 ## Defining an endpoint
 
 The description of an endpoint is an immutable case class, which includes a number of methods:

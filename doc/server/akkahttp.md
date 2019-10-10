@@ -4,7 +4,7 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-akka-http-server" % "0.8.1"
+"com.softwaremill.tapir" %% "tapir-akka-http-server" % "0.11.5"
 ```
 
 and import the package:
@@ -73,9 +73,9 @@ response bodies and reading request bodies. Usage: `streamBody[Source[ByteString
 ## Configuration
 
 The interpreter can be configured by providing an implicit `AkkaHttpServerOptions` value and status mappers, see
-[common server configuration](common.html) for details.
+[server options](options.html) for details.
 
 ## Defining an endpoint together with the server logic
 
 It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[common server configuration](common.html) for details.
+[server logic](logic.html) for details.

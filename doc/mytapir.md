@@ -11,8 +11,9 @@ a single-import whenever you want to use tapir. For example:
 object MyTapir extends Tapir
   with TapirAkkaHttpServer
   with TapirSttpClient
-  with TapirCirceJson
+  with TapirJsonCirce
   with TapirOpenAPICirceYaml
+  with TapirAliases
 ```
 
 Then, a single `import MyTapir._` and all Tapir data types and extensions methods will be in scope!

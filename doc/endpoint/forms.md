@@ -13,7 +13,7 @@ formBody[Map[String, String]]: EndpointIO[Map[String, String],
                                           MediaType.XWwwFormUrlencoded, _]
 ```
 
-Second, form data can be mapped to a case class. The codec for the case class is generated using a macro at 
+Second, form data can be mapped to a case class. The codec for the case class is automatically derived using a macro at 
 compile-time. The fields of the case class should have types, for which there is a plain text codec. For example:
 
 ```scala

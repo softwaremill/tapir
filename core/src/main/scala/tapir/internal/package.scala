@@ -15,8 +15,8 @@ package object internal {
       case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
       case EndpointInput.Multiple(inputs)               => inputs.flatMap(_.traverseInputs(handle))
       case EndpointIO.Multiple(inputs)                  => inputs.flatMap(_.traverseInputs(handle))
-      case EndpointInput.Mapped(wrapped, _, _, _)       => wrapped.traverseInputs(handle)
-      case EndpointIO.Mapped(wrapped, _, _, _)          => wrapped.traverseInputs(handle)
+      case EndpointInput.Mapped(wrapped, _, _)          => wrapped.traverseInputs(handle)
+      case EndpointIO.Mapped(wrapped, _, _)             => wrapped.traverseInputs(handle)
       case a: EndpointInput.Auth[_]                     => a.input.traverseInputs(handle)
       case _                                            => Vector.empty
     }
@@ -36,26 +36,26 @@ package object internal {
       }.headOption
   }
 
-  implicit class RichBasicEndpointInputs(inputs: Vector[EndpointInput.Basic[_]]) {
-    def sortByType: Vector[EndpointInput.Basic[_]] = inputs.sortBy {
-      case _: EndpointInput.FixedMethod           => 0
-      case _: EndpointInput.FixedPath             => 1
-      case _: EndpointInput.PathCapture[_]        => 1
-      case _: EndpointInput.PathsCapture          => 1
-      case _: EndpointInput.Query[_]              => 2
-      case _: EndpointInput.QueryParams           => 2
-      case _: EndpointInput.Cookie[_]             => 3
-      case _: EndpointIO.Header[_]                => 3
-      case _: EndpointIO.Headers                  => 3
-      case _: EndpointInput.ExtractFromRequest[_] => 4
-      case _: EndpointIO.Body[_, _, _]            => 6
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
-    }
+  def basicInputSortIndex(i: EndpointInput.Basic[_]): Int = i match {
+    case _: EndpointInput.FixedMethod           => 0
+    case _: EndpointInput.FixedPath             => 1
+    case _: EndpointInput.PathCapture[_]        => 1
+    case _: EndpointInput.PathsCapture          => 1
+    case _: EndpointInput.Query[_]              => 2
+    case _: EndpointInput.QueryParams           => 2
+    case _: EndpointInput.Cookie[_]             => 3
+    case _: EndpointIO.Header[_]                => 3
+    case _: EndpointIO.Headers                  => 3
+    case _: EndpointIO.FixedHeader              => 3
+    case _: EndpointInput.ExtractFromRequest[_] => 4
+    case _: EndpointIO.Body[_, _, _]            => 6
+    case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
   }
 
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
     def asVectorOfSingleOutputs: Vector[EndpointOutput.Single[_]] = output match {
       case s: EndpointOutput.Single[_]   => Vector(s)
+      case _: EndpointOutput.Void        => Vector()
       case m: EndpointOutput.Multiple[_] => m.outputs
       case m: EndpointIO.Multiple[_]     => m.ios
     }
@@ -82,10 +82,11 @@ package object internal {
       }
 
       output match {
-        case EndpointOutput.Multiple(outputs)        => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
-        case EndpointIO.Multiple(outputs)            => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
-        case EndpointOutput.Mapped(wrapped, _, _, _) => wrapped.asBasicOutputsOrMap
-        case EndpointIO.Mapped(wrapped, _, _, _)     => wrapped.asBasicOutputsOrMap
+        case EndpointOutput.Multiple(outputs)     => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointIO.Multiple(outputs)         => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointOutput.Mapped(wrapped, _, _) => wrapped.asBasicOutputsOrMap
+        case EndpointIO.Mapped(wrapped, _, _)     => wrapped.asBasicOutputsOrMap
+        case _: EndpointOutput.Void               => Left(Vector.empty)
         case s: EndpointOutput.OneOf[_] =>
           Right(
             ListMap(
@@ -106,8 +107,8 @@ package object internal {
       case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
       case EndpointOutput.Multiple(outputs)              => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointIO.Multiple(outputs)                  => outputs.flatMap(_.traverseOutputs(handle))
-      case EndpointOutput.Mapped(wrapped, _, _, _)       => wrapped.traverseOutputs(handle)
-      case EndpointIO.Mapped(wrapped, _, _, _)           => wrapped.traverseOutputs(handle)
+      case EndpointOutput.Mapped(wrapped, _, _)          => wrapped.traverseOutputs(handle)
+      case EndpointIO.Mapped(wrapped, _, _)              => wrapped.traverseOutputs(handle)
       case s: EndpointOutput.OneOf[_]                    => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
       case _                                             => Vector.empty
     }
@@ -125,8 +126,16 @@ package object internal {
       case _: EndpointOutput.FixedStatusCode     => 0
       case _: EndpointIO.Header[_]               => 1
       case _: EndpointIO.Headers                 => 1
+      case _: EndpointIO.FixedHeader             => 1
       case _: EndpointIO.Body[_, _, _]           => 2
       case _: EndpointIO.StreamBodyWrapper[_, _] => 2
+    }
+  }
+
+  private[tapir] def addValidatorShow(s: String, v: Validator[_]): String = {
+    v.show match {
+      case None     => s
+      case Some(sv) => s"$s($sv)"
     }
   }
 }

@@ -3,6 +3,7 @@ package tapir.server.http4s
 import cats.data._
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
+import com.github.ghik.silencer.silent
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import org.log4s._
 import tapir.internal.SeqToParams
@@ -25,8 +26,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
             values.bodyInput match {
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 new Http4sRequestToRawBody(serverOptions).apply(req.body, codec.meta.rawValueType, req.charset, req).map { v =>
-                  codec.safeDecode(DecodeInputs.rawBodyValueToOption(v, codec.meta.isOptional)) match {
-                    case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
+                  codec.decode(DecodeInputs.rawBodyValueToOption(v, codec.meta.isOptional)) match {
+                    case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
                     case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                   }
                 }
@@ -38,7 +39,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       }
 
       def valuesToResponse(values: DecodeInputsResult.Values): F[Response[F]] = {
-        val i = SeqToParams(InputValues(se.endpoint.input, values.values)).asInstanceOf[I]
+        val i = SeqToParams(InputValues(se.endpoint.input, values)).asInstanceOf[I]
         se.logic(i)
           .map {
             case Right(result) => outputToResponse(ServerDefaults.successStatusCode, se.endpoint.output, result)
@@ -63,9 +64,9 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     service
   }
 
+  @silent("never used")
   def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[O])(
-      implicit serverOptions: Http4sServerOptions[F],
-      eIsThrowable: E <:< Throwable,
+      implicit eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
   ): HttpRoutes[F] = {
     def reifyFailedF(f: F[O]): F[Either[E, O]] = {

@@ -191,31 +191,41 @@ case class Reference($ref: String)
 
 // todo: discriminator, xml, json-schema properties
 case class Schema(
-    title: Option[String],
-    required: List[String],
-    `type`: Option[SchemaType.SchemaType],
-    items: Option[ReferenceOr[Schema]],
-    properties: ListMap[String, ReferenceOr[Schema]],
-    description: Option[String],
-    format: Option[SchemaFormat.SchemaFormat],
-    default: Option[ExampleValue],
-    nullable: Option[Boolean],
-    readOnly: Option[Boolean],
-    writeOnly: Option[Boolean],
-    example: Option[ExampleValue],
-    deprecated: Option[Boolean],
-    oneOf: Option[List[ReferenceOr[Schema]]],
-    discriminator: Option[Discriminator]
+    title: Option[String] = None,
+    required: List[String] = List.empty,
+    `type`: Option[SchemaType.SchemaType] = None,
+    items: Option[ReferenceOr[Schema]] = None,
+    properties: ListMap[String, ReferenceOr[Schema]] = ListMap.empty,
+    description: Option[String] = None,
+    format: Option[SchemaFormat.SchemaFormat] = None,
+    default: Option[ExampleValue] = None,
+    nullable: Option[Boolean] = None,
+    readOnly: Option[Boolean] = None,
+    writeOnly: Option[Boolean] = None,
+    example: Option[ExampleValue] = None,
+    deprecated: Option[Boolean] = None,
+    oneOf: Option[List[ReferenceOr[Schema]]] = None,
+    discriminator: Option[Discriminator] = None,
+    additionalProperties: Option[ReferenceOr[Schema]] = None,
+    pattern: Option[String] = None,
+    minLength: Option[Int] = None,
+    maxLength: Option[Int] = None,
+    minimum: Option[BigDecimal] = None,
+    exclusiveMinimum: Option[BigDecimal] = None,
+    maximum: Option[BigDecimal] = None,
+    exclusiveMaximum: Option[BigDecimal] = None,
+    minItems: Option[Int] = None,
+    maxItems: Option[Int] = None,
+    enum: Option[List[String]] = None
 )
 
 case class Discriminator(propertyName: String, mapping: Option[ListMap[String, String]])
 
 object Schema {
-  def apply(`type`: SchemaType.SchemaType): Schema =
-    Schema(None, List.empty, Some(`type`), None, ListMap.empty, None, None, None, None, None, None, None, None, None, None)
+  def apply(`type`: SchemaType.SchemaType): Schema = new Schema(`type` = Some(`type`))
 
   def apply(references: List[ReferenceOr[Schema]], discriminator: Option[Discriminator]): Schema =
-    Schema(None, List.empty, None, None, ListMap.empty, None, None, None, None, None, None, None, None, Some(references), discriminator)
+    new Schema(oneOf = Some(references), discriminator = discriminator)
 }
 
 object SchemaType extends Enumeration {

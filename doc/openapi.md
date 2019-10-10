@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.8.1"
-"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.8.1"
+"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.11.5"
+"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.11.5"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -23,6 +23,12 @@ val docs: OpenAPI = booksListing.toOpenAPI("My Bookshop", "1.0")
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
 class structure such as the `OpenAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
 
+Multiple endpoints can be converted to an `OpenAPI` instance by calling the extension method on a list of endpoints:
+
+```scala
+List(addBook, booksListing, booksListingByGenre).toOpenAPI("My Bookshop", "1.0")
+```
+
 The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala
@@ -31,49 +37,33 @@ import tapir.openapi.circe.yaml._
 println(docs.toYaml)
 ```
 
+Each endpoint corresponds to an operation in the OpenAPI format and should have a unique operation id. By default,
+the `name` of endpoint is used as the operation id, and if this is not available, the operation id is auto-generated
+by concatenating (using camel-case) the request method and path. This can be customised by providing an implicit
+instance of `OpenAPIDocsOptions`.
+
 ## Exposing OpenAPI documentation
 
-Exposing the OpenAPI documentation can be very application-specific. For example, to expose the docs using the
-Swagger UI and akka-http:
+Exposing the OpenAPI documentation can be very application-specific. However, tapir contains modules which contain
+akka-http/http4s routes for exposing documentation using [Swagger UI](https://swagger.io/tools/swagger-ui/) or 
+[Redoc](https://github.com/Redocly/redoc):
 
-* add `libraryDependencies += "org.webjars" % "swagger-ui" % "3.22.1"` to `build.sbt` (or newer)
-* generate the yaml content to serve as a `String` using tapir: 
+```scala
+"com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http" % "0.11.5"
+"com.softwaremill.tapir" %% "tapir-swagger-ui-http4s" % "0.11.5"
+"com.softwaremill.tapir" %% "tapir-redoc-http4s" % "0.11.5"
+```
+
+Usage example for akka-http:
 
 ```scala
 import tapir.docs.openapi._
 import tapir.openapi.circe.yaml._
+import tapir.swagger.akkahttp.SwaggerAkka
 
 val docsAsYaml: String = myEndpoints.toOpenAPI("My App", "1.0").toYaml
+// add to your akka routes
+new SwaggerAkka(docsAsYaml).routes
 ```
 
-* add the following routes to your server:
-
-```scala
-val SwaggerYml = "swagger.yml"
-
-private val redirectToIndex: Route =
-  redirect(s"/swagger/index.html?url=/swagger/$SwaggerYml", StatusCodes.PermanentRedirect) 
-
-// needed only if you use oauth2 authorization
-private def redirectToOath2(query: String): Route =
-    redirect(s"/swagger/oauth2-redirect.html$query", StatusCodes.PermanentRedirect)
-
-private val swaggerVersion = {
-  val p = new Properties()
-  p.load(getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties"))
-  p.getProperty("version")
-}
-
-val routes: Route =   
-  pathPrefix("swagger") {
-    pathEndOrSingleSlash {
-      redirectToIndex
-    } ~ path(SwaggerYml) {
-      complete(yml)
-    } ~ getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
-  } ~
-  // needed only if you use oauth2 authorization
-  path("oauth2-redirect.html") { request => 
-    redirectToOath2(request.request.uri.rawQueryString.map(s => '?' + s).getOrElse(""))(request)
-  }
-```
+For http4s, use the `SwaggerHttp4s` or `RedocHttp4s` classes.

@@ -1,6 +1,7 @@
 package tapir
 
 import java.io.File
+import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
 import java.nio.file.Path
 import java.time._
@@ -22,6 +23,7 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   }
 
   implicit val schemaForString: SchemaFor[String] = SchemaFor(SString)
+  implicit val schemaForByte: SchemaFor[Byte] = SchemaFor(SInteger)
   implicit val schemaForShort: SchemaFor[Short] = SchemaFor(SInteger)
   implicit val schemaForInt: SchemaFor[Int] = SchemaFor(SInteger)
   implicit val schemaForLong: SchemaFor[Long] = SchemaFor(SInteger)
@@ -38,7 +40,12 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
   implicit val schemaForDate: SchemaFor[Date] = SchemaFor(SDateTime)
   implicit val schemaForLocalDateTime: SchemaFor[LocalDateTime] = SchemaFor(SDateTime)
   implicit val schemaForLocalDate: SchemaFor[LocalDate] = SchemaFor(SDate)
+  implicit val schemaForZoneOffset: SchemaFor[ZoneOffset] = SchemaFor(SString)
+  implicit val schemaForJavaDuration: SchemaFor[Duration] = SchemaFor(SString)
+  implicit val schemaForScalaDuration: SchemaFor[scala.concurrent.duration.Duration] = SchemaFor(SString)
   implicit val schemaForUUID: SchemaFor[UUID] = SchemaFor(SString)
+  implicit val schemaForBigDecimal: SchemaFor[BigDecimal] = SchemaFor(SString)
+  implicit val schemaForJBigDecimal: SchemaFor[JBigDecimal] = SchemaFor(SString)
 
   implicit def schemaForOption[T: SchemaFor]: SchemaFor[Option[T]] = new SchemaFor[Option[T]] {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
@@ -56,7 +63,7 @@ object SchemaFor extends SchemaForMagnoliaDerivation {
     override def schema: Schema = implicitly[SchemaFor[T]].schema
   }
 
-  implicit def schemaForMap[V: SchemaFor]: SchemaFor[Map[String, V]] = SchemaFor(SProduct(SObjectInfo("Map"), List.empty, List.empty))
+  implicit def schemaForMap[V: SchemaFor]: SchemaFor[Map[String, V]] = macro generic.SchemaForMapMacro.schemaForMap[Map[String, V], V]
 
   def oneOf[E, V](extractor: E => V, asString: V => String)(mapping: (V, SchemaFor[_])*): SchemaFor[E] = macro oneOfMacro[E, V]
 }

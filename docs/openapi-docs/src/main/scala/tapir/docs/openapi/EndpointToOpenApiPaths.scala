@@ -1,12 +1,11 @@
 package tapir.docs.openapi
 
+import tapir._
 import tapir.docs.openapi.schema.ObjectSchemas
+import tapir.internal._
 import tapir.model.Method
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi._
-import tapir.internal._
-import tapir._
-
+import tapir.openapi.{Schema, _}
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
@@ -21,13 +20,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     val pathComponents = namedPathComponents(inputs)
     val method = e.input.method.getOrElse(Method.GET)
 
-    val pathComponentsForId = pathComponents.map(_.fold(identity, identity))
-    val defaultId = options.operationIdGenerator(pathComponentsForId, method)
-
-    val pathComponentForPath = pathComponents.map {
-      case Left(p)  => s"{$p}"
-      case Right(p) => p
-    }
+    val defaultId = options.operationIdGenerator(pathComponents, method)
 
     val operation = Some(endpointToOperation(defaultId, e, inputs))
     val pathItem = PathItem(
@@ -45,7 +38,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       parameters = List.empty
     )
 
-    ("/" + pathComponentForPath.mkString("/"), pathItem)
+    (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), pathItem)
   }
 
   private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_]]): Operation = {
@@ -61,7 +54,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       e.info.tags.toList,
       e.info.summary,
       e.info.description,
-      defaultId,
+      e.info.name.getOrElse(defaultId),
       parameters.toList.map(Right(_)),
       body.headOption,
       responses,
@@ -86,50 +79,61 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
       case h: EndpointIO.Header[_]         => headerToParameter(h)
       case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
+      case f: EndpointIO.FixedHeader       => fixedHeaderToParameter(f)
     }
   }
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
     EndpointInputToParameterConverter.from(
       header,
-      objectSchemas(header.codec.meta.schema),
+      objectSchemas(header.codec),
       header.info.example.flatMap(exampleValue(header.codec, _))
     )
   }
+
+  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader) = {
+    EndpointInputToParameterConverter.from(
+      header,
+      Right(Schema(SchemaType.String)),
+      header.info.example.map(_ => exampleValue(header.value))
+    )
+  }
+
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
     EndpointInputToParameterConverter.from(
       cookie,
-      objectSchemas(cookie.codec.meta.schema),
+      objectSchemas(cookie.codec),
       cookie.info.example.flatMap(exampleValue(cookie.codec, _))
     )
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    EndpointInputToParameterConverter.from(p, objectSchemas(p.codec.meta.schema), p.info.example.flatMap(exampleValue(p.codec, _)))
+    EndpointInputToParameterConverter.from(
+      p,
+      objectSchemas(p.codec),
+      p.info.example.flatMap(exampleValue(p.codec, _))
+    )
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
     EndpointInputToParameterConverter.from(
       query,
-      objectSchemas(query.codec.meta.schema),
+      objectSchemas(query.codec),
       query.info.example.flatMap(exampleValue(query.codec, _))
     )
   }
 
-  /**
-    * @return `Left` if the component is a capture, `Right` if it is a segment
-    */
-  private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[Either[String, String]] = {
+  private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
     inputs
       .collect {
         case EndpointInput.PathCapture(_, name, _) => Left(name)
         case EndpointInput.FixedPath(s)            => Right(s)
       }
-      .foldLeft((Vector.empty[Either[String, String]], 1)) {
+      .foldLeft((Vector.empty[String], 1)) {
         case ((acc, i), component) =>
           component match {
-            case Left(None)    => (acc :+ Left(s"param$i"), i + 1)
-            case Left(Some(p)) => (acc :+ Left(p), i)
-            case Right(p)      => (acc :+ Right(p), i)
+            case Left(None)    => (acc :+ s"param$i", i + 1)
+            case Left(Some(p)) => (acc :+ p, i)
+            case Right(p)      => (acc :+ p, i)
           }
       }
       ._1

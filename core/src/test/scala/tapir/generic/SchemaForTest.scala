@@ -1,5 +1,8 @@
 package tapir.generic
 
+import java.math.{BigDecimal => JBigDecimal}
+
+import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema._
 import tapir.{Schema, SchemaFor}
@@ -11,6 +14,7 @@ import scala.concurrent.{Await, Future}
 case class StringValueClass(value: String) extends AnyVal
 case class IntegerValueClass(value: Int) extends AnyVal
 
+@silent("never used")
 class SchemaForTest extends FlatSpec with Matchers {
 
   "SchemaFor" should "find schema for simple types" in {
@@ -23,6 +27,8 @@ class SchemaForTest extends FlatSpec with Matchers {
     implicitly[SchemaFor[Float]].schema shouldBe SNumber
     implicitly[SchemaFor[Double]].schema shouldBe SNumber
     implicitly[SchemaFor[Boolean]].schema shouldBe SBoolean
+    implicitly[SchemaFor[BigDecimal]].schema shouldBe SString
+    implicitly[SchemaFor[JBigDecimal]].schema shouldBe SString
   }
 
   it should "find schema for value classes" in {
@@ -138,7 +144,32 @@ class SchemaForTest extends FlatSpec with Matchers {
 
   it should "find schema for map" in {
     val schema = implicitly[SchemaFor[Map[String, Int]]].schema
-    schema shouldBe SProduct(SObjectInfo("Map"), List.empty, List.empty)
+    schema shouldBe SOpenProduct(SObjectInfo("Map", List("Int")), Schema.SInteger)
+  }
+
+  it should "find schema for map of products" in {
+    val schema = implicitly[SchemaFor[Map[String, D]]].schema
+    schema shouldBe SOpenProduct(
+      SObjectInfo("Map", List("D")),
+      SProduct(SObjectInfo("tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName"))
+    )
+  }
+
+  it should "find schema for map of generic products" in {
+    val schema = implicitly[SchemaFor[Map[String, H[D]]]].schema
+    schema shouldBe SOpenProduct(
+      SObjectInfo("Map", List("H", "D")),
+      SProduct(
+        SObjectInfo("tapir.generic.H", List("D")),
+        List(("data", SProduct(SObjectInfo("tapir.generic.D"), List(("someFieldName", SString)), List("someFieldName")))),
+        List("data")
+      )
+    )
+  }
+
+  it should "find schema for map of value classes" in {
+    val schema = implicitly[SchemaFor[Map[String, IntegerValueClass]]].schema
+    schema shouldBe SOpenProduct(SObjectInfo("Map", List("IntegerValueClass")), Schema.SInteger)
   }
 
   it should "find schema for recursive coproduct type" in {
@@ -175,6 +206,41 @@ class SchemaForTest extends FlatSpec with Matchers {
       None
     )
   }
+
+  it should "find the right schema for a case class with simple types" in {
+    // given
+    case class Test1(
+        f1: String,
+        f2: Byte,
+        f3: Short,
+        f4: Int,
+        f5: Long,
+        f6: Float,
+        f7: Double,
+        f8: Boolean,
+        f9: BigDecimal,
+        f10: JBigDecimal
+    )
+    val schema = implicitly[SchemaFor[Test1]]
+
+    // when
+    schema.schema shouldBe SProduct(
+      SObjectInfo("tapir.generic.SchemaForTest.<local SchemaForTest>.Test1"),
+      List(
+        ("f1", SString),
+        ("f2", SInteger),
+        ("f3", SInteger),
+        ("f4", SInteger),
+        ("f5", SInteger),
+        ("f6", SNumber),
+        ("f7", SNumber),
+        ("f8", SBoolean),
+        ("f9", SString),
+        ("f10", SString)
+      ),
+      List("f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10")
+    )
+  }
 }
 
 case class A(f1: String, f2: Int, f3: Option[String])
@@ -183,6 +249,7 @@ case class C(h1: List[String], h2: Option[Int])
 case class D(someFieldName: String)
 case class F(f1: List[F], f2: Int)
 
+@silent("never used")
 class Custom(c: String)
 case class G(f1: Int, f2: Custom)
 

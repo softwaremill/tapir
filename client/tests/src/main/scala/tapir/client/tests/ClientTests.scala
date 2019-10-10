@@ -17,7 +17,6 @@ import org.http4s.util.CaseInsensitiveString
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
 import tapir._
 import tapir.tests._
-import tapir.typelevel.ParamsAsArgs
 import TestUtil._
 import org.http4s.multipart
 import tapir.model.{MultiQueryParams, StatusCodes, UsernamePassword}
@@ -78,6 +77,9 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
   testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
   testClient(in_string_out_status, "apple", Right(StatusCodes.Ok))
+
+  testClient(delete_endpoint, (), Right(()))
+
   testClient(in_optional_json_out_optional_json.name("defined"), Some(FruitAmount("orange", 11)), Right(Some(FruitAmount("orange", 11))))
   testClient(in_optional_json_out_optional_json.name("empty"), None, Right(None))
 
@@ -88,6 +90,37 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       .unsafeRunSync()
       .right
       .get should contain allOf (("X-Fruit", "elppa"), ("Y-Fruit", "egnarO"))
+  }
+
+  test(in_json_out_headers.showDetail) {
+    send(in_json_out_headers, port, FruitAmount("apple", 10))
+      .unsafeRunSync()
+      .right
+      .get should contain(("Content-Type", "application/json".reverse))
+  }
+
+  test(in_simple_multipart_out_raw_string.showDetail) {
+    val result = send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
+      .unsafeRunSync()
+      .right
+      .get
+
+    val indexOfJson = result.indexOf("{\"fruit")
+    val beforeJson = result.substring(0, indexOfJson)
+    val afterJson = result.substring(indexOfJson)
+
+    beforeJson should include("""Content-Disposition: form-data; name="fruitAmount"""")
+    beforeJson should include("Content-Type: application/json")
+    beforeJson should not include ("Content-Type: text/plain")
+
+    afterJson should include("""Content-Disposition: form-data; name="notes"""")
+    afterJson should include("Content-Type: text/plain; charset=UTF-8")
+    afterJson should not include ("Content-Type: application/json")
+  }
+
+  test(in_fixed_header_out_string.showDetail) {
+    send(in_fixed_header_out_string, port, ())
+      .unsafeRunSync() shouldBe Right("Location: secret")
   }
 
   //
@@ -140,6 +173,15 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
         case None    => Ok()
         case Some(h) => Ok("Role: " + h.value)
       }
+
+    case r @ GET -> Root / "secret" =>
+      r.headers.get(CaseInsensitiveString("Location")) match {
+        case None    => BadRequest()
+        case Some(h) => Ok("Location: " + h.value)
+      }
+
+    case DELETE -> Root / "api" / "delete" => Ok()
+
     case r @ GET -> Root / "auth" :? apiKeyOptParam(ak) =>
       val authHeader = r.headers.get(CaseInsensitiveString("Authorization")).map(_.value)
       val xApiKey = r.headers.get(CaseInsensitiveString("X-Api-Key")).map(_.value)
@@ -152,12 +194,9 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   type Port = Int
 
-  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I)(implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]): IO[Either[E, O]]
+  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[Either[E, O]]
 
-  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O])(
-      implicit paramsAsArgs: ParamsAsArgs.Aux[I, FN]
-  ): Unit = {
-
+  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Either[Any, Any] = {

@@ -17,6 +17,7 @@ object DecodeResult {
   case class Multiple[R](vs: Seq[R]) extends DecodeFailure
   case class Error(original: String, error: Throwable) extends DecodeFailure
   case class Mismatch(expected: String, actual: String) extends DecodeFailure
+  case class InvalidValue(errors: List[ValidationError[_]]) extends DecodeFailure
 
   def sequence[T](results: Seq[DecodeResult[T]]): DecodeResult[Seq[T]] = {
     results.foldRight(Value(List.empty[T]): DecodeResult[Seq[T]]) {

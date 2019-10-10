@@ -1,8 +1,8 @@
 package tapir.docs.openapi
 
+import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
-import tapir.Schema.{SProduct, SObjectInfo, SRef}
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -26,7 +26,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml") {
     val expectedYaml = loadYaml("expected.yml")
 
-    val actualYaml = List(in_query_query_out_string, all_the_way).toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYaml = List(in_query_query_out_string, all_the_way, delete_endpoint).toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -137,6 +137,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_status_codes.yml")
 
     // work-around for #10: unsupported sealed trait families
+    @silent("never used") // it is used
     implicit val schemaForErrorInfo: SchemaFor[ErrorInfo] = new SchemaFor[ErrorInfo] {
       override def schema: Schema = Schema.SProduct(Schema.SObjectInfo("ErrorInfo"), Nil, Nil)
     }
@@ -209,6 +210,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should match the expected yaml when using nested coproduct types with discriminator") {
     val sPerson = implicitly[SchemaFor[Person]]
     val sOrganization = implicitly[SchemaFor[Organization]]
+    @silent("never used") // it is used
     implicit val sEntity: SchemaFor[Entity] = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator_nested.yml")
@@ -321,6 +323,171 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render additional properties for map") {
+    val expectedYaml = loadYaml("expected_additional_properties.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[Map[String, Person]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render map with plain values") {
+    val expectedYaml = loadYaml("expected_map_with_plain_values.yml")
+
+    val actualYaml = endpoint
+      .out(jsonBody[Map[String, String]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  // #118
+  test("use fixed status code output in response if it's the only output") {
+    val expectedYaml = loadYaml("expected_fixed_status_code_2.yml")
+
+    val actualYaml = endpoint
+      .out(statusCode(StatusCodes.NoContent))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support prepending inputs") {
+    val expectedYaml = loadYaml("expected_prepended_input.yml")
+
+    val actualYaml = in_query_query_out_string
+      .in("add")
+      .prependIn("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("use fixed header output in response") {
+    val expectedYaml = loadYaml("expected_fixed_header_output_response.yml")
+
+    val actualYaml = endpoint
+      .out(header("Location", "Poland"))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use fixed header input in request") {
+    val expectedYaml = loadYaml("expected_fixed_header_input_request.yml")
+
+    val actualYaml = endpoint
+      .in(header("Location", "Poland"))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("validator with tagged type in query") {
+    val expectedYaml = loadYaml("expected_valid_query_tagged.yml")
+
+    val actualYaml = Validation.in_query_tagged
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("validator with wrapper type in body") {
+    val expectedYaml = loadYaml("expected_valid_body_wrapped.yml")
+
+    val actualYaml = Validation.in_json_wrapper
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("validator with wrappers type in query") {
+    val expectedYaml = loadYaml("expected_valid_query_wrapped.yml")
+
+    val actualYaml = Validation.in_query_wrapper
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("validator with list") {
+    val expectedYaml = loadYaml("expected_valid_body_collection.yml")
+
+    val actualYaml = Validation.in_json_collection
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("render validator for additional properties of map") {
+    val expectedYaml = loadYaml("expected_valid_additional_properties.yml")
+
+    val actualYaml = Validation.in_map
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render enum validator for classes") {
+    val expectedYaml = loadYaml("expected_valid_enum_class.yml")
+
+    val actualYaml = Validation.in_enum_class
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render enum validator for classes wrapped in option") {
+    val expectedYaml = loadYaml("expected_valid_enum_class_wrapped_in_option.yml")
+
+    val actualYaml = Validation.in_optional_enum_class
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render enum validator for values") {
+    val expectedYaml = loadYaml("expected_valid_enum_values.yml")
+
+    val actualYaml = Validation.in_enum_values
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use enum in object in output response") {
+    val expectedYaml = loadYaml("expected_valid_enum_object.yml")
+
+    val actualYaml = Validation.out_enum_object
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 

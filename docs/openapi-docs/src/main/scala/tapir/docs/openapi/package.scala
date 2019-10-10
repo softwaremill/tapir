@@ -17,9 +17,16 @@ package object openapi extends TapirOpenAPIDocs {
     result
   }
 
-  private[openapi] def exampleValue[T](v: Any): ExampleValue = ExampleValue(v.toString)
-  private[openapi] def exampleValue[T](codec: Codec[T, _, _], e: T): Option[ExampleValue] = Some(exampleValue(codec.encode(e)))
-  private[openapi] def exampleValue[T](codec: CodecForOptional[T, _, _], e: T): Option[ExampleValue] = codec.encode(e).map(exampleValue)
+  private[openapi] def rawToString[T](v: Any): String = v.toString
+  private[openapi] def encodeToString[T](codec: Codec[T, _, _]): T => Option[String] = e => Some(rawToString(codec.encode(e)))
+  private[openapi] def encodeToString[T](codec: CodecForOptional[T, _, _]): T => Option[String] = e => codec.encode(e).map(rawToString)
+  private[openapi] def encodeToString[T](codec: CodecForMany[T, _, _]): T => Option[String] =
+    e => codec.encode(e).headOption.map(rawToString)
+
+  private[openapi] def exampleValue[T](v: String): ExampleValue = ExampleValue(v)
+  private[openapi] def exampleValue[T](codec: Codec[T, _, _], e: T): Option[ExampleValue] = encodeToString(codec)(e).map(exampleValue)
+  private[openapi] def exampleValue[T](codec: CodecForOptional[T, _, _], e: T): Option[ExampleValue] =
+    encodeToString(codec)(e).map(exampleValue)
   private[openapi] def exampleValue[T](codec: CodecForMany[T, _, _], e: T): Option[ExampleValue] =
-    codec.encode(e).headOption.map(exampleValue)
+    encodeToString(codec)(e).map(exampleValue)
 }

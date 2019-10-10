@@ -3,16 +3,22 @@ package tapir
 import java.io.{File, InputStream, PrintWriter}
 import java.nio.ByteBuffer
 
+import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import tapir.json.circe._
 import com.softwaremill.macwire._
+import com.softwaremill.tagging.{@@, Tagger}
+import io.circe.{Decoder, Encoder}
+import tapir.Codec.PlainCodec
 import tapir.model._
 
 import scala.io.Source
 
 package object tests {
-
   val in_query_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(query[String]("fruit")).out(stringBody)
+
+  val in_query_out_infallible_string: Endpoint[String, Nothing, String, Nothing] =
+    infallibleEndpoint.in(query[String]("fruit")).out(stringBody).name("infallible")
 
   val in_query_query_out_string: Endpoint[(String, Option[Int]), Unit, String, Nothing] =
     endpoint.in(query[String]("fruit")).in(query[Option[Int]]("amount")).out(stringBody)
@@ -22,7 +28,16 @@ package object tests {
   val in_path_path_out_string: Endpoint[(String, Int), Unit, String, Nothing] =
     endpoint.in("fruit" / path[String] / "amount" / path[Int]).out(stringBody)
 
+  val in_two_path_capture: Endpoint[(Int, Int), Unit, (Int, Int), Nothing] = endpoint
+    .in("in" / path[Int] / path[Int])
+    .out(header[Int]("a") and header[Int]("b"))
+
   val in_string_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.post.in("api" / "echo").in(stringBody).out(stringBody)
+
+  val in_path: Endpoint[String, Unit, Unit, Nothing] = endpoint.get.in("api").in(path[String])
+
+  val in_fixed_header_out_string: Endpoint[Unit, Unit, String, Nothing] =
+    endpoint.in("secret").in(header("location", "secret")).out(stringBody)
 
   val in_mapped_query_out_string: Endpoint[List[Char], Unit, String, Nothing] =
     endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody)
@@ -44,6 +59,11 @@ package object tests {
   val in_query_out_mapped_string_header: Endpoint[String, Unit, FruitAmount, Nothing] = endpoint
     .in(query[String]("fruit"))
     .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
+
+  val in_header_before_path: Endpoint[(String, Int), Unit, (Int, String), Nothing] = endpoint
+    .in(header[String]("SomeHeader"))
+    .in(path[Int])
+    .out(header[Int]("IntHeader") and stringBody)
 
   val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
     endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
@@ -75,8 +95,17 @@ package object tests {
   val in_headers_out_headers: Endpoint[Seq[(String, String)], Unit, Seq[(String, String)], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(headers).out(headers)
 
+  val in_json_out_headers: Endpoint[FruitAmount, Unit, Seq[(String, String)], Nothing] =
+    endpoint.get.in("api" / "echo" / "headers").in(jsonBody[FruitAmount]).out(headers)
+
   val in_paths_out_string: Endpoint[Seq[String], Unit, String, Nothing] =
     endpoint.get.in(paths).out(stringBody)
+
+  val in_path_paths_out_header_body: Endpoint[(Int, Seq[String]), Unit, (Int, String), Nothing] =
+    endpoint.get.in("api").in(path[Int]).in("and").in(paths).out(header[Int]("IntPath") and stringBody)
+
+  val in_path_fixed_capture_fixed_capture: Endpoint[(Int, Int), Unit, Unit, Nothing] =
+    endpoint.get.in("customer" / path[Int]("customer_id") / "orders" / path[Int]("order_id"))
 
   val in_query_list_out_header_list: Endpoint[List[String], Unit, List[String], Nothing] =
     endpoint.get.in("api" / "echo" / "param-to-header").in(query[List[String]]("qq")).out(header[List[String]]("hh"))
@@ -91,6 +120,9 @@ package object tests {
 
   val in_simple_multipart_out_string: Endpoint[FruitAmount, Unit, String, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitAmount]).out(stringBody)
+
+  val in_simple_multipart_out_raw_string: Endpoint[FruitAmountWrapper, Unit, String, Nothing] =
+    endpoint.post.in("api" / "echo").in(multipartBody[FruitAmountWrapper]).out(stringBody)
 
   val in_file_multipart_out_multipart: Endpoint[FruitData, Unit, FruitData, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
@@ -129,14 +161,26 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          // a/b is used instead of value because of scala 2.11
-          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.a)),
-          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.b))
+          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.value)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.value))
+        )
+      )
+
+  val in_string_out_status_from_string_one_empty: Endpoint[String, Unit, Either[Unit, String], Nothing] =
+    endpoint
+      .in(query[String]("fruit"))
+      .out(
+        oneOf[Either[Unit, String]](
+          statusMapping(StatusCodes.Accepted, emptyOutput.map(Left(_))(_.value)),
+          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.value))
         )
       )
 
   val in_string_out_status: Endpoint[String, Unit, StatusCode, Nothing] =
     endpoint.in(query[String]("fruit")).out(statusCode)
+
+  val delete_endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
+    endpoint.delete.in("api" / "delete").out(statusCode(StatusCodes.Ok).description("ok"))
 
   val in_string_out_content_type_string: Endpoint[String, Unit, (String, String), Nothing] =
     endpoint.in("api" / "echo").in(stringBody).out(stringBody).out(header[String]("Content-Type"))
@@ -144,10 +188,131 @@ package object tests {
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.out(statusCode(StatusCodes.PermanentRedirect)).out(header[String]("Location"))
 
+  val in_unit_out_fixed_header: Endpoint[Unit, Unit, Unit, Nothing] =
+    endpoint.out(header("Location", "Poland"))
+
   val in_optional_json_out_optional_json: Endpoint[Option[FruitAmount], Unit, Option[FruitAmount], Nothing] =
     endpoint.post.in("api" / "echo").in(jsonBody[Option[FruitAmount]]).out(jsonBody[Option[FruitAmount]])
 
-  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
+  //
+
+  @silent("never used")
+  object Validation {
+    type MyTaggedString = String @@ Tapir
+
+    val in_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] = {
+      implicit def plainCodecForMyTaggedString(implicit uc: PlainCodec[String]): PlainCodec[MyTaggedString] =
+        uc.map(_.taggedWith[Tapir])(identity).validate(Validator.pattern("apple|banana"))
+
+      endpoint.in(query[String @@ Tapir]("fruit"))
+    }
+
+    val in_query: Endpoint[StatusCode, Unit, Unit, Nothing] = {
+      endpoint.in(query[Int]("amount").validate(Validator.min(0)))
+    }
+
+    val in_json_wrapper: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
+      implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
+      implicit val intValidator: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+      implicit val stringValidator: Validator[StringWrapper] = Validator.minLength(4).contramap(_.v)
+      endpoint.in(jsonBody[ValidFruitAmount])
+    }
+
+    val in_query_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
+        uc.map(IntWrapper.apply)(_.v).validate(Validator.min(1).contramap(_.v))
+      endpoint.in(query[IntWrapper]("amount"))
+    }
+
+    val in_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+
+      implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
+      implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
+      implicit val stringValidator: Validator[StringWrapper] = Validator.minLength(4).contramap(_.v)
+
+      import tapir.tests.BasketOfFruits._
+      implicit def validatedListEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)
+      implicit def validatedListDecoder[T: Decoder]: Decoder[ValidatedList[T]] =
+        implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
+      implicit def schemaForValidatedList[T: SchemaFor]: SchemaFor[ValidatedList[T]] =
+        SchemaFor(Schema.SArray(implicitly[SchemaFor[T]].schema))
+      implicit def validatorForValidatedList[T: Validator]: Validator[ValidatedList[T]] =
+        implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minSize(1).contramap(identity))
+      endpoint.in(jsonBody[BasketOfFruits])
+    }
+
+    val in_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+      endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
+    }
+
+    val in_enum_class: Endpoint[Color, Unit, Unit, Nothing] = {
+      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def plainCodecForColor: PlainCodec[Color] = {
+        Codec.stringPlainCodecUtf8
+          .map[Color]({
+            case "red"  => Red
+            case "blue" => Blue
+          })(_.toString.toLowerCase)
+          .validate(Validator.enum)
+      }
+      endpoint.in(query[Color]("color"))
+    }
+
+    val in_optional_enum_class: Endpoint[Option[Color], Unit, Unit, Nothing] = {
+      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def plainCodecForColor: PlainCodec[Color] = {
+        Codec.stringPlainCodecUtf8
+          .map[Color]({
+            case "red"  => Red
+            case "blue" => Blue
+          })(_.toString.toLowerCase)
+          .validate(Validator.enum)
+      }
+      endpoint.in(query[Option[Color]]("color"))
+    }
+
+    val out_enum_object: Endpoint[Unit, Unit, ColorValue, Nothing] = {
+      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def plainCodecForColor: PlainCodec[Color] = {
+        Codec.stringPlainCodecUtf8
+          .map[Color]({
+            case "red"  => Red
+            case "blue" => Blue
+          })(_.toString.toLowerCase)
+      }
+      implicit def validatorForColor: Validator[Color] =
+        Validator.enum(List(Blue, Red), { c =>
+          Some(plainCodecForColor.encode(c))
+        })
+      endpoint.out(jsonBody[ColorValue])
+    }
+
+    val in_enum_values: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
+        uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
+      endpoint.in(query[IntWrapper]("amount"))
+    }
+
+    val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
+  }
+
+  //
+
+  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]] ++ Validation.allEndpoints
 
   def writeToFile(s: String): File = {
     val f = File.createTempFile("test", "tapir")
@@ -156,5 +321,18 @@ package object tests {
     f
   }
 
-  def readFromFile(f: File): String = Source.fromFile(f).mkString
+  def readFromFile(f: File): String = {
+    val s = Source.fromFile(f)
+    try {
+      s.mkString
+    } finally {
+      s.close()
+    }
+  }
 }
+
+case class ColorValue(color: Color, value: Int)
+
+sealed trait Color
+case object Blue extends Color
+case object Red extends Color

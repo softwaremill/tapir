@@ -51,30 +51,7 @@ For primitive types, the schema values are built-in, and include values such as 
 The schema is left unchanged when mapping over a codec, as the underlying representation of the value doesn't change.
 
 When codecs are derived for complex types, e.g. for json mapping, schemas are looked up through implicit
-`SchemaFor[T]` values. See [json support](json.html) for more details.
-
-Tapir supports schema generation for coproduct types of the box. In order to extend openApi schema
-representation a discriminator object can be specified. 
-
-For example, given following coproduct:
-```scala
-sealed trait Entity{
-  def kind: String
-} 
-case class Person(firstName:String, lastName:String) extends Entity {
-  def kind: String = "person"
-}
-case class Organization(name: String) extends Entity {
-  def kind: String = "org"  
-}
-```
-The discriminator may look like:
-```scala
-val sPerson = implicitly[SchemaFor[Person]]
-val sOrganization = implicitly[SchemaFor[Organization]]
-implicit val sEntity: SchemaFor[Entity] = 
-    SchemaFor.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
-```
+`SchemaFor[T]` values. See [custom types](customtypes.html) for more details.
  
 ## Media types
 
@@ -90,44 +67,6 @@ Different media types can be used in different contexts. When defining a path, q
 with the `TextPlain` media type can be used. However, for bodies, any media types is allowed. For example, the 
 input/output described by `jsonBody[T]` requires a json codec.
 
-## Custom types
-
-Support for custom types can be added by writing a codec from scratch, or mapping over an existing codec. However,
-custom types can also be supported by mapping over inputs/outputs, not codecs. When to use one and the other?
-
-In general, codecs should be used when translating between raw values and "application-primitives". Codecs also
-allow the decoding process to result in an error, or to complete successfully. For example, to support a custom id type:
-
-```scala
-def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match {
-  case Success(v) => DecodeResult.Value(v)
-  case Failure(f) => DecodeResult.Error(s, f)
-}
-def encode(id: MyId): String = id.toString
-
-implicit val myIdCodec: Codec[MyId, TextPlain, _] = Codec.stringPlainCodecUtf8
-  .mapDecode(decode)(encode)
-```
-
-Additionally, if a type is supported by a codec, it can be used in multiple contexts, such as query parameters, headers,
-bodies, etc. Mapped inputs by construction have a fixed context.
-
-On the other hand, when building composite types out of many values, or when an isomorphic representation of a type
- is needed, but only for a single input/output/endpoint, mapping over an input/output is the simpler solution. Note that
- while codecs can report errors during decoding, mapping over inputs/outputs doesn't have this possibility.
-
-## Validation
-
-While codecs support reporting decoding failures, this is not meant as a validation solution, as it only works on single
-values, while validation often involves multiple combined values.
-
-Decoding failures should be reported when the input is in an incorrect low-level format, when parsing a "raw value"
-fails. In other words, decoding failures should be reported for format failures, not business validation errors.
-
-Any validation should be done as part of the "business logic" methods provided to the server interpreters. In case 
-validation fails, the result can be an error, which is one of the mappings defined in an endpoint
-(the `E` in `Endpoint[I, E, O, S]`).
-
 ## Next
 
-Read on about [json support](json.html).
+Read on about [custom types](customtypes.html).

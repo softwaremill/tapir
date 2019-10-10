@@ -1,74 +1,89 @@
-val scala2_11 = "2.11.12"
-val scala2_12 = "2.12.8"
-lazy val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
+val scala2_12 = "2.12.9"
+val scala2_13 = "2.13.0"
+
+lazy val is2_12 = settingKey[Boolean]("Is the scala version 2.12.")
+
+// an ugly work-around for https://github.com/sbt/sbt/issues/3465
+// even if a project is 2.12-only, we fake that it's also 2.13-compatible
+val only2_12settings = Seq(
+  publishArtifact := is2_12.value,
+  skip := !is2_12.value,
+  skip in publish := !is2_12.value,
+  libraryDependencies := (if (is2_12.value) libraryDependencies.value else Nil)
+)
+
+val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.tapir",
   scalaVersion := scala2_12,
   scalafmtOnCompile := true,
-  crossScalaVersions := Seq(scala2_11, scala2_12),
-  scalacOptions ++= 
-    (CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 11)) =>
-        Seq(
-          "-Xexperimental",
-          "-Ypartial-unification"
-        )
-      case _ =>
-        Nil
-    })
+  crossScalaVersions := Seq(scala2_12, scala2_13),
+  is2_12 := scalaVersion.value.startsWith("2.12."),
+  libraryDependencies ++= Seq(
+    compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.4"),
+    compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
+    "com.github.ghik" % "silencer-lib" % Versions.silencer % Provided cross CrossVersion.full
+  )
 )
 
-val scalaTest = "org.scalatest" %% "scalatest" % "3.0.7"
+def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
+  deps.map(_.apply(CrossVersion.partialVersion(version)))
 
-val http4sVersion = "0.20.1"
-val circeVersion = "0.11.1"
-val sttpVersion = "1.5.17"
+val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
 val finatraVersion = "19.4.0"
-val bijectionVersion = "0.9.5"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.0"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
 )
 
 lazy val rootProject = (project in file("."))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(publishArtifact := false, name := "tapir")
-  .aggregate(core,
-             circeJson,
-             openapiModel,
-             openapiCirce,
-             openapiCirceYaml,
-             openapiDocs,
-             serverTests,
-             akkaHttpServer,
-             http4sServer,
-             finatraServer,
-             sttpClient,
-             tests,
-             playground)
+  .aggregate(
+    core,
+    circeJson,
+    playJson,
+    uPickleJson,
+    openapiModel,
+    openapiCirce,
+    openapiCirceYaml,
+    openapiDocs,
+    swaggerUiAkka,
+    swaggerUiHttp4s,
+    redocHttp4s,
+    serverTests,
+    akkaHttpServer,
+    http4sServer,
+    finatraServer,
+    sttpClient,
+    tests,
+    examples,
+    playground
+  )
 
 // core
 
 lazy val core: Project = (project in file("core"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
-      "com.softwaremill" %% "magnolia" % "0.11.0-sml",
+      "com.propensive" %% "magnolia" % "0.12.0",
       scalaTest % "test"
     )
   )
   .enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
 lazy val tests: Project = (project in file("tests"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-tests",
     publishArtifact := false,
     libraryDependencies ++= Seq(
+      "com.softwaremill.common" %% "tagging" % "2.2.1",
       scalaTest,
-      "com.softwaremill.macwire" %% "macros" % "2.3.2" % "provided"
+      "com.softwaremill.macwire" %% "macros" % "2.3.3" % "provided"
     ),
     libraryDependencies ++= loggerDependencies
   )
@@ -77,13 +92,35 @@ lazy val tests: Project = (project in file("tests"))
 // json
 
 lazy val circeJson: Project = (project in file("json/circe"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-json-circe",
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % circeVersion,
-      "io.circe" %% "circe-generic" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %% "circe-parser" % Versions.circe
+    )
+  )
+  .dependsOn(core)
+
+lazy val playJson: Project = (project in file("json/playjson"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-json-play",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-json" % Versions.playJson,
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
+
+lazy val uPickleJson: Project = (project in file("json/upickle"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-upickle",
+    libraryDependencies ++= Seq(
+      "com.lihaoyi" %% "upickle" % Versions.upickle,
+      scalaTest % "test"
     )
   )
   .dependsOn(core)
@@ -91,29 +128,27 @@ lazy val circeJson: Project = (project in file("json/circe"))
 // openapi
 
 lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-openapi-model"
   )
 
 lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % circeVersion,
-      "io.circe" %% "circe-parser" % circeVersion,
-      "io.circe" %% "circe-generic" % circeVersion
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-parser" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe
     ),
     name := "tapir-openapi-circe"
   )
   .dependsOn(openapiModel)
 
 lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yaml"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
-    libraryDependencies ++= Seq(
-      "io.circe" %% "circe-yaml" % "0.10.0"
-    ),
+    libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
     name := "tapir-openapi-circe-yaml"
   )
   .dependsOn(openapiCirce)
@@ -121,39 +156,71 @@ lazy val openapiCirceYaml: Project = (project in file("openapi/openapi-circe-yam
 // docs
 
 lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-openapi-docs"
   )
   .dependsOn(openapiModel, core, tests % "test", openapiCirceYaml % "test")
 
+lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-swagger-ui-akka-http",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    )
+  )
+
+lazy val swaggerUiHttp4s: Project = (project in file("docs/swagger-ui-http4s"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-swagger-ui-http4s",
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "org.http4s" %% "http4s-dsl" % Versions.http4s(_),
+      _ => "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    )
+  )
+
+lazy val redocHttp4s: Project = (project in file("docs/redoc-http4s"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-redoc-http4s",
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)("org.http4s" %% "http4s-dsl" % Versions.http4s(_))
+  )
+
 // server
 
 lazy val serverTests: Project = (project in file("server/tests"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-server-tests",
     publishArtifact := false,
-    libraryDependencies ++= Seq("com.softwaremill.sttp" %% "async-http-client-backend-cats" % sttpVersion)
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "com.softwaremill.sttp" %% "async-http-client-backend-cats" % Versions.sttp(_)
+    )
   )
   .dependsOn(tests)
 
 lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http" % "10.1.8",
-      "com.typesafe.akka" %% "akka-stream" % "2.5.23"
+      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
     )
   )
   .dependsOn(core, serverTests % "test")
 
 lazy val http4sServer: Project = (project in file("server/http4s-server"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-http4s-server",
-    libraryDependencies ++= Seq("org.http4s" %% "http4s-blaze-server" % http4sVersion)
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_)
+    )
   )
   .dependsOn(core, serverTests % "test")
 
@@ -181,44 +248,62 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
 // client
 
 lazy val clientTests: Project = (project in file("client/tests"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-client-tests",
     publishArtifact := false,
-    libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % http4sVersion,
-      "org.http4s" %% "http4s-blaze-server" % http4sVersion,
-      "org.http4s" %% "http4s-circe" % http4sVersion
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "org.http4s" %% "http4s-dsl" % Versions.http4s(_),
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_),
+      "org.http4s" %% "http4s-circe" % Versions.http4s(_)
     )
   )
   .dependsOn(tests)
 
 lazy val sttpClient: Project = (project in file("client/sttp-client"))
-  .settings(commonSettings: _*)
+  .settings(commonSettings)
   .settings(
     name := "tapir-sttp-client",
-    libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "core" % sttpVersion,
-      "com.softwaremill.sttp" %% "async-http-client-backend-fs2" % sttpVersion % "test"
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "com.softwaremill.sttp" %% "core" % Versions.sttp(_),
+      "com.softwaremill.sttp" %% "async-http-client-backend-fs2" % Versions.sttp(_) % "test"
     )
   )
   .dependsOn(core, clientTests % "test")
 
 // other
 
-lazy val playground: Project = (project in file("playground"))
-  .settings(commonSettings: _*)
+lazy val examples: Project = (project in file("examples"))
+  .settings(commonSettings)
   .settings(
-    name := "tapir-playground",
-    libraryDependencies ++= Seq(
-      "com.softwaremill.sttp" %% "akka-http-backend" % sttpVersion,
-      "org.scalaz" %% "scalaz-zio" % "1.0-RC4",
-      "org.scalaz" %% "scalaz-zio-interop-cats" % "1.0-RC4",
-      "org.typelevel" %% "cats-effect" % "1.3.1",
-      "org.webjars" % "swagger-ui" % "3.22.1",
-      "io.swagger" % "swagger-annotations" % "1.5.22"
+    name := "tapir-examples",
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      _ => "dev.zio" %% "zio" % "1.0.0-RC14",
+      _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC5",
+      _ => "org.typelevel" %% "cats-effect" % "2.0.0",
+      "org.http4s" %% "http4s-dsl" % Versions.http4s(_)
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson)
+  .settings(only2_12settings)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+
+lazy val playground: Project = (project in file("playground"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-playground",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % "1.0.0-RC14",
+      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC5",
+      "org.typelevel" %% "cats-effect" % "2.0.0",
+      "io.swagger" % "swagger-annotations" % "1.5.23"
+    ),
+    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp(_),
+    ),
+    libraryDependencies ++= loggerDependencies,
+    publishArtifact := false
+  )
+  .settings(only2_12settings)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)

@@ -81,4 +81,38 @@ class EndpointTest extends FlatSpec with Matchers {
       testShowEndpoint.show shouldBe expectedShowResult
     }
   }
+
+  val renderTestData = List(
+    (endpoint, "/"),
+    (endpoint.in("p1"), "/p1"),
+    (endpoint.in("p1" / "p2"), "/p1/p2"),
+    (endpoint.in("p1" / path[String]), "/p1/{param1}"),
+    (endpoint.in("p1" / path[String].name("par")), "/p1/{par}"),
+    (endpoint.in("p1" / query[String]("par")), "/p1?par={par}"),
+    (endpoint.in("p1" / query[String]("par1") / query[String]("par2")), "/p1?par1={par1}&par2={par2}"),
+    (endpoint.in("p1" / path[String].name("par1") / query[String]("par2")), "/p1/{par1}?par2={par2}"),
+    (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
+    (endpoint.in("p1" / path[String]).mapIn(identity)(identity), "/p1/{param1}")
+  )
+
+  for ((testEndpoint, expectedRenderPath) <- renderTestData) {
+    s"renderPath for ${testEndpoint.showDetail}" should s"be $expectedRenderPath" in {
+      testEndpoint.renderPathTemplate() shouldBe expectedRenderPath
+    }
+  }
+
+  "renderPath" should "keep param count in render functions" in {
+    val testEndpoint = endpoint.in("p1" / path[String] / query[String]("param"))
+    testEndpoint.renderPathTemplate(
+      renderPathParam = (index, _) => s"{par$index}",
+      renderQueryParam = Some((index, query) => s"${query.name}={par$index}")
+    ) shouldBe "/p1/{par1}?param={par2}"
+  }
+
+  "validate" should "accumulate validators" in {
+    val input = query[Int]("x").validate(Validator.min(1)).validate(Validator.max(3))
+    input.codec.validator.validate(0) should not be empty
+    input.codec.validator.validate(4) should not be empty
+    input.codec.validator.validate(2) shouldBe empty
+  }
 }
