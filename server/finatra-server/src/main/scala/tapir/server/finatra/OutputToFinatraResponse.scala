@@ -68,7 +68,7 @@ object OutputToFinatraResponse {
     responseWithContent
   }
 
-  private def rawValueToFinatraContent[M <: MediaType, R](codecMeta: CodecMeta[M, R], r: R): (FinatraContent, String) = {
+  private def rawValueToFinatraContent[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], r: R): (FinatraContent, String) = {
     val ct: String = codecMeta.mediaType.mediaType
 
     codecMeta.rawValueType match {
@@ -94,7 +94,7 @@ object OutputToFinatraResponse {
     }
   }
 
-  private def rawValueToContentBody[M <: MediaType, R](codecMeta: CodecMeta[M, R], part: Part[R], r: R): ContentBody = {
+  private def rawValueToContentBody[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], part: Part[R], r: R): ContentBody = {
     val contentType: String = part.header("content-type").getOrElse("text/plain")
 
     codecMeta.rawValueType match {
@@ -123,7 +123,7 @@ object OutputToFinatraResponse {
       val builder = FormBodyPartBuilder
         .create(
           part.name,
-          rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_ <: MediaType, Any]], part.asInstanceOf[Part[Any]], part.body)
+          rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.asInstanceOf[Part[Any]], part.body)
         )
 
       part.headers.foreach { case (name, value) => builder.addField(name, value) }

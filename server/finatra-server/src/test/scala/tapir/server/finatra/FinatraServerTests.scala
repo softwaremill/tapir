@@ -8,6 +8,7 @@ import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.util.{Future, FuturePool}
 import tapir.Endpoint
+import tapir.server.DecodeFailureHandler
 import tapir.server.tests.ServerTests
 
 import scala.reflect.ClassTag
@@ -21,7 +22,11 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
     t
   }
 
-  override def route[I, E, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[Either[E, O]]): FinatraRoute = {
+  override def route[I, E, O](
+      e: Endpoint[I, E, O, Nothing],
+      fn: I => Future[Either[E, O]],
+      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+  ): FinatraRoute = {
     e.toRoute(fn)
   }
 

@@ -29,7 +29,6 @@ def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*):
   deps.map(_.apply(CrossVersion.partialVersion(version)))
 
 val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
-val finatraVersion = "19.4.0"
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -229,20 +228,20 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(
       name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
-      "com.twitter" %% "finatra-http" % finatraVersion,
+      "com.twitter" %% "finatra-http" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.3",
 
       // Testing
-      "com.twitter" %% "finatra-http" % finatraVersion % "test",
-      "com.twitter" %% "inject-server" % finatraVersion % "test",
-      "com.twitter" %% "inject-app" % finatraVersion % "test",
-      "com.twitter" %% "inject-core" % finatraVersion % "test",
-      "com.twitter" %% "inject-modules" % finatraVersion % "test",
-      "com.twitter" %% "finatra-http" % finatraVersion % "test" classifier "tests",
-      "com.twitter" %% "inject-server" % finatraVersion % "test" classifier "tests",
-      "com.twitter" %% "inject-app" % finatraVersion % "test" classifier "tests",
-      "com.twitter" %% "inject-core" % finatraVersion % "test" classifier "tests",
-      "com.twitter" %% "inject-modules" % finatraVersion % "test" classifier "tests"))
+      "com.twitter" %% "finatra-http" % Versions.finatra % "test",
+      "com.twitter" %% "inject-server" % Versions.finatra % "test",
+      "com.twitter" %% "inject-app" % Versions.finatra % "test",
+      "com.twitter" %% "inject-core" % Versions.finatra % "test",
+      "com.twitter" %% "inject-modules" % Versions.finatra % "test",
+      "com.twitter" %% "finatra-http" % Versions.finatra % "test" classifier "tests",
+      "com.twitter" %% "inject-server" % Versions.finatra % "test" classifier "tests",
+      "com.twitter" %% "inject-app" % Versions.finatra % "test" classifier "tests",
+      "com.twitter" %% "inject-core" % Versions.finatra % "test" classifier "tests",
+      "com.twitter" %% "inject-modules" % Versions.finatra % "test" classifier "tests"))
   .dependsOn(core, serverTests % "test")
 
 // client

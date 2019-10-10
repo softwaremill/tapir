@@ -25,8 +25,8 @@ package object finatra {
                   new FinatraRequestToRawBody(serverOptions)
                     .apply(codec.meta.rawValueType, request.content, request.charset.map(Charset.forName), request)
                     .map { rawBody =>
-                      codec.safeDecode(Some(rawBody)) match {
-                        case DecodeResult.Value(bodyV) => values.value(bodyInput, bodyV)
+                      codec.decode(Some(rawBody)) match {
+                        case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
                         case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                       }
                     }
@@ -37,7 +37,7 @@ package object finatra {
         }
 
         def valuesToResponse(values: DecodeInputsResult.Values): Future[Response] = {
-          val i = SeqToParams(InputValues(e.input, values.values)).asInstanceOf[I]
+          val i = SeqToParams(InputValues(e.input, values)).asInstanceOf[I]
           logic(i)
             .map {
               case Right(result) => OutputToFinatraResponse(Status(ServerDefaults.successStatusCode), e.output, result)
