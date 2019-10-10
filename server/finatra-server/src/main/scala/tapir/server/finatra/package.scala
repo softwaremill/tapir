@@ -25,7 +25,8 @@ package object finatra {
                   new FinatraRequestToRawBody(serverOptions)
                     .apply(codec.meta.rawValueType, request.content, request.charset.map(Charset.forName), request)
                     .map { rawBody =>
-                      codec.decode(Some(rawBody)) match {
+                      val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, codec.meta.isOptional))
+                      decodeResult match {
                         case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
                         case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                       }
