@@ -230,7 +230,6 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
     libraryDependencies ++= Seq(
       "com.twitter" %% "finatra-http" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.3",
-
       // Testing
       "com.twitter" %% "finatra-http" % Versions.finatra % "test",
       "com.twitter" %% "inject-server" % Versions.finatra % "test",
@@ -242,6 +241,7 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
       "com.twitter" %% "inject-app" % Versions.finatra % "test" classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % "test" classifier "tests",
       "com.twitter" %% "inject-modules" % Versions.finatra % "test" classifier "tests"))
+  .settings(only2_12settings)
   .dependsOn(core, serverTests % "test")
 
 // client
