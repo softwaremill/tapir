@@ -238,11 +238,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
       .send()
       .map { r: Response[String] =>
-        // TODO(https://github.com/softwaremill/tapir/issues/116): Properly parse the multipart response
-        r.unsafeBody should include("name=\"fruit\"")
-        r.unsafeBody should include("pineapple apple")
-        r.unsafeBody should include("name=\"amount\"")
-        r.unsafeBody should include("240")
+        r.unsafeBody should include regex "name=\"fruit\"\\s*pineapple apple"
+        r.unsafeBody should include regex "name=\"amount\"\\s*240"
       }
   }
 
@@ -258,9 +255,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .multipartBody(multipartFile("data", file).fileName("fruit-data.txt").header("X-Auth", "12"))
       .send()
       .map { r =>
-        r.unsafeBody should include("name=\"data\"")
-        r.unsafeBody should include("X-Auth: Some(12)")
-        r.unsafeBody should include("oiram hcaep")
+        r.unsafeBody should include regex "name=\"data\"\\s*X-Auth: Some\\(12\\)\\s*oiram hcaep"
       }
   }
 
