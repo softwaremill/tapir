@@ -274,7 +274,7 @@ lazy val playground: Project = (project in file("playground"))
       "dev.zio" %% "zio" % "1.0.0-RC14",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC5",
       "org.typelevel" %% "cats-effect" % "2.0.0",
-      "io.swagger" % "swagger-annotations" % "1.5.23"
+      "io.swagger" % "swagger-annotations" % "1.5.24"
     ),
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
       "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp(_),
