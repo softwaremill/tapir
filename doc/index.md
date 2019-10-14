@@ -8,6 +8,7 @@ interpreted as:
   Currently supported: 
   * [Akka HTTP](server/akkahttp.html) `Route`s/`Directive`s.
   * [Http4s](server/http4s.html) `HttpRoutes[F]`
+  * [Finatra](server/finatra.html) `http.Controller`
 * a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.html).
 * documentation. Currently supported: [OpenAPI](openapi.html).
 

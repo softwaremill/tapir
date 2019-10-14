@@ -54,6 +54,7 @@ lazy val rootProject = (project in file("."))
     serverTests,
     akkaHttpServer,
     http4sServer,
+    finatraServer,
     sttpClient,
     tests,
     examples,
@@ -220,6 +221,27 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_)
     )
   )
+  .dependsOn(core, serverTests % "test")
+
+lazy val finatraServer: Project = (project in file("server/finatra-server"))
+  .settings(commonSettings: _*)
+  .settings(
+      name := "tapir-finatra-server",
+    libraryDependencies ++= Seq(
+      "com.twitter" %% "finatra-http" % Versions.finatra,
+      "org.apache.httpcomponents" % "httpmime" % "4.5.3",
+      // Testing
+      "com.twitter" %% "finatra-http" % Versions.finatra % "test",
+      "com.twitter" %% "inject-server" % Versions.finatra % "test",
+      "com.twitter" %% "inject-app" % Versions.finatra % "test",
+      "com.twitter" %% "inject-core" % Versions.finatra % "test",
+      "com.twitter" %% "inject-modules" % Versions.finatra % "test",
+      "com.twitter" %% "finatra-http" % Versions.finatra % "test" classifier "tests",
+      "com.twitter" %% "inject-server" % Versions.finatra % "test" classifier "tests",
+      "com.twitter" %% "inject-app" % Versions.finatra % "test" classifier "tests",
+      "com.twitter" %% "inject-core" % Versions.finatra % "test" classifier "tests",
+      "com.twitter" %% "inject-modules" % Versions.finatra % "test" classifier "tests"))
+  .settings(only2_12settings)
   .dependsOn(core, serverTests % "test")
 
 // client

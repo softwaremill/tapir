@@ -237,7 +237,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .post(uri"$baseUri/api/echo/multipart")
       .multipartBody(multipart("fruit", "pineapple"), multipart("amount", "120"))
       .send()
-      .map { r =>
+      .map { r: Response[String] =>
         r.unsafeBody should include regex "name=\"fruit\"\\s*pineapple apple"
         r.unsafeBody should include regex "name=\"amount\"\\s*240"
       }
