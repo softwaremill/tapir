@@ -68,5 +68,5 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
       .map(_ => ())
   }
 
-  override def initialPort: Port = 8000
+  override def initialPort: Port = 36000
 }
