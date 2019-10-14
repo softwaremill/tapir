@@ -1,0 +1,37 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /add/path:
+    get:
+      operationId: getAddPath
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidFruitAmountEnum'
+        required: true
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    ValidFruitAmountEnum:
+      required:
+        - fruit
+        - amount
+        - color
+      type: object
+      properties:
+        fruit:
+          type: string
+          minLength: 4
+        amount:
+          type: integer
+          minimum: 1
+        color:
+          type: string
+          enum:
+            - blue
+            - red
