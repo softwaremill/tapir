@@ -4,7 +4,7 @@ When dealing with multiple endpoints, how to find out which endpoint handled a r
 handle a request?
 
 For this purpose, tapir provides optional logging. The logging options (and messages) can be customised by changing
-the default `LoggingOptions` class, which is part of [server options](common.html).
+the default `LoggingOptions` class, which is part of [server options](options.html).
 
 The following can be logged:
 
