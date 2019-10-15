@@ -15,7 +15,6 @@ val only2_12settings = Seq(
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.tapir",
   scalaVersion := scala2_12,
-  scalafmtOnCompile := true,
   crossScalaVersions := Seq(scala2_12, scala2_13),
   is2_12 := scalaVersion.value.startsWith("2.12."),
   libraryDependencies ++= Seq(
@@ -226,7 +225,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
 lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(commonSettings: _*)
   .settings(
-      name := "tapir-finatra-server",
+    name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
       "com.twitter" %% "finatra-http" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.10",
@@ -240,7 +239,9 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
       "com.twitter" %% "inject-server" % Versions.finatra % "test" classifier "tests",
       "com.twitter" %% "inject-app" % Versions.finatra % "test" classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % "test" classifier "tests",
-      "com.twitter" %% "inject-modules" % Versions.finatra % "test" classifier "tests"))
+      "com.twitter" %% "inject-modules" % Versions.finatra % "test" classifier "tests"
+    )
+  )
   .settings(only2_12settings)
   .dependsOn(core, serverTests % "test")
 
@@ -299,7 +300,7 @@ lazy val playground: Project = (project in file("playground"))
       "io.swagger" % "swagger-annotations" % "1.5.24"
     ),
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp(_),
+      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp(_)
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
