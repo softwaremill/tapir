@@ -74,9 +74,31 @@ Validators for enumerations can be created using the `Validator.enum` method, wh
   implementations
 * takes the list of possible values
 
-To properly represent possible values in documentation, an `encode` method needs to be provided, which converts
-the enum value to a raw type (string, number, ...). This method is inferred if the validator is directly added to 
-a codec (without any mapping etc.).
+To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
+converts the enum value to a raw type (typically a string). This method is inferred *only* if the validator is directly 
+added to a codec (without any mapping etc.), for example:
+
+```scala
+sealed trait Color
+case object Blue extends Color
+case object Red extends Color
+
+implicit def plainCodecForColor: PlainCodec[Color] = {
+  Codec.stringPlainCodecUtf8
+    .map[Color]({
+      case "red"  => Red
+      case "blue" => Blue
+    })(_.toString.toLowerCase)
+    .validate(Validator.enum)
+}
+```
+
+If the enum is nested within an object, regardless of whether the codec for that object is defined by hand or derived,
+we need to specify the encode function by hand:
+
+```scala
+implicit def colorValidator: Validator[Color] = Validator.enum.encode(_.toString.toLowerCase)
+```
 
 Like other validators, enum validators need to be added to a codec, or through an implicit value, if the codec and
 validator is automatically derived. 

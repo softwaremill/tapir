@@ -309,7 +309,7 @@ package object tests {
 
     val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Nothing] = {
       implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
-      implicit def validatorColor: Validator[Color] = Validator.enum.encode(_.toString.toLowerCase)
+      implicit def colorValidator: Validator[Color] = Validator.enum.encode(_.toString.toLowerCase)
       endpoint.in(jsonBody[ColorWrapper])
     }
 

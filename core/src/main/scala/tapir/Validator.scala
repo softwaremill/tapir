@@ -147,7 +147,8 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     override def show: Option[String] = Some(s"in(${possibleValues.mkString(",")}")
 
     /**
-      * Specify how values of this type can be encoded to a raw value, which will be used for documentation.
+      * Specify how values of this type can be encoded to a raw value (typically a [[String]]). This encoding
+      * will be used when generating documentation.
       */
     def encode(e: T => scala.Any): Enum[T] = copy(encode = Some(v => Some(e(v))))
   }
