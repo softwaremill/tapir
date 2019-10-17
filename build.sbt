@@ -77,7 +77,6 @@ lazy val tests: Project = (project in file("tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-tests",
-    publishArtifact := false,
     libraryDependencies ++= Seq(
       "com.softwaremill.common" %% "tagging" % "2.2.1",
       scalaTest,
@@ -250,7 +249,6 @@ lazy val clientTests: Project = (project in file("client/tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-client-tests",
-    publishArtifact := false,
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
       "org.http4s" %% "http4s-dsl" % Versions.http4s(_),
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_),
