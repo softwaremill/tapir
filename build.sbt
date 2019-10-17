@@ -194,7 +194,6 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-server-tests",
-    publishArtifact := false,
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
       "com.softwaremill.sttp" %% "async-http-client-backend-cats" % Versions.sttp(_)
     )
