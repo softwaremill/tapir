@@ -10,4 +10,4 @@ case class StringWrapper(v: String) extends AnyVal
 
 case class ValidFruitAmount(fruit: StringWrapper, amount: IntWrapper)
 
-case class ValidFruitAmountEnum(fruit: StringWrapper, amount: IntWrapper, color: Color)
+case class ColorWrapper(color: Color)

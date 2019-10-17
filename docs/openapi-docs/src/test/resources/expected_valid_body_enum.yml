@@ -10,26 +10,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ValidFruitAmountEnum'
+              $ref: '#/components/schemas/ColorWrapper'
         required: true
       responses:
         '200':
           description: ''
 components:
   schemas:
-    ValidFruitAmountEnum:
+    ColorWrapper:
       required:
-        - fruit
-        - amount
         - color
       type: object
       properties:
-        fruit:
-          type: string
-          minLength: 4
-        amount:
-          type: integer
-          minimum: 1
         color:
           type: string
           enum:

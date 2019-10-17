@@ -211,21 +211,6 @@ package object tests {
       endpoint.in(query[Int]("amount").validate(Validator.min(0)))
     }
 
-    val in_json_wrapper_enum: Endpoint[ValidFruitAmountEnum, Unit, Unit, Nothing] = {
-      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
-      implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
-      implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
-      implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
-      implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
-      implicit val intValidator: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
-      implicit val stringValidator: Validator[StringWrapper] = Validator.minLength(4).contramap(_.v)
-
-      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
-      implicit def validatorColor: Validator[Color] = Validator.enum
-
-      endpoint.in(jsonBody[ValidFruitAmountEnum])
-    }
-
     val in_json_wrapper: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
       implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
@@ -320,6 +305,12 @@ package object tests {
       implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
         uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
       endpoint.in(query[IntWrapper]("amount"))
+    }
+
+    val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Nothing] = {
+      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def validatorColor: Validator[Color] = Validator.enum.encode(c => Some(c.toString.toLowerCase))
+      endpoint.in(jsonBody[ColorWrapper])
     }
 
     val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
