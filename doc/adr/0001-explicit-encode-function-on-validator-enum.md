@@ -28,7 +28,7 @@ implicit def plainCodecForColor: PlainCodec[Color] = {
   Codec.stringPlainCodecUtf8
     .map[Color]({
        case "red"  => Red
-        "blue" => Blue
+       case "blue" => Blue
     })(_.toString.toLowerCase)
     .validate(Validator.enum)
 }

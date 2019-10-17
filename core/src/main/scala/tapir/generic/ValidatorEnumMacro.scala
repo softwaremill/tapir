@@ -14,7 +14,7 @@ trait ValidatorEnumMacro {
     if (!symbol.isClass || !symbol.isSealed) {
       c.abort(c.enclosingPosition, "Can only enumerate values of a sealed trait or class.")
     } else {
-      val subclasses = symbol.knownDirectSubclasses.toList
+      val subclasses = symbol.knownDirectSubclasses.toList.sortBy(_.name.encodedName.toString)
       if (!subclasses.forall(_.isModuleClass)) {
         c.abort(c.enclosingPosition, "All children must be objects.")
       } else {
