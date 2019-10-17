@@ -149,7 +149,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     /**
       * Specify how values of this type can be encoded to a raw value, which will be used for documentation.
       */
-    def encode(e: EncodeToRaw[T]): Enum[T] = copy(encode = Some(e))
+    def encode(e: T => scala.Any): Enum[T] = copy(encode = Some(v => Some(e(v))))
   }
 
   //
