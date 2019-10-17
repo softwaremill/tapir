@@ -419,6 +419,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
+  test("validator with enum type in body") {
+    val expectedYaml = loadYaml("expected_valid_body_enum.yml")
+
+    val actualYaml = Validation.in_json_wrapper_enum
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
   test("validator with wrappers type in query") {
     val expectedYaml = loadYaml("expected_valid_query_wrapped.yml")
 
