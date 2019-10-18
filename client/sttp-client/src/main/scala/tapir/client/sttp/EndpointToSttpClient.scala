@@ -11,48 +11,60 @@ import tapir.internal._
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
-    val (uri, req1) =
-      setInputParams(e.input.asVectorOfSingleInputs, paramsTupleToParams(params), 0, baseUri, basicRequest.asInstanceOf[PartialAnyRequest])
-
-    val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
-
-    val responseAs = fromMetadata { meta =>
-      val output = if (meta.isSuccess) e.output else e.errorOutput
-      if (output == EndpointOutput.Void()) {
-        throw new IllegalStateException(s"Got response: $meta, cannot map to a void output of: $e.")
-      }
-
-      responseAsFromOutputs(meta, output)
-    }.mapWithMetadata { (body, meta) =>
-      val output = if (meta.isSuccess) e.output else e.errorOutput
-      val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
-      if (meta.isSuccess) Right(params) else Left(params)
-    }
-
-    req2.response(responseAs).asInstanceOf[Request[Either[E, O], S]]
+    toSttpRequestRaw(e, baseUri)(params).mapResponse(_.bimap(getOrThrow, getOrThrow))
   }
 
-  private def getOutputParams(outputs: Vector[EndpointOutput.Single[_]], body: Any, meta: ResponseMetadata): Any = {
-    val values = outputs
+  def toSttpRequestRaw[S, O, E, I](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[DecodeResult[E], DecodeResult[O]], S] = {
+    params =>
+      val (uri, req1) =
+        setInputParams(
+          e.input.asVectorOfSingleInputs,
+          paramsTupleToParams(params),
+          0,
+          baseUri,
+          basicRequest.asInstanceOf[PartialAnyRequest]
+        )
+
+      val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
+
+      val responseAs = fromMetadata { meta =>
+        val output = if (meta.isSuccess) e.output else e.errorOutput
+        if (output == EndpointOutput.Void()) {
+          throw new IllegalStateException(s"Got response: $meta, cannot map to a void output of: $e.")
+        }
+
+        responseAsFromOutputs(meta, output)
+      }.mapWithMetadata { (body, meta) =>
+        val output = if (meta.isSuccess) e.output else e.errorOutput
+        val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
+        if (meta.isSuccess) Right(params) else Left(params)
+      }
+
+      req2.response(responseAs).asInstanceOf[Request[Either[DecodeResult[E], DecodeResult[O]], S]]
+  }
+
+  private def getOutputParams(outputs: Vector[EndpointOutput.Single[_]], body: Any, meta: ResponseMetadata): DecodeResult[Any] = {
+    val partialDecodeResults = outputs
       .flatMap {
         case EndpointIO.Body(codec, _) =>
           val so = if (codec.meta.isOptional && body == "") None else Some(body)
-          Some(getOrThrow(codec.rawDecode(so)))
+          Some(codec.rawDecode(so))
 
         case EndpointIO.StreamBodyWrapper(_) =>
-          Some(body)
+          Some(DecodeResult.Value(body))
 
         case EndpointIO.Header(name, codec, _) =>
-          Some(getOrThrow(codec.rawDecode(meta.headers(name).toList)))
+          Some(codec.rawDecode(meta.headers(name).toList))
 
         case EndpointIO.Headers(_) =>
-          Some(meta.headers.map(h => (h.name, h.value)))
+          Some(DecodeResult.Value(meta.headers.map(h => (h.name, h.value))))
 
         case EndpointIO.Mapped(wrapped, f, _) =>
-          Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
+          val outputParams = getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)
+          Some(outputParams.map(f.asInstanceOf[Any => Any].apply))
 
         case EndpointOutput.StatusCode() =>
-          Some(meta.code)
+          Some(DecodeResult.Value(meta.code))
 
         case EndpointOutput.FixedStatusCode(_, _) =>
           None
@@ -66,10 +78,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta))
 
         case EndpointOutput.Mapped(wrapped, f, _) =>
-          Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
+          val outputParams = getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)
+          Some(outputParams.map(f.asInstanceOf[Any => Any].apply))
       }
 
-    SeqToParams(values)
+    DecodeResult.sequence(partialDecodeResults).map(SeqToParams(_))
   }
 
   private type PartialAnyRequest = PartialRequest[Any, Any]
@@ -234,5 +247,14 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     case DecodeResult.Value(v)    => v
     case DecodeResult.Error(o, e) => throw new IllegalArgumentException(s"Cannot decode from $o", e)
     case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
+  }
+
+  private implicit class EitherBimap[L, R](either: Either[L, R]) {
+    def bimap[LL, RR](lf: L => LL, rf: R => RR): Either[LL, RR] = {
+      either match {
+        case Left(value)  => Left(lf(value))
+        case Right(value) => Right(rf(value))
+      }
+    }
   }
 }
