@@ -19,4 +19,5 @@ object Versions {
   val playJson = "2.7.4"
   val silencer = "1.4.4"
   val finatra = "19.4.0"
+  val playServer = "2.7.3"
 }

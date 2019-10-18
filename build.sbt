@@ -243,6 +243,16 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(only2_12settings)
   .dependsOn(core, serverTests % "test")
 
+lazy val playServer: Project = (project in file("server/play-server"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-play-server",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-server" % Versions.playServer
+    )
+  )
+  .dependsOn(core, serverTests % "test")
+
 // client
 
 lazy val clientTests: Project = (project in file("client/tests"))
