@@ -132,7 +132,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       defaultCodec: Option[AnyCodecForMany]
   ): Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] =
     new Codec[Seq[AnyPart], MediaType.MultipartFormData, Seq[RawPart]] {
-      private val mvt = MultipartValueType(partCodecs.mapValues(_.meta), defaultCodec.map(_.meta))
+      private val mvt = MultipartValueType(partCodecs.mapValues(_.meta).toMap, defaultCodec.map(_.meta))
 
       private def partCodec(name: String): Option[AnyCodecForMany] = partCodecs.get(name).orElse(defaultCodec)
 
