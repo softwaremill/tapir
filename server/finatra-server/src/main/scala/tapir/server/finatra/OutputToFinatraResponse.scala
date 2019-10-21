@@ -1,4 +1,5 @@
 package tapir.server.finatra
+
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 
@@ -7,8 +8,8 @@ import com.twitter.io.{Buf, InputStreamReader, Reader}
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
+import sttp.model.{Header, Part}
 import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -42,7 +43,7 @@ object OutputToFinatraResponse {
   }
 
   private def outputValuesToResponse(outputValues: OutputValues[(FinatraContent, String)], defaultStatus: Status): Response = {
-    val status = outputValues.statusCode.map(Status(_)).getOrElse(defaultStatus)
+    val status = outputValues.statusCode.map(sc => Status(sc.code)).getOrElse(defaultStatus)
 
     val responseWithContent = outputValues.body match {
       case Some((FinatraContentBuf(buf), ct)) =>
@@ -126,7 +127,7 @@ object OutputToFinatraResponse {
           rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.asInstanceOf[Part[Any]], part.body)
         )
 
-      part.headers.foreach { case (name, value) => builder.addField(name, value) }
+      part.headers.foreach { case Header(name, value) => builder.addField(name, value) }
 
       builder.build()
     }

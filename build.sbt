@@ -194,7 +194,7 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-server-tests",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
+    libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client" %% "async-http-client-backend-cats" % Versions.sttp
     )
   )
@@ -298,8 +298,8 @@ lazy val playground: Project = (project in file("playground"))
       "org.typelevel" %% "cats-effect" % "2.0.0",
       "io.swagger" % "swagger-annotations" % "1.5.24"
     ),
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp(_)
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
