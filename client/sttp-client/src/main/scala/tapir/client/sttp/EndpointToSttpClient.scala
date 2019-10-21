@@ -10,9 +10,19 @@ import tapir._
 import tapir.internal._
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
-  def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
+  def toSttpRequestUnsafe[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
+    toSttpRequest(e, baseUri)(params).mapResponse(getOrThrow)
+  }
+
+  def toSttpRequest[S, O, E, I](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], S] = { params =>
     val (uri, req1) =
-      setInputParams(e.input.asVectorOfSingleInputs, paramsTupleToParams(params), 0, baseUri, basicRequest.asInstanceOf[PartialAnyRequest])
+      setInputParams(
+        e.input.asVectorOfSingleInputs,
+        paramsTupleToParams(params),
+        0,
+        baseUri,
+        basicRequest.asInstanceOf[PartialAnyRequest]
+      )
 
     val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
 
@@ -26,33 +36,34 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     }.mapWithMetadata { (body, meta) =>
       val output = if (meta.isSuccess) e.output else e.errorOutput
       val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
-      if (meta.isSuccess) Right(params) else Left(params)
+      params.map(p => if (meta.isSuccess) Right(p) else Left(p))
     }
 
-    req2.response(responseAs).asInstanceOf[Request[Either[E, O], S]]
+    req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], S]]
   }
 
-  private def getOutputParams(outputs: Vector[EndpointOutput.Single[_]], body: Any, meta: ResponseMetadata): Any = {
-    val values = outputs
+  private def getOutputParams(outputs: Vector[EndpointOutput.Single[_]], body: Any, meta: ResponseMetadata): DecodeResult[Any] = {
+    val partialDecodeResults = outputs
       .flatMap {
         case EndpointIO.Body(codec, _) =>
           val so = if (codec.meta.isOptional && body == "") None else Some(body)
-          Some(getOrThrow(codec.rawDecode(so)))
+          Some(codec.rawDecode(so))
 
         case EndpointIO.StreamBodyWrapper(_) =>
-          Some(body)
+          Some(DecodeResult.Value(body))
 
         case EndpointIO.Header(name, codec, _) =>
-          Some(getOrThrow(codec.rawDecode(meta.headers(name).toList)))
+          Some(codec.rawDecode(meta.headers(name).toList))
 
         case EndpointIO.Headers(_) =>
-          Some(meta.headers.map(h => (h.name, h.value)))
+          Some(DecodeResult.Value(meta.headers.map(h => (h.name, h.value))))
 
         case EndpointIO.Mapped(wrapped, f, _) =>
-          Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
+          val outputParams = getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)
+          Some(outputParams.map(f.asInstanceOf[Any => Any].apply))
 
         case EndpointOutput.StatusCode() =>
-          Some(meta.code)
+          Some(DecodeResult.Value(meta.code))
 
         case EndpointOutput.FixedStatusCode(_, _) =>
           None
@@ -66,10 +77,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta))
 
         case EndpointOutput.Mapped(wrapped, f, _) =>
-          Some(f.asInstanceOf[Any => Any].apply(getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)))
+          val outputParams = getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)
+          Some(outputParams.map(f.asInstanceOf[Any => Any].apply))
       }
 
-    SeqToParams(values)
+    DecodeResult.sequence(partialDecodeResults).map(SeqToParams(_))
   }
 
   private type PartialAnyRequest = PartialRequest[Any, Any]
