@@ -8,8 +8,9 @@ import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.util.{Future, FuturePool}
 import tapir.Endpoint
+import tapir.server.tests.ServerTests.Port
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
-import tapir.server.tests.ServerTests
+import tapir.server.tests.{PortCounter, ServerTests}
 
 import scala.reflect.ClassTag
 
@@ -68,5 +69,9 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
       .map(_ => ())
   }
 
-  override def initialPort: Port = 36000
+  override def portCounter: PortCounter = FinatraServerTests.portCounter
+}
+
+object FinatraServerTests {
+  val portCounter = new PortCounter(36000)
 }

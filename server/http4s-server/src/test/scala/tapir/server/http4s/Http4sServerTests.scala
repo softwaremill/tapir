@@ -7,10 +7,11 @@ import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
-import tapir.server.tests.ServerTests
+import tapir.server.tests.{PortCounter, ServerTests}
 import tapir.Endpoint
 import tapir._
 import sttp.client._
+import tapir.server.tests.ServerTests.Port
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import scala.concurrent.ExecutionContext
@@ -55,13 +56,11 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
       .void
   }
 
-  override val initialPort: Port = 34000
-
   if (testNameFilter.isEmpty) {
     test("should work with a router and routes in a context") {
       val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
       val routes = e.toRoutes
-      val port = nextPort()
+      val port = portCounter.next()
 
       BlazeServerBuilder[IO]
         .bindHttp(port, "localhost")
@@ -73,4 +72,10 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
         .unsafeRunSync()
     }
   }
+
+  override def portCounter: PortCounter = Http4sServerTests.portCounter
+}
+
+object Http4sServerTests {
+  val portCounter = new PortCounter(34000)
 }

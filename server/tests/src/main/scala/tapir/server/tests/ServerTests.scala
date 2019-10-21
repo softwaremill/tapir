@@ -15,6 +15,7 @@ import sttp.model._
 import tapir._
 import tapir.json.circe._
 import tapir.model.UsernamePassword
+import tapir.server.tests.ServerTests.Port
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
 import tapir.tests.TestUtil._
 import tapir.tests._
@@ -608,8 +609,6 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   //
 
-  type Port = Int
-
   def pureResult[T](t: T): R[T]
   def suspendResult[T](t: => T): R[T]
 
@@ -639,7 +638,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
     val resources = for {
-      port <- Resource.liftF(IO(nextPort()))
+      port <- Resource.liftF(IO(portCounter.next()))
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
@@ -653,7 +652,17 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   //
 
-  def initialPort: Int
-  private lazy val _nextPort = new AtomicInteger(initialPort)
-  def nextPort(): Port = _nextPort.getAndIncrement()
+  /**
+    * Must be global (shared between instances of test classes!)
+    */
+  def portCounter: PortCounter
+}
+
+class PortCounter(initial: Int) {
+  private lazy val _next = new AtomicInteger(initial)
+  def next(): Port = _next.getAndIncrement()
+}
+
+object ServerTests {
+  type Port = Int
 }
