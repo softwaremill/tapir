@@ -1,6 +1,6 @@
 package tapir.docs.openapi.schema
 
-import tapir.docs.openapi.EncodeToAny
+import tapir.docs.openapi.rawToString
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
 import tapir.{Validator, Schema => TSchema}
@@ -55,18 +55,17 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
     }
 
     result.map(
-      addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schema.isInstanceOf[TSchema.SInteger.type], typeData.encode)
+      addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schema.isInstanceOf[TSchema.SInteger.type])
     )
   }
 
   private def addConstraints(
       oschema: OSchema,
       vs: Seq[Validator.Primitive[_]],
-      wholeNumbers: Boolean,
-      codec: EncodeToAny[_]
-  ): OSchema = vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers, codec))
+      wholeNumbers: Boolean
+  ): OSchema = vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers))
 
-  private def addConstraints(oschema: OSchema, v: Validator.Primitive[_], wholeNumbers: Boolean, encode: EncodeToAny[_]): OSchema = {
+  private def addConstraints(oschema: OSchema, v: Validator.Primitive[_], wholeNumbers: Boolean): OSchema = {
     v match {
       case m @ Validator.Min(v, exclusive) =>
         if (exclusive) {
@@ -86,8 +85,9 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case Validator.MinSize(value)   => oschema.copy(minItems = Some(value))
       case Validator.MaxSize(value)   => oschema.copy(maxItems = Some(value))
       case Validator.Custom(_, _)     => oschema
-      case Validator.Enum(v) =>
-        val values = v.flatMap(x => encode.asInstanceOf[Any => Option[Any]].apply(x)).map(_.toString)
+      case Validator.Enum(_, None)    => oschema
+      case Validator.Enum(v, Some(encode)) =>
+        val values = v.flatMap(x => encode(x).map(rawToString))
         oschema.copy(enum = if (values.nonEmpty) Some(values) else None)
     }
   }

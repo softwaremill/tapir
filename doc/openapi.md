@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.11.2"
-"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.11.2"
+"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.11.7"
+"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.11.7"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -44,12 +44,14 @@ instance of `OpenAPIDocsOptions`.
 
 ## Exposing OpenAPI documentation
 
-Exposing the OpenAPI documentation can be very application-specific. However, tapir contains two modules which contain
-akka-http/http4s routes for exposing documentation using the swagger ui:
+Exposing the OpenAPI documentation can be very application-specific. However, tapir contains modules which contain
+akka-http/http4s routes for exposing documentation using [Swagger UI](https://swagger.io/tools/swagger-ui/) or 
+[Redoc](https://github.com/Redocly/redoc):
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http" % "0.11.2"
-"com.softwaremill.tapir" %% "tapir-swagger-ui-http4s" % "0.11.2"
+"com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http" % "0.11.7"
+"com.softwaremill.tapir" %% "tapir-swagger-ui-http4s" % "0.11.7"
+"com.softwaremill.tapir" %% "tapir-redoc-http4s" % "0.11.7"
 ```
 
 Usage example for akka-http:
@@ -64,4 +66,4 @@ val docsAsYaml: String = myEndpoints.toOpenAPI("My App", "1.0").toYaml
 new SwaggerAkka(docsAsYaml).routes
 ```
 
-For http4s, use the `SwaggerHttp4s` class.
+For http4s, use the `SwaggerHttp4s` or `RedocHttp4s` classes.

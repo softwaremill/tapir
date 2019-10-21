@@ -42,16 +42,16 @@ object ObjectSchemasForEndpoints {
 
   private def objectSchemas(typeData: AnyTypeData[_]): List[ObjectTypeData[_]] = {
     typeData match {
-      case TypeData(s: TSchema.SProduct, validator, encode) =>
-        List(TypeData(s, validator, encode): ObjectTypeData[_]) ++ fieldsSchemaWithValidator(s, validator)
+      case TypeData(s: TSchema.SProduct, validator) =>
+        List(TypeData(s, validator): ObjectTypeData[_]) ++ fieldsSchemaWithValidator(s, validator)
           .flatMap(objectSchemas)
           .toList
-      case TypeData(TSchema.SArray(o), validator, _) =>
+      case TypeData(TSchema.SArray(o), validator) =>
         objectSchemas(TypeData(o, elementValidator(validator)))
-      case TypeData(s: TSchema.SCoproduct, validator, encode) =>
-        (TypeData(s, validator, encode): ObjectTypeData[_]) +: s.schemas.flatMap(c => objectSchemas(TypeData(c, Validator.pass))).toList
-      case TypeData(s: TSchema.SOpenProduct, validator, encode) =>
-        (TypeData(s, validator, encode): ObjectTypeData[_]) +: objectSchemas(TypeData(s.valueSchema, elementValidator(validator)))
+      case TypeData(s: TSchema.SCoproduct, validator) =>
+        (TypeData(s, validator): ObjectTypeData[_]) +: s.schemas.flatMap(c => objectSchemas(TypeData(c, Validator.pass))).toList
+      case TypeData(s: TSchema.SOpenProduct, validator) =>
+        (TypeData(s, validator): ObjectTypeData[_]) +: objectSchemas(TypeData(s.valueSchema, elementValidator(validator)))
       case _ => List.empty
     }
   }

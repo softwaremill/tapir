@@ -11,7 +11,7 @@ a single-import whenever you want to use tapir. For example:
 object MyTapir extends Tapir
   with TapirAkkaHttpServer
   with TapirSttpClient
-  with TapirCirceJson
+  with TapirJsonCirce
   with TapirOpenAPICirceYaml
   with TapirAliases
 ```

@@ -20,6 +20,8 @@ sealed trait Validator[T] {
 }
 
 object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
+  type EncodeToRaw[T] = T => Option[scala.Any]
+
   def all[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else All[T](v.toList)
   def any[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else Any[T](v.toList)
 
@@ -40,8 +42,14 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     * This enumeration will only be used for documentation, as a value outside of the allowed values will not be
     * decoded in the first place (the decoder has no other option than to fail).
     */
-  def enum[T]: Validator.Primitive[T] = macro validatorForEnum[T]
-  def enum[T](possibleValues: List[T]): Validator.Primitive[T] = Enum(possibleValues)
+  def enum[T]: Validator.Enum[T] = macro validatorForEnum[T]
+  def enum[T](possibleValues: List[T]): Validator.Enum[T] = Enum(possibleValues, None)
+
+  /**
+    * @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
+    *               This will be automatically inferred if the validator is directly added to a codec.
+    */
+  def enum[T](possibleValues: List[T], encode: EncodeToRaw[T]): Validator.Enum[T] = Enum(possibleValues, Some(encode))
   //
 
   sealed trait Single[T] extends Validator[T]
@@ -128,7 +136,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     override def show: Option[String] = Some(s"valid")
   }
 
-  case class Enum[T](possibleValues: List[T]) extends Primitive[T] {
+  case class Enum[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]]) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {
       if (possibleValues.contains(t)) {
         List.empty
@@ -137,6 +145,12 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       }
     }
     override def show: Option[String] = Some(s"in(${possibleValues.mkString(",")}")
+
+    /**
+      * Specify how values of this type can be encoded to a raw value (typically a [[String]]). This encoding
+      * will be used when generating documentation.
+      */
+    def encode(e: T => scala.Any): Enum[T] = copy(encode = Some(v => Some(e(v))))
   }
 
   //
@@ -194,6 +208,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       case ss               => Some(s"all(${ss.mkString(",")})")
     }
 
+    override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) All(Nil) else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
   }
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
@@ -211,6 +226,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       case ss               => Some(s"any(${ss.mkString(",")})")
     }
 
+    override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) Any(Nil) else super.contramap(g)
     override def or(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else Any(validators :+ other)
   }
 

@@ -1,4 +1,4 @@
-# tapir, or Typed API descRiptions
+![tapir, or Typed API descRiptions](https://github.com/softwaremill/tapir/raw/master/banner.png)
 
 [![Join the chat at https://gitter.im/softwaremill/tapir](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/softwaremill/tapir?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/softwaremill/tapir.svg?branch=master)](https://travis-ci.org/softwaremill/tapir)
@@ -74,7 +74,7 @@ tapir documentation is available at [tapir-scala.readthedocs.io](http://tapir-sc
 Add the following dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-core" % "0.11.2"
+"com.softwaremill.tapir" %% "tapir-core" % "0.11.7"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
@@ -110,3 +110,11 @@ See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick 
 If you are having doubts on the *why* or *how* something works, don't hesitate to ask a question on
 [gitter](https://gitter.im/softwaremill/tapir) or via github. This probably means that the documentation, scaladocs or 
 code is unclear and be improved for the benefit of all.
+
+## Commercial Support
+
+We offer commercial support for tapir and related technologies, as well as development services. [Contact us](https://softwaremill.com) to learn more about our offer!
+
+## Copyright
+
+Copyright (C) 2018-2019 SoftwareMill [https://softwaremill.com](https://softwaremill.com).

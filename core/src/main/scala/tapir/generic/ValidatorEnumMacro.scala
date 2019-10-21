@@ -7,18 +7,19 @@ import scala.reflect.macros.blackbox
 // based on: https://stackoverflow.com/questions/13671734/iteration-over-a-sealed-trait-in-scala
 trait ValidatorEnumMacro {
 
-  def validatorForEnum[E: c.WeakTypeTag](c: blackbox.Context): c.Expr[Validator.Primitive[E]] = {
+  def validatorForEnum[E: c.WeakTypeTag](c: blackbox.Context): c.Expr[Validator.Enum[E]] = {
     import c.universe._
+
     val symbol = weakTypeOf[E].typeSymbol.asClass
     if (!symbol.isClass || !symbol.isSealed) {
       c.abort(c.enclosingPosition, "Can only enumerate values of a sealed trait or class.")
     } else {
-      val subclasses = symbol.knownDirectSubclasses.toList
+      val subclasses = symbol.knownDirectSubclasses.toList.sortBy(_.name.encodedName.toString)
       if (!subclasses.forall(_.isModuleClass)) {
         c.abort(c.enclosingPosition, "All children must be objects.")
       } else {
         val instances = subclasses.map(x => Ident(x.asInstanceOf[scala.reflect.internal.Symbols#Symbol].sourceModule.asInstanceOf[Symbol]))
-        c.Expr[Validator.Primitive[E]](q"tapir.Validator.Enum($instances)")
+        c.Expr[Validator.Enum[E]](q"tapir.Validator.enum($instances)")
       }
     }
   }

@@ -1,0 +1,29 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /add/path:
+    get:
+      operationId: getAddPath
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ColorWrapper'
+        required: true
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    ColorWrapper:
+      required:
+        - color
+      type: object
+      properties:
+        color:
+          type: string
+          enum:
+            - blue
+            - red

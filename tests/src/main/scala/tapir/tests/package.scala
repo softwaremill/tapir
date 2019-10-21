@@ -273,11 +273,46 @@ package object tests {
       endpoint.in(query[Color]("color"))
     }
 
+    val in_optional_enum_class: Endpoint[Option[Color], Unit, Unit, Nothing] = {
+      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def plainCodecForColor: PlainCodec[Color] = {
+        Codec.stringPlainCodecUtf8
+          .map[Color]({
+            case "red"  => Red
+            case "blue" => Blue
+          })(_.toString.toLowerCase)
+          .validate(Validator.enum)
+      }
+      endpoint.in(query[Option[Color]]("color"))
+    }
+
+    val out_enum_object: Endpoint[Unit, Unit, ColorValue, Nothing] = {
+      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def plainCodecForColor: PlainCodec[Color] = {
+        Codec.stringPlainCodecUtf8
+          .map[Color]({
+            case "red"  => Red
+            case "blue" => Blue
+          })(_.toString.toLowerCase)
+      }
+      implicit def validatorForColor: Validator[Color] =
+        Validator.enum(List(Blue, Red), { c =>
+          Some(plainCodecForColor.encode(c))
+        })
+      endpoint.out(jsonBody[ColorValue])
+    }
+
     val in_enum_values: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
       implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
         uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
       endpoint.in(query[IntWrapper]("amount"))
+    }
+
+    val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Nothing] = {
+      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def colorValidator: Validator[Color] = Validator.enum.encode(_.toString.toLowerCase)
+      endpoint.in(jsonBody[ColorWrapper])
     }
 
     val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
@@ -303,6 +338,8 @@ package object tests {
     }
   }
 }
+
+case class ColorValue(color: Color, value: Int)
 
 sealed trait Color
 case object Blue extends Color

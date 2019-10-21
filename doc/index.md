@@ -8,6 +8,7 @@ interpreted as:
   Currently supported: 
   * [Akka HTTP](server/akkahttp.html) `Route`s/`Directive`s.
   * [Http4s](server/http4s.html) `HttpRoutes[F]`
+  * [Finatra](server/finatra.html) `http.Controller`
 * a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.html).
 * documentation. Currently supported: [OpenAPI](openapi.html).
 
@@ -83,6 +84,7 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * [Endpoints: authentication](endpoint/auth.md)
 * [Servers: akka-http interpreter](server/akkahttp.md)
 * [Servers: http4s interpreter](server/http4s.md)
+* [Servers: finatra interpreter](server/finatra.md)
 * [Servers: options](server/options.md)
 * [Servers: logic](server/logic.md)
 * [Servers: error handling](server/errors.md)
