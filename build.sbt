@@ -40,6 +40,7 @@ lazy val rootProject = (project in file("."))
   .settings(publishArtifact := false, name := "tapir")
   .aggregate(
     core,
+    tapirCats,
     circeJson,
     playJson,
     uPickleJson,
@@ -85,6 +86,19 @@ lazy val tests: Project = (project in file("tests"))
     libraryDependencies ++= loggerDependencies
   )
   .dependsOn(core, circeJson)
+
+// cats
+
+lazy val tapirCats: Project = (project in file("cats"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-cats",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core" % Versions.cats,
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
 
 // json
 
