@@ -10,11 +10,11 @@ import tapir._
 import tapir.internal._
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
-  def toSttpRequest[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
-    toSttpRequestRaw(e, baseUri)(params).mapResponse(getOrThrow)
+  def toSttpRequestUnsafe[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
+    toSttpRequest(e, baseUri)(params).mapResponse(getOrThrow)
   }
 
-  def toSttpRequestRaw[S, O, E, I](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], S] = { params =>
+  def toSttpRequest[S, O, E, I](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], S] = { params =>
     val (uri, req1) =
       setInputParams(
         e.input.asVectorOfSingleInputs,
