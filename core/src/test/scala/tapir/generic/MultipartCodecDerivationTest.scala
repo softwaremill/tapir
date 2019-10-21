@@ -135,7 +135,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     try {
       // when
       codec.encode(Test1(f)) shouldBe List(Part("f1", f, fileName = Some(f.getName)))
-      codec.decode(List(Part("f1", f, Some(f.getName)))) shouldBe DecodeResult.Value(Test1(f))
+      codec.decode(List(Part("f1", f, fileName = Some(f.getName)))) shouldBe DecodeResult.Value(Test1(f))
     } finally {
       f.delete()
     }
@@ -154,8 +154,8 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
         Part("f1", f, otherDispositionParams = Map("a1" -> "b1")),
         Part("f2", "12")
       )
-      codec.decode(List(Part("f1", f, Some(f.getName)), Part("f2", "12"))) shouldBe DecodeResult.Value(
-        Test1(Part("f1", Some(f), Some(f.getName)), 12)
+      codec.decode(List(Part("f1", f, fileName = Some(f.getName)), Part("f2", "12"))) shouldBe DecodeResult.Value(
+        Test1(Part("f1", Some(f), fileName = Some(f.getName)), 12)
       )
     } finally {
       f.delete()

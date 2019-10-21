@@ -27,7 +27,7 @@ object HelloWorldAkkaServer extends App {
   implicit val materializer: ActorMaterializer = ActorMaterializer()
   val bindAndCheck = Http().bindAndHandle(helloWorldRoute, "localhost", 8080).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
     val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send().body
     println("Got result: " + result)
 

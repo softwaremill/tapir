@@ -34,7 +34,7 @@ object HelloWorldHttp4sServer extends App {
     .resource
     .use { _ =>
       IO {
-        implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
+        implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
         val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send().body
         println("Got result: " + result)
 

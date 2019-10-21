@@ -30,7 +30,7 @@ object MultipleServerEndpointsAkkaServer extends App {
 
   val bindAndCheck = Http().bindAndHandle(route, "localhost", 8080).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
     val result1: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/endpoint1").send().body
     println("Got result (1): " + result1)

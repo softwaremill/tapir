@@ -40,7 +40,7 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
 
   val bindAndCheck = Http().bindAndHandle(amountRoute, "localhost", 8080).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
     // correct request, parameter parses as an int, no errors
     val result1: Either[String, String] = basicRequest.get(uri"http://localhost:8080/?amount=10").send().body

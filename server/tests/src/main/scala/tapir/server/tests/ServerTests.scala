@@ -144,7 +144,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     basicRequest
       .post(uri"$baseUri/api/echo")
       .body("""{"fruit":"banana","amount":12}""")
-      .header(HeaderNames.Accept, MediaTypes.Json)
+      .header(HeaderNames.Accept, sttp.model.MediaType.ApplicationJson.toString) //TODO
       .send()
       .map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
@@ -154,7 +154,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .post(uri"$baseUri/api/echo")
       .body("""{"fruit":"banana","amount":12}""")
       .send()
-      .map(_.contentType shouldBe Some(MediaType.Json().mediaType))
+      .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString)) //TODO
   }
 
   testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { baseUri =>
@@ -598,7 +598,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   //
 
   implicit lazy val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
-  implicit val backend: SttpBackend[IO, Nothing] = AsyncHttpClientCatsBackend[IO]().unsafeRunSync()
+  implicit val backend: SttpBackend[IO, Nothing, NothingT] = AsyncHttpClientCatsBackend[IO]().unsafeRunSync()
 
   override protected def afterAll(): Unit = {
     backend.close()

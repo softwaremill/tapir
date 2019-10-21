@@ -36,7 +36,7 @@ object ErrorOutputsAkkaServer extends App {
 
   val bindAndCheck = Http().bindAndHandle(errorOrJsonRoute, "localhost", 8080).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
     val result1: Either[String, String] = basicRequest.get(uri"http://localhost:8080?amount=-5").send().body
     println("Got result (1): " + result1)

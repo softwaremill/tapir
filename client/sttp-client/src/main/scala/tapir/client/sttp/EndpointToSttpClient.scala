@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
 import sttp.client._
+import sttp.model.Uri.PathSegment
 import sttp.model.{HeaderNames, Method, MultiQueryParams, Part, Uri}
 import tapir.Codec.PlainCodec
 import tapir._
@@ -116,13 +117,13 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointInput.FixedMethod(_) +: tail =>
         setInputParams(tail, params, paramIndex, uri, req)
       case EndpointInput.FixedPath(p) +: tail =>
-        setInputParams(tail, params, paramIndex, uri.copy(path = uri.path :+ p), req)
+        setInputParams(tail, params, paramIndex, uri.copy(pathSegments = uri.pathSegments :+ PathSegment(p)), req)
       case EndpointInput.PathCapture(codec, _, _) +: tail =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(params(paramIndex): Any)
-        setInputParams(tail, params, paramIndex + 1, uri.copy(path = uri.path :+ v), req)
+        setInputParams(tail, params, paramIndex + 1, uri.copy(pathSegments = uri.pathSegments :+ PathSegment(v)), req)
       case EndpointInput.PathsCapture(_) +: tail =>
         val ps = params(paramIndex).asInstanceOf[Seq[String]]
-        setInputParams(tail, params, paramIndex + 1, uri.copy(path = uri.path ++ ps), req)
+        setInputParams(tail, params, paramIndex + 1, uri.copy(pathSegments = uri.pathSegments ++ ps.map(PathSegment(_))), req)
       case EndpointInput.Query(name, codec, _) +: tail =>
         val uri2 = codec
           .encode(params(paramIndex))

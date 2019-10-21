@@ -151,7 +151,7 @@ object BooksExample extends App with StrictLogging {
     import sttp.client._
     import tapir.client.sttp._
 
-    implicit val backend: SttpBackend[Identity, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
     val booksListingRequest: Request[Either[String, Vector[Book]], Nothing] = booksListing
       .toSttpRequestUnsafe(uri"http://localhost:8080")
