@@ -230,7 +230,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
       .send()
       .map { r =>
-        r.headers.filter(_.name == "hh").map(_.value).toList shouldBe List("v3", "v2", "v1", "v0")
+        r.headers.filter(_.is("hh")).map(_.value).toList shouldBe List("v3", "v2", "v1", "v0")
       }
   }
 
@@ -252,19 +252,19 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       pureResult(
         FruitData(
           Part("", writeToFile(readFromFile(fd.data.body).reverse))
-            .header("X-Auth", fd.data.headers.find(_.name == "X-Auth").map(_.value).toString)
+            .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
         ).asRight[Unit]
       )
   ) { baseUri =>
     val file = writeToFile("peach mario")
     basicStringRequest
       .post(uri"$baseUri/api/echo/multipart")
-      .multipartBody(multipartFile("data", file).fileName("fruit-data.txt").header("X-Auth", "12"))
+      .multipartBody(multipartFile("data", file).fileName("fruit-data.txt").header("X-Auth", "12Aa"))
       .send()
       .map { r =>
         r.code shouldBe StatusCode.Ok
         r.body should include regex "name=\"data\"[\\s\\S]*oiram hcaep"
-        r.body should include regex "X-Auth: Some\\(12\\)"
+        r.body should include regex "X-Auth: Some\\(12Aa\\)"
       }
   }
 

@@ -96,7 +96,11 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
               codecMeta <- mvt.partCodecMeta(name)
               futureBody = apply(codecMeta.rawValueType, Buf.ByteArray.Owned(multiPartItem.data), charset, request)
             } yield futureBody
-              .map(body => Part(name, body, dispositionParams - "name", fileItemHeaders(multiPartItem.headers)).asInstanceOf[RawPart])
+              .map(
+                body =>
+                  Part(name, body, otherDispositionParams = dispositionParams - "name", headers = fileItemHeaders(multiPartItem.headers))
+                    .asInstanceOf[RawPart]
+              )
         }
         .toSeq
     )
