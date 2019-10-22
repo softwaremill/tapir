@@ -48,7 +48,7 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
   override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = {
     def waitUntilHealthy(s: EmbeddedHttpServer, count: Int): IO[EmbeddedHttpServer] =
       if (s.isHealthy) IO.pure(s)
-      else if (count > 100) IO.raiseError(new IllegalStateException("Server unhealthy"))
+      else if (count > 1000) IO.raiseError(new IllegalStateException("Server unhealthy"))
       else IO.sleep(10.milliseconds).flatMap(_ => waitUntilHealthy(s, count + 1))
 
     val bind = IO {
