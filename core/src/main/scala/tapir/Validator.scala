@@ -10,14 +10,8 @@ sealed trait Validator[T] {
   def contramap[TT](g: TT => T): Validator[TT] = Validator.Mapped(this, g)
 
   def asOptionElement: Validator[Option[T]] = Validator.CollectionElements(this, _.toIterable)
-  def asArrayElements: Validator[Array[T]] = this match {
-    case Validator.All(Nil) => Validator.all()
-    case _                  => Validator.CollectionElements(this, _.toIterable)
-  }
-  def asIterableElements[C[X] <: Iterable[X]]: Validator[C[T]] = this match {
-    case Validator.All(Nil) => Validator.all()
-    case _                  => Validator.CollectionElements(this, _.toIterable)
-  }
+  def asArrayElements: Validator[Array[T]] = Validator.CollectionElements(this, _.toIterable)
+  def asIterableElements[C[X] <: Iterable[X]]: Validator[C[T]] = Validator.CollectionElements(this, _.toIterable)
 
   def and(other: Validator[T]): Validator[T] = Validator.all(this, other)
   def or(other: Validator[T]): Validator[T] = Validator.any(this, other)
@@ -216,6 +210,10 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
 
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) All(Nil) else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
+
+    override def asArrayElements: Validator[Array[T]] = if (validators.isEmpty) All(Nil) else super.asArrayElements
+    override def asIterableElements[C[X] <: Iterable[X]]: Validator[C[T]] =
+      if (validators.isEmpty) All(Nil) else super.asIterableElements[C]
   }
   case class Any[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def validate(t: T): List[ValidationError[_]] = {
