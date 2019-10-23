@@ -1,6 +1,5 @@
 package tapir
 
-import tapir.Validator.All
 import tapir.generic.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
 
 import scala.collection.immutable
@@ -12,12 +11,12 @@ sealed trait Validator[T] {
 
   def asOptionElement: Validator[Option[T]] = Validator.CollectionElements(this, _.toIterable)
   def asArrayElements: Validator[Array[T]] = this match {
-    case All(Nil) => Validator.all()
-    case _        => Validator.CollectionElements(this, _.toIterable)
+    case Validator.All(Nil) => Validator.all()
+    case _                  => Validator.CollectionElements(this, _.toIterable)
   }
   def asIterableElements[C[X] <: Iterable[X]]: Validator[C[T]] = this match {
-    case All(Nil) => Validator.all()
-    case _        => Validator.CollectionElements(this, _.toIterable)
+    case Validator.All(Nil) => Validator.all()
+    case _                  => Validator.CollectionElements(this, _.toIterable)
   }
 
   def and(other: Validator[T]): Validator[T] = Validator.all(this, other)
