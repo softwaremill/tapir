@@ -5,7 +5,11 @@ import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema.{SArray, SString}
 import tapir.{SchemaFor, Validator}
 
-class SchemaForTest extends FlatSpec with Matchers {
+class TapirCodecCatsTest extends FlatSpec with Matchers {
+
+  case class Test(value: String)
+
+  implicit val validatorForTest: Validator[Test] = Validator.minLength(3).contramap(_.value)
 
   it should "find schema for cats collections" in {
     implicitly[SchemaFor[NonEmptyList[String]]].schema shouldBe SArray(SString)
@@ -19,11 +23,13 @@ class SchemaForTest extends FlatSpec with Matchers {
   }
 
   it should "find proper validator for cats collections" in {
-    implicitly[Validator[NonEmptyList[String]]].show shouldBe Validator.minSize(1).show
+    val expectedValidator = validatorForTest.asIterableElements[List].and(Validator.minSize(1))
 
-    implicitly[Validator[NonEmptySet[String]]].show shouldBe Validator.minSize(1).show
+    implicitly[Validator[NonEmptyList[Test]]].show shouldBe expectedValidator.show
 
-    implicitly[Validator[NonEmptySet[String]]].show shouldBe Validator.minSize(1).show
+    implicitly[Validator[NonEmptySet[Test]]].show shouldBe expectedValidator.show
+
+    implicitly[Validator[NonEmptyChain[Test]]].show shouldBe expectedValidator.show
   }
 
 }

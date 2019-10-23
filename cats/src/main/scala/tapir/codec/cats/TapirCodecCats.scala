@@ -4,16 +4,16 @@ import cats.data.{NonEmptyChain, NonEmptyList, NonEmptySet}
 import tapir._
 
 trait TapirCodecCats {
-  private def nonEmptyValidator[T: Validator]: Validator.Primitive[List[T]] = Validator.minSize[T, List](1)
+  private def nonEmptyValidator[T]: Validator[List[T]] = Validator.minSize[T, List](1)
 
-  implicit def validatorNel[T: Validator]: Validator[NonEmptyList[T]] =
-    nonEmptyValidator[T].contramap(_.toList)
+  implicit def validatorNel[T](implicit v: Validator[T]): Validator[NonEmptyList[T]] =
+    v.asIterableElements.and(nonEmptyValidator[T]).contramap(_.toList)
 
-  implicit def validatorNec[T: Validator]: Validator[NonEmptyChain[T]] =
-    nonEmptyValidator[T].contramap(_.toChain.toList)
+  implicit def validatorNec[T](implicit v: Validator[T]): Validator[NonEmptyChain[T]] =
+    v.asIterableElements.and(nonEmptyValidator[T]).contramap(_.toChain.toList)
 
-  implicit def validatorNes[T: Validator]: Validator[NonEmptySet[T]] =
-    nonEmptyValidator[T].contramap(_.toSortedSet.toList)
+  implicit def validatorNes[T](implicit v: Validator[T]): Validator[NonEmptySet[T]] =
+    v.asIterableElements.and(nonEmptyValidator[T]).contramap(_.toSortedSet.toList)
 
   implicit def schemaForNel[T: SchemaFor]: SchemaFor[NonEmptyList[T]] = new SchemaFor[NonEmptyList[T]] {
     def schema: Schema = Schema.SArray(implicitly[SchemaFor[T]].schema)
