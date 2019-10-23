@@ -107,8 +107,8 @@ implicit val sEntity: SchemaFor[Entity] =
 
 ### Schema for cats datatypes
 
-The `tapir-cats` module contains `SchemaFor` instances for some cats datatypes. See the `tapir.cats.CatsSchemaFor` 
-trait or `import tapir.cats.schemaFor._` to bring the implicit values into scope.
+The `tapir-cats` module contains `SchemaFor` instances for some cats datatypes. See the `tapir.codec.cats.CatsSchemaFor` 
+trait or `import tapir.codec.cats.schemaFor._` to bring the implicit values into scope.
 
 ## Next
 
