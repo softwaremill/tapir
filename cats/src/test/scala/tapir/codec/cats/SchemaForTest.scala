@@ -1,10 +1,9 @@
-package tapir.cats
+package tapir.codec.cats
 
 import cats.data.{NonEmptyChain, NonEmptyList, NonEmptySet}
 import org.scalatest.{FlatSpec, Matchers}
 import tapir.Schema.{SArray, SString}
-import tapir.SchemaFor
-import tapir.cats.schemaFor._
+import tapir.{SchemaFor, Validator}
 
 class SchemaForTest extends FlatSpec with Matchers {
 
@@ -17,6 +16,14 @@ class SchemaForTest extends FlatSpec with Matchers {
 
     implicitly[SchemaFor[NonEmptyChain[String]]].schema shouldBe SArray(SString)
     implicitly[SchemaFor[NonEmptyChain[String]]].isOptional shouldBe false
+  }
+
+  it should "find proper validator for cats collections" in {
+    implicitly[Validator[NonEmptyList[String]]].show shouldBe Validator.minSize(1).show
+
+    implicitly[Validator[NonEmptySet[String]]].show shouldBe Validator.minSize(1).show
+
+    implicitly[Validator[NonEmptySet[String]]].show shouldBe Validator.minSize(1).show
   }
 
 }
