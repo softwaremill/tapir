@@ -2,7 +2,7 @@ package tapir.server.http4s
 
 import java.io.ByteArrayInputStream
 
-import cats.effect.{ContextShift, Sync}
+import cats.effect.{Blocker, ContextShift, Sync}
 import cats.implicits._
 import fs2.Chunk
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
@@ -34,7 +34,7 @@ class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case InputStreamValueType            => asByteArray.map(new ByteArrayInputStream(_))
       case FileValueType =>
         serverOptions.createFile(serverOptions.blockingExecutionContext, req).flatMap { file =>
-          val fileSink = fs2.io.file.writeAll(file.toPath, serverOptions.blockingExecutionContext)
+          val fileSink = fs2.io.file.writeAll(file.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext))
           body.through(fileSink).compile.drain.map(_ => file)
         }
       case mvt: MultipartValueType =>

@@ -1,6 +1,6 @@
 package tapir.server.http4s
 
-import cats.effect.{ContextShift, Sync}
+import cats.effect.{Blocker, ContextShift, Sync}
 import cats.implicits._
 import fs2.Chunk
 import org.http4s
@@ -67,8 +67,8 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case ByteArrayValueType  => fs2.Stream.chunk(Chunk.bytes(r)) -> ct
       case ByteBufferValueType => fs2.Stream.chunk(Chunk.byteBuffer(r)) -> ct
       case InputStreamValueType =>
-        fs2.io.readInputStream(r.pure[F], serverOptions.ioChunkSize, serverOptions.blockingExecutionContext) -> ct
-      case FileValueType => fs2.io.file.readAll(r.toPath, serverOptions.blockingExecutionContext, serverOptions.ioChunkSize) -> ct
+        fs2.io.readInputStream(r.pure[F], serverOptions.ioChunkSize, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext)) -> ct
+      case FileValueType => fs2.io.file.readAll(r.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext), serverOptions.ioChunkSize) -> ct
       case mvt: MultipartValueType =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(mvt, _))
         val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body
