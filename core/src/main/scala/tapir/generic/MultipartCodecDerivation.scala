@@ -94,7 +94,7 @@ object MultipartCodecDerivation {
           .validate(implicitly[Validator[$t]])
       }
      """
-
+    Debug.logGeneratedCode(c)(t.typeSymbol.fullName, codecTree)
     c.Expr[Codec[T, MediaType.MultipartFormData, Seq[AnyPart]]](codecTree)
   }
 }
