@@ -58,7 +58,7 @@ object FormCodecMacros {
           .validate(implicitly[tapir.Validator[$t]])
       }
      """
-
+    Debug.logGeneratedCode[T](c)(codecTree)
     c.Expr[Codec[T, MediaType.XWwwFormUrlencoded, String]](codecTree)
   }
 }
