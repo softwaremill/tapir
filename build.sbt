@@ -290,7 +290,7 @@ lazy val examples: Project = (project in file("examples"))
     name := "tapir-examples",
     libraryDependencies ++= dependenciesFor(scalaVersion.value)(
       _ => "dev.zio" %% "zio" % "1.0.0-RC16",
-      _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC6",
+      _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC7",
       _ => "org.typelevel" %% "cats-effect" % "2.0.0",
       "org.http4s" %% "http4s-dsl" % Versions.http4s(_)
     ),
@@ -306,7 +306,7 @@ lazy val playground: Project = (project in file("playground"))
     name := "tapir-playground",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % "1.0.0-RC16",
-      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC6",
+      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC7",
       "org.typelevel" %% "cats-effect" % "2.0.0",
       "io.swagger" % "swagger-annotations" % "1.5.24"
     ),
