@@ -10,7 +10,8 @@ trait ValidatorEnumMacro {
   def validatorForEnum[E: c.WeakTypeTag](c: blackbox.Context): c.Expr[Validator.Enum[E]] = {
     import c.universe._
 
-    val symbol = weakTypeOf[E].typeSymbol.asClass
+    val t = weakTypeOf[E]
+    val symbol = t.typeSymbol.asClass
     if (!symbol.isClass || !symbol.isSealed) {
       c.abort(c.enclosingPosition, "Can only enumerate values of a sealed trait or class.")
     } else {
@@ -19,7 +20,9 @@ trait ValidatorEnumMacro {
         c.abort(c.enclosingPosition, "All children must be objects.")
       } else {
         val instances = subclasses.map(x => Ident(x.asInstanceOf[scala.reflect.internal.Symbols#Symbol].sourceModule.asInstanceOf[Symbol]))
-        c.Expr[Validator.Enum[E]](q"tapir.Validator.enum($instances)")
+        val validatorEnum = q"tapir.Validator.enum($instances)"
+        Debug.logGeneratedCode(c)(t.typeSymbol.fullName, validatorEnum)
+        c.Expr[Validator.Enum[E]](validatorEnum)
       }
     }
   }

@@ -23,6 +23,7 @@ object SchemaForMapMacro {
     val genericTypeParametersM = List(weakTypeV.typeSymbol.name.decodedName.toString) ++ extractTypeArguments(weakTypeV)
     val schemaForMap =
       q"""tapir.SchemaFor(tapir.Schema.SOpenProduct(tapir.Schema.SObjectInfo("Map", ${genericTypeParametersM}), ${schemaForV}.schema))"""
+    Debug.logGeneratedCode(c)(weakTypeV.typeSymbol.fullName, schemaForMap)
     c.Expr[SchemaFor[Map[String, V]]](schemaForMap)
   }
 }
