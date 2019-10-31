@@ -1,7 +1,11 @@
 package tapir
 
+import java.util.concurrent.TimeUnit
+
 import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
+
+import scala.concurrent.duration.Duration
 
 @silent("never used")
 class ValidatorTest extends FlatSpec with Matchers {
@@ -148,6 +152,45 @@ class ValidatorTest extends FlatSpec with Matchers {
     val v = Validator.enum(List(1, 2, 3, 4))
     v.validate(1) shouldBe empty
     v.validate(0) shouldBe List(ValidationError(v, 0))
+  }
+
+  it should "skip collection validation for array if element validator is passing" in {
+    val v = Validator.pass[Int]
+    val bigArray = List.fill(1000000)(1).toArray
+    val arrayValidator = v.asArrayElements
+
+    // warm up
+    (1 to 10).foreach { _ =>
+      arrayValidator.validate(bigArray)
+    }
+
+    var summaryTime = 0L
+    (1 to 100).foreach { _ =>
+      val start = System.nanoTime()
+      arrayValidator.validate(bigArray)
+      val end = System.nanoTime()
+      summaryTime += (end - start)
+    }
+    Duration(summaryTime, TimeUnit.NANOSECONDS).toSeconds should be <= 1L
+  }
+
+  it should "skip collection validation for iterable if element validator is passing" in {
+    val v = Validator.pass[Int]
+    val bigCollection = List.fill(1000000)(1)
+    val collectionValidator = v.asIterableElements[List]
+    // warm up
+    (1 to 10).foreach { _ =>
+      collectionValidator.validate(bigCollection)
+    }
+
+    var summaryTime = 0L
+    (1 to 100).foreach { _ =>
+      val start = System.nanoTime()
+      collectionValidator.validate(bigCollection)
+      val end = System.nanoTime()
+      summaryTime += (end - start)
+    }
+    Duration(summaryTime, TimeUnit.NANOSECONDS).toSeconds should be <= 1L
   }
 }
 

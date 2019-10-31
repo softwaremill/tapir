@@ -49,6 +49,8 @@ object OneOfMacro {
           val rawMapping = Map(..$mapping)
           val discriminator = Discriminator($name, rawMapping.map{case (k, sf)=> $asString.apply(k) -> SRef(sf.schema.asInstanceOf[SObject].info)})
           SchemaFor(SCoproduct(SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)}), rawMapping.values.map(_.schema).toSet, Some(discriminator)))"""
+
+    Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)
     c.Expr[SchemaFor[E]](schemaForE)
   }
 }

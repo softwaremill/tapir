@@ -105,6 +105,11 @@ implicit val sEntity: SchemaFor[Entity] =
     SchemaFor.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```
 
+### Schema for cats datatypes
+
+The `tapir-cats` module contains `SchemaFor` instances for some cats datatypes. See the `tapir.codec.cats.TapirCodecCats` 
+trait or `import tapir.codec.cats._` to bring the implicit values into scope.
+
 ## Next
 
 Read on about [validation](validation.html).
