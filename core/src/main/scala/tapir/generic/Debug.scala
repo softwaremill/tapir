@@ -8,9 +8,11 @@ object Debug {
   private val macroDebugEnabled = System.getenv("TAPIR_LOG_GENERATED_CODE") == "true"
 
   def logGeneratedCode[E: c.WeakTypeTag](c: blackbox.Context)(tree: c.universe.Tree): Unit = {
+    import c.universe._
     if (macroDebugEnabled) {
-      println(s"""Generated schema code for ${name[E]}:""")
-      println(tree)
+      println(s"""${name[E]} macro output start:""")
+      println(showCode(tree))
+      println(s"""${name[E]} macro output end.""")
     }
   }
 
