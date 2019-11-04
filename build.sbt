@@ -248,7 +248,9 @@ lazy val playServer: Project = (project in file("server/play-server"))
   .settings(
     name := "tapir-play-server",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-server" % Versions.playServer
+      "com.typesafe.play" %% "play-server" % Versions.playServer,
+      "com.typesafe.play" %% "play-akka-http-server" % Versions.playServer,
+      "com.typesafe.play" %% "play" % Versions.playServer
     )
   )
   .dependsOn(core, serverTests % "test")

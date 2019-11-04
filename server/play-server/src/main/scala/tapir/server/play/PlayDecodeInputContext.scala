@@ -1,10 +1,10 @@
 package tapir.server.play
 
-import play.api.mvc.{AnyContent, Request}
+import play.api.mvc.{AnyContent, RawBuffer, Request}
 import tapir.internal.server.DecodeInputsContext
 import tapir.model.{Method, ServerRequest}
 
-private[play] class PlayDecodeInputContext(request: Request[AnyContent], pathConsumed: Int = 0) extends DecodeInputsContext {
+private[play] class PlayDecodeInputContext(request: Request[RawBuffer], pathConsumed: Int = 0) extends DecodeInputsContext {
   override def method: Method = Method(request.method.toUpperCase())
 
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {

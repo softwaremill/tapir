@@ -3,10 +3,10 @@ package tapir.server.play
 import java.net.{InetSocketAddress, URI}
 
 import play.api.http.HeaderNames
-import play.api.mvc.{AnyContent, Request, RequestHeader}
+import play.api.mvc.{AnyContent, RawBuffer, Request, RequestHeader}
 import tapir.model.{ConnectionInfo, Method, ServerRequest}
 
-private[play] class PlayServerRequest(request: Request[AnyContent]) extends ServerRequest {
+private[play] class PlayServerRequest(request: Request[RawBuffer]) extends ServerRequest {
   private val AbsoluteUri = """(?is)^(https?)://([^/]+):([1-9^/]?)(/.*|$)""".r
 
   override def method: Method = Method(request.method.toUpperCase)
