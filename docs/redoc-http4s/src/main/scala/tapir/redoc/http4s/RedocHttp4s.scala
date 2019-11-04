@@ -16,7 +16,6 @@ import scala.io.Source
   * @param yamlName    The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
   */
 class RedocHttp4s(title: String, yaml: String, yamlName: String = "docs.yaml") {
-
   private lazy val html = {
     val fileName = "redoc.html"
     val is = getClass.getClassLoader.getResourceAsStream(fileName)

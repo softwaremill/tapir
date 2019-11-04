@@ -8,9 +8,7 @@ import tapir.DecodeResult.{Error, Value}
 import upickle.default.{ReadWriter, read, write}
 
 trait TapirJsonuPickle {
-
   implicit def encoderDecoderCodec[T: ReadWriter: SchemaFor]: JsonCodec[T] = new JsonCodec[T] {
-
     def encode(t: T): String = write(t)
 
     def rawDecode(s: String): DecodeResult[T] = {
