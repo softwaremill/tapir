@@ -31,12 +31,18 @@ object OutputToPlayResponse {
       v: Any
   ): Result = {
     val outputValues = encodeOutputs(output, v, OutputValues.empty)
-    val headers: Map[String, String] = outputValues.headers.toMap
+    val headers: Map[String, String] = outputValues.headers
+      .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
+        if (a.contains(b._1)) a + (b._1 -> (a(b._1) :+ b._2)) else a + (b._1 -> List(b._2))
+      }
+      .mapValues(_.mkString(";;"))
     val status = outputValues.statusCode.getOrElse(defaultStatus)
 
     outputValues.body match {
-      case Some(entity) => Result(ResponseHeader(status, headers), entity)
-      case None         => Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
+      case Some(entity) =>
+        val result = Result(ResponseHeader(status, headers), entity)
+        headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
+      case None => Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
     }
   }
 
