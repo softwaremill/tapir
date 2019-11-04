@@ -12,7 +12,6 @@ import tapir.server.http4s._
 import tapir.swagger.http4s.SwaggerHttp4s
 
 object ZioExample extends App {
-
   case class Pet(species: String, url: String)
 
   import io.circe.generic.auto._

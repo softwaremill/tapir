@@ -15,7 +15,6 @@ object MultipartCodecDerivation {
   def generateForCaseClass[T: c.WeakTypeTag](
       c: blackbox.Context
   )(conf: c.Expr[Configuration]): c.Expr[Codec[T, MediaType.MultipartFormData, Seq[AnyPart]]] = {
-
     import c.universe._
 
     val t = weakTypeOf[T]

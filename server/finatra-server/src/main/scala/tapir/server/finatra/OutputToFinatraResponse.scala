@@ -25,7 +25,6 @@ import tapir.{
 }
 
 object OutputToFinatraResponse {
-
   private val encodeOutputs: EncodeOutputs[(FinatraContent, String)] = new EncodeOutputs(new EncodeOutputBody[(FinatraContent, String)] {
     override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): (FinatraContent, String) =
       rawValueToFinatraContent(codec.meta, v)
@@ -132,5 +131,4 @@ object OutputToFinatraResponse {
       builder.build()
     }
   }
-
 }

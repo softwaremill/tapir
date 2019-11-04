@@ -72,7 +72,6 @@ package object internal {
 
     private[internal] type BasicOutputsOrMap = Either[BasicOutputs, ListMap[Option[StatusCode], BasicOutputs]]
     private[internal] def asBasicOutputsOrMap: BasicOutputsOrMap = {
-
       def throwMultipleOneOfMappings = throw new IllegalArgumentException(s"Multiple one-of mappings in output $output")
 
       def mergeMultiple(v: Vector[BasicOutputsOrMap]): BasicOutputsOrMap = v.foldLeft(Left(Vector.empty): BasicOutputsOrMap) {

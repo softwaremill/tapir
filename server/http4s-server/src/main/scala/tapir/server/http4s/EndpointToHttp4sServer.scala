@@ -18,7 +18,6 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
   def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] = {
-
     val service: HttpRoutes[F] = HttpRoutes[F] { req: Request[F] =>
       def decodeBody(result: DecodeInputsResult): F[DecodeInputsResult] = {
         result match {

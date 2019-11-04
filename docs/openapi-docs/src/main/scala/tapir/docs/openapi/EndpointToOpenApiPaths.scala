@@ -10,7 +10,6 @@ import tapir.openapi.{Schema, _}
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
-
   private val codecToMediaType = new CodecToMediaType(objectSchemas)
   private val endpointToOperationResponse = new EndpointToOperationResponse(objectSchemas, codecToMediaType)
 

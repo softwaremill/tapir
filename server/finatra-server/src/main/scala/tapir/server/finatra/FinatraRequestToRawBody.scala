@@ -25,7 +25,6 @@ import scala.collection.JavaConverters._
 
 class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
   def apply[R](rawBodyType: RawValueType[R], body: Buf, charset: Option[Charset], request: Request): Future[R] = {
-
     def asByteArray: Array[Byte] = {
       val array = new Array[Byte](body.length)
       body.write(array, 0)

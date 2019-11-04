@@ -7,7 +7,6 @@ import tapir.{Endpoint, EndpointIO, EndpointInput}
 import scala.annotation.tailrec
 
 private[openapi] object SecuritySchemesForEndpoints {
-
   def apply(es: Iterable[Endpoint[_, _, _, _]]): SecuritySchemes = {
     val auths = es.flatMap(e => e.input.auths)
     val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a)))

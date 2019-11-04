@@ -25,7 +25,6 @@ import tapir.{
 }
 
 private[akkahttp] object OutputToAkkaRoute {
-
   def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
     val outputValues = encodeOutputs(output, v, OutputValues.empty)
 

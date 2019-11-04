@@ -5,7 +5,6 @@ import tapir.DecodeResult.InvalidValue
 import tapir._
 
 object ServerDefaults {
-
   /**
     * @param badRequestOnPathFailureIfPathShapeMatches Should a status 400 be returned if the shape of the path
     * of the request matches, but decoding some path segment fails. This assumes that the only way decoding a path

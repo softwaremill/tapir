@@ -9,13 +9,11 @@ import scala.annotation.tailrec
 
 trait DecodeInputsResult
 object DecodeInputsResult {
-
   /**
     * @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint.
     */
   case class Values(basicInputsValues: Vector[Any], bodyInputWithIndex: Option[(EndpointIO.Body[_, _, _], Int)])
       extends DecodeInputsResult {
-
     def addBodyInput(input: EndpointIO.Body[_, _ <: MediaType, _], bodyIndex: Int): Values = {
       if (bodyInputWithIndex.isDefined) {
         throw new IllegalStateException(s"Double body definition: $input")
@@ -55,7 +53,6 @@ trait DecodeInputsContext {
 }
 
 object DecodeInputs {
-
   private final case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
 
   /**
@@ -312,5 +309,4 @@ object DecodeInputs {
       case _                  => Some(v)
     }
   }
-
 }

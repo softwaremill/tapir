@@ -16,7 +16,6 @@ import scala.reflect.ClassTag
   * @tparam S The type of streams that are used by this endpoint's inputs/outputs. `Nothing`, if no streams are used.
   */
 case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointOutput[E], output: EndpointOutput[O], info: EndpointInfo) {
-
   def get: Endpoint[I, E, O, S] = in(FixedMethod(Method.GET))
   def post: Endpoint[I, E, O, S] = in(FixedMethod(Method.POST))
   def head: Endpoint[I, E, O, S] = in(FixedMethod(Method.HEAD))

@@ -11,7 +11,6 @@ import scala.collection.immutable
 import scala.collection.immutable.ListMap
 
 object ObjectSchemasForEndpoints {
-
   def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
     val infoToKey = calculateUniqueKeys(sObjects.map(_.schema.info))

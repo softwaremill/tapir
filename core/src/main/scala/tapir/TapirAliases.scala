@@ -4,7 +4,6 @@ import tapir.generic.SchemaForMagnoliaDerivation
 
 /** Mixin containing aliases for top-level types and modules in the tapir package. */
 trait TapirAliases {
-
   /** Codec.scala */
   type Codec[T, M <: MediaType, R] = tapir.Codec[T, M, R]
   val Codec = tapir.Codec
@@ -87,5 +86,4 @@ trait TapirAliases {
 
   /** TapirAuth.scala */
   val TapirAuth = tapir.TapirAuth
-
 }

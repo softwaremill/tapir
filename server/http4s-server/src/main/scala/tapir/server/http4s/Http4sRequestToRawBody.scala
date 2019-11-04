@@ -21,9 +21,7 @@ import tapir.{
 }
 
 class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
-
   def apply[R](body: fs2.Stream[F, Byte], rawBodyType: RawValueType[R], charset: Option[Charset], req: Request[F]): F[R] = {
-
     def asChunk: F[Chunk[Byte]] = body.compile.toChunk
     def asByteArray: F[Array[Byte]] = body.compile.toChunk.map(_.toByteBuffer.array())
 

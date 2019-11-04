@@ -8,7 +8,6 @@ trait MediaType {
 }
 
 object MediaType {
-
   /**
     * Create a custom media type.
     */

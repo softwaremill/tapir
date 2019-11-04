@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.StrictLogging
 import tapir.swagger.akkahttp.SwaggerAkka
 
 object BooksExample extends App with StrictLogging {
-
   type Limit = Option[Int]
   type AuthToken = String
 
@@ -147,7 +146,6 @@ object BooksExample extends App with StrictLogging {
   }
 
   def makeClientRequest(): Unit = {
-
     import sttp.client._
     import tapir.client.sttp._
 

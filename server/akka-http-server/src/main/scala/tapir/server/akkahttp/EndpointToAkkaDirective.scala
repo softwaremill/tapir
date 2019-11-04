@@ -33,13 +33,11 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Failure
 
 private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOptions) {
-
   def apply[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive1[I] = {
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._
 
     val inputDirectives: Directive1[I] = {
-
       def decodeBody(result: DecodeInputsResult): Directive1[DecodeInputsResult] = {
         result match {
           case values: DecodeInputsResult.Values =>
@@ -102,7 +100,6 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       implicit mat: Materializer,
       ec: ExecutionContext
   ): Future[R] = {
-
     rawValueType match {
       case StringValueType(_)   => implicitly[FromEntityUnmarshaller[String]].apply(entity)
       case ByteArrayValueType   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(entity)
@@ -136,7 +133,6 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       implicit mat: Materializer,
       ec: ExecutionContext
   ): Future[Part[R]] = {
-
     entityToRawValue(part.entity, codecMeta.rawValueType, ctx)
       .map(
         r =>

@@ -16,7 +16,6 @@ import scala.util.control.NonFatal
 package object finatra {
   implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
     def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
-
       val handler = { request: Request =>
         def decodeBody(result: DecodeInputsResult): Future[DecodeInputsResult] = {
           result match {

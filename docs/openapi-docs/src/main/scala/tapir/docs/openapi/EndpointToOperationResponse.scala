@@ -20,7 +20,6 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
-
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = output.asBasicOutputsMap.flatMap {
       case (sc, outputs) =>
         // there might be no output defined at all

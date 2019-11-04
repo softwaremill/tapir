@@ -1,7 +1,6 @@
 import sttp.model.Part
 
 package object tapir extends Tapir {
-
   // a part which contains one of the types supported by RawValueType
   type RawPart = Part[_]
   type AnyPart = Part[_]

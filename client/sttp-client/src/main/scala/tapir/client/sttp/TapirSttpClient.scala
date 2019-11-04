@@ -6,7 +6,6 @@ import tapir.{DecodeResult, Endpoint}
 
 trait TapirSttpClient {
   implicit class RichEndpoint[I, E, O, S](e: Endpoint[I, E, O, S]) {
-
     /**
       * @throws IllegalArgumentException when response parsing fails
       */

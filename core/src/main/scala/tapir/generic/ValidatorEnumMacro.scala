@@ -6,7 +6,6 @@ import scala.reflect.macros.blackbox
 
 // based on: https://stackoverflow.com/questions/13671734/iteration-over-a-sealed-trait-in-scala
 trait ValidatorEnumMacro {
-
   def validatorForEnum[E: c.WeakTypeTag](c: blackbox.Context): c.Expr[Validator.Enum[E]] = {
     import c.universe._
 

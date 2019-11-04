@@ -13,7 +13,6 @@ case class OpenAPI(
     components: Option[Components],
     security: List[SecurityRequirement]
 ) {
-
   def addPathItem(path: String, pathItem: PathItem): OpenAPI = {
     val pathItem2 = paths.get(path) match {
       case None           => pathItem

@@ -4,7 +4,6 @@ import tapir.internal._
 import tapir.{EndpointIO, EndpointInput}
 
 object InputValues {
-
   /**
     * Returns the values of the inputs in the order specified by `input`, and mapped if necessary using defined mapping
     * functions.

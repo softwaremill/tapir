@@ -23,7 +23,6 @@ import tapir.tests._
 import scala.reflect.ClassTag
 
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
-
   private val basicStringRequest = basicRequest.response(asStringAlways)
 
   // method matching
@@ -629,7 +628,6 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   )(
       fn: I => R[Either[E, O]]
   )(runTest: Uri => IO[Assertion]): Unit = {
-
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
       NonEmptyList.of(route(e, fn, decodeFailureHandler))

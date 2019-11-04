@@ -6,7 +6,6 @@ import tapir.{EndpointIO, EndpointInput}
 import scala.collection.immutable.ListMap
 
 private[openapi] object EndpointInputToParameterConverter {
-
   def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
     Parameter(
       query.name,

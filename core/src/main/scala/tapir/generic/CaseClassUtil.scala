@@ -2,7 +2,6 @@ package tapir.generic
 import scala.reflect.macros.blackbox
 
 private class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val c: C) {
-
   import c.universe._
 
   val t: Type = weakTypeOf[T]

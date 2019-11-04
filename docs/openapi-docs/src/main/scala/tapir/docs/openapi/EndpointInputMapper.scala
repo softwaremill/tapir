@@ -6,7 +6,6 @@ private[openapi] class EndpointInputMapper[S](
     inputMapping: PartialFunction[(EndpointInput.Single[_], S), (EndpointInput.Single[_], S)],
     ioMapping: PartialFunction[(EndpointIO.Single[_], S), (EndpointIO.Single[_], S)]
 ) {
-
   def mapInput(ei: EndpointInput[_], s: S): (EndpointInput[_], S) = ei match {
     case single: EndpointInput.Single[_] => mapInputSingle(single, s)
     case eio: EndpointIO[_]              => mapIO(eio, s)

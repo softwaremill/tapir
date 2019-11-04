@@ -48,7 +48,6 @@ object Endpoints {
 }
 
 object BooksExample extends App with StrictLogging {
-
   import Endpoints._
   import akka.http.scaladsl.server.Route
 
@@ -111,7 +110,6 @@ object BooksExample extends App with StrictLogging {
   }
 
   def makeClientRequest(): Unit = {
-
     import sttp.client._
     import tapir.client.sttp._
 
