@@ -2,7 +2,7 @@ package tapir.swagger.http4s
 
 import java.util.Properties
 
-import cats.effect.{ContextShift, Sync}
+import cats.effect.{Blocker, ContextShift, Sync}
 import org.http4s.{HttpRoutes, StaticFile, Uri}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Location
@@ -40,7 +40,7 @@ class SwaggerHttp4s(yaml: String, contextPath: String = "docs", yamlName: String
         Ok(yaml)
       case r =>
         StaticFile
-          .fromResource(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo}", ExecutionContext.global)
+          .fromResource(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo}", Blocker.liftExecutionContext(ExecutionContext.global))
           .getOrElseF(NotFound())
     }
   }
