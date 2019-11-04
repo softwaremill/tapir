@@ -9,7 +9,7 @@ import tapir.server.akkahttp._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import com.softwaremill.sttp._
+import sttp.client._
 import tapir.server.{DecodeFailureHandling, ServerDefaults}
 
 object CustomErrorsOnDecodeFailureAkkaServer extends App {
@@ -40,15 +40,15 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
 
   val bindAndCheck = Http().bindAndHandle(amountRoute, "localhost", 8080).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
     // correct request, parameter parses as an int, no errors
-    val result1: Either[String, String] = sttp.get(uri"http://localhost:8080/?amount=10").send().body
+    val result1: Either[String, String] = basicRequest.get(uri"http://localhost:8080/?amount=10").send().body
     println("Got result: " + result1)
     assert(result1 == Right(""))
 
     // incorrect request, parameter does not parse, error
-    val result2: Either[String, String] = sttp.get(uri"http://localhost:8080/?amount=xyz").send().body
+    val result2: Either[String, String] = basicRequest.get(uri"http://localhost:8080/?amount=xyz").send().body
     println("Got result: " + result2)
     assert(result2 == Left("Incorrect format!!!"))
   }

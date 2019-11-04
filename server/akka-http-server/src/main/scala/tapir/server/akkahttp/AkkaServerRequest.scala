@@ -3,7 +3,8 @@ package tapir.server.akkahttp
 import java.net.URI
 
 import akka.http.scaladsl.server.RequestContext
-import tapir.model.{ConnectionInfo, Method, ServerRequest}
+import sttp.model.Method
+import tapir.model.{ConnectionInfo, ServerRequest}
 
 private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerRequest {
   override def method: Method = Method(ctx.request.method.value.toUpperCase)

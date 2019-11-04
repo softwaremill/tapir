@@ -1,20 +1,27 @@
 package tapir.server.finatra
 
 import cats.data.NonEmptyList
-import cats.effect.{IO, Resource}
+import cats.effect.{ContextShift, IO, Resource, Timer}
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.filters.{AccessLoggingFilter, ExceptionMappingFilter}
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.util.{Future, FuturePool}
 import tapir.Endpoint
+import tapir.server.tests.ServerTests.Port
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
-import tapir.server.tests.ServerTests
+import tapir.server.tests.{PortCounter, ServerTests}
 
+import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
+import scala.concurrent.duration._
 
 class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
   private val futurePool = FuturePool.unboundedPool
+
+  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
+  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
+  implicit val timer: Timer[IO] = IO.timer(ec)
 
   override def pureResult[T](t: T): Future[T] = Future.value(t)
 
@@ -39,6 +46,11 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
   }
 
   override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = {
+    def waitUntilHealthy(s: EmbeddedHttpServer, count: Int): IO[EmbeddedHttpServer] =
+      if (s.isHealthy) IO.pure(s)
+      else if (count > 1000) IO.raiseError(new IllegalStateException("Server unhealthy"))
+      else IO.sleep(10.milliseconds).flatMap(_ => waitUntilHealthy(s, count + 1))
+
     val bind = IO {
       class TestController extends Controller with TapirController {
         routes.toList.foreach(addTapirRoute)
@@ -57,16 +69,23 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
         new TestServer,
         Map(
           "http.port" -> s":$port"
-        )
+        ),
+        // in the default implementation waitForWarmup suspends the thread for 1 second between healthy checks
+        // we improve on that by checking every 10ms
+        waitForWarmup = false
       )
       server.start()
       server
-    }
+    }.flatMap(waitUntilHealthy(_, 0))
 
     Resource
       .make(bind)(httpServer => IO(httpServer.close()))
       .map(_ => ())
   }
 
-  override def initialPort: Port = 36000
+  override def portCounter: PortCounter = FinatraServerTests.portCounter
+}
+
+object FinatraServerTests {
+  val portCounter = new PortCounter(36000)
 }

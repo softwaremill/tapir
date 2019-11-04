@@ -40,7 +40,10 @@ class SwaggerHttp4s(yaml: String, contextPath: String = "docs", yamlName: String
         Ok(yaml)
       case r =>
         StaticFile
-          .fromResource(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo}", Blocker.liftExecutionContext(ExecutionContext.global))
+          .fromResource(
+            s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo}",
+            Blocker.liftExecutionContext(ExecutionContext.global)
+          )
           .getOrElseF(NotFound())
     }
   }

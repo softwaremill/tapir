@@ -3,12 +3,12 @@ package tapir.docs.openapi
 import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
+import sttp.model.{Method, StatusCode}
 import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
 import tapir.docs.openapi.dtos.b.{Pet => BPet}
 import tapir.json.circe._
-import tapir.model.{Method, StatusCodes}
 import tapir.openapi.circe.yaml._
 import tapir.openapi.{Contact, Info, License}
 import tapir.tests.{FruitAmount, _}
@@ -45,7 +45,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should use custom operationId generator") {
-    def customOperationIdGenerator(pc: Vector[String], m: Method) = pc.map(_.toUpperCase).mkString("", "+", "-") + m.m.toUpperCase
+    def customOperationIdGenerator(pc: Vector[String], m: Method) = pc.map(_.toUpperCase).mkString("", "+", "-") + m.method.toUpperCase
     val options = OpenAPIDocsOptions.default.copy(customOperationIdGenerator)
     val expectedYaml = loadYaml("expected_custom_operation_id.yml")
 
@@ -144,8 +144,8 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     val e = endpoint.errorOut(
       tapir.oneOf(
-        statusMapping(StatusCodes.NotFound, jsonBody[NotFound].description("not found")),
-        statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+        statusMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
+        statusMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
         statusDefaultMapping(jsonBody[Unknown].description("unknown"))
       )
     )
@@ -317,7 +317,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_fixed_status_code.yml")
 
     val actualYaml = endpoint
-      .out(statusCode(StatusCodes.PermanentRedirect))
+      .out(statusCode(StatusCode.PermanentRedirect))
       .out(header[String]("Location"))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
@@ -354,7 +354,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_fixed_status_code_2.yml")
 
     val actualYaml = endpoint
-      .out(statusCode(StatusCodes.NoContent))
+      .out(statusCode(StatusCode.NoContent))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

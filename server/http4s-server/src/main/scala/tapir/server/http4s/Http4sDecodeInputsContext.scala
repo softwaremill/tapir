@@ -1,8 +1,9 @@
 package tapir.server.http4s
 import org.http4s.Request
 import org.http4s.util.CaseInsensitiveString
+import sttp.model.Method
 import tapir.internal.server.DecodeInputsContext
-import tapir.model.{Method, ServerRequest}
+import tapir.model.ServerRequest
 
 class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsContext {
   override def method: Method = Method(req.method.name.toUpperCase)

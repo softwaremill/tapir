@@ -7,8 +7,8 @@ import org.http4s
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.{Charset, EntityBody, EntityEncoder, Header, Headers, Response, Status, multipart}
+import sttp.model.{Part, Header => SttpHeader}
 import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import tapir.model.Part
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -24,8 +24,7 @@ import tapir.{
 }
 
 class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
-
-  def apply[O](defaultStatusCode: tapir.model.StatusCode, output: EndpointOutput[O], v: O): Response[F] = {
+  def apply[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): Response[F] = {
     val outputValues = encodeOutputs(output, v, OutputValues.empty)
     val statusCode = outputValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(statusCodeToHttp4sStatus(defaultStatusCode))
 
@@ -36,8 +35,8 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  private def statusCodeToHttp4sStatus(code: tapir.model.StatusCode): Status =
-    Status.fromInt(code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
+  private def statusCodeToHttp4sStatus(code: sttp.model.StatusCode): Status =
+    Status.fromInt(code.code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
 
   private def allOutputHeaders(outputValues: OutputValues[(EntityBody[F], Header)]): Headers = {
     val headers = outputValues.headers.map { case (k, v) => Header.Raw(CaseInsensitiveString(k), v) }
@@ -68,7 +67,8 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case ByteBufferValueType => fs2.Stream.chunk(Chunk.byteBuffer(r)) -> ct
       case InputStreamValueType =>
         fs2.io.readInputStream(r.pure[F], serverOptions.ioChunkSize, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext)) -> ct
-      case FileValueType => fs2.io.file.readAll(r.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext), serverOptions.ioChunkSize) -> ct
+      case FileValueType =>
+        fs2.io.file.readAll(r.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext), serverOptions.ioChunkSize) -> ct
       case mvt: MultipartValueType =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(mvt, _))
         val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body
@@ -79,12 +79,13 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   private def rawPartToBodyPart[T](mvt: MultipartValueType, part: Part[T]): Option[multipart.Part[F]] = {
     mvt.partCodecMeta(part.name).map { codecMeta =>
       val headers = part.headers.map {
-        case (hk, hv) => Header.Raw(CaseInsensitiveString(hk), hv)
+        case SttpHeader(hk, hv) => Header.Raw(CaseInsensitiveString(hk), hv)
       }.toList
 
       val (entity, ctHeader) = rawValueToEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body)
 
-      val contentDispositionHeader = `Content-Disposition`("form-data", part.otherDispositionParams + ("name" -> part.name))
+      val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
+      val contentDispositionHeader = `Content-Disposition`("form-data", dispositionParams)
 
       val shouldAddCtHeader = headers.exists(_.name == `Content-Type`.name)
       val allHeaders = if (shouldAddCtHeader) {

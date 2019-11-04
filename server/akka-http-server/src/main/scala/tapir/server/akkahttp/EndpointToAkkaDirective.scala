@@ -8,9 +8,9 @@ import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
+import sttp.model.{Header, Part}
 import tapir.internal.SeqToParams
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import tapir.model.Part
 import tapir.server.{DecodeFailureHandling, ServerDefaults}
 import tapir.{
   ByteArrayValueType,
@@ -94,7 +94,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
           case (msg, Some(t)) => ctx.log.debug(s"$msg; exception: {}", t)
           case (msg, None)    => ctx.log.debug(msg)
         }
-        StandardRoute(OutputToAkkaRoute(ServerDefaults.errorStatusCode, output, value))
+        StandardRoute(OutputToAkkaRoute(ServerDefaults.errorStatusCode.code, output, value))
     }
   }
 
@@ -138,6 +138,14 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
   ): Future[Part[R]] = {
 
     entityToRawValue(part.entity, codecMeta.rawValueType, ctx)
-      .map(r => Part(part.name, part.additionalDispositionParams, part.headers.map(h => (h.name, h.value)), r))
+      .map(
+        r =>
+          Part(
+            part.name,
+            r,
+            otherDispositionParams = part.additionalDispositionParams,
+            headers = part.additionalHeaders.map(h => Header(h.name, h.value))
+          )
+      )
   }
 }

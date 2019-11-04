@@ -1,7 +1,7 @@
 package tapir.examples
 
 import cats.effect._
-import com.softwaremill.sttp._
+import sttp.client._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
@@ -34,8 +34,8 @@ object HelloWorldHttp4sServer extends App {
     .resource
     .use { _ =>
       IO {
-        implicit val backend: SttpBackend[com.softwaremill.sttp.Id, Nothing] = HttpURLConnectionBackend()
-        val result: String = sttp.get(uri"http://localhost:8080/hello?name=Frodo").send().unsafeBody
+        implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
+        val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send().body
         println("Got result: " + result)
 
         assert(result == "Hello, Frodo!")

@@ -2,7 +2,8 @@ package tapir.server.finatra
 import java.net.URI
 
 import com.twitter.finagle.http.Request
-import tapir.model.{ConnectionInfo, Method, ServerRequest}
+import sttp.model.Method
+import tapir.model.{ConnectionInfo, ServerRequest}
 
 class FinatraServerRequest(request: Request) extends ServerRequest {
   override def method: Method = Method(request.method.toString)

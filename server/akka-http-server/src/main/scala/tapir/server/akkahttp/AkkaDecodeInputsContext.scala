@@ -2,8 +2,9 @@ package tapir.server.akkahttp
 
 import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.RequestContext
+import sttp.model.{Method, MultiQueryParams}
 import tapir.internal.server.DecodeInputsContext
-import tapir.model.{Method, MultiQueryParams, ServerRequest}
+import tapir.model.ServerRequest
 
 private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
   override def method: Method = Method(req.request.method.value.toUpperCase)

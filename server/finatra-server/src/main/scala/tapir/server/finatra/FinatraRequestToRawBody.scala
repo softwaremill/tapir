@@ -1,4 +1,5 @@
 package tapir.server.finatra
+
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -8,7 +9,7 @@ import com.twitter.finatra.http.request.RequestUtils
 import com.twitter.io.Buf
 import com.twitter.util.Future
 import org.apache.commons.fileupload.FileItemHeaders
-import tapir.model.Part
+import sttp.model.{Header, Part}
 import tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -72,13 +73,14 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
   )
 
   private def multiPartRequestToRawBody(request: Request, mvt: MultipartValueType): Future[Seq[RawPart]] = {
-    def fileItemHeadersToSeq(headers: FileItemHeaders): Seq[(String, String)] = {
+    def fileItemHeaders(headers: FileItemHeaders): Seq[Header] = {
       headers.getHeaderNames.asScala
         .flatMap { name =>
           headers.getHeaders(name).asScala.map(name -> _)
         }
         .toSeq
         .filter(_._1.toLowerCase != "content-disposition")
+        .map { case (k, v) => Header(k, v) }
     }
 
     Future.collect(
@@ -94,7 +96,11 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
               codecMeta <- mvt.partCodecMeta(name)
               futureBody = apply(codecMeta.rawValueType, Buf.ByteArray.Owned(multiPartItem.data), charset, request)
             } yield futureBody
-              .map(body => Part(name, dispositionParams - "name", fileItemHeadersToSeq(multiPartItem.headers), body).asInstanceOf[RawPart])
+              .map(
+                body =>
+                  Part(name, body, otherDispositionParams = dispositionParams - "name", headers = fileItemHeaders(multiPartItem.headers))
+                    .asInstanceOf[RawPart]
+              )
         }
         .toSeq
     )

@@ -1,7 +1,7 @@
 package tapir.server
 
+import sttp.model.StatusCode
 import tapir.DecodeResult.InvalidValue
-import tapir.model.{StatusCode, StatusCodes}
 import tapir._
 
 object ServerDefaults {
@@ -25,19 +25,19 @@ object ServerDefaults {
       }
 
       input match {
-        case EndpointInput.Query(name, _, _)       => responseWithValidation(StatusCodes.BadRequest, s"Invalid value for: query parameter $name")
-        case _: EndpointInput.QueryParams          => responseWithValidation(StatusCodes.BadRequest, "Invalid value for: query parameters")
-        case EndpointInput.Cookie(name, _, _)      => responseWithValidation(StatusCodes.BadRequest, s"Invalid value for: cookie $name")
-        case EndpointIO.Header(name, _, _)         => responseWithValidation(StatusCodes.BadRequest, s"Invalid value for: header $name")
-        case _: EndpointIO.Headers                 => responseWithValidation(StatusCodes.BadRequest, s"Invalid value for: headers")
-        case _: EndpointIO.Body[_, _, _]           => responseWithValidation(StatusCodes.BadRequest, s"Invalid value for: body")
-        case _: EndpointIO.StreamBodyWrapper[_, _] => responseWithValidation(StatusCodes.BadRequest, s"Invalid value for: body")
+        case EndpointInput.Query(name, _, _)       => responseWithValidation(StatusCode.BadRequest, s"Invalid value for: query parameter $name")
+        case _: EndpointInput.QueryParams          => responseWithValidation(StatusCode.BadRequest, "Invalid value for: query parameters")
+        case EndpointInput.Cookie(name, _, _)      => responseWithValidation(StatusCode.BadRequest, s"Invalid value for: cookie $name")
+        case EndpointIO.Header(name, _, _)         => responseWithValidation(StatusCode.BadRequest, s"Invalid value for: header $name")
+        case _: EndpointIO.Headers                 => responseWithValidation(StatusCode.BadRequest, s"Invalid value for: headers")
+        case _: EndpointIO.Body[_, _, _]           => responseWithValidation(StatusCode.BadRequest, s"Invalid value for: body")
+        case _: EndpointIO.StreamBodyWrapper[_, _] => responseWithValidation(StatusCode.BadRequest, s"Invalid value for: body")
         // we assume that the only decode failure that might happen during path segment decoding is an error
         // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
         // a path shape mismatch
         case EndpointInput.PathCapture(_, name, _)
             if badRequestOnPathFailureIfPathShapeMatches && failure.isInstanceOf[DecodeResult.Error] =>
-          responseWithValidation(StatusCodes.BadRequest, s"Invalid value for: path parameter ${name.getOrElse("?")}")
+          responseWithValidation(StatusCode.BadRequest, s"Invalid value for: path parameter ${name.getOrElse("?")}")
         case _ => DecodeFailureHandling.noMatch
       }
     }
@@ -68,6 +68,6 @@ object ServerDefaults {
   def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
     DecodeFailureHandling.response(failureOutput)((statusCode, message))
 
-  val successStatusCode: StatusCode = StatusCodes.Ok
-  val errorStatusCode: StatusCode = StatusCodes.BadRequest
+  val successStatusCode: StatusCode = StatusCode.Ok
+  val errorStatusCode: StatusCode = StatusCode.BadRequest
 }

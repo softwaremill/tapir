@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.ActorMaterializer
-import com.softwaremill.sttp._
+import sttp.client._
 import tapir._
 import tapir.server.akkahttp._
 
@@ -30,13 +30,13 @@ object MultipleServerEndpointsAkkaServer extends App {
 
   val bindAndCheck = Http().bindAndHandle(route, "localhost", 8080).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Id, Nothing] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
-    val result1: String = sttp.get(uri"http://localhost:8080/endpoint1").send().unsafeBody
+    val result1: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/endpoint1").send().body
     println("Got result (1): " + result1)
     assert(result1 == "ok1")
 
-    val result2: String = sttp.get(uri"http://localhost:8080/endpoint2/apple").send().unsafeBody
+    val result2: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/endpoint2/apple").send().body
     println("Got result (2): " + result2)
     assert(result2 == "ok2: apple")
   }

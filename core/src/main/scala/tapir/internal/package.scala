@@ -1,5 +1,6 @@
 package tapir
-import tapir.model.{Method, StatusCode}
+
+import sttp.model.{Method, StatusCode}
 
 import scala.collection.immutable.ListMap
 

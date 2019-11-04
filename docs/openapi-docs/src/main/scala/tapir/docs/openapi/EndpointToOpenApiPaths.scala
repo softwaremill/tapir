@@ -1,11 +1,12 @@
 package tapir.docs.openapi
 
+import sttp.model.Method
 import tapir._
 import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.internal._
-import tapir.model.Method
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema, _}
+
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
@@ -14,7 +15,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private val endpointToOperationResponse = new EndpointToOperationResponse(objectSchemas, codecToMediaType)
 
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
-    import model.Method._
+    import Method._
 
     val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)

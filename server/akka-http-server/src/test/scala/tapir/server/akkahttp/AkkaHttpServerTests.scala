@@ -9,11 +9,12 @@ import akka.http.scaladsl.server.Directives._
 import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import com.softwaremill.sttp._
+import sttp.client._
 import com.typesafe.scalalogging.StrictLogging
 import tapir.{Endpoint, endpoint, stringBody}
-import tapir.server.tests.ServerTests
+import tapir.server.tests.{PortCounter, ServerTests}
 import tapir._
+import tapir.server.tests.ServerTests.Port
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import scala.concurrent.duration._
@@ -68,16 +69,20 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
     Future { t }
   }
 
-  override val initialPort: Port = 32000
-
   if (testNameFilter.isEmpty) {
     test("endpoint nested in a path directive") {
       val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => pureResult("ok".asRight[Unit]))
-      val port = nextPort()
+      val port = portCounter.next()
       val route = Directives.pathPrefix("api")(e.toRoute)
       server(NonEmptyList.of(route), port).use { _ =>
-        sttp.get(uri"http://localhost:$port/api/test/directive").send().map(_.body shouldBe Right("ok"))
+        basicRequest.get(uri"http://localhost:$port/api/test/directive").send().map(_.body shouldBe Right("ok"))
       }.unsafeRunSync
     }
   }
+
+  override def portCounter: PortCounter = AkkaHttpServerTests.portCounter
+}
+
+object AkkaHttpServerTests {
+  val portCounter = new PortCounter(32000)
 }

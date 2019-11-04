@@ -1,4 +1,4 @@
-val scala2_12 = "2.12.9"
+val scala2_12 = "2.12.10"
 val scala2_13 = "2.13.0"
 
 lazy val is2_12 = settingKey[Boolean]("Is the scala version 2.12.")
@@ -69,6 +69,7 @@ lazy val core: Project = (project in file("core"))
     name := "tapir-core",
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.12.0",
+      "com.softwaremill.sttp.client" %% "model" % Versions.sttp,
       scalaTest % "test"
     )
   )
@@ -207,8 +208,8 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-server-tests",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "com.softwaremill.sttp" %% "async-http-client-backend-cats" % Versions.sttp(_)
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client" %% "async-http-client-backend-cats" % Versions.sttp
     )
   )
   .dependsOn(tests)
@@ -275,9 +276,9 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings)
   .settings(
     name := "tapir-sttp-client",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "com.softwaremill.sttp" %% "core" % Versions.sttp(_),
-      "com.softwaremill.sttp" %% "async-http-client-backend-fs2" % Versions.sttp(_) % "test"
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client" %% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client" %% "async-http-client-backend-fs2" % Versions.sttp % "test"
     )
   )
   .dependsOn(core, clientTests % "test")
@@ -305,13 +306,14 @@ lazy val playground: Project = (project in file("playground"))
   .settings(
     name := "tapir-playground",
     libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp,
       "dev.zio" %% "zio" % "1.0.0-RC16",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC7",
       "org.typelevel" %% "cats-effect" % "2.0.0",
       "io.swagger" % "swagger-annotations" % "1.5.24"
     ),
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp(_)
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false

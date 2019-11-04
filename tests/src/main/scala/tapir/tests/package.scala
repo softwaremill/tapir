@@ -9,6 +9,7 @@ import tapir.json.circe._
 import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, MultiQueryParams, StatusCode}
 import tapir.Codec.PlainCodec
 import tapir.model._
 
@@ -134,17 +135,18 @@ package object tests {
       .in(cookie[String]("c2"))
       .out(header[List[String]]("Cookie"))
 
-  val in_cookies_out_cookies: Endpoint[List[Cookie], Unit, List[SetCookie], Nothing] =
+  val in_cookies_out_cookies: Endpoint[List[Cookie], Unit, List[CookieWithMeta], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(cookies).out(setCookies)
 
-  val in_set_cookie_value_out_set_cookie_value: Endpoint[SetCookieValue, Unit, SetCookieValue, Nothing] =
+  val in_set_cookie_value_out_set_cookie_value: Endpoint[CookieValueWithMeta, Unit, CookieValueWithMeta, Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(setCookie("c1")).out(setCookie("c1"))
 
   val in_root_path: Endpoint[Unit, Unit, Unit, Nothing] = endpoint.get.in("")
 
   val in_single_path: Endpoint[Unit, Unit, Unit, Nothing] = endpoint.get.in("api")
 
-  val in_extract_request_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in(extractFromRequest(_.method.m)).out(stringBody)
+  val in_extract_request_out_string: Endpoint[String, Unit, String, Nothing] =
+    endpoint.in(extractFromRequest(_.method.method)).out(stringBody)
 
   val in_auth_apikey_header_out_string: Endpoint[String, Unit, String, Nothing] =
     endpoint.in("auth").in(auth.apiKey(header[String]("X-Api-Key"))).out(stringBody)
@@ -161,8 +163,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          statusMapping(StatusCodes.Accepted, plainBody[Int].map(Left(_))(_.value)),
-          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.value))
+          statusMapping(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)),
+          statusMapping(StatusCode.Ok, plainBody[String].map(Right(_))(_.value))
         )
       )
 
@@ -171,8 +173,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          statusMapping(StatusCodes.Accepted, emptyOutput.map(Left(_))(_.value)),
-          statusMapping(StatusCodes.Ok, plainBody[String].map(Right(_))(_.value))
+          statusMapping(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)),
+          statusMapping(StatusCode.Ok, plainBody[String].map(Right(_))(_.value))
         )
       )
 
@@ -180,13 +182,13 @@ package object tests {
     endpoint.in(query[String]("fruit")).out(statusCode)
 
   val delete_endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
-    endpoint.delete.in("api" / "delete").out(statusCode(StatusCodes.Ok).description("ok"))
+    endpoint.delete.in("api" / "delete").out(statusCode(StatusCode.Ok).description("ok"))
 
   val in_string_out_content_type_string: Endpoint[String, Unit, (String, String), Nothing] =
     endpoint.in("api" / "echo").in(stringBody).out(stringBody).out(header[String]("Content-Type"))
 
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Nothing] =
-    endpoint.out(statusCode(StatusCodes.PermanentRedirect)).out(header[String]("Location"))
+    endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location"))
 
   val in_unit_out_fixed_header: Endpoint[Unit, Unit, Unit, Nothing] =
     endpoint.out(header("Location", "Poland"))
@@ -207,7 +209,7 @@ package object tests {
       endpoint.in(query[String @@ Tapir]("fruit"))
     }
 
-    val in_query: Endpoint[StatusCode, Unit, Unit, Nothing] = {
+    val in_query: Endpoint[Int, Unit, Unit, Nothing] = {
       endpoint.in(query[Int]("amount").validate(Validator.min(0)))
     }
 

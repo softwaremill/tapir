@@ -1,7 +1,8 @@
 package tapir.internal.server
 
+import sttp.model.{Cookie, HeaderNames, Method, MultiQueryParams}
 import tapir.internal._
-import tapir.model.{Cookie, Method, MultiQueryParams, ServerRequest}
+import tapir.model.ServerRequest
 import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, MediaType}
 
 import scala.annotation.tailrec
@@ -210,7 +211,7 @@ object DecodeInputs {
 
       case IndexedBasicInput(input @ EndpointInput.FixedMethod(m), _) +: inputsTail =>
         if (m == ctx.method) matchOthers(inputsTail, values, ctx)
-        else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.m, ctx.method.m)), ctx)
+        else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.method, ctx.method.method)), ctx)
 
       case IndexedBasicInput(input @ EndpointIO.FixedHeader(n, v, _), _) +: inputsTail =>
         if (List(v) == ctx.header(n)) matchOthers(inputsTail, values, ctx)
@@ -226,9 +227,8 @@ object DecodeInputs {
         matchOthers(inputsTail, values.setBasicInputValue(MultiQueryParams.fromMultiMap(ctx.queryParameters), index), ctx)
 
       case IndexedBasicInput(input @ EndpointInput.Cookie(name, codec, _), index) +: inputsTail =>
-        val allCookies = DecodeResult.sequence(ctx.headers.filter(_._1 == Cookie.HeaderName).map(p => Cookie.parse(p._2)).toList)
-        val cookieValue =
-          allCookies.map(_.flatten.find(_.name == name)).flatMap(cookie => codec.decode(cookie.map(_.value)))
+        val allCookies = ctx.headers.filter(_._1.equalsIgnoreCase(HeaderNames.Cookie)).flatMap(p => Cookie.parseHeaderValue(p._2))
+        val cookieValue = codec.decode(allCookies.find(_.name == name).map(_.value))
         cookieValue match {
           case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)

@@ -1,6 +1,6 @@
 package tapir.docs.openapi
 
-import tapir.model.Method
+import sttp.model.Method
 
 case class OpenAPIDocsOptions(operationIdGenerator: (Vector[String], Method) => String)
 
@@ -13,7 +13,7 @@ object OpenAPIDocsOptions {
     }
 
     // converting to camelCase
-    (method.m.toLowerCase +: components.map(_.toLowerCase.capitalize)).mkString
+    (method.method.toLowerCase +: components.map(_.toLowerCase.capitalize)).mkString
   }
 
   implicit val default: OpenAPIDocsOptions = OpenAPIDocsOptions(defaultOperationIdGenerator)

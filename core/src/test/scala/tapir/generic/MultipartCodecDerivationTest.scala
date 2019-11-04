@@ -4,8 +4,8 @@ import java.io.File
 
 import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
+import sttp.model.{Header, Part}
 import tapir.Schema._
-import tapir.model.Part
 import tapir.util.CompileUtil
 import tapir.{Codec, DecodeResult, MediaType, RawPart, Validator}
 
@@ -115,10 +115,10 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     case class Test1(f1: Part[Int], f2: String)
     val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
 
-    val instance = Test1(Part("?", Map("a1" -> "b1"), List(("X-Y", "a-b")), 10), "v2")
+    val instance = Test1(Part("?", 10, otherDispositionParams = Map("a1" -> "b1"), headers = List(Header("X-Y", "a-b"))), "v2")
     val parts = List(
-      Part("f1", Map("a1" -> "b1"), List(("X-Y", "a-b")), "10"),
-      Part("f2", Map(), Nil, "v2")
+      Part("f1", "10", otherDispositionParams = Map("a1" -> "b1"), headers = List(Header("X-Y", "a-b"))),
+      Part("f2", "v2")
     )
 
     // when
@@ -134,8 +134,8 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
 
     try {
       // when
-      codec.encode(Test1(f)) shouldBe List(Part("f1", Map("filename" -> f.getName), Nil, f))
-      codec.decode(List(Part("f1", Map("filename" -> f.getName), Nil, f))) shouldBe DecodeResult.Value(Test1(f))
+      codec.encode(Test1(f)) shouldBe List(Part("f1", f, fileName = Some(f.getName)))
+      codec.decode(List(Part("f1", f, fileName = Some(f.getName)))) shouldBe DecodeResult.Value(Test1(f))
     } finally {
       f.delete()
     }
@@ -150,12 +150,12 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     // when
     try {
       // when
-      codec.encode(Test1(Part("?", Map("a1" -> "b1"), Nil, Some(f)), 12)) shouldBe List(
-        Part("f1", Map("a1" -> "b1"), Nil, f),
+      codec.encode(Test1(Part("?", Some(f), otherDispositionParams = Map("a1" -> "b1")), 12)) shouldBe List(
+        Part("f1", f, otherDispositionParams = Map("a1" -> "b1")),
         Part("f2", "12")
       )
-      codec.decode(List(Part("f1", Map("filename" -> f.getName), Nil, f), Part("f2", "12"))) shouldBe DecodeResult.Value(
-        Test1(Part("f1", Map("filename" -> f.getName), Nil, Some(f)), 12)
+      codec.decode(List(Part("f1", f, fileName = Some(f.getName)), Part("f2", "12"))) shouldBe DecodeResult.Value(
+        Test1(Part("f1", Some(f), fileName = Some(f.getName)), 12)
       )
     } finally {
       f.delete()

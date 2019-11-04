@@ -19,7 +19,8 @@ import tapir._
 import tapir.tests._
 import TestUtil._
 import org.http4s.multipart
-import tapir.model.{MultiQueryParams, StatusCodes, UsernamePassword}
+import sttp.model.{MultiQueryParams, StatusCode}
+import tapir.model.UsernamePassword
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -64,7 +65,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_paths_out_string, Seq("fruit", "apple", "amount", "50"), Right("apple 50 None"))
   testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
   testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
-  testClient(in_cookie_cookie_out_header, (23, "pomegranate"), Right(List("etanargemop=2c"))) // for some reason, http4s keeps only the last cookie header
+  testClient(in_cookie_cookie_out_header, (23, "pomegranate"), Right(List("etanargemop=2c ;32=1c")))
   // TODO: test root path
   testClient(in_auth_apikey_header_out_string, "1234", Right("Authorization=None; X-Api-Key=Some(1234); Query=None"))
   testClient(in_auth_apikey_query_out_string, "1234", Right("Authorization=None; X-Api-Key=None; Query=Some(1234)"))
@@ -76,7 +77,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
   testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
   testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
-  testClient(in_string_out_status, "apple", Right(StatusCodes.Ok))
+  testClient(in_string_out_status, "apple", Right(StatusCode.Ok))
 
   testClient(delete_endpoint, (), Right(()))
 
