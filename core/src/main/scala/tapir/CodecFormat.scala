@@ -18,11 +18,11 @@ object CodecFormat {
   }
 
   case class TextPlain(charset: Charset = StandardCharsets.UTF_8) extends CodecFormat {
-    override val mediaType: MediaType = MediaType.TextPlain.copy(charset = Some(charset.displayName()))
+    override val mediaType: MediaType = MediaType.TextPlain.charset(charset.displayName())
   }
 
   case class TextHtml(charset: Charset = StandardCharsets.UTF_8) extends CodecFormat {
-    override val mediaType: MediaType = MediaType.TextHtml.copy(charset = Some(charset.displayName()))
+    override val mediaType: MediaType = MediaType.TextHtml.charset(charset.displayName())
   }
 
   case class OctetStream() extends CodecFormat {

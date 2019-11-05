@@ -9,7 +9,7 @@ import scala.collection.immutable.ListMap
 private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
   def apply[T, CF <: CodecFormat](o: CodecForOptional[T, CF, _], example: Option[T]): ListMap[String, OMediaType] = {
     ListMap(
-      o.meta.format.mediaType.copy(charset = None).toString -> OMediaType(
+      o.meta.format.mediaType.noCharset.toString -> OMediaType(
         Some(objectSchemas(o)),
         example.flatMap(exampleValue(o, _)),
         ListMap.empty,
@@ -24,7 +24,7 @@ private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
       example: Option[String]
   ): ListMap[String, OMediaType] = {
     ListMap(
-      format.mediaType.copy(charset = None).toString -> OMediaType(
+      format.mediaType.noCharset.toString -> OMediaType(
         Some(objectSchemas(TypeData(schema, Validator.pass))),
         example.map(ExampleValue),
         ListMap.empty,
