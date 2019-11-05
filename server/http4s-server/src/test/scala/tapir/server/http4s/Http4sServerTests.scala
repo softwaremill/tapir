@@ -58,7 +58,7 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
     test("should work with a router and routes in a context") {
       val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
       val routes = e.toRoutes
-      val port = portCounter.next()
+      val port = PortCounter.next()
 
       BlazeServerBuilder[IO]
         .bindHttp(port, "localhost")

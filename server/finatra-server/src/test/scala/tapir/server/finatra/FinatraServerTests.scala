@@ -10,7 +10,7 @@ import com.twitter.util.{Future, FuturePool}
 import tapir.Endpoint
 import tapir.server.tests.ServerTests.Port
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
-import tapir.server.tests.{PortCounter, ServerTests}
+import tapir.server.tests.ServerTests
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
