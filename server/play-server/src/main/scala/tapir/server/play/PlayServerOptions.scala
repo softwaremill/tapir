@@ -1,16 +1,27 @@
 package tapir.server.play
 
+import akka.stream.Materializer
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
-import play.api.mvc.{RawBuffer, Request, RequestHeader}
+import play.api.mvc._
 import tapir.server.{DecodeFailureHandler, LoggingOptions, ServerDefaults}
+
+import scala.concurrent.ExecutionContext
 
 case class PlayServerOptions(
     decodeFailureHandler: DecodeFailureHandler[RequestHeader],
     loggingOptions: LoggingOptions,
-    temporaryFileCreator: TemporaryFileCreator
+    temporaryFileCreator: TemporaryFileCreator,
+    defaultActionBuilder: ActionBuilder[Request, AnyContent],
+    playBodyParsers: PlayBodyParsers
 )
 
 object PlayServerOptions {
-  implicit val default: PlayServerOptions =
-    PlayServerOptions(ServerDefaults.decodeFailureHandler, LoggingOptions.default, SingletonTemporaryFileCreator)
+  implicit def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions =
+    PlayServerOptions(
+      ServerDefaults.decodeFailureHandler,
+      LoggingOptions.default,
+      SingletonTemporaryFileCreator,
+      DefaultActionBuilder.apply(PlayBodyParsers.apply().anyContent),
+      PlayBodyParsers.apply()
+    )
 }

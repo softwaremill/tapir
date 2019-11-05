@@ -22,7 +22,7 @@ import tapir.{
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class PlayRequestToRawBody(serverOptions: PlayServerOptions, playBodyParsers: PlayBodyParsers) {
+class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
   def apply[R](rawBodyType: RawValueType[R], charset: Option[Charset], request: Request[RawBuffer], body: ByteString)(
       implicit mat: Materializer
   ): Future[R] = {
@@ -41,7 +41,7 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions, playBodyParsers: Pl
   private def multiPartRequestToRawBody[R](request: Request[RawBuffer], mvt: MultipartValueType)(
       implicit mat: Materializer
   ): Future[Seq[RawPart]] = {
-    val bodyParser = playBodyParsers.multipartFormData(
+    val bodyParser = serverOptions.playBodyParsers.multipartFormData(
       Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)
     )
     bodyParser.apply(request).run().flatMap {

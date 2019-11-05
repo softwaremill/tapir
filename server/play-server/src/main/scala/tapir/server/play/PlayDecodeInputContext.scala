@@ -1,10 +1,13 @@
 package tapir.server.play
 
-import play.api.mvc.{AnyContent, RawBuffer, Request, RequestHeader}
+import akka.stream.Materializer
+import play.api.mvc.RequestHeader
 import tapir.internal.server.DecodeInputsContext
 import tapir.model.{Method, ServerRequest}
 
-private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed: Int = 0) extends DecodeInputsContext {
+private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed: Int = 0, serverOptions: PlayServerOptions)(
+    implicit mat: Materializer
+) extends DecodeInputsContext {
   override def method: Method = Method(request.method.toUpperCase())
 
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
@@ -17,7 +20,7 @@ private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed:
     }
     val charactersConsumed = segment.map(_.length).getOrElse(0) + (path.length - nextStart.length)
 
-    (segment, new PlayDecodeInputContext(request, pathConsumed + charactersConsumed))
+    (segment, new PlayDecodeInputContext(request, pathConsumed + charactersConsumed, serverOptions))
   }
   override def header(name: String): List[String] = request.headers.toMap.get(name).toList.flatten
   override def headers: Seq[(String, String)] = request.headers.headers

@@ -4,24 +4,22 @@ import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import tapir.server.tests.ServerTests
-
-import scala.concurrent.Future
+import play.api.Mode
+import play.api.mvc.RequestHeader
 import play.api.routing.Router
 import play.api.routing.Router.Routes
-import tapir.Endpoint
-import tapir.server.{DecodeFailureHandler, ServerDefaults}
-import play.api.Mode
-import play.api.mvc.{Handler, RequestHeader}
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
+import tapir.Endpoint
+import tapir.server.tests.ServerTests
+import tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with TapirPlayServer {
   private implicit val actorSystem: ActorSystem = ActorSystem()
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val pc: PlayComponents2 = PlayComponents2.apply
   override def pureResult[T](t: T): Future[T] = Future.successful(t)
 
   override def suspendResult[T](t: => T): Future[T] = Future(t)
@@ -38,7 +36,9 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with T
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(
       implicit eClassTag: ClassTag[E]
-  ): Routes = ???
+  ): Routes = {
+    e.toRouteRecoverErrors(fn)
+  }
 
   override def server(routes: NonEmptyList[Routes], port: Port): Resource[IO, Unit] = {
     val components = new DefaultAkkaHttpServerComponents {
@@ -47,7 +47,7 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with T
         Router.from(
           routes.reduce(
             (a: Routes, b: Routes) =>
-              PartialFunction { request: RequestHeader =>
+              PartialFunction { request: RequestHeader => //TODO change to function.unlift?
                 a.applyOrElse(request, b)
               }
           )

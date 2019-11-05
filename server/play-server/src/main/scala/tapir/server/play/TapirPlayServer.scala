@@ -15,13 +15,14 @@ import tapir.internal.{SeqToParams, _}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.reflect.ClassTag
 
 trait TapirPlayServer {
 
   implicit class RichPlayServerEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) {
     def toRoute(
         logic: I => Future[Either[E, O]]
-    )(implicit mat: Materializer, pc: PlayComponents2, serverOptions: PlayServerOptions): PartialFunction[RequestHeader, Handler] = {
+    )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
       def valuesToResponse(values: DecodeInputsResult.Values): Future[Result] = {
         val i = SeqToParams(InputValues(e.input, values)).asInstanceOf[I]
         logic(i)
@@ -56,12 +57,12 @@ trait TapirPlayServer {
           case values: DecodeInputsResult.Values =>
             values.bodyInput match {
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
-                new PlayRequestToRawBody(serverOptions, pc.playBodyParsers)
+                new PlayRequestToRawBody(serverOptions)
                   .apply(
                     codec.meta.rawValueType,
                     request.charset.map(Charset.forName),
                     request,
-                    request.body.asBytes().getOrElse(ByteString.apply(Array.empty[Byte]))
+                    request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))
                   )
                   .map { rawBody =>
                     val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, codec.meta.isOptional))
@@ -78,7 +79,7 @@ trait TapirPlayServer {
 
       val res = new PartialFunction[RequestHeader, Handler] {
         override def isDefinedAt(x: RequestHeader): Boolean = {
-          val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x))
+          val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x, 0, serverOptions))
           val handlingResult = decodeInputResult match {
             case DecodeInputsResult.Failure(input, failure) =>
               serverOptions.decodeFailureHandler(x, input, failure) != DecodeFailureHandling.noMatch
@@ -88,8 +89,8 @@ trait TapirPlayServer {
         }
 
         override def apply(v1: RequestHeader): Handler = {
-          pc.defaultActionBuilder.async(pc.playBodyParsers.raw) { request =>
-            decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1))).flatMap {
+          serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
+            decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1, 0, serverOptions))).flatMap {
               case values: DecodeInputsResult.Values =>
                 valuesToResponse(values)
               case DecodeInputsResult.Failure(input, failure) =>
@@ -100,20 +101,18 @@ trait TapirPlayServer {
       }
       res
     }
+
+    def toRouteRecoverErrors(logic: I => Future[O])(
+        implicit eIsThrowable: E <:< Throwable,
+        eClassTag: ClassTag[E],
+        mat: Materializer,
+        serverOptions: PlayServerOptions
+    ): Routes = {
+      e.toRoute { i: I =>
+        logic(i).map(Right(_)).recover {
+          case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
+        }
+      }
+    }
   }
 }
-
-trait PlayComponents2 {
-  def defaultActionBuilder: ActionBuilder[Request, AnyContent]
-  def playBodyParsers: PlayBodyParsers
-}
-
-object PlayComponents2 {
-  def apply[T](implicit mat: Materializer): PlayComponents2 = new PlayComponents2() {
-    override def defaultActionBuilder: ActionBuilder[Request, AnyContent] = DefaultActionBuilder.apply(playBodyParsers.anyContent)
-
-    override def playBodyParsers: PlayBodyParsers = PlayBodyParsers.apply()
-  }
-}
-
-case class TapirPlayRoutes(r: Routes, handleDecodeFailure: (EndpointInput.Basic[_], DecodeFailure) => Future[Result])
