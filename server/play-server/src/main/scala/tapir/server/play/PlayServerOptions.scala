@@ -1,11 +1,11 @@
 package tapir.server.play
 
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
-import play.api.mvc.{RawBuffer, Request}
+import play.api.mvc.{RawBuffer, Request, RequestHeader}
 import tapir.server.{DecodeFailureHandler, LoggingOptions, ServerDefaults}
 
 case class PlayServerOptions(
-    decodeFailureHandler: DecodeFailureHandler[Request[RawBuffer]],
+    decodeFailureHandler: DecodeFailureHandler[RequestHeader],
     loggingOptions: LoggingOptions,
     temporaryFileCreator: TemporaryFileCreator
 )

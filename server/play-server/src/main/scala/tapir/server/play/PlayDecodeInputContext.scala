@@ -1,10 +1,10 @@
 package tapir.server.play
 
-import play.api.mvc.{AnyContent, RawBuffer, Request}
+import play.api.mvc.{AnyContent, RawBuffer, Request, RequestHeader}
 import tapir.internal.server.DecodeInputsContext
 import tapir.model.{Method, ServerRequest}
 
-private[play] class PlayDecodeInputContext(request: Request[RawBuffer], pathConsumed: Int = 0) extends DecodeInputsContext {
+private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed: Int = 0) extends DecodeInputsContext {
   override def method: Method = Method(request.method.toUpperCase())
 
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
@@ -23,7 +23,7 @@ private[play] class PlayDecodeInputContext(request: Request[RawBuffer], pathCons
   override def headers: Seq[(String, String)] = request.headers.headers
   override def queryParameter(name: String): Seq[String] = request.queryString.get(name).toSeq.flatten
   override def queryParameters: Map[String, Seq[String]] = request.queryString
-  override def bodyStream: Any = request.body
+  override def bodyStream: Any = ???
 
   override def serverRequest: ServerRequest = new PlayServerRequest(request)
 }

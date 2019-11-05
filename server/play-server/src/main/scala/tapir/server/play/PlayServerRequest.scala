@@ -6,7 +6,7 @@ import play.api.http.HeaderNames
 import play.api.mvc.{AnyContent, RawBuffer, Request, RequestHeader}
 import tapir.model.{ConnectionInfo, Method, ServerRequest}
 
-private[play] class PlayServerRequest(request: Request[RawBuffer]) extends ServerRequest {
+private[play] class PlayServerRequest(request: RequestHeader) extends ServerRequest {
   private val AbsoluteUri = """(?is)^(https?)://([^/]+):([1-9^/]?)(/.*|$)""".r
 
   override def method: Method = Method(request.method.toUpperCase)

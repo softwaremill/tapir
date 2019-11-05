@@ -3,8 +3,10 @@ package tapir.server.play
 import java.nio.charset.Charset
 
 import akka.stream.Materializer
+import akka.util.ByteString
 import play.api.http.HttpEntity
 import play.api.mvc._
+import play.api.routing.Router.Routes
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.model.StatusCodes
 import tapir.server.{DecodeFailureHandling, ServerDefaults}
@@ -30,7 +32,7 @@ trait TapirPlayServer {
       }
       def handleDecodeFailure(
           e: Endpoint[_, _, _, _],
-          req: Request[RawBuffer],
+          req: RequestHeader,
           input: EndpointInput.Single[_],
           failure: DecodeFailure
       ): Result = {
@@ -38,7 +40,7 @@ trait TapirPlayServer {
         handling match {
           case DecodeFailureHandling.NoMatch =>
             serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(println(_))
-            Result(header = ResponseHeader(StatusCodes.NotFound), body = HttpEntity.NoEntity)
+            Result(header = ResponseHeader(StatusCodes.BadRequest), body = HttpEntity.NoEntity)
           case DecodeFailureHandling.RespondWithResponse(output, value) =>
             serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
               case (msg, Some(t)) => println(s"$msg $t")
@@ -55,7 +57,12 @@ trait TapirPlayServer {
             values.bodyInput match {
               case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
                 new PlayRequestToRawBody(serverOptions, pc.playBodyParsers)
-                  .apply(codec.meta.rawValueType, request.charset.map(Charset.forName), request, request.body.asBytes().get)
+                  .apply(
+                    codec.meta.rawValueType,
+                    request.charset.map(Charset.forName),
+                    request,
+                    request.body.asBytes().getOrElse(ByteString.apply(Array.empty[Byte]))
+                  )
                   .map { rawBody =>
                     val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, codec.meta.isOptional))
                     decodeResult match {
@@ -69,11 +76,25 @@ trait TapirPlayServer {
         }
       }
 
-      val res = PartialFunction { requestHeader: RequestHeader =>
-        pc.defaultActionBuilder.async(pc.playBodyParsers.raw) { request =>
-          decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(request))).flatMap {
-            case values: DecodeInputsResult.Values          => valuesToResponse(values)
-            case DecodeInputsResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e, request, input, failure))
+      val res = new PartialFunction[RequestHeader, Handler] {
+        override def isDefinedAt(x: RequestHeader): Boolean = {
+          val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x))
+          val handlingResult = decodeInputResult match {
+            case DecodeInputsResult.Failure(input, failure) =>
+              serverOptions.decodeFailureHandler(x, input, failure) != DecodeFailureHandling.noMatch
+            case DecodeInputsResult.Values(_, _) => true
+          }
+          handlingResult
+        }
+
+        override def apply(v1: RequestHeader): Handler = {
+          pc.defaultActionBuilder.async(pc.playBodyParsers.raw) { request =>
+            decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1))).flatMap {
+              case values: DecodeInputsResult.Values =>
+                valuesToResponse(values)
+              case DecodeInputsResult.Failure(input, failure) =>
+                Future.successful(handleDecodeFailure(e, request, input, failure))
+            }
           }
         }
       }
@@ -94,3 +115,5 @@ object PlayComponents2 {
     override def playBodyParsers: PlayBodyParsers = PlayBodyParsers.apply()
   }
 }
+
+case class TapirPlayRoutes(r: Routes, handleDecodeFailure: (EndpointInput.Basic[_], DecodeFailure) => Future[Result])

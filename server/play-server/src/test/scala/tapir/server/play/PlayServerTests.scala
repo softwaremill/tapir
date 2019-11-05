@@ -11,8 +11,8 @@ import play.api.routing.Router
 import play.api.routing.Router.Routes
 import tapir.Endpoint
 import tapir.server.{DecodeFailureHandler, ServerDefaults}
-import cats.implicits._
 import play.api.Mode
+import play.api.mvc.{Handler, RequestHeader}
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -43,12 +43,20 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with T
   override def server(routes: NonEmptyList[Routes], port: Port): Resource[IO, Unit] = {
     val components = new DefaultAkkaHttpServerComponents {
       override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(port), address = "127.0.0.1", mode = Mode.Test)
-      override def router: Router = Router.from(routes.head)
+      override def router: Router =
+        Router.from(
+          routes.reduce(
+            (a: Routes, b: Routes) =>
+              PartialFunction { request: RequestHeader =>
+                a.applyOrElse(request, b)
+              }
+          )
+        )
     }
     val bind = IO {
       components.server
     }
-    Resource.make(bind)(s => IO(s.stop())).void
+    Resource.make(bind)(s => IO(s.stop())).map(_ => ())
   }
 
   override def initialPort: Port = 38000
