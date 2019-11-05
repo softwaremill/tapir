@@ -22,7 +22,6 @@ import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
 
 class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with StrictLogging {
-
   private implicit var actorSystem: ActorSystem = _
   private implicit var materializer: ActorMaterializer = _
 
@@ -84,5 +83,5 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
 }
 
 object AkkaHttpServerTests {
-  val portCounter = new PortCounter(32000)
+  val portCounter = new PortCounter(41000)
 }

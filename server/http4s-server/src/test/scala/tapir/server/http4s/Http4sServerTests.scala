@@ -18,7 +18,6 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] {
-
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
@@ -46,7 +45,6 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
   }
 
   override def server(routes: NonEmptyList[HttpRoutes[IO]], port: Port): Resource[IO, Unit] = {
-
     val service: Kleisli[IO, Request[IO], Response[IO]] = routes.reduceK.orNotFound
 
     BlazeServerBuilder[IO]
@@ -77,5 +75,5 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
 }
 
 object Http4sServerTests {
-  val portCounter = new PortCounter(34000)
+  val portCounter = new PortCounter(43000)
 }

@@ -87,5 +87,5 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
 }
 
 object FinatraServerTests {
-  val portCounter = new PortCounter(36000)
+  val portCounter = new PortCounter(42000)
 }
