@@ -240,6 +240,33 @@ class SchemaForTest extends FlatSpec with Matchers {
       List("f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10")
     )
   }
+
+  it should "support derivation of recursive schemas wrapped with an option" in {
+    // https://github.com/softwaremill/tapir/issues/192
+    val expectedISchema =
+      SProduct(
+        SObjectInfo("tapir.generic.IOpt", List()),
+        List(("i1", SRef(SObjectInfo("tapir.generic.IOpt"))), ("i2", SInteger)),
+        List("i2")
+      )
+    val expectedJSchema = SProduct(SObjectInfo("tapir.generic.JOpt"), List(("data", expectedISchema)), Nil)
+
+    implicitly[SchemaFor[IOpt]].schema shouldBe expectedISchema
+    implicitly[SchemaFor[JOpt]].schema shouldBe expectedJSchema
+  }
+
+  it should "support derivation of recursive schemas wrapped with a collection" in {
+    val expectedISchema =
+      SProduct(
+        SObjectInfo("tapir.generic.IList", List()),
+        List(("i1", SArray(SRef(SObjectInfo("tapir.generic.IList")))), ("i2", SInteger)),
+        List("i1", "i2")
+      )
+    val expectedJSchema = SProduct(SObjectInfo("tapir.generic.JList"), List(("data", SArray(expectedISchema))), List("data"))
+
+    implicitly[SchemaFor[IList]].schema shouldBe expectedISchema
+    implicitly[SchemaFor[JList]].schema shouldBe expectedJSchema
+  }
 }
 
 case class A(f1: String, f2: Int, f3: Option[String])
@@ -257,3 +284,9 @@ case class H[T](data: T)
 sealed trait Node
 case class Edge(id: Long, source: Node) extends Node
 case class SimpleNode(id: Long) extends Node
+
+case class IOpt(i1: Option[IOpt], i2: Int)
+case class JOpt(data: Option[IOpt])
+
+case class IList(i1: List[IList], i2: Int)
+case class JList(data: List[IList])
