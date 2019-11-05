@@ -206,9 +206,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     baseUri =>
       basicRequest
         .get(uri"$baseUri/api/echo/headers")
-        .headers(Header("X-Fruit", "apple"), Header("Y-Fruit", "Orange"))
+        .headers(Header.unsafeApply("X-Fruit", "apple"), Header.unsafeApply("Y-Fruit", "Orange"))
         .send()
-        .map(_.headers should contain allOf (Header("X-Fruit", "elppa"), Header("Y-Fruit", "egnarO")))
+        .map(_.headers should contain allOf (Header.unsafeApply("X-Fruit", "elppa"), Header.unsafeApply("Y-Fruit", "egnarO")))
   }
 
   testServer(in_paths_out_string)((ps: Seq[String]) => pureResult(ps.mkString(" ").asRight[Unit])) { baseUri =>
@@ -279,7 +279,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(in_cookies_out_cookies)(
-    (cs: List[sttp.model.Cookie]) => pureResult(cs.map(c => sttp.model.CookieWithMeta(c.name, c.value.reverse)).asRight[Unit])
+    (cs: List[sttp.model.Cookie]) => pureResult(cs.map(c => sttp.model.CookieWithMeta.unsafeApply(c.name, c.value.reverse)).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send().map { r =>
       r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
@@ -291,7 +291,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   ) { baseUri =>
     basicRequest.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send().map { r =>
       r.cookies.toList shouldBe List(
-        CookieWithMeta("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true)
+        CookieWithMeta.unsafeApply("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true)
       )
     }
   }

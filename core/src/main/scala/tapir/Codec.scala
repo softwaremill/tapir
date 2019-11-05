@@ -182,16 +182,21 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
 
   //
 
-  implicit def cookieCodec: Codec[List[Cookie], MediaType.TextPlain, String] =
-    implicitly[Codec[String, MediaType.TextPlain, String]].map(Cookie.parseHeaderValue)(Cookie.asHeaderValue)
+  private[tapir] def decodeCookie(cookie: String): DecodeResult[List[Cookie]] = Cookie.parse(cookie) match {
+    case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
+    case Right(r) => DecodeResult.Value(r)
+  }
 
-  private[tapir] def decodeCookie(cookie: String): DecodeResult[CookieWithMeta] = CookieWithMeta.parseHeaderValue(cookie) match {
+  implicit def cookieCodec: Codec[List[Cookie], MediaType.TextPlain, String] =
+    implicitly[Codec[String, MediaType.TextPlain, String]].mapDecode(decodeCookie)(Cookie.toString)
+
+  private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] = CookieWithMeta.parse(cookie) match {
     case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
     case Right(r) => DecodeResult.Value(r)
   }
 
   implicit def cookieWithMetaCodec: Codec[CookieWithMeta, MediaType.TextPlain, String] =
-    implicitly[Codec[String, MediaType.TextPlain, String]].mapDecode(decodeCookie)(_.asHeaderValue)
+    implicitly[Codec[String, MediaType.TextPlain, String]].mapDecode(decodeCookieWithMeta)(_.toString)
 }
 
 /**
@@ -365,13 +370,13 @@ object CodecForMany {
       cs.filter(_.name == name) match {
         case Nil     => DecodeResult.Missing
         case List(c) => DecodeResult.Value(c.valueWithMeta)
-        case l       => DecodeResult.Multiple(l.map(_.asHeaderValue))
+        case l       => DecodeResult.Multiple(l.map(_.toString))
       }
     }
 
     implicitly[CodecForMany[List[String], MediaType.TextPlain, String]]
-      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookie)).flatMap(findNamed(name)))(
-        cv => List(CookieWithMeta(name, cv).asHeaderValue)
+      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookieWithMeta)).flatMap(findNamed(name)))(
+        cv => List(CookieWithMeta(name, cv).toString)
       )
   }
 }

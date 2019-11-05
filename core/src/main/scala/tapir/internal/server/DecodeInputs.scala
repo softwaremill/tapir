@@ -224,8 +224,20 @@ object DecodeInputs {
         matchOthers(inputsTail, values.setBasicInputValue(MultiQueryParams.fromMultiMap(ctx.queryParameters), index), ctx)
 
       case IndexedBasicInput(input @ EndpointInput.Cookie(name, codec, _), index) +: inputsTail =>
-        val allCookies = ctx.headers.filter(_._1.equalsIgnoreCase(HeaderNames.Cookie)).flatMap(p => Cookie.parseHeaderValue(p._2))
-        val cookieValue = codec.decode(allCookies.find(_.name == name).map(_.value))
+        val allCookies = DecodeResult
+          .sequence(
+            ctx.headers
+              .filter(_._1.equalsIgnoreCase(HeaderNames.Cookie))
+              .map(
+                p =>
+                  Cookie.parse(p._2) match {
+                    case Left(e)  => DecodeResult.Error(p._2, new RuntimeException(e))
+                    case Right(c) => DecodeResult.Value(c)
+                  }
+              )
+          )
+          .map(_.flatten)
+        val cookieValue = allCookies.map(_.find(_.name == name).map(_.value)).flatMap(codec.decode)
         cookieValue match {
           case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
           case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)

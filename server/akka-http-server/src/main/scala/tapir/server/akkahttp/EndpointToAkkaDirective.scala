@@ -140,7 +140,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
             part.name,
             r,
             otherDispositionParams = part.additionalDispositionParams,
-            headers = part.additionalHeaders.map(h => Header(h.name, h.value))
+            headers = part.additionalHeaders.map(h => Header.notValidated(h.name, h.value))
           )
       )
   }

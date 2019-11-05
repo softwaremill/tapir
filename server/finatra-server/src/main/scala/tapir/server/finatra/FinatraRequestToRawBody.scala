@@ -79,7 +79,7 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
         }
         .toSeq
         .filter(_._1.toLowerCase != "content-disposition")
-        .map { case (k, v) => Header(k, v) }
+        .map { case (k, v) => Header.notValidated(k, v) }
     }
 
     Future.collect(

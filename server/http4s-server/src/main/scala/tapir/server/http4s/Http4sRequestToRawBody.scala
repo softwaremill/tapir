@@ -62,7 +62,7 @@ class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServ
             part.name.getOrElse(""),
             r,
             otherDispositionParams = dispositionParams - Part.NameDispositionParam,
-            headers = part.headers.toList.map(h => Header(h.name.value, h.value))
+            headers = part.headers.toList.map(h => Header.notValidated(h.name.value, h.value))
           )
       )
   }

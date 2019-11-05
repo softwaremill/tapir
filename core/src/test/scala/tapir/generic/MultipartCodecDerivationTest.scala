@@ -115,9 +115,9 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     case class Test1(f1: Part[Int], f2: String)
     val codec = implicitly[Codec[Test1, MediaType.MultipartFormData, Seq[RawPart]]]
 
-    val instance = Test1(Part("?", 10, otherDispositionParams = Map("a1" -> "b1"), headers = List(Header("X-Y", "a-b"))), "v2")
+    val instance = Test1(Part("?", 10, otherDispositionParams = Map("a1" -> "b1"), headers = List(Header.unsafeApply("X-Y", "a-b"))), "v2")
     val parts = List(
-      Part("f1", "10", otherDispositionParams = Map("a1" -> "b1"), headers = List(Header("X-Y", "a-b"))),
+      Part("f1", "10", otherDispositionParams = Map("a1" -> "b1"), headers = List(Header.unsafeApply("X-Y", "a-b"))),
       Part("f2", "v2")
     )
 
