@@ -3,21 +3,16 @@ package tapir.server.play
 import java.nio.charset.Charset
 
 import akka.stream.Materializer
-import play.BuiltInComponents
-import play.api.BuiltInComponents
 import play.api.http.HttpEntity
-import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import play.api.mvc._
-import play.api.routing.Router
-import play.components.BodyParserComponents
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import tapir.server.{DecodeFailureHandling, ServerDefaults}
-import tapir.internal.{SeqToParams, _}
 import tapir.model.StatusCodes
+import tapir.server.{DecodeFailureHandling, ServerDefaults}
+import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
+import tapir.internal.{SeqToParams, _}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.util.control.NonFatal
 
 trait TapirPlayServer {
 
@@ -54,6 +49,26 @@ trait TapirPlayServer {
         }
       }
 
+      def decodeBody(request: Request[RawBuffer], result: DecodeInputsResult)(implicit mat: Materializer): Future[DecodeInputsResult] = {
+        result match {
+          case values: DecodeInputsResult.Values =>
+            values.bodyInput match {
+              case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
+                new PlayRequestToRawBody(serverOptions, pc.playBodyParsers)
+                  .apply(codec.meta.rawValueType, request.charset.map(Charset.forName), request, request.body.asBytes().get)
+                  .map { rawBody =>
+                    val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, codec.meta.isOptional))
+                    decodeResult match {
+                      case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
+                      case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                    }
+                  }
+              case None => Future(values)
+            }
+          case failure: DecodeInputsResult.Failure => Future(failure)
+        }
+      }
+
       val res = PartialFunction { requestHeader: RequestHeader =>
         pc.defaultActionBuilder.async(pc.playBodyParsers.raw) { request =>
           decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(request))).flatMap {
@@ -64,27 +79,6 @@ trait TapirPlayServer {
       }
       res
     }
-
-    def decodeBody(request: Request[RawBuffer], result: DecodeInputsResult)(implicit mat: Materializer): Future[DecodeInputsResult] = {
-      result match {
-        case values: DecodeInputsResult.Values =>
-          values.bodyInput match {
-            case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
-              PlayRequestToRawBody
-                .apply(codec.meta.rawValueType, request.body, request.charset.map(Charset.forName), request)
-                .map { rawBody =>
-                  val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, codec.meta.isOptional))
-                  decodeResult match {
-                    case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
-                    case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
-                  }
-                }
-            case None => Future(values)
-          }
-        case failure: DecodeInputsResult.Failure => Future(failure)
-      }
-    }
-
   }
 }
 
