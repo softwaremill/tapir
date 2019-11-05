@@ -6,7 +6,7 @@ object Versions {
     case _             => "0.21.0-M5"
   }
   val cats = "2.0.0"
-  val circe = "0.12.2"
+  val circe = "0.12.3"
   val circeYaml = "0.11.0-M1"
   val sttp = "2.0.0-M9"
   val akkaHttp = "10.1.10"
