@@ -78,10 +78,4 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
       }.unsafeRunSync
     }
   }
-
-  override def portCounter: PortCounter = AkkaHttpServerTests.portCounter
-}
-
-object AkkaHttpServerTests {
-  val portCounter = new PortCounter(41000)
 }

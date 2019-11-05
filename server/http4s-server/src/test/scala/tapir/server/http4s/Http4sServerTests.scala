@@ -70,10 +70,4 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
         .unsafeRunSync()
     }
   }
-
-  override def portCounter: PortCounter = Http4sServerTests.portCounter
-}
-
-object Http4sServerTests {
-  val portCounter = new PortCounter(43000)
 }

@@ -636,7 +636,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
     val resources = for {
-      port <- Resource.liftF(IO(portCounter.next()))
+      port <- Resource.liftF(IO(PortCounter.next()))
       _ <- server(rs, port)
     } yield uri"http://localhost:$port"
 
@@ -647,18 +647,16 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   // define to run a single test (in development)
   def testNameFilter: Option[String] = None
-
-  //
-
-  /**
-    * Must be global (shared between instances of test classes!)
-    */
-  def portCounter: PortCounter
 }
 
-class PortCounter(initial: Int) {
-  private lazy val _next = new AtomicInteger(initial)
+class PortCounter(inital: Int) {
+  private lazy val _next = new AtomicInteger(inital)
   def next(): Port = _next.getAndIncrement()
+}
+
+object PortCounter {
+  private val instance = new PortCounter(55555)
+  def next(): Port = instance.next()
 }
 
 object ServerTests {

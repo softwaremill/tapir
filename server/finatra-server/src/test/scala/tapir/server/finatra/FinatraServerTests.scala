@@ -82,10 +82,4 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
       .make(bind)(httpServer => IO(httpServer.close()))
       .map(_ => ())
   }
-
-  override def portCounter: PortCounter = FinatraServerTests.portCounter
-}
-
-object FinatraServerTests {
-  val portCounter = new PortCounter(42000)
 }
