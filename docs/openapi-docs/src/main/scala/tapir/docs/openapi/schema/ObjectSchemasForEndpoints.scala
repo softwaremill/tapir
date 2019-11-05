@@ -48,7 +48,7 @@ object ObjectSchemasForEndpoints {
       case TypeData(TSchema.SArray(o), validator) =>
         objectSchemas(TypeData(o, elementValidator(validator)))
       case TypeData(s: TSchema.SCoproduct, validator) =>
-        (TypeData(s, validator): ObjectTypeData[_]) +: s.schemas.flatMap(c => objectSchemas(TypeData(c, Validator.pass))).toList
+        (TypeData(s, validator): ObjectTypeData[_]) +: s.schemas.flatMap(c => objectSchemas(TypeData(c, Validator.pass)))
       case TypeData(s: TSchema.SOpenProduct, validator) =>
         (TypeData(s, validator): ObjectTypeData[_]) +: objectSchemas(TypeData(s.valueSchema, elementValidator(validator)))
       case _ => List.empty

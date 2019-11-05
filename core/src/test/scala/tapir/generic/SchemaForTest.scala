@@ -16,7 +16,6 @@ case class IntegerValueClass(value: Int) extends AnyVal
 
 @silent("never used")
 class SchemaForTest extends FlatSpec with Matchers {
-
   "SchemaFor" should "find schema for simple types" in {
     implicitly[SchemaFor[String]].schema shouldBe SString
     implicitly[SchemaFor[String]].isOptional shouldBe false
@@ -176,7 +175,7 @@ class SchemaForTest extends FlatSpec with Matchers {
     val schema = implicitly[SchemaFor[Node]].schema
     schema shouldBe SCoproduct(
       SObjectInfo("tapir.generic.Node", List.empty),
-      Set(
+      List(
         SProduct(
           SObjectInfo("tapir.generic.Edge"),
           List(
@@ -184,7 +183,7 @@ class SchemaForTest extends FlatSpec with Matchers {
             "source" ->
               SCoproduct(
                 SObjectInfo("tapir.generic.Node", List.empty),
-                Set(
+                List(
                   SRef(SObjectInfo("tapir.generic.Edge")),
                   SProduct(
                     SObjectInfo("tapir.generic.SimpleNode"),

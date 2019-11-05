@@ -38,7 +38,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case TSchema.SCoproduct(_, schemas, d) =>
         Right(
           OSchema.apply(
-            schemas.collect { case s: TSchema.SProduct => Left(schemaReferenceMapper.map(s.info)) }.toList,
+            schemas.collect { case s: TSchema.SProduct => Left(schemaReferenceMapper.map(s.info)) },
             d.map(discriminatorToOpenApi.apply)
           )
         )

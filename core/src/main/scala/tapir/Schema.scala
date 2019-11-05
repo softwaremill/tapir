@@ -36,7 +36,7 @@ object Schema {
   case class SProduct(info: SObjectInfo, fields: Iterable[(String, Schema)], required: Iterable[String]) extends SObject {
     def show: String = s"object(${fields.map(f => s"${f._1}->${f._2.show}").mkString(",")};required:${required.mkString(",")})"
   }
-  case class SCoproduct(info: SObjectInfo, schemas: Set[Schema], discriminator: Option[Discriminator]) extends SObject {
+  case class SCoproduct(info: SObjectInfo, schemas: List[Schema], discriminator: Option[Discriminator]) extends SObject {
     override def show: String = "oneOf:" + schemas.mkString(",")
   }
   case class SOpenProduct(info: SObjectInfo, valueSchema: Schema) extends SObject {
