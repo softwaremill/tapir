@@ -17,7 +17,7 @@ import tapir.{
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
-  MediaType,
+  CodecFormat,
   MultipartValueType,
   RawPart,
   StringValueType
@@ -48,16 +48,16 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   }
 
   private val encodeOutputs: EncodeOutputs[(EntityBody[F], Header)] = new EncodeOutputs(new EncodeOutputBody[(EntityBody[F], Header)] {
-    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): (EntityBody[F], Header) =
+    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: CodecFormat, Any]): (EntityBody[F], Header) =
       rawValueToEntity(codec.meta, v)
-    override def streamValueToBody(v: Any, mediaType: MediaType): (EntityBody[F], Header) = {
-      val ctHeader = mediaTypeToContentType(mediaType)
+    override def streamValueToBody(v: Any, format: CodecFormat): (EntityBody[F], Header) = {
+      val ctHeader = formatToContentType(format)
       (v.asInstanceOf[EntityBody[F]], ctHeader)
     }
   })
 
-  private def rawValueToEntity[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], r: R): (EntityBody[F], Header) = {
-    val ct: `Content-Type` = mediaTypeToContentType(codecMeta.mediaType)
+  private def rawValueToEntity[CF <: CodecFormat, R](codecMeta: CodecMeta[_, CF, R], r: R): (EntityBody[F], Header) = {
+    val ct: `Content-Type` = formatToContentType(codecMeta.format)
 
     codecMeta.rawValueType match {
       case StringValueType(charset) =>
@@ -82,7 +82,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         case SttpHeader(hk, hv) => Header.Raw(CaseInsensitiveString(hk), hv)
       }.toList
 
-      val (entity, ctHeader) = rawValueToEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body)
+      val (entity, ctHeader) = rawValueToEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.body)
 
       val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
       val contentDispositionHeader = `Content-Disposition`("form-data", dispositionParams)
@@ -98,19 +98,19 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  private def mediaTypeToContentType(mediaType: MediaType): `Content-Type` =
-    mediaType match {
-      case MediaType.Json()               => `Content-Type`(http4s.MediaType.application.json)
-      case MediaType.TextPlain(charset)   => `Content-Type`(http4s.MediaType.text.plain, Charset.fromNioCharset(charset))
-      case MediaType.OctetStream()        => `Content-Type`(http4s.MediaType.application.`octet-stream`)
-      case MediaType.XWwwFormUrlencoded() => `Content-Type`(http4s.MediaType.application.`x-www-form-urlencoded`)
-      case MediaType.MultipartFormData()  => `Content-Type`(http4s.MediaType.multipart.`form-data`)
+  private def formatToContentType(format: CodecFormat): `Content-Type` =
+    format match {
+      case CodecFormat.Json()               => `Content-Type`(http4s.MediaType.application.json)
+      case CodecFormat.TextPlain(charset)   => `Content-Type`(http4s.MediaType.text.plain, Charset.fromNioCharset(charset))
+      case CodecFormat.OctetStream()        => `Content-Type`(http4s.MediaType.application.`octet-stream`)
+      case CodecFormat.XWwwFormUrlencoded() => `Content-Type`(http4s.MediaType.application.`x-www-form-urlencoded`)
+      case CodecFormat.MultipartFormData()  => `Content-Type`(http4s.MediaType.multipart.`form-data`)
       case mt =>
         `Content-Type`(
           http4s.MediaType
-            .parse(mt.mediaType)
+            .parse(mt.mediaType.toString())
             .right
-            .getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $mediaType"))
+            .getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $format"))
         )
     }
 }

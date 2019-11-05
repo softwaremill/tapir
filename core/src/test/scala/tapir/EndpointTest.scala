@@ -20,9 +20,9 @@ class EndpointTest extends FlatSpec with Matchers {
   }
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBody[Vector[Byte]](schemaFor[String], MediaType.Json())): Endpoint[Vector[Byte], Unit, Unit, Vector[Byte]]
+    endpoint.in(streamBody[Vector[Byte]](schemaFor[String], CodecFormat.Json())): Endpoint[Vector[Byte], Unit, Unit, Vector[Byte]]
     endpoint
-      .in(streamBody[Vector[Byte]](schemaFor[String], MediaType.Json()))
+      .in(streamBody[Vector[Byte]](schemaFor[String], CodecFormat.Json()))
       .in(path[Int]): Endpoint[(Vector[Byte], Int), Unit, Unit, Vector[Byte]]
   }
 
@@ -35,9 +35,9 @@ class EndpointTest extends FlatSpec with Matchers {
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBody[Vector[Byte]](schemaFor[String], MediaType.Json())): Endpoint[Unit, Unit, Vector[Byte], Vector[Byte]]
+    endpoint.out(streamBody[Vector[Byte]](schemaFor[String], CodecFormat.Json())): Endpoint[Unit, Unit, Vector[Byte], Vector[Byte]]
     endpoint
-      .out(streamBody[Vector[Byte]](schemaFor[String], MediaType.Json()))
+      .out(streamBody[Vector[Byte]](schemaFor[String], CodecFormat.Json()))
       .out(header[Int]("h1")): Endpoint[Unit, Unit, (Vector[Byte], Int), Vector[Byte]]
   }
 

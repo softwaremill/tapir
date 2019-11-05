@@ -15,8 +15,8 @@ trait TapirJsonPlay {
       case JsSuccess(value, _) => Value(value)
     }
     override def encode(t: T): String = Json.prettyPrint(Json.toJson(t))
-    override def meta: CodecMeta[T, MediaType.Json, String] =
-      CodecMeta(implicitly[SchemaFor[T]].schema, MediaType.Json(), StringValueType(StandardCharsets.UTF_8))
+    override def meta: CodecMeta[T, CodecFormat.Json, String] =
+      CodecMeta(implicitly[SchemaFor[T]].schema, CodecFormat.Json(), StringValueType(StandardCharsets.UTF_8))
   }
 
   implicit val schemaForPlayJsValue: SchemaFor[JsValue] = SchemaFor(

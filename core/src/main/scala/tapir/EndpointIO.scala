@@ -225,14 +225,14 @@ object EndpointIO {
 
   sealed trait Basic[I] extends Single[I] with EndpointInput.Basic[I] with EndpointOutput.Basic[I]
 
-  case class Body[T, M <: MediaType, R](codec: CodecForOptional[T, M, R], info: Info[T]) extends Basic[T] {
-    def description(d: String): Body[T, M, R] = copy(info = info.description(d))
-    def example(t: T): Body[T, M, R] = copy(info = info.example(t))
-    def validate(v: Validator[T]): Body[T, M, R] = copy(codec = codec.validate(v))
-    def show: String = addValidatorShow(s"{body as ${codec.meta.mediaType.mediaType}}", codec.validator)
+  case class Body[T, CF <: CodecFormat, R](codec: CodecForOptional[T, CF, R], info: Info[T]) extends Basic[T] {
+    def description(d: String): Body[T, CF, R] = copy(info = info.description(d))
+    def example(t: T): Body[T, CF, R] = copy(info = info.example(t))
+    def validate(v: Validator[T]): Body[T, CF, R] = copy(codec = codec.validate(v))
+    def show: String = addValidatorShow(s"{body as ${codec.meta.format.mediaType}}", codec.validator)
   }
 
-  case class StreamBodyWrapper[S, M <: MediaType](wrapped: StreamingEndpointIO.Body[S, M]) extends Basic[S] {
+  case class StreamBodyWrapper[S, F <: CodecFormat](wrapped: StreamingEndpointIO.Body[S, F]) extends Basic[S] {
     def show = s"{body as stream, ${wrapped.mediaType.mediaType}}"
   }
 
@@ -314,11 +314,11 @@ sealed trait StreamingEndpointIO[I, +S] {
 }
 
 object StreamingEndpointIO {
-  case class Body[S, M <: MediaType](schema: Schema, mediaType: M, info: EndpointIO.Info[String]) extends StreamingEndpointIO[S, S] {
-    def description(d: String): Body[S, M] = copy(info = info.description(d))
-    def example(t: String): Body[S, M] = copy(info = info.example(t))
+  case class Body[S, CF <: CodecFormat](schema: Schema, mediaType: CF, info: EndpointIO.Info[String]) extends StreamingEndpointIO[S, S] {
+    def description(d: String): Body[S, CF] = copy(info = info.description(d))
+    def example(t: String): Body[S, CF] = copy(info = info.example(t))
 
-    private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, M] = EndpointIO.StreamBodyWrapper(this)
+    private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, CF] = EndpointIO.StreamBodyWrapper(this)
   }
 
   case class Mapped[I, T, S](wrapped: StreamingEndpointIO[I, S], f: I => T, g: T => I) extends StreamingEndpointIO[T, S] {

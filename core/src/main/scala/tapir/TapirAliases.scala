@@ -5,16 +5,16 @@ import tapir.generic.SchemaForMagnoliaDerivation
 /** Mixin containing aliases for top-level types and modules in the tapir package. */
 trait TapirAliases {
   /** Codec.scala */
-  type Codec[T, M <: MediaType, R] = tapir.Codec[T, M, R]
+  type Codec[T, CF <: CodecFormat, R] = tapir.Codec[T, CF, R]
   val Codec = tapir.Codec
 
-  type CodecForOptional[T, M <: MediaType, R] = tapir.CodecForOptional[T, M, R]
+  type CodecForOptional[T, CF <: CodecFormat, R] = tapir.CodecForOptional[T, CF, R]
   val CodecForOptional = tapir.CodecForOptional
 
-  type CodecForMany[T, M <: MediaType, R] = tapir.CodecForMany[T, M, R]
+  type CodecForMany[T, CF <: CodecFormat, R] = tapir.CodecForMany[T, CF, R]
   val CodecForMany = tapir.CodecForMany
 
-  type CodecMeta[T, M <: MediaType, R] = tapir.CodecMeta[T, M, R]
+  type CodecMeta[T, CF <: CodecFormat, R] = tapir.CodecMeta[T, CF, R]
   val CodecMeta = tapir.CodecMeta
 
   type RawValueType[R] = tapir.RawValueType[R]
@@ -58,9 +58,9 @@ trait TapirAliases {
   type StreamingEndpointIO[I, +S] = tapir.StreamingEndpointIO[I, S]
   val StreamingEndpointIO = tapir.StreamingEndpointIO
 
-  /** MediaType.scala */
-  type MediaType = tapir.MediaType
-  val MediaType = tapir.MediaType
+  /** CodecFormat.scala */
+  type CodecFormat = tapir.CodecFormat
+  val CodecFormat = tapir.CodecFormat
 
   /** package.scala */
   type RawPart = tapir.RawPart

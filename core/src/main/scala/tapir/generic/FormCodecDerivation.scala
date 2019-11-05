@@ -1,13 +1,13 @@
 package tapir.generic
 
-import tapir.{Codec, MediaType}
+import tapir.{Codec, CodecFormat}
 
 import scala.reflect.macros.blackbox
 
 trait FormCodecDerivation {
   implicit def formCaseClassCodec[T <: Product with Serializable](
       implicit conf: Configuration
-  ): Codec[T, MediaType.XWwwFormUrlencoded, String] =
+  ): Codec[T, CodecFormat.XWwwFormUrlencoded, String] =
     macro FormCodecMacros.generateForCaseClass[T]
 }
 
@@ -15,7 +15,7 @@ object FormCodecMacros {
   // http://blog.echo.sh/2013/11/04/exploring-scala-macros-map-to-case-class-conversion.html
   def generateForCaseClass[T: c.WeakTypeTag](
       c: blackbox.Context
-  )(conf: c.Expr[Configuration]): c.Expr[Codec[T, MediaType.XWwwFormUrlencoded, String]] = {
+  )(conf: c.Expr[Configuration]): c.Expr[Codec[T, CodecFormat.XWwwFormUrlencoded, String]] = {
     import c.universe._
 
     val t = weakTypeOf[T]
@@ -59,6 +59,6 @@ object FormCodecMacros {
       }
      """
     Debug.logGeneratedCode(c)(t.typeSymbol.fullName, codecTree)
-    c.Expr[Codec[T, MediaType.XWwwFormUrlencoded, String]](codecTree)
+    c.Expr[Codec[T, CodecFormat.XWwwFormUrlencoded, String]](codecTree)
   }
 }

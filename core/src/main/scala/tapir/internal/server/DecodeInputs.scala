@@ -3,7 +3,7 @@ package tapir.internal.server
 import sttp.model.{Cookie, HeaderNames, Method, MultiQueryParams}
 import tapir.internal._
 import tapir.model.ServerRequest
-import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, MediaType}
+import tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, CodecFormat}
 
 import scala.annotation.tailrec
 
@@ -14,7 +14,7 @@ object DecodeInputsResult {
     */
   case class Values(basicInputsValues: Vector[Any], bodyInputWithIndex: Option[(EndpointIO.Body[_, _, _], Int)])
       extends DecodeInputsResult {
-    def addBodyInput(input: EndpointIO.Body[_, _ <: MediaType, _], bodyIndex: Int): Values = {
+    def addBodyInput(input: EndpointIO.Body[_, _ <: CodecFormat, _], bodyIndex: Int): Values = {
       if (bodyInputWithIndex.isDefined) {
         throw new IllegalStateException(s"Double body definition: $input")
       }

@@ -112,7 +112,7 @@ package object tests {
     endpoint.get.in("api" / "echo" / "param-to-header").in(query[List[String]]("qq")).out(header[List[String]]("hh"))
 
   def in_stream_out_stream[S]: Endpoint[S, Unit, S, S] = {
-    val sb = streamBody[S](schemaFor[String], MediaType.TextPlain())
+    val sb = streamBody[S](schemaFor[String], CodecFormat.TextPlain())
     endpoint.post.in("api" / "echo").in(sb).out(sb)
   }
 

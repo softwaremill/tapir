@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 
 import sttp.client._
 import sttp.model.Uri.PathSegment
-import sttp.model.{HeaderNames, Method, MultiQueryParams, Part, Uri}
+import sttp.model.{Header, HeaderNames, Method, MultiQueryParams, Part, Uri}
 import tapir.Codec.PlainCodec
 import tapir._
 import tapir.internal._
@@ -173,7 +173,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     }
   }
 
-  private def setBody[T, M <: MediaType, R](v: T, codec: CodecForOptional[T, M, R], req: PartialAnyRequest): PartialAnyRequest = {
+  private def setBody[T, CF <: CodecFormat, R](v: T, codec: CodecForOptional[T, CF, R], req: PartialAnyRequest): PartialAnyRequest = {
     codec
       .encode(v)
       .map { t =>
@@ -192,7 +192,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
                     // TODO
                     sttpPart1
                       .copy(headers = sttpPart1.headers.filterNot(_.is(HeaderNames.ContentType)))
-                      .contentType(partCodecMeta.mediaType.mediaTypeNoParams)
+                      .contentType(partCodecMeta.format.mediaType.copy(charset = None))
                   } else sttpPart1
                 val sttpPart3 = p.headers.foldLeft(sttpPart2)(_.header(_))
                 p.fileName.map(sttpPart3.fileName).getOrElse(sttpPart3)
@@ -202,7 +202,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             req.multipartBody(parts.toList)
         }
 
-        req2.header(HeaderNames.ContentType, codec.meta.mediaType.mediaType, replaceExisting = false)
+        req2.header(Header.contentType(codec.meta.format.mediaType), replaceExisting = false)
       }
       .getOrElse(req)
   }

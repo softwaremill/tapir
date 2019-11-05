@@ -18,7 +18,7 @@ import tapir.{
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
-  MediaType,
+  CodecFormat,
   MultipartValueType,
   RawPart,
   StringValueType
@@ -45,14 +45,14 @@ private[akkahttp] object OutputToAkkaRoute {
   }
 
   private val encodeOutputs: EncodeOutputs[ResponseEntity] = new EncodeOutputs(new EncodeOutputBody[ResponseEntity] {
-    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): ResponseEntity =
+    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: CodecFormat, Any]): ResponseEntity =
       rawValueToResponseEntity(codec.meta, v)
-    override def streamValueToBody(v: Any, mediaType: MediaType): ResponseEntity =
-      HttpEntity(mediaTypeToContentType(mediaType), v.asInstanceOf[AkkaStream])
+    override def streamValueToBody(v: Any, format: CodecFormat): ResponseEntity =
+      HttpEntity(formatToContentType(format), v.asInstanceOf[AkkaStream])
   })
 
-  private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], r: R): ResponseEntity = {
-    val ct = mediaTypeToContentType(codecMeta.mediaType)
+  private def rawValueToResponseEntity[CF <: CodecFormat, R](codecMeta: CodecMeta[_, CF, R], r: R): ResponseEntity = {
+    val ct = formatToContentType(codecMeta.format)
     codecMeta.rawValueType match {
       case StringValueType(charset) =>
         ct match {
@@ -76,7 +76,7 @@ private[akkahttp] object OutputToAkkaRoute {
         case Header(hk, hv) => parseHeaderOrThrow(hk, hv)
       }
 
-      val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body) match {
+      val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.body) match {
         case b: BodyPartEntity => overrideContentTypeIfDefined(b, headers)
         case _                 => throw new IllegalArgumentException(s"${codecMeta.rawValueType} is not supported in multipart bodies")
       }
@@ -86,15 +86,15 @@ private[akkahttp] object OutputToAkkaRoute {
     }
   }
 
-  private def mediaTypeToContentType(mediaType: MediaType): ContentType = {
-    mediaType match {
-      case MediaType.Json()               => ContentTypes.`application/json`
-      case MediaType.TextPlain(charset)   => MediaTypes.`text/plain`.withCharset(charsetToHttpCharset(charset))
-      case MediaType.OctetStream()        => MediaTypes.`application/octet-stream`
-      case MediaType.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`
-      case MediaType.MultipartFormData()  => MediaTypes.`multipart/form-data`
-      case mt =>
-        ContentType.parse(mt.mediaType).right.getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $mediaType"))
+  private def formatToContentType(format: CodecFormat): ContentType = {
+    format match {
+      case CodecFormat.Json()               => ContentTypes.`application/json`
+      case CodecFormat.TextPlain(charset)   => MediaTypes.`text/plain`.withCharset(charsetToHttpCharset(charset))
+      case CodecFormat.OctetStream()        => MediaTypes.`application/octet-stream`
+      case CodecFormat.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`
+      case CodecFormat.MultipartFormData()  => MediaTypes.`multipart/form-data`
+      case f =>
+        ContentType.parse(f.mediaType.toString()).right.getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $format"))
     }
   }
 

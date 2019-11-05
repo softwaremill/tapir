@@ -16,7 +16,6 @@ import tapir.tests.{FruitAmount, _}
 import scala.io.Source
 
 class VerifyYamlTest extends FunSuite with Matchers {
-
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Nothing] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))
@@ -58,8 +57,8 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], Vector[Byte]] = endpoint
-    .in(streamBody[Vector[Byte]](schemaFor[String], MediaType.TextPlain()))
-    .out(streamBody[Vector[Byte]](Schema.SBinary, MediaType.OctetStream()))
+    .in(streamBody[Vector[Byte]](schemaFor[String], CodecFormat.TextPlain()))
+    .out(streamBody[Vector[Byte]](Schema.SBinary, CodecFormat.OctetStream()))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")

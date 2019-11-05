@@ -18,7 +18,7 @@ import tapir.{
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
-  MediaType,
+  CodecFormat,
   MultipartValueType,
   RawPart,
   StringValueType
@@ -26,10 +26,10 @@ import tapir.{
 
 object OutputToFinatraResponse {
   private val encodeOutputs: EncodeOutputs[(FinatraContent, String)] = new EncodeOutputs(new EncodeOutputBody[(FinatraContent, String)] {
-    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): (FinatraContent, String) =
+    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: CodecFormat, Any]): (FinatraContent, String) =
       rawValueToFinatraContent(codec.meta, v)
-    override def streamValueToBody(v: Any, mediaType: MediaType): (FinatraContent, String) = {
-      FinatraContentBuf(v.asInstanceOf[Buf]) -> mediaType.mediaType
+    override def streamValueToBody(v: Any, format: CodecFormat): (FinatraContent, String) = {
+      FinatraContentBuf(v.asInstanceOf[Buf]) -> format.mediaType.toString()
     }
   })
 
@@ -68,8 +68,8 @@ object OutputToFinatraResponse {
     responseWithContent
   }
 
-  private def rawValueToFinatraContent[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], r: R): (FinatraContent, String) = {
-    val ct: String = codecMeta.mediaType.mediaType
+  private def rawValueToFinatraContent[CF <: CodecFormat, R](codecMeta: CodecMeta[_, CF, R], r: R): (FinatraContent, String) = {
+    val ct: String = codecMeta.format.mediaType.toString()
 
     codecMeta.rawValueType match {
       case StringValueType(charset) =>
@@ -94,7 +94,7 @@ object OutputToFinatraResponse {
     }
   }
 
-  private def rawValueToContentBody[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], part: Part[R], r: R): ContentBody = {
+  private def rawValueToContentBody[CF <: CodecFormat, R](codecMeta: CodecMeta[_, CF, R], part: Part[R], r: R): ContentBody = {
     val contentType: String = part.header("content-type").getOrElse("text/plain")
 
     codecMeta.rawValueType match {
@@ -123,7 +123,7 @@ object OutputToFinatraResponse {
       val builder = FormBodyPartBuilder
         .create(
           part.name,
-          rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.asInstanceOf[Part[Any]], part.body)
+          rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.asInstanceOf[Part[Any]], part.body)
         )
 
       part.headers.foreach { case Header(name, value) => builder.addField(name, value) }

@@ -3,7 +3,7 @@ package tapir.internal.server
 import sttp.model.StatusCode
 import tapir.CodecForMany.PlainCodecForMany
 import tapir.internal._
-import tapir.{CodecForOptional, EndpointIO, EndpointOutput, MediaType, StreamingEndpointIO}
+import tapir.{CodecForOptional, EndpointIO, EndpointOutput, CodecFormat, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 
@@ -81,6 +81,6 @@ object OutputValues {
 }
 
 trait EncodeOutputBody[B] {
-  def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): B
-  def streamValueToBody(v: Any, mediaType: MediaType): B
+  def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: CodecFormat, Any]): B
+  def streamValueToBody(v: Any, format: CodecFormat): B
 }

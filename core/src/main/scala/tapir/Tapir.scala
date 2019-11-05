@@ -34,38 +34,39 @@ trait Tapir extends TapirDerivedInputs {
     EndpointInput.Cookie(name, implicitly[PlainCodecForOptional[T]], EndpointIO.Info.empty)
   def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](HeaderNames.Cookie)
   def setCookie(name: String): EndpointIO.Header[CookieValueWithMeta] = {
-    implicit val codec: CodecForMany[CookieValueWithMeta, MediaType.TextPlain, String] = CodecForMany.cookieValueWithMetaCodecForMany(name)
+    implicit val codec: CodecForMany[CookieValueWithMeta, CodecFormat.TextPlain, String] =
+      CodecForMany.cookieValueWithMetaCodecForMany(name)
     header[CookieValueWithMeta](HeaderNames.SetCookie)
   }
   def setCookies: EndpointIO.Header[List[CookieWithMeta]] = header[List[CookieWithMeta]](HeaderNames.SetCookie)
 
-  def body[T, M <: MediaType](implicit tm: CodecForOptional[T, M, _]): EndpointIO.Body[T, M, _] =
+  def body[T, CF <: CodecFormat](implicit tm: CodecForOptional[T, CF, _]): EndpointIO.Body[T, CF, _] =
     EndpointIO.Body(tm, EndpointIO.Info.empty)
 
-  def stringBody: EndpointIO.Body[String, MediaType.TextPlain, String] = stringBody(StandardCharsets.UTF_8)
-  def stringBody(charset: String): EndpointIO.Body[String, MediaType.TextPlain, String] = stringBody(Charset.forName(charset))
-  def stringBody(charset: Charset): EndpointIO.Body[String, MediaType.TextPlain, String] =
+  def stringBody: EndpointIO.Body[String, CodecFormat.TextPlain, String] = stringBody(StandardCharsets.UTF_8)
+  def stringBody(charset: String): EndpointIO.Body[String, CodecFormat.TextPlain, String] = stringBody(Charset.forName(charset))
+  def stringBody(charset: Charset): EndpointIO.Body[String, CodecFormat.TextPlain, String] =
     EndpointIO.Body(CodecForOptional.fromCodec(Codec.stringCodec(charset)), EndpointIO.Info.empty)
 
-  val htmlBodyUtf8: EndpointIO.Body[String, MediaType.TextHtml, String] =
+  val htmlBodyUtf8: EndpointIO.Body[String, CodecFormat.TextHtml, String] =
     EndpointIO.Body(CodecForOptional.fromCodec(Codec.textHtmlCodecUtf8), EndpointIO.Info.empty)
 
-  def plainBody[T](implicit codec: CodecForOptional[T, MediaType.TextPlain, _]): EndpointIO.Body[T, MediaType.TextPlain, _] =
+  def plainBody[T](implicit codec: CodecForOptional[T, CodecFormat.TextPlain, _]): EndpointIO.Body[T, CodecFormat.TextPlain, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
-  def jsonBody[T](implicit codec: CodecForOptional[T, MediaType.Json, _]): EndpointIO.Body[T, MediaType.Json, _] =
+  def jsonBody[T](implicit codec: CodecForOptional[T, CodecFormat.Json, _]): EndpointIO.Body[T, CodecFormat.Json, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
-  def binaryBody[T](implicit codec: CodecForOptional[T, MediaType.OctetStream, _]): EndpointIO.Body[T, MediaType.OctetStream, _] =
+  def binaryBody[T](implicit codec: CodecForOptional[T, CodecFormat.OctetStream, _]): EndpointIO.Body[T, CodecFormat.OctetStream, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
   def formBody[T](
-      implicit codec: CodecForOptional[T, MediaType.XWwwFormUrlencoded, _]
-  ): EndpointIO.Body[T, MediaType.XWwwFormUrlencoded, _] =
+      implicit codec: CodecForOptional[T, CodecFormat.XWwwFormUrlencoded, _]
+  ): EndpointIO.Body[T, CodecFormat.XWwwFormUrlencoded, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
   def multipartBody[T](
-      implicit codec: CodecForOptional[T, MediaType.MultipartFormData, _]
-  ): EndpointIO.Body[T, MediaType.MultipartFormData, _] =
+      implicit codec: CodecForOptional[T, CodecFormat.MultipartFormData, _]
+  ): EndpointIO.Body[T, CodecFormat.MultipartFormData, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
 
-  def streamBody[S](schema: Schema, mediaType: MediaType): StreamingEndpointIO.Body[S, mediaType.type] =
+  def streamBody[S](schema: Schema, mediaType: CodecFormat): StreamingEndpointIO.Body[S, mediaType.type] =
     StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth

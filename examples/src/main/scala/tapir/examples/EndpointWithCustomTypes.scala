@@ -14,7 +14,7 @@ object EndpointWithCustomTypes {
 
   // Custom type as a path or query parameter: encoding and decoding is fully handled by tapir. We need to provide
   // a custom implicit Codec
-  implicit val myIdCodec: Codec[MyId, MediaType.TextPlain, String] =
+  implicit val myIdCodec: Codec[MyId, CodecFormat.TextPlain, String] =
     Codec.stringPlainCodecUtf8.map[MyId](s => new MyIdImpl(s))(myId => myId.id)
   val endpointWithMyId: Endpoint[MyId, Unit, Unit, Nothing] = endpoint.in("find" / path[MyId])
 

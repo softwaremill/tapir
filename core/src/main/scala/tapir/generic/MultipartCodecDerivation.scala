@@ -1,20 +1,20 @@
 package tapir.generic
 
-import tapir.{AnyPart, Codec, MediaType}
+import tapir.{AnyPart, Codec, CodecFormat}
 
 import scala.reflect.macros.blackbox
 
 trait MultipartCodecDerivation {
   implicit def multipartCaseClassCodec[T <: Product with Serializable](
       implicit conf: Configuration
-  ): Codec[T, MediaType.MultipartFormData, Seq[AnyPart]] =
+  ): Codec[T, CodecFormat.MultipartFormData, Seq[AnyPart]] =
     macro MultipartCodecDerivation.generateForCaseClass[T]
 }
 
 object MultipartCodecDerivation {
   def generateForCaseClass[T: c.WeakTypeTag](
       c: blackbox.Context
-  )(conf: c.Expr[Configuration]): c.Expr[Codec[T, MediaType.MultipartFormData, Seq[AnyPart]]] = {
+  )(conf: c.Expr[Configuration]): c.Expr[Codec[T, CodecFormat.MultipartFormData, Seq[AnyPart]]] = {
     import c.universe._
 
     val t = weakTypeOf[T]
@@ -27,9 +27,9 @@ object MultipartCodecDerivation {
     val fieldsWithCodecs = fields.map { field =>
       val codecType = if (fieldIsPart(field)) partTypeArg(field) else field.typeSignature
 
-      val plainCodec = c.typecheck(q"implicitly[tapir.CodecForMany[$codecType, tapir.MediaType.TextPlain, _]]", silent = true)
+      val plainCodec = c.typecheck(q"implicitly[tapir.CodecForMany[$codecType, tapir.CodecFormat.TextPlain, _]]", silent = true)
       val codec = if (plainCodec == EmptyTree) {
-        c.typecheck(q"implicitly[tapir.CodecForMany[$codecType, _ <: tapir.MediaType, _]]")
+        c.typecheck(q"implicitly[tapir.CodecForMany[$codecType, _ <: tapir.CodecFormat, _]]")
       } else plainCodec
 
       (field, codec)
@@ -94,6 +94,6 @@ object MultipartCodecDerivation {
       }
      """
     Debug.logGeneratedCode(c)(t.typeSymbol.fullName, codecTree)
-    c.Expr[Codec[T, MediaType.MultipartFormData, Seq[AnyPart]]](codecTree)
+    c.Expr[Codec[T, CodecFormat.MultipartFormData, Seq[AnyPart]]](codecTree)
   }
 }
