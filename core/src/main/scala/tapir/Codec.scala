@@ -10,7 +10,7 @@ import java.util.UUID
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part}
 import tapir.DecodeResult._
 import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
-import tapir.internal.UrlencodedData
+import tapir.internal._
 
 import scala.annotation.implicitNotFound
 import scala.util.{Failure, Success, Try}
@@ -30,7 +30,7 @@ Did you define a codec for: ${T}?
 Did you import the codecs for: ${CF}?
 Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${CF}, _];
-schemas are looked up as implicit values of type SchemaFor[${T}])
+schemas are looked up as implicit values of type Schema[${T}])
 """)
 trait Codec[T, CF <: CodecFormat, R] extends Decode[T, R] { outer =>
   def encode(t: T): R
@@ -41,7 +41,7 @@ trait Codec[T, CF <: CodecFormat, R] extends Decode[T, R] { outer =>
     new Codec[TT, CF, R] {
       override def encode(t: TT): R = outer.encode(g(t))
       override def rawDecode(s: R): DecodeResult[TT] = outer.rawDecode(s).flatMap(f)
-      override val meta: CodecMeta[TT, CF, R] = outer.meta.copy(validator = outer.validator.contramap(g))
+      override val meta: CodecMeta[TT, CF, R] = outer.meta.copy(schema = outer.meta.schema.as[TT], validator = outer.validator.contramap(g))
     }
 
   def map[TT](f: T => TT)(g: TT => T): Codec[TT, CF, R] = mapDecode[TT](f.andThen(Value.apply))(g)
@@ -53,7 +53,7 @@ trait Codec[T, CF <: CodecFormat, R] extends Decode[T, R] { outer =>
   }
 
   def mediaType[F2 <: CodecFormat](m2: F2): Codec[T, F2, R] = withMeta[F2](meta.copy[T, F2, R](format = m2))
-  def schema(s2: Schema): Codec[T, CF, R] = withMeta(meta.copy(schema = s2))
+  def schema(s2: Schema[T]): Codec[T, CF, R] = withMeta(meta.copy(schema = s2))
 
   private[tapir] def validator: Validator[T] = meta.validator
 
@@ -75,22 +75,22 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   type JsonCodec[T] = Codec[T, CodecFormat.Json, String]
 
   implicit val stringPlainCodecUtf8: PlainCodec[String] = stringCodec(StandardCharsets.UTF_8)
-  implicit val bytePlainCodec: PlainCodec[Byte] = plainCodec[Byte](_.toByte, Schema.SInteger)
-  implicit val shortPlainCodec: PlainCodec[Short] = plainCodec[Short](_.toShort, Schema.SInteger)
-  implicit val intPlainCodec: PlainCodec[Int] = plainCodec[Int](_.toInt, Schema.SInteger)
-  implicit val longPlainCodec: PlainCodec[Long] = plainCodec[Long](_.toLong, Schema.SInteger)
-  implicit val floatPlainCodec: PlainCodec[Float] = plainCodec[Float](_.toFloat, Schema.SNumber)
-  implicit val doublePlainCodec: PlainCodec[Double] = plainCodec[Double](_.toDouble, Schema.SNumber)
-  implicit val booleanPlainCodec: PlainCodec[Boolean] = plainCodec[Boolean](_.toBoolean, Schema.SBoolean)
-  implicit val uuidPlainCodec: PlainCodec[UUID] = plainCodec[UUID](UUID.fromString, Schema.SString)
-  implicit val bigDecimalPlainCodec: PlainCodec[BigDecimal] = plainCodec[BigDecimal](BigDecimal(_), Schema.SString)
-  implicit val javaBigDecimalPlainCodec: PlainCodec[JBigDecimal] = plainCodec[JBigDecimal](new JBigDecimal(_), Schema.SString)
+  implicit val bytePlainCodec: PlainCodec[Byte] = plainCodec[Byte](_.toByte)
+  implicit val shortPlainCodec: PlainCodec[Short] = plainCodec[Short](_.toShort)
+  implicit val intPlainCodec: PlainCodec[Int] = plainCodec[Int](_.toInt)
+  implicit val longPlainCodec: PlainCodec[Long] = plainCodec[Long](_.toLong)
+  implicit val floatPlainCodec: PlainCodec[Float] = plainCodec[Float](_.toFloat)
+  implicit val doublePlainCodec: PlainCodec[Double] = plainCodec[Double](_.toDouble)
+  implicit val booleanPlainCodec: PlainCodec[Boolean] = plainCodec[Boolean](_.toBoolean)
+  implicit val uuidPlainCodec: PlainCodec[UUID] = plainCodec[UUID](UUID.fromString)
+  implicit val bigDecimalPlainCodec: PlainCodec[BigDecimal] = plainCodec[BigDecimal](BigDecimal(_))
+  implicit val javaBigDecimalPlainCodec: PlainCodec[JBigDecimal] = plainCodec[JBigDecimal](new JBigDecimal(_))
 
   implicit val textHtmlCodecUtf8: Codec[String, CodecFormat.TextHtml, String] = stringPlainCodecUtf8.mediaType(CodecFormat.TextHtml())
 
-  def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, Schema.SString, charset)
+  def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, charset)
 
-  private def plainCodec[T](parse: String => T, _schema: Schema, charset: Charset = StandardCharsets.UTF_8): PlainCodec[T] =
+  private def plainCodec[T: Schema](parse: String => T, charset: Charset = StandardCharsets.UTF_8): PlainCodec[T] =
     new PlainCodec[T] {
       override def encode(t: T): String = t.toString
       override def rawDecode(s: String): DecodeResult[T] =
@@ -99,7 +99,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
           case e: Exception => Error(s, e)
         }
       override val meta: CodecMeta[T, CodecFormat.TextPlain, String] =
-        CodecMeta(_schema, CodecFormat.TextPlain(charset), StringValueType(charset))
+        CodecMeta(implicitly, CodecFormat.TextPlain(charset), StringValueType(charset))
     }
 
   implicit val byteArrayCodec: Codec[Array[Byte], CodecFormat.OctetStream, Array[Byte]] = binaryCodec(ByteArrayValueType)
@@ -108,11 +108,12 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   implicit val fileCodec: Codec[File, CodecFormat.OctetStream, File] = binaryCodec(FileValueType)
   implicit val pathCodec: Codec[Path, CodecFormat.OctetStream, File] = binaryCodec(FileValueType).map(_.toPath)(_.toFile)
 
-  def binaryCodec[T](_rawValueType: RawValueType[T]): Codec[T, CodecFormat.OctetStream, T] = new Codec[T, CodecFormat.OctetStream, T] {
-    override def encode(b: T): T = b
-    override def rawDecode(b: T): DecodeResult[T] = Value(b)
-    override val meta: CodecMeta[T, CodecFormat.OctetStream, T] = CodecMeta(Schema.SBinary, CodecFormat.OctetStream(), _rawValueType)
-  }
+  private def binaryCodec[T: Schema](_rawValueType: RawValueType[T]): Codec[T, CodecFormat.OctetStream, T] =
+    new Codec[T, CodecFormat.OctetStream, T] {
+      override def encode(b: T): T = b
+      override def rawDecode(b: T): DecodeResult[T] = Value(b)
+      override val meta: CodecMeta[T, CodecFormat.OctetStream, T] = CodecMeta(implicitly, CodecFormat.OctetStream(), _rawValueType)
+    }
 
   implicit val formSeqCodecUtf8: Codec[Seq[(String, String)], CodecFormat.XWwwFormUrlencoded, String] = formSeqCodec(StandardCharsets.UTF_8)
   implicit val formMapCodecUtf8: Codec[Map[String, String], CodecFormat.XWwwFormUrlencoded, String] = formMapCodec(StandardCharsets.UTF_8)
@@ -177,7 +178,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
         DecodeResult.sequence(anyParts)
       }
       override val meta: CodecMeta[Seq[AnyPart], CodecFormat.MultipartFormData, Seq[RawPart]] =
-        CodecMeta(Schema.SBinary, CodecFormat.MultipartFormData(), mvt)
+        CodecMeta(Schema(SchemaType.SBinary), CodecFormat.MultipartFormData(), mvt)
     }
 
   //
@@ -214,7 +215,7 @@ Did you define a codec for: ${T}?
 Did you import the codecs for: ${CF}?
 Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${CF}, _];
-schemas are looked up as implicit values of type SchemaFor[${T}])
+schemas are looked up as implicit values of type Schema[${T}])
 """)
 trait CodecForOptional[T, CF <: CodecFormat, R] extends Decode[T, Option[R]] { outer =>
   def encode(t: T): Option[R]
@@ -232,7 +233,8 @@ trait CodecForOptional[T, CF <: CodecFormat, R] extends Decode[T, Option[R]] { o
     new CodecForOptional[TT, CF, R] {
       override def encode(t: TT): Option[R] = outer.encode(g(t))
       override def rawDecode(s: Option[R]): DecodeResult[TT] = outer.rawDecode(s).flatMap(f)
-      override val meta: CodecMeta[TT, CF, R] = outer.meta.copy(validator = outer.meta.validator.contramap(g))
+      override val meta: CodecMeta[TT, CF, R] =
+        outer.meta.copy(schema = outer.meta.schema.as[TT], validator = outer.meta.validator.contramap(g))
     }
 
   def map[TT](f: T => TT)(g: TT => T): CodecForOptional[TT, CF, R] = mapDecode[TT](f.andThen(Value.apply))(g)
@@ -258,7 +260,8 @@ object CodecForOptional {
         case None     => DecodeResult.Value(None)
         case Some(ss) => tm.rawDecode(ss).map(Some(_))
       }
-      override val meta: CodecMeta[Option[T], CF, R] = tm.meta.copy(isOptional = true, validator = tm.validator.asOptionElement)
+      override val meta: CodecMeta[Option[T], CF, R] =
+        tm.meta.copy(schema = tm.meta.schema.asOptional, validator = tm.validator.asOptionElement)
     }
 }
 
@@ -277,7 +280,7 @@ Did you define a codec for: ${T}?
 Did you import the codecs for: ${CF}?
 Is there an implicit schema for: ${T}, and all of its components?
 (codecs are looked up as implicit values of type Codec[${T}, ${CF}, _];
-schemas are looked up as implicit values of type SchemaFor[${T}])
+schemas are looked up as implicit values of type Schema[${T}])
 """)
 trait CodecForMany[T, CF <: CodecFormat, R] extends Decode[T, Seq[R]] { outer =>
   def encode(t: T): Seq[R]
@@ -295,7 +298,8 @@ trait CodecForMany[T, CF <: CodecFormat, R] extends Decode[T, Seq[R]] { outer =>
     new CodecForMany[TT, CF, R] {
       override def encode(t: TT): Seq[R] = outer.encode(g(t))
       override def rawDecode(s: Seq[R]): DecodeResult[TT] = outer.rawDecode(s).flatMap(f)
-      override val meta: CodecMeta[TT, CF, R] = outer.meta.copy(validator = outer.meta.validator.contramap(g))
+      override val meta: CodecMeta[TT, CF, R] =
+        outer.meta.copy(schema = outer.meta.schema.as[TT], validator = outer.meta.validator.contramap(g))
     }
 
   def map[TT](f: T => TT)(g: TT => T): CodecForMany[TT, CF, R] = mapDecode[TT](f.andThen(Value.apply))(g)
@@ -322,7 +326,8 @@ object CodecForMany {
         case List(h) => tm.rawDecode(h).map(Some(_))
         case l       => DecodeResult.Multiple(l)
       }
-      override val meta: CodecMeta[Option[T], CF, R] = tm.meta.copy(isOptional = true, validator = tm.meta.validator.asOptionElement)
+      override val meta: CodecMeta[Option[T], CF, R] =
+        tm.meta.copy(schema = tm.meta.schema.asOptional, validator = tm.meta.validator.asOptionElement)
     }
 
   // collections
@@ -332,7 +337,7 @@ object CodecForMany {
       override def encode(t: Seq[T]): Seq[R] = t.map(v => tm.encode(v))
       override def rawDecode(s: Seq[R]): DecodeResult[Seq[T]] = DecodeResult.sequence(s.map(tm.rawDecode))
       override val meta: CodecMeta[Seq[T], CF, R] =
-        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.asIterableElements)
+        tm.meta.copy(schema = tm.meta.schema.asArrayElement, validator = tm.validator.asIterableElements)
     }
 
   implicit def forList[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[List[T], CF, R] =
@@ -340,7 +345,7 @@ object CodecForMany {
       override def encode(t: List[T]): Seq[R] = t.map(v => tm.encode(v))
       override def rawDecode(s: Seq[R]): DecodeResult[List[T]] = DecodeResult.sequence(s.map(tm.rawDecode)).map(_.toList)
       override val meta: CodecMeta[List[T], CF, R] =
-        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.asIterableElements)
+        tm.meta.copy(schema = tm.meta.schema.asArrayElement, validator = tm.validator.asIterableElements)
     }
 
   implicit def forVector[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[Vector[T], CF, R] =
@@ -348,7 +353,7 @@ object CodecForMany {
       override def encode(t: Vector[T]): Seq[R] = t.map(v => tm.encode(v))
       override def rawDecode(s: Seq[R]): DecodeResult[Vector[T]] = DecodeResult.sequence(s.map(tm.rawDecode)).map(_.toVector)
       override val meta: CodecMeta[Vector[T], CF, R] =
-        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.asIterableElements)
+        tm.meta.copy(schema = tm.meta.schema.asArrayElement, validator = tm.validator.asIterableElements)
     }
 
   implicit def forSet[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[Set[T], CF, R] =
@@ -356,7 +361,7 @@ object CodecForMany {
       override def encode(t: Set[T]): Seq[R] = t.map(v => tm.encode(v)).toSeq
       override def rawDecode(s: Seq[R]): DecodeResult[Set[T]] = DecodeResult.sequence(s.map(tm.rawDecode)).map(_.toSet)
       override val meta: CodecMeta[Set[T], CF, R] =
-        tm.meta.copy(isOptional = true, schema = Schema.SArray(tm.meta.schema), validator = tm.validator.asIterableElements)
+        tm.meta.copy(schema = tm.meta.schema.asArrayElement, validator = tm.validator.asIterableElements)
     }
 
   //
@@ -383,11 +388,10 @@ object CodecForMany {
 /**
   * Contains meta-data for a [[Codec]], between type `T` and a raw value `R`.
   *
-  * The meta-data consists of the schema for type `T`, validator, optionality and reified type of the raw value.
+  * The meta-data consists of the schema for type `T`, validator and reified type of the raw value.
   */
 case class CodecMeta[T, CF <: CodecFormat, R] private (
-    isOptional: Boolean,
-    schema: Schema,
+    schema: Schema[T],
     format: CF,
     rawValueType: RawValueType[R],
     validator: Validator[T]
@@ -398,12 +402,12 @@ case class CodecMeta[T, CF <: CodecFormat, R] private (
 }
 object CodecMeta {
   def apply[T, CF <: CodecFormat, R](
-      schema: Schema,
+      schema: Schema[T],
       mediaType: CF,
       rawValueType: RawValueType[R],
       validator: Validator[T] = Validator.pass[T]
   ): CodecMeta[T, CF, R] =
-    CodecMeta(isOptional = false, schema, mediaType, rawValueType, validator)
+    new CodecMeta(schema, mediaType, rawValueType, validator)
 }
 
 sealed trait RawValueType[R]

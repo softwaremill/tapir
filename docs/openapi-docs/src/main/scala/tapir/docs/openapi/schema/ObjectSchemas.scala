@@ -2,7 +2,7 @@ package tapir.docs.openapi.schema
 
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{SchemaType, Schema => OSchema}
-import tapir.{Codec, CodecForMany, CodecForOptional, Schema => TSchema}
+import tapir.{Codec, CodecForMany, CodecForOptional, Schema => TSchema, SchemaType => TSchemaType}
 
 class ObjectSchemas(
     tschemaToOSchema: TSchemaToOSchema,
@@ -13,11 +13,11 @@ class ObjectSchemas(
   def apply[T](codec: CodecForOptional[T, _, _]): ReferenceOr[OSchema] = apply(TypeData(codec))
 
   def apply(typeData: TypeData[_, _]): ReferenceOr[OSchema] = {
-    typeData.schema match {
-      case TSchema.SArray(o: TSchema.SObject) =>
+    typeData.schemaType match {
+      case TSchemaType.SArray(TSchema(o: TSchemaType.SObject, _)) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(o.info)))))
-      case o: TSchema.SObject => Left(schemaReferenceMapper.map(o.info))
-      case _                  => tschemaToOSchema(typeData)
+      case o: TSchemaType.SObject => Left(schemaReferenceMapper.map(o.info))
+      case _                      => tschemaToOSchema(typeData)
     }
   }
 }

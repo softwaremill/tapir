@@ -16,8 +16,6 @@ paths:
 components:
   schemas:
     F1:
-      required:
-        - data
       type: object
       properties:
         data:

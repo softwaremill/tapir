@@ -314,7 +314,8 @@ sealed trait StreamingEndpointIO[I, +S] {
 }
 
 object StreamingEndpointIO {
-  case class Body[S, CF <: CodecFormat](schema: Schema, mediaType: CF, info: EndpointIO.Info[String]) extends StreamingEndpointIO[S, S] {
+  case class Body[S, CF <: CodecFormat](schema: SchemaType, mediaType: CF, info: EndpointIO.Info[String])
+      extends StreamingEndpointIO[S, S] {
     def description(d: String): Body[S, CF] = copy(info = info.description(d))
     def example(t: String): Body[S, CF] = copy(info = info.example(t))
 

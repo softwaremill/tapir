@@ -4,7 +4,7 @@ import tapir._
 import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.internal._
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi.{Schema => OSchema, _}
+import tapir.openapi.{Schema => OSchema, SchemaType => OSchemaType, _}
 
 import scala.collection.immutable.ListMap
 
@@ -43,7 +43,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
         name -> Right(
           Header(
             info.description,
-            Some(!codec.meta.isOptional),
+            Some(!codec.meta.schema.isOptional),
             None,
             None,
             None,
@@ -65,7 +65,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             None,
             None,
             None,
-            Option(Right(OSchema(SchemaType.String))),
+            Option(Right(OSchema(OSchemaType.String))),
             None,
             ListMap.empty,
             ListMap.empty

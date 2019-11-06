@@ -2,7 +2,7 @@ package tapir.docs.openapi
 
 import tapir.docs.openapi.schema.{ObjectSchemas, TypeData}
 import tapir.openapi.{MediaType => OMediaType, _}
-import tapir.{CodecFormat, Schema => SSchema, _}
+import tapir.{CodecFormat, SchemaType => SSchema, _}
 
 import scala.collection.immutable.ListMap
 

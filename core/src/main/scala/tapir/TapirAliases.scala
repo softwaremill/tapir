@@ -72,13 +72,13 @@ trait TapirAliases {
   /** RenderPathTemplate.scala */
   val RenderPathTemplate = tapir.RenderPathTemplate
 
-  /** Schema.scala */
-  type Schema = tapir.Schema
-  val Schema = tapir.Schema
+  /** SchemaType.scala */
+  type SchemaType = tapir.SchemaType
+  val SchemaType = tapir.SchemaType
 
-  /** SchemaFor.scala */
-  type SchemaFor[T] = tapir.SchemaFor[T]
-  val SchemaFor: tapir.SchemaFor.type with SchemaForMagnoliaDerivation = tapir.SchemaFor
+  /** Schema.scala */
+  type Schema[T] = tapir.Schema[T]
+  val Schema: tapir.Schema.type with SchemaForMagnoliaDerivation = tapir.Schema
 
   /** Tapir.scala */
   type Tapir = tapir.Tapir

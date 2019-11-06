@@ -5,7 +5,7 @@ import tapir.CodecForMany.PlainCodecForMany
 import tapir.docs.openapi.uniqueName
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema}
-import tapir.{Schema => TSchema, _}
+import tapir.{SchemaType => TSchemaType, _}
 
 import scala.collection.immutable
 import scala.collection.immutable.ListMap
@@ -13,19 +13,19 @@ import scala.collection.immutable.ListMap
 object ObjectSchemasForEndpoints {
   def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
-    val infoToKey = calculateUniqueKeys(sObjects.map(_.schema.info))
+    val infoToKey = calculateUniqueKeys(sObjects.map(_.schemaType.info))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
-    val infosToSchema = sObjects.map(td => (td.schema.info, tschemaToOSchema(td))).toMap
+    val infosToSchema = sObjects.map(td => (td.schemaType.info, tschemaToOSchema(td))).toMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
   }
 
-  private def calculateUniqueKeys(infos: Iterable[TSchema.SObjectInfo]): Map[TSchema.SObjectInfo, SchemaKey] = {
-    case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, TSchema.SObjectInfo], infoToKey: Map[TSchema.SObjectInfo, SchemaKey])
+  private def calculateUniqueKeys(infos: Iterable[TSchemaType.SObjectInfo]): Map[TSchemaType.SObjectInfo, SchemaKey] = {
+    case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, TSchemaType.SObjectInfo], infoToKey: Map[TSchemaType.SObjectInfo, SchemaKey])
     infos
       .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) {
         case (SchemaKeyAssignment1(keyToInfo, infoToKey), objectInfo) =>
@@ -41,27 +41,27 @@ object ObjectSchemasForEndpoints {
 
   private def objectSchemas(typeData: AnyTypeData[_]): List[ObjectTypeData[_]] = {
     typeData match {
-      case TypeData(s: TSchema.SProduct, validator) =>
+      case TypeData(s: TSchemaType.SProduct, validator) =>
         List(TypeData(s, validator): ObjectTypeData[_]) ++ fieldsSchemaWithValidator(s, validator)
           .flatMap(objectSchemas)
           .toList
-      case TypeData(TSchema.SArray(o), validator) =>
-        objectSchemas(TypeData(o, elementValidator(validator)))
-      case TypeData(s: TSchema.SCoproduct, validator) =>
-        (TypeData(s, validator): ObjectTypeData[_]) +: s.schemas.flatMap(c => objectSchemas(TypeData(c, Validator.pass)))
-      case TypeData(s: TSchema.SOpenProduct, validator) =>
-        (TypeData(s, validator): ObjectTypeData[_]) +: objectSchemas(TypeData(s.valueSchema, elementValidator(validator)))
+      case TypeData(TSchemaType.SArray(o), validator) =>
+        objectSchemas(TypeData(o.schemaType, elementValidator(validator)))
+      case TypeData(s: TSchemaType.SCoproduct, validator) =>
+        (TypeData(s, validator): ObjectTypeData[_]) +: s.schemas.flatMap(c => objectSchemas(TypeData(c.schemaType, Validator.pass)))
+      case TypeData(s: TSchemaType.SOpenProduct, validator) =>
+        (TypeData(s, validator): ObjectTypeData[_]) +: objectSchemas(TypeData(s.valueSchema.schemaType, elementValidator(validator)))
       case _ => List.empty
     }
   }
 
-  private def fieldsSchemaWithValidator(p: TSchema.SProduct, v: Validator[_]): immutable.Seq[AnyTypeData[_]] = {
+  private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator[_]): immutable.Seq[AnyTypeData[_]] = {
     v match {
       case Validator.Product(validatedFields) =>
         p.fields.map { f =>
-          TypeData(f._2, validatedFields.get(f._1).map(_.validator).getOrElse(Validator.pass))
+          TypeData(f._2.schemaType, validatedFields.get(f._1).map(_.validator).getOrElse(Validator.pass))
         }.toList
-      case _ => p.fields.map(f => TypeData(f._2, Validator.pass)).toList
+      case _ => p.fields.map(f => TypeData(f._2.schemaType, Validator.pass)).toList
     }
   }
 
@@ -109,7 +109,7 @@ object ObjectSchemasForEndpoints {
   private def forCodec[T](codec: PlainCodec[T]): List[ObjectTypeData[_]] = objectSchemas(TypeData(codec))
   private def forCodec[T](codec: PlainCodecForMany[T]): List[ObjectTypeData[_]] = objectSchemas(TypeData(codec))
 
-  private def objectInfoToName(info: TSchema.SObjectInfo): String = {
+  private def objectInfoToName(info: TSchemaType.SObjectInfo): String = {
     val shortName = info.fullName.split('.').last
     (shortName +: info.typeParameterShortNames).mkString("_")
   }

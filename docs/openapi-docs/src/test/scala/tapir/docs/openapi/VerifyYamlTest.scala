@@ -58,7 +58,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
   val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], Vector[Byte]] = endpoint
     .in(streamBody[Vector[Byte]](schemaFor[String], CodecFormat.TextPlain()))
-    .out(streamBody[Vector[Byte]](Schema.SBinary, CodecFormat.OctetStream()))
+    .out(streamBody[Vector[Byte]](SchemaType.SBinary, CodecFormat.OctetStream()))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")
@@ -137,9 +137,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     // work-around for #10: unsupported sealed trait families
     @silent("never used") // it is used
-    implicit val schemaForErrorInfo: SchemaFor[ErrorInfo] = new SchemaFor[ErrorInfo] {
-      override def schema: Schema = Schema.SProduct(Schema.SObjectInfo("ErrorInfo"), Nil, Nil)
-    }
+    implicit val schemaForErrorInfo: Schema[ErrorInfo] = Schema[ErrorInfo](SchemaType.SProduct(SchemaType.SObjectInfo("ErrorInfo"), Nil))
 
     val e = endpoint.errorOut(
       tapir.oneOf(
@@ -181,9 +179,9 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should match the expected yaml when using coproduct types with discriminator") {
-    val sPerson = implicitly[SchemaFor[Person]]
-    val sOrganization = implicitly[SchemaFor[Organization]]
-    implicit val sEntity: SchemaFor[Entity] = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
+    val sPerson = implicitly[Schema[Person]]
+    val sOrganization = implicitly[Schema[Organization]]
+    implicit val sEntity: Schema[Entity] = Schema.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator.yml")
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
@@ -207,10 +205,10 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should match the expected yaml when using nested coproduct types with discriminator") {
-    val sPerson = implicitly[SchemaFor[Person]]
-    val sOrganization = implicitly[SchemaFor[Organization]]
+    val sPerson = implicitly[Schema[Person]]
+    val sOrganization = implicitly[Schema[Organization]]
     @silent("never used") // it is used
-    implicit val sEntity: SchemaFor[Entity] = SchemaFor.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
+    implicit val sEntity: Schema[Entity] = Schema.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator_nested.yml")
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Nothing] = endpoint

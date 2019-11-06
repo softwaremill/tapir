@@ -5,9 +5,9 @@ import java.io.File
 import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
 import sttp.model.{Header, Part}
-import tapir.Schema._
+import tapir.SchemaType._
 import tapir.util.CompileUtil
-import tapir.{Codec, DecodeResult, CodecFormat, RawPart, Validator}
+import tapir.{Codec, CodecFormat, DecodeResult, RawPart, Schema, Validator}
 
 @silent("discarded")
 @silent("never used")
@@ -65,10 +65,9 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     val codec = implicitly[Codec[Test6, CodecFormat.MultipartFormData, Seq[RawPart]]]
 
     // when
-    codec.meta.schema shouldBe SProduct(
+    codec.meta.schema.schemaType shouldBe SProduct(
       SObjectInfo("tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"),
-      List(("f1", SString), ("f2", SInteger)),
-      List("f1", "f2")
+      List(("f1", implicitly[Schema[String]]), ("f2", implicitly[Schema[Int]]))
     )
   }
 
@@ -78,10 +77,9 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     val codec = implicitly[Codec[Test1, CodecFormat.MultipartFormData, Seq[RawPart]]]
 
     // when
-    codec.meta.schema shouldBe SProduct(
+    codec.meta.schema.schemaType shouldBe SProduct(
       SObjectInfo("tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
-      List(("f1", SBinary), ("f2", SInteger)),
-      List("f1", "f2")
+      List(("f1", implicitly[Schema[File]]), ("f2", implicitly[Schema[Int]]))
     )
   }
 

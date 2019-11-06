@@ -47,7 +47,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     val partialDecodeResults = outputs
       .flatMap {
         case EndpointIO.Body(codec, _) =>
-          val so = if (codec.meta.isOptional && body == "") None else Some(body)
+          val so = if (codec.meta.schema.isOptional && body == "") None else Some(body)
           Some(codec.rawDecode(so))
 
         case EndpointIO.StreamBodyWrapper(_) =>

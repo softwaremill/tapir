@@ -66,7 +66,7 @@ trait Tapir extends TapirDerivedInputs {
   ): EndpointIO.Body[T, CodecFormat.MultipartFormData, _] =
     EndpointIO.Body(codec, EndpointIO.Info.empty)
 
-  def streamBody[S](schema: Schema, mediaType: CodecFormat): StreamingEndpointIO.Body[S, mediaType.type] =
+  def streamBody[S](schema: SchemaType, mediaType: CodecFormat): StreamingEndpointIO.Body[S, mediaType.type] =
     StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth
@@ -105,7 +105,7 @@ trait Tapir extends TapirDerivedInputs {
     */
   def emptyOutput: EndpointOutput[Unit] = EndpointOutput.Multiple(Vector.empty)
 
-  def schemaFor[T: SchemaFor]: Schema = implicitly[SchemaFor[T]].schema
+  def schemaFor[T: Schema]: SchemaType = implicitly[Schema[T]].schemaType
 
   val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing] =
     Endpoint[Unit, Nothing, Unit, Nothing](

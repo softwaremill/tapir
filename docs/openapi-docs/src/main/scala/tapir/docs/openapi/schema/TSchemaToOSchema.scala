@@ -3,59 +3,59 @@ package tapir.docs.openapi.schema
 import tapir.docs.openapi.rawToString
 import tapir.openapi.OpenAPI.ReferenceOr
 import tapir.openapi.{Schema => OSchema, _}
-import tapir.{Validator, Schema => TSchema}
+import tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /**
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
   def apply(typeData: TypeData[_, _]): ReferenceOr[OSchema] = {
-    val result = typeData.schema match {
-      case TSchema.SInteger => Right(OSchema(SchemaType.Integer))
-      case TSchema.SNumber  => Right(OSchema(SchemaType.Number))
-      case TSchema.SBoolean => Right(OSchema(SchemaType.Boolean))
-      case TSchema.SString  => Right(OSchema(SchemaType.String))
-      case TSchema.SProduct(_, fields, required) =>
+    val result = typeData.schemaType match {
+      case TSchemaType.SInteger => Right(OSchema(SchemaType.Integer))
+      case TSchemaType.SNumber  => Right(OSchema(SchemaType.Number))
+      case TSchemaType.SBoolean => Right(OSchema(SchemaType.Boolean))
+      case TSchemaType.SString  => Right(OSchema(SchemaType.String))
+      case p @ TSchemaType.SProduct(_, fields) =>
         Right(
           OSchema(SchemaType.Object).copy(
-            required = required.toList,
+            required = p.required.toList,
             properties = fields.map {
-              case (fieldName, s: TSchema.SObject) =>
+              case (fieldName, TSchema(s: TSchemaType.SObject, _)) =>
                 fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName)))
+                fieldName -> apply(TypeData(fieldSchema.schemaType, fieldValidator(typeData.validator, fieldName)))
             }.toListMap
           )
         )
-      case TSchema.SArray(el: TSchema.SObject) =>
+      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _)) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(el.info)))))
-      case TSchema.SArray(el) =>
+      case TSchemaType.SArray(TSchema(el, _)) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
-      case TSchema.SBinary        => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
-      case TSchema.SDate          => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
-      case TSchema.SDateTime      => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
-      case TSchema.SRef(fullName) => Left(schemaReferenceMapper.map(fullName))
-      case TSchema.SCoproduct(_, schemas, d) =>
+      case TSchemaType.SBinary        => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
+      case TSchemaType.SDate          => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
+      case TSchemaType.SDateTime      => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
+      case TSchemaType.SRef(fullName) => Left(schemaReferenceMapper.map(fullName))
+      case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           OSchema.apply(
-            schemas.collect { case s: TSchema.SProduct => Left(schemaReferenceMapper.map(s.info)) },
+            schemas.collect { case TSchema(s: TSchemaType.SProduct, _) => Left(schemaReferenceMapper.map(s.info)) },
             d.map(discriminatorToOpenApi.apply)
           )
         )
-      case TSchema.SOpenProduct(_, valueSchema) =>
+      case TSchemaType.SOpenProduct(_, valueSchema) =>
         Right(
           OSchema(SchemaType.Object).copy(
             required = List.empty,
-            additionalProperties = Some(valueSchema match {
-              case so: TSchema.SObject => Left(schemaReferenceMapper.map(so.info))
-              case s                   => apply(TypeData(s, elementValidator(typeData.validator)))
+            additionalProperties = Some(valueSchema.schemaType match {
+              case so: TSchemaType.SObject => Left(schemaReferenceMapper.map(so.info))
+              case s                       => apply(TypeData(s, elementValidator(typeData.validator)))
             })
           )
         )
     }
 
     result.map(
-      addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schema.isInstanceOf[TSchema.SInteger.type])
+      addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schemaType.isInstanceOf[TSchemaType.SInteger.type])
     )
   }
 

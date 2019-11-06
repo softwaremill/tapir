@@ -13,7 +13,7 @@ paths:
               type: array
               items:
                 $ref: '#/components/schemas/FruitAmount'
-        required: true
+        required: false
       responses:
         '200':
           description: ''

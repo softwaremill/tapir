@@ -214,7 +214,7 @@ package object tests {
     }
 
     val in_json_wrapper: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
-      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
@@ -225,14 +225,14 @@ package object tests {
     }
 
     val in_query_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
-      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
         uc.map(IntWrapper.apply)(_.v).validate(Validator.min(1).contramap(_.v))
       endpoint.in(query[IntWrapper]("amount"))
     }
 
     val in_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Nothing] = {
-      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
@@ -245,15 +245,14 @@ package object tests {
       implicit def validatedListEncoder[T: Encoder]: Encoder[ValidatedList[T]] = implicitly[Encoder[List[T]]].contramap(identity)
       implicit def validatedListDecoder[T: Decoder]: Decoder[ValidatedList[T]] =
         implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
-      implicit def schemaForValidatedList[T: SchemaFor]: SchemaFor[ValidatedList[T]] =
-        SchemaFor(Schema.SArray(implicitly[SchemaFor[T]].schema))
+      implicit def schemaForValidatedList[T: Schema]: Schema[ValidatedList[T]] = implicitly[Schema[T]].asArrayElement
       implicit def validatorForValidatedList[T: Validator]: Validator[ValidatedList[T]] =
         implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minSize(1).contramap(identity))
       endpoint.in(jsonBody[BasketOfFruits])
     }
 
     val in_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Nothing] = {
-      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       implicit val v: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
@@ -261,7 +260,7 @@ package object tests {
     }
 
     val in_enum_class: Endpoint[Color, Unit, Unit, Nothing] = {
-      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def plainCodecForColor: PlainCodec[Color] = {
         Codec.stringPlainCodecUtf8
           .map[Color]({
@@ -274,7 +273,7 @@ package object tests {
     }
 
     val in_optional_enum_class: Endpoint[Option[Color], Unit, Unit, Nothing] = {
-      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def plainCodecForColor: PlainCodec[Color] = {
         Codec.stringPlainCodecUtf8
           .map[Color]({
@@ -287,7 +286,7 @@ package object tests {
     }
 
     val out_enum_object: Endpoint[Unit, Unit, ColorValue, Nothing] = {
-      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def plainCodecForColor: PlainCodec[Color] = {
         Codec.stringPlainCodecUtf8
           .map[Color]({
@@ -303,14 +302,14 @@ package object tests {
     }
 
     val in_enum_values: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
-      implicit val schemaForIntWrapper: SchemaFor[IntWrapper] = SchemaFor(Schema.SInteger)
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
         uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
       endpoint.in(query[IntWrapper]("amount"))
     }
 
     val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Nothing] = {
-      implicit def schemaForColor: SchemaFor[Color] = SchemaFor(Schema.SString)
+      implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def colorValidator: Validator[Color] = Validator.enum.encode(_.toString.toLowerCase)
       endpoint.in(jsonBody[ColorWrapper])
     }

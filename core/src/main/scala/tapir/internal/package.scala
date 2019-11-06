@@ -138,4 +138,8 @@ package object internal {
       case Some(sv) => s"$s($sv)"
     }
   }
+
+  implicit class RichSchema[T](val s: Schema[T]) extends AnyVal {
+    def as[U]: Schema[U] = s.asInstanceOf[Schema[U]]
+  }
 }

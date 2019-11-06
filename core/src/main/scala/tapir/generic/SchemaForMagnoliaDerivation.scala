@@ -2,39 +2,34 @@ package tapir.generic
 
 import com.github.ghik.silencer.silent
 import magnolia._
-import tapir.Schema._
+import tapir.SchemaType._
 import tapir.generic.SchemaForMagnoliaDerivation.deriveInProgress
-import tapir.{Schema, SchemaFor}
+import tapir.{SchemaType, Schema}
 
 import scala.collection.mutable
 import scala.language.experimental.macros
 
 trait SchemaForMagnoliaDerivation {
-  type Typeclass[T] = SchemaFor[T]
+  type Typeclass[T] = Schema[T]
 
   @silent("discarded")
-  def combine[T](ctx: CaseClass[SchemaFor, T])(implicit genericDerivationConfig: Configuration): SchemaFor[T] = {
+  def combine[T](ctx: CaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withProgressCache { cache =>
       val cacheKey = ctx.typeName.full
       if (cache.contains(cacheKey)) {
-        new SchemaFor[T] {
-          override val schema: Schema = SRef(typeNameToObjectInfo(ctx.typeName))
-        }
+        Schema[T](SRef(typeNameToObjectInfo(ctx.typeName)))
       } else {
         try {
           cache.add(cacheKey)
           if (ctx.isValueClass) {
-            new SchemaFor[T] {
-              override val schema: Schema = ctx.parameters.head.typeclass.schema
-            }
+            Schema[T](ctx.parameters.head.typeclass.schemaType)
           } else {
-            new SchemaFor[T] {
-              override val schema: Schema = SProduct(
+            Schema[T](
+              SProduct(
                 typeNameToObjectInfo(ctx.typeName),
-                ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass.schema)).toList,
-                ctx.parameters.filter(!_.typeclass.isOptional).map(p => genericDerivationConfig.transformMemberName(p.label))
+                ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass)).toList
               )
-            }
+            )
           }
         } finally {
           cache.remove(cacheKey)
@@ -43,12 +38,12 @@ trait SchemaForMagnoliaDerivation {
     }
   }
 
-  private def typeNameToObjectInfo(typeName: TypeName): Schema.SObjectInfo = {
+  private def typeNameToObjectInfo(typeName: TypeName): SchemaType.SObjectInfo = {
     def allTypeArguments(tn: TypeName): Seq[TypeName] = tn.typeArguments.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
     SObjectInfo(typeName.full, allTypeArguments(typeName).map(_.short).toList)
   }
 
-  private def withProgressCache[T](f: mutable.Set[String] => SchemaFor[T]): SchemaFor[T] = {
+  private def withProgressCache[T](f: mutable.Set[String] => Schema[T]): Schema[T] = {
     var cache = deriveInProgress.get()
     val newCache = cache == null
     if (newCache) {
@@ -64,11 +59,11 @@ trait SchemaForMagnoliaDerivation {
     }
   }
 
-  def dispatch[T](ctx: SealedTrait[SchemaFor, T]): SchemaFor[T] = {
-    SchemaFor(SCoproduct(typeNameToObjectInfo(ctx.typeName), ctx.subtypes.map(_.typeclass.schema).toList, None))
+  def dispatch[T](ctx: SealedTrait[Schema, T]): Schema[T] = {
+    Schema(SCoproduct(typeNameToObjectInfo(ctx.typeName), ctx.subtypes.map(_.typeclass).toList, None))
   }
 
-  implicit def schemaForCaseClass[T]: SchemaFor[T] = macro Magnolia.gen[T]
+  implicit def schemaForCaseClass[T]: Schema[T] = macro Magnolia.gen[T]
 }
 
 object SchemaForMagnoliaDerivation {

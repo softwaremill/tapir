@@ -4,9 +4,9 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
-import tapir.Schema.{SInteger, SObjectInfo, SProduct, SString}
+import tapir.SchemaType.{SObjectInfo, SProduct}
 import tapir.util.CompileUtil
-import tapir.{Codec, DecodeResult, CodecFormat, Validator}
+import tapir.{Codec, CodecFormat, DecodeResult, Schema, Validator}
 
 @silent("never used")
 class FormCodecDerivationTest extends FlatSpec with Matchers {
@@ -74,10 +74,9 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
     val codec = implicitly[Codec[Test6, CodecFormat.XWwwFormUrlencoded, String]]
 
     // when
-    codec.meta.schema shouldBe SProduct(
+    codec.meta.schema.schemaType shouldBe SProduct(
       SObjectInfo("tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
-      List(("f1", SString), ("f2", SInteger)),
-      List("f1", "f2")
+      List(("f1", implicitly[Schema[String]]), ("f2", implicitly[Schema[Int]]))
     )
   }
 

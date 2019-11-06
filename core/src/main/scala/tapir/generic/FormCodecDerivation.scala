@@ -54,7 +54,7 @@ object FormCodecMacros {
 
         tapir.Codec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
-          .schema(${util.schema}.schema)
+          .schema(${util.schema})
           .validate(implicitly[tapir.Validator[$t]])
       }
      """

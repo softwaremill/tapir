@@ -5,7 +5,7 @@ import tapir._
 import tapir.docs.openapi.schema.ObjectSchemas
 import tapir.internal._
 import tapir.openapi.OpenAPI.ReferenceOr
-import tapir.openapi.{Schema, _}
+import tapir.openapi.{Schema => OSchema, SchemaType => OSchemaType, _}
 
 import scala.collection.immutable.ListMap
 
@@ -67,7 +67,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
       case EndpointIO.Body(codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.isOptional)))
+        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.schema.isOptional)))
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
         Right(RequestBody(i.description, codecToMediaType(s, mt, i.example), Some(true)))
     }
@@ -94,7 +94,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader) = {
     EndpointInputToParameterConverter.from(
       header,
-      Right(Schema(SchemaType.String)),
+      Right(OSchema(OSchemaType.String)),
       header.info.example.map(_ => exampleValue(header.value))
     )
   }

@@ -2,24 +2,23 @@ package tapir.codec.cats
 
 import cats.data.{NonEmptyChain, NonEmptyList, NonEmptySet}
 import org.scalatest.{FlatSpec, Matchers}
-import tapir.Schema.{SArray, SString}
-import tapir.{SchemaFor, Validator}
+import tapir.SchemaType.{SArray, SString}
+import tapir.{Schema, Validator}
 
 class TapirCodecCatsTest extends FlatSpec with Matchers {
-
   case class Test(value: String)
 
   implicit val validatorForTest: Validator[Test] = Validator.minLength(3).contramap(_.value)
 
   it should "find schema for cats collections" in {
-    implicitly[SchemaFor[NonEmptyList[String]]].schema shouldBe SArray(SString)
-    implicitly[SchemaFor[NonEmptyList[String]]].isOptional shouldBe false
+    implicitly[Schema[NonEmptyList[String]]].schemaType shouldBe SArray(Schema(SString))
+    implicitly[Schema[NonEmptyList[String]]].isOptional shouldBe false
 
-    implicitly[SchemaFor[NonEmptySet[String]]].schema shouldBe SArray(SString)
-    implicitly[SchemaFor[NonEmptySet[String]]].isOptional shouldBe false
+    implicitly[Schema[NonEmptySet[String]]].schemaType shouldBe SArray(Schema(SString))
+    implicitly[Schema[NonEmptySet[String]]].isOptional shouldBe false
 
-    implicitly[SchemaFor[NonEmptyChain[String]]].schema shouldBe SArray(SString)
-    implicitly[SchemaFor[NonEmptyChain[String]]].isOptional shouldBe false
+    implicitly[Schema[NonEmptyChain[String]]].schemaType shouldBe SArray(Schema(SString))
+    implicitly[Schema[NonEmptyChain[String]]].isOptional shouldBe false
   }
 
   it should "find proper validator for cats collections" in {
@@ -31,5 +30,4 @@ class TapirCodecCatsTest extends FlatSpec with Matchers {
 
     implicitly[Validator[NonEmptyChain[Test]]].show shouldBe expectedValidator.show
   }
-
 }

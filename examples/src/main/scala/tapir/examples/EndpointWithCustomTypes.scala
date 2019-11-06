@@ -22,7 +22,7 @@ object EndpointWithCustomTypes {
   // circe Encoder and Decoder. We also need the schema (through the SchemaFor implicit) for documentation.
   case class Person(id: MyId, name: String)
 
-  implicit val myIdSchema: SchemaFor[MyId] = SchemaFor(Schema.SString)
+  implicit val myIdSchema: Schema[MyId] = Schema(SchemaType.SString)
   // custom circe encoders and decoders need to be in-scope as well
   implicit val myIdEncoder: Encoder[MyId] = Encoder.encodeString.contramap(_.id)
   implicit val myIdDecoder: Decoder[MyId] = Decoder.decodeString.map(s => new MyIdImpl(s))

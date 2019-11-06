@@ -1,6 +1,6 @@
 package tapir.generic
 
-import tapir.SchemaFor
+import tapir.Schema
 
 import scala.reflect.macros.blackbox
 
@@ -10,7 +10,7 @@ object SchemaForMapMacro {
    */
   def schemaForMap[M: c.WeakTypeTag, V: c.WeakTypeTag](
       c: blackbox.Context
-  )(schemaForV: c.Expr[SchemaFor[V]]): c.Expr[SchemaFor[Map[String, V]]] = {
+  )(schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[String, V]]] = {
     import c.universe._
 
     def extractTypeArguments(weakType: c.Type): List[String] = {
@@ -21,8 +21,8 @@ object SchemaForMapMacro {
     val weakTypeV = weakTypeOf[V]
     val genericTypeParametersM = List(weakTypeV.typeSymbol.name.decodedName.toString) ++ extractTypeArguments(weakTypeV)
     val schemaForMap =
-      q"""tapir.SchemaFor(tapir.Schema.SOpenProduct(tapir.Schema.SObjectInfo("Map", ${genericTypeParametersM}), ${schemaForV}.schema))"""
+      q"""tapir.Schema(tapir.SchemaType.SOpenProduct(tapir.SchemaType.SObjectInfo("Map", ${genericTypeParametersM}), ${schemaForV}))"""
     Debug.logGeneratedCode(c)(weakTypeV.typeSymbol.fullName, schemaForMap)
-    c.Expr[SchemaFor[Map[String, V]]](schemaForMap)
+    c.Expr[Schema[Map[String, V]]](schemaForMap)
   }
 }
