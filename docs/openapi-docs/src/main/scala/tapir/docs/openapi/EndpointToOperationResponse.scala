@@ -23,7 +23,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = output.asBasicOutputsMap.flatMap {
       case (sc, outputs) =>
         // there might be no output defined at all
-        outputsToResponse(outputs)
+        outputsToResponse(sc, outputs)
           .map { response =>
             // using the "default" response key, if no status code is provided
             val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
@@ -37,7 +37,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     } else responses
   }
 
-  private def outputsToResponse(outputs: Vector[EndpointOutput[_]]): Option[Response] = {
+  private def outputsToResponse(sc: Option[sttp.model.StatusCode], outputs: Vector[EndpointOutput[_]]): Option[Response] = {
     val headers = outputs.collect {
       case EndpointIO.Header(name, codec, info) =>
         name -> Right(
@@ -80,8 +80,10 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     }
     val body = bodies.headOption
 
-    val statusCodeDescriptions = outputs.collect {
-      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _)) => desc
+    val statusCodeDescriptions = outputs.flatMap {
+      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _)) => Vector(desc)
+      case EndpointOutput.OneOfStatusCodes(codes)                            => codes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
+      case _                                                                 => Vector()
     }
 
     val description = body.flatMap(_._1).getOrElse(statusCodeDescriptions.headOption.getOrElse(""))

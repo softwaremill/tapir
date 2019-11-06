@@ -36,6 +36,7 @@ For both inputs/outputs:
 For outputs:
 
 * `statusCode` maps to the status code of the response
+* `statusCode(code1, code2, ..., coden)` maps to the status code of the response. The difference is it adds information to documentation about possible status codes
 * `statusCode(code)` maps to a fixed status code of the response
 
 ## Combining inputs and outputs

@@ -68,6 +68,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
         case EndpointOutput.FixedStatusCode(_, _) =>
           None
+        case EndpointOutput.OneOfStatusCodes(_) =>
+          None
         case EndpointIO.FixedHeader(_, _, _) =>
           None
 
