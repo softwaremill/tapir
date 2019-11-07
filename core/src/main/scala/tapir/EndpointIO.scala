@@ -159,20 +159,12 @@ object EndpointOutput {
 
   //
 
-  case class StatusCode() extends Basic[sttp.model.StatusCode] {
-    override def show: String = "{status code}"
-  }
-
-  case class OneOfStatusCodes(codes: List[(sttp.model.StatusCode, Info[Unit])]) extends Basic[Unit] {
-    def description(code: sttp.model.StatusCode, d: String): OneOfStatusCodes = {
-      val codesWithUpdatedInfo = codes.map {
-        case (c, oldInfo) if c == code => (code, oldInfo.description(d))
-        case c                         => c
-      }
-      copy(codes = codesWithUpdatedInfo)
+  case class StatusCode(documentedCodes: Map[sttp.model.StatusCode, Info[Unit]] = Map.empty) extends Basic[sttp.model.StatusCode] {
+    def description(code: sttp.model.StatusCode, d: String): StatusCode = {
+      val updatedCodes = documentedCodes + (code -> Info.empty[Unit].description(d))
+      copy(documentedCodes = updatedCodes)
     }
-
-    override def show: String = s"one of status codes ($codes)"
+    override def show: String = s"status code - possible codes ($documentedCodes)"
   }
 
   //

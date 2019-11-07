@@ -99,8 +99,8 @@ package object internal {
             )
           )
         case f: EndpointOutput.FixedStatusCode => Right(ListMap(Some(f.statusCode) -> Vector(f)))
-        case f: EndpointOutput.OneOfStatusCodes =>
-          val entries = f.codes.map(_._1).map(code => Some(code) -> Vector(f))
+        case f: EndpointOutput.StatusCode =>
+          val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toSeq
           Right(ListMap(entries: _*))
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
       }
@@ -127,7 +127,6 @@ package object internal {
     def sortByType: Vector[EndpointOutput.Basic[_]] = outputs.sortBy {
       case _: EndpointOutput.StatusCode          => 0
       case _: EndpointOutput.FixedStatusCode     => 0
-      case _: EndpointOutput.OneOfStatusCodes    => 0
       case _: EndpointIO.Header[_]               => 1
       case _: EndpointIO.Headers                 => 1
       case _: EndpointIO.FixedHeader             => 1

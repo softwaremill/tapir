@@ -63,12 +63,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           val outputParams = getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)
           Some(outputParams.map(f.asInstanceOf[Any => Any].apply))
 
-        case EndpointOutput.StatusCode() =>
+        case EndpointOutput.StatusCode(_) =>
           Some(DecodeResult.Value(meta.code))
 
         case EndpointOutput.FixedStatusCode(_, _) =>
-          None
-        case EndpointOutput.OneOfStatusCodes(_) =>
           None
         case EndpointIO.FixedHeader(_, _, _) =>
           None
