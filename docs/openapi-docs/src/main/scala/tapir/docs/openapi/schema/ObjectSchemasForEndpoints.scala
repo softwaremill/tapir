@@ -84,7 +84,7 @@ object ObjectSchemasForEndpoints {
   private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData[_]] = {
     output match {
       case EndpointOutput.OneOf(mappings)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
-      case EndpointOutput.StatusCode()          => List.empty
+      case EndpointOutput.StatusCode(_)         => List.empty
       case EndpointOutput.FixedStatusCode(_, _) => List.empty
       case EndpointOutput.Mapped(wrapped, _, _) => forOutput(wrapped)
       case EndpointOutput.Void()                => List.empty

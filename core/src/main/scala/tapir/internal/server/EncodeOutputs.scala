@@ -39,7 +39,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
                 .foldLeft(ov)(_.withHeader(_))
             case EndpointIO.Mapped(wrapped, _, g) =>
               apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
-            case EndpointOutput.StatusCode() =>
+            case EndpointOutput.StatusCode(_) =>
               ov.withStatusCode(vsHead.asInstanceOf[StatusCode])
             case EndpointOutput.FixedStatusCode(_, _) =>
               throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
