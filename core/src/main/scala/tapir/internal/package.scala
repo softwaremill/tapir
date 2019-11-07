@@ -99,7 +99,7 @@ package object internal {
             )
           )
         case f: EndpointOutput.FixedStatusCode => Right(ListMap(Some(f.statusCode) -> Vector(f)))
-        case f: EndpointOutput.StatusCode =>
+        case f: EndpointOutput.StatusCode if f.documentedCodes.nonEmpty =>
           val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toSeq
           Right(ListMap(entries: _*))
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
