@@ -11,14 +11,16 @@ import scala.collection.immutable
 import scala.collection.immutable.ListMap
 
 object ObjectSchemasForEndpoints {
+  private type ObjectTypeData = (TSchemaType.SObjectInfo, AnyTypeData[_])
+
   def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
-    val infoToKey = calculateUniqueKeys(sObjects.map(_.schemaType.info))
+    val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
-    val infosToSchema = sObjects.map(td => (td.schemaType.info, tschemaToOSchema(td))).toMap
+    val infosToSchema = sObjects.map(td => (td._1, tschemaToOSchema(td._2))).toMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
@@ -39,18 +41,20 @@ object ObjectSchemasForEndpoints {
       .infoToKey
   }
 
-  private def objectSchemas(typeData: AnyTypeData[_]): List[ObjectTypeData[_]] = {
+  private def objectSchemas(typeData: AnyTypeData[_]): List[ObjectTypeData] = {
     typeData match {
       case TypeData(s, st: TSchemaType.SProduct, validator) =>
-        List(TypeData(s, st, validator): ObjectTypeData[_]) ++ fieldsSchemaWithValidator(st, validator)
+        List(st.info -> TypeData(s, st, validator): ObjectTypeData) ++ fieldsSchemaWithValidator(st, validator)
           .flatMap(objectSchemas)
           .toList
       case TypeData(_, TSchemaType.SArray(o), validator) =>
         objectSchemas(TypeData(o, o.schemaType, elementValidator(validator)))
       case TypeData(s, st: TSchemaType.SCoproduct, validator) =>
-        (TypeData(s, st, validator): ObjectTypeData[_]) +: st.schemas.flatMap(c => objectSchemas(TypeData(c, c.schemaType, Validator.pass)))
+        (st.info -> TypeData(s, st, validator): ObjectTypeData) +: st.schemas.flatMap(
+          c => objectSchemas(TypeData(c, c.schemaType, Validator.pass))
+        )
       case TypeData(s, st: TSchemaType.SOpenProduct, validator) =>
-        (TypeData(s, st, validator): ObjectTypeData[_]) +: objectSchemas(
+        (st.info -> TypeData(s, st, validator): ObjectTypeData) +: objectSchemas(
           TypeData(st.valueSchema, st.valueSchema.schemaType, elementValidator(validator))
         )
       case _ => List.empty
@@ -67,7 +71,7 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forInput(input: EndpointInput[_]): List[ObjectTypeData[_]] = {
+  private def forInput(input: EndpointInput[_]): List[ObjectTypeData] = {
     input match {
       case EndpointInput.FixedMethod(_)           => List.empty
       case EndpointInput.FixedPath(_)             => List.empty
@@ -83,7 +87,7 @@ object ObjectSchemasForEndpoints {
       case op: EndpointIO[_]                      => forIO(op)
     }
   }
-  private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData[_]] = {
+  private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData] = {
     output match {
       case EndpointOutput.OneOf(mappings)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
       case EndpointOutput.StatusCode(_)         => List.empty
@@ -95,7 +99,7 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forIO(io: EndpointIO[_]): List[ObjectTypeData[_]] = {
+  private def forIO(io: EndpointIO[_]): List[ObjectTypeData] = {
     io match {
       case EndpointIO.Multiple(ios)       => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
       case EndpointIO.Header(_, codec, _) => forCodec(codec)
@@ -108,9 +112,9 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def forCodec[T](codec: CodecForOptional[T, _, _]): List[ObjectTypeData[_]] = objectSchemas(TypeData(codec))
-  private def forCodec[T](codec: PlainCodec[T]): List[ObjectTypeData[_]] = objectSchemas(TypeData(codec))
-  private def forCodec[T](codec: PlainCodecForMany[T]): List[ObjectTypeData[_]] = objectSchemas(TypeData(codec))
+  private def forCodec[T](codec: CodecForOptional[T, _, _]): List[ObjectTypeData] = objectSchemas(TypeData(codec))
+  private def forCodec[T](codec: PlainCodec[T]): List[ObjectTypeData] = objectSchemas(TypeData(codec))
+  private def forCodec[T](codec: PlainCodecForMany[T]): List[ObjectTypeData] = objectSchemas(TypeData(codec))
 
   private def objectInfoToName(info: TSchemaType.SObjectInfo): String = {
     val shortName = info.fullName.split('.').last

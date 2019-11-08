@@ -221,7 +221,7 @@ trait CodecForOptional[T, CF <: CodecFormat, R] extends Decode[T, Option[R]] { o
   def encode(t: T): Option[R]
   def rawDecode(s: Option[R]): DecodeResult[T]
   def meta: CodecMeta[T, CF, R]
-  private[tapir] def validator: Validator[T] = meta.validator
+  private[tapir] def validator: Validator[T] = meta.validator // TODO
 
   def validate(v: Validator[T]): CodecForOptional[T, CF, R] = new CodecForOptional[T, CF, R] {
     override def encode(t: T): Option[R] = outer.encode(t)

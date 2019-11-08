@@ -5,7 +5,6 @@ import tapir.{Validator, SchemaType => TSchemaType}
 package object schema {
   type SchemaKey = String
 
-  type ObjectTypeData[T] = TypeData[TSchemaType.SObject, T]
   type AnyTypeData[T] = TypeData[TSchemaType, T]
 
   private[schema] def elementValidator(v: Validator[_]): Validator[_] = {
