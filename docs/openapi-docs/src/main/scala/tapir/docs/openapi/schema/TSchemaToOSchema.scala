@@ -20,25 +20,25 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
           OSchema(SchemaType.Object).copy(
             required = p.required.toList,
             properties = fields.map {
-              case (fieldName, TSchema(s: TSchemaType.SObject, _)) =>
+              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _)) =>
                 fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(TypeData(fieldSchema.schemaType, fieldValidator(typeData.validator, fieldName)))
+                fieldName -> apply(TypeData(fieldSchema, fieldSchema.schemaType, fieldValidator(typeData.validator, fieldName)))
             }.toListMap
           )
         )
-      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _)) =>
+      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _)) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(el.info)))))
-      case TSchemaType.SArray(TSchema(el, _)) =>
-        Right(OSchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
-      case TSchemaType.SBinary        => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Binary)))
-      case TSchemaType.SDate          => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.Date)))
-      case TSchemaType.SDateTime      => Right(OSchema(SchemaType.String).copy(format = Some(SchemaFormat.DateTime)))
+      case TSchemaType.SArray(el) =>
+        Right(OSchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, el.schemaType, elementValidator(typeData.validator))))))
+      case TSchemaType.SBinary        => Right(OSchema(SchemaType.String).copy(format = SchemaFormat.Binary))
+      case TSchemaType.SDate          => Right(OSchema(SchemaType.String).copy(format = SchemaFormat.Date))
+      case TSchemaType.SDateTime      => Right(OSchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
       case TSchemaType.SRef(fullName) => Left(schemaReferenceMapper.map(fullName))
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           OSchema.apply(
-            schemas.collect { case TSchema(s: TSchemaType.SProduct, _) => Left(schemaReferenceMapper.map(s.info)) },
+            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _) => Left(schemaReferenceMapper.map(s.info)) },
             d.map(discriminatorToOpenApi.apply)
           )
         )
@@ -48,15 +48,21 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             required = List.empty,
             additionalProperties = Some(valueSchema.schemaType match {
               case so: TSchemaType.SObject => Left(schemaReferenceMapper.map(so.info))
-              case s                       => apply(TypeData(s, elementValidator(typeData.validator)))
+              case s                       => apply(TypeData(valueSchema, s, elementValidator(typeData.validator)))
             })
           )
         )
     }
 
-    result.map(
-      addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schemaType.isInstanceOf[TSchemaType.SInteger.type])
-    )
+    result
+      .map(addMetadata(_, typeData.schema))
+      .map(
+        addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schemaType.isInstanceOf[TSchemaType.SInteger.type])
+      )
+  }
+
+  private def addMetadata(oschema: OSchema, tschema: TSchema[_]): OSchema = {
+    oschema.copy(description = tschema.description.orElse(oschema.description), format = tschema.format.orElse(oschema.format))
   }
 
   private def addConstraints(

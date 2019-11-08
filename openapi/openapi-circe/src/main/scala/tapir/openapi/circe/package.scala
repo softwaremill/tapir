@@ -26,7 +26,6 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderExampleValue: Encoder[ExampleValue] = { ev: ExampleValue =>
     parse(ev.value).right.getOrElse(Json.fromString(ev.value))
   }
-  implicit val encoderSchemaFormat: Encoder[SchemaFormat.SchemaFormat] = Encoder.encodeEnumeration(SchemaFormat)
   implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.encodeEnumeration(SchemaType)
   implicit val encoderSchema: Encoder[Schema] = deriveEncoder[Schema]
   implicit val encoderReference: Encoder[Reference] = deriveEncoder[Reference]

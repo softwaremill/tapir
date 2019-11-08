@@ -41,16 +41,18 @@ object ObjectSchemasForEndpoints {
 
   private def objectSchemas(typeData: AnyTypeData[_]): List[ObjectTypeData[_]] = {
     typeData match {
-      case TypeData(s: TSchemaType.SProduct, validator) =>
-        List(TypeData(s, validator): ObjectTypeData[_]) ++ fieldsSchemaWithValidator(s, validator)
+      case TypeData(s, st: TSchemaType.SProduct, validator) =>
+        List(TypeData(s, st, validator): ObjectTypeData[_]) ++ fieldsSchemaWithValidator(st, validator)
           .flatMap(objectSchemas)
           .toList
-      case TypeData(TSchemaType.SArray(o), validator) =>
-        objectSchemas(TypeData(o.schemaType, elementValidator(validator)))
-      case TypeData(s: TSchemaType.SCoproduct, validator) =>
-        (TypeData(s, validator): ObjectTypeData[_]) +: s.schemas.flatMap(c => objectSchemas(TypeData(c.schemaType, Validator.pass)))
-      case TypeData(s: TSchemaType.SOpenProduct, validator) =>
-        (TypeData(s, validator): ObjectTypeData[_]) +: objectSchemas(TypeData(s.valueSchema.schemaType, elementValidator(validator)))
+      case TypeData(_, TSchemaType.SArray(o), validator) =>
+        objectSchemas(TypeData(o, o.schemaType, elementValidator(validator)))
+      case TypeData(s, st: TSchemaType.SCoproduct, validator) =>
+        (TypeData(s, st, validator): ObjectTypeData[_]) +: st.schemas.flatMap(c => objectSchemas(TypeData(c, c.schemaType, Validator.pass)))
+      case TypeData(s, st: TSchemaType.SOpenProduct, validator) =>
+        (TypeData(s, st, validator): ObjectTypeData[_]) +: objectSchemas(
+          TypeData(st.valueSchema, st.valueSchema.schemaType, elementValidator(validator))
+        )
       case _ => List.empty
     }
   }
@@ -59,9 +61,9 @@ object ObjectSchemasForEndpoints {
     v match {
       case Validator.Product(validatedFields) =>
         p.fields.map { f =>
-          TypeData(f._2.schemaType, validatedFields.get(f._1).map(_.validator).getOrElse(Validator.pass))
+          TypeData(f._2, f._2.schemaType, validatedFields.get(f._1).map(_.validator).getOrElse(Validator.pass))
         }.toList
-      case _ => p.fields.map(f => TypeData(f._2.schemaType, Validator.pass)).toList
+      case _ => p.fields.map(f => TypeData(f._2, f._2.schemaType, Validator.pass)).toList
     }
   }
 
@@ -95,13 +97,14 @@ object ObjectSchemasForEndpoints {
 
   private def forIO(io: EndpointIO[_]): List[ObjectTypeData[_]] = {
     io match {
-      case EndpointIO.Multiple(ios)                                             => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
-      case EndpointIO.Header(_, codec, _)                                       => forCodec(codec)
-      case EndpointIO.Headers(_)                                                => List.empty
-      case EndpointIO.Body(codec, _)                                            => forCodec(codec)
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) => objectSchemas(TypeData(schema, Validator.pass))
-      case EndpointIO.Mapped(wrapped, _, _)                                     => forInput(wrapped) ++ forOutput(wrapped)
-      case EndpointIO.FixedHeader(_, _, _)                                      => List.empty
+      case EndpointIO.Multiple(ios)       => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
+      case EndpointIO.Header(_, codec, _) => forCodec(codec)
+      case EndpointIO.Headers(_)          => List.empty
+      case EndpointIO.Body(codec, _)      => forCodec(codec)
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) =>
+        objectSchemas(TypeData(schema, schema.schemaType, Validator.pass))
+      case EndpointIO.Mapped(wrapped, _, _) => forInput(wrapped) ++ forOutput(wrapped)
+      case EndpointIO.FixedHeader(_, _, _)  => List.empty
     }
   }
 

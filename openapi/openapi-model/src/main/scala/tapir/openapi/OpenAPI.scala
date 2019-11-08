@@ -128,22 +128,22 @@ case class Parameter(
 object ParameterIn extends Enumeration {
   type ParameterIn = Value
 
-  val Query = Value("query")
-  val Header = Value("header")
-  val Path = Value("path")
-  val Cookie = Value("cookie")
+  val Query: Value = Value("query")
+  val Header: Value = Value("header")
+  val Path: Value = Value("path")
+  val Cookie: Value = Value("cookie")
 }
 
 object ParameterStyle extends Enumeration {
   type ParameterStyle = Value
 
-  val Simple = Value("simple")
-  val Form = Value("form")
-  val Matrix = Value("matrix")
-  val Label = Value("label")
-  val SpaceDelimited = Value("spaceDelimited")
-  val PipeDelimited = Value("pipeDelimited")
-  val DeepObject = Value("deepObject")
+  val Simple: Value = Value("simple")
+  val Form: Value = Value("form")
+  val Matrix: Value = Value("matrix")
+  val Label: Value = Value("label")
+  val SpaceDelimited: Value = Value("spaceDelimited")
+  val PipeDelimited: Value = Value("pipeDelimited")
+  val DeepObject: Value = Value("deepObject")
 }
 
 case class RequestBody(description: Option[String], content: ListMap[String, MediaType], required: Option[Boolean])
@@ -196,7 +196,7 @@ case class Schema(
     items: Option[ReferenceOr[Schema]] = None,
     properties: ListMap[String, ReferenceOr[Schema]] = ListMap.empty,
     description: Option[String] = None,
-    format: Option[SchemaFormat.SchemaFormat] = None,
+    format: Option[String] = None,
     default: Option[ExampleValue] = None,
     nullable: Option[Boolean] = None,
     readOnly: Option[Boolean] = None,
@@ -230,26 +230,24 @@ object Schema {
 object SchemaType extends Enumeration {
   type SchemaType = Value
 
-  val Boolean = Value("boolean")
-  val Object = Value("object")
-  val Array = Value("array")
-  val Number = Value("number")
-  val String = Value("string")
-  val Integer = Value("integer")
+  val Boolean: Value = Value("boolean")
+  val Object: Value = Value("object")
+  val Array: Value = Value("array")
+  val Number: Value = Value("number")
+  val String: Value = Value("string")
+  val Integer: Value = Value("integer")
 }
 
-object SchemaFormat extends Enumeration {
-  type SchemaFormat = Value
-
-  val Int32 = Value("int32")
-  val Int64 = Value("int64")
-  val Float = Value("float")
-  val Double = Value("double")
-  val Byte = Value("byte")
-  val Binary = Value("binary")
-  val Date = Value("date")
-  val DateTime = Value("date-time")
-  val Password = Value("password")
+object SchemaFormat {
+  val Int32: Option[String] = Some("int32")
+  val Int64: Option[String] = Some("int64")
+  val Float: Option[String] = Some("float")
+  val Double: Option[String] = Some("double")
+  val Byte: Option[String] = Some("byte")
+  val Binary: Option[String] = Some("binary")
+  val Date: Option[String] = Some("date")
+  val DateTime: Option[String] = Some("date-time")
+  val Password: Option[String] = Some("password")
 }
 
 case class ExampleValue(value: String)

@@ -58,7 +58,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
   val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], Vector[Byte]] = endpoint
     .in(streamBody[Vector[Byte]](schemaFor[String], CodecFormat.TextPlain()))
-    .out(streamBody[Vector[Byte]](SchemaType.SBinary, CodecFormat.OctetStream()))
+    .out(streamBody[Vector[Byte]](schemaFor[Array[Byte]], CodecFormat.OctetStream()))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")
@@ -268,6 +268,23 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_unfolded_object_unfolded_array.yml")
 
     val actualYaml = endpoint
+      .out(jsonBody[List[ObjectWrapper]])
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should use descriptions from custom schemas of nested objects") {
+    val expectedYaml = loadYaml("expected_descriptions_in_nested_custom_schemas.yml")
+
+    import SchemaType._
+    implicit val customFruitAmountSchema: Schema[FruitAmount] = Schema(
+      SProduct(SObjectInfo("tapir.tests.FruitAmount", Nil), List(("fruit", Schema(SString)), ("amount", Schema(SInteger).format("int32"))))
+    ).description("Amount of fruits")
+
+    val actualYaml = endpoint.post
       .out(jsonBody[List[ObjectWrapper]])
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml

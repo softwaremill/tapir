@@ -14,8 +14,14 @@ import tapir.generic.SchemaForMagnoliaDerivation
 
 /**
   * Describes the shape of the low-level, "raw" representation of type `T`.
+  * @param format The name of the format of the low-level representation of `T`.
   */
-case class Schema[T](schemaType: SchemaType, isOptional: Boolean = false) {
+case class Schema[T](
+    schemaType: SchemaType,
+    isOptional: Boolean = false,
+    description: Option[String] = None,
+    format: Option[String] = None
+) {
   /**
     * Returns an optional version of this schema, with `isOptional` set to true.
     */
@@ -26,6 +32,10 @@ case class Schema[T](schemaType: SchemaType, isOptional: Boolean = false) {
     * Also, sets `isOptional` to true as the collection might be empty.
     */
   def asArrayElement[U]: Schema[U] = copy(isOptional = true, schemaType = SArray(this))
+
+  def description(d: String): Schema[T] = copy(description = Some(d))
+
+  def format(f: String): Schema[T] = copy(format = Some(f))
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 }

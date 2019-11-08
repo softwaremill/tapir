@@ -2,7 +2,7 @@ package tapir.docs.openapi
 
 import tapir.docs.openapi.schema.{ObjectSchemas, TypeData}
 import tapir.openapi.{MediaType => OMediaType, _}
-import tapir.{CodecFormat, SchemaType => SSchema, _}
+import tapir.{CodecFormat, Schema => TSchema, _}
 
 import scala.collection.immutable.ListMap
 
@@ -19,13 +19,13 @@ private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
   }
 
   def apply[CF <: CodecFormat](
-      schema: SSchema,
+      schema: TSchema[_],
       format: CF,
       example: Option[String]
   ): ListMap[String, OMediaType] = {
     ListMap(
       format.mediaType.noCharset.toString -> OMediaType(
-        Some(objectSchemas(TypeData(schema, Validator.pass))),
+        Some(objectSchemas(TypeData(schema, schema.schemaType, Validator.pass))),
         example.map(ExampleValue),
         ListMap.empty,
         ListMap.empty

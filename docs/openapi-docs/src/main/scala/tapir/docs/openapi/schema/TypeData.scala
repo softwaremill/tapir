@@ -1,17 +1,18 @@
 package tapir.docs.openapi.schema
 
-import tapir.{Codec, CodecForMany, CodecForOptional, Validator, SchemaType => TSchemaType}
+import tapir.{Codec, CodecForMany, CodecForOptional, Validator, Schema => TSchema, SchemaType => TSchemaType}
 
-case class TypeData[TS <: TSchemaType, T](schemaType: TS, validator: Validator[T])
+// TODO
+case class TypeData[TS <: TSchemaType, T](schema: TSchema[_], schemaType: TS, validator: Validator[T])
 
 object TypeData {
   def apply[T](tm: Codec[T, _, _]): AnyTypeData[T] = {
-    TypeData(tm.meta.schema.schemaType, tm.validator)
+    TypeData(tm.meta.schema, tm.meta.schema.schemaType, tm.validator)
   }
   def apply[T](tm: CodecForOptional[T, _, _]): AnyTypeData[T] = {
-    TypeData(tm.meta.schema.schemaType, tm.validator)
+    TypeData(tm.meta.schema, tm.meta.schema.schemaType, tm.validator)
   }
   def apply[T](tm: CodecForMany[T, _, _]): AnyTypeData[T] = {
-    TypeData(tm.meta.schema.schemaType, tm.validator)
+    TypeData(tm.meta.schema, tm.meta.schema.schemaType, tm.validator)
   }
 }
