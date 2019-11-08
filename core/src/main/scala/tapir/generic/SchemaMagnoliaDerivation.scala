@@ -3,13 +3,13 @@ package tapir.generic
 import com.github.ghik.silencer.silent
 import magnolia._
 import tapir.SchemaType._
-import tapir.generic.SchemaForMagnoliaDerivation.deriveInProgress
+import tapir.generic.SchemaMagnoliaDerivation.deriveInProgress
 import tapir.{SchemaType, Schema}
 
 import scala.collection.mutable
 import scala.language.experimental.macros
 
-trait SchemaForMagnoliaDerivation {
+trait SchemaMagnoliaDerivation {
   type Typeclass[T] = Schema[T]
 
   @silent("discarded")
@@ -66,6 +66,6 @@ trait SchemaForMagnoliaDerivation {
   implicit def schemaForCaseClass[T]: Schema[T] = macro Magnolia.gen[T]
 }
 
-object SchemaForMagnoliaDerivation {
+object SchemaMagnoliaDerivation {
   private[generic] val deriveInProgress: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
 }

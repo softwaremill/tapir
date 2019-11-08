@@ -1,6 +1,6 @@
 package tapir
 
-import tapir.generic.SchemaForMagnoliaDerivation
+import tapir.generic.SchemaMagnoliaDerivation
 
 /** Mixin containing aliases for top-level types and modules in the tapir package. */
 trait TapirAliases {
@@ -78,7 +78,7 @@ trait TapirAliases {
 
   /** Schema.scala */
   type Schema[T] = tapir.Schema[T]
-  val Schema: tapir.Schema.type with SchemaForMagnoliaDerivation = tapir.Schema
+  val Schema: tapir.Schema.type with SchemaMagnoliaDerivation = tapir.Schema
 
   /** Tapir.scala */
   type Tapir = tapir.Tapir

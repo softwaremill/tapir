@@ -10,7 +10,7 @@ import java.util.{Date, UUID}
 import sttp.model.Part
 import tapir.SchemaType._
 import tapir.generic.OneOfMacro.oneOfMacro
-import tapir.generic.SchemaForMagnoliaDerivation
+import tapir.generic.SchemaMagnoliaDerivation
 
 /**
   * Describes the shape of the low-level, "raw" representation of type `T`.
@@ -40,7 +40,7 @@ case class Schema[T](
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 }
 
-object Schema extends SchemaForMagnoliaDerivation {
+object Schema extends SchemaMagnoliaDerivation {
   implicit val schemaForString: Schema[String] = Schema(SString)
   implicit val schemaForByte: Schema[Byte] = Schema(SInteger)
   implicit val schemaForShort: Schema[Short] = Schema(SInteger)
@@ -75,7 +75,7 @@ object Schema extends SchemaForMagnoliaDerivation {
 
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = Schema[Part[T]](implicitly[Schema[T]].schemaType)
 
-  implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro generic.SchemaForMapMacro.schemaForMap[Map[String, V], V]
+  implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro generic.SchemaMapMacro.schemaForMap[Map[String, V], V]
 
   def oneOf[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*): Schema[E] = macro oneOfMacro[E, V]
 }

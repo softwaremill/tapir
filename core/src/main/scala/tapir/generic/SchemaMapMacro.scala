@@ -4,7 +4,7 @@ import tapir.Schema
 
 import scala.reflect.macros.blackbox
 
-object SchemaForMapMacro {
+object SchemaMapMacro {
   /*
     Extract name and generic type parameters of map value type for object info creation
    */
