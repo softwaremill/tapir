@@ -9,8 +9,8 @@ import tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
   * Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenApi) {
-  def apply(typeData: TypeData[_, _]): ReferenceOr[OSchema] = {
-    val result = typeData.schemaType match {
+  def apply(typeData: TypeData[_]): ReferenceOr[OSchema] = {
+    val result = typeData.schema.schemaType match {
       case TSchemaType.SInteger => Right(OSchema(SchemaType.Integer))
       case TSchemaType.SNumber  => Right(OSchema(SchemaType.Number))
       case TSchemaType.SBoolean => Right(OSchema(SchemaType.Boolean))
@@ -23,14 +23,14 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
               case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _)) =>
                 fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(TypeData(fieldSchema, fieldSchema.schemaType, fieldValidator(typeData.validator, fieldName)))
+                fieldName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName)))
             }.toListMap
           )
         )
       case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _)) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(el.info)))))
       case TSchemaType.SArray(el) =>
-        Right(OSchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, el.schemaType, elementValidator(typeData.validator))))))
+        Right(OSchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
       case TSchemaType.SBinary        => Right(OSchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate          => Right(OSchema(SchemaType.String).copy(format = SchemaFormat.Date))
       case TSchemaType.SDateTime      => Right(OSchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
@@ -48,7 +48,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
             required = List.empty,
             additionalProperties = Some(valueSchema.schemaType match {
               case so: TSchemaType.SObject => Left(schemaReferenceMapper.map(so.info))
-              case s                       => apply(TypeData(valueSchema, s, elementValidator(typeData.validator)))
+              case _                       => apply(TypeData(valueSchema, elementValidator(typeData.validator)))
             })
           )
         )
@@ -57,7 +57,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
     result
       .map(addMetadata(_, typeData.schema))
       .map(
-        addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schemaType.isInstanceOf[TSchemaType.SInteger.type])
+        addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schema.schemaType.isInstanceOf[TSchemaType.SInteger.type])
       )
   }
 
