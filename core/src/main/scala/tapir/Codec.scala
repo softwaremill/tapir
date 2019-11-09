@@ -54,6 +54,7 @@ trait Codec[T, CF <: CodecFormat, R] extends Decode[T, R] { outer =>
 
   def codecFormat[F2 <: CodecFormat](f2: F2): Codec[T, F2, R] = withMeta[F2](meta.copy[T, F2, R](format = f2))
   def schema(s2: Schema[T]): Codec[T, CF, R] = withMeta(meta.copy(schema = s2))
+  def modifySchema(modify: Schema[T] => Schema[T]): Codec[T, CF, R] = withMeta(meta.copy(schema = modify(meta.schema)))
 
   private[tapir] def validator: Validator[T] = meta.validator
 
