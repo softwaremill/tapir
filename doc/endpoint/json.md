@@ -18,7 +18,7 @@ Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](..
 import tapir.json.circe._
 ```
 
-This will allow automatically deriving `Codec`s which, given an in-scope circe `Encoder`/`Decoder` and a `SchemaFor`, 
+This will allow automatically deriving `Codec`s which, given an in-scope circe `Encoder`/`Decoder` and a `Schema`, 
 will create a codec using the json media type. Circe includes a couple of approaches to generating encoders/decoders 
 (manual, semi-auto and auto), so you may choose whatever suits you.
 

@@ -52,6 +52,7 @@ trait Codec[T, CF <: CodecFormat, R] extends Decode[T, R] { outer =>
     override val meta: CodecMeta[T, F2, R] = meta2
   }
 
+  // TODO
   def mediaType[F2 <: CodecFormat](m2: F2): Codec[T, F2, R] = withMeta[F2](meta.copy[T, F2, R](format = m2))
   def schema(s2: Schema[T]): Codec[T, CF, R] = withMeta(meta.copy(schema = s2))
 

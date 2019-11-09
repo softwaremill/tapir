@@ -45,25 +45,29 @@ second will properly map to an `Option`, depending if the value is present or no
 ## Schemas
 
 A codec also contains the schema of the mapped type. This schema information is used when generating documentation. 
-For primitive types, the schema values are built-in, and include values such as `Schema.SString`, `Schema.SArray`, 
-`Schema.SBinary` etc. 
+Schemas consists of the schema type, which is one of the values defined in `SchemaType`, such as `SString`,
+`SBinary`, `SArray` or `SProduct` (for objects). Moreover, a schema contains meta-data: value optionality,
+description and low-level format.
+
+For primitive types, the schema values are built-in, and defined in the `Schema` companion object.
 
 The schema is left unchanged when mapping over a codec, as the underlying representation of the value doesn't change.
 
 When codecs are derived for complex types, e.g. for json mapping, schemas are looked up through implicit
-`SchemaFor[T]` values. See [custom types](customtypes.html) for more details.
+`Schema[T]` values. See [custom types](customtypes.html) for more details.
  
-## Media types
+## Codec format
 
-Codecs carry an additional type parameter, which specifies the media type. Some built-in media types include 
-`text/plain`, `application/json` and `multipart/form-data`. Custom media types can be added by creating an 
+Codecs carry an additional type parameter, which specifies the codec format. Each format corresponds to a media type,
+which describes the low-level format of the raw value (to which the codec encodes). Some built-in formats include 
+`text/plain`, `application/json` and `multipart/form-data`. Custom formats can be added by creating an 
 implementation of the `tapir.MediaType` trait.
 
-Thanks to codec being parametrised by media types, it is possible to have a `Codec[MyCaseClass, TextPlain, _]` which 
+Thanks to codec being parametrised by codec formats, it is possible to have a `Codec[MyCaseClass, TextPlain, _]` which 
 specifies how to serialize a case class to plain text, and a different `Codec[MyCaseClass, Json, _]`, which specifies 
 how to serialize a case class to json. Both can be implicitly available without implicit resolution conflicts.
 
-Different media types can be used in different contexts. When defining a path, query or header parameter, only a codec 
+Different codec formats can be used in different contexts. When defining a path, query or header parameter, only a codec 
 with the `TextPlain` media type can be used. However, for bodies, any media types is allowed. For example, the 
 input/output described by `jsonBody[T]` requires a json codec.
 

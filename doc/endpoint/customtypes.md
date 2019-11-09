@@ -14,7 +14,7 @@ information:
 * codec meta-data (`CodecMeta`) consisting of:
   * schema of the type (for documentation)
   * validator for the type
-  * media type (`text/plain`, `application/json` etc.)
+  * codec format (`text/plain`, `application/json` etc.)
   * type of the raw value, to which data is serialised (`String`, `Int` etc.)
 
 This might be quite a lot of work, that's why it's usually easier to map over an existing codec. To do that, you'll 
@@ -52,11 +52,11 @@ Automatic codec derivation usually requires other implicits, such as:
 
 * json encoders/decoders from the json library
 * codecs for individual form fields
-* schema of the custom type, through the `SchemaFor[T]` implicit
+* schema of the custom type, through the `Schema[T]` implicit
 
 ### Schema derivation
 
-For case classes types, `SchemaFor[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
+For case classes types, `Schema[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
 that schemas are defined for all of the case class's fields. It is possible to configure the automatic derivation to use
 snake-case, kebab-case or a custom field naming policy, by providing an implicit `tapir.generic.Configuration` value:
 
@@ -65,11 +65,11 @@ implicit val customConfiguration: Configuration =
   Configuration.default.withSnakeCaseMemberNames
 ```
 
-Alternatively, `SchemaFor` values can be defined by hand, either for whole case classes, or only for some of its fields.
+Alternatively, `Schema[_]` values can be defined by hand, either for whole case classes, or only for some of its fields.
 For example, here we state that the schema for `MyCustomType` is a `String`:
 
 ```scala
-implicit val schemaForMyCustomType: SchemaFor[MyCustomType] = SchemaFor(Schema.SString)
+implicit val schemaForMyCustomType: SchemaFor[MyCustomType] = Schema(Schema.SString)
 ```
 
 If you have a case class which contains some non-standard types (other than strings, number, other case classes, 
@@ -105,9 +105,31 @@ implicit val sEntity: SchemaFor[Entity] =
     SchemaFor.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```
 
+### Customising derived schemas
+
+In some cases, it might be desirable to customise the derived schemas, e.g. to add a description to a particular
+field of a case class. This can be done by looking up an implicit instance of the `Derived[Schema[T]]` type, 
+and assigning it to an implicit schema. When such an implicit `Schmea[T]` is in scope will have higher priority 
+than the built-in low-priority conversion from `Derived[Schema[T]]` to `Schema[T]`.
+
+Schemas for products/coproducts (case classes and case class families) can be traversed and modified using
+`.modifyUnsafe`. The "unsafe" prefix comes from the fact that the method takes a list of fields, traverses the
+schema to find the referenced one; the correctness of this specification is not checked.
+
+To traverse colletions, using the `"each"` field name.
+
+For example:
+
+```scala
+case class Basket(fruits: List[FruitAmount])
+case class FruitAmount(fruit: String, amount: Int)
+implicit val customBasketSchema: Schema[Basket] = implicitly[Derived[Schema[Basket]]].value
+      .modifyUnsafe("fruits", "each", "amount")(_.description("How many fruits?"))
+```
+
 ### Schema for cats datatypes
 
-The `tapir-cats` module contains `SchemaFor` instances for some cats datatypes. See the `tapir.codec.cats.TapirCodecCats` 
+The `tapir-cats` module contains `Schema[_]` instances for some cats datatypes. See the `tapir.codec.cats.TapirCodecCats` 
 trait or `import tapir.codec.cats._` to bring the implicit values into scope.
 
 ## Next
