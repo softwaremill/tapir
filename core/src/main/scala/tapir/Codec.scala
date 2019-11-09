@@ -52,8 +52,7 @@ trait Codec[T, CF <: CodecFormat, R] extends Decode[T, R] { outer =>
     override val meta: CodecMeta[T, F2, R] = meta2
   }
 
-  // TODO
-  def mediaType[F2 <: CodecFormat](m2: F2): Codec[T, F2, R] = withMeta[F2](meta.copy[T, F2, R](format = m2))
+  def codecFormat[F2 <: CodecFormat](f2: F2): Codec[T, F2, R] = withMeta[F2](meta.copy[T, F2, R](format = f2))
   def schema(s2: Schema[T]): Codec[T, CF, R] = withMeta(meta.copy(schema = s2))
 
   private[tapir] def validator: Validator[T] = meta.validator
@@ -87,7 +86,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   implicit val bigDecimalPlainCodec: PlainCodec[BigDecimal] = plainCodec[BigDecimal](BigDecimal(_))
   implicit val javaBigDecimalPlainCodec: PlainCodec[JBigDecimal] = plainCodec[JBigDecimal](new JBigDecimal(_))
 
-  implicit val textHtmlCodecUtf8: Codec[String, CodecFormat.TextHtml, String] = stringPlainCodecUtf8.mediaType(CodecFormat.TextHtml())
+  implicit val textHtmlCodecUtf8: Codec[String, CodecFormat.TextHtml, String] = stringPlainCodecUtf8.codecFormat(CodecFormat.TextHtml())
 
   def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, charset)
 
@@ -122,7 +121,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   def formSeqCodec(charset: Charset): Codec[Seq[(String, String)], CodecFormat.XWwwFormUrlencoded, String] =
     stringCodec(charset)
       .map(UrlencodedData.decode(_, charset))(UrlencodedData.encode(_, charset))
-      .mediaType(CodecFormat.XWwwFormUrlencoded())
+      .codecFormat(CodecFormat.XWwwFormUrlencoded())
   def formMapCodec(charset: Charset): Codec[Map[String, String], CodecFormat.XWwwFormUrlencoded, String] =
     formSeqCodec(charset).map(_.toMap)(_.toSeq)
 
