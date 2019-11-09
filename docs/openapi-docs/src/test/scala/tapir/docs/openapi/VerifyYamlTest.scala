@@ -8,6 +8,7 @@ import tapir._
 import tapir.docs.openapi.dtos.Book
 import tapir.docs.openapi.dtos.a.{Pet => APet}
 import tapir.docs.openapi.dtos.b.{Pet => BPet}
+import tapir.generic.Derived
 import tapir.json.circe._
 import tapir.openapi.circe.yaml._
 import tapir.openapi.{Contact, Info, License}
@@ -283,6 +284,21 @@ class VerifyYamlTest extends FunSuite with Matchers {
     implicit val customFruitAmountSchema: Schema[FruitAmount] = Schema(
       SProduct(SObjectInfo("tapir.tests.FruitAmount", Nil), List(("fruit", Schema(SString)), ("amount", Schema(SInteger).format("int32"))))
     ).description("Amount of fruits")
+
+    val actualYaml = endpoint.post
+      .out(jsonBody[List[ObjectWrapper]])
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should use descriptions from customised derived schemas") {
+    val expectedYaml = loadYaml("expected_descriptions_in_nested_custom_schemas.yml")
+
+    implicit val customFruitAmountSchema: Schema[FruitAmount] = implicitly[Derived[Schema[FruitAmount]]].value
+      .description("Amount of fruits")
 
     val actualYaml = endpoint.post
       .out(jsonBody[List[ObjectWrapper]])

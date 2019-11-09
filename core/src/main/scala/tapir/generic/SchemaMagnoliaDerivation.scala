@@ -63,7 +63,7 @@ trait SchemaMagnoliaDerivation {
     Schema(SCoproduct(typeNameToObjectInfo(ctx.typeName), ctx.subtypes.map(_.typeclass).toList, None))
   }
 
-  implicit def schemaForCaseClass[T]: Schema[T] = macro Magnolia.gen[T]
+  implicit def schemaForCaseClass[T]: Derived[Schema[T]] = macro MagnoliaDerivedMacro.derivedGen[T]
 }
 
 object SchemaMagnoliaDerivation {
