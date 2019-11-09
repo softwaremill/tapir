@@ -94,3 +94,12 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * [Documentation: openapi interpreter](openapi.md)
 * [Create your own tapir](mytapir.md)
 * [Contributing](contributing.md)
+
+## Other sttp projects
+
+sttp is a family of Scala HTTP-related projects, and currently includes:
+
+* [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
+* sttp tapir: this project
+* [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
+

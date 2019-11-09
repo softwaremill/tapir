@@ -101,6 +101,14 @@ please increase your stack memory. Example:
 sbt -J-Xss4M clean compile
 ```
 
+## Other sttp projects
+
+sttp is a family of Scala HTTP-related projects, and currently includes:
+
+* [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
+* sttp tapir: this project
+* [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
+
 ## Contributing
 
 Tapir is an early stage project. Everything might change. All suggestions welcome :)
