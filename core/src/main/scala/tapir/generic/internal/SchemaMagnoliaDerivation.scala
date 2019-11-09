@@ -1,10 +1,11 @@
-package tapir.generic
+package tapir.generic.internal
 
 import com.github.ghik.silencer.silent
 import magnolia._
 import tapir.SchemaType._
-import tapir.generic.SchemaMagnoliaDerivation.deriveInProgress
-import tapir.{SchemaType, Schema}
+import tapir.generic.{Configuration, Derived}
+import tapir.{Schema, SchemaType}
+import SchemaMagnoliaDerivation.deriveInProgress
 
 import scala.collection.mutable
 import scala.language.experimental.macros
@@ -67,5 +68,5 @@ trait SchemaMagnoliaDerivation {
 }
 
 object SchemaMagnoliaDerivation {
-  private[generic] val deriveInProgress: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
+  private[internal] val deriveInProgress: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
 }

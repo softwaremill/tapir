@@ -9,8 +9,9 @@ import java.util.{Date, UUID}
 
 import sttp.model.Part
 import tapir.SchemaType._
-import tapir.generic.OneOfMacro.oneOfMacro
-import tapir.generic.{Derived, SchemaMagnoliaDerivation}
+import tapir.generic.internal.OneOfMacro.oneOfMacro
+import tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
+import tapir.generic.Derived
 
 /**
   * Describes the shape of the low-level, "raw" representation of type `T`.
@@ -96,7 +97,7 @@ object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
 
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = Schema[Part[T]](implicitly[Schema[T]].schemaType)
 
-  implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro generic.SchemaMapMacro.schemaForMap[Map[String, V], V]
+  implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro SchemaMapMacro.schemaForMap[Map[String, V], V]
 
   def oneOf[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*): Schema[E] = macro oneOfMacro[E, V]
 }

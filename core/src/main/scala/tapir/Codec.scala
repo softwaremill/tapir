@@ -9,7 +9,7 @@ import java.util.UUID
 
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part}
 import tapir.DecodeResult._
-import tapir.generic.{FormCodecDerivation, MultipartCodecDerivation}
+import tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import tapir.internal._
 
 import scala.annotation.implicitNotFound

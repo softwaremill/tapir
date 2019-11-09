@@ -1,4 +1,4 @@
-package tapir.generic
+package tapir.generic.internal
 
 import tapir.Validator
 

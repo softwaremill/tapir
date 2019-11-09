@@ -1,5 +1,6 @@
-package tapir.generic
+package tapir.generic.internal
 
+import tapir.generic.Configuration
 import tapir.{Codec, CodecFormat}
 
 import scala.reflect.macros.blackbox

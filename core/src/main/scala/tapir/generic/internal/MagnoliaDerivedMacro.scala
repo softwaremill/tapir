@@ -1,6 +1,7 @@
-package tapir.generic
+package tapir.generic.internal
 
 import magnolia.Magnolia
+import tapir.generic.Derived
 
 object MagnoliaDerivedMacro {
   import scala.reflect.macros.whitebox

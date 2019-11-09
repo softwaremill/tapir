@@ -1,4 +1,4 @@
-package tapir.generic
+package tapir.generic.internal
 
 import com.github.ghik.silencer.silent
 import magnolia.{CaseClass, Magnolia, SealedTrait}

@@ -1,6 +1,6 @@
 package tapir
 
-import tapir.generic.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
+import tapir.generic.internal.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
 
 import scala.collection.immutable
 
