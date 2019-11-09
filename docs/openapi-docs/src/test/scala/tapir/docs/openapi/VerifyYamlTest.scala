@@ -299,6 +299,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     implicit val customFruitAmountSchema: Schema[FruitAmount] = implicitly[Derived[Schema[FruitAmount]]].value
       .description("Amount of fruits")
+      .modifyUnsafe("amount")(_.format("int32"))
 
     val actualYaml = endpoint.post
       .out(jsonBody[List[ObjectWrapper]])

@@ -38,9 +38,30 @@ case class Schema[T](
   def format(f: String): Schema[T] = copy(format = Some(f))
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
+
+  def modifyUnsafe(fields: String*)(modify: Schema[_] => Schema[_]): Schema[T] = modifyAtPath(fields.toList, modify)
+
+  private def modifyAtPath(fieldPath: List[String], modify: Schema[_] => Schema[_]): Schema[T] = fieldPath match {
+    case Nil => modify(this).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
+    case f :: fs =>
+      val schemaType2 = schemaType match {
+        case SArray(element) if f == Schema.ModifyCollectionElements => SArray(element.modifyAtPath(fs, modify))
+        case s @ SProduct(_, fields) =>
+          s.copy(fields = fields.toList.map {
+            case field @ (fieldName, fieldSchema) =>
+              if (fieldName == f) (fieldName, fieldSchema.modifyAtPath(fs, modify)) else field
+          })
+        case s @ SOpenProduct(_, valueSchema) => s.copy(valueSchema = valueSchema.modifyAtPath(fieldPath, modify))
+        case s @ SCoproduct(_, schemas, _)    => s.copy(schemas = schemas.map(_.modifyAtPath(fieldPath, modify)))
+        case _                                => schemaType
+      }
+      copy(schemaType = schemaType2)
+  }
 }
 
 object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
+  val ModifyCollectionElements = "each"
+
   implicit val schemaForString: Schema[String] = Schema(SString)
   implicit val schemaForByte: Schema[Byte] = Schema(SInteger)
   implicit val schemaForShort: Schema[Short] = Schema(SInteger)
