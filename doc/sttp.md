@@ -9,7 +9,7 @@ Add the dependency:
 To make requests using an endpoint definition using [sttp](https://github.com/softwaremill/sttp), import:
 
 ```scala
-import tapir.client.sttp._
+import sttp.tapir.client.sttp._
 ```
 
 This adds the `toSttpRequest(Uri)` extension method to any `Endpoint` instance which, given the given base URI returns a 

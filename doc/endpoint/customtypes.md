@@ -130,7 +130,7 @@ implicit val customBasketSchema: Schema[Basket] = implicitly[Derived[Schema[Bask
 ### Schema for cats datatypes
 
 The `tapir-cats` module contains `Schema[_]` instances for some cats datatypes. See the `tapir.codec.cats.TapirCodecCats` 
-trait or `import tapir.codec.cats._` to bring the implicit values into scope.
+trait or `import sttp.tapir.codec.cats._` to bring the implicit values into scope.
 
 ## Next
 

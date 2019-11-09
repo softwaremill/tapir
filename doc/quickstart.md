@@ -13,7 +13,7 @@ Most of tapir functionalities are grouped into package objects which provide bui
 easiest to work with tapir if you import whole packages, e.g.:
 
 ```scala
-import tapir._
+import sttp.tapir._
 ```
 
 If you don't have it already, you'll also need partial unification enabled in the compiler (alternatively, you'll need 

@@ -15,7 +15,7 @@ To use Circe add the following dependency to your project:
 Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.html)):
 
 ```scala
-import tapir.json.circe._
+import sttp.tapir.json.circe._
 ```
 
 This will allow automatically deriving `Codec`s which, given an in-scope circe `Encoder`/`Decoder` and a `Schema`, 
@@ -27,8 +27,8 @@ Note that when using Circe's auto derivation, any encoders/decoders for custom t
 For example, to automatically generate a JSON codec for a case class:
 
 ```scala
-import tapir._
-import tapir.json.circe._
+import sttp.tapir._
+import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
 case class Book(author: String, title: String, year: Int)
@@ -80,15 +80,15 @@ To use µPickle add the following dependency to your project:
 Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.html) and add `TapirJsonuPickle` not `TapirCirceJson`):
 
 ```scala
-import tapir.json.upickle._
+import sttp.tapir.json.upickle._
 ```
 
 µPickle requires a ReadWriter in scope for each type you want to serialize. In order to provide one use the `macroRW` macro in the companion object as follows:
 
 ```scala
-import tapir._
+import sttp.tapir._
 import upickle.default._
-import tapir.json.upickle._
+import sttp.tapir.json.upickle._
 
 case class Book(author: String, title: String, year: Int)
 
@@ -114,7 +114,7 @@ To use Play JSON add the following dependency to your project:
 Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.html) and add `TapirJsonPlay` not `TapirCirceJson`):
 
 ```scala
-import tapir.json.play._
+import sttp.tapir.json.play._
 ```
 
 Play JSON requires `Reads` and `Writes` implicit values in scope for each type you want to serialize. 

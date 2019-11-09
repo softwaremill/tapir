@@ -20,8 +20,8 @@ for a more detailed description of how tapir works!
 ## Code teaser
 
 ```scala
-import tapir._
-import tapir.json.circe._
+import sttp.tapir._
+import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
 type Limit = Int
@@ -40,15 +40,15 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 
 //
 
-import tapir.docs.openapi._
-import tapir.openapi.circe.yaml._
+import sttp.tapir.docs.openapi._
+import sttp.tapir.openapi.circe.yaml._
 
 val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
 println(docs.toYaml)
 
 //
 
-import tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp._
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
@@ -60,7 +60,7 @@ val booksListingRoute: Route = booksListing.toRoute(bookListingLogic _)
 
 //
 
-import tapir.client.sttp._
+import sttp.tapir.client.sttp._
 import com.softwaremill.sttp._
 
 val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksListing

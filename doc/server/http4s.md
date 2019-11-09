@@ -10,7 +10,7 @@ dependency:
 and import the package:
 
 ```scala
-import tapir.server.http4s._
+import sttp.tapir.server.http4s._
 ```
 
 This adds two extension methods to the `Endpoint` type: `toRoutes` and `toRoutesRecoverErrors`. This first requires the 
@@ -24,8 +24,8 @@ where `F[_]` is the chosen effect type. The second recovers errors from failed e
 a subclass of `Throwable` (an exception); it expects a function of type `I => F[O]`. For example:
 
 ```scala
-import tapir._
-import tapir.server.http4s._
+import sttp.tapir._
+import sttp.tapir.server.http4s._
 import cats.effect.IO
 import org.http4s.HttpRoutes
 import cats.effect.ContextShift

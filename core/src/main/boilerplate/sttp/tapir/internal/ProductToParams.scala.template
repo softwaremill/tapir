@@ -1,0 +1,12 @@
+package sttp.tapir.internal
+
+object ProductToParams {
+  def apply(p: Product, arity: Int): Any = {
+    arity match {
+      case 0 => ()
+      case 1 => p.productElement(0)
+      [2..#case 1 => ([#p.productElement(0)#])#
+      ]
+    }
+  }
+}

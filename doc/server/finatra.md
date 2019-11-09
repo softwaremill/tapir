@@ -10,7 +10,7 @@ dependency:
 and import the package:
 
 ```scala
-import tapir.server.finatra._
+import sttp.tapir.server.finatra._
 ```
 
 This adds extension methods to the `Endpoint` type: `toRoute` and `toRouteRecoverErrors`. The first one
@@ -26,8 +26,8 @@ it expects a function of type `I => Future[O]`.
 For example:
 
 ```scala
-import tapir._
-import tapir.server.akkahttp._
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
