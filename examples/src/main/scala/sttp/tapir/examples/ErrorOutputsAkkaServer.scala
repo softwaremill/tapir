@@ -3,7 +3,6 @@ package sttp.tapir.examples
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
 import sttp.client._
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
@@ -32,7 +31,6 @@ object ErrorOutputsAkkaServer extends App {
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   val bindAndCheck = Http().bindAndHandle(errorOrJsonRoute, "localhost", 8080).map { _ =>
     // testing

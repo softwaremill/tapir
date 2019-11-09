@@ -6,7 +6,6 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.Directives._
-import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.client._
@@ -23,12 +22,10 @@ import scala.reflect.ClassTag
 
 class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with StrictLogging {
   private implicit var actorSystem: ActorSystem = _
-  private implicit var materializer: ActorMaterializer = _
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     actorSystem = ActorSystem()
-    materializer = ActorMaterializer()
   }
 
   override protected def afterAll(): Unit = {

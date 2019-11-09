@@ -5,7 +5,6 @@ import java.io.{File, PrintWriter}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
 import sttp.client._
 import sttp.model.Part
 import sttp.tapir._
@@ -41,7 +40,6 @@ object MultipartFormUploadAkkaServer extends App {
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
   val bindAndCheck = Http().bindAndHandle(setProfileRoute, "localhost", 8080).map { _ =>
     val testFile = File.createTempFile("user-123", ".jpg")
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()

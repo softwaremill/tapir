@@ -97,13 +97,11 @@ object BooksExample extends App with StrictLogging {
     import akka.actor.ActorSystem
     import akka.http.scaladsl.Http
     import akka.http.scaladsl.server.Directives._
-    import akka.stream.ActorMaterializer
 
     import scala.concurrent.Await
     import scala.concurrent.duration._
     val routes = route ~ new SwaggerAkka(yaml).routes
     implicit val actorSystem: ActorSystem = ActorSystem()
-    implicit val materializer: ActorMaterializer = ActorMaterializer()
     Await.result(Http().bindAndHandle(routes, "localhost", 8080), 1.minute)
 
     logger.info("Server started")

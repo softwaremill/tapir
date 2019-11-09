@@ -3,7 +3,6 @@ package sttp.tapir.examples
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import akka.stream.ActorMaterializer
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
 
@@ -24,7 +23,6 @@ object HelloWorldAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
   val bindAndCheck = Http().bindAndHandle(helloWorldRoute, "localhost", 8080).map { _ =>
     // testing
     implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
