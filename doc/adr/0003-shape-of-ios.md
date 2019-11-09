@@ -1,7 +1,13 @@
-# Design notes
+# 3. Shape of IOs
+
+Date: 2019-11-09
+
+## Context
 
 The shape of tapir's inputs and outputs is fixed and in some ways constrained. Below you'll find some motivation
 behind this design, as well as alternatives.
+
+## Decision
 
 The *input* of an endpoint is always a product of values: that is, each new input extends the list of values that the
 endpoint's input maps to. A new input can contribute 0 values (in case of fixed paths), 1 value (query parameter, 
