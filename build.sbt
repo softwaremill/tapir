@@ -189,9 +189,9 @@ lazy val swaggerUiHttp4s: Project = (project in file("docs/swagger-ui-http4s"))
   .settings(commonSettings)
   .settings(
     name := "tapir-swagger-ui-http4s",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s(_),
-      _ => "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi
     )
   )
 
@@ -199,7 +199,7 @@ lazy val redocHttp4s: Project = (project in file("docs/redoc-http4s"))
   .settings(commonSettings)
   .settings(
     name := "tapir-redoc-http4s",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)("org.http4s" %% "http4s-dsl" % Versions.http4s(_))
+    libraryDependencies += "org.http4s" %% "http4s-dsl" % Versions.http4s
   )
 
 // server
@@ -229,8 +229,8 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings)
   .settings(
     name := "tapir-http4s-server",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_)
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s
     )
   )
   .dependsOn(core, serverTests % "test")
@@ -264,10 +264,10 @@ lazy val clientTests: Project = (project in file("client/tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-client-tests",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s(_),
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_),
-      "org.http4s" %% "http4s-circe" % Versions.http4s(_)
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-circe" % Versions.http4s
     )
   )
   .dependsOn(tests)
@@ -289,11 +289,11 @@ lazy val examples: Project = (project in file("examples"))
   .settings(commonSettings)
   .settings(
     name := "tapir-examples",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      _ => "dev.zio" %% "zio" % "1.0.0-RC16",
-      _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC7",
-      _ => "org.typelevel" %% "cats-effect" % "2.0.0",
-      "org.http4s" %% "http4s-dsl" % Versions.http4s(_)
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % "1.0.0-RC16",
+      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC7",
+      "org.typelevel" %% "cats-effect" % "2.0.0",
+      "org.http4s" %% "http4s-dsl" % Versions.http4s
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
