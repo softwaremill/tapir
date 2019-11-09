@@ -15,6 +15,7 @@ import scala.concurrent.{Await, Future}
 class SchemaGenericTest extends FlatSpec with Matchers {
   private val stringSchema = implicitly[Schema[String]]
   private val intSchema = implicitly[Schema[Int]]
+  private val longSchema = implicitly[Schema[Long]]
 
   "Schema" should "find schema for simple types" in {
     stringSchema.schemaType shouldBe SString
@@ -22,7 +23,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
 
     implicitly[Schema[Short]].schemaType shouldBe SInteger
     intSchema.schemaType shouldBe SInteger
-    implicitly[Schema[Long]].schemaType shouldBe SInteger
+    longSchema.schemaType shouldBe SInteger
     implicitly[Schema[Float]].schemaType shouldBe SNumber
     implicitly[Schema[Double]].schemaType shouldBe SNumber
     implicitly[Schema[Boolean]].schemaType shouldBe SBoolean
@@ -185,7 +186,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
           SProduct(
             SObjectInfo("sttp.tapir.generic.Edge"),
             List(
-              "id" -> intSchema,
+              "id" -> longSchema,
               "source" ->
                 Schema(
                   SCoproduct(
@@ -195,7 +196,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
                       Schema(
                         SProduct(
                           SObjectInfo("sttp.tapir.generic.SimpleNode"),
-                          List("id" -> intSchema)
+                          List("id" -> longSchema)
                         )
                       )
                     ),
@@ -208,7 +209,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
         Schema(
           SProduct(
             SObjectInfo("sttp.tapir.generic.SimpleNode"),
-            List("id" -> intSchema)
+            List("id" -> longSchema)
           )
         )
       ),
