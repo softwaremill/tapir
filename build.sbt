@@ -13,7 +13,7 @@ val only2_12settings = Seq(
 )
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-  organization := "com.softwaremill.tapir",
+  organization := "com.softwaremill.sttp.tapir",
   scalaVersion := scala2_12,
   crossScalaVersions := Seq(scala2_12, scala2_13),
   is2_12 := scalaVersion.value.startsWith("2.12."),

@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.11.9"
-"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.11.9"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.11.9"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.11.9"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -49,9 +49,9 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 [Redoc](https://github.com/Redocly/redoc):
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http" % "0.11.9"
-"com.softwaremill.tapir" %% "tapir-swagger-ui-http4s" % "0.11.9"
-"com.softwaremill.tapir" %% "tapir-redoc-http4s" % "0.11.9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.11.9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.11.9"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.11.9"
 ```
 
 Usage example for akka-http:
