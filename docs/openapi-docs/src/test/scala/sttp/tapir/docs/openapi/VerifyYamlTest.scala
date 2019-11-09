@@ -281,6 +281,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_descriptions_in_nested_custom_schemas.yml")
 
     import SchemaType._
+    @silent("never used")
     implicit val customFruitAmountSchema: Schema[FruitAmount] = Schema(
       SProduct(SObjectInfo("tapir.tests.FruitAmount", Nil), List(("fruit", Schema(SString)), ("amount", Schema(SInteger).format("int32"))))
     ).description("Amount of fruits")
@@ -297,6 +298,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should use descriptions from customised derived schemas") {
     val expectedYaml = loadYaml("expected_descriptions_in_nested_custom_schemas.yml")
 
+    @silent("never used")
     implicit val customFruitAmountSchema: Schema[FruitAmount] = implicitly[Derived[Schema[FruitAmount]]].value
       .description("Amount of fruits")
       .modifyUnsafe("amount")(_.format("int32"))

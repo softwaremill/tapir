@@ -2,6 +2,7 @@ package sttp.tapir.server.finatra
 
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource, Timer}
+import com.github.ghik.silencer.silent
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.filters.{AccessLoggingFilter, ExceptionMappingFilter}
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
@@ -57,6 +58,7 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
       }
 
       class TestServer extends HttpServer {
+        @silent("discarded")
         override protected def configureHttp(router: HttpRouter): Unit = {
           router
             .filter[AccessLoggingFilter[Request]]

@@ -2,6 +2,7 @@ package sttp.tapir.server
 
 import java.nio.charset.Charset
 
+import com.github.ghik.silencer.silent
 import com.twitter.finagle.http.{Request, Response, Status}
 import com.twitter.inject.Logging
 import com.twitter.util.Future
@@ -81,6 +82,7 @@ package object finatra {
       FinatraRoute(handler, e.input.path)
     }
 
+    @silent("never used")
     def toRouteRecoverErrors(logic: I => Future[O])(
         implicit eIsThrowable: E <:< Throwable,
         eClassTag: ClassTag[E]

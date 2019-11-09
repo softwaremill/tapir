@@ -31,7 +31,6 @@ import sttp.tapir.{
 }
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Failure
 
 private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOptions) {
   def apply[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive1[I] = {
@@ -110,14 +109,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         serverOptions
           .createFile(ctx)
           .flatMap(
-            file =>
-              entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map { ioResult =>
-                ioResult.status match {
-                  case Failure(t) => throw t
-                  case _          => // do nothing
-                }
-                file
-              }
+            file => entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => file)
           )
       case mvt: MultipartValueType =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(entity).flatMap { fd =>
