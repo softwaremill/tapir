@@ -649,14 +649,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def testNameFilter: Option[String] = None
 }
 
-class PortCounter(inital: Int) {
-  private lazy val _next = new AtomicInteger(inital)
-  def next(): Port = _next.getAndIncrement()
-}
-
 object PortCounter {
-  private val instance = new PortCounter(55555)
-  def next(): Port = instance.next()
+  private val _next = new AtomicInteger(58102)
+  def next(): Port = _next.getAndIncrement()
 }
 
 object ServerTests {
