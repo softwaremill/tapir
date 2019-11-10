@@ -7,12 +7,12 @@ import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
-import sttp.tapir.server.tests.{PortCounter, ServerTests}
+import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.Endpoint
 import sttp.tapir._
 import sttp.client._
-import sttp.tapir.server.tests.ServerTests.Port
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag

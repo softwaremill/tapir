@@ -9,9 +9,9 @@ import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Endpoint
-import sttp.tapir.server.tests.ServerTests.Port
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
-import sttp.tapir.server.tests.{PortCounter, ServerTests}
+import sttp.tapir.server.tests.ServerTests
+import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag

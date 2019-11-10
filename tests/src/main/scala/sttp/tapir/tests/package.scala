@@ -337,6 +337,8 @@ package object tests {
       s.close()
     }
   }
+
+  type Port = Int
 }
 
 case class ColorValue(color: Color, value: Int)

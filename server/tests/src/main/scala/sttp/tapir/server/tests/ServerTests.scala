@@ -2,7 +2,6 @@ package sttp.tapir.server.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
-import java.util.concurrent.atomic.AtomicInteger
 
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource}
@@ -16,7 +15,6 @@ import sttp.model._
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.server.tests.ServerTests.Port
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
@@ -640,8 +638,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
     val resources = for {
       port <- Resource.liftF(IO(portCounter.next()))
+      _ <- Resource.liftF(IO(logger.info(s"Trying to bind to $port")))
       _ <- server(rs, port).onError {
-        case e: Exception => Resource.pure(logger.error(s"Starting server on $port failed because of ${e.getMessage}"))
+        case e: Exception => Resource.liftF(IO(logger.error(s"Starting server on $port failed because of ${e.getMessage}")))
       }
     } yield uri"http://localhost:$port"
 
@@ -652,17 +651,4 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   // define to run a single test (in development)
   def testNameFilter: Option[String] = None
-}
-
-class PortCounter(initial: Int) extends StrictLogging {
-  private val _next = new AtomicInteger(initial)
-  def next(): Port = {
-    val r = _next.getAndIncrement()
-    logger.info(s"Next port: $r")
-    r
-  }
-}
-
-object ServerTests {
-  type Port = Int
 }

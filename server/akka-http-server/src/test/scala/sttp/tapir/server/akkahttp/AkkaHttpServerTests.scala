@@ -11,10 +11,10 @@ import cats.effect.{IO, Resource}
 import sttp.client._
 import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.{Endpoint, endpoint, stringBody}
-import sttp.tapir.server.tests.{PortCounter, ServerTests}
+import sttp.tapir.server.tests.ServerTests
 import sttp.tapir._
-import sttp.tapir.server.tests.ServerTests.Port
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

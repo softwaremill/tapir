@@ -220,7 +220,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    port = nextPort()
+    port = portCounter.next()
 
     exitSignal = SignallingRef.apply[IO, Boolean](false).unsafeRunSync()
 
@@ -246,6 +246,5 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   //
 
-  private val _nextPort = new AtomicInteger(40000)
-  def nextPort(): Port = _nextPort.getAndIncrement()
+  lazy val portCounter: PortCounter = new PortCounter(41000)
 }
