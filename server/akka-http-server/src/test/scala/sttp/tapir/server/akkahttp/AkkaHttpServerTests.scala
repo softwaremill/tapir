@@ -51,11 +51,7 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
   }
 
   override def server(routes: NonEmptyList[Route], port: Port): Resource[IO, Unit] = {
-    val bind = IO(logger.info(s"Trying to bind to $port")) >> IO.fromFuture(
-      IO(Http().bindAndHandle(routes.toList.reduce(_ ~ _), "localhost", port)).onError {
-        case e: Exception => IO(logger.error(s"Bind to port $port failed because of ${e.getMessage}"))
-      }
-    )
+    val bind = IO.fromFuture(IO(Http().bindAndHandle(routes.toList.reduce(_ ~ _), "localhost", port)))
     Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).void
   }
 

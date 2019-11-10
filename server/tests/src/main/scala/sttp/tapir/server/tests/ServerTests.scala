@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource}
 import cats.implicits._
+import com.typesafe.scalalogging.StrictLogging
 import sttp.client._
 import sttp.client.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import io.circe.generic.auto._
@@ -22,7 +23,7 @@ import sttp.tapir.tests._
 
 import scala.reflect.ClassTag
 
-trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
+trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
   private val basicStringRequest = basicRequest.response(asStringAlways)
 
   // method matching
@@ -639,7 +640,9 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
     val resources = for {
       port <- Resource.liftF(IO(portCounter.next()))
-      _ <- server(rs, port)
+      _ <- server(rs, port).onError {
+        case e: Exception => Resource.pure(logger.error(s"Starting server on $port failed because of ${e.getMessage}"))
+      }
     } yield uri"http://localhost:$port"
 
     if (testNameFilter forall name.contains) {
@@ -651,9 +654,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def testNameFilter: Option[String] = None
 }
 
-class PortCounter(initial: Int) {
+class PortCounter(initial: Int) extends StrictLogging {
   private val _next = new AtomicInteger(initial)
-  def next(): Port = _next.getAndIncrement()
+  def next(): Port = {
+    val r = _next.getAndIncrement()
+    logger.info(s"Next port: $r")
+    r
+  }
 }
 
 object ServerTests {
