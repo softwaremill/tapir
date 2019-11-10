@@ -11,7 +11,7 @@ import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Endpoint
 import sttp.tapir.server.tests.ServerTests.Port
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
-import sttp.tapir.server.tests.ServerTests
+import sttp.tapir.server.tests.{PortCounter, ServerTests}
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
@@ -84,4 +84,6 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
       .make(bind)(httpServer => IO(httpServer.close()))
       .map(_ => ())
   }
+
+  override lazy val portCounter: PortCounter = new PortCounter(58000)
 }

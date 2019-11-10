@@ -54,11 +54,13 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
       .void
   }
 
+  override lazy val portCounter: PortCounter = new PortCounter(59000)
+
   if (testNameFilter.isEmpty) {
     test("should work with a router and routes in a context") {
       val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
       val routes = e.toRoutes
-      val port = PortCounter.next()
+      val port = portCounter.next()
 
       BlazeServerBuilder[IO]
         .bindHttp(port, "localhost")
