@@ -29,7 +29,7 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
   }
 
   override protected def afterAll(): Unit = {
-    Await.result(actorSystem.terminate(), 1.second)
+    Await.result(actorSystem.terminate(), 5.seconds)
     super.afterAll()
   }
 

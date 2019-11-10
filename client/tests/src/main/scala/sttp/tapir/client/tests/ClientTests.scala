@@ -241,7 +241,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       exitCode <- serverExitCode
     } yield exitCode
 
-    logger.debug(s"Server exited with code: ${Await.result(status, 2.seconds)}")
+    logger.debug(s"Server exited with code: ${Await.result(status, 5.seconds)}")
   }
 
   //
