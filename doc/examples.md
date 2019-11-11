@@ -1,18 +1,18 @@
 # Examples
 
-The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/tapir/examples) sub-project contains a number of runnable tapir usage examples:
+The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/main/scala/sttp/tapir/examples) sub-project contains a number of runnable tapir usage examples:
 
-* [Hello world server, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/HelloWorldAkkaServer.scala)
-* [Hello world server, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/HelloWorldHttp4sServer.scala)
-* [Separate error & success outputs, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/ErrorOutputsAkkaServer.scala)
-* [Multiple endpoints, exposing OpenAPI/Swagger documentation, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/MultipleEndpointsDocumentationAkkaServer.scala)
-* [Multiple endpoints, exposing OpenAPI/Swagger documentation, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/MultipleEndpointsDocumentationHttp4sServer.scala)
-* [Multiple endpoints, with the description coupled with server logic, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/MultipleServerEndpointsAkkaServer.scala)
-* [Reporting errors in a custom format when a query/path/.. parameter cannot be decoded](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/CustomErrorsOnDecodeFailureAkkaServer.scala)
-* [Using custom types in endpoint descriptions](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/EndpointWithCustomTypes.scala)
-* [Multipart form upload, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/MultipartFormUploadAkkaServer.scala)
-* [Books example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/BooksExample.scala)
-* [ZIO example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/tapir/examples/ZioExampleHttp4sServer.scala)
+* [Hello world server, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldAkkaServer.scala)
+* [Hello world server, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldHttp4sServer.scala)
+* [Separate error & success outputs, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ErrorOutputsAkkaServer.scala)
+* [Multiple endpoints, exposing OpenAPI/Swagger documentation, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipleEndpointsDocumentationAkkaServer.scala)
+* [Multiple endpoints, exposing OpenAPI/Swagger documentation, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipleEndpointsDocumentationHttp4sServer.scala)
+* [Multiple endpoints, with the description coupled with server logic, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipleServerEndpointsAkkaServer.scala)
+* [Reporting errors in a custom format when a query/path/.. parameter cannot be decoded](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/CustomErrorsOnDecodeFailureAkkaServer.scala)
+* [Using custom types in endpoint descriptions](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/EndpointWithCustomTypes.scala)
+* [Multipart form upload, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipartFormUploadAkkaServer.scala)
+* [Books example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExample.scala)
+* [ZIO example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleHttp4sServer.scala)
 
 ## Other examples
 
