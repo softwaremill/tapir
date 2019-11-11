@@ -122,7 +122,7 @@ Play JSON requires `Reads` and `Writes` implicit values in scope for each type y
 ## Other JSON libraries
 
 To add support for additional JSON libraries, see the
-[sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/tapir/json/circe/TapirJsonCirce.scala)
+[sources](https://github.com/softwaremill/tapir/blob/master/json/circe/src/main/scala/sttp/tapir/json/circe/TapirJsonCirce.scala)
 for the Circe codec (which is just a couple of lines of code).
 
 ## Schemas
