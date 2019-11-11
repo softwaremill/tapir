@@ -89,7 +89,7 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * [Servers: logic](server/logic.md)
 * [Servers: error handling](server/errors.md)
 * [Servers: debugging](server/debugging.md)
-* [Clients: sttp interpreter](sttp.md)
+* [Clients: sttp client interpreter](sttp.md)
 * [Other interpreters](other_interpreters.md)
 * [Documentation: openapi interpreter](openapi.md)
 * [Create your own tapir](mytapir.md)

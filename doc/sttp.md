@@ -6,7 +6,7 @@ Add the dependency:
 "com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.12.0"
 ```
 
-To make requests using an endpoint definition using [sttp](https://github.com/softwaremill/sttp), import:
+To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
 
 ```scala
 import sttp.tapir.client.sttp._
