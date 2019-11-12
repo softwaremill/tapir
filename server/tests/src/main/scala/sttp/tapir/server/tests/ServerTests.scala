@@ -421,7 +421,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler[Any] = ServerDefaults.decodeFailureHandlerUsingResponse(
     ServerDefaults.failureResponse,
-    badRequestOnPathFailureIfPathShapeMatches = true,
+    badRequestOnPathErrorIfPathShapeMatches = true,
+    badRequestOnPathInvalidIfPathShapeMatches = true,
     ServerDefaults.validationErrorToMessage
   )
 
@@ -529,6 +530,18 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     )
   ) { baseUri =>
     basicStringRequest.get(uri"$baseUri/p1/p2").send().map(_.body shouldBe "e2")
+  }
+
+  testServer(
+    "two endpoints with validation: should not try the second one if validation fails",
+    NonEmptyList.of(
+      route(endpoint.get.in("p1" / path[String].validate(Validator.minLength(5))), (_: String) => pureResult(().asRight[Unit])),
+      route(endpoint.get.in("p2"), (_: Unit) => pureResult(().asRight[Unit]))
+    )
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri/p1/abcde").send().map(_.code shouldBe StatusCode.Ok) >>
+      basicRequest.get(uri"$baseUri/p1/ab").send().map(_.code shouldBe StatusCode.BadRequest) >>
+      basicRequest.get(uri"$baseUri/p2").send().map(_.code shouldBe StatusCode.Ok)
   }
 
   //

@@ -6,13 +6,15 @@ import sttp.tapir._
 
 object ServerDefaults {
   /**
-    * @param badRequestOnPathFailureIfPathShapeMatches Should a status 400 be returned if the shape of the path
-    * of the request matches, but decoding some path segment fails. This assumes that the only way decoding a path
-    * segment might fail is with a DecodeResult.Error.
+    * @param badRequestOnPathErrorIfPathShapeMatches Should a status 400 be returned if the shape of the path
+    * of the request matches, but decoding some path segment fails with a [[DecodeResult.Error]].
+    * @param badRequestOnPathInvalidIfPathShapeMatches Should a status 400 be returned if the shape of the path
+    * of the request matches, but decoding some path segment fails with a [[DecodeResult.InvalidValue]].
     */
   def decodeFailureHandlerUsingResponse(
       response: (StatusCode, String) => DecodeFailureHandling,
-      badRequestOnPathFailureIfPathShapeMatches: Boolean,
+      badRequestOnPathErrorIfPathShapeMatches: Boolean,
+      badRequestOnPathInvalidIfPathShapeMatches: Boolean,
       validationErrorToMessage: ValidationError[_] => String
   ): DecodeFailureHandler[Any] =
     (_, input, failure) => {
@@ -35,7 +37,8 @@ object ServerDefaults {
         // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
         // a path shape mismatch
         case EndpointInput.PathCapture(_, name, _)
-            if badRequestOnPathFailureIfPathShapeMatches && failure.isInstanceOf[DecodeResult.Error] =>
+            if (badRequestOnPathErrorIfPathShapeMatches && failure.isInstanceOf[DecodeResult.Error]) ||
+              (badRequestOnPathInvalidIfPathShapeMatches && failure.isInstanceOf[DecodeResult.InvalidValue]) =>
           responseWithValidation(StatusCode.BadRequest, s"Invalid value for: path parameter ${name.getOrElse("?")}")
         case _ => DecodeFailureHandling.noMatch
       }
@@ -43,13 +46,18 @@ object ServerDefaults {
 
   /**
     * By default, a 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason),
-    * or if decoding a path capture ends with an error.
+    * or if decoding a path capture causes a validation error.
     *
-    * Otherwise (e.g. if the method, a path segment, or path capture is missing or there's a mismatch), a "no match" is
-    * returned, which is a signal to try the next endpoint.
+    * Otherwise (e.g. if the method, a path segment, or path capture is missing, there's a mismatch or a decode error),
+    * a "no match" is returned, which is a signal to try the next endpoint.
     */
   def decodeFailureHandler: DecodeFailureHandler[Any] =
-    decodeFailureHandlerUsingResponse(failureResponse, badRequestOnPathFailureIfPathShapeMatches = false, validationErrorToMessage)
+    decodeFailureHandlerUsingResponse(
+      failureResponse,
+      badRequestOnPathErrorIfPathShapeMatches = false,
+      badRequestOnPathInvalidIfPathShapeMatches = true,
+      validationErrorToMessage
+    )
 
   def validationErrorToMessage(ve: ValidationError[_]): String = ve.validator match {
     case Validator.Min(value, exclusive)   => s"expected ${ve.invalidValue} to be greater than ${if (exclusive) "" else "or equal to "}$value"

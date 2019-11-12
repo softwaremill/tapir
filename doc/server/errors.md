@@ -46,10 +46,11 @@ Quite often user input will be malformed and decoding will fail. Should the requ
 conventions, that an endpoint is uniquely identified by the method and served path. That's why:
 
 * an "endpoint doesn't match" result is returned if the request method or path doesn't match. The http library should
-  attempt to serve this request with the next endpoint.
+  attempt to serve this request with the next endpoint. The path doesn't match if a path segment is missing, there's
+  a constant value mismatch or a decoding error (e.g. parsing a segment to an `Int` fails)
 * otherwise, we assume that this is the correct endpoint to serve the request, but the parameters are somehow 
-  malformed. A `400 Bad Request` response is returned if a query parameter, header or body is missing / decoding fails, 
-  or if the decoding a path capture fails with an error (but not a "missing" decode result).
+  malformed. A `400 Bad Request` response is returned if a query parameter, header or body causes any decode failure, 
+  or if the decoding a path capture causes a validation error.
 
 This can be customised by providing an implicit instance of `tapir.server.DecodeFailureHandler`, which basing on the 
 request, failing input and failure description can decide, whether to return a "no match" or a specific response.
@@ -76,6 +77,7 @@ def myFailureResponse(statusCode: StatusCode, message: String): DecodeFailureHan
 val myDecodeFailureHandler = ServerDefaults.decodeFailureHandlerUsingResponse(
   myFailureResponse,
   badRequestOnPathFailureIfPathShapeMatches = false,
+  badRequestOnPathInvalidIfPathShapeMatches = true,
   validationErrorToMessage
 )
 ```
@@ -85,8 +87,7 @@ which should be used to create the response, as well as a value for this output.
 
 The default decode failure handler also has the option to return a `400 Bad Request`, instead of a no-match (ultimately
 leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
-and endpoint's paths are the same), but when decoding some part of the path fails. By default, any kind of decode 
-failure in the path will result in a no-match being returned.
+and endpoint's paths are the same), but when decoding some part of the path ends in an error. 
 
 Finally, you can provide custom error messages for validation errors. By default, these messages are appended to the
 decode failure message (see the `validationErrorToMessage` method in `ServerDefaults`).
