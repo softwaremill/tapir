@@ -126,6 +126,17 @@ lazy val playJson: Project = (project in file("json/playjson"))
   )
   .dependsOn(core)
 
+lazy val sprayJson: Project = (project in file("json/sprayjson"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-json-spray",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-http-spray-json" % Versions.sprayJson,
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
+
 lazy val uPickleJson: Project = (project in file("json/upickle"))
   .settings(commonSettings)
   .settings(
