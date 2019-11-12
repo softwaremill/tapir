@@ -645,15 +645,15 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     } yield uri"http://localhost:$port"
 
     if (testNameFilter forall name.contains) {
-      test(name)(retryIfBindFailed(resources, 3).use(runTest).unsafeRunSync())
+      test(name)(retryIfAddressAlreadyInUse(resources, 3).use(runTest).unsafeRunSync())
     }
   }
 
-  private def retryIfBindFailed[A](r: Resource[IO, A], tries: Int): Resource[IO, A] = {
+  private def retryIfAddressAlreadyInUse[A](r: Resource[IO, A], tries: Int): Resource[IO, A] = {
     r.recoverWith {
-      case e: Exception if tries > 1 && e.getMessage.contains("Bind failed") =>
+      case e: Exception if tries > 1 && e.getMessage.contains("Address already in use") =>
         logger.error(s"Exception when evaluating resource, retrying ${tries - 1} more times", e)
-        retryIfBindFailed(r, tries - 1)
+        retryIfAddressAlreadyInUse(r, tries - 1)
     }
   }
 
