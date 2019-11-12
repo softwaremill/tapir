@@ -119,6 +119,22 @@ import sttp.tapir.json.play._
 
 Play JSON requires `Reads` and `Writes` implicit values in scope for each type you want to serialize. 
 
+## Spray JSON
+
+To use Spray JSON add the following dependency to your project:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "0.12.0"
+```
+
+Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.html) and add `TapirJsonSpray` not `TapirCirceJson`):
+
+```scala
+import sttp.tapir.json.spray._
+```
+
+Spray JSON requires a `JsonFormat` implicit value in scope for each type you want to serialize. 
+
 ## Other JSON libraries
 
 To add support for additional JSON libraries, see the

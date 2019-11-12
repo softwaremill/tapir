@@ -43,6 +43,7 @@ lazy val rootProject = (project in file("."))
     tapirCats,
     circeJson,
     playJson,
+    sprayJson,
     uPickleJson,
     openapiModel,
     openapiCirce,
@@ -131,7 +132,7 @@ lazy val sprayJson: Project = (project in file("json/sprayjson"))
   .settings(
     name := "tapir-json-spray",
     libraryDependencies ++= Seq(
-      "com.typesafe.akka" %% "akka-http-spray-json" % Versions.sprayJson,
+      "io.spray" %% "spray-json" % Versions.sprayJson,
       scalaTest % "test"
     )
   )

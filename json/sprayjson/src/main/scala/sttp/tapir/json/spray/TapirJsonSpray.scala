@@ -11,7 +11,7 @@ import sttp.tapir._
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonSpray {
-  implicit def readsWritesCodec[T: JsonFormat: Schema]: JsonCodec[T] = new JsonCodec[T] {
+  implicit def jsonFormatCodec[T: JsonFormat: Schema]: JsonCodec[T] = new JsonCodec[T] {
     override def encode(t: T): String = t.toJson.toString()
 
     override def rawDecode(s: String): DecodeResult[T] = Try(s.parseJson.convertTo[T]) match {
@@ -30,4 +30,3 @@ trait TapirJsonSpray {
     )
   )
 }
-

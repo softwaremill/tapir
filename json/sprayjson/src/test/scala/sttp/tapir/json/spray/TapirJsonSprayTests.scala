@@ -3,8 +3,8 @@ package sttp.tapir.json.spray
 import org.scalatest.{Assertion, FlatSpec, Matchers}
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
-
 import spray.json._
+import sttp.tapir.Codec.JsonCodec
 
 object TapirJsonSprayCodec extends TapirJsonSpray
 
@@ -15,11 +15,11 @@ class TapirJsonSprayTests extends FlatSpec with Matchers with DefaultJsonProtoco
     implicit val rw: JsonFormat[Customer] = jsonFormat3(Customer.apply)
   }
 
-  val customerDecoder = TapirJsonSprayCodec.readsWritesCodec[Customer]
+  val customerDecoder: JsonCodec[Customer] = TapirJsonSprayCodec.jsonFormatCodec[Customer]
 
   // Helper to test encoding then decoding an object is the same as the original
   def testEncodeDecode[T: JsonFormat: Schema](original: T): Assertion = {
-    val codec = TapirJsonSprayCodec.readsWritesCodec[T]
+    val codec = TapirJsonSprayCodec.jsonFormatCodec[T]
 
     val encoded = codec.encode(original)
     codec.decode(encoded) match {
@@ -47,5 +47,4 @@ class TapirJsonSprayTests extends FlatSpec with Matchers with DefaultJsonProtoco
   it should "encode and decode Long type" in {
     testEncodeDecode(1566150331L)
   }
-
 }
