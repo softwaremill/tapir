@@ -7,7 +7,15 @@ dependency:
 "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.12.0"
 ```
 
-and import the package:
+This will transitively pull some Akka modules in version 2.6. If you want to force
+your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.12.0" exclude("com.typesafe.akka", "akka-stream_2.12")
+```
+
+
+Now import the package:
 
 ```scala
 import sttp.tapir.server.akkahttp._
