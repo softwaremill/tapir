@@ -6,7 +6,6 @@ import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.{Schema, SchemaType}
 import SchemaMagnoliaDerivation.deriveInProgress
-import sttp.tapir.Schema
 
 import scala.collection.mutable
 import scala.language.experimental.macros
