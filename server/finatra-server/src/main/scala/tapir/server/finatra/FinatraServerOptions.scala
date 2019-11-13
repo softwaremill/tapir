@@ -1,4 +1,5 @@
 package tapir.server.finatra
+
 import java.io.{File, FileOutputStream}
 
 import com.twitter.finagle.http.Request

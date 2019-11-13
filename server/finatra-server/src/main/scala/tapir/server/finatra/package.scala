@@ -2,10 +2,10 @@ package tapir.server
 
 import java.nio.charset.Charset
 
-import com.twitter.finagle.http.{Request, Response, Status}
+import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.inject.Logging
 import com.twitter.util.Future
-import tapir.EndpointInput.PathCapture
+import tapir.EndpointInput.{FixedMethod, Multiple, PathCapture, Single}
 import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import tapir.internal.{SeqToParams, _}
 import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
@@ -15,6 +15,26 @@ import scala.util.control.NonFatal
 
 package object finatra {
   implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
+    private def httpMethod(endpoint: Endpoint[I, E, O, Nothing]): Method = {
+      endpoint.input match {
+        case Multiple(inputs) =>
+          inputs
+            .find {
+              case FixedMethod(_) => true
+              case _              => false
+            }
+            .fold(Method("ANY"))(m => Method(m.show))
+        case s: Single[_] => s.method.fold(Method("ANY"))(m => Method(m.m))
+        case EndpointIO.Multiple(ios) =>
+          (ios: Vector[EndpointInput.Single[_]])
+            .find {
+              case FixedMethod(_) => true
+              case _              => false
+            }
+            .fold(Method("ANY"))(m => Method(m.show))
+      }
+    }
+
     def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
       val handler = { request: Request =>
         def decodeBody(result: DecodeInputsResult): Future[DecodeInputsResult] = {
@@ -78,7 +98,7 @@ package object finatra {
         }
       }
 
-      FinatraRoute(handler, e.input.path)
+      FinatraRoute(handler, httpMethod(e), e.input.path)
     }
 
     def toRouteRecoverErrors(logic: I => Future[O])(

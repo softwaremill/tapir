@@ -74,16 +74,16 @@ object OutputToFinatraResponse {
     codecMeta.rawValueType match {
       case StringValueType(charset) =>
         FinatraContentBuf(Buf.ByteArray.Owned(r.toString.getBytes(charset))) -> ct
-      case ByteArrayValueType  => FinatraContentBuf(Buf.ByteArray.Owned(r)) -> ct
-      case ByteBufferValueType => FinatraContentBuf(Buf.ByteBuffer.Owned(r)) -> ct
+      case ByteArrayValueType  => FinatraContentBuf(Buf.ByteArray.Owned(r.asInstanceOf[Array[Byte]])) -> ct
+      case ByteBufferValueType => FinatraContentBuf(Buf.ByteBuffer.Owned(r.asInstanceOf[ByteBuffer])) -> ct
       case InputStreamValueType =>
-        FinatraContentReader(Reader.fromStream(r: InputStream)) -> ct
+        FinatraContentReader(Reader.fromStream(r.asInstanceOf[InputStream])) -> ct
       case FileValueType =>
-        FinatraContentReader(Reader.fromFile(r: File)) -> ct
+        FinatraContentReader(Reader.fromFile(r.asInstanceOf[File])) -> ct
       case mvt: MultipartValueType =>
         val entity = MultipartEntityBuilder.create()
 
-        (r: Seq[RawPart]).flatMap(rawPartToFormBodyPart(mvt, _)).foreach { formBodyPart: FormBodyPart =>
+        (r.asInstanceOf[Seq[RawPart]]).flatMap(rawPartToFormBodyPart(mvt, _)).foreach { formBodyPart: FormBodyPart =>
           entity.addPart(formBodyPart)
         }
 
@@ -101,18 +101,18 @@ object OutputToFinatraResponse {
       case StringValueType(charset) =>
         new StringBody(r.toString, ContentType.create(contentType, charset))
       case ByteArrayValueType =>
-        new ByteArrayBody(r: Array[Byte], ContentType.create(contentType), part.fileName.get)
+        new ByteArrayBody(r.asInstanceOf[Array[Byte]], ContentType.create(contentType), part.fileName.get)
       case ByteBufferValueType =>
-        val array: Array[Byte] = new Array[Byte]((r: ByteBuffer).remaining)
-        (r: ByteBuffer).get(array)
+        val array: Array[Byte] = new Array[Byte]((r.asInstanceOf[ByteBuffer]).remaining)
+        (r.asInstanceOf[ByteBuffer]).get(array)
         new ByteArrayBody(array, ContentType.create(contentType), part.fileName.get)
       case FileValueType =>
         part.fileName match {
-          case Some(filename) => new FileBody(r: File, ContentType.create(contentType), filename)
-          case None           => new FileBody(r: File, ContentType.create(contentType))
+          case Some(filename) => new FileBody(r.asInstanceOf[File], ContentType.create(contentType), filename)
+          case None           => new FileBody(r.asInstanceOf[File], ContentType.create(contentType))
         }
       case InputStreamValueType =>
-        new InputStreamBody(r: InputStream, ContentType.create(contentType), part.fileName.get)
+        new InputStreamBody(r.asInstanceOf[InputStream], ContentType.create(contentType), part.fileName.get)
       case _: MultipartValueType =>
         throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }
