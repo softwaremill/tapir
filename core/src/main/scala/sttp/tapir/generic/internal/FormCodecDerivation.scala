@@ -31,14 +31,14 @@ object FormCodecMacros {
       case (field, codec) =>
         val fieldName = field.name.asInstanceOf[TermName]
         val fieldNameAsString = fieldName.decodedName.toString
-        q"""val transformedName = $conf.transformMemberName($fieldNameAsString)
+        q"""val transformedName = $conf.toLowLevelName($fieldNameAsString)
            $codec.encode(o.$fieldName).map(v => (transformedName, v))"""
     }
 
     val decodeParams = fieldsWithCodecs.map {
       case (field, codec) =>
         val fieldName = field.name.decodedName.toString
-        q"""val transformedName = $conf.transformMemberName($fieldName)
+        q"""val transformedName = $conf.toLowLevelName($fieldName)
            $codec.decode(paramsMap.get(transformedName).toList.flatten)"""
     }
 

@@ -28,7 +28,7 @@ trait SchemaMagnoliaDerivation {
             Schema[T](
               SProduct(
                 typeNameToObjectInfo(ctx.typeName),
-                ctx.parameters.map(p => (genericDerivationConfig.transformMemberName(p.label), p.typeclass)).toList
+                ctx.parameters.map(p => (genericDerivationConfig.toLowLevelName(p.label), p.typeclass)).toList
               )
             )
           }
