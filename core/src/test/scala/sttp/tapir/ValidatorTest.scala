@@ -105,7 +105,7 @@ class ValidatorTest extends FlatSpec with Matchers {
 
   it should "validate openProduct" in {
     val validator = Validator.openProduct(Validator.min(10))
-    validator.validate(Map("key" -> 0)) shouldBe List(ValidationError(Validator.min(10), 0))
+    validator.validate(Map("key" -> 0)).map(noPath(_)) shouldBe List(ValidationError(Validator.min(10), 0))
     validator.validate(Map("key" -> 12)) shouldBe empty
   }
 
