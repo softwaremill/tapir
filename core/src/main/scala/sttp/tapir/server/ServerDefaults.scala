@@ -15,13 +15,13 @@ object ServerDefaults {
       response: (StatusCode, String) => DecodeFailureHandling,
       badRequestOnPathErrorIfPathShapeMatches: Boolean,
       badRequestOnPathInvalidIfPathShapeMatches: Boolean,
-      validationErrorToMessage: ValidationError[_] => String
+      validationErrorsToMessage: List[ValidationError[_]] => String
   ): DecodeFailureHandler[Any] =
     (_, input, failure) => {
       val responseWithValidation = failure match {
         case InvalidValue(errors) if errors.nonEmpty =>
-          val validationErrorMessage = errors.map(validationErrorToMessage).mkString(", ")
-          (statusCode: StatusCode, msg: String) => response(statusCode, s"$msg ($validationErrorMessage)")
+          val validationErrorsMessage = validationErrorsToMessage(errors)
+          (statusCode: StatusCode, msg: String) => response(statusCode, s"$msg ($validationErrorsMessage)")
         case _ => response
       }
 
@@ -56,19 +56,45 @@ object ServerDefaults {
       failureResponse,
       badRequestOnPathErrorIfPathShapeMatches = false,
       badRequestOnPathInvalidIfPathShapeMatches = true,
-      validationErrorToMessage
+      ValidationMessages.errorMessage
     )
 
-  def validationErrorToMessage(ve: ValidationError[_]): String = ve.validator match {
-    case Validator.Min(value, exclusive)   => s"expected ${ve.invalidValue} to be greater than ${if (exclusive) "" else "or equal to "}$value"
-    case Validator.Max(value, exclusive)   => s"expected ${ve.invalidValue} to be less than ${if (exclusive) "" else "or equal to "}$value"
-    case Validator.Pattern(value)          => s"expected '${ve.invalidValue}' to match '$value'"
-    case Validator.MinLength(value)        => s"expected length of ${ve.invalidValue} to be greater than or equal to $value "
-    case Validator.MaxLength(value)        => s"expected length of ${ve.invalidValue} to be less than or equal to $value "
-    case Validator.MinSize(value)          => s"expected size of collection (${ve.invalidValue}) to be greater than or equal to $value"
-    case Validator.MaxSize(value)          => s"expected size of collection (${ve.invalidValue}) to be less than or equal to $value"
-    case Validator.Custom(_, message)      => s"expected '${ve.invalidValue}' to pass custom validation: $message"
-    case Validator.Enum(possibleValues, _) => s"expected '${ve.invalidValue}' to be within $possibleValues"
+  object ValidationMessages {
+    /**
+      * Default message describing why a value is invalid
+      * @param valueName Name of the validated value to be used in error messages
+      */
+    def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String = ve.validator match {
+      case Validator.Min(value, exclusive) =>
+        s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
+      case Validator.Max(value, exclusive) =>
+        s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
+      case Validator.Pattern(value)          => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
+      case Validator.MinLength(value)        => s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
+      case Validator.MaxLength(value)        => s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
+      case Validator.MinSize(value)          => s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
+      case Validator.MaxSize(value)          => s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
+      case Validator.Custom(_, message)      => s"expected $valueName to pass custom validation: $message, but was '${ve.invalidValue}'"
+      case Validator.Enum(possibleValues, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
+    }
+
+    /**
+      * Default message describing the path to an invalid value
+      */
+    def pathMessage(ve: ValidationError[_]): Option[String] = ve.path match {
+      case Nil => None
+      case l   => Some(l.map(_.lowLevelName).mkString("."))
+    }
+
+    /**
+      * Default message describing the validation error: which value is invalid, and why
+      */
+    def errorMessage(ve: ValidationError[_]): String = invalidValueMessage(ve, pathMessage(ve).getOrElse("value"))
+
+    /**
+      * Default message describing a list of validation errors: which values are invalid, and why
+      */
+    def errorMessage(ve: List[ValidationError[_]]): String = ve.map(errorMessage).mkString(", ")
   }
 
   val failureOutput: EndpointOutput[(StatusCode, String)] = statusCode.and(stringBody)

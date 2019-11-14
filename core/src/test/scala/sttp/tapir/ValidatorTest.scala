@@ -135,12 +135,14 @@ class ValidatorTest extends FlatSpec with Matchers {
     implicit val nameValidator: Validator[String] = Validator.pattern("^[A-Z].*")
     implicit val ageValidator: Validator[Int] = Validator.min(18)
     val validator = Validator.validatorForCaseClass[Person]
-    validator.validate(Person("notImportantButOld", 21)) shouldBe List(ValidationError(Validator.pattern("^[A-Z].*"), "notImportantButOld"))
-    validator.validate(Person("notImportantAndYoung", 15)) shouldBe List(
+    validator.validate(Person("notImportantButOld", 21)).map(noPath(_)) shouldBe List(
+      ValidationError(Validator.pattern("^[A-Z].*"), "notImportantButOld")
+    )
+    validator.validate(Person("notImportantAndYoung", 15)).map(noPath(_)) shouldBe List(
       ValidationError(Validator.pattern("^[A-Z].*"), "notImportantAndYoung"),
       ValidationError(Validator.min(18), 15)
     )
-    validator.validate(Person("ImportantButYoung", 15)) shouldBe List(ValidationError(Validator.min(18), 15))
+    validator.validate(Person("ImportantButYoung", 15)).map(noPath(_)) shouldBe List(ValidationError(Validator.min(18), 15))
     validator.validate(Person("ImportantAndOld", 21)) shouldBe empty
   }
 
@@ -192,6 +194,8 @@ class ValidatorTest extends FlatSpec with Matchers {
     }
     Duration(summaryTime, TimeUnit.NANOSECONDS).toSeconds should be <= 1L
   }
+
+  private def noPath[T](v: ValidationError[T]): ValidationError[T] = v.copy(path = Nil)
 }
 
 sealed trait Color

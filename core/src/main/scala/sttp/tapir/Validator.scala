@@ -165,15 +165,17 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     override def show: Option[String] = elementValidator.show.map(se => s"elements($se)")
   }
 
+  case class FieldName(name: String, lowLevelName: String)
   trait ProductField[T] {
     type FieldType
+    def name: FieldName
     def get(t: T): FieldType
     def validator: Validator[FieldType]
   }
   case class Product[T](fields: Map[String, ProductField[T]]) extends Single[T] {
     override def validate(t: T): List[ValidationError[_]] = {
       fields.values.flatMap { f =>
-        f.validator.validate(f.get(t))
+        f.validator.validate(f.get(t)).map(_.prependPath(f.name))
       }
     }.toList
     override def show: Option[String] =
@@ -188,7 +190,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
 
   case class OpenProduct[E](elementValidator: Validator[E]) extends Single[Map[String, E]] {
     override def validate(t: Map[String, E]): List[ValidationError[_]] = {
-      t.values.flatMap(elementValidator.validate)
+      t.flatMap { case (name, value) => elementValidator.validate(value).map(_.prependPath(FieldName(name, name))) }
     }.toList
     override def show: Option[String] = elementValidator.show.map(se => s"elements($se)")
   }
@@ -242,4 +244,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   implicit def openProduct[T: Validator]: Validator[Map[String, T]] = OpenProduct(implicitly[Validator[T]])
 }
 
-case class ValidationError[T](validator: Validator.Primitive[T], invalidValue: T)
+case class ValidationError[T](validator: Validator.Primitive[T], invalidValue: T, path: List[Validator.FieldName] = Nil) {
+  def prependPath(f: Validator.FieldName): ValidationError[T] = copy(path = f :: path)
+}

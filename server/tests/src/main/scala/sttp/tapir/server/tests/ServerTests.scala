@@ -423,7 +423,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     ServerDefaults.failureResponse,
     badRequestOnPathErrorIfPathShapeMatches = true,
     badRequestOnPathInvalidIfPathShapeMatches = true,
-    ServerDefaults.validationErrorToMessage
+    ServerDefaults.ValidationMessages.errorMessage
   )
 
   testServer(
