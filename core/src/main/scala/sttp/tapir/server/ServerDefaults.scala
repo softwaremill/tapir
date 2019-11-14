@@ -101,6 +101,8 @@ object ServerDefaults {
   def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
     DecodeFailureHandling.response(failureOutput)((statusCode, message))
 
-  val successStatusCode: StatusCode = StatusCode.Ok
-  val errorStatusCode: StatusCode = StatusCode.BadRequest
+  object StatusCodes {
+    val success: StatusCode = StatusCode.Ok
+    val error: StatusCode = StatusCode.BadRequest
+  }
 }

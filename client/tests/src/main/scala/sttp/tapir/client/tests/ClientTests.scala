@@ -2,7 +2,6 @@ package sttp.tapir.client.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
-import java.util.concurrent.atomic.AtomicInteger
 
 import cats.effect._
 import cats.effect.concurrent.Ref

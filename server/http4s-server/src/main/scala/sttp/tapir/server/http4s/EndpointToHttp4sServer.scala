@@ -41,8 +41,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         val i = SeqToParams(InputValues(se.endpoint.input, values)).asInstanceOf[I]
         se.logic(i)
           .map {
-            case Right(result) => outputToResponse(ServerDefaults.successStatusCode, se.endpoint.output, result)
-            case Left(err)     => outputToResponse(ServerDefaults.errorStatusCode, se.endpoint.errorOutput, err)
+            case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
+            case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
           }
           .map { response =>
             serverOptions.loggingOptions.requestHandledMsg(se.endpoint, response.status.code).foreach(log.debug(_))
@@ -101,7 +101,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           case (msg, None)    => log.debug(msg)
         }
 
-        Some(outputToResponse(ServerDefaults.errorStatusCode, output, value))
+        Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value))
     }
   }
 }

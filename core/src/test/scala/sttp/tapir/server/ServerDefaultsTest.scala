@@ -1,12 +1,15 @@
 package sttp.tapir.server
 
+import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.Validator
 
 class ServerDefaultsTest extends FlatSpec with Matchers {
   it should "create a validation error message for a nested field" in {
     // given
+    @silent("never used")
     implicit val addressNumberValidator: Validator[Int] = Validator.min(1)
+    @silent("fallback derivation")
     val personValidator = Validator.validatorForCaseClass[Person]
 
     // when

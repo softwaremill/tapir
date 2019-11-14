@@ -92,7 +92,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
           case (msg, Some(t)) => ctx.log.debug(s"$msg; exception: {}", t)
           case (msg, None)    => ctx.log.debug(msg)
         }
-        StandardRoute(OutputToAkkaRoute(ServerDefaults.errorStatusCode.code, output, value))
+        StandardRoute(OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, output, value))
     }
   }
 
