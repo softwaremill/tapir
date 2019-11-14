@@ -420,7 +420,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   // path shape matching
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler[Any] = ServerDefaults.decodeFailureHandlerUsingResponse(
-    ServerDefaults.failureResponse,
+    ServerDefaults.FailureHandling.failureResponse,
     badRequestOnPathErrorIfPathShapeMatches = true,
     badRequestOnPathInvalidIfPathShapeMatches = true,
     ServerDefaults.ValidationMessages.errorMessage

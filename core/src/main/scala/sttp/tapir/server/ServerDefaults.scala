@@ -6,6 +6,25 @@ import sttp.tapir._
 
 object ServerDefaults {
   /**
+    * By default, a 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason),
+    * or if decoding a path capture causes a validation error.
+    *
+    * Otherwise (e.g. if the method, a path segment, or path capture is missing, there's a mismatch or a decode error),
+    * a "no match" is returned, which is a signal to try the next endpoint.
+    */
+  def decodeFailureHandler: DecodeFailureHandler[Any] =
+    decodeFailureHandlerUsingResponse(
+      FailureHandling.failureResponse,
+      badRequestOnPathErrorIfPathShapeMatches = false,
+      badRequestOnPathInvalidIfPathShapeMatches = true,
+      ValidationMessages.errorMessage
+    )
+
+  /**
+    * Create a custom decode failure handler, using a custom way to create the response (using `response`), and
+    * custom validation error messages, but using the default logic (see [[decodeFailureHandler]]) to decide decode
+    * failures on which outputs lead to response, and which lead to a no-match result.
+    *
     * @param badRequestOnPathErrorIfPathShapeMatches Should a status 400 be returned if the shape of the path
     * of the request matches, but decoding some path segment fails with a [[DecodeResult.Error]].
     * @param badRequestOnPathInvalidIfPathShapeMatches Should a status 400 be returned if the shape of the path
@@ -43,21 +62,6 @@ object ServerDefaults {
         case _ => DecodeFailureHandling.noMatch
       }
     }
-
-  /**
-    * By default, a 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason),
-    * or if decoding a path capture causes a validation error.
-    *
-    * Otherwise (e.g. if the method, a path segment, or path capture is missing, there's a mismatch or a decode error),
-    * a "no match" is returned, which is a signal to try the next endpoint.
-    */
-  def decodeFailureHandler: DecodeFailureHandler[Any] =
-    decodeFailureHandlerUsingResponse(
-      failureResponse,
-      badRequestOnPathErrorIfPathShapeMatches = false,
-      badRequestOnPathInvalidIfPathShapeMatches = true,
-      ValidationMessages.errorMessage
-    )
 
   object ValidationMessages {
     /**
@@ -97,9 +101,12 @@ object ServerDefaults {
     def errorMessage(ve: List[ValidationError[_]]): String = ve.map(errorMessage).mkString(", ")
   }
 
-  val failureOutput: EndpointOutput[(StatusCode, String)] = statusCode.and(stringBody)
-  def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
-    DecodeFailureHandling.response(failureOutput)((statusCode, message))
+  object FailureHandling {
+    val failureOutput: EndpointOutput[(StatusCode, String)] = statusCode.and(stringBody)
+
+    def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
+      DecodeFailureHandling.response(failureOutput)((statusCode, message))
+  }
 
   object StatusCodes {
     val success: StatusCode = StatusCode.Ok
