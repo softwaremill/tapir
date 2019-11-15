@@ -42,8 +42,8 @@ package object finatra {
           val i = SeqToParams(InputValues(e.input, values)).asInstanceOf[I]
           logic(i)
             .map {
-              case Right(result) => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.error.code), e.output, result)
-              case Left(err)     => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.success.code), e.errorOutput, err)
+              case Right(result) => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.success.code), e.output, result)
+              case Left(err)     => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.error.code), e.errorOutput, err)
             }
             .onFailure {
               case NonFatal(ex) =>
