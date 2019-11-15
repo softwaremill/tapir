@@ -12,14 +12,17 @@ To make requests using an endpoint definition using the [sttp client](https://gi
 import sttp.tapir.client.sttp._
 ```
 
-This adds the `toSttpRequest(Uri)` extension method to any `Endpoint` instance which, given the given base URI returns a 
-function:
+This adds the two extension methods to any `Endpoint`:
+ - `toSttpRequestUnsafe(Uri)` for given base URI returns a function which throws exception if deserialization fails
+    ```scala
+    I => Request[Either[E, O], Nothing]
+    ```
+ - `toSttpRequest(Uri)` for given base URI returns a function which encapsulates decoding errors within DecodeResult class
+    ```scala
+    I => Request[DecodeResult[Either[E, O]], Nothing]
+    ```
 
-```scala
-I => Request[Either[E, O], Nothing]
-```
-
-Note that this is a one-argument function, where the single argument is the input of end endpoint. This might be a 
+Note that this are a one-argument functions, where the single argument is the input of end endpoint. This might be a 
 single type, a tuple, or a case class, depending on the endpoint description. 
 
 After providing the input parameters, a description of the request to be made is returned. This can be further 
