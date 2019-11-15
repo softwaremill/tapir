@@ -422,7 +422,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler[Any] = DecodeFailureHandler(
     ServerDefaults.FailureHandling.failureResponse,
     ServerDefaults.FailureHandling
-      .respondWithStatusCode(_, _, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true),
+      .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true),
     ServerDefaults.FailureMessages.failureMessage,
     ServerDefaults.ValidationMessages.validationErrorsMessage
   )

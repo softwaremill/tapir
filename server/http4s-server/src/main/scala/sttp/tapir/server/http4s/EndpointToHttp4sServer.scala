@@ -8,7 +8,7 @@ import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import org.log4s._
 import sttp.tapir.internal.SeqToParams
 import sttp.tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import sttp.tapir.server.{DecodeFailureHandling, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
 import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.reflect.ClassTag
@@ -90,7 +90,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       input: EndpointInput.Single[_],
       failure: DecodeFailure
   ): Option[Response[F]] = {
-    val handling = serverOptions.decodeFailureHandler(req, input, failure)
+    val handling = serverOptions.decodeFailureHandler(DecodeFailureContext(req, input, failure))
     handling match {
       case DecodeFailureHandling.NoMatch =>
         serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(log.debug(_))

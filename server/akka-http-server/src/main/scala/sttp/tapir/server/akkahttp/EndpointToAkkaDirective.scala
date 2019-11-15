@@ -12,7 +12,7 @@ import akka.util.ByteString
 import sttp.model.{Header, Part}
 import sttp.tapir.internal.SeqToParams
 import sttp.tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import sttp.tapir.server.{DecodeFailureHandling, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
 import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -82,7 +82,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       input: EndpointInput.Single[_],
       failure: DecodeFailure
   ): Directive1[I] = {
-    val handling = serverOptions.decodeFailureHandler(ctx, input, failure)
+    val handling = serverOptions.decodeFailureHandler(DecodeFailureContext(ctx, input, failure))
     handling match {
       case DecodeFailureHandling.NoMatch =>
         serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(ctx.log.debug)

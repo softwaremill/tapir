@@ -57,7 +57,7 @@ package object finatra {
             input: EndpointInput.Single[_],
             failure: DecodeFailure
         ): Response = {
-          val handling = serverOptions.decodeFailureHandler(req, input, failure)
+          val handling = serverOptions.decodeFailureHandler(DecodeFailureContext(req, input, failure))
 
           handling match {
             case DecodeFailureHandling.NoMatch =>

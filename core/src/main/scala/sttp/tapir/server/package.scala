@@ -8,7 +8,7 @@ package object server {
     * Given the request, the input for which value decoding failed, and the decode value, returns the action
     * that should be taken.
     */
-  type DecodeFailureHandler[-REQUEST] = (REQUEST, EndpointInput.Single[_], DecodeFailure) => DecodeFailureHandling
+  type DecodeFailureHandler[-REQUEST] = DecodeFailureContext[REQUEST] => DecodeFailureHandling
 
   object DecodeFailureHandler {
     /**
@@ -20,24 +20,23 @@ package object server {
       *   `respondWithStatusCode`
       * - creates the response using `response`
       */
-    def apply(
+    def apply[R](
         response: (StatusCode, String) => DecodeFailureHandling,
-        respondWithStatusCode: (EndpointInput.Single[_], DecodeFailure) => Option[StatusCode],
-        failureMessage: (EndpointInput.Single[_], Option[String]) => String,
+        respondWithStatusCode: DecodeFailureContext[R] => Option[StatusCode],
+        failureMessage: (DecodeFailureContext[R], Option[String]) => String,
         validationErrorsToMessage: List[ValidationError[_]] => String
-    ): DecodeFailureHandler[Any] =
-      (_, input, failure) => {
-        respondWithStatusCode(input, failure) match {
-          case Some(c) =>
-            val errorMsgDetail = failure match {
-              case InvalidValue(errors) if errors.nonEmpty => Some(validationErrorsToMessage(errors))
-              case _                                       => None
-            }
+    ): DecodeFailureHandler[R] = ctx => {
+      respondWithStatusCode(ctx) match {
+        case Some(c) =>
+          val errorMsgDetail = ctx.failure match {
+            case InvalidValue(errors) if errors.nonEmpty => Some(validationErrorsToMessage(errors))
+            case _                                       => None
+          }
 
-            val failureMsg = failureMessage(input, errorMsgDetail)
-            response(c, failureMsg)
-          case None => DecodeFailureHandling.noMatch
-        }
+          val failureMsg = failureMessage(ctx, errorMsgDetail)
+          response(c, failureMsg)
+        case None => DecodeFailureHandling.noMatch
       }
+    }
   }
 }

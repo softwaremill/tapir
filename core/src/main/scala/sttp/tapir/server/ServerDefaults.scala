@@ -20,7 +20,7 @@ object ServerDefaults {
     DecodeFailureHandler(
       FailureHandling.failureResponse,
       FailureHandling
-        .respondWithStatusCode(_, _, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
+        .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
       FailureMessages.failureMessage,
       ValidationMessages.validationErrorsMessage
     )
@@ -38,12 +38,11 @@ object ServerDefaults {
       * of the request matches, but decoding some path segment fails with a [[DecodeResult.InvalidValue]].
       */
     def respondWithStatusCode(
-        input: EndpointInput.Single[_],
-        failure: DecodeFailure,
+        ctx: DecodeFailureContext[Any],
         badRequestOnPathErrorIfPathShapeMatches: Boolean,
         badRequestOnPathInvalidIfPathShapeMatches: Boolean
     ): Option[StatusCode] = {
-      input match {
+      ctx.input match {
         case _: EndpointInput.Query[_]             => Some(StatusCode.BadRequest)
         case _: EndpointInput.QueryParams          => Some(StatusCode.BadRequest)
         case _: EndpointInput.Cookie[_]            => Some(StatusCode.BadRequest)
@@ -55,8 +54,8 @@ object ServerDefaults {
         // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
         // a path shape mismatch
         case _: EndpointInput.PathCapture[_]
-            if (badRequestOnPathErrorIfPathShapeMatches && failure.isInstanceOf[DecodeResult.Error]) ||
-              (badRequestOnPathInvalidIfPathShapeMatches && failure.isInstanceOf[DecodeResult.InvalidValue]) =>
+            if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
+              (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
           Some(StatusCode.BadRequest)
         case _ => None
       }
@@ -87,8 +86,8 @@ object ServerDefaults {
     /**
       * Default message describing the source of a decode failure, alongside with optional error details.
       */
-    def failureMessage(input: EndpointInput.Single[_], detail: Option[String]): String = {
-      val base = failureSourceMessage(input)
+    def failureMessage(ctx: DecodeFailureContext[Any], detail: Option[String]): String = {
+      val base = failureSourceMessage(ctx.input)
       detail match {
         case None    => base
         case Some(d) => s"$base ($d)"
