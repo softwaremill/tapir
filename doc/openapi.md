@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.12.1"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.12.2"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.12.2"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -49,16 +49,16 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 [Redoc](https://github.com/Redocly/redoc):
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.12.1"
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.12.1"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.12.2"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.12.2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.12.2"
 ```
 
 Note: `tapir-swagger-ui-akka-http` transitively pulls some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.12.1" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.12.2" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Usage example for akka-http:
