@@ -13,16 +13,18 @@ import sttp.tapir.client.sttp._
 ```
 
 This adds the two extension methods to any `Endpoint`:
- - `toSttpRequestUnsafe(Uri)` for given base URI returns a function which throws exception if deserialization fails
-    ```scala
-    I => Request[Either[E, O], Nothing]
-    ```
- - `toSttpRequest(Uri)` for given base URI returns a function which encapsulates decoding errors within DecodeResult class
-    ```scala
-    I => Request[DecodeResult[Either[E, O]], Nothing]
-    ```
+ - `toSttpRequestUnsafe(Uri)`: given the base URI returns a function, which might throw an exception if 
+   decoding of the result fails
+   ```scala
+   I => Request[Either[E, O], Nothing]
+   ```
+ - `toSttpRequest(Uri)`: given the base URI returns a function, which represents decoding errors as the `DecodeResult` 
+   class
+   ```scala
+   I => Request[DecodeResult[Either[E, O]], Nothing]
+   ```
 
-Note that this are a one-argument functions, where the single argument is the input of end endpoint. This might be a 
+Note that these are a one-argument functions, where the single argument is the input of end endpoint. This might be a 
 single type, a tuple, or a case class, depending on the endpoint description. 
 
 After providing the input parameters, a description of the request to be made is returned. This can be further 
