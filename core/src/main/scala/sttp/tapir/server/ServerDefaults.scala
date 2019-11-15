@@ -7,20 +7,22 @@ import scala.annotation.tailrec
 
 object ServerDefaults {
   /**
-    * By default, a 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason),
-    * or if decoding a path capture causes a validation error.
+    * The default implementation of the [[DecodeFailureHandler]].
+    *
+    * A 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason), or if
+    * decoding a path capture causes a validation error.
     *
     * Otherwise (e.g. if the method, a path segment, or path capture is missing, there's a mismatch or a decode error),
     * a "no match" is returned, which is a signal to try the next endpoint.
     *
-    * The default error messages contain information about the source of the decode error, and optionally the
-    * validation error detail that caused the failure.
+    * The error messages contain information about the source of the decode error, and optionally the validation error
+    * detail that caused the failure.
     */
-  def decodeFailureHandler: DecodeFailureHandler[Any] =
-    DecodeFailureHandler(
-      FailureHandling.failureResponse,
+  def decodeFailureHandler: DefaultDecodeFailureHandler[Any] =
+    DefaultDecodeFailureHandler(
       FailureHandling
         .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
+      FailureHandling.failureResponse,
       FailureMessages.failureMessage,
       ValidationMessages.validationErrorsMessage
     )
