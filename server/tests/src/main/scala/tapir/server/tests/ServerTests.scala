@@ -23,7 +23,7 @@ import scala.reflect.ClassTag
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   def multipleValueHeaderSupport: Boolean = true
-
+  def streamingSupport: Boolean = true
   // method matching
 
   testServer(endpoint, "GET empty endpoint")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
@@ -219,17 +219,10 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       sttp.get(uri"$baseUri").send().map(_.body shouldBe Right(""))
   }
 
-  testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
-  }
-
-  testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
-    sttp
-      .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
-      .send()
-      .map { r =>
-        r.headers.filter(_._1 == "hh").map(_._2).toList shouldBe List("v3", "v2", "v1", "v0")
-      }
+  if (streamingSupport) {
+    testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
+      sttp.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
+    }
   }
 
   testServer(in_simple_multipart_out_multipart)(
@@ -272,6 +265,15 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       baseUri =>
         sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
           r.headers("Cookie") shouldBe Seq("32", "etanargemop")
+        }
+    }
+
+    testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
+      sttp
+        .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
+        .send()
+        .map { r =>
+          r.headers.filter(_._1 == "hh").map(_._2).toList shouldBe List("v3", "v2", "v1", "v0")
         }
     }
   }
