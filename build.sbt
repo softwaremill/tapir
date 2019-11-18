@@ -252,6 +252,9 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-effect" % Versions.cats,
+      "io.catbird" %% "catbird-finagle" % Versions.finatra,
+      "io.catbird" %% "catbird-effect" % Versions.finatra,
       "com.twitter" %% "finatra-http" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.10",
       // Testing
@@ -265,7 +268,8 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
       "com.twitter" %% "inject-app" % Versions.finatra % "test" classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % "test" classifier "tests",
       "com.twitter" %% "inject-modules" % Versions.finatra % "test" classifier "tests"
-    )
+    ),
+    parallelExecution in Test := false
   )
   .settings(only2_12settings)
   .dependsOn(core, serverTests % "test")
