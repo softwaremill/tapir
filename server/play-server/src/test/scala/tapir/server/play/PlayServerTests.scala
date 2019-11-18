@@ -18,6 +18,8 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with TapirPlayServer {
+  override def multipleValueHeaderSupport: Boolean = false
+
   private implicit val actorSystem: ActorSystem = ActorSystem()
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
   override def pureResult[T](t: T): Future[T] = Future.successful(t)

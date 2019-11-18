@@ -22,6 +22,8 @@ import scala.reflect.ClassTag
 
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
 
+  def multipleValueHeaderSupport: Boolean = true
+
   // method matching
 
   testServer(endpoint, "GET empty endpoint")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
@@ -264,11 +266,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.get(uri"$baseUri?fruit2=orange").send().map(_.code shouldBe StatusCodes.BadRequest)
   }
 
-  testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
-    baseUri =>
-      sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
-        r.headers("Cookie") shouldBe Seq("32", "etanargemop")
-      }
+  if (multipleValueHeaderSupport) {
+
+    testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
+      baseUri =>
+        sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
+          r.headers("Cookie") shouldBe Seq("32", "etanargemop")
+        }
+    }
   }
 
   testServer(in_cookies_out_cookies)(
