@@ -2,26 +2,18 @@ package tapir.server.play
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.nio.file.Files
 
+import akka.NotUsed
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
-import play.api.http.HttpEntity
-import play.api.mvc.{ResponseHeader, Result}
+import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
+import play.api.mvc.MultipartFormData.{DataPart, FilePart}
+import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import tapir.model.StatusCode
-import tapir.{
-  ByteArrayValueType,
-  ByteBufferValueType,
-  CodecForOptional,
-  CodecMeta,
-  EndpointOutput,
-  FileValueType,
-  InputStreamValueType,
-  MediaType,
-  MultipartValueType,
-  StringValueType
-}
+import tapir.model.{Part, StatusCode}
+import tapir.{ByteArrayValueType, ByteBufferValueType, CodecForOptional, CodecMeta, EndpointOutput, FileValueType, InputStreamValueType, MediaType, MultipartValueType, RawPart, StringValueType}
 
 object OutputToPlayResponse {
 
@@ -80,17 +72,80 @@ object OutputToPlayResponse {
         val file = FileIO.fromPath(path)
         HttpEntity.Streamed(file, fileSize, contentType)
 
-      case MultipartValueType(partCodecMetas, defaultCodecMeta) =>
-        throw new UnsupportedOperationException("Sending response body as a multipart is not support in play server")
+      case mvt: MultipartValueType =>
+        val rawParts = r.asInstanceOf[Seq[RawPart]]
+
+        val dataParts = rawParts
+          .filter { part =>
+            mvt.partCodecMeta(part.name).exists { rawPart =>
+              rawPart.rawValueType match {
+                case StringValueType(_)  => true
+                case ByteArrayValueType  => true
+                case ByteBufferValueType => true
+                case _                   => false
+              }
+            }
+          }
+          .flatMap(rawPartsToDataPart(mvt, _))
+
+        val fileParts = rawParts
+          .filter { part =>
+            mvt.partCodecMeta(part.name).exists { rawPart =>
+              rawPart.rawValueType match {
+                case InputStreamValueType => true
+                case FileValueType        => true
+                case _                    => false
+              }
+            }
+          }
+          .flatMap(rawPartsToFilePart(mvt, _))
+
+        HttpEntity.Streamed(multipartFormToStream(dataParts, fileParts), None, contentType)
+    }
+  }
+
+  private def rawPartsToFilePart[T](
+      mvt: MultipartValueType,
+      part: Part[T]
+  ): Option[MultipartFormData.FilePart[Source[ByteString, _]]] = {
+
+    mvt.partCodecMeta(part.name).flatMap { codecMeta =>
+      val entity: HttpEntity = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body)
+
+      for {
+        fileName <- part.fileName
+        contentLength <- entity.contentLength
+        dispositionType <- part.otherDispositionParams.get(part.name)
+      } yield MultipartFormData.FilePart(part.name, fileName, entity.contentType, entity.dataStream, contentLength, dispositionType)
+    }
+  }
+
+  private def rawPartsToDataPart[T](
+      mvt: MultipartValueType,
+      part: Part[T]
+  ): Option[MultipartFormData.DataPart] = {
+    mvt.partCodecMeta(part.name).flatMap { codecMeta =>
+      val charset = codecMeta.rawValueType match {
+        case valueType: StringValueType => valueType.charset
+        case _                          => Charset.defaultCharset()
+      }
+
+      val maybeData: Option[String] = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body) match {
+        case HttpEntity.Strict(data, _)   => Some(data.decodeString(charset))
+        case HttpEntity.Streamed(_, _, _) => None
+        case HttpEntity.Chunked(_, _)     => None
+      }
+
+      maybeData.map(MultipartFormData.DataPart(part.name, _))
     }
   }
 
   private def mediaTypeToContentType(mediaType: MediaType): Option[String] = {
     val result = mediaType match {
-      case MediaType.Json()               => "application/json"
-      case MediaType.TextPlain(charset)   => "text/plain"
-      case MediaType.OctetStream()        => "application/octet-stream"
-      case MediaType.XWwwFormUrlencoded() => "application/x-www-form-urlencoded"
+      case MediaType.Json()               => ContentTypes.JSON
+      case MediaType.TextPlain(charset)   => ContentTypes.TEXT(Codec.javaSupported(charset.name()))
+      case MediaType.OctetStream()        => ContentTypes.BINARY
+      case MediaType.XWwwFormUrlencoded() => ContentTypes.FORM
       case MediaType.MultipartFormData()  => "multipart/form-data"
       case _                              => throw new IllegalArgumentException(s"Cannot parse content type: $mediaType")
     }
@@ -98,4 +153,42 @@ object OutputToPlayResponse {
     Option(result)
   }
 
+  private def multipartFormToStream[A](dataParts: Seq[DataPart],
+                                       fileParts: Seq[FilePart[Source[ByteString, _]]]): Source[ByteString, NotUsed] = {
+    val boundary: String = "--------" + scala.util.Random.alphanumeric.take(20).mkString("")
+
+    def formatDataParts(dataParts: Seq[DataPart]) = {
+      val result = dataParts
+        .flatMap {
+          case DataPart(name, value) =>
+            s"--$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name=$name\r\n\r\n$value\r\n"
+
+        }
+        .mkString("")
+      Codec.utf_8.encode(result)
+    }
+
+    def filePartHeader(file: FilePart[_]) = {
+      val name = s""""${file.key}""""
+      val filename = s""""${file.filename}""""
+      val contentType = file.contentType
+        .map { ct =>
+          s"${HeaderNames.CONTENT_TYPE}: $ct\r\n"
+        }
+        .getOrElse("")
+      Codec.utf_8.encode(
+        s"--$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name=$name; filename=$filename\r\n$contentType\r\n"
+      )
+    }
+
+    Source
+      .single(formatDataParts(dataParts))
+      .concat(Source(fileParts.toList).flatMapConcat { file =>
+        Source
+          .single(filePartHeader(file))
+          .concat(file.ref)
+          .concat(Source.single(ByteString("\r\n", Charset.forName("UTF-8"))))
+          .concat(Source.single(ByteString(s"--$boundary--", "UTF-8")))
+      })
+  }
 }
