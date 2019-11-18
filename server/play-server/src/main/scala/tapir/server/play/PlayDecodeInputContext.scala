@@ -26,7 +26,7 @@ private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed:
   override def headers: Seq[(String, String)] = request.headers.headers
   override def queryParameter(name: String): Seq[String] = request.queryString.get(name).toSeq.flatten
   override def queryParameters: Map[String, Seq[String]] = request.queryString
-  override def bodyStream: Any = ???
+  override def bodyStream: Any = throw new UnsupportedOperationException("Play doesn't support request body streaming")
 
   override def serverRequest: ServerRequest = new PlayServerRequest(request)
 }
