@@ -9,12 +9,12 @@ import sttp.model.StatusCode
   * - creates decode failure messages using `failureMessage`
   * - creates the response using `response`
   */
-case class DefaultDecodeFailureHandler[R](
-    respondWithStatusCode: DecodeFailureContext[R] => Option[StatusCode],
+case class DefaultDecodeFailureHandler(
+    respondWithStatusCode: DecodeFailureContext => Option[StatusCode],
     response: (StatusCode, String) => DecodeFailureHandling,
-    failureMessage: DecodeFailureContext[R] => String
-) extends DecodeFailureHandler[R] {
-  def apply(ctx: DecodeFailureContext[R]): DecodeFailureHandling = {
+    failureMessage: DecodeFailureContext => String
+) extends DecodeFailureHandler {
+  def apply(ctx: DecodeFailureContext): DecodeFailureHandling = {
     respondWithStatusCode(ctx) match {
       case Some(c) =>
         val failureMsg = failureMessage(ctx)

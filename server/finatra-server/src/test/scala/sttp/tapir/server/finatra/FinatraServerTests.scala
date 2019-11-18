@@ -33,7 +33,7 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
   override def route[I, E, O](
       e: Endpoint[I, E, O, Nothing],
       fn: I => Future[Either[E, O]],
-      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
       FinatraServerOptions.default.copy(decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler))

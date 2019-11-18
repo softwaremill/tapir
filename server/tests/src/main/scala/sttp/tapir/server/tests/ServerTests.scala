@@ -419,7 +419,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   // path shape matching
 
-  val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler[Any] =
+  val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
     ServerDefaults.decodeFailureHandler.copy(
       respondWithStatusCode = ServerDefaults.FailureHandling
         .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
@@ -625,7 +625,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def route[I, E, O](
       e: Endpoint[I, E, O, S],
       fn: I => R[Either[E, O]],
-      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): ROUTE
 
   def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, S], fn: I => R[O])(implicit eClassTag: ClassTag[E]): ROUTE
@@ -637,7 +637,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def testServer[I, E, O](
       e: Endpoint[I, E, O, S],
       testNameSuffix: String = "",
-      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None
   )(
       fn: I => R[Either[E, O]]
   )(runTest: Uri => IO[Assertion]): Unit = {

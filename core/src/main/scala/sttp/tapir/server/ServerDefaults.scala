@@ -22,7 +22,7 @@ object ServerDefaults {
     * This is only used for failures that occur when decoding inputs, not for exceptions that happen when the server
     * logic is invoked.
     */
-  def decodeFailureHandler: DefaultDecodeFailureHandler[Any] =
+  def decodeFailureHandler: DefaultDecodeFailureHandler =
     DefaultDecodeFailureHandler(
       FailureHandling
         .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
@@ -43,7 +43,7 @@ object ServerDefaults {
       * of the request matches, but decoding some path segment fails with a [[DecodeResult.InvalidValue]].
       */
     def respondWithStatusCode(
-        ctx: DecodeFailureContext[Any],
+        ctx: DecodeFailureContext,
         badRequestOnPathErrorIfPathShapeMatches: Boolean,
         badRequestOnPathInvalidIfPathShapeMatches: Boolean
     ): Option[StatusCode] = {
@@ -102,7 +102,7 @@ object ServerDefaults {
     /**
       * Default message describing the source of a decode failure, alongside with optional validation details.
       */
-    def failureMessage(ctx: DecodeFailureContext[Any]): String = {
+    def failureMessage(ctx: DecodeFailureContext): String = {
       val base = failureSourceMessage(ctx.input)
 
       val detail = ctx.failure match {

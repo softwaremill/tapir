@@ -2,18 +2,24 @@ package sttp.tapir.server.finatra
 
 import java.io.{File, FileOutputStream}
 
-import com.twitter.finagle.http.Request
+import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Defaults
-import sttp.tapir.server.{DecodeFailureHandler, LoggingOptions, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaults}
 
 case class FinatraServerOptions(
     createFile: Array[Byte] => Future[File],
-    decodeFailureHandler: DecodeFailureHandler[Request],
-    loggingOptions: LoggingOptions
+    decodeFailureHandler: DecodeFailureHandler,
+    logRequestHandling: LogRequestHandling[Unit]
 )
 
-object FinatraServerOptions {
+object FinatraServerOptions extends Logging {
+  implicit lazy val default: FinatraServerOptions = FinatraServerOptions(
+    defaultCreateFile(futurePool),
+    ServerDefaults.decodeFailureHandler,
+    defaultLogRequestHandling
+  )
+
   def defaultCreateFile(futurePool: FuturePool)(bytes: Array[Byte]): Future[File] = {
     // TODO: Make this streaming
     futurePool {
@@ -25,11 +31,17 @@ object FinatraServerOptions {
     }
   }
 
-  private val futurePool = FuturePool.unboundedPool
+  private lazy val futurePool = FuturePool.unboundedPool
 
-  implicit val default: FinatraServerOptions = FinatraServerOptions(
-    defaultCreateFile(futurePool),
-    ServerDefaults.decodeFailureHandler,
-    LoggingOptions.default
+  lazy val defaultLogRequestHandling: LogRequestHandling[Unit] = LogRequestHandling(
+    doLogWhenHandled = debugLog,
+    doLogAllDecodeFailures = debugLog,
+    doLogLogicExceptions = (msg: String, ex: Throwable) => error(msg, ex),
+    noLog = ()
   )
+
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit = exOpt match {
+    case None     => debug(msg)
+    case Some(ex) => debug(msg, ex)
+  }
 }

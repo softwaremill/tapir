@@ -82,16 +82,14 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       input: EndpointInput.Single[_],
       failure: DecodeFailure
   ): Directive1[I] = {
-    val handling = serverOptions.decodeFailureHandler(DecodeFailureContext(ctx, input, failure))
+    val decodeFailureCtx = DecodeFailureContext(input, failure)
+    val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
     handling match {
       case DecodeFailureHandling.NoMatch =>
-        serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(ctx.log.debug)
+        serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(ctx.log)
         reject
       case DecodeFailureHandling.RespondWithResponse(output, value) =>
-        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
-          case (msg, Some(t)) => ctx.log.debug(s"$msg; exception: {}", t)
-          case (msg, None)    => ctx.log.debug(msg)
-        }
+        serverOptions.logRequestHandling.decodeFailureHandled(e, decodeFailureCtx, value)(ctx.log)
         StandardRoute(OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, output, value))
     }
   }
