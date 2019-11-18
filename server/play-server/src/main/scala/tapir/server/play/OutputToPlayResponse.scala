@@ -80,7 +80,8 @@ object OutputToPlayResponse {
         val file = FileIO.fromPath(path)
         HttpEntity.Streamed(file, fileSize, contentType)
 
-      case MultipartValueType(partCodecMetas, defaultCodecMeta) => ???
+      case MultipartValueType(partCodecMetas, defaultCodecMeta) =>
+        throw new UnsupportedOperationException("Sending response body as a multipart is not support in play server")
     }
   }
 
