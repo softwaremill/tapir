@@ -13,7 +13,19 @@ import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import tapir.model.{Part, StatusCode}
-import tapir.{ByteArrayValueType, ByteBufferValueType, CodecForOptional, CodecMeta, EndpointOutput, FileValueType, InputStreamValueType, MediaType, MultipartValueType, RawPart, StringValueType}
+import tapir.{
+  ByteArrayValueType,
+  ByteBufferValueType,
+  CodecForOptional,
+  CodecMeta,
+  EndpointOutput,
+  FileValueType,
+  InputStreamValueType,
+  MediaType,
+  MultipartValueType,
+  RawPart,
+  StringValueType
+}
 
 object OutputToPlayResponse {
 
@@ -75,6 +87,7 @@ object OutputToPlayResponse {
       case mvt: MultipartValueType =>
         val rawParts = r.asInstanceOf[Seq[RawPart]]
 
+        //fetch HttpEntity.Strict as dataParts
         val dataParts = rawParts
           .filter { part =>
             mvt.partCodecMeta(part.name).exists { rawPart =>
@@ -88,6 +101,7 @@ object OutputToPlayResponse {
           }
           .flatMap(rawPartsToDataPart(mvt, _))
 
+        //fetch HttpEntity.Streamed as fileParts
         val fileParts = rawParts
           .filter { part =>
             mvt.partCodecMeta(part.name).exists { rawPart =>
@@ -130,10 +144,9 @@ object OutputToPlayResponse {
         case _                          => Charset.defaultCharset()
       }
 
-      val maybeData: Option[String] = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body) match {
-        case HttpEntity.Strict(data, _)   => Some(data.decodeString(charset))
-        case HttpEntity.Streamed(_, _, _) => None
-        case HttpEntity.Chunked(_, _)     => None
+      val maybeData = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body) match {
+        case HttpEntity.Strict(data, _) => Some(data.decodeString(charset))
+        case _                          => None
       }
 
       maybeData.map(MultipartFormData.DataPart(part.name, _))
@@ -162,7 +175,6 @@ object OutputToPlayResponse {
         .flatMap {
           case DataPart(name, value) =>
             s"--$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name=$name\r\n\r\n$value\r\n"
-
         }
         .mkString("")
       Codec.utf_8.encode(result)
