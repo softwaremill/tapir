@@ -5,7 +5,7 @@ import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import play.api.Mode
-import play.api.mvc.RequestHeader
+import play.api.mvc.{Handler, RequestHeader}
 import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
@@ -49,10 +49,13 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with T
       override def router: Router =
         Router.from(
           routes.reduce(
-            (a: Routes, b: Routes) =>
-              PartialFunction { request: RequestHeader => //TODO change to function.unlift?
-                a.applyOrElse(request, b)
+            (a: Routes, b: Routes) => {
+              val handler: PartialFunction[RequestHeader, Handler] = {
+                case request => a.applyOrElse(request, b)
               }
+
+              handler
+            }
           )
         )
     }
