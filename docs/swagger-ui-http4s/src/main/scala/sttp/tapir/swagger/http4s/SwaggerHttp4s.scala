@@ -34,14 +34,17 @@ class SwaggerHttp4s(yaml: String, contextPath: String = "docs", yamlName: String
     import dsl._
 
     HttpRoutes.of[F] {
-      case GET -> Root =>
-        PermanentRedirect(Location(Uri.fromString(s"/$contextPath/index.html?url=/$contextPath/$yamlName").right.get))
-      case GET -> Root / `yamlName` =>
+      case path @ GET -> Root / `contextPath` =>
+        Uri
+          .fromString(s"${path.uri}/index.html?url=${path.uri}/$yamlName")
+          .map(uri => PermanentRedirect(Location(uri)))
+          .getOrElse(NotFound())
+      case GET -> Root / `contextPath` / `yamlName` =>
         Ok(yaml)
-      case r =>
+      case GET -> Root / `contextPath` / swaggerResource =>
         StaticFile
           .fromResource(
-            s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo}",
+            s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$swaggerResource",
             Blocker.liftExecutionContext(ExecutionContext.global)
           )
           .getOrElseF(NotFound())
