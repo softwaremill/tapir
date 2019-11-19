@@ -67,11 +67,12 @@ trait Tapir extends TapirDerivedInputs {
     EndpointIO.Body(codec, EndpointIO.Info.empty)
 
   /**
-    * @param schema Schema of the body. Note that any schema can be passed here, as usually we'll use a schema for a
-    *               dfiferent type than `S`: e.g. the schema of the "deserialized" stream.
+    * @param schema Schema of the body. Note that any schema can be passed here, usually this will be a schema for the
+    *               "deserialized" stream.
+    * @param format The format of the stream body, which specifies its media type.
     */
-  def streamBody[S](schema: Schema[_], mediaType: CodecFormat): StreamingEndpointIO.Body[S, mediaType.type] =
-    StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)
+  def streamBody[S](schema: Schema[_], format: CodecFormat): StreamingEndpointIO.Body[S, format.type] =
+    StreamingEndpointIO.Body(schema, format, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth
 

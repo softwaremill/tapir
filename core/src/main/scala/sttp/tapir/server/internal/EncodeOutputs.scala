@@ -26,8 +26,8 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
                 .map(encodeOutputBody.rawValueToBody(_, codec))
                 .map(ov.withBody)
                 .getOrElse(ov)
-            case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, mediaType, _)) =>
-              ov.withBody(encodeOutputBody.streamValueToBody(vsHead, mediaType))
+            case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, format, _)) =>
+              ov.withBody(encodeOutputBody.streamValueToBody(vsHead, format))
             case EndpointIO.Header(name, codec, _) =>
               codec
                 .asInstanceOf[PlainCodecForMany[Any]]
