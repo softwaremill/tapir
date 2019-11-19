@@ -252,9 +252,6 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % Versions.cats,
-      "io.catbird" %% "catbird-finagle" % Versions.finatra,
-      "io.catbird" %% "catbird-effect" % Versions.finatra,
       "com.twitter" %% "finatra-http" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.10",
       // Testing
@@ -273,6 +270,33 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
   )
   .settings(only2_12settings)
   .dependsOn(core, serverTests % "test")
+
+lazy val finatraCatsSupport: Project =
+  (project in file("server/finatra-cats-support"))
+    .settings(commonSettings: _*)
+    .settings(
+      name := "tapir-finatra-server-cats-support",
+      libraryDependencies ++= Seq(
+        "org.typelevel" %% "cats-effect" % Versions.cats,
+        "io.catbird" %% "catbird-finagle" % Versions.finatra,
+        "io.catbird" %% "catbird-effect" % Versions.finatra,
+        "com.twitter" %% "finatra-http" % Versions.finatra,
+        "org.apache.httpcomponents" % "httpmime" % "4.5.10",
+        // Testing
+        "com.twitter" %% "finatra-http" % Versions.finatra % "test",
+        "com.twitter" %% "inject-server" % Versions.finatra % "test",
+        "com.twitter" %% "inject-app" % Versions.finatra % "test",
+        "com.twitter" %% "inject-core" % Versions.finatra % "test",
+        "com.twitter" %% "inject-modules" % Versions.finatra % "test",
+        "com.twitter" %% "finatra-http" % Versions.finatra % "test" classifier "tests",
+        "com.twitter" %% "inject-server" % Versions.finatra % "test" classifier "tests",
+        "com.twitter" %% "inject-app" % Versions.finatra % "test" classifier "tests",
+        "com.twitter" %% "inject-core" % Versions.finatra % "test" classifier "tests",
+        "com.twitter" %% "inject-modules" % Versions.finatra % "test" classifier "tests"
+      )
+    )
+    .settings(only2_12settings)
+    .dependsOn(finatraServer, serverTests % "test")
 
 // client
 

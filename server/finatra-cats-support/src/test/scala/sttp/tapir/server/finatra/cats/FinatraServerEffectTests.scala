@@ -1,4 +1,4 @@
-package sttp.tapir.server.finatra
+package sttp.tapir.server.finatra.cats
 
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource, Timer}
@@ -11,6 +11,7 @@ import com.twitter.util.{Future, FuturePool}
 import io.catbird.util.Rerunnable
 import io.catbird.util.effect._
 import sttp.tapir.Endpoint
+import sttp.tapir.server.finatra.{FinatraRoute, FinatraServerOptions, TapirController}
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.{Port, PortCounter}
@@ -47,7 +48,9 @@ class FinatraServerEffectTests extends ServerTests[Future, Nothing, FinatraRoute
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(
       implicit eClassTag: ClassTag[E]
   ): FinatraRoute = {
-    e.toRouteRecoverErrors(fn)
+    e.toRouteRecoverErrors({ i: I =>
+      Rerunnable.fromFuture(fn(i))
+    })
   }
 
   override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = {
