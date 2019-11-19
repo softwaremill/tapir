@@ -1,7 +1,6 @@
-package sttp.tapir.internal.server
+package sttp.tapir.server.internal
 
 import sttp.model.{Cookie, HeaderNames, Method, MultiQueryParams}
-import sttp.tapir.{DecodeFailure, DecodeResult}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{CodecFormat, DecodeFailure, DecodeResult, EndpointIO, EndpointInput}

@@ -7,8 +7,8 @@ import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.util.logging.Logging
 import com.twitter.util.Future
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
-import sttp.tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
 import sttp.tapir.internal.{SeqToParams, _}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
 import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.reflect.ClassTag

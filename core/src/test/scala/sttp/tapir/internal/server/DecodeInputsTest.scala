@@ -5,6 +5,7 @@ import sttp.model.Method
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsContext, DecodeInputsResult}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 
 class DecodeInputsTest extends FlatSpec with Matchers {

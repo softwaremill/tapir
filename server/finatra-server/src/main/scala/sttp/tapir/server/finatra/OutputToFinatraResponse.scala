@@ -8,7 +8,7 @@ import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import sttp.model.{Header, Part}
-import sttp.tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,

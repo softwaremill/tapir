@@ -8,16 +8,16 @@ import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.{Charset, EntityBody, EntityEncoder, Header, Headers, Response, Status, multipart}
 import sttp.model.{Part, Header => SttpHeader}
-import sttp.tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
   CodecForOptional,
+  CodecFormat,
   CodecMeta,
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
-  CodecFormat,
   MultipartValueType,
   RawPart,
   StringValueType

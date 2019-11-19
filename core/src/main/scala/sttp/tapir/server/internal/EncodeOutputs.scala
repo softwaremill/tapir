@@ -1,9 +1,9 @@
-package sttp.tapir.internal.server
+package sttp.tapir.server.internal
 
 import sttp.model.StatusCode
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.internal._
-import sttp.tapir.{CodecForOptional, EndpointIO, EndpointOutput, CodecFormat, StreamingEndpointIO}
+import sttp.tapir.{CodecForOptional, CodecFormat, EndpointIO, EndpointOutput, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 

@@ -11,7 +11,7 @@ import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
 import sttp.model.{Header, Part}
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
 import sttp.tapir.{
   ByteArrayValueType,

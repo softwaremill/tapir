@@ -9,16 +9,16 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
 import sttp.model.{Header, HeaderNames, Part}
-import sttp.tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
   CodecForOptional,
+  CodecFormat,
   CodecMeta,
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
-  CodecFormat,
   MultipartValueType,
   RawPart,
   StringValueType

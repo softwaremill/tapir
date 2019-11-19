@@ -1,7 +1,8 @@
-package sttp.tapir.internal.server
+package sttp.tapir.server.internal
 
-import sttp.tapir.internal._
+import sttp.tapir.internal.SeqToParams
 import sttp.tapir.{EndpointIO, EndpointInput}
+import sttp.tapir.internal._
 
 object InputValues {
   /**

@@ -7,8 +7,8 @@ import com.github.ghik.silencer.silent
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import org.log4s._
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
+import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.reflect.ClassTag
@@ -51,9 +51,9 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           }
       }
 
-      OptionT(decodeBody(DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
+      OptionT(decodeBody(internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values          => valuesToResponse(values).map(_.some)
-        case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, req, input, failure)
+        case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
       })
     }
 
@@ -83,7 +83,6 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
   private def handleDecodeFailure[I](
       e: Endpoint[_, _, _, _],
-      req: Request[F],
       input: EndpointInput.Single[_],
       failure: DecodeFailure
   ): F[Option[Response[F]]] = {
