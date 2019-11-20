@@ -11,9 +11,7 @@ import scala.concurrent.ExecutionContext
 
 /**
   * Usage: add `new SwaggerHttp4s(yaml).routes[F]` to your http4s router. For example:
-  * `Router("/docs" -> new SwaggerHttp4s(yaml).routes[IO])`.
-  *
-  * When using a custom `contextPath` is used, replace `/docs` with that value.
+  * `Router("/" -> new SwaggerHttp4s(yaml).routes[IO])`.
   *
   * @param yaml        The yaml with the OpenAPI documentation.
   * @param contextPath The context in which the documentation will be served. Defaults to `docs`, so the address
@@ -34,14 +32,17 @@ class SwaggerHttp4s(yaml: String, contextPath: String = "docs", yamlName: String
     import dsl._
 
     HttpRoutes.of[F] {
-      case GET -> Root =>
-        PermanentRedirect(Location(Uri.fromString(s"/$contextPath/index.html?url=/$contextPath/$yamlName").right.get))
-      case GET -> Root / `yamlName` =>
+      case path @ GET -> Root / `contextPath` =>
+        Uri
+          .fromString(s"${path.uri}/index.html?url=${path.uri}/$yamlName")
+          .map(uri => PermanentRedirect(Location(uri)))
+          .getOrElse(NotFound())
+      case GET -> Root / `contextPath` / `yamlName` =>
         Ok(yaml)
-      case r =>
+      case GET -> Root / `contextPath` / swaggerResource =>
         StaticFile
           .fromResource(
-            s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion${r.pathInfo}",
+            s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$swaggerResource",
             Blocker.liftExecutionContext(ExecutionContext.global)
           )
           .getOrElseF(NotFound())
