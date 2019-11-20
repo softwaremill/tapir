@@ -16,15 +16,6 @@ import scala.util.control.NonFatal
 
 package object finatra {
   implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
-    private def httpMethod(endpoint: Endpoint[I, E, O, Nothing]): Method = {
-      endpoint.input
-        .asVectorOfBasicInputs()
-        .collectFirst {
-          case FixedMethod(m) => Method(m.method)
-        }
-        .getOrElse(Method("ANY"))
-    }
-
     def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
       val handler = { request: Request =>
         def decodeBody(result: DecodeInputsResult): Future[DecodeInputsResult] = {
@@ -90,7 +81,7 @@ package object finatra {
         }
       }
 
-      FinatraRoute(handler, httpMethod(e), e.input.path)
+      FinatraRoute(handler, httpMethod(e), path(e.input))
     }
 
     @silent("never used")
@@ -106,18 +97,25 @@ package object finatra {
     }
   }
 
-  implicit class SuperRichEndpointInput[I](input: EndpointInput[I]) {
-    def path: String = {
-      val p = input
-        .asVectorOfBasicInputs()
-        .collect {
-          case segment: EndpointInput.FixedPath => segment.show
-          case PathCapture(_, Some(name), _)    => s"/:$name"
-          case PathCapture(_, _, _)             => "/:param"
-          case EndpointInput.PathsCapture(_)    => "/:*"
-        }
-        .mkString
-      if (p.isEmpty) "/:*" else p
-    }
+  private[finatra] def path(input: EndpointInput[_]): String = {
+    val p = input
+      .asVectorOfBasicInputs()
+      .collect {
+        case segment: EndpointInput.FixedPath => segment.show
+        case PathCapture(_, Some(name), _)    => s"/:$name"
+        case PathCapture(_, _, _)             => "/:param"
+        case EndpointInput.PathsCapture(_)    => "/:*"
+      }
+      .mkString
+    if (p.isEmpty) "/:*" else p
+  }
+
+  private[finatra] def httpMethod(endpoint: Endpoint[_, _, _, _]): Method = {
+    endpoint.input
+      .asVectorOfBasicInputs()
+      .collectFirst {
+        case FixedMethod(m) => Method(m.method)
+      }
+      .getOrElse(Method("ANY"))
   }
 }

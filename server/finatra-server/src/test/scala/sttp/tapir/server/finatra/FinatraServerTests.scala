@@ -46,7 +46,13 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
     e.toRouteRecoverErrors(fn)
   }
 
-  override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = {
+  override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = FinatraServerTests.server(routes, port)
+
+  override lazy val portCounter: PortCounter = new PortCounter(58000)
+}
+
+object FinatraServerTests {
+  def server(routes: NonEmptyList[FinatraRoute], port: Port)(implicit ioTimer: Timer[IO]): Resource[IO, Unit] = {
     def waitUntilHealthy(s: EmbeddedHttpServer, count: Int): IO[EmbeddedHttpServer] =
       if (s.isHealthy) IO.pure(s)
       else if (count > 1000) IO.raiseError(new IllegalStateException("Server unhealthy"))
@@ -84,6 +90,4 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
       .make(bind)(httpServer => IO(httpServer.close()))
       .map(_ => ())
   }
-
-  override lazy val portCounter: PortCounter = new PortCounter(58000)
 }
