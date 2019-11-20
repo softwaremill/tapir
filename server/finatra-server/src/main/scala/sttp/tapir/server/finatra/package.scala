@@ -49,6 +49,7 @@ package object finatra {
 
         def valuesToResponse(values: DecodeInputsResult.Values): Future[Response] = {
           val i = SeqToParams(InputValues(e.input, values)).asInstanceOf[I]
+
           logic(i)
             .map {
               case Right(result) => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.success.code), e.output, result)
