@@ -89,6 +89,6 @@ add the created route with `addTapirRoute`.
 
 ```scala
 class MyController extends Controller with TapirController {
-  addTapirRoute(endpoint.toRoute { (s: String, i: Int) => ??? }
+  addTapirRoute(endpoint.toRoute { (s: String, i: Int) => ??? })
 }
 ```
