@@ -11,9 +11,7 @@ import scala.concurrent.ExecutionContext
 
 /**
   * Usage: add `new SwaggerHttp4s(yaml).routes[F]` to your http4s router. For example:
-  * `Router("/docs" -> new SwaggerHttp4s(yaml).routes[IO])`.
-  *
-  * When using a custom `contextPath` is used, replace `/docs` with that value.
+  * `Router("/" -> new SwaggerHttp4s(yaml).routes[IO])`.
   *
   * @param yaml        The yaml with the OpenAPI documentation.
   * @param contextPath The context in which the documentation will be served. Defaults to `docs`, so the address
