@@ -16,7 +16,7 @@ import sttp.tapir.server.finatra._
 or if you would like to use cats-effect project, you can add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats-support" % "0.12.3"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "0.12.3"
 ```
 
 and import the packate:
