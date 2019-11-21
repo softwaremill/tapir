@@ -215,6 +215,16 @@ lazy val redocHttp4s: Project = (project in file("docs/redoc-http4s"))
     libraryDependencies += "org.http4s" %% "http4s-dsl" % Versions.http4s
   )
 
+lazy val swaggerUiFinatra: Project = (project in file("docs/swagger-ui-finatra"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-swagger-ui-finatra",
+    libraryDependencies ++= Seq(
+      "com.twitter" %% "finatra-http" % Versions.finatra,
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    )
+  )
+
 // server
 
 lazy val serverTests: Project = (project in file("server/tests"))
