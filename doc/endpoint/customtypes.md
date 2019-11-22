@@ -33,7 +33,11 @@ def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match {
 }
 def encode(id: MyId): String = id.toString
 
-implicit val myIdCodec: Codec[MyId, TextPlain, _] = Codec.stringPlainCodecUtf8
+implicit val myIdCodec: Codec[MyId, TextPlain, String] = Codec.stringPlainCodecUtf8
+  .mapDecode(decode)(encode)
+
+// or, using the type alias for codecs in the TextPlain format and String as the raw value:
+implicit val myIdCodec: PlainCodec[MyId] = Codec.stringPlainCodecUtf8
   .mapDecode(decode)(encode)
 ```
 
