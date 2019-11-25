@@ -4,7 +4,7 @@ import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.docs.openapi.uniqueName
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.openapi.{Schema => OSchema}
+import sttp.tapir.openapi.{Reference, Schema => OSchema}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
 
 import scala.collection.immutable
@@ -20,10 +20,31 @@ object ObjectSchemasForEndpoints {
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
     val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
-    val infosToSchema = sObjects.map(td => (td._1, tschemaToOSchema(td._2))).toMap
+    val infosToSchema = sObjects.map(td => (td._1, tschemaToOSchema(td._2))).toListMap
 
-    val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
-    (schemaKeys.values.toListMap, schemas)
+    val schemaKeys = infosToSchema.map { case (k, v) => infoToKey(k) -> v }
+    (updateChildToParentRelation(schemaKeys), schemas)
+  }
+
+  private def updateChildToParentRelation(
+      schemaKeys: ListMap[SchemaKey, ReferenceOr[OSchema]]
+  ): ListMap[SchemaKey, ReferenceOr[OSchema]] = {
+    val productToParent = schemaKeys
+      .collect {
+        case (key, Right(schema)) =>
+          schema.oneOf.collect {
+            case Left(e) => (e.dereference: SchemaKey) -> Reference(key)
+          }
+      }
+      .flatten
+      .toMap
+
+    schemaKeys.map {
+      case (key, Right(value)) if productToParent.contains(key) =>
+        val parent = productToParent(key)
+        key -> Right(OSchema(allOf = List(Left(parent), Right(value))))
+      case other => other
+    }
   }
 
   private def calculateUniqueKeys(infos: Iterable[TSchemaType.SObjectInfo]): Map[TSchemaType.SObjectInfo, SchemaKey] = {

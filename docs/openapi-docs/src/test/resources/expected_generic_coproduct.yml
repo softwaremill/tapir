@@ -33,19 +33,23 @@ components:
       oneOf:
         - $ref: '#/components/schemas/GenericPerson_String'
     GenericPerson_String:
-      required:
-        - data
-      type: object
-      properties:
-        data:
-          type: string
+      allOf:
+        - $ref: '#/components/schemas/GenericEntity_String'
+        - required:
+            - data
+          type: object
+          properties:
+            data:
+              type: string
     GenericEntity_Int:
       oneOf:
         - $ref: '#/components/schemas/GenericPerson_Int'
     GenericPerson_Int:
-      required:
-        - data
-      type: object
-      properties:
-        data:
-          type: integer
+      allOf:
+        - $ref: '#/components/schemas/GenericEntity_Int'
+        - required:
+            - data
+          type: object
+          properties:
+            data:
+              type: integer
