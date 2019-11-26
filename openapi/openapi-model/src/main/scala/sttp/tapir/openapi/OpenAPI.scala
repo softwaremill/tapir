@@ -258,7 +258,10 @@ object SchemaFormat {
   val Password: Option[String] = Some("password")
 }
 
-case class ExampleValue(value: String)
+sealed trait ExampleValue
+
+case class ExampleSingleValue(value: String) extends ExampleValue
+case class ExampleMultipleValue(values: List[String]) extends ExampleValue
 
 case class SecurityScheme(
     `type`: String,

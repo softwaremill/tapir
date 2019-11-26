@@ -549,6 +549,19 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("support both multiple and single example values") {
+    val expectedYaml = loadYaml("expected_multiple_and_single_example_values.yml")
+    val actualYaml = endpoint.post
+      .in(query[List[String]]("friends").example(List("bob", "alice")))
+      .in(query[String]("current-person").example("alan"))
+      .in(jsonBody[Person].example(Person("bob", 23)))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }

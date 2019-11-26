@@ -1,0 +1,49 @@
+openapi: 3.0.1
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      parameters:
+        - name: friends
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          example:
+            - bob
+            - alice
+        - name: current-person
+          in: query
+          required: true
+          schema:
+            type: string
+          example: alan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Person'
+            example:
+              name: bob
+              age: 23
+        required: true
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    Person:
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
