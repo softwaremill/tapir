@@ -30,10 +30,9 @@ package object openapi extends TapirOpenAPIDocs {
 
   private[openapi] def exampleValue[T](codec: CodecForMany[T, _, _], e: T): Option[ExampleValue] = {
     val encodedValues = encodeToString(codec)(e)
-    if (codec.meta.schema.schemaType.isInstanceOf[SchemaType.SArray]) {
-      Some(ExampleMultipleValue(encodedValues))
-    } else {
-      encodedValues.headOption.map(ExampleSingleValue)
+    codec.meta.schema.schemaType match {
+      case SchemaType.SArray(_) => Some(ExampleMultipleValue(encodedValues))
+      case _                    => encodedValues.headOption.map(ExampleSingleValue)
     }
   }
 }
