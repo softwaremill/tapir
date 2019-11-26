@@ -41,6 +41,7 @@ lazy val rootProject = (project in file("."))
   .aggregate(
     core,
     tapirCats,
+    tapirEnumeratum,
     circeJson,
     playJson,
     sprayJson,
@@ -107,6 +108,19 @@ lazy val tapirCats: Project = (project in file("cats"))
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.1.0",
       "org.scalacheck" %% "scalacheck" % Versions.scalaCheck % "test",
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
+
+// enumeratum
+
+lazy val tapirEnumeratum: Project = (project in file("enumeratum"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-enumeratum",
+    libraryDependencies ++= Seq(
+      "com.beachape" %% "enumeratum" % Versions.enumeratum,
       scalaTest % "test"
     )
   )
