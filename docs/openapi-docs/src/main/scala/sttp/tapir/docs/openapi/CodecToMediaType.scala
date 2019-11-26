@@ -26,7 +26,7 @@ private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
     ListMap(
       format.mediaType.noCharset.toString -> OMediaType(
         Some(objectSchemas(TypeData(schema, Validator.pass))),
-        example.map(ExampleValue),
+        example.map(ExampleSingleValue),
         ListMap.empty,
         ListMap.empty
       )
