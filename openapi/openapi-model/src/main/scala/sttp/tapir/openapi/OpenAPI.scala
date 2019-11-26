@@ -186,10 +186,18 @@ case class Header(
     content: ListMap[String, MediaType]
 )
 
-case class Reference($ref: String)
+case class Reference private ($ref: String) {
+  def dereference: String = $ref.replace(Reference.ReferencePrefix, "")
+}
+
+object Reference {
+  private val ReferencePrefix = "#/components/schemas/"
+  def apply($ref: String): Reference = new Reference(s"$ReferencePrefix${$ref}")
+}
 
 // todo: discriminator, xml, json-schema properties
 case class Schema(
+    allOf: List[ReferenceOr[Schema]] = List.empty,
     title: Option[String] = None,
     required: List[String] = List.empty,
     `type`: Option[SchemaType.SchemaType] = None,
@@ -203,7 +211,7 @@ case class Schema(
     writeOnly: Option[Boolean] = None,
     example: Option[ExampleValue] = None,
     deprecated: Option[Boolean] = None,
-    oneOf: Option[List[ReferenceOr[Schema]]] = None,
+    oneOf: List[ReferenceOr[Schema]] = List.empty,
     discriminator: Option[Discriminator] = None,
     additionalProperties: Option[ReferenceOr[Schema]] = None,
     pattern: Option[String] = None,
@@ -224,7 +232,7 @@ object Schema {
   def apply(`type`: SchemaType.SchemaType): Schema = new Schema(`type` = Some(`type`))
 
   def apply(references: List[ReferenceOr[Schema]], discriminator: Option[Discriminator]): Schema =
-    new Schema(oneOf = Some(references), discriminator = discriminator)
+    new Schema(oneOf = references, discriminator = discriminator)
 }
 
 object SchemaType extends Enumeration {

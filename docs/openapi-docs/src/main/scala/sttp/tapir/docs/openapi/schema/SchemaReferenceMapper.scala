@@ -5,6 +5,6 @@ import sttp.tapir.{SchemaType => TSchemaType}
 
 class SchemaReferenceMapper(fullNameToKey: Map[TSchemaType.SObjectInfo, SchemaKey]) {
   def map(objectInfo: TSchemaType.SObjectInfo): Reference = {
-    Reference("#/components/schemas/" + fullNameToKey(objectInfo))
+    Reference(fullNameToKey(objectInfo))
   }
 }
