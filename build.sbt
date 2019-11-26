@@ -73,7 +73,16 @@ lazy val core: Project = (project in file("core"))
       "com.propensive" %% "magnolia" % "0.12.0",
       "com.softwaremill.sttp.client" %% "model" % Versions.sttp,
       scalaTest % "test"
-    )
+    ),
+    unmanagedSourceDirectories in Compile += (baseDirectory in Compile).value / "src" / "main" / "scala-common",
+    unmanagedSourceDirectories in Compile += {
+      // sourceDirectory returns a platform-scoped directory, e.g. /.jvm
+      val sourceDir = (baseDirectory in Compile).value / "src" / "main"
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
+        case _                       => sourceDir / "scala-2.13-"
+      }
+    }
   )
   .enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
@@ -224,6 +233,7 @@ lazy val swaggerUiFinatra: Project = (project in file("docs/swagger-ui-finatra")
       "org.webjars" % "swagger-ui" % Versions.swaggerUi
     )
   )
+  .settings(only2_12settings)
 
 // server
 
