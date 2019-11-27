@@ -51,6 +51,7 @@ lazy val rootProject = (project in file("."))
     openapiDocs,
     swaggerUiAkka,
     swaggerUiHttp4s,
+    swaggerUiFinatra,
     redocHttp4s,
     serverTests,
     akkaHttpServer,
@@ -224,6 +225,7 @@ lazy val swaggerUiFinatra: Project = (project in file("docs/swagger-ui-finatra")
       "org.webjars" % "swagger-ui" % Versions.swaggerUi
     )
   )
+  .settings(only2_12settings)
 
 // server
 
