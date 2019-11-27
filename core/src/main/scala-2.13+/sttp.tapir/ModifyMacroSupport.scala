@@ -11,7 +11,7 @@ trait ModifyMacroSupport extends ModifyMacroOptionSupport {
     new ModifyFunctor[F, A] {}
 
   implicit class ModifyEachMap[F[_, _], K, T](t: F[K, T])(implicit fac: Factory[(K, T), F[K, T]]) {
-    @compileTimeOnly(canOnlyBeUsedInsideIgnore("each"))
+    @compileTimeOnly(canOnlyBeUsedInsideModify("each"))
     def each: T = sys.error("")
   }
 }

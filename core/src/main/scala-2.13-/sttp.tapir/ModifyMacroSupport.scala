@@ -12,7 +12,7 @@ trait ModifyMacroSupport extends ModifyMacroOptionSupport {
     new ModifyFunctor[F, A] {}
 
   trait ModifyMapAtFunctor[F[_, _], K, T] {
-    @compileTimeOnly(canOnlyBeUsedInsideIgnore("each"))
+    @compileTimeOnly(canOnlyBeUsedInsideModify("each"))
     def each(fa: F[K, T])(f: T => T): F[K, T] = sys.error("")
   }
 
@@ -21,7 +21,7 @@ trait ModifyMacroSupport extends ModifyMacroOptionSupport {
   ): ModifyMapAtFunctor[M, K, T] = new ModifyMapAtFunctor[M, K, T] {}
 
   implicit class ModifyEachMap[F[_, _], K, T](t: F[K, T])(implicit f: ModifyMapAtFunctor[F, K, T]) {
-    @compileTimeOnly(canOnlyBeUsedInsideIgnore("each"))
+    @compileTimeOnly(canOnlyBeUsedInsideModify("each"))
     def each: T = sys.error("")
   }
 }
