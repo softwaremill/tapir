@@ -11,7 +11,7 @@ import sttp.tapir.model.ServerRequest
 
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirDerivedInputs {
+trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.FixedPath(s)
 
   def path[T: PlainCodec]: EndpointInput.PathCapture[T] =
