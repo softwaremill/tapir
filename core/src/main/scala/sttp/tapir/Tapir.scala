@@ -7,6 +7,7 @@ import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.CodecForOptional.PlainCodecForOptional
 import sttp.tapir.EndpointOutput.StatusMapping
+import sttp.tapir.internal.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
 
 import scala.reflect.ClassTag

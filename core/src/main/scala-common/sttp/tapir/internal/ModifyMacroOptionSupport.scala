@@ -1,4 +1,4 @@
-package sttp.tapir
+package sttp.tapir.internal
 
 import scala.annotation.compileTimeOnly
 
