@@ -7,11 +7,12 @@ import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.CodecForOptional.PlainCodecForOptional
 import sttp.tapir.EndpointOutput.StatusMapping
+import sttp.tapir.internal.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
 
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirDerivedInputs {
+trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.FixedPath(s)
 
   def path[T: PlainCodec]: EndpointInput.PathCapture[T] =

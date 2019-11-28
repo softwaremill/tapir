@@ -117,10 +117,7 @@ and assigning it to an implicit schema. When such an implicit `Schmea[T]` is in 
 than the built-in low-priority conversion from `Derived[Schema[T]]` to `Schema[T]`.
 
 Schemas for products/coproducts (case classes and case class families) can be traversed and modified using
-`.modifyUnsafe`. The "unsafe" prefix comes from the fact that the method takes a list of fields, traverses the
-schema to find the referenced one; the correctness of this specification is not checked.
-
-To traverse colletions, using the `"each"` field name.
+`.modify` method.
 
 For example:
 
@@ -128,8 +125,12 @@ For example:
 case class Basket(fruits: List[FruitAmount])
 case class FruitAmount(fruit: String, amount: Int)
 implicit val customBasketSchema: Schema[Basket] = implicitly[Derived[Schema[Basket]]].value
-      .modifyUnsafe("fruits", "each", "amount")(_.description("How many fruits?"))
+      .modify(_.fruits.each.amount)(_.description("How many fruits?"))
 ```
+
+There is also an unsafe variant of this method, but it should be avoided in most cases. 
+The "unsafe" prefix comes from the fact that the method takes a list of strings, 
+which represent fields, and the correctness of this specification is not checked.
 
 ### Schema for cats datatypes
 

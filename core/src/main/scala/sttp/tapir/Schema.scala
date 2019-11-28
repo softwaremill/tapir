@@ -12,6 +12,7 @@ import sttp.tapir.SchemaType._
 import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
 import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
 import sttp.tapir.generic.Derived
+import sttp.tapir.internal.ModifySchemaMacro
 
 /**
   * Describes the shape of the low-level, "raw" representation of type `T`.
@@ -40,10 +41,12 @@ case class Schema[T](
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 
-  def modifyUnsafe(fields: String*)(modify: Schema[_] => Schema[_]): Schema[T] = modifyAtPath(fields.toList, modify)
+  def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
-  private def modifyAtPath(fieldPath: List[String], modify: Schema[_] => Schema[_]): Schema[T] = fieldPath match {
-    case Nil => modify(this).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
+  def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.modifyMacro[T, U]
+
+  private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] = fieldPath match {
+    case Nil => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
     case f :: fs =>
       val schemaType2 = schemaType match {
         case SArray(element) if f == Schema.ModifyCollectionElements => SArray(element.modifyAtPath(fs, modify))
@@ -52,9 +55,10 @@ case class Schema[T](
             case field @ (fieldName, fieldSchema) =>
               if (fieldName == f) (fieldName, fieldSchema.modifyAtPath(fs, modify)) else field
           })
-        case s @ SOpenProduct(_, valueSchema) => s.copy(valueSchema = valueSchema.modifyAtPath(fieldPath, modify))
-        case s @ SCoproduct(_, schemas, _)    => s.copy(schemas = schemas.map(_.modifyAtPath(fieldPath, modify)))
-        case _                                => schemaType
+        case s @ SOpenProduct(_, valueSchema) if f == Schema.ModifyCollectionElements =>
+          s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))
+        case s @ SCoproduct(_, schemas, _) => s.copy(schemas = schemas.map(_.modifyAtPath(fieldPath, modify)))
+        case _                             => schemaType
       }
       copy(schemaType = schemaType2)
   }
