@@ -3,7 +3,7 @@ package sttp.tapir.internal
 import scala.annotation.compileTimeOnly
 import scala.collection.Factory
 
-trait ModifyMacroSupport extends ModifyMacroOptionSupport {
+trait ModifyMacroSupport extends ModifyMacroFunctorSupport {
   implicit def traversableModifyFunctor[F[_], A](
                                                   implicit fac: Factory[A, F[A]],
                                                   ev: F[A] => Iterable[A]

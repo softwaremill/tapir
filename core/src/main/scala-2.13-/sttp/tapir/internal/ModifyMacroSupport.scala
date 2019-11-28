@@ -4,7 +4,7 @@ import scala.annotation.compileTimeOnly
 import scala.collection.TraversableLike
 import scala.collection.generic.CanBuildFrom
 
-trait ModifyMacroSupport extends ModifyMacroOptionSupport {
+trait ModifyMacroSupport extends ModifyMacroFunctorSupport {
   implicit def traversableModifyFunctor[F[_], A](
       implicit cbf: CanBuildFrom[F[A], A, F[A]],
       ev: F[A] => TraversableLike[A, F[A]]

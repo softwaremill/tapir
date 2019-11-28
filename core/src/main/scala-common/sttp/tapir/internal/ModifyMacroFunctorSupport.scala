@@ -2,7 +2,7 @@ package sttp.tapir.internal
 
 import scala.annotation.compileTimeOnly
 
-trait ModifyMacroOptionSupport {
+trait ModifyMacroFunctorSupport {
   implicit class ModifyEach[F[_], T](t: F[T])(implicit f: ModifyFunctor[F, T]) {
     @compileTimeOnly(canOnlyBeUsedInsideModify("each"))
     def each: T = sys.error("")
