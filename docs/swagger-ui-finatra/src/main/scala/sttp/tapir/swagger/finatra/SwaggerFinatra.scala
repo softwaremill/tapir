@@ -67,7 +67,7 @@ class SwaggerFinatra(yaml: String, contextPath: String = "docs", yamlName: Strin
             } else {
               response.ok(bytes).contentType("image/png")
             }
-        }
+          }
     )
   }
 }

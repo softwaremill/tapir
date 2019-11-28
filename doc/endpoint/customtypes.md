@@ -117,7 +117,7 @@ and assigning it to an implicit schema. When such an implicit `Schmea[T]` is in 
 than the built-in low-priority conversion from `Derived[Schema[T]]` to `Schema[T]`.
 
 Schemas for products/coproducts (case classes and case class families) can be traversed and modified using
-`.modify` method.
+`.modify` method. To traverse collections, use `.each`.
 
 For example:
 
@@ -131,6 +131,8 @@ implicit val customBasketSchema: Schema[Basket] = implicitly[Derived[Schema[Bask
 There is also an unsafe variant of this method, but it should be avoided in most cases. 
 The "unsafe" prefix comes from the fact that the method takes a list of strings, 
 which represent fields, and the correctness of this specification is not checked.
+
+Non-standard collections can be unwrapped in the modification path by providing an implicit value of `ModifyFunctor`.
 
 ### Schema for cats datatypes
 
