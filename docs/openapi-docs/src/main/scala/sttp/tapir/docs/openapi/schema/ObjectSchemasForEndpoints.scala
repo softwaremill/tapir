@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi.schema
 
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
-import sttp.tapir.docs.openapi.uniqueName
+import sttp.tapir.docs.openapi.{OpenAPIDocsOptions, uniqueName}
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
 import sttp.tapir.openapi.{Reference, Schema => OSchema}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
@@ -13,7 +13,7 @@ import scala.collection.immutable.ListMap
 object ObjectSchemasForEndpoints {
   private type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
 
-  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
+  def apply(es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
@@ -23,7 +23,8 @@ object ObjectSchemasForEndpoints {
     val infosToSchema = sObjects.map(td => (td._1, tschemaToOSchema(td._2))).toListMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => infoToKey(k) -> v }
-    (updateChildToParentRelation(schemaKeys), schemas)
+    val schemaKeys2 = if (options.linkFromChildToParent) updateChildToParentRelation(schemaKeys) else schemaKeys
+    (schemaKeys2, schemas)
   }
 
   private def updateChildToParentRelation(
