@@ -40,6 +40,6 @@ class SwaggerAkka(yaml: String, contextPath: String = "docs", yamlName: String =
     } ~
       // needed only if you use oauth2 authorization
       path("oauth2-redirect.html") { request =>
-        redirectToOath2(request.request.uri.rawQueryString.map(s => '?' + s).getOrElse(""))(request)
+        redirectToOath2(request.request.uri.rawQueryString.map(s => "?" + s).getOrElse(""))(request)
       }
 }
