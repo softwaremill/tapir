@@ -164,8 +164,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          statusMapping(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)),
-          statusMapping(StatusCode.Ok, plainBody[String].map(Right(_))(_.value))
+          partialStatusMapping(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)){case Left(_:Int) => true},
+          partialStatusMapping(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)){case Right(_:String) => true}
         )
       )
 
@@ -174,9 +174,14 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Option[Either[Int, String]]](
-          statusMapping(StatusCode.NoContent, emptyOutput.map(_ => None)(_ => ())),
-          statusMapping(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]]),
-          statusMapping(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])
+          statusMapping[None.type](StatusCode.NoContent, emptyOutput.map[None.type](_ => None)(_ => ())),
+
+          partialStatusMapping(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]]){
+            case Some(Left(_: Int)) => true
+          },
+          partialStatusMapping(StatusCode.Ok, jsonBody[Some[Right[Int, String]]]){
+            case Some(Right(_: String)) => true
+          }
         )
       )
   val in_string_out_status_from_string_one_empty: Endpoint[String, Unit, Either[Unit, String], Nothing] =
@@ -184,8 +189,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          statusMapping(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)),
-          statusMapping(StatusCode.Ok, plainBody[String].map(Right(_))(_.value))
+          partialStatusMapping(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)){case Left(_: Unit) => true},
+          partialStatusMapping(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)){case Right(_: String) => true}
         )
       )
 

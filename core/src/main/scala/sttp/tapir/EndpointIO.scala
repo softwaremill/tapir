@@ -177,7 +177,19 @@ object EndpointOutput {
 
   //
 
-  case class StatusMapping[O](statusCode: Option[sttp.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])
+  sealed trait StatusMapping[O] {
+    def statusCode: Option[sttp.model.StatusCode]
+    def output: EndpointOutput[O]
+    def applyTo(a: Any): Boolean
+  }
+
+  case class TypeStatusMapping[O] private[tapir](statusCode: Option[sttp.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O]) extends StatusMapping[O] {
+    override def applyTo(a: Any): Boolean = ct.runtimeClass.isInstance(a)
+  }
+
+  case class PartialStatusMapping[O] private[tapir](statusCode: Option[sttp.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])(matcher: PartialFunction[Any, Boolean]) extends StatusMapping[O] {
+    override def applyTo(a: Any): Boolean = matcher.lift(a).getOrElse(false)
+  }
 
   case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"

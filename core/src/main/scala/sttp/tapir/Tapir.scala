@@ -6,10 +6,11 @@ import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, HeaderNames, Sta
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.CodecForOptional.PlainCodecForOptional
-import sttp.tapir.EndpointOutput.StatusMapping
+import sttp.tapir.EndpointOutput.{PartialStatusMapping, StatusMapping, TypeStatusMapping}
 import sttp.tapir.model.ServerRequest
 
 import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.{TypeTag, typeOf}
 
 trait Tapir extends TapirDerivedInputs {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.FixedPath(s)
@@ -97,13 +98,21 @@ trait Tapir extends TapirDerivedInputs {
   /**
     * Create a mapping to be used in [[oneOf]] output descriptions.
     */
-  def statusMapping[O: ClassTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
-    StatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)
+  def statusMapping[O: ClassTag: TypeTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] = {
+    val t = typeOf[O]
+    if (!(t =:= t.erasure)) {
+      throw new IllegalArgumentException(f"Constructing statusMapping on type $t is not allowed because $t is subject to type erasure, please use partialStatusMapping instead")
+    }
+    TypeStatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)
+  }
+
+  def partialStatusMapping[O: ClassTag](statusCode: StatusCode, output: EndpointOutput[O])(matcher: PartialFunction[Any, Boolean]): StatusMapping[O] =
+    PartialStatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)(matcher)
 
   /**
     * Create a fallback mapping to be used in [[oneOf]] output descriptions.
     */
-  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(None, implicitly[ClassTag[O]], output)
+  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = TypeStatusMapping(None, implicitly[ClassTag[O]], output)
 
   /**
     * An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
