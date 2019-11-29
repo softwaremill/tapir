@@ -3,14 +3,13 @@ package sttp.tapir.generic
 import java.math.{BigDecimal => JBigDecimal}
 
 import com.github.ghik.silencer.silent
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
+import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.SchemaType.{SObjectInfo, SProduct}
 import sttp.tapir.util.CompileUtil
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema, Validator}
 
 @silent("never used")
-class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
+class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
     case class Test1(f1: Int)

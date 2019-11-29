@@ -1,12 +1,11 @@
 package sttp.tapir.codec.cats
 
 import cats.data.{NonEmptyChain, NonEmptyList, NonEmptySet}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
+import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.SchemaType.{SArray, SString}
 import sttp.tapir.{Schema, Validator}
 
-class TapirCodecCatsTest extends AnyFlatSpec with Matchers {
+class TapirCodecCatsTest extends FlatSpec with Matchers {
   case class Test(value: String)
 
   implicit val validatorForTest: Validator[Test] = Validator.minLength(3).contramap(_.value)

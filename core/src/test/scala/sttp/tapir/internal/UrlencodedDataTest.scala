@@ -2,10 +2,9 @@ package sttp.tapir.internal
 
 import java.nio.charset.StandardCharsets
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
+import org.scalatest.{FlatSpec, Matchers}
 
-class UrlencodedDataTest extends AnyFlatSpec with Matchers {
+class UrlencodedDataTest extends FlatSpec with Matchers {
   def test(desc: String, s: String, expected: Seq[(String, String)]): Unit = {
     it should desc in {
       val decoded = UrlencodedData.decode(s, StandardCharsets.UTF_8)

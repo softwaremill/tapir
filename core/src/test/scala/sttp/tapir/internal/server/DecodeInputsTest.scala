@@ -1,7 +1,6 @@
 package sttp.tapir.internal.server
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
+import org.scalatest.{FlatSpec, Matchers}
 import sttp.model.Method
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 import sttp.tapir.Codec.PlainCodec
@@ -9,7 +8,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsContext, DecodeInputsResult}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 
-class DecodeInputsTest extends AnyFlatSpec with Matchers {
+class DecodeInputsTest extends FlatSpec with Matchers {
   it should "return an error if decoding throws an exception" in {
     // given
     case class X(v: String)

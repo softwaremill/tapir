@@ -1,10 +1,7 @@
 package sttp.tapir.internal
 
-import com.github.ghik.silencer.silent
-
 import scala.annotation.compileTimeOnly
 
-@silent("never used")
 trait ModifyMacroFunctorSupport {
   implicit class ModifyEach[F[_], T](t: F[T])(implicit f: ModifyFunctor[F, T]) {
     @compileTimeOnly(canOnlyBeUsedInsideModify("each"))

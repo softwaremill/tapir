@@ -1,10 +1,9 @@
 package sttp.tapir
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
+import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.SchemaType._
 
-class SchemaMacroTest extends AnyFlatSpec with Matchers {
+class SchemaMacroTest extends FlatSpec with Matchers {
   it should "modify basic schema" in {
     implicitly[Schema[String]].modify(x => x)(_.description("test")) shouldBe implicitly[Schema[String]]
       .copy(description = Some("test"))
