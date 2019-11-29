@@ -24,6 +24,14 @@ import scala.reflect.ClassTag
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
   private val basicStringRequest = basicRequest.response(asStringAlways)
 
+
+  testServer(in_string_out_status_from_type_erasure)(
+    (v: String) => pureResult((if (v == "right") Some(Right("right")) else if (v == "left") Some(Left(42)) else None).asRight[Unit])
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri?fruit=nothing").send().map(_.code shouldBe StatusCode.NoContent) >>
+      basicRequest.get(uri"$baseUri?fruit=right").send().map(_.code shouldBe StatusCode.Ok) >>
+      basicRequest.get(uri"$baseUri?fruit=left").send().map(_.code shouldBe StatusCode.Accepted)
+  }
   // method matching
 
   testServer(endpoint, "GET empty endpoint")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
