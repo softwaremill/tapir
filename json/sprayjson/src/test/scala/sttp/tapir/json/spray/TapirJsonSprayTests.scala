@@ -1,6 +1,8 @@
 package sttp.tapir.json.spray
 
-import org.scalatest.{Assertion, FlatSpec, Matchers}
+import org.scalatest.Assertion
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
 import spray.json._
@@ -8,7 +10,7 @@ import sttp.tapir.Codec.JsonCodec
 
 object TapirJsonSprayCodec extends TapirJsonSpray
 
-class TapirJsonSprayTests extends FlatSpec with Matchers with DefaultJsonProtocol {
+class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProtocol {
   case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
 
   object Customer {

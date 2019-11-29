@@ -1,9 +1,10 @@
 package sttp.tapir.server.http4s
 
 import cats.effect.IO
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class RichToMonadFunctionTest extends FunSuite with Matchers {
+class RichToMonadFunctionTest extends AnyFunSuite with Matchers {
   case class Error(r: String)
   case class User(u: String)
   case class Result(r: String)

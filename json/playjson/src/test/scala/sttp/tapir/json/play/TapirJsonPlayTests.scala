@@ -1,15 +1,17 @@
 package sttp.tapir.json.play
 
-import org.scalatest.{FlatSpec, Matchers, Assertion}
+import org.scalatest.Assertion
 import play.api.libs.json._
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
-
 import java.util.Date
+
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 object TapirJsonPlayCodec extends TapirJsonPlay
 
-class TapirJsonPlayTests extends FlatSpec with Matchers {
+class TapirJsonPlayTests extends AnyFlatSpec with Matchers {
   case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
 
   object Customer {

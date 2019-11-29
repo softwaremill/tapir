@@ -1,10 +1,11 @@
 package sttp.tapir.server
 
 import com.github.ghik.silencer.silent
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Validator
 
-class ServerDefaultsTest extends FlatSpec with Matchers {
+class ServerDefaultsTest extends AnyFlatSpec with Matchers {
   it should "create a validation error message for a nested field" in {
     // given
     @silent("never used")

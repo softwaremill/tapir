@@ -1,9 +1,12 @@
 package sttp.tapir.internal
 
+import com.github.ghik.silencer.silent
+
 import scala.annotation.compileTimeOnly
 import scala.collection.TraversableLike
 import scala.collection.generic.CanBuildFrom
 
+@silent("never used")
 trait ModifyMacroSupport extends ModifyMacroFunctorSupport {
   implicit def traversableModifyFunctor[F[_], A](
       implicit cbf: CanBuildFrom[F[A], A, F[A]],

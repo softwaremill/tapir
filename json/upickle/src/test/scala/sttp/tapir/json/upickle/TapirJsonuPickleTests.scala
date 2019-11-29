@@ -1,16 +1,18 @@
 package sttp.tapir.json.upickle
 
 import upickle.default._
-import org.scalatest.{Assertion, FlatSpec, Matchers}
 import java.util.Date
 
+import org.scalatest.Assertion
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
 
 object TapirJsonuPickleCodec extends TapirJsonuPickle
 
-class TapirJsonuPickleTests extends FlatSpec with Matchers {
+class TapirJsonuPickleTests extends AnyFlatSpec with Matchers {
   case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
 
   object Customer {
