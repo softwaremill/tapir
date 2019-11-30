@@ -194,7 +194,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
                       .copy(headers = sttpPart1.headers.filterNot(_.is(HeaderNames.ContentType)))
                       .contentType(partCodecMeta.format.mediaType.copy(charset = None))
                   } else sttpPart1
-                val sttpPart3 = p.headers.foldLeft(sttpPart2)(_.header(_))
+                val sttpPart3 = p.headers.foldLeft(sttpPart2)(_.header(_, true))
+                println(sttpPart1)
+                println(sttpPart2)
+                println(sttpPart3)
                 p.fileName.map(sttpPart3.fileName).getOrElse(sttpPart3)
               }
             }

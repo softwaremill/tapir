@@ -18,9 +18,8 @@ import sttp.tapir._
 import sttp.tapir.tests._
 import TestUtil._
 import org.http4s.multipart
-import sttp.model.{MultiQueryParams, StatusCode}
+import sttp.model.{MultiQueryParams, Part, StatusCode}
 import sttp.tapir.model.UsernamePassword
-
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -88,7 +87,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     send(in_headers_out_headers, port, List(("X-Fruit", "apple"), ("Y-Fruit", "Orange")))
       .unsafeRunSync()
       .right
-      .get should contain allOf (("X-Fruit", "elppa"), ("Y-Fruit", "egnarO"))
+      .get should contain allOf(("X-Fruit", "elppa"), ("Y-Fruit", "egnarO"))
   }
 
   test(in_json_out_headers.showDetail) {
@@ -122,9 +121,23 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       .unsafeRunSync() shouldBe Right("Location: secret")
   }
 
+  val customisedFileUpload = FruitData(
+    Part(
+      "image",
+      File.createTempFile("tapir-", "image"),
+      contentType = Some(sttp.model.MediaType.ImageJpeg)
+    )
+  )
+
+  test(s"${in_multipart_with_content_type_headers_multipart_out_content_type.showDetail} with custom media type") {
+    send(in_multipart_with_content_type_headers_multipart_out_content_type, port, customisedFileUpload)
+      .unsafeRunSync() shouldBe Right(List("image/jpeg"))
+  }
+
   //
 
   def mkStream(s: String): S
+
   def rmStream(s: S): String
 
   test(in_stream_out_stream[S].showDetail) {
@@ -139,8 +152,11 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   //
 
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
+
   private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
+
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
+
   private object apiKeyOptParam extends OptionalQueryParamDecoderMatcher[String]("api-key")
 
   private val service = HttpRoutes.of[IO] {
@@ -150,41 +166,53 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       } else {
         Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
       }
-    case GET -> Root / "fruit" / f                                         => Ok(s"$f")
+    case GET -> Root / "fruit" / f => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
-    case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
-    case r @ GET -> Root / "api" / "echo" / "headers"                      => Ok(headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse)): _*)
-    case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
+    case r@GET -> Root / "api" / "echo" / "params" => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
+    case r@GET -> Root / "api" / "echo" / "headers" => Ok(headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse)): _*)
+    case r@GET -> Root / "api" / "echo" / "param-to-header" =>
       Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
-    case r @ POST -> Root / "api" / "echo" / "multipart" =>
+    case r@POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
         val parts: Vector[multipart.Part[IO]] = mp.parts
+
         def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8Decode).compile.foldMonoid
+
         def partToString(name: String): IO[String] = parts.find(_.name.contains(name)).map(p => toString(p.body)).getOrElse(IO.pure(""))
+
         partToString("fruit").product(partToString("amount")).flatMap {
           case (fruit, amount) =>
             Ok(s"$fruit=$amount")
         }
       }
-    case r @ POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))
-    case r @ GET -> Root =>
+    case r@POST -> Root / "api" / "echo" / "multipart" / "content-type" =>
+      r.decode[multipart.Multipart[IO]] { mp =>
+        val contentType = mp.parts.flatMap(
+          _.headers.filter(_.name == (CaseInsensitiveString("Content-Type"))).toList.map(_.value)
+        )
+        Ok(contentType.mkString(","))
+      }
+
+    case r@POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))
+    case r@GET -> Root =>
       r.headers.get(CaseInsensitiveString("X-Role")) match {
-        case None    => Ok()
+        case None => Ok()
         case Some(h) => Ok("Role: " + h.value)
       }
 
-    case r @ GET -> Root / "secret" =>
+    case r@GET -> Root / "secret" =>
       r.headers.get(CaseInsensitiveString("Location")) match {
-        case None    => BadRequest()
+        case None => BadRequest()
         case Some(h) => Ok("Location: " + h.value)
       }
 
     case DELETE -> Root / "api" / "delete" => Ok()
 
-    case r @ GET -> Root / "auth" :? apiKeyOptParam(ak) =>
+    case r@GET -> Root / "auth" :? apiKeyOptParam(ak) =>
       val authHeader = r.headers.get(CaseInsensitiveString("Authorization")).map(_.value)
       val xApiKey = r.headers.get(CaseInsensitiveString("X-Api-Key")).map(_.value)
       Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; Query=$ak")
+
   }
 
   private val app: HttpApp[IO] = Router("/" -> service).orNotFound
@@ -201,9 +229,9 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       def adjust(r: Either[Any, Any]): Either[Any, Any] = {
         def doAdjust(v: Any) = v match {
           case is: InputStream => inputStreamToByteArray(is).toList
-          case a: Array[Byte]  => a.toList
-          case f: File         => readFromFile(f)
-          case _               => v
+          case a: Array[Byte] => a.toList
+          case f: File => readFromFile(f)
+          case _ => v
         }
 
         r.map(doAdjust).left.map(doAdjust)
@@ -246,4 +274,5 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   //
 
   lazy val portCounter: PortCounter = new PortCounter(41000)
+
 }

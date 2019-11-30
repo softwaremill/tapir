@@ -129,6 +129,12 @@ package object tests {
   val in_file_multipart_out_multipart: Endpoint[FruitData, Unit, FruitData, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
 
+  val in_multipart_with_content_type_headers_multipart_out_content_type: Endpoint[FruitData, Unit, List[String], Nothing] = {
+    endpoint.post.in("api" / "echo" / "multipart" / "content-type")
+      .in(multipartBody[FruitData]).out(
+      stringBody.map[List[String]](_.split(',').toList)(_.mkString(","))).name("echo content type headers")
+  }
+
   val in_cookie_cookie_out_header: Endpoint[(Int, String), Unit, List[String], Nothing] =
     endpoint.get
       .in("api" / "echo" / "headers")
