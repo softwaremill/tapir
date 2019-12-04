@@ -133,7 +133,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"valid")
+    override def show: Option[String] = Some(message)
   }
 
   case class Enum[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]]) extends Primitive[T] {
