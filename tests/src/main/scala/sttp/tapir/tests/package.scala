@@ -286,6 +286,22 @@ package object tests {
       endpoint.in(query[Option[Color]]("color"))
     }
 
+    val in_nested_optional_enum_class: Endpoint[OptionalColor, Unit, Unit, Nothing] = {
+      implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
+      implicit def plainCodecForColor: PlainCodec[Color] = {
+        Codec.stringPlainCodecUtf8
+          .map[Color]({
+            case "red"  => Red
+            case "blue" => Blue
+          })(_.toString.toLowerCase)
+      }
+      implicit def validatorForColor: Validator[Color] =
+        Validator.enum(List(Blue, Red), { c =>
+          Some(plainCodecForColor.encode(c))
+        })
+      endpoint.in(jsonBody[OptionalColor])
+    }
+
     val out_enum_object: Endpoint[Unit, Unit, ColorValue, Nothing] = {
       implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def plainCodecForColor: PlainCodec[Color] = {
@@ -342,6 +358,7 @@ package object tests {
 }
 
 case class ColorValue(color: Color, value: Int)
+case class OptionalColor(color: Option[Color], value: Int)
 
 sealed trait Color
 case object Blue extends Color
