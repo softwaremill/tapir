@@ -1,27 +1,46 @@
 package sttp.tapir.typelevel
 
-import magnolia.{CaseClass, Magnolia, SealedTrait}
+import magnolia.{CaseClass, Magnolia, Param, SealedTrait}
 
 import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
+import scala.reflect.runtime.universe.typeOf
 
 trait MatchType[T] {
   def apply(a: Any): Boolean
 }
 
-trait GenericMatchType {
+private[typelevel] trait GenericMatchType {
   type Typeclass[T] = MatchType[T]
 
-  def combine[T: ClassTag](ctx: CaseClass[Typeclass, T]): Typeclass[T] = { value: Any =>
+  def combine[T: ClassTag: TypeTag](ctx: CaseClass[Typeclass, T]): Typeclass[T] = {
     val ct = implicitly[ClassTag[T]]
-    ct.runtimeClass.isInstance(value) && ctx.parameters.forall {
-      param => param.typeclass(param.dereference(value.asInstanceOf[T]))
+    val tp = typeOf[T]
+    if (tp.erasure =:= tp) {
+      ct.runtimeClass.isInstance(_)
+    } else {
+      {value: Any =>
+        ct.runtimeClass.isInstance(value) &&
+          ctx.parameters.forall {
+            param: Param[Typeclass, T] => {
+              param.typeclass(param.dereference(value.asInstanceOf[T]))
+            }
+          }
+      }
     }
   }
 
-  def dispatch[T: ClassTag](ctx: SealedTrait[Typeclass, T]): Typeclass[T] = { value: Any =>
+  def dispatch[T: ClassTag: TypeTag](ctx: SealedTrait[Typeclass, T]): Typeclass[T] = {
     val ct = implicitly[ClassTag[T]]
-    ct.runtimeClass.isInstance(value) && ctx.dispatch(value.asInstanceOf[T]) { sub =>
-      sub.typeclass(sub.cast(value.asInstanceOf[T]))
+    val tp = typeOf[T]
+    if (tp.erasure =:= tp) {
+      ct.runtimeClass.isInstance(_)
+    } else {
+      { value: Any =>
+        ct.runtimeClass.isInstance(value) && ctx.dispatch(value.asInstanceOf[T]) { sub =>
+          sub.typeclass(sub.cast(value.asInstanceOf[T]))
+        }
+      }
     }
   }
 
@@ -40,7 +59,7 @@ object MatchType extends GenericMatchType {
   implicit val double: MatchType[Double] = matchTypeFromPartial[Double]{case _:Double => true}
   implicit val int: MatchType[Int] = matchTypeFromPartial[Int]{case _:Int => true}
 
-  private def matchTypeFromPartial[T](pf: PartialFunction[Any, Boolean]): MatchType[T] =  { a =>
+  private[typelevel] def matchTypeFromPartial[T](pf: PartialFunction[Any, Boolean]): MatchType[T] =  { a =>
     pf.lift(a).getOrElse(false)
   }
 }

@@ -90,4 +90,20 @@ class MatchTypeTest extends FlatSpec with Matchers with AppendedClues {
     a = Left(Left("plop"))
     matchType(a) shouldBe false
   }
+
+  it should "work for list" in {
+    val matchType: MatchType[List[Int]] = implicitly
+
+    var a: Any = List(1)
+    matchType(a) shouldBe true
+
+    a = List(1, 2, 3)
+    matchType(a) shouldBe true
+
+    a = List("plop")
+    matchType(a) shouldBe false
+
+    a = List()
+    matchType(a) shouldBe true
+  }
 }
