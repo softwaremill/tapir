@@ -543,16 +543,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("render enum validator for class nested optional field") {
-    val expectedYaml = loadYaml("expected_valid_enum_class_nested_optional_field.yml")
-
-    val actualYaml = Validation.in_nested_optional_enum_class
-      .toOpenAPI(Info("Entities", "1.0"))
-      .toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
   test("render enum validator for values") {
     val expectedYaml = loadYaml("expected_valid_enum_values.yml")
 
