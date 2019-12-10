@@ -19,9 +19,16 @@ import scala.concurrent.ExecutionContext
   * @param contextPath The context in which the documentation will be served. Defaults to `docs`, so the address
   *                    of the docs will be `/docs`.
   * @param yamlName    The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
-  * @param queryParams Optional query parameters for swagger UI (for example. Option(Map(defaultModelsExpandDepth, Seq("0"))). Defaults to None.
+  * @param redirectQuery Additional query parameters to add when redirecting from the context path root to
+  *                      Swagger's `index.html`. For example, `Map(defaultModelsExpandDepth, Seq("0"))`. Defaults to
+  *                      an empty map.
   */
-class SwaggerHttp4s(yaml: String, contextPath: String = "docs", yamlName: String = "docs.yaml", queryParams: Option[Map[String, Seq[String]]] = None) {
+class SwaggerHttp4s(
+    yaml: String,
+    contextPath: String = "docs",
+    yamlName: String = "docs.yaml",
+    redirectQuery: Map[String, Seq[String]] = Map.empty
+) {
   private val swaggerVersion = {
     val p = new Properties()
     val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
@@ -36,10 +43,10 @@ class SwaggerHttp4s(yaml: String, contextPath: String = "docs", yamlName: String
 
     HttpRoutes.of[F] {
       case path @ GET -> Root / `contextPath` =>
-        val defaultQuery = Map("url" -> Seq(s"${path.uri}/$yamlName"))
+        val queryParameters = Map("url" -> Seq(s"${path.uri}/$yamlName")) ++ redirectQuery
         Uri
           .fromString(s"${path.uri}/index.html")
-          .map(uri => uri.setQueryParams(queryParams.map(defaultQuery ++ _).getOrElse(defaultQuery)))
+          .map(uri => uri.setQueryParams(queryParameters))
           .map(uri => PermanentRedirect(Location(uri)))
           .getOrElse(NotFound())
       case GET -> Root / `contextPath` / `yamlName` =>
