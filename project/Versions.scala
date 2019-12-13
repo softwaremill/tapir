@@ -12,4 +12,5 @@ object Versions {
   val silencer = "1.4.4"
   val finatra = "19.11.0"
   val sprayJson = "1.3.5"
+  val scalaTest = "3.0.8"
 }

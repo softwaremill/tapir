@@ -1,3 +1,7 @@
+// shadow sbt-scalajs' crossProject and CrossType from Scala.js 0.6.x
+import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
+import sbtcrossproject.CrossProject
+
 val scala2_12 = "2.12.10"
 val scala2_13 = "2.13.1"
 
@@ -24,10 +28,30 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   )
 )
 
+val commonJvmSettings = commonSettings
+
+val commonJsSettings = commonSettings ++ Seq(
+  // slow down for CI
+  parallelExecution in Test := false,
+  // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
+  scalaJSLinkerConfig ~= {
+    _.withBatchMode(System.getenv("CONTINUOUS_INTEGRATION") == "true")
+  },
+  scalacOptions in Compile ++= {
+    if (isSnapshot.value) Seq.empty
+    else
+      Seq {
+        val dir = project.base.toURI.toString.replaceFirst("[^/]+/?$", "")
+        val url = "https://raw.githubusercontent.com/softwaremill/sttp"
+        s"-P:scalajs:mapSourceURI:$dir->$url/v${version.value}/"
+      }
+  }
+)
+
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
 
-val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
+val scalaTest = "org.scalatest" %% "scalatest" % Versions.scalaTest
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -38,13 +62,19 @@ lazy val loggerDependencies = Seq(
 lazy val rootProject = (project in file("."))
   .settings(commonSettings)
   .settings(publishArtifact := false, name := "tapir")
+  .aggregate(rootJVM, rootJS)
+
+lazy val rootJVM = project
+  .in(file(".jvm"))
+  .settings(commonSettings: _*)
+  .settings(skip in publish := true, name := "tapirJVM")
   .aggregate(
-    core,
-    tapirCats,
-    circeJson,
-    playJson,
+    coreJVM,
+    tapirCatsJVM,
+    circeJsonJVM,
+    playJsonJVM,
     sprayJson,
-    uPickleJson,
+    uPickleJsonJVM,
     openapiModel,
     openapiCirce,
     openapiCirceYaml,
@@ -58,25 +88,35 @@ lazy val rootProject = (project in file("."))
     http4sServer,
     finatraServer,
     finatraServerCats,
-    sttpClient,
+    sttpClientJVM,
     tests,
     examples,
     playground
   )
 
+lazy val rootJS = project
+  .in(file(".js"))
+  .settings(commonSettings: _*)
+  .settings(skip in publish := true, name := "tapirJS")
+  .aggregate(coreJS, tapirCatsJS, circeJsonJS, playJsonJS, uPickleJsonJS, sttpClientJS)
+
 // core
 
-lazy val core: Project = (project in file("core"))
+lazy val core: CrossProject = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("core"))
   .settings(commonSettings)
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
-      "com.propensive" %% "magnolia" % "0.12.3",
-      "com.softwaremill.sttp.client" %% "model" % Versions.sttp,
-      scalaTest % "test"
+      "com.propensive" %%% "magnolia" % "0.12.3",
+      "com.softwaremill.sttp.client" %%% "model" % Versions.sttp,
+      "org.scalatest" %%% "scalatest" % Versions.scalaTest % Test
     ),
+    boilerplateSource in Compile := (baseDirectory in Compile).value / ".." / "src" / "main" / "boilerplate",
     unmanagedSourceDirectories in Compile += {
-      val sourceDir = (baseDirectory in Compile).value / "src" / "main"
+      val sourceDir = (baseDirectory in Compile).value / ".." / "src" / "main"
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
         case _                       => sourceDir / "scala-2.13-"
@@ -84,6 +124,9 @@ lazy val core: Project = (project in file("core"))
     }
   )
   .enablePlugins(spray.boilerplate.BoilerplatePlugin)
+
+lazy val coreJVM = core.jvm
+lazy val coreJS = core.js
 
 lazy val tests: Project = (project in file("tests"))
   .settings(commonSettings)
@@ -96,45 +139,60 @@ lazy val tests: Project = (project in file("tests"))
     ),
     libraryDependencies ++= loggerDependencies
   )
-  .dependsOn(core, circeJson)
+  .dependsOn(coreJVM, circeJsonJVM)
 
 // cats
 
-lazy val tapirCats: Project = (project in file("cats"))
+lazy val tapirCats: CrossProject = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("cats"))
   .settings(commonSettings)
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % Versions.cats,
-      scalaTest % "test"
+      "org.typelevel" %%% "cats-core" % Versions.cats,
+      "org.scalatest" %%% "scalatest" % Versions.scalaTest % Test
     )
   )
-  .dependsOn(core)
+
+lazy val tapirCatsJVM = tapirCats.jvm.dependsOn(coreJVM)
+lazy val tapirCatsJS = tapirCats.js.dependsOn(coreJS)
 
 // json
 
-lazy val circeJson: Project = (project in file("json/circe"))
+lazy val circeJson: CrossProject = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("json/circe"))
   .settings(commonSettings)
   .settings(
     name := "tapir-json-circe",
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % Versions.circe,
-      "io.circe" %% "circe-generic" % Versions.circe,
-      "io.circe" %% "circe-parser" % Versions.circe
+      "io.circe" %%% "circe-core" % Versions.circe,
+      "io.circe" %%% "circe-generic" % Versions.circe,
+      "io.circe" %%% "circe-parser" % Versions.circe
     )
   )
-  .dependsOn(core)
 
-lazy val playJson: Project = (project in file("json/playjson"))
+lazy val circeJsonJVM = circeJson.jvm.dependsOn(coreJVM)
+lazy val circeJsonJS = circeJson.js.dependsOn(coreJS)
+
+lazy val playJson: CrossProject = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("json/playjson"))
   .settings(commonSettings: _*)
   .settings(
     name := "tapir-json-play",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-json" % Versions.playJson,
-      scalaTest % "test"
+      "com.typesafe.play" %%% "play-json" % Versions.playJson,
+      "org.scalatest" %%% "scalatest" % Versions.scalaTest % Test
     )
   )
-  .dependsOn(core)
+
+lazy val playJsonJVM = playJson.jvm.dependsOn(coreJVM)
+lazy val playJsonJS = playJson.js.dependsOn(coreJS)
 
 lazy val sprayJson: Project = (project in file("json/sprayjson"))
   .settings(commonSettings: _*)
@@ -145,18 +203,23 @@ lazy val sprayJson: Project = (project in file("json/sprayjson"))
       scalaTest % "test"
     )
   )
-  .dependsOn(core)
+  .dependsOn(coreJVM)
 
-lazy val uPickleJson: Project = (project in file("json/upickle"))
+lazy val uPickleJson: CrossProject = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Pure)
+  .in(file("json/upickle"))
   .settings(commonSettings)
   .settings(
     name := "tapir-json-upickle",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % Versions.upickle,
-      scalaTest % "test"
+      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      "org.scalatest" %%% "scalatest" % Versions.scalaTest % Test
     )
   )
-  .dependsOn(core)
+
+lazy val uPickleJsonJVM = uPickleJson.jvm.dependsOn(coreJVM)
+lazy val uPickleJsonJS = uPickleJson.js.dependsOn(coreJS)
 
 // openapi
 
@@ -193,7 +256,7 @@ lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   .settings(
     name := "tapir-openapi-docs"
   )
-  .dependsOn(openapiModel, core, tests % "test", openapiCirceYaml % "test")
+  .dependsOn(openapiModel, coreJVM, tests % "test", openapiCirceYaml % "test")
 
 lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
   .settings(commonSettings)
@@ -255,7 +318,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
     )
   )
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(coreJVM, serverTests % "test")
 
 lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings)
@@ -265,7 +328,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s
     )
   )
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(coreJVM, serverTests % "test")
 
 lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(commonSettings: _*)
@@ -288,7 +351,7 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
     )
   )
   .settings(only2_12settings)
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(coreJVM, serverTests % "test")
 
 lazy val finatraServerCats: Project =
   (project in file("server/finatra-server/finatra-server-cats"))
@@ -318,7 +381,10 @@ lazy val clientTests: Project = (project in file("client/tests"))
   )
   .dependsOn(tests)
 
-lazy val sttpClient: Project = (project in file("client/sttp-client"))
+lazy val sttpClient: CrossProject = crossProject(JSPlatform, JVMPlatform)
+  .withoutSuffixFor(JVMPlatform)
+  .crossType(CrossType.Full)
+  .in(file("client/sttp-client"))
   .settings(commonSettings)
   .settings(
     name := "tapir-sttp-client",
@@ -327,7 +393,9 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
       "com.softwaremill.sttp.client" %% "async-http-client-backend-fs2" % Versions.sttp % "test"
     )
   )
-  .dependsOn(core, clientTests % "test")
+
+lazy val sttpClientJVM = sttpClient.jvm.dependsOn(coreJVM, clientTests % "test")
+lazy val sttpClientJS = sttpClient.js.dependsOn(coreJS, clientTests % "test")
 
 // other
 
@@ -345,7 +413,7 @@ lazy val examples: Project = (project in file("examples"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClientJVM, openapiCirceYaml, openapiDocs, circeJsonJVM, swaggerUiAkka, swaggerUiHttp4s)
 
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings)
@@ -365,4 +433,4 @@ lazy val playground: Project = (project in file("playground"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClientJVM, openapiCirceYaml, openapiDocs, circeJsonJVM, swaggerUiAkka, swaggerUiHttp4s)
