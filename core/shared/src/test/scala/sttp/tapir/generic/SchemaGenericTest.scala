@@ -9,7 +9,7 @@ import sttp.tapir.{SchemaType, Schema}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.{Future}
 
 @silent("never used")
 class SchemaGenericTest extends FlatSpec with Matchers {
@@ -113,26 +113,6 @@ class SchemaGenericTest extends FlatSpec with Matchers {
       SObjectInfo("sttp.tapir.generic.F"),
       List(("f1", Schema(SRef(SObjectInfo("sttp.tapir.generic.F"))).asArrayElement), ("f2", intSchema))
     )
-  }
-
-  it should "find schema for recursive data structure when invoked from many threads" in {
-    val expected =
-      SProduct(
-        SObjectInfo("sttp.tapir.generic.F"),
-        List(("f1", Schema(SRef(SObjectInfo("sttp.tapir.generic.F"))).asArrayElement), ("f2", intSchema))
-      )
-
-    val count = 100
-    val futures = (1 until count).map { _ =>
-      Future[SchemaType] {
-        implicitly[Schema[F]].schemaType
-      }
-    }
-
-    val eventualSchemas = Future.sequence(futures)
-
-    val schemas = Await.result(eventualSchemas, 5 seconds)
-    schemas should contain only expected
   }
 
   it should "use custom schema for custom types" in {

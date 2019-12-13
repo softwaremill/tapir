@@ -104,7 +104,7 @@ lazy val rootJS = project
 
 lazy val core: CrossProject = crossProject(JSPlatform, JVMPlatform)
   .withoutSuffixFor(JVMPlatform)
-  .crossType(CrossType.Pure)
+  .crossType(CrossType.Full)
   .in(file("core"))
   .settings(commonSettings)
   .settings(
@@ -114,9 +114,9 @@ lazy val core: CrossProject = crossProject(JSPlatform, JVMPlatform)
       "com.softwaremill.sttp.client" %%% "model" % Versions.sttp,
       "org.scalatest" %%% "scalatest" % Versions.scalaTest % Test
     ),
-    boilerplateSource in Compile := (baseDirectory in Compile).value / ".." / "src" / "main" / "boilerplate",
+    boilerplateSource in Compile := (baseDirectory in Compile).value.getParentFile / "shared" / "src" / "main" / "boilerplate",
     unmanagedSourceDirectories in Compile += {
-      val sourceDir = (baseDirectory in Compile).value / ".." / "src" / "main"
+      val sourceDir = (baseDirectory in Compile).value.getParentFile / "shared"/ "src" / "main"
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
         case _                       => sourceDir / "scala-2.13-"
