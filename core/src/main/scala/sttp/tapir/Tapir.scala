@@ -2,7 +2,7 @@ package sttp.tapir
 
 import java.nio.charset.{Charset, StandardCharsets}
 
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, HeaderNames, StatusCode}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, StatusCode}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.CodecForOptional.PlainCodecForOptional
@@ -27,6 +27,8 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
 
   def header[T: PlainCodecForMany](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[PlainCodecForMany[T]], EndpointIO.Info.empty)
+  def header(h: Header): EndpointIO.FixedHeader =
+    EndpointIO.FixedHeader(h.name, h.value, EndpointIO.Info.empty)
   def header(name: String, value: String): EndpointIO.FixedHeader =
     EndpointIO.FixedHeader(name, value, EndpointIO.Info.empty)
   def headers: EndpointIO.Headers = EndpointIO.Headers(EndpointIO.Info.empty)
@@ -126,13 +128,12 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
 
 trait TapirDerivedInputs { this: Tapir =>
   def clientIp: EndpointInput[Option[String]] =
-    extractFromRequest(
-      request =>
-        request
-          .header("X-Forwarded-For")
-          .flatMap(_.split(",").headOption)
-          .orElse(request.header("Remote-Address"))
-          .orElse(request.header("X-Real-Ip"))
-          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
+    extractFromRequest(request =>
+      request
+        .header("X-Forwarded-For")
+        .flatMap(_.split(",").headOption)
+        .orElse(request.header("Remote-Address"))
+        .orElse(request.header("X-Real-Ip"))
+        .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
     )
 }

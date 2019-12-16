@@ -380,8 +380,8 @@ object CodecForMany {
     }
 
     implicitly[CodecForMany[List[String], CodecFormat.TextPlain, String]]
-      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookieWithMeta)).flatMap(findNamed(name)))(
-        cv => List(CookieWithMeta(name, cv).toString)
+      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookieWithMeta)).flatMap(findNamed(name)))(cv =>
+        List(CookieWithMeta(name, cv).toString)
       )
   }
 }
