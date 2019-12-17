@@ -297,8 +297,8 @@ lazy val finatraServerCats: Project =
       name := "tapir-finatra-server-cats",
       libraryDependencies ++= Seq(
         "org.typelevel" %% "cats-effect" % Versions.cats,
-        "io.catbird" %% "catbird-finagle" % Versions.finatra,
-        "io.catbird" %% "catbird-effect" % Versions.finatra
+        "io.catbird" %% "catbird-finagle" % "19.11.0",
+        "io.catbird" %% "catbird-effect" % "19.11.0"
       )
     )
     .settings(only2_12settings)

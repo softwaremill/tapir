@@ -10,6 +10,6 @@ object Versions {
   val upickle = "0.8.0"
   val playJson = "2.8.1"
   val silencer = "1.4.4"
-  val finatra = "19.11.0"
+  val finatra = "19.12.0"
   val sprayJson = "1.3.5"
 }
