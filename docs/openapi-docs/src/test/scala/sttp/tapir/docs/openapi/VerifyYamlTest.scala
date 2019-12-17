@@ -576,6 +576,17 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("support recursive coproducts") {
+    val expectedYaml = loadYaml("expected_recursive_coproducts.yml")
+    val actualYaml = endpoint.post
+      .in(jsonBody[Clause])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
@@ -605,3 +616,7 @@ sealed trait GenericEntity[T]
 case class GenericPerson[T](data: T) extends GenericEntity[T]
 
 case class ObjectWithList(data: List[FruitAmount])
+
+sealed trait Clause
+case class Expression(v: String) extends Clause
+case class Not(not: Clause) extends Clause

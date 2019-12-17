@@ -9,12 +9,13 @@ import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
 
 import scala.collection.immutable
 import scala.collection.immutable.ListMap
+import scala.collection.mutable.ListBuffer
 
 object ObjectSchemasForEndpoints {
   private type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
 
   def apply(es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
-    val sObjects = es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output))
+    val sObjects = uniqueObjects(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
@@ -48,6 +49,22 @@ object ObjectSchemasForEndpoints {
     }
   }
 
+  /**
+    * Keeps only the first object data for each `SObjectInfo`. In case of recursive objects, the first one is the
+    * most complete as it contains the built-up structure, unlike subsequent ones, which only represent leaves (#354).
+    */
+  private def uniqueObjects(objs: Iterable[(TSchemaType.SObjectInfo, TypeData[_])]): Iterable[(TSchemaType.SObjectInfo, TypeData[_])] = {
+    val seen: collection.mutable.Set[TSchemaType.SObjectInfo] = collection.mutable.Set()
+    val result: ListBuffer[(TSchemaType.SObjectInfo, TypeData[_])] = ListBuffer()
+    objs.foreach { obj =>
+      if (!seen.contains(obj._1)) {
+        seen.add(obj._1)
+        result += obj
+      }
+    }
+    result.toList
+  }
+
   private def calculateUniqueKeys(infos: Iterable[TSchemaType.SObjectInfo]): Map[TSchemaType.SObjectInfo, SchemaKey] = {
     case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, TSchemaType.SObjectInfo], infoToKey: Map[TSchemaType.SObjectInfo, SchemaKey])
     infos
@@ -72,9 +89,7 @@ object ObjectSchemasForEndpoints {
       case TypeData(TSchema(TSchemaType.SArray(o), _, _, _), validator) =>
         objectSchemas(TypeData(o, elementValidator(validator)))
       case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _), validator) =>
-        (st.info -> TypeData(s, validator): ObjectTypeData) +: st.schemas.flatMap(
-          c => objectSchemas(TypeData(c, Validator.pass))
-        )
+        (st.info -> TypeData(s, validator): ObjectTypeData) +: st.schemas.flatMap(c => objectSchemas(TypeData(c, Validator.pass)))
       case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _), validator) =>
         (st.info -> TypeData(s, validator): ObjectTypeData) +: objectSchemas(
           TypeData(st.valueSchema, elementValidator(validator))
