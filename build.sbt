@@ -71,7 +71,7 @@ lazy val core: Project = (project in file("core"))
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
-      "com.propensive" %% "magnolia" % "0.12.3",
+      "com.propensive" %% "magnolia" % "0.12.5",
       "com.softwaremill.sttp.client" %% "model" % Versions.sttp,
       scalaTest % "test"
     ),
