@@ -187,7 +187,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     implicit val openApiDocsOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(linkFromChildToParent = false)
     val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
-    println(actualYaml)
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
