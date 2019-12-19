@@ -169,17 +169,20 @@ package object tests {
         )
       )
 
-  val in_string_out_status_from_type_erasure: Endpoint[String, Unit, Option[Either[Int, String]], Nothing] =
+  val in_string_out_status_from_type_erasure_using_partial_matcher: Endpoint[String, Unit, Option[Either[Int, String]], Nothing] = {
+    import sttp.tapir.typelevel.MatchType
+
     endpoint
       .in(query[String]("fruit"))
       .out(
         oneOf[Option[Either[Int, String]]](
-          statusMappingTypeMatcher(StatusCode.NoContent, emptyOutput.map[None.type](_ => None)(_ => ())),
+          statusMapping(StatusCode.NoContent, emptyOutput.map[None.type](_ => None)(_ => ())),
 
-          statusMappingTypeMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]]),
-          statusMappingTypeMatcher(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])
+          statusMappingValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(implicitly[MatchType[Some[Left[Int, String]]]].partial),
+          statusMappingValueMatcher(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])(implicitly[MatchType[Some[Right[Int, String]]]].partial)
         )
       )
+  }
   val in_string_out_status_from_string_one_empty: Endpoint[String, Unit, Either[Unit, String], Nothing] =
     endpoint
       .in(query[String]("fruit"))

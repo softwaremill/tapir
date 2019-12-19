@@ -8,6 +8,9 @@ import scala.reflect.runtime.universe.typeOf
 
 trait MatchType[T] {
   def apply(a: Any): Boolean
+  def partial: PartialFunction[Any, Boolean] = {
+    case a: Any => apply(a)
+  }
 }
 
 private[typelevel] trait GenericMatchType {

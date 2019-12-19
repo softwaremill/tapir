@@ -25,7 +25,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   private val basicStringRequest = basicRequest.response(asStringAlways)
 
 
-  testServer(in_string_out_status_from_type_erasure)(
+  testServer(in_string_out_status_from_type_erasure_using_partial_matcher)(
     (v: String) => pureResult((if (v == "right") Some(Right("right")) else if (v == "left") Some(Left(42)) else None).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri?fruit=nothing").send().map(_.code shouldBe StatusCode.NoContent) >>
