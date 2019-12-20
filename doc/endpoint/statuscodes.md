@@ -26,9 +26,9 @@ case object NoContent extends ErrorInfo
 
 val baseEndpoint = endpoint.errorOut(
   oneOf(
-    statusMapping(StatusCodes.NotFound, jsonBody[NotFound].description("not found")),
-    statusMapping(StatusCodes.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-    statusMapping(StatusCodes.NoContent, emptyOutput.map(_ => NoContent)(_ => ())),
+    statusMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
+    statusMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+    statusMapping(StatusCode.NoContent, emptyOutput.map(_ => NoContent)(_ => ())),
     statusDefaultMapping(jsonBody[Unknown].description("unknown"))
   )
 )
@@ -40,6 +40,63 @@ the status code. Moreover, default mappings can be defined using `statusDefaultM
 * for servers, the default status code for error outputs is `400`, and for normal outputs `200` (unless a `statusCode` 
   is used in the nested output)
 * for clients, a default mapping is a catch-all. 
+
+## Status mapping and type erasure
+
+Sometime at runtime status mapping resolution can not work properly because of type erasure.
+For example this code will fail at startup type because of type erasure `Right[NotFound]` and `Right[BadRequest]` will become `Right[Any]`, thefore the code would not be able to infer correct mapping for a value.
+```scala
+case class ServerError(what: String)
+
+sealed trait UserError
+case class BadRequest(what: String) extends UserError
+case class NotFound(what: String) extends UserError
+
+val baseEndpoint = endpoint.errorOut(
+  oneOf[Either[ServerError, UserError]](
+    statusMapping(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
+    statusMapping(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
+    statusMapping(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
+  )
+)
+```
+If you try this code, you will have the following error:
+```
+Exception in thread "main" java.lang.IllegalArgumentException: Constructing statusMapping on type Right[sttp.tapir.examples.TestTestExample.ServerError,sttp.tapir.examples.TestTestExample.NotFound] is not allowed because Right[sttp.tapir.examples.TestTestExample.ServerError,sttp.tapir.examples.TestTestExample.NotFound] is subject to type erasure, please use statusMappingValueMatcher instead
+```
+
+The solution is thefore to handwrite a function checking that a val of type Any is of the correct type:
+```
+val baseEndpoint = endpoint.errorOut(
+  oneOf[Either[ServerError, UserError]](
+    statusMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
+      case Right(NotFound(_)) => true
+    },
+    statusMappingValueMatcher(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")) {
+      case Right(BadRequest(_)) => true
+    },
+    statusMappingValueMatcher(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")) {
+      case Left(ServerError(_)) => true
+    }
+  )
+)
+```
+
+Of course you could use `statusMappingValueMatcher` to do runtime filtering for other purpose than solving type erasure.
+
+In the case of solving type erasure, writting by hand partial function to match value against composition of case class and sealed trait can be repetitive.
+To make that more easy, we provide a `experimental` typeclass for that `MatchType` so you can automatically derive that partial function:
+```
+import sttp.tapir.typelevel.MatchType
+
+val baseEndpoint = endpoint.errorOut(
+  oneOf[Either[ServerError, UserError]](
+    statusMappingFromMatchType(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
+    statusMappingFromMatchType(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
+    statusMappingFromMatchType(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized"))
+  )
+)
+```
 
 ## Server interpreters
 
