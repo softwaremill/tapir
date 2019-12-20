@@ -105,7 +105,7 @@ lazy val tapirCats: Project = (project in file("cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % Versions.cats,
+      "org.typelevel" %% "cats-core" % "2.1.0",
       scalaTest % "test"
     )
   )
