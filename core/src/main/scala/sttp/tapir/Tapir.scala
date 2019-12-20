@@ -9,8 +9,11 @@ import sttp.tapir.CodecForOptional.PlainCodecForOptional
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.typelevel.MatchType
 
 import scala.reflect.ClassTag
+import scala.reflect.runtime.universe.TypeTag
+import scala.reflect.runtime.universe.typeOf
 
 trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.FixedPath(s)
@@ -100,13 +103,31 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   /**
     * Create a mapping to be used in [[oneOf]] output descriptions.
     */
-  def statusMapping[O: ClassTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
-    StatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)
+  def statusMapping[O: ClassTag: TypeTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] = {
+    val t= typeOf[O]
+    if (!( t =:= t.erasure)) {
+      throw new IllegalArgumentException(f"Constructing statusMapping on type $t is not allowed because $t is subject to type erasure, please use statusMappingValueMatcher instead")
+    }
+    val classTag: ClassTag[O] = implicitly[ClassTag[O]]
+    StatusMapping(Some(statusCode), output, {a: Any => classTag.runtimeClass.isInstance(a)})
+  }
+
+  def statusMappingValueMatcher[O](statusCode: StatusCode, output: EndpointOutput[O])(matcher: PartialFunction[Any, Boolean]): StatusMapping[O] =
+    StatusMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
+
+  /**
+    * Experimental: create a mapping deriving the value matcher using the experimental MatchType type class derivation
+    */
+  def statusMappingFromMatchType[O: MatchType](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
+    statusMappingValueMatcher(statusCode, output) (implicitly[MatchType[O]].partial)
 
   /**
     * Create a fallback mapping to be used in [[oneOf]] output descriptions.
     */
-  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(None, implicitly[ClassTag[O]], output)
+  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = {
+    val classTag: ClassTag[O] = implicitly[ClassTag[O]]
+    StatusMapping(None, output, {a: Any => classTag.runtimeClass.isInstance(a)})
+  }
 
   /**
     * An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.

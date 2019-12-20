@@ -10,7 +10,6 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.collection.immutable.ListMap
-import scala.reflect.ClassTag
 
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
@@ -175,9 +174,7 @@ object EndpointOutput {
     override def show: String = s"status code ($statusCode)"
   }
 
-  //
-
-  case class StatusMapping[O](statusCode: Option[sttp.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])
+  case class StatusMapping[O] private[tapir](statusCode: Option[sttp.model.StatusCode], output: EndpointOutput[O], applyTo: Any => Boolean)
 
   case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
