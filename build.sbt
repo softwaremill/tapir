@@ -296,7 +296,7 @@ lazy val finatraServerCats: Project =
     .settings(
       name := "tapir-finatra-server-cats",
       libraryDependencies ++= Seq(
-        "org.typelevel" %% "cats-effect" % Versions.cats,
+        "org.typelevel" %% "cats-effect" % Versions.catsEffect,
         "io.catbird" %% "catbird-finagle" % Versions.catbird,
         "io.catbird" %% "catbird-effect" % Versions.catbird
       )
@@ -338,7 +338,7 @@ lazy val examples: Project = (project in file("examples"))
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % "1.0.0-RC17",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC10",
-      "org.typelevel" %% "cats-effect" % "2.1.0",
+      "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s
     ),
     libraryDependencies ++= loggerDependencies,
@@ -355,7 +355,7 @@ lazy val playground: Project = (project in file("playground"))
       "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp,
       "dev.zio" %% "zio" % "1.0.0-RC17",
       "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC10",
-      "org.typelevel" %% "cats-effect" % "2.1.0",
+      "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "io.swagger" % "swagger-annotations" % "1.6.0"
     ),
     libraryDependencies ++= Seq(
