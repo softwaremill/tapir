@@ -107,7 +107,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     val t = typeOf[O]
     if (!(t =:= t.erasure)) {
       throw new IllegalArgumentException(
-        f"Constructing statusMapping on type $t is not allowed because $t is subject to type erasure, please use statusMappingValueMatcher instead"
+        s"Constructing statusMapping on type $t is not allowed because $t is subject to type erasure, please use statusMappingValueMatcher instead"
       )
     }
     val classTag: ClassTag[O] = implicitly[ClassTag[O]]
@@ -122,7 +122,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     StatusMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
 
   /**
-    * Experimental: create a mapping deriving the value matcher using the experimental MatchType type class derivation
+    * Experimental: create a mapping deriving the value matcher using the experimental [[MatchType]] type class derivation
     */
   def statusMappingFromMatchType[O: MatchType](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
     statusMappingValueMatcher(statusCode, output)(implicitly[MatchType[O]].partial)
@@ -130,11 +130,8 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   /**
     * Create a fallback mapping to be used in [[oneOf]] output descriptions.
     */
-  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = {
-    val classTag: ClassTag[O] = implicitly[ClassTag[O]]
-    StatusMapping(None, output, { a: Any =>
-      classTag.runtimeClass.isInstance(a)
-    })
+  def statusDefaultMapping[O](output: EndpointOutput[O]): StatusMapping[O] = {
+    StatusMapping(None, output, _ => true)
   }
 
   /**

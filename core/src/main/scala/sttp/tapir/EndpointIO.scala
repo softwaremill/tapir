@@ -174,7 +174,18 @@ object EndpointOutput {
     override def show: String = s"status code ($statusCode)"
   }
 
-  case class StatusMapping[O] private[tapir] (statusCode: Option[sttp.model.StatusCode], output: EndpointOutput[O], applyTo: Any => Boolean)
+  /**
+    * Specifies that for `statusCode`, the given `output` should be used.
+    *
+    * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
+    * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
+    * type parameters).
+    */
+  case class StatusMapping[O] private[tapir] (
+      statusCode: Option[sttp.model.StatusCode],
+      output: EndpointOutput[O],
+      appliesTo: Any => Boolean
+  )
 
   case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"

@@ -41,10 +41,15 @@ the status code. Moreover, default mappings can be defined using `statusDefaultM
   is used in the nested output)
 * for clients, a default mapping is a catch-all. 
 
+Both `statusMapping` and `statusDefaultMapping` return a value of type `StatusMapping`. A list of these values can be
+dynamically assembled (e.g. using a default set of cases, plus endpoint-specific mappings), and provided to `oneOf`.
+
 ## Status mapping and type erasure
 
 Sometime at runtime status mapping resolution can not work properly because of type erasure.
-For example this code will fail at startup type because of type erasure `Right[NotFound]` and `Right[BadRequest]` will become `Right[Any]`, thefore the code would not be able to infer correct mapping for a value.
+For example this code will fail at startup type because of type erasure `Right[NotFound]` and `Right[BadRequest]` will 
+become `Right[Any]`, therefore the code would not be able to infer correct mapping for a value:
+
 ```scala
 case class ServerError(what: String)
 
@@ -60,12 +65,15 @@ val baseEndpoint = endpoint.errorOut(
   )
 )
 ```
+
 If you try this code, you will have the following error:
+
 ```
 Exception in thread "main" java.lang.IllegalArgumentException: Constructing statusMapping on type Right[sttp.tapir.examples.TestTestExample.ServerError,sttp.tapir.examples.TestTestExample.NotFound] is not allowed because Right[sttp.tapir.examples.TestTestExample.ServerError,sttp.tapir.examples.TestTestExample.NotFound] is subject to type erasure, please use statusMappingValueMatcher instead
 ```
 
-The solution is thefore to handwrite a function checking that a val of type Any is of the correct type:
+The solution is therefore to handwrite a function checking that a `val` (of type `Any`() is of the correct type:
+
 ```
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
@@ -84,8 +92,8 @@ val baseEndpoint = endpoint.errorOut(
 
 Of course you could use `statusMappingValueMatcher` to do runtime filtering for other purpose than solving type erasure.
 
-In the case of solving type erasure, writting by hand partial function to match value against composition of case class and sealed trait can be repetitive.
-To make that more easy, we provide a `experimental` typeclass for that `MatchType` so you can automatically derive that partial function:
+In the case of solving type erasure, writing by hand partial function to match value against composition of case class and sealed trait can be repetitive.
+To make that more easy, we provide an **experimental** typeclass - `MatchType` - so you can automatically derive that partial function:
 ```
 import sttp.tapir.typelevel.MatchType
 
