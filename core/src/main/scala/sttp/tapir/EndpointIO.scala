@@ -174,7 +174,7 @@ object EndpointOutput {
     override def show: String = s"status code ($statusCode)"
   }
 
-  case class StatusMapping[O] private[tapir](statusCode: Option[sttp.model.StatusCode], output: EndpointOutput[O], applyTo: Any => Boolean)
+  case class StatusMapping[O] private[tapir] (statusCode: Option[sttp.model.StatusCode], output: EndpointOutput[O], applyTo: Any => Boolean)
 
   case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"

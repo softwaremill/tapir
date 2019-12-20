@@ -24,6 +24,7 @@ case class Schema[T](
     description: Option[String] = None,
     format: Option[String] = None
 ) {
+
   /**
     * Returns an optional version of this schema, with `isOptional` set to true.
     */

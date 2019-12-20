@@ -164,8 +164,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          statusMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)){case Left(_:Int) => true},
-          statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)){case Right(_:String) => true}
+          statusMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int)   => true },
+          statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
 
@@ -177,9 +177,12 @@ package object tests {
       .out(
         oneOf[Option[Either[Int, String]]](
           statusMapping(StatusCode.NoContent, emptyOutput.map[None.type](_ => None)(_ => ())),
-
-          statusMappingValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(implicitly[MatchType[Some[Left[Int, String]]]].partial),
-          statusMappingValueMatcher(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])(implicitly[MatchType[Some[Right[Int, String]]]].partial)
+          statusMappingValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(
+            implicitly[MatchType[Some[Left[Int, String]]]].partial
+          ),
+          statusMappingValueMatcher(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])(
+            implicitly[MatchType[Some[Right[Int, String]]]].partial
+          )
         )
       )
   }
@@ -188,8 +191,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          statusMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)){case Left(_: Unit) => true},
-          statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)){case Right(_: String) => true}
+          statusMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit)     => true },
+          statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
 

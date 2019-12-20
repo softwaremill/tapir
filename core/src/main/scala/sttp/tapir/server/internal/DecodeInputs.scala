@@ -9,6 +9,7 @@ import scala.annotation.tailrec
 
 trait DecodeInputsResult
 object DecodeInputsResult {
+
   /**
     * @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint.
     */
@@ -228,12 +229,11 @@ object DecodeInputs {
           .sequence(
             ctx.headers
               .filter(_._1.equalsIgnoreCase(HeaderNames.Cookie))
-              .map(
-                p =>
-                  Cookie.parse(p._2) match {
-                    case Left(e)  => DecodeResult.Error(p._2, new RuntimeException(e))
-                    case Right(c) => DecodeResult.Value(c)
-                  }
+              .map(p =>
+                Cookie.parse(p._2) match {
+                  case Left(e)  => DecodeResult.Error(p._2, new RuntimeException(e))
+                  case Right(c) => DecodeResult.Value(c)
+                }
               )
           )
           .map(_.flatten)

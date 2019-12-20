@@ -7,13 +7,12 @@ private[tapir] object UrlencodedData {
   def decode(s: String, charset: Charset): Seq[(String, String)] = {
     s.split("&")
       .toList
-      .flatMap(
-        kv =>
-          kv.split("=", 2) match {
-            case Array(k, v) =>
-              Some((URLDecoder.decode(k, charset.toString), URLDecoder.decode(v, charset.toString)))
-            case _ => None
-          }
+      .flatMap(kv =>
+        kv.split("=", 2) match {
+          case Array(k, v) =>
+            Some((URLDecoder.decode(k, charset.toString), URLDecoder.decode(v, charset.toString)))
+          case _ => None
+        }
       )
   }
 
