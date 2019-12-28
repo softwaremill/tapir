@@ -1,5 +1,6 @@
 package sttp.tapir
 
+import magnolia.SealedTrait
 import sttp.tapir.generic.internal.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
 
 import scala.collection.immutable
@@ -170,6 +171,17 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     }.toList
   }
 
+  case class Coproduct[T](ctx: SealedTrait[Validator, T]) extends Single[T] {
+    override def validate(t: T): List[ValidationError[_]] = {
+      ctx.dispatch(t) { v =>
+        v.typeclass.validate(v.cast(t))
+      }
+    }
+
+    def subtypes: Map[String, Validator[scala.Any]] =
+      ctx.subtypes.map(st => st.typeName.full -> st.typeclass.asInstanceOf[Validator[scala.Any]]).toMap
+  }
+
   case class OpenProduct[E](elementValidator: Validator[E]) extends Single[Map[String, E]] {
     override def validate(t: Map[String, E]): List[ValidationError[_]] = {
       t.flatMap { case (name, value) => elementValidator.validate(value).map(_.prependPath(FieldName(name, name))) }
@@ -227,6 +239,14 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
           fields.flatMap {
             case (n, f) =>
               recurse(f.validator).map(n -> _)
+          }.toList match {
+            case Nil => None
+            case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
+          }
+        case c @ Coproduct(_) =>
+          c.subtypes.flatMap {
+            case (n, v) =>
+              recurse(v).map(n -> _)
           }.toList match {
             case Nil => None
             case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))

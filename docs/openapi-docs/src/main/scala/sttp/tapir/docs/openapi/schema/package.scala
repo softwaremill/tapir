@@ -29,6 +29,7 @@ package object schema {
       case Validator.Any(validators)                => validators.flatMap(asPrimitiveValidators)
       case Validator.CollectionElements(wrapped, _) => asPrimitiveValidators(wrapped)
       case Validator.Product(_)                     => Nil
+      case Validator.Coproduct(_)                   => Nil
       case Validator.OpenProduct(_)                 => Nil
       case bv: Validator.Primitive[_]               => List(bv)
     }

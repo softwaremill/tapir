@@ -20,7 +20,7 @@ trait ValidatorMagnoliaDerivation {
   }
 
   @silent("never used")
-  def dispatch[T](ctx: SealedTrait[Validator, T]): Validator[T] = Validator.pass
+  def dispatch[T](ctx: SealedTrait[Validator, T]): Validator[T] = Validator.Coproduct(ctx)
 
   implicit def validatorForCaseClass[T]: Validator[T] = macro Magnolia.gen[T]
 

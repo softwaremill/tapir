@@ -82,14 +82,16 @@ object ObjectSchemasForEndpoints {
 
   private def objectSchemas(typeData: TypeData[_]): List[ObjectTypeData] = {
     typeData match {
-      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _), validator) =>
+      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _), validator: Validator.Product[_]) =>
         List(st.info -> TypeData(s, validator): ObjectTypeData) ++ fieldsSchemaWithValidator(st, validator)
           .flatMap(objectSchemas)
           .toList
       case TypeData(TSchema(TSchemaType.SArray(o), _, _, _), validator) =>
         objectSchemas(TypeData(o, elementValidator(validator)))
-      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _), validator) =>
-        (st.info -> TypeData(s, validator): ObjectTypeData) +: st.schemas.flatMap(c => objectSchemas(TypeData(c, Validator.pass)))
+      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _), validator: Validator.Coproduct[_]) =>
+        (st.info -> TypeData(s, validator): ObjectTypeData) +: subtypesSchemaWithValidator(st, validator)
+          .flatMap(objectSchemas)
+          .toList
       case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _), validator) =>
         (st.info -> TypeData(s, validator): ObjectTypeData) +: objectSchemas(
           TypeData(st.valueSchema, elementValidator(validator))
@@ -98,13 +100,15 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator[_]): immutable.Seq[TypeData[_]] = {
-    v match {
-      case Validator.Product(validatedFields) =>
-        p.fields.map { f =>
-          TypeData(f._2, validatedFields.get(f._1).map(_.validator).getOrElse(Validator.pass))
-        }.toList
-      case _ => p.fields.map(f => TypeData(f._2, Validator.pass)).toList
+  private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator.Product[_]): Seq[TypeData[_]] = {
+    p.fields.map { f =>
+      TypeData(f._2, v.fields(f._1).validator)
+    }.toList
+  }
+
+  private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator.Coproduct[_]): Seq[TypeData[_]] = {
+    st.schemas.collect {
+      case s @ TSchema(st: TSchemaType.SProduct, _, _, _) => TypeData(s, v.subtypes(st.info.fullName))
     }
   }
 

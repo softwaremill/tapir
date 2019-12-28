@@ -586,6 +586,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render field validator when used inside of coproduct") {
+    implicit val ageValidator: Validator[Int] = Validator.min(11)
+    val expectedYaml = loadYaml("expected_valid_coproduct.yml")
+    val actualYaml = endpoint.get
+      .out(jsonBody[Entity])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
