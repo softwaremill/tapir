@@ -3,7 +3,8 @@ package tapir.server.play
 import java.net.URI
 
 import play.api.mvc.RequestHeader
-import tapir.model.{ConnectionInfo, Method, ServerRequest}
+import sttp.model.Method
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
 private[play] class PlayServerRequest(request: RequestHeader) extends ServerRequest {
 

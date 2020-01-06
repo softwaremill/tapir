@@ -7,11 +7,11 @@ import akka.util.ByteString
 import play.api.http.HttpEntity
 import play.api.mvc._
 import play.api.routing.Router.Routes
-import tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import tapir.model.StatusCodes
-import tapir.server.{DecodeFailureHandling, ServerDefaults}
-import tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
-import tapir.internal.{SeqToParams, _}
+import sttp.tapir.internal.SeqToParams
+import sttp.tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
+import sttp.tapir.server.ServerDefaults.StatusCodes
+import sttp.tapir.server.{DecodeFailureHandling, ServerDefaults}
+import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -27,8 +27,8 @@ trait TapirPlayServer {
         val i = SeqToParams(InputValues(e.input, values)).asInstanceOf[I]
         logic(i)
           .map {
-            case Right(result) => OutputToPlayResponse(ServerDefaults.successStatusCode, e.output, result)
-            case Left(err)     => OutputToPlayResponse(ServerDefaults.errorStatusCode, e.errorOutput, err)
+            case Right(result) => OutputToPlayResponse(ServerDefaults.StatusCodes.success, e.output, result)
+            case Left(err)     => OutputToPlayResponse(ServerDefaults.StatusCodes.error, e.errorOutput, err)
           }
       }
       def handleDecodeFailure(
@@ -41,14 +41,14 @@ trait TapirPlayServer {
         handling match {
           case DecodeFailureHandling.NoMatch =>
             serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(println(_))
-            Result(header = ResponseHeader(StatusCodes.BadRequest), body = HttpEntity.NoEntity)
+            Result(header = ResponseHeader(StatusCodes.error.code), body = HttpEntity.NoEntity)
           case DecodeFailureHandling.RespondWithResponse(output, value) =>
             serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
               case (msg, Some(t)) => println(s"$msg $t")
               case (msg, None)    => println(msg)
             }
 
-            OutputToPlayResponse(ServerDefaults.errorStatusCode, output, value)
+            OutputToPlayResponse(ServerDefaults.StatusCodes.error, output, value)
         }
       }
 
@@ -65,7 +65,7 @@ trait TapirPlayServer {
                     request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))
                   )
                   .map { rawBody =>
-                    val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, codec.meta.isOptional))
+                    val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, true))
                     decodeResult match {
                       case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
                       case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult

@@ -1,23 +1,14 @@
 package tapir.server.play
 
-import java.io.{ByteArrayInputStream, File}
+import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
 
 import akka.stream.Materializer
 import akka.util.ByteString
-import play.api.mvc.{PlayBodyParsers, RawBuffer, Request}
+import play.api.mvc.{RawBuffer, Request}
 import play.core.parsers.Multipart
-import tapir.model.Part
-import tapir.{
-  ByteArrayValueType,
-  ByteBufferValueType,
-  FileValueType,
-  InputStreamValueType,
-  MultipartValueType,
-  RawPart,
-  RawValueType,
-  StringValueType
-}
+import sttp.model.Part
+import sttp.tapir.{ByteArrayValueType, ByteBufferValueType, FileValueType, InputStreamValueType, MultipartValueType, RawPart, RawValueType, StringValueType}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -53,7 +44,7 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
             f.contentType.map(Charset.forName),
             request,
             ByteString.apply(java.nio.file.Files.readAllBytes(f.ref.path))
-          ).map(body => Part(f.key, Map(f.key -> f.dispositionType), Seq.empty, body).asInstanceOf[RawPart])
+          ).map(body => Part(f.key, body, Map(f.key -> f.dispositionType), Seq.empty).asInstanceOf[RawPart])
         }))
     }
   }

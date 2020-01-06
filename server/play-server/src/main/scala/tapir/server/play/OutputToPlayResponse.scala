@@ -11,17 +11,17 @@ import akka.util.ByteString
 import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
-import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import tapir.model.{Part, StatusCode}
-import tapir.{
+import sttp.model.{MediaType, Part, StatusCode}
+import sttp.tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
   CodecForOptional,
+  CodecFormat,
   CodecMeta,
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
-  MediaType,
   MultipartValueType,
   RawPart,
   StringValueType
@@ -44,22 +44,22 @@ object OutputToPlayResponse {
 
     outputValues.body match {
       case Some(entity) =>
-        val result = Result(ResponseHeader(status, headers), entity)
+        val result = Result(ResponseHeader(status.code, headers), entity)
         headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
-      case None => Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
+      case None => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
     }
   }
 
   private val encodeOutputs: EncodeOutputs[HttpEntity] =
     new EncodeOutputs[HttpEntity](new EncodeOutputBody[HttpEntity] {
-      override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): HttpEntity =
+      override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: CodecFormat, Any]): HttpEntity =
         rawValueToResponseEntity(codec.meta, v)
-      override def streamValueToBody(v: Any, mediaType: MediaType): HttpEntity =
-        HttpEntity.Streamed(v.asInstanceOf[Source[ByteString, _]], None, mediaTypeToContentType(mediaType))
+      override def streamValueToBody(v: Any, codecFormat: CodecFormat): HttpEntity =
+        HttpEntity.Streamed(v.asInstanceOf[Source[ByteString, _]], None, mediaTypeToContentFormat(codecFormat.mediaType))
     })
 
-  private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], r: R): HttpEntity = {
-    val contentType = mediaTypeToContentType(codecMeta.mediaType)
+  private def rawValueToResponseEntity[M <: CodecFormat, R](codecMeta: CodecMeta[_, M, R], r: R): HttpEntity = {
+    val contentType = mediaTypeToContentFormat(codecMeta.format.mediaType)
 
     codecMeta.rawValueType match {
       case StringValueType(charset) =>
@@ -122,7 +122,7 @@ object OutputToPlayResponse {
   ): Option[MultipartFormData.FilePart[Source[ByteString, _]]] = {
 
     mvt.partCodecMeta(part.name).flatMap { codecMeta =>
-      val entity: HttpEntity = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body)
+      val entity: HttpEntity = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.body)
 
       for {
         fileName <- part.fileName
@@ -142,24 +142,26 @@ object OutputToPlayResponse {
         case _                          => Charset.defaultCharset()
       }
 
-      val maybeData: Option[String] = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body) match {
-        case HttpEntity.Strict(data, _)   => Some(data.decodeString(charset))
-        case HttpEntity.Streamed(_, _, _) => None
-        case HttpEntity.Chunked(_, _)     => None
-      }
+      val maybeData: Option[String] =
+        rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.body) match {
+          case HttpEntity.Strict(data, _)   => Some(data.decodeString(charset))
+          case HttpEntity.Streamed(_, _, _) => None
+          case HttpEntity.Chunked(_, _)     => None
+        }
 
       maybeData.map(MultipartFormData.DataPart(part.name, _))
     }
   }
 
-  private def mediaTypeToContentType(mediaType: MediaType): Option[String] = {
-    val result = mediaType match {
-      case MediaType.Json()               => ContentTypes.JSON
-      case MediaType.TextPlain(charset)   => ContentTypes.TEXT(Codec.javaSupported(charset.name()))
-      case MediaType.OctetStream()        => ContentTypes.BINARY
-      case MediaType.XWwwFormUrlencoded() => ContentTypes.FORM
-      case MediaType.MultipartFormData()  => "multipart/form-data"
-      case _                              => throw new IllegalArgumentException(s"Cannot parse content type: $mediaType")
+  private def mediaTypeToContentFormat(mediaType: MediaType): Option[String] = {
+    val result = mediaType.copy(charset = mediaType.charset.map(_.toLowerCase)) match {
+      case MediaType.ApplicationJson               => ContentTypes.JSON
+      case MediaType.TextPlain                     => ContentTypes.TEXT(Codec.javaSupported(mediaType.charset.getOrElse("utf-8")))
+      case MediaType.TextPlainUtf8                 => ContentTypes.TEXT(Codec.utf_8)
+      case MediaType.ApplicationOctetStream        => ContentTypes.BINARY
+      case MediaType.ApplicationXWwwFormUrlencoded => ContentTypes.FORM
+      case MediaType.MultipartFormData             => "multipart/form-data"
+      case _                                       => throw new IllegalArgumentException(s"Cannot parse content type: $mediaType")
     }
 
     Option(result)

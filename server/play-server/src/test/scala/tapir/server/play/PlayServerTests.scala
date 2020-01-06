@@ -9,9 +9,10 @@ import play.api.mvc.{Handler, RequestHeader}
 import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
-import tapir.Endpoint
-import tapir.server.tests.ServerTests
-import tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.Endpoint
+import sttp.tapir.server.tests.ServerTests
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -65,5 +66,5 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with T
     Resource.make(bind)(s => IO(s.stop())).map(_ => ())
   }
 
-  override def initialPort: Port = 38000
+  override def portCounter: PortCounter = new PortCounter(38000)
 }

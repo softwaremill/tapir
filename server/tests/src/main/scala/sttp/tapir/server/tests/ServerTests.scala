@@ -223,7 +223,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   if (streamingSupport) {
     testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
-      sttp.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
+      basicRequest.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
     }
   }
 
@@ -279,27 +279,26 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   if (multipleValueHeaderSupport) {
-
     testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
       baseUri =>
-        sttp.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
+        basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
           r.headers("Cookie") shouldBe Seq("32", "etanargemop")
         }
     }
 
-  testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
-    baseUri =>
-      basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
-        r.headers("Cookie") shouldBe Seq("32", "etanargemop")
-      }
-  }
+    testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
+      baseUri =>
+        basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
+          r.headers("Cookie") shouldBe Seq("32", "etanargemop")
+        }
+    }
 
     testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
-      sttp
+      basicRequest
         .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
         .send()
         .map { r =>
-          r.headers.filter(_._1 == "hh").map(_._2).toList shouldBe List("v3", "v2", "v1", "v0")
+          r.header("hh").toList shouldBe List("v3", "v2", "v1", "v0")
         }
     }
   }
