@@ -580,7 +580,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       basicRequest.get(uri"$baseUri?amount=-3").send().map(_.code shouldBe StatusCode.BadRequest)
   }
 
-  testServer(Validation.in_json_wrapper, "support jsonBody validation with wrapped type")((_: ValidFruitAmount) =>
+  testServer(Validation.in_valid_json, "support jsonBody validation with wrapped type")((_: ValidFruitAmount) =>
     pureResult(().asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri").body("""{"fruit":"orange","amount":11}""").send().map(_.code shouldBe StatusCode.Ok) >>
@@ -588,14 +588,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       basicRequest.get(uri"$baseUri").body("""{"fruit":"orange","amount":1}""").send().map(_.code shouldBe StatusCode.Ok)
   }
 
-  testServer(Validation.in_query_wrapper, "support query validation with wrapper type")((_: IntWrapper) => pureResult(().asRight[Unit])) {
+  testServer(Validation.in_valid_query, "support query validation with wrapper type")((_: IntWrapper) => pureResult(().asRight[Unit])) {
     baseUri =>
       basicRequest.get(uri"$baseUri?amount=11").send().map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri?amount=0").send().map(_.code shouldBe StatusCode.BadRequest) >>
         basicRequest.get(uri"$baseUri?amount=1").send().map(_.code shouldBe StatusCode.Ok)
   }
 
-  testServer(Validation.in_json_collection, "support jsonBody validation with list of wrapped type")((_: BasketOfFruits) =>
+  testServer(Validation.in_valid_json_collection, "support jsonBody validation with list of wrapped type")((_: BasketOfFruits) =>
     pureResult(().asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri").body("""{"fruits":[{"fruit":"orange","amount":11}]}""").send().map(_.code shouldBe StatusCode.Ok) >>

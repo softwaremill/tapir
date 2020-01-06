@@ -1,0 +1,31 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /add/path:
+    get:
+      operationId: getAddPath
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidFruitAmount'
+        required: false
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    ValidFruitAmount:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+          minLength: 4
+        amount:
+          type: integer
+          minimum: 1

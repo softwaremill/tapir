@@ -231,7 +231,7 @@ package object tests {
       endpoint.in(query[Int]("amount").validate(Validator.min(0)))
     }
 
-    val in_json_wrapper: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
+    val in_valid_json: Endpoint[ValidFruitAmount, Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
@@ -242,14 +242,25 @@ package object tests {
       endpoint.in(jsonBody[ValidFruitAmount])
     }
 
-    val in_query_wrapper: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
+    val in_valid_optional_json: Endpoint[Option[ValidFruitAmount], Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
+      implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val intDecoder: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val stringEncoder: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
+      implicit val stringDecoder: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
+      implicit val intValidator: Validator[IntWrapper] = Validator.min(1).contramap(_.v)
+      implicit val stringValidator: Validator[StringWrapper] = Validator.minLength(4).contramap(_.v)
+      endpoint.in(jsonBody[Option[ValidFruitAmount]])
+    }
+
+    val in_valid_query: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
         uc.map(IntWrapper.apply)(_.v).validate(Validator.min(1).contramap(_.v))
       endpoint.in(query[IntWrapper]("amount"))
     }
 
-    val in_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Nothing] = {
+    val in_valid_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
@@ -269,7 +280,7 @@ package object tests {
       endpoint.in(jsonBody[BasketOfFruits])
     }
 
-    val in_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Nothing] = {
+    val in_valid_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
