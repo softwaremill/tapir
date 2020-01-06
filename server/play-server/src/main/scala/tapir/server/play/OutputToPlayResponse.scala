@@ -13,7 +13,19 @@ import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import tapir.model.{Part, StatusCode}
-import tapir.{ByteArrayValueType, ByteBufferValueType, CodecForOptional, CodecMeta, EndpointOutput, FileValueType, InputStreamValueType, MediaType, MultipartValueType, RawPart, StringValueType}
+import tapir.{
+  ByteArrayValueType,
+  ByteBufferValueType,
+  CodecForOptional,
+  CodecMeta,
+  EndpointOutput,
+  FileValueType,
+  InputStreamValueType,
+  MediaType,
+  MultipartValueType,
+  RawPart,
+  StringValueType
+}
 
 object OutputToPlayResponse {
 
@@ -162,7 +174,6 @@ object OutputToPlayResponse {
         .flatMap {
           case DataPart(name, value) =>
             s"--$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name=$name\r\n\r\n$value\r\n"
-
         }
         .mkString("")
       Codec.utf_8.encode(result)
