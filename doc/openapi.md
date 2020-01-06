@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-openapi-docs" % "0.11.7"
-"com.softwaremill.tapir" %% "tapir-openapi-circe-yaml" % "0.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.12.1"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -14,8 +14,8 @@ An endpoint can be converted to an instance of the model by importing the `tapir
 the provided extension method:
 
 ```scala
-import tapir.openapi.OpenAPI
-import tapir.docs.openapi._
+import sttp.tapir.openapi.OpenAPI
+import sttp.tapir.docs.openapi._
 
 val docs: OpenAPI = booksListing.toOpenAPI("My Bookshop", "1.0")
 ```
@@ -32,7 +32,7 @@ List(addBook, booksListing, booksListingByGenre).toOpenAPI("My Bookshop", "1.0")
 The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala
-import tapir.openapi.circe.yaml._
+import sttp.tapir.openapi.circe.yaml._
 
 println(docs.toYaml)
 ```
@@ -49,17 +49,24 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 [Redoc](https://github.com/Redocly/redoc):
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-swagger-ui-akka-http" % "0.11.7"
-"com.softwaremill.tapir" %% "tapir-swagger-ui-http4s" % "0.11.7"
-"com.softwaremill.tapir" %% "tapir-redoc-http4s" % "0.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.12.1"
+```
+
+Note: `tapir-swagger-ui-akka-http` transitively pulls some Akka modules in version 2.6. If you want to force
+your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.12.1" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Usage example for akka-http:
 
 ```scala
-import tapir.docs.openapi._
-import tapir.openapi.circe.yaml._
-import tapir.swagger.akkahttp.SwaggerAkka
+import sttp.tapir.docs.openapi._
+import sttp.tapir.openapi.circe.yaml._
+import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
 val docsAsYaml: String = myEndpoints.toOpenAPI("My App", "1.0").toYaml
 // add to your akka routes

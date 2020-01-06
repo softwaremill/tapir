@@ -4,13 +4,21 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-akka-http-server" % "0.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.12.1"
 ```
 
-and import the package:
+This will transitively pull some Akka modules in version 2.6. If you want to force
+your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
 
 ```scala
-import tapir.server.akkahttp._
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.12.1" exclude("com.typesafe.akka", "akka-stream_2.12")
+```
+
+
+Now import the package:
+
+```scala
+import sttp.tapir.server.akkahttp._
 ```
 
 This adds extension methods to the `Endpoint` type: `toDirective`, `toRoute` and `toRouteRecoverErrors`. The first two
@@ -26,8 +34,8 @@ it expects a function of type `I => Future[O]`.
 For example:
 
 ```scala
-import tapir._
-import tapir.server.akkahttp._
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 

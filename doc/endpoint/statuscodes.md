@@ -2,7 +2,8 @@
 
 To provide a (varying) status code of a server response, use the `statusCode` output, which maps to a value of type
 `type tapir.model.StatusCode` (which is an alias for `Int`). The `tapir.model.StatusCodes` object contains known status 
-codes as constants. This type of output is used only when interpreting the endpoint as a server.
+codes as constants. This type of output is used only when interpreting the endpoint as a server. If your endpoint returns varying status codes
+which you would like to have listed in documentation use `statusCode.description(code1, "code1 description").description(code2, "code2 description")` output.
 
 Alternatively, a fixed status code can be specified using the `statusCode(code)` output.
 

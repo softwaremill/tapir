@@ -13,8 +13,8 @@ also a logic function `I => F[Either[E, O]]`, for some effect `F`.
 For example, the book example can be more concisely written as follows:
 
 ```scala
-import tapir._
-import tapir.server.akkahttp._
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
@@ -81,7 +81,7 @@ This extension method is defined in the same traits as the route interpreters, b
 interpreter) and for an arbitrary monad (in the http4s interpreter), so importing the package is sufficient to use it:
 
 ```scala
-import tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp._
 val r: Route = myEndpoint.toRoute((authFn _).andThenFirstE((logicFn _).tupled))
 ```
 

@@ -1,5 +1,5 @@
-val scala2_12 = "2.12.9"
-val scala2_13 = "2.13.0"
+val scala2_12 = "2.12.10"
+val scala2_13 = "2.13.1"
 
 lazy val is2_12 = settingKey[Boolean]("Is the scala version 2.12.")
 
@@ -13,12 +13,12 @@ val only2_12settings = Seq(
 )
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
-  organization := "com.softwaremill.tapir",
+  organization := "com.softwaremill.sttp.tapir",
   scalaVersion := scala2_12,
   crossScalaVersions := Seq(scala2_12, scala2_13),
   is2_12 := scalaVersion.value.startsWith("2.12."),
   libraryDependencies ++= Seq(
-    compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.4"),
+    compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.5"),
     compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
     "com.github.ghik" % "silencer-lib" % Versions.silencer % Provided cross CrossVersion.full
   )
@@ -40,8 +40,10 @@ lazy val rootProject = (project in file("."))
   .settings(publishArtifact := false, name := "tapir")
   .aggregate(
     core,
+    tapirCats,
     circeJson,
     playJson,
+    sprayJson,
     uPickleJson,
     openapiModel,
     openapiCirce,
@@ -68,6 +70,7 @@ lazy val core: Project = (project in file("core"))
     name := "tapir-core",
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.12.0",
+      "com.softwaremill.sttp.client" %% "model" % Versions.sttp,
       scalaTest % "test"
     )
   )
@@ -85,6 +88,19 @@ lazy val tests: Project = (project in file("tests"))
     libraryDependencies ++= loggerDependencies
   )
   .dependsOn(core, circeJson)
+
+// cats
+
+lazy val tapirCats: Project = (project in file("cats"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-cats",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core" % Versions.cats,
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
 
 // json
 
@@ -106,6 +122,17 @@ lazy val playJson: Project = (project in file("json/playjson"))
     name := "tapir-json-play",
     libraryDependencies ++= Seq(
       "com.typesafe.play" %% "play-json" % Versions.playJson,
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
+
+lazy val sprayJson: Project = (project in file("json/sprayjson"))
+  .settings(commonSettings: _*)
+  .settings(
+    name := "tapir-json-spray",
+    libraryDependencies ++= Seq(
+      "io.spray" %% "spray-json" % Versions.sprayJson,
       scalaTest % "test"
     )
   )
@@ -174,9 +201,9 @@ lazy val swaggerUiHttp4s: Project = (project in file("docs/swagger-ui-http4s"))
   .settings(commonSettings)
   .settings(
     name := "tapir-swagger-ui-http4s",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s(_),
-      _ => "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi
     )
   )
 
@@ -184,7 +211,7 @@ lazy val redocHttp4s: Project = (project in file("docs/redoc-http4s"))
   .settings(commonSettings)
   .settings(
     name := "tapir-redoc-http4s",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)("org.http4s" %% "http4s-dsl" % Versions.http4s(_))
+    libraryDependencies += "org.http4s" %% "http4s-dsl" % Versions.http4s
   )
 
 // server
@@ -193,8 +220,8 @@ lazy val serverTests: Project = (project in file("server/tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-server-tests",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "com.softwaremill.sttp" %% "async-http-client-backend-cats" % Versions.sttp(_)
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client" %% "async-http-client-backend-cats" % Versions.sttp
     )
   )
   .dependsOn(tests)
@@ -214,8 +241,8 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings)
   .settings(
     name := "tapir-http4s-server",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_)
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s
     )
   )
   .dependsOn(core, serverTests % "test")
@@ -261,10 +288,10 @@ lazy val clientTests: Project = (project in file("client/tests"))
   .settings(commonSettings)
   .settings(
     name := "tapir-client-tests",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s(_),
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s(_),
-      "org.http4s" %% "http4s-circe" % Versions.http4s(_)
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-circe" % Versions.http4s
     )
   )
   .dependsOn(tests)
@@ -273,9 +300,9 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
   .settings(commonSettings)
   .settings(
     name := "tapir-sttp-client",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "com.softwaremill.sttp" %% "core" % Versions.sttp(_),
-      "com.softwaremill.sttp" %% "async-http-client-backend-fs2" % Versions.sttp(_) % "test"
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client" %% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client" %% "async-http-client-backend-fs2" % Versions.sttp % "test"
     )
   )
   .dependsOn(core, clientTests % "test")
@@ -286,11 +313,11 @@ lazy val examples: Project = (project in file("examples"))
   .settings(commonSettings)
   .settings(
     name := "tapir-examples",
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      _ => "dev.zio" %% "zio" % "1.0.0-RC15",
-      _ => "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC6",
-      _ => "org.typelevel" %% "cats-effect" % "2.0.0",
-      "org.http4s" %% "http4s-dsl" % Versions.http4s(_)
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % "1.0.0-RC16",
+      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC7",
+      "org.typelevel" %% "cats-effect" % "2.0.0",
+      "org.http4s" %% "http4s-dsl" % Versions.http4s
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
@@ -303,13 +330,14 @@ lazy val playground: Project = (project in file("playground"))
   .settings(
     name := "tapir-playground",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "1.0.0-RC15",
-      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC6",
+      "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp,
+      "dev.zio" %% "zio" % "1.0.0-RC16",
+      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC7",
       "org.typelevel" %% "cats-effect" % "2.0.0",
       "io.swagger" % "swagger-annotations" % "1.5.24"
     ),
-    libraryDependencies ++= dependenciesFor(scalaVersion.value)(
-      "com.softwaremill.sttp" %% "akka-http-backend" % Versions.sttp(_)
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
