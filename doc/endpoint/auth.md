@@ -4,7 +4,7 @@ Inputs which carry authentication data wrap another input can be marked as such 
 `auth` object. Apart from predefined codecs for some authentication methods, such inputs will be treated differently]
 when generating documentation. Otherwise, they behave as normal inputs which map to the the given type.
 
-Currently, the following authentication inputs are available (assuming `import tapir._`):
+Currently, the following authentication inputs are available (assuming `import sttp.tapir._`):
 
 * `auth.apiKey(anotherInput)`: wraps any other input and designates it as an api key. The input is typically a header, 
 cookie or a query parameter

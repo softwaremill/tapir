@@ -7,3 +7,6 @@ interpreted also by code not included in the library. Below is a list of project
 
 [tapir-gen](https://github.com/xplosunn/tapir-gen) extends tapir to do client code generation. The goal is to 
 auto-generate clients in multiple-languages with multiple libraries.
+
+[scala-opentracing](https://github.com/Colisweb/scala-opentracing) contains a module which provides a small integration 
+layer that allows you to create traced http endpoints from tapir Endpoint definitions.

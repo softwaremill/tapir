@@ -2,8 +2,9 @@ package tapir.server.play
 
 import akka.stream.Materializer
 import play.api.mvc.RequestHeader
-import tapir.internal.server.DecodeInputsContext
-import tapir.model.{Method, ServerRequest}
+import sttp.model.Method
+import sttp.tapir.internal.server.DecodeInputsContext
+import sttp.tapir.model.ServerRequest
 
 private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed: Int = 0, serverOptions: PlayServerOptions)(
     implicit mat: Materializer

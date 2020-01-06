@@ -3,7 +3,7 @@ package tapir.server.play
 import akka.stream.Materializer
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
-import tapir.server.{DecodeFailureHandler, LoggingOptions, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, LoggingOptions, ServerDefaults}
 
 import scala.concurrent.ExecutionContext
 

@@ -1,0 +1,13 @@
+package sttp.tapir.internal;
+
+object SeqToParams {
+  def apply[T](seq: Seq[T]): Any = {
+    seq match {
+      case Seq() => ()
+      case Seq(v1) => v1
+      [2..#case Seq([#v1#]) => ([#v1#])#
+      ]
+      case _                           => throw new IllegalArgumentException(s"Cannot convert $seq to params!")
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 [![Join the chat at https://gitter.im/softwaremill/tapir](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/softwaremill/tapir?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![Build Status](https://travis-ci.org/softwaremill/tapir.svg?branch=master)](https://travis-ci.org/softwaremill/tapir)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/tapir-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.tapir/tapir-core_2.12)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.12)
 
 With tapir you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
 input parameters, error-output parameters, and normal-output parameters. An endpoint specification can be 
@@ -18,8 +18,8 @@ interpreted as:
 ## Teaser
 
 ```scala
-import tapir._
-import tapir.json.circe._
+import sttp.tapir._
+import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
 type Limit = Int
@@ -37,15 +37,15 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 
 //
 
-import tapir.docs.openapi._
-import tapir.openapi.circe.yaml._
+import sttp.tapir.docs.openapi._
+import sttp.tapir.openapi.circe.yaml._
 
 val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
 println(docs.toYaml)
 
 //
 
-import tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp._
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
@@ -57,7 +57,7 @@ val booksListingRoute: Route = booksListing.toRoute(bookListingLogic _)
 
 //
 
-import tapir.client.sttp._
+import sttp.tapir.client.sttp._
 import com.softwaremill.sttp._
 
 val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksListing
@@ -74,7 +74,7 @@ tapir documentation is available at [tapir-scala.readthedocs.io](http://tapir-sc
 Add the following dependency:
 
 ```scala
-"com.softwaremill.tapir" %% "tapir-core" % "0.11.7"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.12.1"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
@@ -86,7 +86,7 @@ scalacOptions += "-Ypartial-unification"
 Then, import:
 
 ```scala
-import tapir._
+import sttp.tapir._
 ```
 
 And finally, type `endpoint.` and see where auto-complete gets you!
@@ -100,6 +100,14 @@ please increase your stack memory. Example:
 ```
 sbt -J-Xss4M clean compile
 ```
+
+## Other sttp projects
+
+sttp is a family of Scala HTTP-related projects, and currently includes:
+
+* [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
+* sttp tapir: this project
+* [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
 
 ## Contributing
 

@@ -16,8 +16,6 @@ paths:
 components:
   schemas:
     ObjectWithList:
-      required:
-        - data
       type: object
       properties:
         data:
