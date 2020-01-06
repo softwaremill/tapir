@@ -95,6 +95,10 @@ object ObjectSchemasForEndpoints {
         (st.info -> TypeData(s, validator): ObjectTypeData) +: subtypesSchemaWithValidator(st, validator)
           .flatMap(objectSchemas)
           .toList
+      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _), v @ Validator.CollectionElements(ev: Validator.Coproduct[_], _)) =>
+        (st.info -> TypeData(s, v: Validator[_]): ObjectTypeData) +: subtypesSchemaWithValidator(st, ev)
+          .flatMap(objectSchemas)
+          .toList
       case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _), validator) =>
         (st.info -> TypeData(s, validator): ObjectTypeData) +: objectSchemas(
           TypeData(st.valueSchema, elementValidator(validator))

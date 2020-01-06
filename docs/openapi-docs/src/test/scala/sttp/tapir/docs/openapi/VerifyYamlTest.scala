@@ -486,7 +486,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
       .toYaml
-    println(actualYaml)
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
@@ -610,6 +609,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render field validator when used inside of optional coproduct") {
+    implicit val ageValidator: Validator[Int] = Validator.min(11)
+    val expectedYaml = loadYaml("expected_valid_optional_coproduct.yml")
+    val actualYaml = endpoint.get
+      .in(jsonBody[Option[Entity]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
@@ -621,12 +632,6 @@ case class F1(data: List[F1])
 case class G[T](data: T)
 
 case class NestedEntity(entity: Entity)
-
-sealed trait Entity {
-  def name: String
-}
-case class Person(name: String, age: Int) extends Entity
-case class Organization(name: String) extends Entity
 
 sealed trait ErrorInfo
 case class NotFound(what: String) extends ErrorInfo
