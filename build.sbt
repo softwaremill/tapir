@@ -56,6 +56,7 @@ lazy val rootProject = (project in file("."))
     akkaHttpServer,
     http4sServer,
     finatraServer,
+    playServer,
     sttpClient,
     tests,
     examples,
