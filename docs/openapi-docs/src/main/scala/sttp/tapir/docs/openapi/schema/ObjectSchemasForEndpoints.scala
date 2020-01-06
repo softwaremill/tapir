@@ -7,7 +7,6 @@ import sttp.tapir.openapi.OpenAPI.ReferenceOr
 import sttp.tapir.openapi.{Reference, Schema => OSchema}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
 
-import scala.collection.immutable
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 
