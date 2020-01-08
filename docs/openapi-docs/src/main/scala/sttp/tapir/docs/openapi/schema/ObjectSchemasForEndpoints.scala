@@ -5,7 +5,7 @@ import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.docs.openapi.{OpenAPIDocsOptions, uniqueName}
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
 import sttp.tapir.openapi.{Reference, Schema => OSchema}
-import sttp.tapir.{SchemaType, Schema => TSchema, SchemaType => TSchemaType, _}
+import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
 
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
@@ -99,13 +99,13 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def productSchemas(s: TSchema[_], st: SchemaType.SProduct, validator: Validator.Product[_]): List[ObjectTypeData] = {
+  private def productSchemas(s: TSchema[_], st: TSchemaType.SProduct, validator: Validator.Product[_]): List[ObjectTypeData] = {
     (st.info -> TypeData(s, validator): ObjectTypeData) +: fieldsSchemaWithValidator(st, validator)
       .flatMap(objectSchemas)
       .toList
   }
 
-  private def coproductSchemas(s: TSchema[_], st: SchemaType.SCoproduct, validator: Validator.Coproduct[_]): List[ObjectTypeData] = {
+  private def coproductSchemas(s: TSchema[_], st: TSchemaType.SCoproduct, validator: Validator.Coproduct[_]): List[ObjectTypeData] = {
     (st.info -> TypeData(s, validator): ObjectTypeData) +: subtypesSchemaWithValidator(st, validator)
       .flatMap(objectSchemas)
       .toList
