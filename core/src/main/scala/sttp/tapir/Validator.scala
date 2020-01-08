@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import magnolia.SealedTrait
+import sttp.tapir.generic.SealedTrait
 import sttp.tapir.generic.internal.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
 
 import scala.collection.immutable
@@ -173,13 +173,10 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
 
   case class Coproduct[T](ctx: SealedTrait[Validator, T]) extends Single[T] {
     override def validate(t: T): List[ValidationError[_]] = {
-      ctx.dispatch(t) { v =>
-        v.typeclass.validate(v.cast(t))
-      }
+      ctx.dispatch(t).validate(t)
     }
 
-    def subtypes: Map[String, Validator[scala.Any]] =
-      ctx.subtypes.map(st => st.typeName.full -> st.typeclass.asInstanceOf[Validator[scala.Any]]).toMap
+    def subtypes: Map[String, Validator[scala.Any]] = ctx.subtypes
   }
 
   case class OpenProduct[E](elementValidator: Validator[E]) extends Single[Map[String, E]] {
