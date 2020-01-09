@@ -470,7 +470,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("validator with wrapper type in body") {
     val expectedYaml = loadYaml("expected_valid_body_wrapped.yml")
 
-    val actualYaml = Validation.in_json_wrapper
+    val actualYaml = Validation.in_valid_json
+      .in("add")
+      .in("path")
+      .toOpenAPI(Info("Fruits", "1.0"))
+      .toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("validator with optional wrapper type in body") {
+    val expectedYaml = loadYaml("expected_valid_optional_body_wrapped.yml")
+
+    val actualYaml = Validation.in_valid_optional_json
       .in("add")
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
@@ -493,7 +504,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("validator with wrappers type in query") {
     val expectedYaml = loadYaml("expected_valid_query_wrapped.yml")
 
-    val actualYaml = Validation.in_query_wrapper
+    val actualYaml = Validation.in_valid_query
       .in("add")
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
@@ -504,7 +515,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("validator with list") {
     val expectedYaml = loadYaml("expected_valid_body_collection.yml")
 
-    val actualYaml = Validation.in_json_collection
+    val actualYaml = Validation.in_valid_json_collection
       .in("add")
       .in("path")
       .toOpenAPI(Info("Fruits", "1.0"))
@@ -515,7 +526,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("render validator for additional properties of map") {
     val expectedYaml = loadYaml("expected_valid_additional_properties.yml")
 
-    val actualYaml = Validation.in_map
+    val actualYaml = Validation.in_valid_map
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -586,6 +597,30 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render field validator when used inside of coproduct") {
+    implicit val ageValidator: Validator[Int] = Validator.min(11)
+    val expectedYaml = loadYaml("expected_valid_coproduct.yml")
+    val actualYaml = endpoint.get
+      .out(jsonBody[Entity])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render field validator when used inside of optional coproduct") {
+    implicit val ageValidator: Validator[Int] = Validator.min(11)
+    val expectedYaml = loadYaml("expected_valid_optional_coproduct.yml")
+    val actualYaml = endpoint.get
+      .in(jsonBody[Option[Entity]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
@@ -597,12 +632,6 @@ case class F1(data: List[F1])
 case class G[T](data: T)
 
 case class NestedEntity(entity: Entity)
-
-sealed trait Entity {
-  def name: String
-}
-case class Person(name: String, age: Int) extends Entity
-case class Organization(name: String) extends Entity
 
 sealed trait ErrorInfo
 case class NotFound(what: String) extends ErrorInfo
