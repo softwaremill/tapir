@@ -1,11 +1,10 @@
 package sttp.tapir
 
 import org.scalatest.{FlatSpec, Matchers}
-import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.util.CompileUtil
 
 class EndpointTest extends FlatSpec with Matchers {
-  it should "compile inputs" in {
+  "endpoint" should "compile inputs" in {
     endpoint.in(query[String]("q1")): Endpoint[String, Unit, Unit, Nothing]
     endpoint.in(query[String]("q1").and(query[Int]("q2"))): Endpoint[(String, Int), Unit, Unit, Nothing]
 
@@ -64,18 +63,6 @@ class EndpointTest extends FlatSpec with Matchers {
 
     exception.getMessage contains "found   : tapir.EndpointInput.PathCapture[String]"
     exception.getMessage contains "required: tapir.EndpointIO[?]"
-  }
-
-  // https://github.com/softwaremill/tapir/issues/373
-  it should "compile without type annotations needed to get the type tag" in {
-    endpoint.get.out(
-      sttp.tapir.oneOf(
-        statusMapping(
-          StatusCode.BadRequest,
-          header(HeaderNames.ContentType).and(stringBody) //: EndpointOutput[(StatusCode, Book)]
-        )
-      )
-    )
   }
 
   val showTestData = List(

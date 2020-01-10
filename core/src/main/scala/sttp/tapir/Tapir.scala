@@ -7,12 +7,11 @@ import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.CodecForOptional.PlainCodecForOptional
 import sttp.tapir.EndpointOutput.StatusMapping
-import sttp.tapir.internal.ModifyMacroSupport
+import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
 
 import scala.reflect.ClassTag
-import scala.reflect.runtime.universe.WeakTypeTag
 
 trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.FixedPath(s)
@@ -100,28 +99,53 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     EndpointOutput.OneOf[I](firstCase +: otherCases)
 
   /**
-    * Create a mapping to be used in [[oneOf]] output descriptions.
+    * Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
+    * as a server) matches the runtime class of `O`.
+    *
+    * This will fail at compile-time if the type erasure of `O` is different from `O`, as a runtime check in this
+    * situation would give invalid results. In such cases, use [[statusMappingClassMatcher]],
+    * [[statusMappingValueMatcher]] or [[statusMappingFromMatchType]] instead.
+    *
+    * Should be used in [[oneOf]] output descriptions.
     */
-  def statusMapping[O: ClassTag: WeakTypeTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] = {
-    val t = implicitly[WeakTypeTag[O]].tpe
-    if (!(t =:= t.erasure)) {
-      throw new IllegalArgumentException(
-        s"Constructing statusMapping on type $t is not allowed because $t is subject to type erasure, please use statusMappingValueMatcher instead"
-      )
-    }
-    val classTag: ClassTag[O] = implicitly[ClassTag[O]]
+  def statusMapping[O: ClassTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
+    macro StatusMappingMacro.classMatcherIfErasedSameAsType[O]
+
+  /**
+    * Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
+    * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def statusMappingClassMatcher[O](
+      statusCode: StatusCode,
+      output: EndpointOutput[O],
+      runtimeClass: Class[_]
+  ): StatusMapping[O] = {
     StatusMapping(Some(statusCode), output, { a: Any =>
-      classTag.runtimeClass.isInstance(a)
+      runtimeClass.isInstance(a)
     })
   }
 
+  /**
+    * Create a status mapping which uses `statusCode` and `output` if the provided value (when interpreting as a server
+    * matches the `matcher` predicate.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
   def statusMappingValueMatcher[O](statusCode: StatusCode, output: EndpointOutput[O])(
       matcher: PartialFunction[Any, Boolean]
   ): StatusMapping[O] =
     StatusMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
 
   /**
-    * Experimental: create a mapping deriving the value matcher using the experimental [[MatchType]] type class derivation
+    * Experimental!
+    *
+    * Create a status mapping which uses `statusCode` and `output` if the provided value matches the target type, as
+    * checked by [[MatchType]]. Instances of [[MatchType]] are automatically derived and recursively check that
+    * classes of all fields match, to bypass issues caused by type erasure.
+    *
+    * Should be used in [[oneOf]] output descriptions.
     */
   def statusMappingFromMatchType[O: MatchType](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
     statusMappingValueMatcher(statusCode, output)(implicitly[MatchType[O]].partial)
