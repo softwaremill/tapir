@@ -12,8 +12,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
 
 import scala.reflect.ClassTag
-import scala.reflect.runtime.universe.TypeTag
-import scala.reflect.runtime.universe.typeOf
+import scala.reflect.runtime.universe.WeakTypeTag
 
 trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.FixedPath(s)
@@ -103,8 +102,8 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   /**
     * Create a mapping to be used in [[oneOf]] output descriptions.
     */
-  def statusMapping[O: ClassTag: TypeTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] = {
-    val t = typeOf[O]
+  def statusMapping[O: ClassTag: WeakTypeTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] = {
+    val t = implicitly[WeakTypeTag[O]].tpe
     if (!(t =:= t.erasure)) {
       throw new IllegalArgumentException(
         s"Constructing statusMapping on type $t is not allowed because $t is subject to type erasure, please use statusMappingValueMatcher instead"
