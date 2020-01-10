@@ -3,8 +3,6 @@ package sttp.tapir.typelevel
 import magnolia.{CaseClass, Magnolia, Param, SealedTrait}
 
 import scala.reflect.ClassTag
-import scala.reflect.runtime.universe.TypeTag
-import scala.reflect.runtime.universe.typeOf
 
 trait MatchType[T] {
 
@@ -20,33 +18,25 @@ trait MatchType[T] {
 private[typelevel] trait GenericMatchType {
   type Typeclass[T] = MatchType[T]
 
-  def combine[T: ClassTag: TypeTag](ctx: CaseClass[Typeclass, T]): Typeclass[T] = {
+  def combine[T: ClassTag](ctx: CaseClass[Typeclass, T]): Typeclass[T] = {
     val ct = implicitly[ClassTag[T]]
-    val tp = typeOf[T]
-    if (tp.erasure =:= tp) {
-      ct.runtimeClass.isInstance(_)
-    } else {
-      { value: Any =>
-        ct.runtimeClass.isInstance(value) &&
-        ctx.parameters.forall { param: Param[Typeclass, T] =>
-          {
-            param.typeclass(param.dereference(value.asInstanceOf[T]))
-          }
+
+    { value: Any =>
+      ct.runtimeClass.isInstance(value) &&
+      ctx.parameters.forall { param: Param[Typeclass, T] =>
+        {
+          param.typeclass(param.dereference(value.asInstanceOf[T]))
         }
       }
     }
   }
 
-  def dispatch[T: ClassTag: TypeTag](ctx: SealedTrait[Typeclass, T]): Typeclass[T] = {
+  def dispatch[T: ClassTag](ctx: SealedTrait[Typeclass, T]): Typeclass[T] = {
     val ct = implicitly[ClassTag[T]]
-    val tp = typeOf[T]
-    if (tp.erasure =:= tp) {
-      ct.runtimeClass.isInstance(_)
-    } else {
-      { value: Any =>
-        ct.runtimeClass.isInstance(value) && ctx.dispatch(value.asInstanceOf[T]) { sub =>
-          sub.typeclass(sub.cast(value.asInstanceOf[T]))
-        }
+
+    { value: Any =>
+      ct.runtimeClass.isInstance(value) && ctx.dispatch(value.asInstanceOf[T]) { sub =>
+        sub.typeclass(sub.cast(value.asInstanceOf[T]))
       }
     }
   }
