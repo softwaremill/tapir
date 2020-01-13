@@ -101,10 +101,4 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
   private def toBigDecimal[N](v: N, vIsNumeric: Numeric[N], wholeNumber: Boolean): BigDecimal = {
     if (wholeNumber) BigDecimal(vIsNumeric.toLong(v)) else BigDecimal(vIsNumeric.toDouble(v))
   }
-
-  private def fieldValidator(v: Validator[_], fieldName: String): Validator[_] = {
-    Validator.all(asSingleValidators(v).collect {
-      case Validator.Product(fields) if fields.isDefinedAt(fieldName) => fields(fieldName).validator
-    }: _*)
-  }
 }

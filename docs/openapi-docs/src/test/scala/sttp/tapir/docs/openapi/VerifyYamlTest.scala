@@ -1,6 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import com.github.ghik.silencer.silent
+import io.circe.Json
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import sttp.model.{Method, StatusCode}
@@ -614,6 +615,17 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_valid_optional_coproduct.yml")
     val actualYaml = endpoint.get
       .in(jsonBody[Option[Entity]])
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("arbitrary json output") {
+    val expectedYaml = loadYaml("expected_arbitrary_json_output.yml")
+    val actualYaml = endpoint
+      .out(jsonBody[Json])
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 

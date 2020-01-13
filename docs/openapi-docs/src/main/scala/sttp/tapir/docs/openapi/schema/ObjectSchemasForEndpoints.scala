@@ -2,6 +2,7 @@ package sttp.tapir.docs.openapi.schema
 
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.openapi.{OpenAPIDocsOptions, uniqueName}
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
 import sttp.tapir.openapi.{Reference, Schema => OSchema}
@@ -83,14 +84,10 @@ object ObjectSchemasForEndpoints {
     typeData match {
       case TypeData(TSchema(TSchemaType.SArray(o), _, _, _), validator) =>
         objectSchemas(TypeData(o, elementValidator(validator)))
-      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _), validator: Validator.Product[_]) =>
+      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _), validator) =>
         productSchemas(s, st, validator)
-      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _), Validator.CollectionElements(ev: Validator.Product[_], _)) =>
-        productSchemas(s, st, ev)
-      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _), validator: Validator.Coproduct[_]) =>
+      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _), validator) =>
         coproductSchemas(s, st, validator)
-      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _), Validator.CollectionElements(ev: Validator.Coproduct[_], _)) =>
-        coproductSchemas(s, st, ev)
       case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _), validator) =>
         (st.info -> TypeData(s, validator): ObjectTypeData) +: objectSchemas(
           TypeData(st.valueSchema, elementValidator(validator))
@@ -99,28 +96,34 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def productSchemas(s: TSchema[_], st: TSchemaType.SProduct, validator: Validator.Product[_]): List[ObjectTypeData] = {
+  private def productSchemas(s: TSchema[_], st: TSchemaType.SProduct, validator: Validator[_]): List[ObjectTypeData] = {
     (st.info -> TypeData(s, validator): ObjectTypeData) +: fieldsSchemaWithValidator(st, validator)
       .flatMap(objectSchemas)
       .toList
   }
 
-  private def coproductSchemas(s: TSchema[_], st: TSchemaType.SCoproduct, validator: Validator.Coproduct[_]): List[ObjectTypeData] = {
+  private def coproductSchemas(s: TSchema[_], st: TSchemaType.SCoproduct, validator: Validator[_]): List[ObjectTypeData] = {
     (st.info -> TypeData(s, validator): ObjectTypeData) +: subtypesSchemaWithValidator(st, validator)
       .flatMap(objectSchemas)
       .toList
   }
 
-  private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator.Product[_]): Seq[TypeData[_]] = {
+  private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator[_]): Seq[TypeData[_]] = {
     p.fields.map { f =>
-      TypeData(f._2, v.fields(f._1).validator)
+      TypeData(f._2, fieldValidator(v, f._1))
     }.toList
   }
 
-  private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator.Coproduct[_]): Seq[TypeData[_]] = {
+  private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator[_]): Seq[TypeData[_]] = {
     st.schemas.collect {
-      case s @ TSchema(st: TSchemaType.SProduct, _, _, _) => TypeData(s, v.subtypes(st.info.fullName))
+      case s @ TSchema(st: TSchemaType.SProduct, _, _, _) => TypeData(s, subtypeValidator(v, st.info))
     }
+  }
+
+  private def subtypeValidator(v: Validator[_], subtype: SObjectInfo): Validator[_] = v match {
+    case v @ Validator.Coproduct(_)                                  => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
+    case Validator.CollectionElements(v @ Validator.Coproduct(_), _) => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
+    case _                                                           => Validator.pass
   }
 
   private def forInput(input: EndpointInput[_]): List[ObjectTypeData] = {

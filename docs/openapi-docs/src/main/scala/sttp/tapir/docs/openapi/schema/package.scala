@@ -34,4 +34,11 @@ package object schema {
       case bv: Validator.Primitive[_]               => List(bv)
     }
   }
+
+  private[schema] def fieldValidator(v: Validator[_], fieldName: String): Validator[_] = {
+    Validator.all(asSingleValidators(v).collect {
+      case Validator.CollectionElements(Validator.Product(fields), _) if fields.isDefinedAt(fieldName) => fields(fieldName).validator
+      case Validator.Product(fields) if fields.isDefinedAt(fieldName)                                  => fields(fieldName).validator
+    }: _*)
+  }
 }
