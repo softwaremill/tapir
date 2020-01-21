@@ -81,9 +81,9 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     val body = bodies.headOption
 
     val statusCodeDescriptions = outputs.flatMap {
-      case EndpointOutput.StatusCode(possibleCodes)                          => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
-      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _)) => Vector(desc)
-      case _                                                                 => Vector()
+      case EndpointOutput.StatusCode(possibleCodes)                             => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
+      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _, _)) => Vector(desc)
+      case _                                                                    => Vector()
     }
 
     val description = body.flatMap(_._1).getOrElse(statusCodeDescriptions.headOption.getOrElse(""))

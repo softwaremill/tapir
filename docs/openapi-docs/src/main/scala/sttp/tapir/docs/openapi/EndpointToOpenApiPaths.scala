@@ -58,7 +58,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       parameters.toList.map(Right(_)),
       body.headOption,
       responses,
-      None,
+      e.info.deprecated,
       if (securityRequirement.isEmpty) List.empty else List(securityRequirement),
       List.empty
     )

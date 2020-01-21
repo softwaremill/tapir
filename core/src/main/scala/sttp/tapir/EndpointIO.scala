@@ -64,6 +64,7 @@ object EndpointInput {
   case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
+    def deprecated(): Query[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Query[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"?$name", codec.validator)
   }
@@ -71,12 +72,14 @@ object EndpointInput {
   case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Basic[MultiQueryParams] {
     def description(d: String): QueryParams = copy(info = info.description(d))
     def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
+    def deprecated(): QueryParams = copy(info = info.deprecated(true))
     def show = s"?..."
   }
 
   case class Cookie[T](name: String, codec: PlainCodecForOptional[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Cookie[T] = copy(info = info.description(d))
     def example(t: T): Cookie[T] = copy(info = info.example(t))
+    def deprecated(): Cookie[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Cookie[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
   }
@@ -252,12 +255,14 @@ object EndpointIO {
 
   case class FixedHeader(name: String, value: String, info: Info[Unit]) extends Basic[Unit] {
     def description(d: String): FixedHeader = copy(info = info.description(d))
+    def deprecated(): FixedHeader = copy(info = info.deprecated(true))
     def show = s"{header $name: $value}"
   }
 
   case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Basic[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
+    def deprecated(): Header[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Header[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"{header $name}", codec.validator)
   }
@@ -298,12 +303,13 @@ object EndpointIO {
 
   //
 
-  case class Info[T](description: Option[String], example: Option[T]) {
+  case class Info[T](description: Option[String], example: Option[T], deprecated: Option[Boolean]) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example(t: T): Info[T] = copy(example = Some(t))
+    def deprecated(d: Boolean): Info[T] = copy(deprecated = Some(d))
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, None)
+    def empty[T]: Info[T] = Info[T](None, None, None)
   }
 }
 
