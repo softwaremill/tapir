@@ -303,13 +303,13 @@ object EndpointIO {
 
   //
 
-  case class Info[T](description: Option[String], example: Option[T], deprecated: Option[Boolean]) {
+  case class Info[T](description: Option[String], example: Option[T], deprecated: Boolean) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example(t: T): Info[T] = copy(example = Some(t))
-    def deprecated(d: Boolean): Info[T] = copy(deprecated = Some(d))
+    def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, None, None)
+    def empty[T]: Info[T] = Info[T](None, None, deprecated = false)
   }
 }
 

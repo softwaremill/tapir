@@ -65,7 +65,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
     oschema.copy(
       description = tschema.description.orElse(oschema.description),
       format = tschema.format.orElse(oschema.format),
-      deprecated = tschema.deprecated.orElse(oschema.deprecated)
+      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated)
     )
   }
 
