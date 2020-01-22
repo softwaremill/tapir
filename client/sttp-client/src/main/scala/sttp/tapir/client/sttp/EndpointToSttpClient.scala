@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 
 import sttp.client._
 import sttp.model.Uri.PathSegment
-import sttp.model.{Header, HeaderNames, Method, MultiQueryParams, Part, Uri}
+import sttp.model.{HeaderNames, Method, MultiQueryParams, Part, Uri}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.internal._
