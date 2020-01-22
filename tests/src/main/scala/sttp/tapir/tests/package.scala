@@ -202,9 +202,6 @@ package object tests {
   val delete_endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
     endpoint.delete.in("api" / "delete").out(statusCode(StatusCode.Ok).description("ok"))
 
-  val deprecated_delete_endpoint: Endpoint[Unit, Unit, Unit, Nothing] =
-    endpoint.delete.in("api" / "delete" / "deprecated").out(statusCode(StatusCode.Ok).description("ok")).deprecated()
-
   val in_string_out_content_type_string: Endpoint[String, Unit, (String, String), Nothing] =
     endpoint.in("api" / "echo").in(stringBody).out(stringBody).out(header[String]("Content-Type"))
 
