@@ -22,7 +22,8 @@ case class Schema[T](
     schemaType: SchemaType,
     isOptional: Boolean = false,
     description: Option[String] = None,
-    format: Option[String] = None
+    format: Option[String] = None,
+    deprecated: Boolean = false
 ) {
 
   /**
@@ -39,6 +40,8 @@ case class Schema[T](
   def description(d: String): Schema[T] = copy(description = Some(d))
 
   def format(f: String): Schema[T] = copy(format = Some(f))
+
+  def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 

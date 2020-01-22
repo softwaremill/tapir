@@ -14,7 +14,7 @@ class DecodeInputsTest extends FlatSpec with Matchers {
     case class X(v: String)
     val e = new RuntimeException()
     implicit val xCodec: PlainCodec[X] = Codec.stringPlainCodecUtf8.map(_ => throw e)(_.v)
-    val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, None))
+    val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, None, deprecated = false))
 
     // when & then
     DecodeInputs(input, StubDecodeInputContext) shouldBe DecodeInputsResult.Failure(input, DecodeResult.Error("List(v)", e))

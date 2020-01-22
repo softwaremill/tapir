@@ -20,14 +20,14 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
           OSchema(SchemaType.Object).copy(
             required = p.required.toList,
             properties = fields.map {
-              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _)) =>
+              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _)) =>
                 fieldName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
                 fieldName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName)))
             }.toListMap
           )
         )
-      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _)) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(el.info)))))
       case TSchemaType.SArray(el) =>
         Right(OSchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
@@ -38,7 +38,7 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           OSchema.apply(
-            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _) => Left(schemaReferenceMapper.map(s.info)) },
+            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _) => Left(schemaReferenceMapper.map(s.info)) },
             d.map(discriminatorToOpenApi.apply)
           )
         )
@@ -62,7 +62,11 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
   }
 
   private def addMetadata(oschema: OSchema, tschema: TSchema[_]): OSchema = {
-    oschema.copy(description = tschema.description.orElse(oschema.description), format = tschema.format.orElse(oschema.format))
+    oschema.copy(
+      description = tschema.description.orElse(oschema.description),
+      format = tschema.format.orElse(oschema.format),
+      deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated)
+    )
   }
 
   private def addConstraints(

@@ -81,6 +81,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def description(d: String): Endpoint[I, E, O, S] = copy(info = info.description(d))
   def tags(ts: List[String]): Endpoint[I, E, O, S] = copy(info = info.tags(ts))
   def tag(t: String): Endpoint[I, E, O, S] = copy(info = info.tag(t))
+  def deprecated(): Endpoint[I, E, O, S] = copy(info = info.deprecated(true))
 
   def info(i: EndpointInfo): Endpoint[I, E, O, S] = copy(info = i)
 
@@ -146,10 +147,17 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
 }
 
-case class EndpointInfo(name: Option[String], summary: Option[String], description: Option[String], tags: Vector[String]) {
+case class EndpointInfo(
+    name: Option[String],
+    summary: Option[String],
+    description: Option[String],
+    tags: Vector[String],
+    deprecated: Boolean
+) {
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
   def description(d: String): EndpointInfo = copy(description = Some(d))
   def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
   def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
+  def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
 }
