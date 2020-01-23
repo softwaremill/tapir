@@ -4,7 +4,7 @@ To expose an endpoint as an [finatra](https://twitter.github.io/finatra/) server
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "0.12.16"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "0.12.17"
 ```
 
 and import the package:
@@ -16,7 +16,7 @@ import sttp.tapir.server.finatra._
 or if you would like to use cats-effect project, you can add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "0.12.16"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "0.12.17"
 ```
 
 and import the packate:
