@@ -645,6 +645,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should not set format for array types ") {
+    val expectedYaml = loadYaml("expected_array_no_format.yml")
+    val actualYaml = endpoint
+      .in(query[List[String]]("foo"))
+      .in(query[List[Long]]("bar"))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }

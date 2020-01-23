@@ -1,0 +1,27 @@
+openapi: 3.0.1
+ info:
+   title: Entities
+   version: '1.0'
+ paths:
+   /:
+     get:
+       operationId: getRoot
+       parameters:
+         - name: foo
+           in: query
+           required: false
+           schema:
+             type: array
+             items:
+               type: string
+         - name: bar
+           in: query
+           required: false
+           schema:
+             type: array
+             items:
+               type: integer
+               format: int64
+       responses:
+         '200':
+           description: ''
