@@ -73,7 +73,7 @@ Alternatively, `Schema[_]` values can be defined by hand, either for whole case 
 For example, here we state that the schema for `MyCustomType` is a `String`:
 
 ```scala
-implicit val schemaForMyCustomType: SchemaFor[MyCustomType] = Schema(Schema.SString)
+implicit val schemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaType.SString)
 ```
 
 If you have a case class which contains some non-standard types (other than strings, number, other case classes, 
@@ -103,10 +103,10 @@ case class Organization(name: String) extends Entity {
 The schema may look like this:
 
 ```scala
-val sPerson = implicitly[SchemaFor[Person]]
-val sOrganization = implicitly[SchemaFor[Organization]]
-implicit val sEntity: SchemaFor[Entity] = 
-    SchemaFor.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
+val sPerson = implicitly[Schema[Person]]
+val sOrganization = implicitly[Schema[Organization]]
+implicit val sEntity: Schema[Entity] = 
+    Schema.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```
 
 ### Customising derived schemas

@@ -10,6 +10,8 @@ import zio.{DefaultRuntime, IO, Task, UIO}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.http4s._
+import sttp.tapir.swagger.http4s.SwaggerHttp4s
+import cats.implicits._
 
 object ZioExampleHttp4sServer extends App {
   // extension methods for ZIO; not a strict requirement, but they make working with ZIO much nicer
@@ -63,7 +65,7 @@ object ZioExampleHttp4sServer extends App {
 
     val serve = BlazeServerBuilder[Task]
       .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> service).orNotFound)
+      .withHttpApp(Router("/" -> (service <+> new SwaggerHttp4s(yaml).routes[Task])).orNotFound)
       .serve
       .compile
       .drain

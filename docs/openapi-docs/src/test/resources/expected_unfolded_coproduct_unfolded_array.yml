@@ -19,8 +19,17 @@ components:
   schemas:
     Entity:
       oneOf:
-        - $ref: '#/components/schemas/Person'
         - $ref: '#/components/schemas/Organization'
+        - $ref: '#/components/schemas/Person'
+    Organization:
+      allOf:
+        - $ref: '#/components/schemas/Entity'
+        - required:
+            - name
+          type: object
+          properties:
+            name:
+              type: string
     Person:
       allOf:
         - $ref: '#/components/schemas/Entity'
@@ -33,12 +42,3 @@ components:
               type: string
             age:
               type: integer
-    Organization:
-      allOf:
-        - $ref: '#/components/schemas/Entity'
-        - required:
-            - name
-          type: object
-          properties:
-            name:
-              type: string

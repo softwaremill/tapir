@@ -75,7 +75,7 @@ tapir documentation is available at [tapir-scala.readthedocs.io](http://tapir-sc
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.12.7"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.12.17"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
@@ -126,4 +126,4 @@ We offer commercial support for tapir and related technologies, as well as devel
 
 ## Copyright
 
-Copyright (C) 2018-2019 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2020 SoftwareMill [https://softwaremill.com](https://softwaremill.com).

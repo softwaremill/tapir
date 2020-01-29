@@ -7,6 +7,7 @@ import sttp.tapir._
 import scala.annotation.tailrec
 
 object ServerDefaults {
+
   /**
     * The default implementation of the [[DecodeFailureHandler]].
     *
@@ -71,6 +72,7 @@ object ServerDefaults {
     * Default messages for [[DecodeFailure]]s.
     */
   object FailureMessages {
+
     /**
       * Describes the source of the failure: in which part of the request did the failure occur.
       */
@@ -118,6 +120,7 @@ object ServerDefaults {
     * Default messages when the decode failure is due to a validation error.
     */
   object ValidationMessages {
+
     /**
       * Default message describing why a value is invalid.
       * @param valueName Name of the validated value to be used in error messages

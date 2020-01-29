@@ -10,7 +10,6 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.collection.immutable.ListMap
-import scala.reflect.ClassTag
 
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
@@ -65,6 +64,7 @@ object EndpointInput {
   case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
+    def deprecated(): Query[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Query[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"?$name", codec.validator)
   }
@@ -72,12 +72,14 @@ object EndpointInput {
   case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Basic[MultiQueryParams] {
     def description(d: String): QueryParams = copy(info = info.description(d))
     def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
+    def deprecated(): QueryParams = copy(info = info.deprecated(true))
     def show = s"?..."
   }
 
   case class Cookie[T](name: String, codec: PlainCodecForOptional[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Cookie[T] = copy(info = info.description(d))
     def example(t: T): Cookie[T] = copy(info = info.example(t))
+    def deprecated(): Cookie[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Cookie[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
   }
@@ -175,9 +177,18 @@ object EndpointOutput {
     override def show: String = s"status code ($statusCode)"
   }
 
-  //
-
-  case class StatusMapping[O](statusCode: Option[sttp.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])
+  /**
+    * Specifies that for `statusCode`, the given `output` should be used.
+    *
+    * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
+    * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
+    * type parameters).
+    */
+  case class StatusMapping[O] private[tapir] (
+      statusCode: Option[sttp.model.StatusCode],
+      output: EndpointOutput[O],
+      appliesTo: Any => Boolean
+  )
 
   case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
@@ -244,12 +255,14 @@ object EndpointIO {
 
   case class FixedHeader(name: String, value: String, info: Info[Unit]) extends Basic[Unit] {
     def description(d: String): FixedHeader = copy(info = info.description(d))
+    def deprecated(): FixedHeader = copy(info = info.deprecated(true))
     def show = s"{header $name: $value}"
   }
 
   case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Basic[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
+    def deprecated(): Header[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Header[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"{header $name}", codec.validator)
   }
@@ -290,12 +303,13 @@ object EndpointIO {
 
   //
 
-  case class Info[T](description: Option[String], example: Option[T]) {
+  case class Info[T](description: Option[String], example: Option[T], deprecated: Boolean) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example(t: T): Info[T] = copy(example = Some(t))
+    def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, None)
+    def empty[T]: Info[T] = Info[T](None, None, deprecated = false)
   }
 }
 

@@ -380,8 +380,8 @@ object CodecForMany {
     }
 
     implicitly[CodecForMany[List[String], CodecFormat.TextPlain, String]]
-      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookieWithMeta)).flatMap(findNamed(name)))(
-        cv => List(CookieWithMeta(name, cv).toString)
+      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookieWithMeta)).flatMap(findNamed(name)))(cv =>
+        List(CookieWithMeta(name, cv).toString)
       )
   }
 }
@@ -422,8 +422,8 @@ case class MultipartValueType(partCodecMetas: Map[String, AnyCodecMeta], default
   def partCodecMeta(name: String): Option[AnyCodecMeta] = partCodecMetas.get(name).orElse(defaultCodecMeta)
 }
 
-trait Decode[T, F] {
-  def rawDecode(s: F): DecodeResult[T]
+trait Decode[T, R] {
+  def rawDecode(s: R): DecodeResult[T]
 
   private[tapir] def validator: Validator[T]
 
@@ -432,9 +432,9 @@ trait Decode[T, F] {
     * - catches any exceptions that might occur, converting them to decode failures
     * - validates the result
     */
-  def decode(f: F): DecodeResult[T] = validate(tryRawDecode(f))
+  def decode(r: R): DecodeResult[T] = validate(tryRawDecode(r))
 
-  private def tryRawDecode(f: F): DecodeResult[T] = {
+  private def tryRawDecode(f: R): DecodeResult[T] = {
     Try(rawDecode(f)) match {
       case Success(r) => r
       case Failure(e) => DecodeResult.Error(f.toString, e)

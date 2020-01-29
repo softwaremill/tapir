@@ -106,9 +106,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       case FileValueType =>
         serverOptions
           .createFile(ctx)
-          .flatMap(
-            file => entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => file)
-          )
+          .flatMap(file => entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => file))
       case mvt: MultipartValueType =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(entity).flatMap { fd =>
           fd.parts
@@ -125,14 +123,13 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       ec: ExecutionContext
   ): Future[Part[R]] = {
     entityToRawValue(part.entity, codecMeta.rawValueType, ctx)
-      .map(
-        r =>
-          Part(
-            part.name,
-            r,
-            otherDispositionParams = part.additionalDispositionParams,
-            headers = part.additionalHeaders.map(h => Header.notValidated(h.name, h.value))
-          )
+      .map(r =>
+        Part(
+          part.name,
+          r,
+          otherDispositionParams = part.additionalDispositionParams,
+          headers = part.additionalHeaders.map(h => Header.notValidated(h.name, h.value))
+        )
       )
   }
 }

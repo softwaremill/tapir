@@ -1,27 +1,22 @@
 openapi: 3.0.1
 info:
-  title: Fruits
+  title: Entities
   version: '1.0'
 paths:
   /:
     get:
       operationId: getRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Entity'
+          required: false
       responses:
         '200':
           description: ''
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NestedEntity'
 components:
   schemas:
-    NestedEntity:
-      required:
-        - entity
-      type: object
-      properties:
-        entity:
-          $ref: '#/components/schemas/Entity'
     Entity:
       oneOf:
         - $ref: '#/components/schemas/Organization'
@@ -47,3 +42,4 @@ components:
               type: string
             age:
               type: integer
+              minimum: 11

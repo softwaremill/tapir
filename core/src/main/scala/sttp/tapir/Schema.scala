@@ -22,8 +22,10 @@ case class Schema[T](
     schemaType: SchemaType,
     isOptional: Boolean = false,
     description: Option[String] = None,
-    format: Option[String] = None
+    format: Option[String] = None,
+    deprecated: Boolean = false
 ) {
+
   /**
     * Returns an optional version of this schema, with `isOptional` set to true.
     */
@@ -32,12 +34,15 @@ case class Schema[T](
   /**
     * Returns a collection version of this schema, with the schema type wrapped in [[SArray]].
     * Also, sets `isOptional` to true as the collection might be empty.
+    * Also, sets 'format' to None. Formats are only applicable to the array elements, not to the array as a whole.
     */
-  def asArrayElement[U]: Schema[U] = copy(isOptional = true, schemaType = SArray(this))
+  def asArrayElement[U]: Schema[U] = copy(isOptional = true, schemaType = SArray(this), format=None)
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
   def format(f: String): Schema[T] = copy(format = Some(f))
+
+  def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 

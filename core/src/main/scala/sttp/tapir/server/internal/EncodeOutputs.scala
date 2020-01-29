@@ -47,7 +47,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
               throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
             case EndpointOutput.OneOf(mappings) =>
               val mapping = mappings
-                .find(mapping => mapping.ct.runtimeClass.isInstance(vsHead))
+                .find(mapping => mapping.appliesTo(vsHead))
                 .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $vsHead, in output: $output"))
               apply(mapping.output, vsHead, mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
             case EndpointOutput.Mapped(wrapped, _, g) =>

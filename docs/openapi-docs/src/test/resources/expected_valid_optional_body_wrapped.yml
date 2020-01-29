@@ -1,31 +1,31 @@
 openapi: 3.0.1
 info:
-  title: Entities
+  title: Fruits
   version: '1.0'
 paths:
-  /:
+  /add/path:
     get:
-      operationId: getRoot
+      operationId: getAddPath
       requestBody:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/OptionalColor'
-        required: true
+              $ref: '#/components/schemas/ValidFruitAmount'
+        required: false
       responses:
         '200':
           description: ''
 components:
   schemas:
-    OptionalColor:
+    ValidFruitAmount:
       required:
-        - value
+        - fruit
+        - amount
       type: object
       properties:
-        color:
+        fruit:
           type: string
-          enum:
-            - blue
-            - red
-        value:
+          minLength: 4
+        amount:
           type: integer
+          minimum: 1
