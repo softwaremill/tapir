@@ -27,7 +27,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
 
-val scalaTest = "org.scalatest" %% "scalatest" % "3.0.8"
+val scalaTest = "org.scalatest" %% "scalatest" % Versions.scalaTest
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -106,6 +106,7 @@ lazy val tapirCats: Project = (project in file("cats"))
     name := "tapir-cats",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.1.0",
+      "org.scalacheck" %% "scalacheck" % Versions.scalaCheck % "test",
       scalaTest % "test"
     )
   )
