@@ -1,8 +1,6 @@
 package sttp.tapir.codec.cats
 
 import cats.data.{NonEmptyChain, NonEmptyList, NonEmptySet}
-import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.{Schema, SchemaType}
 import sttp.tapir._
 
@@ -29,18 +27,21 @@ trait TapirCodecCats {
   implicit def schemaForNes[T: Schema]: Schema[NonEmptySet[T]] =
     Schema[NonEmptySet[T]](SchemaType.SArray(implicitly[Schema[T]])).copy(isOptional = false)
 
-  implicit def codecForNonEmptyList[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptyList[T], CF, R] = implicitly[CodecForMany[List[T], CF, R]]
-    .mapDecode{l =>
-      DecodeResult.fromOption(NonEmptyList.fromList(l))
-    }(_.toList)
+  implicit def codecForNonEmptyList[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptyList[T], CF, R] =
+    implicitly[CodecForMany[List[T], CF, R]]
+      .mapDecode { l =>
+        DecodeResult.fromOption(NonEmptyList.fromList(l))
+      }(_.toList)
 
-  implicit def codecForNonEmptyChain[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptyChain[T], CF, R] = implicitly[CodecForMany[List[T], CF, R]]
-    .mapDecode{l =>
-      DecodeResult.fromOption(NonEmptyChain.fromSeq(l))
-    }(_.toNonEmptyList.toList)
+  implicit def codecForNonEmptyChain[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptyChain[T], CF, R] =
+    implicitly[CodecForMany[List[T], CF, R]]
+      .mapDecode { l =>
+        DecodeResult.fromOption(NonEmptyChain.fromSeq(l))
+      }(_.toNonEmptyList.toList)
 
-  implicit def codecForNonEmptySet[T: Ordering, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptySet[T], CF, R] = implicitly[CodecForMany[Set[T], CF, R]]
-    .mapDecode{set =>
-      DecodeResult.fromOption(NonEmptySet.fromSet(set.to[SortedSet]))
-    }(_.toSortedSet)
+  implicit def codecForNonEmptySet[T: Ordering, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptySet[T], CF, R] =
+    implicitly[CodecForMany[Set[T], CF, R]]
+      .mapDecode { set =>
+        DecodeResult.fromOption(NonEmptySet.fromSet(set.to[SortedSet]))
+      }(_.toSortedSet)
 }
