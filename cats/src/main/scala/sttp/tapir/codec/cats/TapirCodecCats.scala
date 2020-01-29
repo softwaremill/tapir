@@ -42,6 +42,6 @@ trait TapirCodecCats {
   implicit def codecForNonEmptySet[T: Ordering, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptySet[T], CF, R] =
     implicitly[CodecForMany[Set[T], CF, R]]
       .mapDecode { set =>
-        DecodeResult.fromOption(NonEmptySet.fromSet(set.to[SortedSet]))
+        DecodeResult.fromOption(NonEmptySet.fromSet(SortedSet(set.toSeq: _*)))
       }(_.toSortedSet)
 }
