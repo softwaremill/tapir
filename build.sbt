@@ -112,6 +112,17 @@ lazy val tapirCats: Project = (project in file("cats"))
   )
   .dependsOn(core)
 
+lazy val tapirRefined: Project = (project in file("refined"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-refined",
+    libraryDependencies ++= Seq(
+      "eu.timepit" %% "refined" % Versions.refined,
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
+
 // json
 
 lazy val circeJson: Project = (project in file("json/circe"))
