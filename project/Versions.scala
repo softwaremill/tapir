@@ -11,7 +11,7 @@ object Versions {
   val playJson = "2.8.1"
   val silencer = "1.4.4"
   val finatra = "20.1.0"
-  val catbird = "19.12.0"
+  val catbird = "20.1.0"
   val sprayJson = "1.3.5"
   val scalaCheck = "1.14.1"
   val scalaTest = "3.0.8"
