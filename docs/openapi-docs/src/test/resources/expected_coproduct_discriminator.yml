@@ -25,23 +25,19 @@ components:
           john: '#/components/schemas/Person'
           sml: '#/components/schemas/Organization'
     Person:
-      allOf:
-        - $ref: '#/components/schemas/Entity'
-        - required:
-            - name
-            - age
-          type: object
-          properties:
-            name:
-              type: string
-            age:
-              type: integer
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
     Organization:
-      allOf:
-        - $ref: '#/components/schemas/Entity'
-        - required:
-            - name
-          type: object
-          properties:
-            name:
-              type: string
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
