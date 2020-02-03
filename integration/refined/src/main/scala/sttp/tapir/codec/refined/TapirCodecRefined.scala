@@ -1,10 +1,11 @@
 package sttp.tapir.codec.refined
 
 import sttp.tapir._
-import eu.timepit.refined.api.{Refined, Validate}
+import eu.timepit.refined.api.{Max, Refined, Validate}
 import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.refineV
 import eu.timepit.refined.string.MatchesRegex
+import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import shapeless.Witness
 
 import scala.reflect.ClassTag
@@ -40,6 +41,18 @@ trait TapirCodecRefined extends ImplicitGenericRefinedValidator {
 
   implicit def matchesRegexRefinedTranslator[S <: String](implicit ws: Witness.Aux[S]): RefinedValidatorTranslation[String, MatchesRegex[S]] =
     RefinedValidatorTranslation.fromPrimitiveValidator(Validator.pattern(ws.value))
+
+  implicit def lessRefinedTranslator[N: Numeric, NM <: N](implicit ws: Witness.Aux[NM]): RefinedValidatorTranslation[N, Less[NM]] =
+    RefinedValidatorTranslation.fromPrimitiveValidator(Validator.max(ws.value, exclusive = true))
+
+  implicit def lessEqualRefinedTranslator[N: Numeric, NM <: N](implicit ws: Witness.Aux[NM]): RefinedValidatorTranslation[N, LessEqual[NM]] =
+    RefinedValidatorTranslation.fromPrimitiveValidator(Validator.max(ws.value, exclusive = false))
+
+  implicit def maxRefinedTranslator[N: Numeric, NM <: N](implicit ws: Witness.Aux[NM]): RefinedValidatorTranslation[N, Greater[NM]] =
+    RefinedValidatorTranslation.fromPrimitiveValidator(Validator.min(ws.value, exclusive = true))
+
+  implicit def maxEqualRefinedTranslator[N: Numeric, NM <: N](implicit ws: Witness.Aux[NM]): RefinedValidatorTranslation[N, GreaterEqual[NM]] =
+    RefinedValidatorTranslation.fromPrimitiveValidator(Validator.min(ws.value, exclusive = false))
 }
 
 trait ImplicitGenericRefinedValidator {

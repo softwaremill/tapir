@@ -1,7 +1,8 @@
 package sttp.tapir.codec.refined
 
-import eu.timepit.refined.api.Refined
+import eu.timepit.refined.api.{Max, Refined}
 import eu.timepit.refined.collection.NonEmpty
+import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import eu.timepit.refined.string.{IPv4, MatchesRegex}
 import eu.timepit.refined.{W, refineMV, refineV}
 import eu.timepit.refined.types.string.NonEmptyString
@@ -38,5 +39,41 @@ class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefine
 
     val expectedValidator: Validator[String] = Validator.pattern("[a-zA-Z][-a-zA-Z0-9_]*")
     identifierCodec.decode("-bad") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, "-bad", _))) if validator == expectedValidator=>}
+  }
+
+  "Generated codec for Less" should "use tapir Validator.drMax" in {
+    type IntConstraint = Less[W.`3`.T]
+    type LimitedInt = Int Refined IntConstraint
+    val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
+
+    val expectedValidator: Validator[Int] = Validator.max(3, exclusive = true)
+    limitedIntCodec.decode("3") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, 3, _))) if validator == expectedValidator=>}
+  }
+
+  "Generated codec for LessEqual" should "use tapir Validator.drMax" in {
+    type IntConstraint = LessEqual[W.`3`.T]
+    type LimitedInt = Int Refined IntConstraint
+    val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
+
+    val expectedValidator: Validator[Int] = Validator.max(3, exclusive = false)
+    limitedIntCodec.decode("4") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, 4, _))) if validator == expectedValidator=>}
+  }
+
+  "Generated codec for Max" should "use tapir Validator.drMax" in {
+    type IntConstraint = Greater[W.`3`.T]
+    type LimitedInt = Int Refined IntConstraint
+    val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
+
+    val expectedValidator: Validator[Int] = Validator.min(3, exclusive = true)
+    limitedIntCodec.decode("3") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, 3, _))) if validator == expectedValidator=>}
+  }
+
+  "Generated codec for MaxEqual" should "use tapir Validator.drMax" in {
+    type IntConstraint = GreaterEqual[W.`3`.T]
+    type LimitedInt = Int Refined IntConstraint
+    val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
+
+    val expectedValidator: Validator[Int] = Validator.min(3, exclusive = false)
+    limitedIntCodec.decode("2") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, 2, _))) if validator == expectedValidator=>}
   }
 }
