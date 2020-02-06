@@ -40,8 +40,9 @@ lazy val rootProject = (project in file("."))
   .settings(publishArtifact := false, name := "tapir")
   .aggregate(
     core,
-    tapirCats,
-    tapirEnumeratum,
+    cats,
+    refined,
+    enumeratum,
     circeJson,
     playJson,
     sprayJson,
@@ -99,9 +100,9 @@ lazy val tests: Project = (project in file("tests"))
   )
   .dependsOn(core, circeJson)
 
-// cats
+// integrations
 
-lazy val tapirCats: Project = (project in file("cats"))
+lazy val cats: Project = (project in file("integration/cats"))
   .settings(commonSettings)
   .settings(
     name := "tapir-cats",
@@ -113,14 +114,23 @@ lazy val tapirCats: Project = (project in file("cats"))
   )
   .dependsOn(core)
 
-// enumeratum
-
-lazy val tapirEnumeratum: Project = (project in file("enumeratum"))
+lazy val enumeratum: Project = (project in file("enumeratum"))
   .settings(commonSettings)
   .settings(
     name := "tapir-enumeratum",
     libraryDependencies ++= Seq(
       "com.beachape" %% "enumeratum" % Versions.enumeratum,
+            scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
+
+lazy val refined: Project = (project in file("integration/refined"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-refined",
+    libraryDependencies ++= Seq(
+      "eu.timepit" %% "refined" % Versions.refined,
       scalaTest % "test"
     )
   )
