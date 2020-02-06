@@ -16,5 +16,5 @@ object Versions {
   val scalaCheck = "1.14.3"
   val scalaTest = "3.0.8"
   val refined = "0.9.12"
-  val enumeratum = "1.5.14"
+  val enumeratum = "1.5.15"
 }
