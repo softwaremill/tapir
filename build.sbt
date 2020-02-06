@@ -40,7 +40,8 @@ lazy val rootProject = (project in file("."))
   .settings(publishArtifact := false, name := "tapir")
   .aggregate(
     core,
-    tapirCats,
+    cats,
+    refined,
     circeJson,
     playJson,
     sprayJson,
@@ -72,7 +73,7 @@ lazy val core: Project = (project in file("core"))
     name := "tapir-core",
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.12.6",
-      "com.softwaremill.sttp.model" %% "core" % "1.0.0-RC5",
+      "com.softwaremill.sttp.model" %% "core" % "1.0.0-RC7",
       scalaTest % "test"
     ),
     unmanagedSourceDirectories in Compile += {
@@ -98,15 +99,26 @@ lazy val tests: Project = (project in file("tests"))
   )
   .dependsOn(core, circeJson)
 
-// cats
+// integrations
 
-lazy val tapirCats: Project = (project in file("cats"))
+lazy val cats: Project = (project in file("integration/cats"))
   .settings(commonSettings)
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.1.0",
       "org.scalacheck" %% "scalacheck" % Versions.scalaCheck % "test",
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
+
+lazy val refined: Project = (project in file("integration/refined"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-refined",
+    libraryDependencies ++= Seq(
+      "eu.timepit" %% "refined" % Versions.refined,
       scalaTest % "test"
     )
   )
