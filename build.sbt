@@ -41,6 +41,7 @@ lazy val rootProject = (project in file("."))
   .aggregate(
     core,
     tapirCats,
+    tapirRefined,
     circeJson,
     playJson,
     sprayJson,
@@ -100,13 +101,24 @@ lazy val tests: Project = (project in file("tests"))
 
 // cats
 
-lazy val tapirCats: Project = (project in file("cats"))
+lazy val tapirCats: Project = (project in file("integration/cats"))
   .settings(commonSettings)
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.1.0",
       "org.scalacheck" %% "scalacheck" % Versions.scalaCheck % "test",
+      scalaTest % "test"
+    )
+  )
+  .dependsOn(core)
+
+lazy val tapirRefined: Project = (project in file("integration/refined"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-refined",
+    libraryDependencies ++= Seq(
+      "eu.timepit" %% "refined" % Versions.refined,
       scalaTest % "test"
     )
   )
