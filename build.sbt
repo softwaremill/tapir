@@ -102,7 +102,7 @@ lazy val tests: Project = (project in file("tests"))
 
 // integrations
 
-lazy val cats: Project = (project in file("integration/cats"))
+lazy val cats: Project = (project in file("integrations/cats"))
   .settings(commonSettings)
   .settings(
     name := "tapir-cats",
@@ -114,18 +114,18 @@ lazy val cats: Project = (project in file("integration/cats"))
   )
   .dependsOn(core)
 
-lazy val enumeratum: Project = (project in file("enumeratum"))
+lazy val enumeratum: Project = (project in file("integrations/enumeratum"))
   .settings(commonSettings)
   .settings(
     name := "tapir-enumeratum",
     libraryDependencies ++= Seq(
       "com.beachape" %% "enumeratum" % Versions.enumeratum,
-            scalaTest % "test"
+      scalaTest % "test"
     )
   )
   .dependsOn(core)
 
-lazy val refined: Project = (project in file("integration/refined"))
+lazy val refined: Project = (project in file("integrations/refined"))
   .settings(commonSettings)
   .settings(
     name := "tapir-refined",
