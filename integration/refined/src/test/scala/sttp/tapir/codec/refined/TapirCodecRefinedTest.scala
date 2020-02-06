@@ -14,10 +14,11 @@ class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefine
 
   val nonEmptyStringCodec = implicitly[PlainCodec[NonEmptyString]]
 
-
   "Generated codec" should "return DecodResult.Invalid if subtype can't be refined with correct tapir validator if available" in {
     val expectedValidator: Validator[String] = Validator.minLength(1)
-    nonEmptyStringCodec.decode("") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, "", _))) if validator == expectedValidator=>}
+    nonEmptyStringCodec.decode("") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError(validator, "", _))) if validator == expectedValidator =>
+    }
   }
 
   it should "correctly delegate to raw parser and refine it" in {
@@ -29,7 +30,9 @@ class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefine
     val IPStringCodec = implicitly[PlainCodec[IPString]]
 
     val expectedMsg = refineV[IPv4]("192.168.0.1000").left.get
-    IPStringCodec.decode("192.168.0.1000") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(Validator.Custom(_, `expectedMsg`), "192.168.0.1000", _)))=>}
+    IPStringCodec.decode("192.168.0.1000") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError(Validator.Custom(_, `expectedMsg`), "192.168.0.1000", _))) =>
+    }
   }
 
   "Generated codec for MatchesRegex" should "use tapir Validator.Pattern" in {
@@ -38,7 +41,9 @@ class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefine
     val identifierCodec = implicitly[PlainCodec[VariableString]]
 
     val expectedValidator: Validator[String] = Validator.pattern("[a-zA-Z][-a-zA-Z0-9_]*")
-    identifierCodec.decode("-bad") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, "-bad", _))) if validator == expectedValidator=>}
+    identifierCodec.decode("-bad") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError(validator, "-bad", _))) if validator == expectedValidator =>
+    }
   }
 
   "Generated codec for Less" should "use tapir Validator.drMax" in {
@@ -47,7 +52,9 @@ class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefine
     val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
 
     val expectedValidator: Validator[Int] = Validator.max(3, exclusive = true)
-    limitedIntCodec.decode("3") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, 3, _))) if validator == expectedValidator=>}
+    limitedIntCodec.decode("3") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError(validator, 3, _))) if validator == expectedValidator =>
+    }
   }
 
   "Generated codec for LessEqual" should "use tapir Validator.drMax" in {
@@ -55,8 +62,10 @@ class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefine
     type LimitedInt = Int Refined IntConstraint
     val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
 
-    val expectedValidator: Validator[Int] = Validator.max(3, exclusive = false)
-    limitedIntCodec.decode("4") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, 4, _))) if validator == expectedValidator=>}
+    val expectedValidator: Validator[Int] = Validator.max(3)
+    limitedIntCodec.decode("4") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError(validator, 4, _))) if validator == expectedValidator =>
+    }
   }
 
   "Generated codec for Max" should "use tapir Validator.drMax" in {
@@ -65,7 +74,9 @@ class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefine
     val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
 
     val expectedValidator: Validator[Int] = Validator.min(3, exclusive = true)
-    limitedIntCodec.decode("3") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, 3, _))) if validator == expectedValidator=>}
+    limitedIntCodec.decode("3") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError(validator, 3, _))) if validator == expectedValidator =>
+    }
   }
 
   "Generated codec for MaxEqual" should "use tapir Validator.drMax" in {
@@ -73,7 +84,9 @@ class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefine
     type LimitedInt = Int Refined IntConstraint
     val limitedIntCodec = implicitly[PlainCodec[LimitedInt]]
 
-    val expectedValidator: Validator[Int] = Validator.min(3, exclusive = false)
-    limitedIntCodec.decode("2") should matchPattern{case DecodeResult.InvalidValue(List(ValidationError(validator, 2, _))) if validator == expectedValidator=>}
+    val expectedValidator: Validator[Int] = Validator.min(3)
+    limitedIntCodec.decode("2") should matchPattern {
+      case DecodeResult.InvalidValue(List(ValidationError(validator, 2, _))) if validator == expectedValidator =>
+    }
   }
 }

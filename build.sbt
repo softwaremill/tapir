@@ -40,8 +40,8 @@ lazy val rootProject = (project in file("."))
   .settings(publishArtifact := false, name := "tapir")
   .aggregate(
     core,
-    tapirCats,
-    tapirRefined,
+    cats,
+    refined,
     circeJson,
     playJson,
     sprayJson,
@@ -99,9 +99,9 @@ lazy val tests: Project = (project in file("tests"))
   )
   .dependsOn(core, circeJson)
 
-// cats
+// integrations
 
-lazy val tapirCats: Project = (project in file("integration/cats"))
+lazy val cats: Project = (project in file("integration/cats"))
   .settings(commonSettings)
   .settings(
     name := "tapir-cats",
@@ -113,7 +113,7 @@ lazy val tapirCats: Project = (project in file("integration/cats"))
   )
   .dependsOn(core)
 
-lazy val tapirRefined: Project = (project in file("integration/refined"))
+lazy val refined: Project = (project in file("integration/refined"))
   .settings(commonSettings)
   .settings(
     name := "tapir-refined",
