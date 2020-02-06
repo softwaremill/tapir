@@ -22,20 +22,16 @@ components:
         - $ref: '#/components/schemas/Expression'
         - $ref: '#/components/schemas/Not'
     Expression:
-      allOf:
-        - $ref: '#/components/schemas/Clause'
-        - required:
-            - v
-          type: object
-          properties:
-            v:
-              type: string
+      required:
+        - v
+      type: object
+      properties:
+        v:
+          type: string
     Not:
-      allOf:
-        - $ref: '#/components/schemas/Clause'
-        - required:
-          - not
-          type: object
-          properties:
-            not:
-              $ref: '#/components/schemas/Clause'
+      required:
+        - not
+      type: object
+      properties:
+        not:
+          $ref: '#/components/schemas/Clause'

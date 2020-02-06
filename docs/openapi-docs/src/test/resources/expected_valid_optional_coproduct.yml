@@ -11,7 +11,7 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/Entity'
-          required: false
+        required: false
       responses:
         '200':
           description: ''
@@ -22,24 +22,20 @@ components:
         - $ref: '#/components/schemas/Organization'
         - $ref: '#/components/schemas/Person'
     Organization:
-      allOf:
-        - $ref: '#/components/schemas/Entity'
-        - required:
-            - name
-          type: object
-          properties:
-            name:
-              type: string
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
     Person:
-      allOf:
-        - $ref: '#/components/schemas/Entity'
-        - required:
-            - name
-            - age
-          type: object
-          properties:
-            name:
-              type: string
-            age:
-              type: integer
-              minimum: 11
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+          minimum: 11

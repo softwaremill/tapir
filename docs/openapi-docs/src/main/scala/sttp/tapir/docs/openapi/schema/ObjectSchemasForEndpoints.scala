@@ -5,7 +5,7 @@ import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.openapi.{OpenAPIDocsOptions, uniqueName}
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.openapi.{Reference, Schema => OSchema}
+import sttp.tapir.openapi.{Schema => OSchema}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
 
 import scala.collection.immutable.ListMap
@@ -23,30 +23,8 @@ object ObjectSchemasForEndpoints {
     val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToOSchema(td._2))).toListMap
 
-    val schemaKeys = infosToSchema.map { case (k, v) => infoToKey(k) -> v }
-    val schemaKeys2 = if (options.linkFromChildToParent) updateChildToParentRelation(schemaKeys) else schemaKeys
-    (schemaKeys2, schemas)
-  }
-
-  private def updateChildToParentRelation(
-      schemaKeys: ListMap[SchemaKey, ReferenceOr[OSchema]]
-  ): ListMap[SchemaKey, ReferenceOr[OSchema]] = {
-    val productToParent = schemaKeys
-      .collect {
-        case (key, Right(schema)) =>
-          schema.oneOf.collect {
-            case Left(e) => (e.dereference: SchemaKey) -> Reference(key)
-          }
-      }
-      .flatten
-      .toMap
-
-    schemaKeys.map {
-      case (key, Right(value)) if productToParent.contains(key) =>
-        val parent = productToParent(key)
-        key -> Right(OSchema(allOf = List(Left(parent), Right(value))))
-      case other => other
-    }
+    val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
+    (schemaKeys.values.toListMap, schemas)
   }
 
   /**
