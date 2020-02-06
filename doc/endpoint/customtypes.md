@@ -144,8 +144,8 @@ into scope.
 
 ### Schema for refined type
 
-If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` module will provide implicit codecs for
-`T Refined P` as long as a codec for `T` already exists. You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
+If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` module will provide implicit codecs and
+validators for `T Refined P` as long as a codec for `T` already exists. You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
 trait or `import sttp.tapir.codec.refined._` to bring the implicit values into scope.
 
 The refined codecs contain a validator which wrap/unwrap the value from/to its refined equivalent.

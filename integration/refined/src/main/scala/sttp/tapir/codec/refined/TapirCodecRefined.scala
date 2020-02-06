@@ -29,6 +29,11 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
 
   //
 
+  implicit def validatorFromPredicate[V, P](implicit vfp: ValidatorForPredicate[V, P]): Validator[V Refined P] =
+    vfp.validator.contramap(_.value)
+
+  //
+
   implicit val validatorForNonEmptyString: ValidatorForPredicate[String, NonEmpty] =
     ValidatorForPredicate.fromPrimitiveValidator[String, NonEmpty](Validator.minLength(1))
 
