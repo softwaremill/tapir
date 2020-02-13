@@ -92,6 +92,7 @@ lazy val tests: Project = (project in file("tests"))
   .settings(
     name := "tapir-tests",
     libraryDependencies ++= Seq(
+      "io.circe" %% "circe-generic" % Versions.circe,
       "com.softwaremill.common" %% "tagging" % "2.2.1",
       scalaTest,
       "com.softwaremill.macwire" %% "macros" % "2.3.3" % "provided"
@@ -144,7 +145,6 @@ lazy val circeJson: Project = (project in file("json/circe"))
     name := "tapir-json-circe",
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % Versions.circe,
-      "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-parser" % Versions.circe
     )
   )
