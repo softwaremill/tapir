@@ -36,7 +36,7 @@ case class Schema[T](
     * Also, sets `isOptional` to true as the collection might be empty.
     * Also, sets 'format' to None. Formats are only applicable to the array elements, not to the array as a whole.
     */
-  def asArrayElement[U]: Schema[U] = copy(isOptional = true, schemaType = SArray(this), format=None)
+  def asArrayElement[U]: Schema[U] = copy(isOptional = true, schemaType = SArray(this), format = None)
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
@@ -93,6 +93,8 @@ object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
   implicit val schemaForLocalDate: Schema[LocalDate] = Schema(SDate)
   implicit val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString)
   implicit val schemaForJavaDuration: Schema[Duration] = Schema(SString)
+  implicit val schemaForLocalTime: Schema[LocalTime] = Schema(SString)
+  implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString)
   implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString)
   implicit val schemaForUUID: Schema[UUID] = Schema(SString)
   implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SString)
