@@ -1,6 +1,7 @@
 package sttp.tapir
 
 import org.scalatest.{FlatSpec, Matchers}
+import sttp.model.Method
 import sttp.tapir.util.CompileUtil
 
 class EndpointTest extends FlatSpec with Matchers {
@@ -116,23 +117,23 @@ class EndpointTest extends FlatSpec with Matchers {
     input.codec.validator.validate(2) shouldBe empty
   }
 
-  val showMethodTestData = List(
-    endpoint -> "GET",
-    endpoint.in("api" / "cats" / path[String]).get -> "GET",
-    endpoint.in("api" / "cats" / path[String]).put -> "PUT",
-    endpoint.in("api" / "cats" / path[String]).post -> "POST",
-    endpoint.in("api" / "cats" / path[String]).head -> "HEAD",
-    endpoint.in("api" / "cats" / path[String]).trace -> "TRACE",
-    endpoint.in("api" / "cats" / path[String]).patch -> "PATCH",
-    endpoint.in("api" / "cats" / path[String]).connect -> "CONNECT",
-    endpoint.in("api" / "cats" / path[String]).delete -> "DELETE",
-    endpoint.in("api" / "cats" / path[String]).options -> "OPTIONS",
-    endpoint.in("api" / "cats" / path[String]).method("XX") -> "XX"
+  val httpMethodTestData = List(
+    endpoint -> None,
+    endpoint.in("api" / "cats" / path[String]).get -> Some(Method.GET),
+    endpoint.in("api" / "cats" / path[String]).put -> Some(Method.PUT),
+    endpoint.in("api" / "cats" / path[String]).post -> Some(Method.POST),
+    endpoint.in("api" / "cats" / path[String]).head -> Some(Method.HEAD),
+    endpoint.in("api" / "cats" / path[String]).trace -> Some(Method.TRACE),
+    endpoint.in("api" / "cats" / path[String]).patch -> Some(Method.PATCH),
+    endpoint.in("api" / "cats" / path[String]).connect -> Some(Method.CONNECT),
+    endpoint.in("api" / "cats" / path[String]).delete -> Some(Method.DELETE),
+    endpoint.in("api" / "cats" / path[String]).options -> Some(Method.OPTIONS),
+    endpoint.in("api" / "cats" / path[String]).method("XX") -> Some(Method("XX"))
   )
 
-  for((testEndpoint, expectedMethod) <- showMethodTestData) {
-    s"showTransactionName for ${testEndpoint.showDetail}" should s"be $expectedMethod" in {
-      testEndpoint.showMethod shouldBe expectedMethod
+  for((testEndpoint, expectedMethod) <- httpMethodTestData) {
+    s"httpMethod for ${testEndpoint.showDetail}" should s"be $expectedMethod" in {
+      testEndpoint.httpMethod shouldBe expectedMethod
     }
   }
 }

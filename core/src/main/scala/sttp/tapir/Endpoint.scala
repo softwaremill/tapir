@@ -127,7 +127,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     */
   def showRaw: String = toString
 
-  def showMethod: String = {
+  def httpMethod: Option[Method] = {
     def findMethod(input: EndpointInput[_]): Option[Method] = input match {
       case FixedMethod(m) => Some(m)
       case Mapped(wrapped, _, _) => findMethod(wrapped)
@@ -135,7 +135,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
       case _ => None
     }
 
-    findMethod(input).getOrElse(Method.GET).method
+    findMethod(input)
   }
 
   /**
