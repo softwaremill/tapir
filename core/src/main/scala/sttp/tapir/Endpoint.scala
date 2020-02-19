@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import sttp.model.Method
-import sttp.tapir.EndpointInput.{FixedMethod, Multiple}
+import sttp.tapir.EndpointInput.{FixedMethod, Multiple, Mapped}
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.server.ServerEndpoint
@@ -129,9 +129,10 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
 
   def showMethod: String = {
     def findMethod(input: EndpointInput[_]): Option[Method] = input match {
-      case FixedMethod(m)   => Some(m)
+      case FixedMethod(m) => Some(m)
+      case Mapped(wrapped, _, _) => findMethod(wrapped)
       case Multiple(inputs) => inputs.flatMap(findMethod).headOption
-      case _                => None
+      case _ => None
     }
 
     findMethod(input).getOrElse(Method.GET).method
@@ -148,9 +149,9 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     * @param includeAuth Should authentication inputs be included in the result.
     */
   def renderPathTemplate(
-      renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
-      renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
-      includeAuth: Boolean = true
+    renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
+    renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
+    includeAuth: Boolean = true
   ): String =
     RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
 
@@ -158,11 +159,11 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
 }
 
 case class EndpointInfo(
-    name: Option[String],
-    summary: Option[String],
-    description: Option[String],
-    tags: Vector[String],
-    deprecated: Boolean
+  name: Option[String],
+  summary: Option[String],
+  description: Option[String],
+  tags: Vector[String],
+  deprecated: Boolean
 ) {
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
