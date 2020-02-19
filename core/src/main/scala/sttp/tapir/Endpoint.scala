@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import sttp.model.Method
-import sttp.tapir.EndpointInput.FixedMethod
+import sttp.tapir.EndpointInput.{FixedMethod, Multiple}
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.server.ServerEndpoint
@@ -126,6 +126,16 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     * Equivalent to `.toString`, shows the whole case class structure.
     */
   def showRaw: String = toString
+
+  def showMethod: String = {
+    def findMethod(input: EndpointInput[_]): Option[Method] = input match {
+      case FixedMethod(m)   => Some(m)
+      case Multiple(inputs) => inputs.flatMap(findMethod).headOption
+      case _                => None
+    }
+
+    findMethod(input).getOrElse(Method.GET).method
+  }
 
   /**
     * Renders endpoint path, by default all parametrised path and query components are replaced by {param_name} or
