@@ -2,7 +2,6 @@ package sttp.tapir.codec.cats
 
 import cats.data.{NonEmptyChain, NonEmptyList, NonEmptySet}
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalatest.{FlatSpec, Matchers}
 import org.scalatestplus.scalacheck.Checkers
 import org.scalacheck.Arbitrary.arbString
 import sttp.tapir.CodecForMany.PlainCodecForMany
@@ -10,8 +9,10 @@ import sttp.tapir.SchemaType.{SArray, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
 
 import scala.collection.immutable.SortedSet
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class TapirCodecCatsTest extends FlatSpec with Matchers with Checkers {
+class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
   case class Test(value: String)
 
   implicit val validatorForTest: Validator[Test] = Validator.minLength(3).contramap(_.value)

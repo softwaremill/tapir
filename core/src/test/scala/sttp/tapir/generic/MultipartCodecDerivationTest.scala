@@ -3,17 +3,18 @@ package sttp.tapir.generic
 import java.io.File
 
 import com.github.ghik.silencer.silent
-import org.scalatest.{FlatSpec, Matchers}
 import sttp.model.{Header, Part}
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat.MultipartFormData
 import sttp.tapir.SchemaType._
 import sttp.tapir.util.CompileUtil
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, RawPart, Schema, Validator}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 @silent("discarded")
 @silent("never used")
-class MultipartCodecDerivationTest extends FlatSpec with Matchers {
+class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
     case class Test1(f1: Int)
