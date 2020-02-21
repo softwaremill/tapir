@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import sttp.model.Method
-import sttp.tapir.EndpointInput.{FixedMethod, Multiple, Mapped}
+import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.server.ServerEndpoint
@@ -128,14 +128,8 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def showRaw: String = toString
 
   def httpMethod: Option[Method] = {
-    def findMethod(input: EndpointInput[_]): Option[Method] = input match {
-      case FixedMethod(m) => Some(m)
-      case Mapped(wrapped, _, _) => findMethod(wrapped)
-      case Multiple(inputs) => inputs.flatMap(findMethod).headOption
-      case _ => None
-    }
-
-    findMethod(input)
+    import sttp.tapir.internal._
+    input.method
   }
 
   /**
