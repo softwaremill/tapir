@@ -77,7 +77,7 @@ lazy val core: Project = (project in file("core"))
     name := "tapir-core",
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.12.6",
-      "com.softwaremill.sttp.model" %% "core" % "1.0.0-RC7",
+      "com.softwaremill.sttp.model" %% "core" % "1.0.0",
       scalaTest % "test"
     ),
     unmanagedSourceDirectories in Compile += {
