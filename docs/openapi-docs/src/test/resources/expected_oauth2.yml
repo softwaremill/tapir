@@ -1,0 +1,72 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /api1/{p1}:
+    get:
+      operationId: getApi1P1
+      parameters:
+        - name: p1
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+      security:
+        - oauth2Auth: []
+  /api2/{p1}:
+    get:
+      operationId: getApi2P1
+      parameters:
+        - name: p1
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+      security:
+        - oauth2Auth:
+            - client
+  /api3/{p1}:
+    get:
+      operationId: getApi3P1
+      parameters:
+        - name: p1
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+      security:
+        - oauth2Auth:
+            - admin
+components:
+  securitySchemes:
+    oauth2Auth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://example.com/auth
+          tokenUrl: https://example.com/token
+          scopes:
+            client: scope for clients
+            admin: administration scope
