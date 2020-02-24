@@ -20,4 +20,4 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.coursier
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION test
+  - sbt ++$TRAVIS_SCALA_VERSION mimaReportBinaryIssues test
