@@ -9,7 +9,8 @@ val only2_12settings = Seq(
   publishArtifact := is2_12.value,
   skip := !is2_12.value,
   skip in publish := !is2_12.value,
-  libraryDependencies := (if (is2_12.value) libraryDependencies.value else Nil)
+  libraryDependencies := (if (is2_12.value) libraryDependencies.value else Nil),
+  mimaPreviousArtifacts := (if (is2_12.value) mimaPreviousArtifacts.value else Set.empty)
 )
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
