@@ -142,12 +142,12 @@ class VerifyYamlTest extends FunSuite with Matchers {
         .out(stringBody)
     val e2 =
       endpoint
-        .in(oauth2.withRequiredScopes(Seq("client")))
+        .in(oauth2.requiredScopes(Seq("client")))
         .in("api2" / path[String])
         .out(stringBody)
     val e3 =
       endpoint
-        .in(oauth2.withRequiredScopes(Seq("admin")))
+        .in(oauth2.requiredScopes(Seq("admin")))
         .in("api3" / path[String])
         .out(stringBody)
 

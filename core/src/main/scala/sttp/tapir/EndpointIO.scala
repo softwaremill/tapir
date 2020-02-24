@@ -109,7 +109,7 @@ object EndpointInput {
         input: EndpointInput.Single[String]
     ) extends Auth[String] {
       def show = s"auth(oauth2, via ${input.show})"
-      def withRequiredScopes(requiredScopes: Seq[String]): ScopedOauth2 = ScopedOauth2(this, requiredScopes)
+      def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2 = ScopedOauth2(this, requiredScopes)
     }
 
     case class ScopedOauth2(oauth2: Oauth2, requiredScopes: Seq[String]) extends Auth[(String, Seq[String])] {
