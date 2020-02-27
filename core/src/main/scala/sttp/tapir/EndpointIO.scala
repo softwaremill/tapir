@@ -112,12 +112,10 @@ object EndpointInput {
       def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2[T] = ScopedOauth2(this, requiredScopes)
     }
 
-    case class ScopedOauth2[T](oauth2: Oauth2[T], requiredScopes: Seq[String]) extends Auth[(T, Seq[String])] {
+    case class ScopedOauth2[T](oauth2: Oauth2[T], requiredScopes: Seq[String]) extends Auth[T] {
       require(requiredScopes.forall(oauth2.scopes.keySet.contains), "all requiredScopes have to be defined on outer Oauth2#scopes")
       def show = s"scoped(${oauth2.show})"
-
-      override def input: Single[(T, Seq[String])] =
-        Mapped[T, (T, Seq[String])](oauth2.input, token => (token, requiredScopes), ts => ts._1)
+      override def input: Single[T] = oauth2.input
     }
   }
 
