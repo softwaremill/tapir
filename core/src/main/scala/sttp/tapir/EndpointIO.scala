@@ -101,23 +101,23 @@ object EndpointInput {
     case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
       def show = s"auth($scheme http, via ${input.show})"
     }
-    case class Oauth2(
+    case class Oauth2[T](
         authorizationUrl: String,
         tokenUrl: String,
         scopes: ListMap[String, String],
         refreshUrl: Option[String] = None,
-        input: EndpointInput.Single[String]
-    ) extends Auth[String] {
+        input: EndpointInput.Single[T]
+    ) extends Auth[T] {
       def show = s"auth(oauth2, via ${input.show})"
-      def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2 = ScopedOauth2(this, requiredScopes)
+      def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2[T] = ScopedOauth2(this, requiredScopes)
     }
 
-    case class ScopedOauth2(oauth2: Oauth2, requiredScopes: Seq[String]) extends Auth[(String, Seq[String])] {
+    case class ScopedOauth2[T](oauth2: Oauth2[T], requiredScopes: Seq[String]) extends Auth[(T, Seq[String])] {
       require(requiredScopes.forall(oauth2.scopes.keySet.contains), "all requiredScopes have to be defined on outer Oauth2#scopes")
       def show = s"scoped(${oauth2.show})"
 
-      override def input: Single[(String, Seq[String])] =
-        Mapped[String, (String, Seq[String])](oauth2.input, token => (token, requiredScopes), ts => ts._1)
+      override def input: Single[(T, Seq[String])] =
+        Mapped[T, (T, Seq[String])](oauth2.input, token => (token, requiredScopes), ts => ts._1)
     }
   }
 

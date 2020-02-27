@@ -22,7 +22,7 @@ object TapirAuth {
         tokenUrl: String,
         scopes: ListMap[String, String],
         refreshUrl: Option[String] = None
-    ): Auth.Oauth2 =
+    ): Auth.Oauth2[String] =
       EndpointInput.Auth.Oauth2(
         authorizationUrl,
         tokenUrl,
