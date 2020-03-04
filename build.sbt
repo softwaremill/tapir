@@ -148,7 +148,8 @@ lazy val circeJson: Project = (project in file("json/circe"))
     name := "tapir-json-circe",
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % Versions.circe,
-      "io.circe" %% "circe-parser" % Versions.circe
+      "io.circe" %% "circe-parser" % Versions.circe,
+      "io.circe" %% "circe-generic-extras" % Versions.circe
     )
   )
   .dependsOn(core)
