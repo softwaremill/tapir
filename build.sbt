@@ -22,8 +22,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.5"),
     compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
     "com.github.ghik" % "silencer-lib" % Versions.silencer % Provided cross CrossVersion.full
-  ),
-  mimaPreviousArtifacts := Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
+  )
+  //mimaPreviousArtifacts := Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
