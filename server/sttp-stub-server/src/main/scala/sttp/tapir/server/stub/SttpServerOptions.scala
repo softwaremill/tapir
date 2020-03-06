@@ -1,4 +1,4 @@
-package sttp.tapir.server.sttpStub
+package sttp.tapir.server.stub
 
 import cats.Applicative
 import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaults}
@@ -29,5 +29,5 @@ object SttpServerOptions {
     case Some(ex) => Sync[F].delay(log.debug(ex)(msg))
   }
 
-  private[http4s] val log: Logger = getLogger
+  private[stub] val log: Logger = getLogger
 }

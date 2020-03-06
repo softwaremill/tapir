@@ -301,13 +301,13 @@ lazy val sttpStubServer: Project = (project in file("server/sttp-stub-server"))
   .settings(
     name := "tapir-sttp-stub-server",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % Versions.cats,
+      "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "com.softwaremill.sttp.client" %% "core" % Versions.sttp,
       "org.log4s" %% "log4s" % Versions.log4s
     ),
-    libraryDependencies ++= loggerDependencies,
+    libraryDependencies ++= loggerDependencies
   )
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(core, serverTests % "test", sttpClient % "test")
 
 lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(commonSettings: _*)
