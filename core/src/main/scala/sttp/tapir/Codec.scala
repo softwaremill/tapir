@@ -5,6 +5,8 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
+import java.time.format.{DateTimeFormatter, DateTimeParseException}
+import java.time.{LocalDate, LocalDateTime, LocalTime, ZoneOffset, ZonedDateTime}
 import java.util.UUID
 
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part}
@@ -91,7 +93,50 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
 
   def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, charset)
 
-  private def plainCodec[T: Schema](parse: String => T, charset: Charset = StandardCharsets.UTF_8): PlainCodec[T] =
+  implicit val localTimePlainCodec: PlainCodec[LocalTime] = plainCodec[LocalTime](LocalTime.parse)
+  implicit val localDatePlainCodec: PlainCodec[LocalDate] = plainCodec[LocalDate](LocalDate.parse)
+
+  implicit val zonedDateTimePlainCodec: PlainCodec[ZonedDateTime] =
+    new PlainCodec[ZonedDateTime] {
+      val formatter: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+      val charset: Charset = StandardCharsets.UTF_8
+
+      override def encode(t: ZonedDateTime): String = t.format(formatter)
+
+      override def rawDecode(s: String): DecodeResult[ZonedDateTime] = {
+        try {
+          Value(ZonedDateTime.parse(s, formatter))
+        } catch {
+          case e: Exception => Error(s, e)
+        }
+      }
+
+      override val meta: CodecMeta[ZonedDateTime, CodecFormat.TextPlain, String] =
+        CodecMeta(implicitly, CodecFormat.TextPlain(charset), StringValueType(charset))
+    }
+
+  implicit val localDateTimeCodec: PlainCodec[LocalDateTime] =
+    new PlainCodec[LocalDateTime] {
+      val formatter: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
+      val charset: Charset = StandardCharsets.UTF_8
+      override def encode(t: LocalDateTime): String = t.atZone(ZoneOffset.UTC).format(formatter)
+      override def rawDecode(s: String): DecodeResult[LocalDateTime] = {
+        try {
+          try {
+            Value(LocalDateTime.parse(s))
+          } catch {
+            case _: DateTimeParseException => Value(ZonedDateTime.parse(s, formatter).toLocalDateTime)
+          }
+        } catch {
+          case e: Exception => Error(s, e)
+        }
+      }
+
+      override val meta: CodecMeta[LocalDateTime, CodecFormat.TextPlain, String] =
+        CodecMeta(implicitly, CodecFormat.TextPlain(charset), StringValueType(charset))
+    }
+
+  def plainCodec[T: Schema](parse: String => T, charset: Charset = StandardCharsets.UTF_8): PlainCodec[T] =
     new PlainCodec[T] {
       override def encode(t: T): String = t.toString
       override def rawDecode(s: String): DecodeResult[T] =
@@ -148,9 +193,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
         t.flatMap { part =>
           partCodec(part.name).toList.flatMap { codec =>
             // a single value-part might yield multiple raw-parts (e.g. for repeated fields)
-            val rawParts: Seq[RawPart] = codec.asInstanceOf[CodecForMany[Any, _, _]].encode(part.body).map { b =>
-              part.copy(body = b)
-            }
+            val rawParts: Seq[RawPart] = codec.asInstanceOf[CodecForMany[Any, _, _]].encode(part.body).map { b => part.copy(body = b) }
 
             rawParts
           }
