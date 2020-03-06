@@ -24,6 +24,13 @@ import scala.reflect.ClassTag
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
   private val basicStringRequest = basicRequest.response(asStringAlways)
 
+  testServer(in_string_out_status_from_type_erasure_using_partial_matcher)((v: String) =>
+    pureResult((if (v == "right") Some(Right("right")) else if (v == "left") Some(Left(42)) else None).asRight[Unit])
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri?fruit=nothing").send().map(_.code shouldBe StatusCode.NoContent) >>
+      basicRequest.get(uri"$baseUri?fruit=right").send().map(_.code shouldBe StatusCode.Ok) >>
+      basicRequest.get(uri"$baseUri?fruit=left").send().map(_.code shouldBe StatusCode.Accepted)
+  }
   // method matching
 
   testServer(endpoint, "GET empty endpoint")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
@@ -164,8 +171,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     basicRequest.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
-  testServer(in_input_stream_out_input_stream)(
-    (is: InputStream) => pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
+  testServer(in_input_stream_out_input_stream)((is: InputStream) =>
+    pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
   ) { baseUri =>
     basicRequest.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
@@ -191,8 +198,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         .map(_.body shouldBe Right("fruit=mulp&amount=11"))
   }
 
-  testServer(in_query_params_out_string)(
-    (mqp: MultiQueryParams) => pureResult(mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&").asRight[Unit])
+  testServer(in_query_params_out_string)((mqp: MultiQueryParams) =>
+    pureResult(mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&").asRight[Unit])
   ) { baseUri =>
     val params = Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")
     basicRequest
@@ -232,8 +239,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
-  testServer(in_simple_multipart_out_multipart)(
-    (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
+  testServer(in_simple_multipart_out_multipart)((fa: FruitAmount) =>
+    pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
   ) { baseUri =>
     basicStringRequest
       .post(uri"$baseUri/api/echo/multipart")
@@ -245,14 +252,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
-  testServer(in_file_multipart_out_multipart)(
-    (fd: FruitData) =>
-      pureResult(
-        FruitData(
-          Part("", writeToFile(readFromFile(fd.data.body).reverse))
-            .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
-        ).asRight[Unit]
-      )
+  testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
+    pureResult(
+      FruitData(
+        Part("", writeToFile(readFromFile(fd.data.body).reverse))
+          .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
+      ).asRight[Unit]
+    )
   ) { baseUri =>
     val file = writeToFile("peach mario")
     basicStringRequest
@@ -277,16 +283,15 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
-  testServer(in_cookies_out_cookies)(
-    (cs: List[sttp.model.Cookie]) => pureResult(cs.map(c => sttp.model.CookieWithMeta.unsafeApply(c.name, c.value.reverse)).asRight[Unit])
+  testServer(in_cookies_out_cookies)((cs: List[sttp.model.Cookie]) =>
+    pureResult(cs.map(c => sttp.model.CookieWithMeta.unsafeApply(c.name, c.value.reverse)).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send().map { r =>
       r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
     }
   }
 
-  testServer(in_set_cookie_value_out_set_cookie_value)(
-    (c: CookieValueWithMeta) => pureResult(c.copy(value = c.value.reverse).asRight[Unit])
+  testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) => pureResult(c.copy(value = c.value.reverse).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send().map { r =>
       r.cookies.toList shouldBe List(
@@ -398,8 +403,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         basicRequest.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCode.Accepted)
   }
 
-  testServer(in_string_out_status_from_string_one_empty)(
-    (v: String) => pureResult((if (v == "apple") Right("x") else Left(())).asRight[Unit])
+  testServer(in_string_out_status_from_string_one_empty)((v: String) =>
+    pureResult((if (v == "apple") Right("x") else Left(())).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCode.Ok) >>
       basicRequest.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCode.Accepted)
@@ -410,8 +415,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       basicStringRequest.post(uri"$baseUri").send().map(_.body shouldBe "POST")
   }
 
-  testServer(in_string_out_status)(
-    (v: String) => pureResult((if (v == "apple") StatusCode.Accepted else StatusCode.NotFound).asRight[Unit])
+  testServer(in_string_out_status)((v: String) => pureResult((if (v == "apple") StatusCode.Accepted else StatusCode.NotFound).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCode.Accepted) >>
       basicRequest.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCode.NotFound)
@@ -429,9 +433,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     in_path_fixed_capture_fixed_capture,
     "Returns 400 if path 'shape' matches, but failed to parse a path parameter",
     Some(decodeFailureHandlerBadRequestOnPathFailure)
-  )(
-    _ => pureResult(Either.right[Unit, Unit](()))
-  ) { baseUri =>
+  )(_ => pureResult(Either.right[Unit, Unit](()))) { baseUri =>
     basicRequest.get(uri"$baseUri/customer/asd/orders/2").send().map { response =>
       response.body shouldBe Left("Invalid value for: path parameter customer_id")
       response.code shouldBe StatusCode.BadRequest
@@ -442,9 +444,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     in_path_fixed_capture_fixed_capture,
     "Returns 404 if path 'shape' doesn't match",
     Some(decodeFailureHandlerBadRequestOnPathFailure)
-  )(
-    _ => pureResult(Either.right[Unit, Unit](()))
-  ) { baseUri =>
+  )(_ => pureResult(Either.right[Unit, Unit](()))) { baseUri =>
     basicRequest.get(uri"$baseUri/customer").send().map(response => response.code shouldBe StatusCode.NotFound) >>
       basicRequest.get(uri"$baseUri/customer/asd").send().map(response => response.code shouldBe StatusCode.NotFound) >>
       basicRequest.get(uri"$baseUri/customer/asd/orders/2/xyz").send().map(response => response.code shouldBe StatusCode.NotFound)
@@ -580,23 +580,23 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       basicRequest.get(uri"$baseUri?amount=-3").send().map(_.code shouldBe StatusCode.BadRequest)
   }
 
-  testServer(Validation.in_json_wrapper, "support jsonBody validation with wrapped type")(
-    (_: ValidFruitAmount) => pureResult(().asRight[Unit])
+  testServer(Validation.in_valid_json, "support jsonBody validation with wrapped type")((_: ValidFruitAmount) =>
+    pureResult(().asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri").body("""{"fruit":"orange","amount":11}""").send().map(_.code shouldBe StatusCode.Ok) >>
       basicRequest.get(uri"$baseUri").body("""{"fruit":"orange","amount":0}""").send().map(_.code shouldBe StatusCode.BadRequest) >>
       basicRequest.get(uri"$baseUri").body("""{"fruit":"orange","amount":1}""").send().map(_.code shouldBe StatusCode.Ok)
   }
 
-  testServer(Validation.in_query_wrapper, "support query validation with wrapper type")((_: IntWrapper) => pureResult(().asRight[Unit])) {
+  testServer(Validation.in_valid_query, "support query validation with wrapper type")((_: IntWrapper) => pureResult(().asRight[Unit])) {
     baseUri =>
       basicRequest.get(uri"$baseUri?amount=11").send().map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri?amount=0").send().map(_.code shouldBe StatusCode.BadRequest) >>
         basicRequest.get(uri"$baseUri?amount=1").send().map(_.code shouldBe StatusCode.Ok)
   }
 
-  testServer(Validation.in_json_collection, "support jsonBody validation with list of wrapped type")(
-    (_: BasketOfFruits) => pureResult(().asRight[Unit])
+  testServer(Validation.in_valid_json_collection, "support jsonBody validation with list of wrapped type")((_: BasketOfFruits) =>
+    pureResult(().asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri").body("""{"fruits":[{"fruit":"orange","amount":11}]}""").send().map(_.code shouldBe StatusCode.Ok) >>
       basicRequest.get(uri"$baseUri").body("""{"fruits": []}""").send().map(_.code shouldBe StatusCode.BadRequest) >>

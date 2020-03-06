@@ -3,9 +3,9 @@ package sttp.tapir.docs.openapi
 import sttp.model.Method
 
 /**
- * @param linkFromChildToParent Should child schemas contain a backlink to the parent schema using `allOf`, in addition
- *                              to the parent enumerating all children using `oneOf`.
- */
+  * @param linkFromChildToParent Should child schemas contain a backlink to the parent schema using `allOf`, in addition
+  *                              to the parent enumerating all children using `oneOf`.
+  */
 case class OpenAPIDocsOptions(operationIdGenerator: (Vector[String], Method) => String, linkFromChildToParent: Boolean)
 
 object OpenAPIDocsOptions {

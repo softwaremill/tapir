@@ -68,6 +68,20 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
   .apply(BooksFromYear("SF", 2016), 20, "xyz-abc-123")
 ```
 
+## Other sttp projects
+
+sttp is a family of Scala HTTP-related projects, and currently includes:
+
+* [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
+* sttp tapir: this project
+* [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
+
+## Sponsors
+
+Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https://softwaremill.com), a software development and consulting company. We help clients scale their business through software. Our areas of expertise include backends, distributed systems, blockchain, machine learning and data analytics.
+
+[![](https://softwaremill.com/images/header-main-logo.3449d6a3.svg "SoftwareMill")](https://softwaremill.com)
+
 ## Contents
 
 * [Quickstart](quickstart.md)
@@ -94,12 +108,4 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
 * [Documentation: openapi interpreter](openapi.md)
 * [Create your own tapir](mytapir.md)
 * [Contributing](contributing.md)
-
-## Other sttp projects
-
-sttp is a family of Scala HTTP-related projects, and currently includes:
-
-* [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
-* sttp tapir: this project
-* [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
 

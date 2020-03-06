@@ -17,26 +17,22 @@ components:
   schemas:
     Entity:
       oneOf:
-        - $ref: '#/components/schemas/Person'
         - $ref: '#/components/schemas/Organization'
-    Person:
-      allOf:
-        - $ref: '#/components/schemas/Entity'
-        - required:
-            - name
-            - age
-          type: object
-          properties:
-            name:
-              type: string
-            age:
-              type: integer
+        - $ref: '#/components/schemas/Person'
     Organization:
-      allOf:
-        - $ref: '#/components/schemas/Entity'
-        - required:
-            - name
-          type: object
-          properties:
-            name:
-              type: string
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+    Person:
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer

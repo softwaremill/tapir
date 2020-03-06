@@ -49,25 +49,24 @@ class SwaggerFinatra(yaml: String, contextPath: String = "docs", yamlName: Strin
     val sIStreamOpt: Option[InputStream] =
       Option(getClass.getResourceAsStream(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$sResource"))
 
-    sIStreamOpt.fold(Future.value(response.notFound))(
-      is =>
-        Reader
-          .readAllItems(
-            InputStreamReader(is)
-          )
-          .map { bs =>
-            val bytes: Array[Byte] = Buf.ByteArray.Shared.extract(bs.fold(Buf.Empty)(_.concat(_)))
+    sIStreamOpt.fold(Future.value(response.notFound))(is =>
+      Reader
+        .readAllItems(
+          InputStreamReader(is)
+        )
+        .map { bs =>
+          val bytes: Array[Byte] = Buf.ByteArray.Shared.extract(bs.fold(Buf.Empty)(_.concat(_)))
 
-            if (sResource.endsWith(".html")) {
-              response.ok.html(new String(bytes, "UTF-8"))
-            } else if (sResource.endsWith(".css")) {
-              response.ok(new String(bytes, "UTF-8")).contentType("text/css")
-            } else if (sResource.endsWith(".js")) {
-              response.ok(new String(bytes, "UTF-8")).contentType("text/javascript")
-            } else {
-              response.ok(bytes).contentType("image/png")
-            }
+          if (sResource.endsWith(".html")) {
+            response.ok.html(new String(bytes, "UTF-8"))
+          } else if (sResource.endsWith(".css")) {
+            response.ok(new String(bytes, "UTF-8")).contentType("text/css")
+          } else if (sResource.endsWith(".js")) {
+            response.ok(new String(bytes, "UTF-8")).contentType("text/javascript")
+          } else {
+            response.ok(bytes).contentType("image/png")
           }
+        }
     )
   }
 }

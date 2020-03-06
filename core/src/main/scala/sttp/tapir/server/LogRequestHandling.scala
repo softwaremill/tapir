@@ -15,6 +15,7 @@ case class LogRequestHandling[T](
     logAllDecodeFailures: Boolean = false,
     logLogicExceptions: Boolean = true
 ) {
+
   /**
     * Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
     * given failure returns a no-match.

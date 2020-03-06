@@ -29,8 +29,16 @@ package object schema {
       case Validator.Any(validators)                => validators.flatMap(asPrimitiveValidators)
       case Validator.CollectionElements(wrapped, _) => asPrimitiveValidators(wrapped)
       case Validator.Product(_)                     => Nil
+      case Validator.Coproduct(_)                   => Nil
       case Validator.OpenProduct(_)                 => Nil
       case bv: Validator.Primitive[_]               => List(bv)
     }
+  }
+
+  private[schema] def fieldValidator(v: Validator[_], fieldName: String): Validator[_] = {
+    Validator.all(asSingleValidators(v).collect {
+      case Validator.CollectionElements(Validator.Product(fields), _) if fields.isDefinedAt(fieldName) => fields(fieldName).validator
+      case Validator.Product(fields) if fields.isDefinedAt(fieldName)                                  => fields(fieldName).validator
+    }: _*)
   }
 }

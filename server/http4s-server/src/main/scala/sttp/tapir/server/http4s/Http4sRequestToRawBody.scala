@@ -22,8 +22,8 @@ import sttp.tapir.{
 
 class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   def apply[R](body: fs2.Stream[F, Byte], rawBodyType: RawValueType[R], charset: Option[Charset], req: Request[F]): F[R] = {
-    def asChunk: F[Chunk[Byte]] = body.compile.toChunk
-    def asByteArray: F[Array[Byte]] = body.compile.toChunk.map(_.toByteBuffer.array())
+    def asChunk: F[Chunk[Byte]] = body.compile.to(Chunk)
+    def asByteArray: F[Array[Byte]] = body.compile.to(Chunk).map(_.toByteBuffer.array())
 
     rawBodyType match {
       case StringValueType(defaultCharset) => asByteArray.map(new String(_, charset.map(_.nioCharset).getOrElse(defaultCharset)))
@@ -56,14 +56,13 @@ class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     val dispositionParams = part.headers.get(`Content-Disposition`).map(_.parameters).getOrElse(Map.empty)
     val charset = part.headers.get(`Content-Type`).flatMap(_.charset)
     apply(part.body, codecMeta.rawValueType, charset, req)
-      .map(
-        r =>
-          Part(
-            part.name.getOrElse(""),
-            r,
-            otherDispositionParams = dispositionParams - Part.NameDispositionParam,
-            headers = part.headers.toList.map(h => Header.notValidated(h.name.value, h.value))
-          )
+      .map(r =>
+        Part(
+          part.name.getOrElse(""),
+          r,
+          otherDispositionParams = dispositionParams - Part.NameDispositionParam,
+          headers = part.headers.toList.map(h => Header.notValidated(h.name.value, h.value))
+        )
       )
   }
 }

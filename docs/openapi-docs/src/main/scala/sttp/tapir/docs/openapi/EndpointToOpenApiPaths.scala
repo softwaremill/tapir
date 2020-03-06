@@ -4,7 +4,7 @@ import sttp.model.Method
 import sttp.tapir._
 import sttp.tapir.docs.openapi.schema.ObjectSchemas
 import sttp.tapir.internal._
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
+import sttp.tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
 import sttp.tapir.openapi.{Schema => OSchema, SchemaType => OSchemaType, _}
 
 import scala.collection.immutable.ListMap
@@ -46,9 +46,10 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
-    val authNames = e.input.auths.flatMap(auth => securitySchemes.get(auth).map(_._1))
-    // for now, all auths have empty scope
-    val securityRequirement = authNames.map(_ -> Vector.empty).toListMap
+    val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
+      case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
+      case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
+    }.toListMap
 
     Operation(
       e.info.tags.toList,
@@ -58,7 +59,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       parameters.toList.map(Right(_)),
       body.headOption,
       responses,
-      None,
+      if (e.info.deprecated) Some(true) else None,
       if (securityRequirement.isEmpty) List.empty else List(securityRequirement),
       List.empty
     )

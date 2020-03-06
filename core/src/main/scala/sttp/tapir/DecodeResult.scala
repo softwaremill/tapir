@@ -29,4 +29,6 @@ object DecodeResult {
         }
     }
   }
+
+  def fromOption[T](o: Option[T]): DecodeResult[T] = o.map(Value(_)).getOrElse(Missing)
 }

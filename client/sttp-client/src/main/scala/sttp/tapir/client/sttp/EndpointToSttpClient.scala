@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 
 import sttp.client._
 import sttp.model.Uri.PathSegment
-import sttp.model.{Header, HeaderNames, Method, MultiQueryParams, Part, Uri}
+import sttp.model.{HeaderNames, Method, MultiQueryParams, Part, Uri}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.internal._
@@ -186,23 +186,22 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           case mvt: MultipartValueType =>
             val parts: Seq[Part[BasicRequestBody]] = (t: Seq[RawPart]).flatMap { p =>
               mvt.partCodecMeta(p.name).map { partCodecMeta =>
+                // copying the name & body - this also sets a default content type
                 val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], partCodecMeta.asInstanceOf[CodecMeta[_, _, Any]])
-                val sttpPart2 =
-                  if (!p.headers.exists(_.is(HeaderNames.ContentType))) {
-                    // TODO
-                    sttpPart1
-                      .copy(headers = sttpPart1.headers.filterNot(_.is(HeaderNames.ContentType)))
-                      .contentType(partCodecMeta.format.mediaType.copy(charset = None))
-                  } else sttpPart1
-                val sttpPart3 = p.headers.foldLeft(sttpPart2)(_.header(_))
-                p.fileName.map(sttpPart3.fileName).getOrElse(sttpPart3)
+                  .contentType(partCodecMeta.format.mediaType)
+                // copying the headers; overwriting the content type if it is specified
+                val sttpPart2 = p.headers.foldLeft(sttpPart1) { (part, header) =>
+                  part.header(header, replaceExisting = header.is(HeaderNames.ContentType))
+                }
+                // copying the other disposition params (e.g. filename)
+                p.otherDispositionParams.foldLeft(sttpPart2) { case (part, (k, v)) => part.dispositionParam(k, v) }
               }
             }
 
             req.multipartBody(parts.toList)
         }
 
-        req2.header(Header.contentType(codec.meta.format.mediaType), replaceExisting = false)
+        req2.contentType(codec.meta.format.mediaType)
       }
       .getOrElse(req)
   }
