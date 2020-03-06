@@ -1,4 +1,4 @@
-package sttp.tapir.server.sttpStub
+package sttp.tapir.server.stub
 
 import sttp.client.Request
 import sttp.model.Method
@@ -31,7 +31,7 @@ class SttpDecodeInput(r: Request[_, _], segmentIndex: Int = 0) extends DecodeInp
       .groupBy(_.k)
       .map { case (k, vs) => (k, vs.map(_.v)) }
 
-  override def bodyStream: Any = ??? // bo kacper tak powiedział
+  override def bodyStream: Any = ()
 
   override def serverRequest: ServerRequest = new SttpStubServerRequest(r)
 }
