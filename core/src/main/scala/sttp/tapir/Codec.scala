@@ -5,8 +5,8 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
-import java.time.format.{DateTimeFormatter, DateTimeParseException}
-import java.time.{LocalDate, LocalDateTime, LocalTime, ZoneOffset, ZonedDateTime}
+import java.time.format.DateTimeParseException
+import java.time._
 import java.util.UUID
 
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part}
@@ -95,37 +95,19 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
 
   implicit val localTimePlainCodec: PlainCodec[LocalTime] = plainCodec[LocalTime](LocalTime.parse)
   implicit val localDatePlainCodec: PlainCodec[LocalDate] = plainCodec[LocalDate](LocalDate.parse)
-
-  implicit val zonedDateTimePlainCodec: PlainCodec[ZonedDateTime] =
-    new PlainCodec[ZonedDateTime] {
-      val formatter: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
-      val charset: Charset = StandardCharsets.UTF_8
-
-      override def encode(t: ZonedDateTime): String = t.format(formatter)
-
-      override def rawDecode(s: String): DecodeResult[ZonedDateTime] = {
-        try {
-          Value(ZonedDateTime.parse(s, formatter))
-        } catch {
-          case e: Exception => Error(s, e)
-        }
-      }
-
-      override val meta: CodecMeta[ZonedDateTime, CodecFormat.TextPlain, String] =
-        CodecMeta(implicitly, CodecFormat.TextPlain(charset), StringValueType(charset))
-    }
+  implicit val offsetDateTimePlainCodec: PlainCodec[OffsetDateTime] = plainCodec[OffsetDateTime](OffsetDateTime.parse)
+  implicit val zonedDateTimePlainCodec: PlainCodec[ZonedDateTime] = offsetDateTimePlainCodec.map(_.toZonedDateTime)(_.toOffsetDateTime)
 
   implicit val localDateTimeCodec: PlainCodec[LocalDateTime] =
     new PlainCodec[LocalDateTime] {
-      val formatter: DateTimeFormatter = DateTimeFormatter.ISO_OFFSET_DATE_TIME
       val charset: Charset = StandardCharsets.UTF_8
-      override def encode(t: LocalDateTime): String = t.atZone(ZoneOffset.UTC).format(formatter)
+      override def encode(t: LocalDateTime): String = OffsetDateTime.of(t, ZoneOffset.UTC).toString
       override def rawDecode(s: String): DecodeResult[LocalDateTime] = {
         try {
           try {
             Value(LocalDateTime.parse(s))
           } catch {
-            case _: DateTimeParseException => Value(ZonedDateTime.parse(s, formatter).toLocalDateTime)
+            case _: DateTimeParseException => Value(OffsetDateTime.parse(s).toLocalDateTime)
           }
         } catch {
           case e: Exception => Error(s, e)
