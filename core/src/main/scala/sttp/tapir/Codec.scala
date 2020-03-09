@@ -5,9 +5,12 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
-import java.time.format.DateTimeParseException
+import java.text.DateFormat
+import java.time.format.{DateTimeFormatter, DateTimeParseException}
+import scala.concurrent.duration.{Duration => SDuration}
 import java.time._
-import java.util.UUID
+import java.time.temporal.TemporalUnit
+import java.util.{Date, UUID}
 
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part}
 import sttp.tapir.DecodeResult._
@@ -97,6 +100,12 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   implicit val localDatePlainCodec: PlainCodec[LocalDate] = plainCodec[LocalDate](LocalDate.parse)
   implicit val offsetDateTimePlainCodec: PlainCodec[OffsetDateTime] = plainCodec[OffsetDateTime](OffsetDateTime.parse)
   implicit val zonedDateTimePlainCodec: PlainCodec[ZonedDateTime] = offsetDateTimePlainCodec.map(_.toZonedDateTime)(_.toOffsetDateTime)
+  implicit val instantPlainCodec: PlainCodec[Instant] = zonedDateTimePlainCodec.map(_.toInstant)(_.atZone(ZoneOffset.UTC))
+  implicit val datePlainCodec: PlainCodec[Date] = instantPlainCodec.map(Date.from)(_.toInstant)
+  implicit val zoneOffsetPlainCodec: PlainCodec[ZoneOffset] = plainCodec[ZoneOffset](ZoneOffset.of)
+  implicit val durationPlainCodec: PlainCodec[Duration] = plainCodec[Duration](Duration.parse)
+  implicit val offsetTime: PlainCodec[OffsetTime] = plainCodec[OffsetTime](OffsetTime.parse)
+  implicit val scalaDurationPlainCodec: PlainCodec[SDuration] = plainCodec[SDuration](SDuration.apply)
 
   implicit val localDateTimeCodec: PlainCodec[LocalDateTime] =
     new PlainCodec[LocalDateTime] {
