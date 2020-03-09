@@ -76,8 +76,8 @@ lazy val core: Project = (project in file("core"))
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
-      "com.propensive" %% "magnolia" % "0.12.7",
-      "com.softwaremill.sttp.model" %% "core" % "1.0.0",
+      "com.propensive" %% "magnolia" % "0.12.8",
+      "com.softwaremill.sttp.model" %% "core" % "1.0.1",
       scalaTest % "test"
     ),
     unmanagedSourceDirectories in Compile += {
@@ -301,7 +301,7 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
       "com.twitter" %% "finatra-http" % Versions.finatra,
-      "org.apache.httpcomponents" % "httpmime" % "4.5.11",
+      "org.apache.httpcomponents" % "httpmime" % "4.5.12",
       // Testing
       "com.twitter" %% "finatra-http" % Versions.finatra % "test",
       "com.twitter" %% "inject-server" % Versions.finatra % "test",
@@ -364,8 +364,8 @@ lazy val examples: Project = (project in file("examples"))
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % "1.0.0-RC17",
-      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC10",
+      "dev.zio" %% "zio" % Versions.zio,
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s
     ),
@@ -381,8 +381,8 @@ lazy val playground: Project = (project in file("playground"))
     name := "tapir-playground",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp,
-      "dev.zio" %% "zio" % "1.0.0-RC17",
-      "dev.zio" %% "zio-interop-cats" % "2.0.0.0-RC10",
+      "dev.zio" %% "zio" % Versions.zio,
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "io.swagger" % "swagger-annotations" % "1.6.0",
       "io.circe" %% "circe-generic-extras" % "0.13.0"
