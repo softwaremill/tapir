@@ -299,15 +299,9 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
 lazy val sttpStubServer: Project = (project in file("server/sttp-stub-server"))
   .settings(commonSettings)
   .settings(
-    name := "tapir-sttp-stub-server",
-    libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-      "com.softwaremill.sttp.client" %% "core" % Versions.sttp,
-      "org.log4s" %% "log4s" % Versions.log4s
-    ),
-    libraryDependencies ++= loggerDependencies
+    name := "tapir-sttp-stub-server"
   )
-  .dependsOn(core, serverTests % "test", sttpClient % "test")
+  .dependsOn(core, serverTests % "test", sttpClient)
 
 lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(commonSettings: _*)
