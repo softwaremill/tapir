@@ -30,6 +30,7 @@ def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*):
   deps.map(_.apply(CrossVersion.partialVersion(version)))
 
 val scalaTest = "org.scalatest" %% "scalatest" % Versions.scalaTest
+val scalaCheck = "org.scalacheck" %% "scalacheck" % Versions.scalaCheck
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -78,7 +79,9 @@ lazy val core: Project = (project in file("core"))
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.12.8",
       "com.softwaremill.sttp.model" %% "core" % "1.0.2",
-      scalaTest % "test"
+      scalaTest % Test,
+      scalaCheck % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.3.2" % Test
     ),
     unmanagedSourceDirectories in Compile += {
       val sourceDir = (baseDirectory in Compile).value / "src" / "main"
@@ -112,8 +115,8 @@ lazy val cats: Project = (project in file("integrations/cats"))
     name := "tapir-cats",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.1.1",
-      "org.scalacheck" %% "scalacheck" % Versions.scalaCheck % "test",
-      scalaTest % "test"
+      scalaTest % Test,
+      scalaCheck % Test
     )
   )
   .dependsOn(core)
@@ -124,7 +127,7 @@ lazy val enumeratum: Project = (project in file("integrations/enumeratum"))
     name := "tapir-enumeratum",
     libraryDependencies ++= Seq(
       "com.beachape" %% "enumeratum" % Versions.enumeratum,
-      scalaTest % "test"
+      scalaTest % Test
     )
   )
   .dependsOn(core)
@@ -135,7 +138,7 @@ lazy val refined: Project = (project in file("integrations/refined"))
     name := "tapir-refined",
     libraryDependencies ++= Seq(
       "eu.timepit" %% "refined" % Versions.refined,
-      scalaTest % "test"
+      scalaTest % Test
     )
   )
   .dependsOn(core)
@@ -159,7 +162,7 @@ lazy val playJson: Project = (project in file("json/playjson"))
     name := "tapir-json-play",
     libraryDependencies ++= Seq(
       "com.typesafe.play" %% "play-json" % Versions.playJson,
-      scalaTest % "test"
+      scalaTest % Test
     )
   )
   .dependsOn(core)
@@ -170,7 +173,7 @@ lazy val sprayJson: Project = (project in file("json/sprayjson"))
     name := "tapir-json-spray",
     libraryDependencies ++= Seq(
       "io.spray" %% "spray-json" % Versions.sprayJson,
-      scalaTest % "test"
+      scalaTest % Test
     )
   )
   .dependsOn(core)
@@ -181,7 +184,7 @@ lazy val uPickleJson: Project = (project in file("json/upickle"))
     name := "tapir-json-upickle",
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % Versions.upickle,
-      scalaTest % "test"
+      scalaTest % Test
     )
   )
   .dependsOn(core)
@@ -221,7 +224,7 @@ lazy val openapiDocs: Project = (project in file("docs/openapi-docs"))
   .settings(
     name := "tapir-openapi-docs"
   )
-  .dependsOn(openapiModel, core, tests % "test", openapiCirceYaml % "test")
+  .dependsOn(openapiModel, core, tests % Test, openapiCirceYaml % Test)
 
 lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
   .settings(commonSettings)
@@ -283,7 +286,7 @@ lazy val akkaHttpServer: Project = (project in file("server/akka-http-server"))
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
     )
   )
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(core, serverTests % Test)
 
 lazy val http4sServer: Project = (project in file("server/http4s-server"))
   .settings(commonSettings)
@@ -293,7 +296,7 @@ lazy val http4sServer: Project = (project in file("server/http4s-server"))
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s
     )
   )
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(core, serverTests % Test)
 
 lazy val finatraServer: Project = (project in file("server/finatra-server"))
   .settings(commonSettings: _*)
@@ -303,20 +306,20 @@ lazy val finatraServer: Project = (project in file("server/finatra-server"))
       "com.twitter" %% "finatra-http" % Versions.finatra,
       "org.apache.httpcomponents" % "httpmime" % "4.5.12",
       // Testing
-      "com.twitter" %% "finatra-http" % Versions.finatra % "test",
-      "com.twitter" %% "inject-server" % Versions.finatra % "test",
-      "com.twitter" %% "inject-app" % Versions.finatra % "test",
-      "com.twitter" %% "inject-core" % Versions.finatra % "test",
-      "com.twitter" %% "inject-modules" % Versions.finatra % "test",
-      "com.twitter" %% "finatra-http" % Versions.finatra % "test" classifier "tests",
-      "com.twitter" %% "inject-server" % Versions.finatra % "test" classifier "tests",
-      "com.twitter" %% "inject-app" % Versions.finatra % "test" classifier "tests",
-      "com.twitter" %% "inject-core" % Versions.finatra % "test" classifier "tests",
-      "com.twitter" %% "inject-modules" % Versions.finatra % "test" classifier "tests"
+      "com.twitter" %% "finatra-http" % Versions.finatra % Test,
+      "com.twitter" %% "inject-server" % Versions.finatra % Test,
+      "com.twitter" %% "inject-app" % Versions.finatra % Test,
+      "com.twitter" %% "inject-core" % Versions.finatra % Test,
+      "com.twitter" %% "inject-modules" % Versions.finatra % Test,
+      "com.twitter" %% "finatra-http" % Versions.finatra % Test classifier "tests",
+      "com.twitter" %% "inject-server" % Versions.finatra % Test classifier "tests",
+      "com.twitter" %% "inject-app" % Versions.finatra % Test classifier "tests",
+      "com.twitter" %% "inject-core" % Versions.finatra % Test classifier "tests",
+      "com.twitter" %% "inject-modules" % Versions.finatra % Test classifier "tests"
     )
   )
   .settings(only2_12settings)
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(core, serverTests % Test)
 
 lazy val finatraServerCats: Project =
   (project in file("server/finatra-server/finatra-server-cats"))
@@ -330,7 +333,7 @@ lazy val finatraServerCats: Project =
       )
     )
     .settings(only2_12settings)
-    .dependsOn(finatraServer % "compile->compile;test->test", serverTests % "test")
+    .dependsOn(finatraServer % "compile->compile;test->test", serverTests % Test)
 
 // client
 
@@ -352,10 +355,10 @@ lazy val sttpClient: Project = (project in file("client/sttp-client"))
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client" %% "core" % Versions.sttp,
-      "com.softwaremill.sttp.client" %% "async-http-client-backend-fs2" % Versions.sttp % "test"
+      "com.softwaremill.sttp.client" %% "async-http-client-backend-fs2" % Versions.sttp % Test
     )
   )
-  .dependsOn(core, clientTests % "test")
+  .dependsOn(core, clientTests % Test)
 
 // other
 
