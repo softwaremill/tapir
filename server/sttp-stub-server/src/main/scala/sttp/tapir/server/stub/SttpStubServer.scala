@@ -50,14 +50,7 @@ trait SttpStubServer {
         case (currentPf, endpoint) =>
           currentPf.orElse(pf(endpoint))
       }
-      val clz = classOf[SttpBackendStub[F, Nothing]] // TODO reflection hack until stub constructor becomes public
-      val ctor = clz.getDeclaredConstructor(
-        classOf[MonadError[F]],
-        classOf[PartialFunction[Request[_, _], F[Response[_]]]],
-        classOf[Option[SttpBackend[F, Nothing, NothingT]]]
-      )
-      ctor.setAccessible(true)
-      ctor.newInstance(me, matchers, None)
+      new SttpBackendStub(me, matchers, None)
     }
 
     private def handleDecodeFailure(
