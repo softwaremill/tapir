@@ -1,4 +1,4 @@
-# Debugging servers
+# Debugging
 
 When dealing with multiple endpoints, how to find out which endpoint handled a request, or why an endpoint didn't
 handle a request?
