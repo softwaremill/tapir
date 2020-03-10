@@ -12,7 +12,7 @@ import sttp.tapir.{DecodeFailure, Endpoint, EndpointInput}
 
 trait SttpStubServer {
 
-  implicit class RichStubServerEndpoints[F[+_]](
+  implicit class RichStubServerEndpoints[F[_]](
       endpoints: Iterable[ServerEndpoint[_, _, _, _, F]]
   ) {
     def toBackendStub(implicit me: MonadError[F]): SttpBackend[F, Nothing, NothingT] = {
@@ -35,8 +35,8 @@ trait SttpStubServer {
               case values: DecodeInputsResult.Values =>
                 se.logic(SeqToParams(InputValues(se.endpoint.input, values)).asInstanceOf[I])
                   .map {
-                    case Right(result) => Response(result, ServerDefaults.StatusCodes.success)
-                    case Left(err)     => Response(err, StatusCode.InternalServerError)
+                    case r @ Right(_) => Response(r, ServerDefaults.StatusCodes.success)
+                    case l @ Left(_)  => Response(l, StatusCode.InternalServerError)
                   }
               case DecodeInputsResult.Failure(input, failure) =>
                 me.unit(handleDecodeFailure(input, failure))
