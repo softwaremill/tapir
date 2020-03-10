@@ -1,0 +1,33 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+servers:
+  - url: https://development.example.com/v1
+    description: Development server
+  - url: https://staging.example.com/v1
+    description: Staging server
+  - url: https://api.example.com/v1
+    description: Production server
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: fruit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: amount
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string

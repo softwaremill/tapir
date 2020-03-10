@@ -12,7 +12,7 @@ import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.openapi.{Contact, Info, License}
+import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
 import sttp.tapir.tests.{FruitAmount, _}
 
 import scala.collection.immutable.ListMap
@@ -686,6 +686,52 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml for single server with variables") {
+    val expectedYaml = loadYaml("expected_single_server_with_variables.yml")
+
+    val api = Info(
+      "Fruits",
+      "1.0"
+    )
+    val servers = List(Server(
+      "https://{username}.example.com:{port}/{basePath}",
+      Some("The production API server"),
+      Some(ListMap(
+        "username" -> ServerVariable(None, "demo", Some("Username")),
+        "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
+        "basePath" -> ServerVariable(None, "v2", None)
+      ))
+    ))
+
+    val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    println(expectedYaml)
+    println(actualYamlNoIndent)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml for multiple servers") {
+    val expectedYaml = loadYaml("expected_multiple_servers.yml")
+
+    val api = Info(
+      "Fruits",
+      "1.0"
+    )
+    val servers = List(
+      Server("https://development.example.com/v1", Some("Development server"), None),
+      Server("https://staging.example.com/v1", Some("Staging server"), None),
+      Server("https://api.example.com/v1", Some("Production server"), None)
+    )
+
+    val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    println(expectedYaml)
+    println(actualYamlNoIndent)
     actualYamlNoIndent shouldBe expectedYaml
   }
 
