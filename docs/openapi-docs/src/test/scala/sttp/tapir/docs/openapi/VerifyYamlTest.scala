@@ -735,6 +735,22 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("'default' in ServerVariable should belong to 'enum'") {
+    a[java.lang.IllegalArgumentException] shouldBe thrownBy {
+      Server(
+        "https://{username}.example.com:{port}/{basePath}",
+        None,
+        Some(
+          ListMap(
+            "username" -> ServerVariable(None, "demo", Some("Username")),
+            "port" -> ServerVariable(Some(List("8443", "443")), "80", None),
+            "basePath" -> ServerVariable(None, "v2", None)
+          )
+        )
+      )
+    }
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }

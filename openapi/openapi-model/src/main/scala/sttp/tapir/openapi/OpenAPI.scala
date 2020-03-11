@@ -56,7 +56,9 @@ case class Server(
     variables: Option[ListMap[String, ServerVariable]]
 )
 
-case class ServerVariable(enum: Option[List[String]], default: String, description: Option[String])
+case class ServerVariable(enum: Option[List[String]], default: String, description: Option[String]) {
+  require(`enum`.fold(true)(_.contains(default)), "ServerVariable#default must be one of the values in enum if enum is defined")
+}
 
 // todo: responses, parameters, examples, requestBodies, headers, links, callbacks
 case class Components(
