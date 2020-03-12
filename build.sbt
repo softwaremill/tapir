@@ -56,9 +56,10 @@ lazy val rootProject = (project in file("."))
     openapiCirceYaml,
     openapiDocs,
     swaggerUiAkka,
+    redocAkka,
     swaggerUiHttp4s,
-    swaggerUiFinatra,
     redocHttp4s,
+    swaggerUiFinatra,
     serverTests,
     akkaHttpServer,
     http4sServer,
@@ -234,6 +235,16 @@ lazy val swaggerUiAkka: Project = (project in file("docs/swagger-ui-akka-http"))
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
       "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    )
+  )
+
+lazy val redocAkka: Project = (project in file("docs/redoc-akka-http"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-redoc-akka-http",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
     )
   )
 

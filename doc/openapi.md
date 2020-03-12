@@ -53,6 +53,7 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.12.23"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.12.23"
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.12.23"
 "com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.12.23"
 ```
@@ -75,5 +76,7 @@ val docsAsYaml: String = myEndpoints.toOpenAPI("My App", "1.0").toYaml
 // add to your akka routes
 new SwaggerAkka(docsAsYaml).routes
 ```
+
+For redoc, use `RedocAkkaHttp`. 
 
 For http4s, use the `SwaggerHttp4s` or `RedocHttp4s` classes.

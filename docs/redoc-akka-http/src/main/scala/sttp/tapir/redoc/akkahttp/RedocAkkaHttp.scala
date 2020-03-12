@@ -1,12 +1,11 @@
 package sttp.tapir.redoc.akkahttp
 
-
 import akka.http.scaladsl.model.{ContentTypes, HttpCharsets, HttpEntity, MediaType, StatusCodes}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 
 class RedocAkkaHttp(title: String, yaml: String, yamlName: String = "docs.yaml", redocVersion: String = "2.0.0-rc.23") {
-  lazy val html =
+  lazy val html: String =
     s"""
        |<!DOCTYPE html>
        |<html>
@@ -49,4 +48,3 @@ class RedocAkkaHttp(title: String, yaml: String, yamlName: String = "docs.yaml",
   }
 
 }
-
