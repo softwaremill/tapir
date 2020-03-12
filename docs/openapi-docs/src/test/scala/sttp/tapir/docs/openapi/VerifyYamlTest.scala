@@ -683,21 +683,19 @@ class VerifyYamlTest extends FunSuite with Matchers {
       "Fruits",
       "1.0"
     )
-    val servers = List(Server(
-      "https://{username}.example.com:{port}/{basePath}",
-      Some("The production API server"),
-      Some(ListMap(
-        "username" -> ServerVariable(None, "demo", Some("Username")),
-        "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
-        "basePath" -> ServerVariable(None, "v2", None)
-      ))
-    ))
+    val servers = List(
+      Server("https://{username}.example.com:{port}/{basePath}")
+        .description("The production API server")
+        .variables(
+          "username" -> ServerVariable(None, "demo", Some("Username")),
+          "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> ServerVariable(None, "v2", None)
+        )
+    )
 
     val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
-    println(expectedYaml)
-    println(actualYamlNoIndent)
     actualYamlNoIndent shouldBe expectedYaml
   }
 
@@ -717,25 +715,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
-    println(expectedYaml)
-    println(actualYamlNoIndent)
     actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("'default' in ServerVariable should belong to 'enum'") {
-    a[java.lang.IllegalArgumentException] shouldBe thrownBy {
-      Server(
-        "https://{username}.example.com:{port}/{basePath}",
-        None,
-        Some(
-          ListMap(
-            "username" -> ServerVariable(None, "demo", Some("Username")),
-            "port" -> ServerVariable(Some(List("8443", "443")), "80", None),
-            "basePath" -> ServerVariable(None, "v2", None)
-          )
-        )
-      )
-    }
   }
 
   private def loadYaml(fileName: String): String = {

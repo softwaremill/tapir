@@ -197,6 +197,7 @@ lazy val openapiModel: Project = (project in file("openapi/openapi-model"))
   .settings(
     name := "tapir-openapi-model"
   )
+  .settings(libraryDependencies += scalaTest % Test)
 
 lazy val openapiCirce: Project = (project in file("openapi/openapi-circe"))
   .settings(commonSettings)

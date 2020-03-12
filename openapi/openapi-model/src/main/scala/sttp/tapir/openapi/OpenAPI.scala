@@ -52,9 +52,12 @@ case class License(name: String, url: Option[String])
 
 case class Server(
     url: String,
-    description: Option[String],
-    variables: Option[ListMap[String, ServerVariable]]
-)
+    description: Option[String] = None,
+    variables: Option[ListMap[String, ServerVariable]] = None
+) {
+  def description(d: String): Server = copy(description = Some(d))
+  def variables(vars: (String, ServerVariable)*): Server = copy(variables = Some(ListMap(vars: _*)))
+}
 
 case class ServerVariable(enum: Option[List[String]], default: String, description: Option[String]) {
   require(`enum`.fold(true)(_.contains(default)), "ServerVariable#default must be one of the values in enum if enum is defined")
