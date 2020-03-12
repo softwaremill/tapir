@@ -6,7 +6,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
-import zio.{DefaultRuntime, IO, Task, UIO}
+import zio.{Runtime, IO, Task, UIO}
 import sttp.tapir._
 import sttp.tapir.server.http4s._
 import sttp.tapir.swagger.http4s.SwaggerHttp4s
@@ -48,7 +48,7 @@ object ZioExample extends App {
   val yaml = List(petEndpoint).toOpenAPI("Our pets", "1.0").toYaml
 
   {
-    implicit val runtime: DefaultRuntime = new DefaultRuntime {}
+    implicit val runtime: Runtime[Unit] = Runtime.default
 
     val serve = BlazeServerBuilder[Task]
       .bindHttp(8080, "localhost")

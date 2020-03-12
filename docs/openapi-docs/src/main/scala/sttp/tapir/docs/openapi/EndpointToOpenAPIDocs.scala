@@ -9,7 +9,7 @@ import scala.collection.immutable.ListMap
 object EndpointToOpenAPIDocs {
   def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): OpenAPI = {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
-    val (keyToSchema, objectSchemas) = ObjectSchemasForEndpoints(es2, options)
+    val (keyToSchema, objectSchemas) = ObjectSchemasForEndpoints(es2)
     val securitySchemes = SecuritySchemesForEndpoints(es2)
     val pathCreator = new EndpointToOpenApiPaths(objectSchemas, securitySchemes, options)
     val componentsCreator = new EndpointToOpenApiComponents(keyToSchema, securitySchemes)
