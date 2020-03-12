@@ -51,6 +51,7 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderOperation: Encoder[Operation] = deriveEncoder[Operation]
   implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem]
   implicit val encoderComponents: Encoder[Components] = deriveEncoder[Components]
+  implicit val encoderServerVariable: Encoder[ServerVariable] = deriveEncoder[ServerVariable]
   implicit val encoderServer: Encoder[Server] = deriveEncoder[Server]
   implicit val encoderExternalDocumentation: Encoder[ExternalDocumentation] = deriveEncoder[ExternalDocumentation]
   implicit val encoderTag: Encoder[Tag] = deriveEncoder[Tag]
