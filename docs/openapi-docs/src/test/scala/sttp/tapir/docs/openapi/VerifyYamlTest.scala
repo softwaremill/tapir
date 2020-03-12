@@ -212,19 +212,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should match the expected yaml when using coproduct types, without parent backlinks") {
-    val expectedYaml = loadYaml("expected_coproduct_no_parent_links.yml")
-
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
-      .out(jsonBody[Entity])
-
-    implicit val openApiDocsOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(linkFromChildToParent = false)
-    val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
   test("should match the expected yaml when using coproduct types with discriminator") {
     val sPerson = implicitly[Schema[Person]]
     val sOrganization = implicitly[Schema[Organization]]
