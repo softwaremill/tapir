@@ -87,39 +87,34 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
     EndpointInputToParameterConverter.from(
       header,
-      objectSchemas(header.codec),
-      header.info.example.flatMap(exampleValue(header.codec, _))
+      objectSchemas(header.codec)
     )
   }
 
   private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader) = {
     EndpointInputToParameterConverter.from(
       header,
-      Right(OSchema(OSchemaType.String)),
-      header.info.example.map(_ => exampleValue(header.value))
+      Right(OSchema(OSchemaType.String))
     )
   }
 
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
     EndpointInputToParameterConverter.from(
       cookie,
-      objectSchemas(cookie.codec),
-      cookie.info.example.flatMap(exampleValue(cookie.codec, _))
+      objectSchemas(cookie.codec)
     )
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
     EndpointInputToParameterConverter.from(
       p,
-      objectSchemas(p.codec),
-      p.info.example.flatMap(exampleValue(p.codec, _))
+      objectSchemas(p.codec)
     )
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
     EndpointInputToParameterConverter.from(
       query,
-      objectSchemas(query.codec),
-      query.info.example.flatMap(exampleValue(query.codec, _))
+      objectSchemas(query.codec)
     )
   }
 

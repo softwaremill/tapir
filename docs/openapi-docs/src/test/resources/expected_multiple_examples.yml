@@ -20,7 +20,7 @@ paths:
               value:
                 - amy
                 - greg
-            Alans's friends:
+            Alan's friends:
               summary: Friends of alan
               value:
                 - robert
@@ -30,7 +30,9 @@ paths:
           required: true
           schema:
             type: string
-          example: alan
+          examples:
+            Alan:
+              value: alan
       requestBody:
         content:
           application/json:
