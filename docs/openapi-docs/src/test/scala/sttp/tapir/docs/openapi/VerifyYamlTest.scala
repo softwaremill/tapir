@@ -5,6 +5,7 @@ import io.circe.Json
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import sttp.model.{Method, StatusCode}
+import sttp.tapir.EndpointIO.Example
 import sttp.tapir._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -593,12 +594,43 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("support both multiple and single example values") {
-    val expectedYaml = loadYaml("expected_multiple_and_single_example_values.yml")
+  test("support example of list and not-list types") {
+    val expectedYaml = loadYaml("expected_examples_of_list_and_not_list_types.yml")
     val actualYaml = endpoint.post
       .in(query[List[String]]("friends").example(List("bob", "alice")))
       .in(query[String]("current-person").example("alan"))
       .in(jsonBody[Person].example(Person("bob", 23)))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("support multiple examples") {
+    val expectedYaml = loadYaml("expected_multiple_examples.yml")
+    val actualYaml = endpoint.post
+      .in(query[List[String]]("friends")
+        .examples(List(
+          Example(List("amy", "greg"), Some("Matt's friends"), Some("Friends of matt")),
+          Example(List("robert", "ania"), Some("Alan's friends"), Some("Friends of alan")))
+        ))
+      .in(query[String]("current-person").example(Example("alan", Some("Alan"), None)))
+      .in(jsonBody[Person].examples(List(
+        Example(Person("bob", 23), Some("Bob"), None),
+        Example(Person("alan", 50), Some("Alan"), Some("Alan summary"))
+      )))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("support multiple examples with default names") {
+    val expectedYaml = loadYaml("expected_multiple_examples_with_default_names.yml")
+    val actualYaml = endpoint.post
+      .in(jsonBody[Person].examples(Person("bob", 23), Person("matt", 30)))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
