@@ -334,7 +334,7 @@ object EndpointIO {
 
   //
 
-  case class Example[T](value: T, name: Option[String], summary: Option[String])
+  case class Example[+T](value: T, name: Option[String], summary: Option[String])
 
   object Example {
     def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)

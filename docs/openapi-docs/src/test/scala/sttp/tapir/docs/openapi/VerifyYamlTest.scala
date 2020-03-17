@@ -610,15 +610,17 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("support multiple examples") {
     val expectedYaml = loadYaml("expected_multiple_examples.yml")
     val actualYaml = endpoint.post
-      .in(query[List[String]]("friends")
-        .examples(List(
-          Example(List("amy", "greg"), Some("Matt's friends"), Some("Friends of matt")),
-          Example(List("robert", "ania"), Some("Alan's friends"), Some("Friends of alan")))
-        ))
+      .in(path[String]("country").examples("Poland", "UK"))
       .in(query[String]("current-person").example(Example("alan", Some("Alan"), None)))
       .in(jsonBody[Person].examples(List(
         Example(Person("bob", 23), Some("Bob"), None),
         Example(Person("alan", 50), Some("Alan"), Some("Alan summary"))
+      )))
+      .in(header[String]("X-Forwarded-User").examples("user1", "user2"))
+      .in(cookie[String]("cookie-param").examples("cookie1", "cookie2"))
+      .out(jsonBody[Entity].examples(List(
+        Example(Person("michal", 40), Some("Michal"), None),
+        Example(Organization("acme"), Some("Acme"), None)
       )))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
