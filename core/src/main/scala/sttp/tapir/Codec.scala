@@ -7,12 +7,14 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 import java.text.DateFormat
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
+
 import scala.concurrent.duration.{Duration => SDuration}
 import java.time._
 import java.time.temporal.TemporalUnit
 import java.util.{Date, UUID}
 
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part, Uri}
+import sttp.model.Uri._
 import sttp.tapir.DecodeResult._
 import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import sttp.tapir.internal._
@@ -91,6 +93,9 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   implicit val uuidPlainCodec: PlainCodec[UUID] = plainCodec[UUID](UUID.fromString)
   implicit val bigDecimalPlainCodec: PlainCodec[BigDecimal] = plainCodec[BigDecimal](BigDecimal(_))
   implicit val javaBigDecimalPlainCodec: PlainCodec[JBigDecimal] = plainCodec[JBigDecimal](new JBigDecimal(_))
+
+  implicit val uriPlainCodec: PlainCodec[Uri] =
+    stringPlainCodecUtf8.mapDecode(raw => Try(uri"$raw").fold(DecodeResult.Error("Invalid URI", _), DecodeResult.Value(_)))(_.toString())
 
   implicit val textHtmlCodecUtf8: Codec[String, CodecFormat.TextHtml, String] = stringPlainCodecUtf8.codecFormat(CodecFormat.TextHtml())
 
