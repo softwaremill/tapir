@@ -14,7 +14,7 @@ import sttp.tapir.generic.Derived
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests.{FruitAmount, _}
+import sttp.tapir.tests.{FruitAmount, Person, _}
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
@@ -607,20 +607,12 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("support multiple examples") {
-    val expectedYaml = loadYaml("expected_multiple_examples.yml")
+  test("support multiple examples with explicit names") {
+    val expectedYaml = loadYaml("expected_multiple_examples_with_names.yml")
     val actualYaml = endpoint.post
-      .in(path[String]("country").examples("Poland", "UK"))
-      .in(query[String]("current-person").example(Example("alan", Some("Alan"), None)))
-      .in(jsonBody[Person].examples(List(
-        Example(Person("bob", 23), Some("Bob"), None),
-        Example(Person("alan", 50), Some("Alan"), Some("Alan summary"))
-      )))
-      .in(header[String]("X-Forwarded-User").examples("user1", "user2"))
-      .in(cookie[String]("cookie-param").examples("cookie1", "cookie2"))
       .out(jsonBody[Entity].examples(List(
-        Example(Person("michal", 40), Some("Michal"), None),
-        Example(Organization("acme"), Some("Acme"), None)
+        Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")),
+        Example.of(Organization("acme"), Some("Acme"))
       )))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
@@ -633,6 +625,47 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_multiple_examples_with_default_names.yml")
     val actualYaml = endpoint.post
       .in(jsonBody[Person].examples(Person("bob", 23), Person("matt", 30)))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("support example name even if there is a single example") {
+    val expectedYaml = loadYaml("expected_single_example_with_name.yml")
+    val actualYaml = endpoint.post
+      .out(jsonBody[Entity].example(
+        Example(Person("michal", 40), Some("Michal"), Some("Some summary"))
+      ))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+
+  test("support multiple examples with both explicit and default names ") {
+    val expectedYaml = loadYaml("expected_multiple_examples_with_explicit_and_default_names.yml")
+    val actualYaml = endpoint.post
+      .in(jsonBody[Person].examples(List(Example.of(Person("bob", 23), name=Some("Bob")), Example.of(Person("matt", 30)))))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("support examples in different IO params") {
+    val expectedYaml = loadYaml("expected_multiple_examples.yml")
+    val actualYaml = endpoint.post
+      .in(path[String]("country").examples("Poland", "UK"))
+      .in(query[String]("current-person").examples("alan", "bob"))
+      .in(jsonBody[Person].examples(Person("bob", 23), Person("alan", 50)))
+      .in(header[String]("X-Forwarded-User").examples("user1", "user2"))
+      .in(cookie[String]("cookie-param").examples("cookie1", "cookie2"))
+      .out(jsonBody[Entity].examples(Person("michal", 40), Organization("acme")))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 

@@ -27,7 +27,7 @@ private[openapi] object ExampleConverter {
 
   private def convertExamples[T](examples: List[EndpointIO.Example[T]])(exampleValue: T => Option[ExampleValue]): Examples = {
     examples match {
-      case (example@EndpointIO.Example(_, None, _)) :: Nil =>
+      case (example @ EndpointIO.Example(_, None, _)) :: Nil =>
         Examples(exampleValue(example.value), ListMap.empty)
       case examples =>
         val exampleValues = examples.zipWithIndex.map {

@@ -23,8 +23,10 @@ paths:
           schema:
             type: string
           examples:
-            Alan:
+            Example0:
               value: alan
+            Example1:
+              value: bob
         - name: X-Forwarded-User
           in: header
           required: true
@@ -51,12 +53,11 @@ paths:
             schema:
               $ref: '#/components/schemas/Person'
             examples:
-              Bob:
+              Example0:
                 value:
                   name: bob
                   age: 23
-              Alan:
-                summary: Alan summary
+              Example1:
                 value:
                   name: alan
                   age: 50
@@ -69,12 +70,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Entity'
           examples:
-            Michal:
+            Example0:
               value:
                 Person:
                   name: michal
                   age: 40
-            Acme:
+            Example1:
                 value:
                   Organization:
                     name: acme

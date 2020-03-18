@@ -22,10 +22,10 @@ private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
   }
 
   def apply[CF <: CodecFormat](
-                                schema: TSchema[_],
-                                format: CF,
-                                examples: List[EndpointIO.Example[String]]
-                              ): ListMap[String, OMediaType] = {
+      schema: TSchema[_],
+      format: CF,
+      examples: List[EndpointIO.Example[String]]
+  ): ListMap[String, OMediaType] = {
     val convertedExamples = ExampleConverter.convertExamples(Codec.stringPlainCodecUtf8, examples)
 
     ListMap(
