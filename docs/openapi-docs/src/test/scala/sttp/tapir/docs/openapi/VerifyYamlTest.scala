@@ -14,7 +14,7 @@ import sttp.tapir.generic.Derived
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests.{FruitAmount, Person, _}
+import sttp.tapir.tests._
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
@@ -624,7 +624,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("support multiple examples with default names") {
     val expectedYaml = loadYaml("expected_multiple_examples_with_default_names.yml")
     val actualYaml = endpoint.post
-      .in(jsonBody[Person].examples(Person("bob", 23), Person("matt", 30)))
+      .in(jsonBody[Person].example(Person("bob", 23)).example(Person("matt", 30)))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
@@ -660,12 +660,12 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("support examples in different IO params") {
     val expectedYaml = loadYaml("expected_multiple_examples.yml")
     val actualYaml = endpoint.post
-      .in(path[String]("country").examples("Poland", "UK"))
-      .in(query[String]("current-person").examples("alan", "bob"))
-      .in(jsonBody[Person].examples(Person("bob", 23), Person("alan", 50)))
-      .in(header[String]("X-Forwarded-User").examples("user1", "user2"))
-      .in(cookie[String]("cookie-param").examples("cookie1", "cookie2"))
-      .out(jsonBody[Entity].examples(Person("michal", 40), Organization("acme")))
+      .in(path[String]("country").example("Poland").example("UK"))
+      .in(query[String]("current-person").example("alan").example("bob"))
+      .in(jsonBody[Person].example(Person("bob", 23)).example(Person("alan", 50)))
+      .in(header[String]("X-Forwarded-User").example("user1").example("user2"))
+      .in(cookie[String]("cookie-param").example("cookie1").example("cookie2"))
+      .out(jsonBody[Entity].example(Person("michal", 40)).example(Organization("acme")))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
