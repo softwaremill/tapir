@@ -23,7 +23,7 @@ val docs: OpenAPI = booksListing.toOpenAPI("My Bookshop", "1.0")
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
 class structure such as the `OpenAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
 
-Quit often, you'll need to define the servers, through which the API can be reached. To do this, you can modify the
+Quite often, you'll need to define the servers, through which the API can be reached. To do this, you can modify the
 returned `OpenAPI` case class either directly or by using a helper method:
 
 ```scala
