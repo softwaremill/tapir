@@ -9,6 +9,9 @@ import sttp.model.{HeaderNames, Method, MultiQueryParams, Part, Uri}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.internal._
+import EndpointToSttpClient._
+
+import scala.util.{Failure, Success, Try}
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   def toSttpRequestUnsafe[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
@@ -28,16 +31,20 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
 
     val responseAs = fromMetadata { meta =>
-      val output = if (meta.isSuccess) e.output else e.errorOutput
-      if (output == EndpointOutput.Void()) {
-        throw new IllegalStateException(s"Got response: $meta, cannot map to a void output of: $e.")
-      }
+      wrapErrors(req2) {
+        val output = if (meta.isSuccess) e.output else e.errorOutput
+        if (output == EndpointOutput.Void()) {
+          throw new IllegalStateException(s"Got response: $meta, cannot map to a void output of: $e.")
+        }
 
-      responseAsFromOutputs(meta, output)
+        responseAsFromOutputs(meta, output)
+      }
     }.mapWithMetadata { (body, meta) =>
-      val output = if (meta.isSuccess) e.output else e.errorOutput
-      val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
-      params.map(p => if (meta.isSuccess) Right(p) else Left(p))
+      wrapErrors(req2) {
+        val output = if (meta.isSuccess) e.output else e.errorOutput
+        val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
+        params.map(p => if (meta.isSuccess) Right(p) else Left(p))
+      }
     }
 
     req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], S]]
@@ -247,4 +254,16 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     case DecodeResult.Error(o, e) => throw new IllegalArgumentException(s"Cannot decode from $o", e)
     case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
   }
+
+}
+
+object EndpointToSttpClient {
+  class ResponseDecodingException(request: Request[_, _], cause: Throwable)
+      extends RuntimeException(s"Failed to parse response of ${request.method} ${request.uri}", cause)
+
+  def wrapErrors[T](request: Request[_, _])(body: => T): T =
+    Try(body) match {
+      case Success(value)     => value
+      case Failure(exception) => throw new ResponseDecodingException(request, exception)
+    }
 }
