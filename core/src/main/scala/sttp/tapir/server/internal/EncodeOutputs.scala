@@ -52,6 +52,15 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
               apply(mapping.output, vsHead, mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
             case EndpointOutput.Mapped(wrapped, _, g) =>
               apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
+
+            case EndpointOutput.BodyMappedStatusCode(wrapped, f, _) =>
+              wrapped.codec
+                .asInstanceOf[CodecForOptional[Any, _, Any]]
+                .encode(vsHead)
+                .map(encodeOutputBody.rawValueToBody(_, wrapped.codec))
+                .map(ov.withBody)
+                .getOrElse(ov)
+                .withStatusCode(f.asInstanceOf[Any => StatusCode](vsHead))
           }
           run(outputsTail, ov2, vsTail)
         case _ =>

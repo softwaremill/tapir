@@ -186,6 +186,17 @@ package object tests {
         )
       )
   }
+
+  val in_string_out_status_from_string_status_mapped: Endpoint[String, Unit, Either[Int, String], Nothing] = {
+
+    endpoint
+      .in(query[String]("fruit"))
+      .out(statusFromBody(jsonBody[Either[Int, String]]) {
+        case _: Left[_, _]  => StatusCode.Accepted
+        case _: Right[_, _] => StatusCode.Ok
+      })
+
+  }
   val in_string_out_status_from_string_one_empty: Endpoint[String, Unit, Either[Unit, String], Nothing] =
     endpoint
       .in(query[String]("fruit"))
@@ -327,9 +338,7 @@ package object tests {
           })(_.toString.toLowerCase)
       }
       implicit def validatorForColor: Validator[Color] =
-        Validator.enum(List(Blue, Red), { c =>
-          Some(plainCodecForColor.encode(c))
-        })
+        Validator.enum(List(Blue, Red), c => Some(plainCodecForColor.encode(c)))
       endpoint.out(jsonBody[ColorValue])
     }
 
