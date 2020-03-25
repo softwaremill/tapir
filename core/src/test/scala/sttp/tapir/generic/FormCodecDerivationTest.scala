@@ -13,7 +13,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
     case class Test1(f1: Int)
-    val codec = implicitly[Codec[Test1, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(Test1(10)) shouldBe "f1=10"
@@ -23,7 +23,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a two-arg case class" in {
     // given
     case class Test2(f1: String, f2: Int)
-    val codec = implicitly[Codec[Test2, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, Test2, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(Test2("v1", 10)) shouldBe "f1=v1&f2=10"
@@ -37,7 +37,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a three-arg case class" in {
     // given
     case class Test3(f1: String, f2: Int, f3: Boolean)
-    val codec = implicitly[Codec[Test3, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, Test3, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(Test3("v1", 10, f3 = true)) shouldBe "f1=v1&f2=10&f3=true"
@@ -47,7 +47,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a case class with optional parameters" in {
     // given
     case class Test4(f1: Option[String], f2: Int)
-    val codec = implicitly[Codec[Test4, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, Test4, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(Test4(Some("v1"), 10)) shouldBe "f1=v1&f2=10"
@@ -62,28 +62,30 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
         |import sttp.tapir._
         |trait NoCodecForThisTrait
         |case class Test5(f1: String, f2: NoCodecForThisTrait)
-        |implicitly[Codec[Test5, CodecFormat.XWwwFormUrlencoded, String]]
+        |implicitly[Codec[String, Test5, CodecFormat.XWwwFormUrlencoded]]
         |""".stripMargin)
 
-    error.message should include("Cannot find a codec for type: NoCodecForThisTrait")
+    error.message should include("Cannot find a codec between types: List[String] and NoCodecForThisTrait")
   }
 
   it should "use the right schema for a two-arg case class" in {
     // given
     case class Test6(f1: String, f2: Int)
-    val codec = implicitly[Codec[Test6, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, Test6, CodecFormat.XWwwFormUrlencoded]]
 
     // when
-    codec.meta.schema.schemaType shouldBe SProduct(
-      SObjectInfo("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
-      List(("f1", implicitly[Schema[String]]), ("f2", implicitly[Schema[Int]]))
+    codec.schema.map(_.schemaType) shouldBe Some(
+      SProduct(
+        SObjectInfo("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
+        List(("f1", implicitly[Schema[String]]), ("f2", implicitly[Schema[Int]]))
+      )
     )
   }
 
   it should "generate a codec for a one-arg case class using snake-case naming transformation" in {
     // given
     implicit val configuration: Configuration = Configuration.default.withSnakeCaseMemberNames
-    val codec = implicitly[Codec[CaseClassWithComplicatedName, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, CaseClassWithComplicatedName, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(CaseClassWithComplicatedName(10)) shouldBe "complicated_name=10"
@@ -93,7 +95,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class using kebab-case naming transformation" in {
     // given
     implicit val configuration: Configuration = Configuration.default.withKebabCaseMemberNames
-    val codec = implicitly[Codec[CaseClassWithComplicatedName, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, CaseClassWithComplicatedName, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(CaseClassWithComplicatedName(10)) shouldBe "complicated-name=10"
@@ -103,7 +105,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class with list" in {
     // given
     case class Test1(f1: List[Int])
-    val codec = implicitly[Codec[Test1, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(Test1(Nil)) shouldBe ""
@@ -119,7 +121,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
     // given
     case class Test1(f1: Int)
     implicit val v: Validator[Int] = Validator.min(5)
-    val codec = implicitly[Codec[Test1, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(Test1(10)) shouldBe "f1=10"
@@ -153,7 +155,7 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
       f9 = BigDecimal("1337.7331"),
       f10 = new JBigDecimal("31337.73313")
     )
-    val codec = implicitly[Codec[Test1, CodecFormat.XWwwFormUrlencoded, String]]
+    val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
 
     // when
     codec.encode(test1) shouldBe "f1=str&f2=42&f3=228&f4=322&f5=69&f6=27.0&f7=33.0&f8=true&f9=1337.7331&f10=31337.73313"

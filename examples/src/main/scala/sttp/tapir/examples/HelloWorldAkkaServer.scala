@@ -32,7 +32,5 @@ object HelloWorldAkkaServer extends App {
     assert(result == "Hello, Frodo!")
   }
 
-  Await.result(bindAndCheck.transformWith { r =>
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }

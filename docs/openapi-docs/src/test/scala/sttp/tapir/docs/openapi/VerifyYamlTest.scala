@@ -73,9 +73,9 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should support tags") {
-    val userTaggedEndpointShow = endpoint.tag("user").in("user" / "show").get.out(plainBody[String])
-    val userTaggedEdnpointSearch = endpoint.tags(List("user", "admin")).in("user" / "search").get.out(plainBody[String])
-    val adminTaggedEndpointAdd = endpoint.tag("admin").in("admin" / "add").get.out(plainBody[String])
+    val userTaggedEndpointShow = endpoint.tag("user").in("user" / "show").get.out(stringBody)
+    val userTaggedEdnpointSearch = endpoint.tags(List("user", "admin")).in("user" / "search").get.out(stringBody)
+    val adminTaggedEndpointAdd = endpoint.tag("admin").in("admin" / "add").get.out(stringBody)
 
     val expectedYaml = loadYaml("expected_tags.yml")
 
@@ -268,7 +268,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should unfold nested hierarchy") {
     val e: Endpoint[Book, Unit, String, Nothing] = endpoint
       .in(jsonBody[Book])
-      .out(plainBody[String])
+      .out(stringBody)
     val expectedYaml = loadYaml("expected_unfolded_hierarchy.yml")
 
     val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -278,7 +278,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should unfold arrays") {
-    val e = endpoint.in(jsonBody[List[FruitAmount]]).out(plainBody[String])
+    val e = endpoint.in(jsonBody[List[FruitAmount]]).out(stringBody)
     val expectedYaml = loadYaml("expected_unfolded_array.yml")
 
     val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml

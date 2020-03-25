@@ -19,7 +19,7 @@ class TapirJsonPlayTests extends FlatSpec with Matchers {
   val customerDecoder = TapirJsonPlayCodec.readsWritesCodec[Customer]
 
   // Helper to test encoding then decoding an object is the same as the original
-  def testEncodeDecode[T: Format: Schema](original: T): Assertion = {
+  def testEncodeDecode[T: Format: Schema: Validator](original: T): Assertion = {
     val codec = TapirJsonPlayCodec.readsWritesCodec[T]
 
     val encoded = codec.encode(original)

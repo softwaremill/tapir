@@ -1,9 +1,10 @@
 package sttp.tapir.server.internal
 
+import java.nio.charset.Charset
+
 import sttp.model.StatusCode
-import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.internal._
-import sttp.tapir.{CodecForOptional, CodecFormat, EndpointIO, EndpointOutput, StreamingEndpointIO}
+import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, RawBodyType, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 
@@ -13,46 +14,11 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     def run(outputs: Vector[EndpointOutput.Single[_]], ov: OutputValues[B], vs: Seq[Any]): OutputValues[B] = {
       (outputs, vs) match {
         case (Vector(), Seq()) => ov
-        case (EndpointOutput.FixedStatusCode(sc, _) +: outputsTail, _) =>
-          run(outputsTail, ov.withStatusCode(sc), vs)
-        case (EndpointIO.FixedHeader(name, value, _) +: outputsTail, _) =>
-          run(outputsTail, ov.withHeader(name -> value), vs)
+        case (outputsHead +: outputsTail, _) if outputsHead._codec.hIsUnit =>
+          val ov2 = encodeOutput(outputsHead, (), ov)
+          run(outputsTail, ov2, vs)
         case (outputsHead +: outputsTail, vsHead +: vsTail) =>
-          val ov2 = outputsHead match {
-            case EndpointIO.Body(codec, _) =>
-              codec
-                .asInstanceOf[CodecForOptional[Any, _, Any]]
-                .encode(vsHead)
-                .map(encodeOutputBody.rawValueToBody(_, codec))
-                .map(ov.withBody)
-                .getOrElse(ov)
-            case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, format, _)) =>
-              ov.withBody(encodeOutputBody.streamValueToBody(vsHead, format))
-            case EndpointIO.Header(name, codec, _) =>
-              codec
-                .asInstanceOf[PlainCodecForMany[Any]]
-                .encode(vsHead)
-                .foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
-            case EndpointIO.Headers(_) =>
-              vsHead
-                .asInstanceOf[Seq[(String, String)]]
-                .foldLeft(ov)(_.withHeader(_))
-            case EndpointIO.Mapped(wrapped, _, g) =>
-              apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
-            case EndpointOutput.StatusCode(_) =>
-              ov.withStatusCode(vsHead.asInstanceOf[StatusCode])
-            case EndpointOutput.FixedStatusCode(_, _) =>
-              throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
-            case EndpointIO.FixedHeader(_, _, _) =>
-              throw new IllegalStateException("Already handled") // to make the exhaustiveness checker happy
-            case EndpointOutput.OneOf(mappings) =>
-              val mapping = mappings
-                .find(mapping => mapping.appliesTo(vsHead))
-                .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $vsHead, in output: $output"))
-              apply(mapping.output, vsHead, mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
-            case EndpointOutput.Mapped(wrapped, _, g) =>
-              apply(wrapped, g.asInstanceOf[Any => Any](vsHead), ov)
-          }
+          val ov2 = encodeOutput(outputsHead, vsHead, ov)
           run(outputsTail, ov2, vsTail)
         case _ =>
           throw new IllegalStateException(s"Outputs and output values don't match in output: $output, values: ${ParamsToSeq(v)}")
@@ -60,6 +26,30 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     }
 
     run(output.asVectorOfSingleOutputs, initialOutputValues, ParamsToSeq(v))
+  }
+
+  private def encodeOutput(output: EndpointOutput.Single[_], value: Any, ov: OutputValues[B]): OutputValues[B] = {
+    def encoded[T] = output._codec.asInstanceOf[Codec[T, Any, _ <: CodecFormat]].encode(value)
+    output match {
+      case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
+      case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value)
+      case EndpointIO.Body(rawValueType, codec, _) =>
+        ov.withBody(encodeOutputBody.rawValueToBody(encoded, codec.format.getOrElse(CodecFormat.OctetStream()), rawValueType))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, charset)) =>
+        ov.withBody(encodeOutputBody.streamValueToBody(encoded, codec.format.getOrElse(CodecFormat.OctetStream()), charset))
+      case EndpointIO.Header(name, _, _) =>
+        encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
+      case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
+      case EndpointIO.MappedTuple(wrapped, _) => apply(wrapped, encoded, ov)
+      case EndpointOutput.StatusCode(_, _)    => ov.withStatusCode(encoded[StatusCode])
+      case EndpointOutput.OneOf(mappings, _) =>
+        val enc = encoded[Any]
+        val mapping = mappings
+          .find(mapping => mapping.appliesTo(enc))
+          .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $enc, in output: $output"))
+        apply(mapping.output, enc, mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
+      case EndpointOutput.MappedTuple(wrapped, _) => apply(wrapped, encoded, ov)
+    }
   }
 }
 
@@ -81,6 +71,6 @@ object OutputValues {
 }
 
 trait EncodeOutputBody[B] {
-  def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: CodecFormat, Any]): B
-  def streamValueToBody(v: Any, format: CodecFormat): B
+  def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): B
+  def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): B
 }

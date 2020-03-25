@@ -12,12 +12,9 @@ import scala.concurrent.{Await, Future}
 
 object MultipleServerEndpointsAkkaServer extends App {
   // endpoint descriptions, together with the server logic
-  val endpoint1 = endpoint.get.in("endpoint1").out(stringBody).serverLogic[Future] { _ =>
-    Future.successful(Right("ok1"))
-  }
-  val endpoint2 = endpoint.get.in("endpoint2").in(path[String]).out(stringBody).serverLogic[Future] { path =>
-    Future.successful(Right(s"ok2: $path"))
-  }
+  val endpoint1 = endpoint.get.in("endpoint1").out(stringBody).serverLogic[Future] { _ => Future.successful(Right("ok1")) }
+  val endpoint2 =
+    endpoint.get.in("endpoint2").in(path[String]).out(stringBody).serverLogic[Future] { path => Future.successful(Right(s"ok2: $path")) }
 
   // converting the endpoints to a (single) route
   val route: Route = List(endpoint1, endpoint2).toRoute
@@ -39,7 +36,5 @@ object MultipleServerEndpointsAkkaServer extends App {
     assert(result2 == "ok2: apple")
   }
 
-  Await.result(bindAndCheck.transformWith { r =>
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }

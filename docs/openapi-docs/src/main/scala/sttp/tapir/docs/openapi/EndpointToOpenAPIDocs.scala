@@ -36,8 +36,8 @@ object EndpointToOpenAPIDocs {
   private def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _, _]): Endpoint[_, _, _, _] = {
     val (input2, _) = new EndpointInputMapper[Int](
       {
-        case (EndpointInput.PathCapture(codec, None, info), i) =>
-          (EndpointInput.PathCapture(codec, Some(s"p$i"), info), i + 1)
+        case (EndpointInput.PathCapture(None, codec, info), i) =>
+          (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)
       },
       PartialFunction.empty
     ).mapInput(e.input, 1)

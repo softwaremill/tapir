@@ -67,10 +67,10 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
 
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
-      case EndpointIO.Body(codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.schema.isOptional)))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
-        Right(RequestBody(i.description, codecToMediaType(s, mt, i.example), Some(true)))
+      case EndpointIO.Body(_, codec, info) =>
+        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.schema.exists(_.isOptional))))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, info, _)) =>
+        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(true)))
     }
   }
 
@@ -80,7 +80,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
       case h: EndpointIO.Header[_]         => headerToParameter(h)
       case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
-      case f: EndpointIO.FixedHeader       => fixedHeaderToParameter(f)
+      case f: EndpointIO.FixedHeader[_]    => fixedHeaderToParameter(f)
     }
   }
 
@@ -92,11 +92,11 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     )
   }
 
-  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader) = {
+  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) = {
     EndpointInputToParameterConverter.from(
       header,
       Right(OSchema(OSchemaType.String)),
-      header.info.example.map(_ => exampleValue(header.value))
+      header.info.example.map(_ => exampleValue(header.h.value))
     )
   }
 
@@ -126,8 +126,8 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
     inputs
       .collect {
-        case EndpointInput.PathCapture(_, name, _) => Left(name)
-        case EndpointInput.FixedPath(s)            => Right(s)
+        case EndpointInput.PathCapture(name, _, _) => Left(name)
+        case EndpointInput.FixedPath(s, _)         => Right(s)
       }
       .foldLeft((Vector.empty[String], 1)) {
         case ((acc, i), component) =>

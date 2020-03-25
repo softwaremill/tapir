@@ -57,7 +57,5 @@ object MultipartFormUploadAkkaServer extends App {
     assert(result == s"Received: Frodo / Some(hiking) / 33 / Some(${testFile.getName}) (19)")
   }
 
-  Await.result(bindAndCheck.transformWith { r =>
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }

@@ -50,11 +50,11 @@ object ServerDefaults {
     ): Option[StatusCode] = {
       ctx.input match {
         case _: EndpointInput.Query[_]             => Some(StatusCode.BadRequest)
-        case _: EndpointInput.QueryParams          => Some(StatusCode.BadRequest)
+        case _: EndpointInput.QueryParams[_]       => Some(StatusCode.BadRequest)
         case _: EndpointInput.Cookie[_]            => Some(StatusCode.BadRequest)
         case _: EndpointIO.Header[_]               => Some(StatusCode.BadRequest)
-        case _: EndpointIO.Headers                 => Some(StatusCode.BadRequest)
-        case _: EndpointIO.Body[_, _, _]           => Some(StatusCode.BadRequest)
+        case _: EndpointIO.Headers[_]              => Some(StatusCode.BadRequest)
+        case _: EndpointIO.Body[_, _]              => Some(StatusCode.BadRequest)
         case _: EndpointIO.StreamBodyWrapper[_, _] => Some(StatusCode.BadRequest)
         // we assume that the only decode failure that might happen during path segment decoding is an error
         // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
@@ -63,7 +63,10 @@ object ServerDefaults {
             if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
               (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
           Some(StatusCode.BadRequest)
-        case _ => None
+        // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
+        case _: EndpointInput.Basic[_] => None
+        // all other inputs (tuples, mapped) - responding with bad request
+        case _ => Some(StatusCode.BadRequest)
       }
     }
   }
@@ -77,23 +80,23 @@ object ServerDefaults {
       * Describes the source of the failure: in which part of the request did the failure occur.
       */
     @tailrec
-    def failureSourceMessage(input: EndpointInput.Single[_]): String = input match {
-      case EndpointInput.FixedMethod(_)           => s"Invalid value for: method"
-      case EndpointInput.FixedPath(_)             => s"Invalid value for: path segment"
-      case EndpointInput.PathCapture(_, name, _)  => s"Invalid value for: path parameter ${name.getOrElse("?")}"
-      case EndpointInput.PathsCapture(_)          => s"Invalid value for: path"
+    def failureSourceMessage(input: EndpointInput[_]): String = input match {
+      case EndpointInput.FixedMethod(_, _)        => s"Invalid value for: method"
+      case EndpointInput.FixedPath(_, _)          => s"Invalid value for: path segment"
+      case EndpointInput.PathCapture(name, _, _)  => s"Invalid value for: path parameter ${name.getOrElse("?")}"
+      case EndpointInput.PathsCapture(_, _)       => s"Invalid value for: path"
       case EndpointInput.Query(name, _, _)        => s"Invalid value for: query parameter $name"
-      case _: EndpointInput.QueryParams           => "Invalid value for: query parameters"
+      case EndpointInput.QueryParams(_, _)        => "Invalid value for: query parameters"
       case EndpointInput.Cookie(name, _, _)       => s"Invalid value for: cookie $name"
       case _: EndpointInput.ExtractFromRequest[_] => "Invalid value"
       case a: EndpointInput.Auth[_]               => failureSourceMessage(a.input)
-      case _: EndpointInput.Mapped[_, _]          => "Invalid value"
-      case _: EndpointIO.Body[_, _, _]            => s"Invalid value for: body"
+      case _: EndpointInput.MappedTuple[_, _]     => "Invalid value"
+      case _: EndpointIO.Body[_, _]               => s"Invalid value for: body"
       case _: EndpointIO.StreamBodyWrapper[_, _]  => s"Invalid value for: body"
       case EndpointIO.Header(name, _, _)          => s"Invalid value for: header $name"
       case EndpointIO.FixedHeader(name, _, _)     => s"Invalid value for: header $name"
-      case _: EndpointIO.Headers                  => s"Invalid value for: headers"
-      case _: EndpointIO.Mapped[_, _]             => "Invalid value"
+      case EndpointIO.Headers(_, _)               => s"Invalid value for: headers"
+      case _                                      => "Invalid value"
     }
 
     def combineSourceAndDetail(source: String, detail: Option[String]): String = detail match {

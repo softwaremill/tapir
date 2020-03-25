@@ -12,7 +12,7 @@ private[openapi] object EndpointInputToParameterConverter {
       query.name,
       ParameterIn.Query,
       query.info.description,
-      Some(!query.codec.meta.schema.isOptional),
+      Some(!query.codec.schema.exists(_.isOptional)),
       if (query.info.deprecated) Some(true) else None,
       None,
       None,
@@ -48,7 +48,7 @@ private[openapi] object EndpointInputToParameterConverter {
       header.name,
       ParameterIn.Header,
       header.info.description,
-      Some(!header.codec.meta.schema.isOptional),
+      Some(!header.codec.schema.exists(_.isOptional)),
       if (header.info.deprecated) Some(true) else None,
       None,
       None,
@@ -61,9 +61,9 @@ private[openapi] object EndpointInputToParameterConverter {
     )
   }
 
-  def from[T](header: EndpointIO.FixedHeader, schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+  def from[T](header: EndpointIO.FixedHeader[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
     Parameter(
-      header.name,
+      header.h.name,
       ParameterIn.Header,
       header.info.description,
       Some(true),
@@ -84,7 +84,7 @@ private[openapi] object EndpointInputToParameterConverter {
       cookie.name,
       ParameterIn.Cookie,
       cookie.info.description,
-      Some(!cookie.codec.meta.schema.isOptional),
+      Some(!cookie.codec.schema.exists(_.isOptional)),
       if (cookie.info.deprecated) Some(true) else None,
       None,
       None,

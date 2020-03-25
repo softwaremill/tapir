@@ -26,10 +26,16 @@ case class Schema[T](
     deprecated: Boolean = false
 ) {
 
+  // TODO: return Schema[Option[U]]?
   /**
     * Returns an optional version of this schema, with `isOptional` set to true.
     */
   def asOptional[U]: Schema[U] = copy(isOptional = true)
+
+  /**
+    * Returns a required version of this schema, with `isOptional` set to false.
+    */
+  def asRequired[U]: Schema[U] = copy(isOptional = false)
 
   /**
     * Returns a collection version of this schema, with the schema type wrapped in [[SArray]].

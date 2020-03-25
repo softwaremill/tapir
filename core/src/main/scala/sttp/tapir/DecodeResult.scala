@@ -4,6 +4,7 @@ sealed trait DecodeResult[+T] {
   def map[TT](f: T => TT): DecodeResult[TT]
   def flatMap[U](f: T => DecodeResult[U]): DecodeResult[U]
 }
+// TODO: rename to Failure?
 sealed trait DecodeFailure extends DecodeResult[Nothing] {
   override def map[TT](f: Nothing => TT): DecodeResult[TT] = this
   override def flatMap[U](f: Nothing => DecodeResult[U]): DecodeResult[U] = this

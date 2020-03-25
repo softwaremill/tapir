@@ -1,6 +1,7 @@
 package sttp.tapir.server.finatra
 
 import java.io.InputStream
+import java.nio.charset.Charset
 
 import com.twitter.finagle.http.{Response, Status, Version}
 import com.twitter.io.{Buf, InputStreamReader, Reader}
@@ -9,24 +10,14 @@ import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import sttp.model.{Header, Part}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{
-  ByteArrayValueType,
-  ByteBufferValueType,
-  CodecForOptional,
-  CodecFormat,
-  CodecMeta,
-  EndpointOutput,
-  FileValueType,
-  InputStreamValueType,
-  MultipartValueType,
-  StringValueType
-}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
+import sttp.tapir.internal._
 
 object OutputToFinatraResponse {
   private val encodeOutputs: EncodeOutputs[(FinatraContent, String)] = new EncodeOutputs(new EncodeOutputBody[(FinatraContent, String)] {
-    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: CodecFormat, Any]): (FinatraContent, String) =
-      rawValueToFinatraContent(codec.meta, v)
-    override def streamValueToBody(v: Any, format: CodecFormat): (FinatraContent, String) = {
+    override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): (FinatraContent, String) =
+      rawValueToFinatraContent(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), v)
+    override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): (FinatraContent, String) = {
       FinatraContentBuf(v.asInstanceOf[Buf]) -> format.mediaType.toString()
     }
   })
@@ -66,24 +57,20 @@ object OutputToFinatraResponse {
     responseWithContent
   }
 
-  private def rawValueToFinatraContent[CF <: CodecFormat, R](codecMeta: CodecMeta[_, CF, R], r: R): (FinatraContent, String) = {
-    val ct: String = codecMeta.format.mediaType.toString()
-
-    codecMeta.rawValueType match {
-      case StringValueType(charset) =>
+  private def rawValueToFinatraContent[CF <: CodecFormat, R](bodyType: RawBodyType[R], ct: String, r: R): (FinatraContent, String) = {
+    bodyType match {
+      case RawBodyType.StringBody(charset) =>
         FinatraContentBuf(Buf.ByteArray.Owned(r.toString.getBytes(charset))) -> ct
-      case ByteArrayValueType  => FinatraContentBuf(Buf.ByteArray.Owned(r)) -> ct
-      case ByteBufferValueType => FinatraContentBuf(Buf.ByteBuffer.Owned(r)) -> ct
-      case InputStreamValueType =>
+      case RawBodyType.ByteArrayBody  => FinatraContentBuf(Buf.ByteArray.Owned(r)) -> ct
+      case RawBodyType.ByteBufferBody => FinatraContentBuf(Buf.ByteBuffer.Owned(r)) -> ct
+      case RawBodyType.InputStreamBody =>
         FinatraContentReader(Reader.fromStream(r)) -> ct
-      case FileValueType =>
+      case RawBodyType.FileBody =>
         FinatraContentReader(Reader.fromFile(r)) -> ct
-      case mvt: MultipartValueType =>
+      case m: RawBodyType.MultipartBody =>
         val entity = MultipartEntityBuilder.create()
 
-        r.flatMap(rawPartToFormBodyPart(mvt, _)).foreach { formBodyPart: FormBodyPart =>
-          entity.addPart(formBodyPart)
-        }
+        r.flatMap(rawPartToFormBodyPart(m, _)).foreach { formBodyPart: FormBodyPart => entity.addPart(formBodyPart) }
 
         // inputStream is split out into a val because otherwise it doesn't compile in 2.11
         val inputStream: InputStream = entity.build().getContent
@@ -92,41 +79,54 @@ object OutputToFinatraResponse {
     }
   }
 
-  private def rawValueToContentBody[CF <: CodecFormat, R](codecMeta: CodecMeta[_, CF, R], part: Part[R], r: R): ContentBody = {
+  private def rawValueToContentBody[CF <: CodecFormat, R](bodyType: RawBodyType[R], part: Part[R], r: R): ContentBody = {
     val contentType: String = part.header("content-type").getOrElse("text/plain")
 
-    codecMeta.rawValueType match {
-      case StringValueType(charset) =>
+    bodyType match {
+      case RawBodyType.StringBody(charset) =>
         new StringBody(r.toString, ContentType.create(contentType, charset))
-      case ByteArrayValueType =>
+      case RawBodyType.ByteArrayBody =>
         new ByteArrayBody(r, ContentType.create(contentType), part.fileName.get)
-      case ByteBufferValueType =>
+      case RawBodyType.ByteBufferBody =>
         val array: Array[Byte] = new Array[Byte](r.remaining)
         r.get(array)
         new ByteArrayBody(array, ContentType.create(contentType), part.fileName.get)
-      case FileValueType =>
+      case RawBodyType.FileBody =>
         part.fileName match {
           case Some(filename) => new FileBody(r, ContentType.create(contentType), filename)
           case None           => new FileBody(r, ContentType.create(contentType))
         }
-      case InputStreamValueType =>
+      case RawBodyType.InputStreamBody =>
         new InputStreamBody(r, ContentType.create(contentType), part.fileName.get)
-      case _: MultipartValueType =>
+      case _: RawBodyType.MultipartBody =>
         throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }
   }
 
-  private def rawPartToFormBodyPart[R](mvt: MultipartValueType, part: Part[R]): Option[FormBodyPart] = {
-    mvt.partCodecMeta(part.name).map { codecMeta =>
+  private def rawPartToFormBodyPart[R](m: RawBodyType.MultipartBody, part: Part[R]): Option[FormBodyPart] = {
+    m.partType(part.name).map { partType =>
       val builder = FormBodyPartBuilder
         .create(
           part.name,
-          rawValueToContentBody(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.asInstanceOf[Part[Any]], part.body)
+          rawValueToContentBody(partType.asInstanceOf[RawBodyType[Any]], part.asInstanceOf[Part[Any]], part.body)
         )
 
       part.headers.foreach { case Header(name, value) => builder.addField(name, value) }
 
       builder.build()
+    }
+  }
+
+  private def formatToContentType(format: CodecFormat, charset: Option[Charset]): String = {
+    format match {
+      case CodecFormat.Json()               => format.mediaType.toString()
+      case CodecFormat.OctetStream()        => format.mediaType.toString()
+      case CodecFormat.XWwwFormUrlencoded() => format.mediaType.toString()
+      case CodecFormat.MultipartFormData()  => format.mediaType.toString()
+      // text/plain and others
+      case _ =>
+        val mt = format.mediaType
+        charset.map(c => mt.charset(c.toString)).getOrElse(mt).toString
     }
   }
 }

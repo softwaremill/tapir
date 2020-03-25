@@ -34,7 +34,7 @@ object RenderPathTemplate {
       case ((acc, index), component) =>
         component match {
           case p: EndpointInput.PathCapture[_] => (acc :+ pathParamRendering(index, p), index + 1)
-          case EndpointInput.FixedPath(s)      => (acc :+ s, index)
+          case EndpointInput.FixedPath(s, _)   => (acc :+ s, index)
           case _                               => (acc, index)
         }
     }

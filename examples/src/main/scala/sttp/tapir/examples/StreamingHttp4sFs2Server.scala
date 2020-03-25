@@ -1,5 +1,7 @@
 package sttp.tapir.examples
 
+import java.nio.charset.StandardCharsets
+
 import cats.effect._
 import cats.implicits._
 import org.http4s.HttpRoutes
@@ -23,7 +25,7 @@ object StreamingHttp4sFs2Server extends App {
   val streamingEndpoint = endpoint.get
     .in("receive")
     .out(header[Long](HeaderNames.ContentLength))
-    .out(streamBody[Stream[IO, Byte]](schemaFor[String], CodecFormat.TextPlain()))
+    .out(streamBody[Stream[IO, Byte]](schemaFor[String], CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
 
   // mandatory implicits
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
