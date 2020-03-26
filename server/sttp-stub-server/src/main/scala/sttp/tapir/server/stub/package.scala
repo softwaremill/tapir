@@ -15,7 +15,7 @@ package object stub extends SttpStubServer {
       implicit val stubBackend: SttpBackend[F, Nothing, NothingT] = List(serverEndpoint).toBackendStub
       val req = serverEndpoint.endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(input)
 
-      val decodeInputResult = DecodeInputs(serverEndpoint.endpoint.input, new SttpDecodeInput(req))
+      val decodeInputResult = DecodeInputs(serverEndpoint.endpoint.input, new SttpDecodeInputs(req))
       decodeInputResult match {
         case DecodeInputsResult.Failure(_, _) =>
           None
