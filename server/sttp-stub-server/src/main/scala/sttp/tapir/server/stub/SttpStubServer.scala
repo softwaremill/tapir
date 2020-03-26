@@ -22,7 +22,7 @@ trait SttpStubServer {
           val endpoint: Endpoint[_, _, _, _] = se.endpoint
 
           override def isDefinedAt(req: Request[_, _]): Boolean = {
-            val decodeInputResult = DecodeInputs(endpoint.input, new SttpDecodeInput(req))
+            val decodeInputResult = DecodeInputs(endpoint.input, new SttpDecodeInputs(req))
             decodeInputResult match {
               case DecodeInputsResult.Failure(input, failure) =>
                 handleDecodeFailure(input, failure).code != StatusCode.NotFound
@@ -31,7 +31,7 @@ trait SttpStubServer {
           }
 
           override def apply(req: Request[_, _]): F[Response[_]] = {
-            DecodeInputs(endpoint.input, new SttpDecodeInput(req)) match {
+            DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
               case values: DecodeInputsResult.Values =>
                 se.logic(SeqToParams(InputValues(se.endpoint.input, values)).asInstanceOf[I])
                   .map {

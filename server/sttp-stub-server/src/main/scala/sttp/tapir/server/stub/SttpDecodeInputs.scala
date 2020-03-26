@@ -6,11 +6,11 @@ import sttp.model.Uri.QuerySegment
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 
-class SttpDecodeInput(r: Request[_, _], segmentIndex: Int = 0) extends DecodeInputsContext {
+class SttpDecodeInputs(r: Request[_, _], segmentIndex: Int = 0) extends DecodeInputsContext {
   override def method: Method = Method(r.method.method)
 
   override def nextPathSegment: (Option[String], DecodeInputsContext) =
-    (r.uri.pathSegments.drop(segmentIndex).headOption.map(_.v), new SttpDecodeInput(r, segmentIndex + 1))
+    (r.uri.pathSegments.drop(segmentIndex).headOption.map(_.v), new SttpDecodeInputs(r, segmentIndex + 1))
 
   override def header(name: String): List[String] = r.headers.filter(_.name.toUpperCase == name.toUpperCase).map(_.value).toList
 
