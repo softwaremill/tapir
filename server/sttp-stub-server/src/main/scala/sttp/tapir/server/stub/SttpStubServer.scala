@@ -68,7 +68,7 @@ trait SttpStubServer {
     }
   }
 
-  implicit class RichSttpBackendStub[F[_], S](stub: SttpBackendStub[F, S]) {
+  implicit class RichSttpBackendStub[F[_], S](val stub: SttpBackendStub[F, S]) {
     def whenRequestMatches[I, E, O, SS](endpoint: Endpoint[I, E, O, SS]): TypeAwareWhenRequest[E, O] = {
       new TypeAwareWhenRequest(
         new stub.WhenRequest(req =>
@@ -113,17 +113,7 @@ trait SttpStubServer {
       def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S] =
         whenRequest.thenRespond(sttp.client.Response[E](errorResponse, statusCode))
 
-      def thenRespond[T](resp: => Response[T]): SttpBackendStub[F, S] = whenRequest.thenRespond(resp)
-
-      def thenRespondWithCode(status: StatusCode, msg: String = ""): SttpBackendStub[F, S] = whenRequest.thenRespondWithCode(status, msg)
-
-      def thenRespondNotFound(): SttpBackendStub[F, S] = whenRequest.thenRespondNotFound()
-
-      def thenRespondOk(): SttpBackendStub[F, S] = whenRequest.thenRespondOk()
-
-      def thenRespondServerError(): SttpBackendStub[F, S] = whenRequest.thenRespondServerError()
-
-      def thenRespond[T](body: T): SttpBackendStub[F, S] = whenRequest.thenRespond(body)
+      def unsafe: stub.WhenRequest = whenRequest
     }
   }
 }
