@@ -14,7 +14,7 @@ import sttp.tapir.generic.Derived
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests._
+import sttp.tapir.tests.{Person => TestPerson, _}
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
@@ -240,7 +240,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should match the expected yaml when using coproduct types with discriminator") {
-    val sPerson = implicitly[Schema[Person]]
+    val sPerson = implicitly[Schema[TestPerson]]
     val sOrganization = implicitly[Schema[Organization]]
     implicit val sEntity: Schema[Entity] = Schema.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
@@ -266,7 +266,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should match the expected yaml when using nested coproduct types with discriminator") {
-    val sPerson = implicitly[Schema[Person]]
+    val sPerson = implicitly[Schema[TestPerson]]
     val sOrganization = implicitly[Schema[Organization]]
     @silent("never used") // it is used
     implicit val sEntity: Schema[Entity] = Schema.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
@@ -625,7 +625,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val actualYaml = endpoint.post
       .in(query[List[String]]("friends").example(List("bob", "alice")))
       .in(query[String]("current-person").example("alan"))
-      .in(jsonBody[Person].example(Person("bob", 23)))
+      .in(jsonBody[TestPerson].example(TestPerson("bob", 23)))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
@@ -639,7 +639,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .out(
         jsonBody[Entity].examples(
           List(
-            Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")),
+            Example.of(TestPerson("michal", 40), Some("Michal"), Some("Some summary")),
             Example.of(Organization("acme"), Some("Acme"))
           )
         )
@@ -654,7 +654,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("support multiple examples with default names") {
     val expectedYaml = loadYaml("expected_multiple_examples_with_default_names.yml")
     val actualYaml = endpoint.post
-      .in(jsonBody[Person].example(Person("bob", 23)).example(Person("matt", 30)))
+      .in(jsonBody[TestPerson].example(TestPerson("bob", 23)).example(TestPerson("matt", 30)))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
@@ -667,7 +667,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val actualYaml = endpoint.post
       .out(
         jsonBody[Entity].example(
-          Example(Person("michal", 40), Some("Michal"), Some("Some summary"))
+          Example(TestPerson("michal", 40), Some("Michal"), Some("Some summary"))
         )
       )
       .toOpenAPI(Info("Entities", "1.0"))
@@ -680,7 +680,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("support multiple examples with both explicit and default names ") {
     val expectedYaml = loadYaml("expected_multiple_examples_with_explicit_and_default_names.yml")
     val actualYaml = endpoint.post
-      .in(jsonBody[Person].examples(List(Example.of(Person("bob", 23), name = Some("Bob")), Example.of(Person("matt", 30)))))
+      .in(jsonBody[TestPerson].examples(List(Example.of(TestPerson("bob", 23), name = Some("Bob")), Example.of(TestPerson("matt", 30)))))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
@@ -693,10 +693,10 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val actualYaml = endpoint.post
       .in(path[String]("country").example("Poland").example("UK"))
       .in(query[String]("current-person").example("alan").example("bob"))
-      .in(jsonBody[Person].example(Person("bob", 23)).example(Person("alan", 50)))
+      .in(jsonBody[TestPerson].example(TestPerson("bob", 23)).example(TestPerson("alan", 50)))
       .in(header[String]("X-Forwarded-User").example("user1").example("user2"))
       .in(cookie[String]("cookie-param").example("cookie1").example("cookie2"))
-      .out(jsonBody[Entity].example(Person("michal", 40)).example(Organization("acme")))
+      .out(jsonBody[Entity].example(TestPerson("michal", 40)).example(Organization("acme")))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
