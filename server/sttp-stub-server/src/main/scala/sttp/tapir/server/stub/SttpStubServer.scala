@@ -113,7 +113,7 @@ trait SttpStubServer {
       def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S] =
         whenRequest.thenRespond(sttp.client.Response[E](errorResponse, statusCode))
 
-      def unsafe: stub.WhenRequest = whenRequest
+      def genericResponse: stub.WhenRequest = whenRequest
     }
   }
 }
