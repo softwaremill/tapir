@@ -91,7 +91,7 @@ trait SttpStubServer {
       )
     }
 
-    def whenDecodedInputFailure[I, E, O, SS](
+    def whenDecodingInputFails[I, E, O, SS](
         endpoint: Endpoint[I, E, O, SS]
     )(failureMatcher: PartialFunction[DecodeFailure, Boolean]): TypeAwareWhenRequest[E, O] = {
       new TypeAwareWhenRequest(
