@@ -4,7 +4,9 @@ import io.circe.generic.auto._
 import org.scalatest.{FlatSpec, Matchers}
 import sttp.client._
 import sttp.client.monad._
+import sttp.client.testing.SttpBackendStub
 import sttp.model.StatusCode
+import sttp.tapir.DecodeResult.InvalidValue
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.ServerEndpoint
@@ -90,6 +92,71 @@ class SttpStubServerTest extends FlatSpec with Matchers {
 
     // then
     response shouldBe Some(Right(ResponseWrapper(4.95)))
+  }
+
+  it should "combine tapir endpoint with sttp stub" in {
+    import sttp.tapir.client.sttp._
+    // given
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / "sometest4")
+      .in(
+        query[Int]("amount")
+          .validate(Validator.min(0))
+      )
+      .post
+      .out(jsonBody[ResponseWrapper])
+
+    implicit val backend = SttpBackendStub
+      .apply(idMonad)
+      .whenRequestMatches(endpoint)
+      .thenRespond(ResponseWrapper(1.0))
+    val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
+
+    response shouldBe Response.ok(ResponseWrapper(1.0))
+  }
+
+  it should "match with inputs" in {
+    import sttp.tapir.client.sttp._
+    // given
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / "sometest4")
+      .in(query[Int]("amount"))
+      .post
+      .out(jsonBody[ResponseWrapper])
+
+    implicit val backend = SttpBackendStub
+      .apply(idMonad)
+      .whenInputMatches(endpoint) { amount => amount > 0 }
+      .thenRespond(ResponseWrapper(1.0))
+      .whenInputMatches(endpoint) { amount => amount <= 0 }
+      .thenRespondServerError()
+
+    val response1 = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
+    val response2 = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
+
+    response1 shouldBe Response.ok(ResponseWrapper(1.0))
+    response2 shouldBe Response.apply(Left(()), StatusCode.InternalServerError, "Internal server error")
+  }
+
+  it should "match with decode failure" in {
+    import sttp.tapir.client.sttp._
+    // given
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / "sometest4")
+      .in(
+        query[Int]("amount")
+          .validate(Validator.min(0))
+      )
+      .post
+      .out(jsonBody[ResponseWrapper])
+
+    implicit val backend = SttpBackendStub
+      .apply(idMonad)
+      .whenDecodedInputFailure(endpoint) { case _: InvalidValue => true }
+      .thenRespondWithCode(StatusCode.BadRequest)
+    val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
+
+    response shouldBe Response(Left(()), StatusCode.BadRequest)
   }
 }
 

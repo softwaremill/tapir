@@ -67,4 +67,63 @@ trait SttpStubServer {
       }
     }
   }
+
+  implicit class RichSttpBackendStub[F[_], S](stub: SttpBackendStub[F, S]) {
+    def whenRequestMatches[I, E, O, SS](endpoint: Endpoint[I, E, O, SS]): TypeAwareWhenRequest[E, O] = {
+      new TypeAwareWhenRequest(
+        new stub.WhenRequest(req =>
+          DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
+            case DecodeInputsResult.Failure(_, _) => false
+            case DecodeInputsResult.Values(_, _)  => true
+          }
+        )
+      )
+    }
+
+    def whenInputMatches[I, E, O, SS](endpoint: Endpoint[I, E, O, SS])(inputMatcher: I => Boolean): TypeAwareWhenRequest[E, O] = {
+      new TypeAwareWhenRequest(
+        new stub.WhenRequest(req =>
+          DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
+            case DecodeInputsResult.Failure(_, _)  => false
+            case values: DecodeInputsResult.Values => inputMatcher(SeqToParams(InputValues(endpoint.input, values)).asInstanceOf[I])
+          }
+        )
+      )
+    }
+
+    def whenDecodedInputFailure[I, E, O, SS](
+        endpoint: Endpoint[I, E, O, SS]
+    )(failureMatcher: PartialFunction[DecodeFailure, Boolean]): TypeAwareWhenRequest[E, O] = {
+      new TypeAwareWhenRequest(
+        new stub.WhenRequest(req => {
+          val result = DecodeInputs(endpoint.input, new SttpDecodeInputs(req))
+          result match {
+            case DecodeInputsResult.Failure(_, f) if failureMatcher.isDefinedAt(f) => failureMatcher(f)
+            case DecodeInputsResult.Values(_, _)                                   => false
+          }
+        })
+      )
+    }
+
+    class TypeAwareWhenRequest[E, O](whenRequest: stub.WhenRequest) {
+
+      def thenSuccess(response: O): SttpBackendStub[F, S] =
+        whenRequest.thenRespond(response)
+
+      def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S] =
+        whenRequest.thenRespond(sttp.client.Response[E](errorResponse, statusCode))
+
+      def thenRespond[T](resp: => Response[T]): SttpBackendStub[F, S] = whenRequest.thenRespond(resp)
+
+      def thenRespondWithCode(status: StatusCode, msg: String = ""): SttpBackendStub[F, S] = whenRequest.thenRespondWithCode(status, msg)
+
+      def thenRespondNotFound(): SttpBackendStub[F, S] = whenRequest.thenRespondNotFound()
+
+      def thenRespondOk(): SttpBackendStub[F, S] = whenRequest.thenRespondOk()
+
+      def thenRespondServerError(): SttpBackendStub[F, S] = whenRequest.thenRespondServerError()
+
+      def thenRespond[T](body: T): SttpBackendStub[F, S] = whenRequest.thenRespond(body)
+    }
+  }
 }
