@@ -7,8 +7,7 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.{Error, Value}
 
 trait TapirJsonPlay {
-  def jsonBody[T: Reads: Writes: Schema: Validator]: EndpointIO.Body[String, T] =
-    anyUtf8StringBody(CodecFormat.Json()).map(readsWritesCodec[T])
+  def jsonBody[T: Reads: Writes: Schema: Validator]: EndpointIO.Body[String, T] = anyUtf8StringBody(readsWritesCodec[T])
 
   implicit def readsWritesCodec[T: Reads: Writes: Schema: Validator]: JsonCodec[T] =
     Codec.json[T] { s =>

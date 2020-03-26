@@ -1,7 +1,6 @@
 package sttp.tapir
 
 import sttp.model.Method
-import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
@@ -24,7 +23,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def patch: Endpoint[I, E, O, S] = method(Method.PATCH)
   def connect: Endpoint[I, E, O, S] = method(Method.CONNECT)
   def trace: Endpoint[I, E, O, S] = method(Method.TRACE)
-  def method(m: sttp.model.Method): Endpoint[I, E, O, S] = in(FixedMethod(m, Codec.idOptMeta(None, Some(TextPlain()))))
+  def method(m: sttp.model.Method): Endpoint[I, E, O, S] = in(FixedMethod(m, Codec.idPlain()))
 
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S] =
     this.copy[IJ, E, O, S](input = input.and(i))
@@ -103,7 +102,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
           val mappings = basicOutputsMap.map {
             case (sc, os) => StatusMapping(sc, EndpointOutput.Tuple(os.sortByType), _ => true)
           }
-          EndpointOutput.OneOf(mappings.toSeq, Codec.idNoMeta).show
+          EndpointOutput.OneOf(mappings.toSeq, Mapping.id).show
       }
     }
 

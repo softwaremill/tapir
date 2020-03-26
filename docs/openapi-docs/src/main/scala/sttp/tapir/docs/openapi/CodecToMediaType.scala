@@ -11,7 +11,7 @@ private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
     val convertedExamples = ExampleConverter.convertExamples(o, examples)
 
     ListMap(
-      o.format.getOrElse(CodecFormat.OctetStream()).mediaType.noCharset.toString -> OMediaType(
+      o.format.mediaType.noCharset.toString -> OMediaType(
         Some(objectSchemas(o)),
         convertedExamples.singleExample,
         convertedExamples.multipleExamples,

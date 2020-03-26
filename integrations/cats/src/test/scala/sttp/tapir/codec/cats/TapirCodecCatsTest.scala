@@ -83,7 +83,7 @@ class TapirCodecCatsTest extends FlatSpec with Matchers with Checkers {
 
   implicit def set[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Set[T], Set[U], CF] =
     Codec
-      .idOptMeta[Set[T], CF](None, c.format)
+      .id[Set[T], CF](c.format)
       .mapDecode(ts => DecodeResult.sequence(ts.toList.map(c.decode)).map(_.toSet))(us => us.map(c.encode))
       .schema(c.schema.map(_.asArrayElement.as[Set[U]]))
       .validate(c.validator.asIterableElements[Set])

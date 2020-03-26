@@ -35,7 +35,7 @@ object TapirAuth {
   private def httpAuth[T](authType: String, codec: Codec[String, T, TextPlain]): EndpointInput.Auth.Http[T] =
     EndpointInput.Auth.Http(authType, header[String]("Authorization").map(codec))
 
-  private def usernamePasswordCodec: Codec[String, UsernamePassword, TextPlain] = {
+  private def usernamePasswordCodec: Mapping[String, UsernamePassword] = {
     def decode(s: String): DecodeResult[UsernamePassword] =
       try {
         val s2 = new String(Base64.getDecoder.decode(s))
@@ -53,7 +53,7 @@ object TapirAuth {
     def encode(up: UsernamePassword): String =
       Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes("UTF-8"))
 
-    Codec.fromDecodeNoMeta(decode)(encode)
+    Mapping.fromDecode(decode)(encode)
   }
 
   private def credentialsCodec(authType: String): Codec[String, String, TextPlain] = {

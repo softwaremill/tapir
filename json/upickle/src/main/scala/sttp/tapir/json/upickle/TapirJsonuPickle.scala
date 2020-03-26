@@ -8,8 +8,7 @@ import upickle.default.{ReadWriter, read, write}
 
 trait TapirJsonuPickle {
 
-  def jsonBody[T: ReadWriter: Schema: Validator]: EndpointIO.Body[String, T] =
-    anyUtf8StringBody(CodecFormat.Json()).map(readWriterCodec[T])
+  def jsonBody[T: ReadWriter: Schema: Validator]: EndpointIO.Body[String, T] = anyUtf8StringBody(readWriterCodec[T])
 
   implicit def readWriterCodec[T: ReadWriter: Schema: Validator]: JsonCodec[T] =
     Codec.json[T] { s =>

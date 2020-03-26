@@ -1,7 +1,7 @@
 package sttp.tapir.server.internal
 
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.{Codec, DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
+import sttp.tapir.{Mapping, DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
 import sttp.tapir.internal._
 
 sealed trait InputValuesResult {
@@ -55,7 +55,7 @@ object InputValues {
 
   private def handleMappedTuple[II, T](
       wrapped: EndpointInput[II],
-      codec: Codec[II, T, _],
+      codec: Mapping[II, T],
       inputsTail: Vector[EndpointInput.Single[_]],
       remainingInputValues: Vector[Any]
   ): InputValuesResult = {

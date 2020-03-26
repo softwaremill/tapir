@@ -13,23 +13,23 @@ import sttp.tapir.internal._
 import scala.reflect.ClassTag
 
 trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
-  implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idNoMeta)
+  implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain())
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
     EndpointInput.PathCapture(None, implicitly, EndpointIO.Info.empty)
   def path[T: Codec[String, *, TextPlain]](name: String): EndpointInput.PathCapture[T] =
     EndpointInput.PathCapture(Some(name), implicitly, EndpointIO.Info.empty)
-  def paths: EndpointInput.PathsCapture[List[String]] = EndpointInput.PathsCapture(Codec.idNoMeta, EndpointIO.Info.empty)
+  def paths: EndpointInput.PathsCapture[List[String]] = EndpointInput.PathsCapture(Codec.idPlain(), EndpointIO.Info.empty)
 
   def query[T: Codec[List[String], *, TextPlain]](name: String): EndpointInput.Query[T] =
     EndpointInput.Query(name, implicitly, EndpointIO.Info.empty)
-  def queryParams: EndpointInput.QueryParams[MultiQueryParams] = EndpointInput.QueryParams(Codec.idNoMeta, EndpointIO.Info.empty)
+  def queryParams: EndpointInput.QueryParams[MultiQueryParams] = EndpointInput.QueryParams(Codec.idPlain(), EndpointIO.Info.empty)
 
   def header[T: Codec[List[String], *, TextPlain]](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly, EndpointIO.Info.empty)
-  def header(h: Header): EndpointIO.FixedHeader[Unit] = EndpointIO.FixedHeader(h, Codec.idNoMeta, EndpointIO.Info.empty)
+  def header(h: Header): EndpointIO.FixedHeader[Unit] = EndpointIO.FixedHeader(h, Codec.idPlain(), EndpointIO.Info.empty)
   def header(name: String, value: String): EndpointIO.FixedHeader[Unit] = header(sttp.model.Header.notValidated(name, value))
-  def headers: EndpointIO.Headers[List[sttp.model.Header]] = EndpointIO.Headers(Codec.idNoMeta, EndpointIO.Info.empty)
+  def headers: EndpointIO.Headers[List[sttp.model.Header]] = EndpointIO.Headers(Codec.idPlain(), EndpointIO.Info.empty)
 
   def cookie[T: Codec[Option[String], *, TextPlain]](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly, EndpointIO.Info.empty)
@@ -78,14 +78,15 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     * @param charset An optional charset of the resulting stream's data, to be used in the content type.
     */
   def streamBody[S](schema: Schema[_], format: CodecFormat, charset: Option[Charset] = None): StreamingEndpointIO.Body[S, S] =
-    StreamingEndpointIO.Body(Codec.id(schema.as[S], format), EndpointIO.Info.empty, charset)
+    StreamingEndpointIO.Body(Codec.id(format, Some(schema.as[S])), EndpointIO.Info.empty, charset)
 
   // TODO
   // no schema
-  def anyUtf8StringBody[CF <: CodecFormat](format: CF): EndpointIO.Body[String, String] = anyStringBody[CF](format, StandardCharsets.UTF_8)
+  def anyUtf8StringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
+    anyStringBody[T, CF](codec, StandardCharsets.UTF_8)
   // no schema
-  def anyStringBody[CF <: CodecFormat](format: CF, charset: Charset): EndpointIO.Body[String, String] =
-    EndpointIO.Body(RawBodyType.StringBody(charset), Codec.idOptMeta(None, Some(format)), EndpointIO.Info.empty)
+  def anyStringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
+    EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth
 
@@ -94,11 +95,11 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     * documentation interpreters and the provided value is discarded by client interpreters.
     */
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
-    EndpointInput.ExtractFromRequest(Codec.fromNoMeta(f)(_ => null))
+    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null))
 
-  def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] = EndpointOutput.StatusCode(Map.empty, Codec.idNoMeta)
+  def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] = EndpointOutput.StatusCode(Map.empty, Codec.idPlain())
   def statusCode(statusCode: sttp.model.StatusCode): EndpointOutput.FixedStatusCode[Unit] =
-    EndpointOutput.FixedStatusCode(statusCode, Codec.idNoMeta, EndpointIO.Info.empty)
+    EndpointOutput.FixedStatusCode(statusCode, Codec.idPlain(), EndpointIO.Info.empty)
 
   /**
     * Maps status codes to outputs. All outputs must have a common supertype (`T`). Typically, the supertype is a sealed
@@ -107,7 +108,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `T` are covered).
     */
   def oneOf[T](firstCase: StatusMapping[_ <: T], otherCases: StatusMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
-    EndpointOutput.OneOf[T, T](firstCase +: otherCases, Codec.idNoMeta)
+    EndpointOutput.OneOf[T, T](firstCase +: otherCases, Codec.idPlain())
 
   /**
     * Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting

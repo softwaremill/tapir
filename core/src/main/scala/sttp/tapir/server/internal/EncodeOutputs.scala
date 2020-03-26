@@ -4,7 +4,7 @@ import java.nio.charset.Charset
 
 import sttp.model.StatusCode
 import sttp.tapir.internal._
-import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, RawBodyType, StreamingEndpointIO}
+import sttp.tapir.{Codec, CodecFormat, Mapping, EndpointIO, EndpointOutput, RawBodyType, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 
@@ -29,14 +29,13 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
   }
 
   private def encodeOutput(output: EndpointOutput.Single[_], value: Any, ov: OutputValues[B]): OutputValues[B] = {
-    def encoded[T] = output._codec.asInstanceOf[Codec[T, Any, _ <: CodecFormat]].encode(value)
+    def encoded[T] = output._codec.asInstanceOf[Mapping[T, Any]].encode(value)
     output match {
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value)
-      case EndpointIO.Body(rawValueType, codec, _) =>
-        ov.withBody(encodeOutputBody.rawValueToBody(encoded, codec.format.getOrElse(CodecFormat.OctetStream()), rawValueType))
+      case EndpointIO.Body(rawValueType, codec, _)  => ov.withBody(encodeOutputBody.rawValueToBody(encoded, codec.format, rawValueType))
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, charset)) =>
-        ov.withBody(encodeOutputBody.streamValueToBody(encoded, codec.format.getOrElse(CodecFormat.OctetStream()), charset))
+        ov.withBody(encodeOutputBody.streamValueToBody(encoded, codec.format, charset))
       case EndpointIO.Header(name, _, _) =>
         encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
       case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))

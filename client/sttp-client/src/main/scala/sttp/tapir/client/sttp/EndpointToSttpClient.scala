@@ -96,7 +96,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   ): (Uri, PartialAnyRequest) = {
     def handleMapped[II, T](
         tuple: EndpointInput[II],
-        codec: Codec[T, II, _],
+        codec: Mapping[T, II],
         tail: Vector[EndpointInput.Single[_]]
     ): (Uri, PartialAnyRequest) = {
       val (uri2, req2) = setInputParams(
@@ -206,7 +206,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         req.multipartBody(parts.toList)
     }
 
-    codec.format.map(cf => req2.contentType(cf.mediaType)).getOrElse(req2)
+    req2.contentType(codec.format.mediaType)
   }
 
   private def partToSttpPart[R](p: Part[R], bodyType: RawBodyType[R]): Part[BasicRequestBody] = bodyType match {
