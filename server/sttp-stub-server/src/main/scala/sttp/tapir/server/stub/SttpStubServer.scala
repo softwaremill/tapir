@@ -69,7 +69,7 @@ trait SttpStubServer {
   }
 
   implicit class RichSttpBackendStub[F[_], S](val stub: SttpBackendStub[F, S]) {
-    def whenRequestMatches[I, E, O, SS](endpoint: Endpoint[I, E, O, SS]): TypeAwareWhenRequest[E, O] = {
+    def whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[E, O] = {
       new TypeAwareWhenRequest(
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
@@ -80,7 +80,7 @@ trait SttpStubServer {
       )
     }
 
-    def whenInputMatches[I, E, O, SS](endpoint: Endpoint[I, E, O, SS])(inputMatcher: I => Boolean): TypeAwareWhenRequest[E, O] = {
+    def whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[E, O] = {
       new TypeAwareWhenRequest(
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
@@ -91,8 +91,8 @@ trait SttpStubServer {
       )
     }
 
-    def whenDecodingInputFails[I, E, O, SS](
-        endpoint: Endpoint[I, E, O, SS]
+    def whenDecodingInputFailureMatches[E, O](
+        endpoint: Endpoint[_, E, O, _]
     )(failureMatcher: PartialFunction[DecodeFailure, Boolean]): TypeAwareWhenRequest[E, O] = {
       new TypeAwareWhenRequest(
         new stub.WhenRequest(req => {
@@ -105,6 +105,10 @@ trait SttpStubServer {
       )
     }
 
+    def whenDecodingInputFailure[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[E, O] = {
+      whenDecodingInputFailureMatches(endpoint) { case _ => true }
+    }
+
     class TypeAwareWhenRequest[E, O](whenRequest: stub.WhenRequest) {
 
       def thenSuccess(response: O): SttpBackendStub[F, S] =
@@ -112,6 +116,8 @@ trait SttpStubServer {
 
       def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S] =
         whenRequest.thenRespond(sttp.client.Response[E](errorResponse, statusCode))
+
+      def thenBadRequest(): SttpBackendStub[F, S] = whenRequest.thenRespondWithCode(StatusCode.BadRequest)
 
       def genericResponse: stub.WhenRequest = whenRequest
     }
