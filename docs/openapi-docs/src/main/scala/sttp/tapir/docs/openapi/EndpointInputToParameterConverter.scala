@@ -66,7 +66,7 @@ private[openapi] object EndpointInputToParameterConverter {
   }
 
   def from[T](header: EndpointIO.FixedHeader[T], schema: ReferenceOr[Schema]): Parameter = {
-    val examples = ExampleConverter.fixedExample(header.info.examples, header.value)
+    val examples = ExampleConverter.convertExamples(header.codec, header.info.examples)
     Parameter(
       header.h.name,
       ParameterIn.Header,

@@ -9,7 +9,7 @@ import java.time._
 import java.time.format.DateTimeParseException
 import java.util.{Date, UUID}
 
-import sttp.model.{Cookie, CookieWithMeta, Part}
+import sttp.model._
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
 import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
@@ -200,9 +200,10 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       case e: Exception => Error(l, e)
     }
   }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
-
-  implicit val uriPlainCodec: PlainCodec[Uri] =
-    string.mapDecode(raw => Try(uri"$raw").fold(DecodeResult.Error("Invalid URI", _), DecodeResult.Value(_)))(_.toString())
+  implicit val uri: PlainCodec[Uri] =
+    string.mapDecode(raw => Uri.parse(raw).fold(e => DecodeResult.Error(raw, new IllegalArgumentException(e)), DecodeResult.Value(_)))(
+      _.toString()
+    )
 
   def stringCodec[T: Schema](parse: String => T): Codec[String, T, TextPlain] =
     string.map(parse)(_.toString).schema(implicitly[Schema[T]])

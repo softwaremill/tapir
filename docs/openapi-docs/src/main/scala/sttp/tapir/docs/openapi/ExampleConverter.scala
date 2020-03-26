@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.{Codec, CodecForMany, CodecForOptional, CodecFormat, EndpointIO}
+import sttp.tapir.{Codec, EndpointIO}
 import sttp.tapir.openapi.{Example, ExampleValue}
 
 import scala.collection.immutable.ListMap
@@ -9,20 +9,8 @@ import scala.collection.immutable.ListMap
 private[openapi] object ExampleConverter {
   case class Examples(singleExample: Option[ExampleValue], multipleExamples: ListMap[String, ReferenceOr[Example]])
 
-  def convertExamples[T, CF <: CodecFormat](o: CodecForMany[T, CF, _], examples: List[EndpointIO.Example[T]]): Examples = {
+  def convertExamples[T](o: Codec[_, T, _], examples: List[EndpointIO.Example[T]]): Examples = {
     convertExamples(examples)(exampleValue(o, _))
-  }
-
-  def convertExamples[T, CF <: CodecFormat](o: CodecForOptional[T, CF, _], examples: List[EndpointIO.Example[T]]): Examples = {
-    convertExamples(examples)(exampleValue(o, _))
-  }
-
-  def convertExamples[T](o: Codec[T, _, _], examples: List[EndpointIO.Example[T]]): Examples = {
-    convertExamples(examples)(exampleValue(o, _))
-  }
-
-  def fixedExample(examples: List[EndpointIO.Example[Unit]], value: String): Examples = {
-    convertExamples[Unit](examples)((_: Unit) => Some[ExampleValue](exampleValue(value)))
   }
 
   private def convertExamples[T](examples: List[EndpointIO.Example[T]])(exampleValue: T => Option[ExampleValue]): Examples = {

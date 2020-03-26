@@ -4,7 +4,7 @@ import java.nio.charset.Charset
 
 import sttp.model.{Method, MultiQueryParams}
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.EndpointIO.Info
+import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
@@ -67,8 +67,8 @@ object EndpointInput {
 
     def description(d: String): PathsCapture[T] = copy(info = info.description(d))
     def example(t: T): PathsCapture[T] = copy(info = info.example(t))
-    def example(example: Example[T]): PathsCapture = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): PathsCapture = copy(info = info.examples(examples))
+    def example(example: Example[T]): PathsCapture[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): PathsCapture[T] = copy(info = info.examples(examples))
     def deprecated(): PathsCapture[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): PathsCapture[T] = copy(codec = codec.validate(v))
   }
@@ -93,8 +93,8 @@ object EndpointInput {
 
     def description(d: String): QueryParams[T] = copy(info = info.description(d))
     def example(t: T): QueryParams[T] = copy(info = info.example(t))
-    def example(example: Example[T]): PathsCapture = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): PathsCapture = copy(info = info.examples(examples))
+    def example(example: Example[T]): QueryParams[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): QueryParams[T] = copy(info = info.examples(examples))
     def deprecated(): QueryParams[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): QueryParams[T] = copy(codec = codec.validate(v))
   }
@@ -429,9 +429,13 @@ object EndpointIO {
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
 
     def map[U](codec: Codec[T, U, _]): Info[U] =
-      Info(description, example.map(e => codec.decode(e)).collect {
-        case DecodeResult.Value(ee) => ee
-      }, deprecated)
+      Info(
+        description,
+        examples.map(e => e.copy(value = codec.decode(e.value))).collect {
+          case Example(DecodeResult.Value(ee), name, summary) => Example(ee, name, summary)
+        },
+        deprecated
+      )
   }
   object Info {
     def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false)
