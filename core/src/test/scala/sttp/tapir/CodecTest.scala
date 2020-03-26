@@ -9,6 +9,8 @@ import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateJdk
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.{Assertion, FlatSpec, Matchers}
 import org.scalatestplus.scalacheck.Checkers
+import sttp.model.Uri
+import sttp.model.Uri._
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.DecodeResult.Value
 
@@ -16,6 +18,14 @@ import scala.concurrent.duration.{Duration => SDuration}
 import scala.reflect.ClassTag
 
 class CodecTest extends FlatSpec with Matchers with Checkers {
+
+  implicit val arbitraryUri: Arbitrary[Uri] = Arbitrary(for {
+    scheme <- Gen.alphaLowerStr if scheme.nonEmpty
+    host <- Gen.identifier.map(_.take(5)) // schemes may not be too long
+    port <- Gen.option(Gen.chooseNum(1, Short.MaxValue))
+    path <- Gen.listOfN(5, Gen.identifier)
+    query <- Gen.mapOf((Gen.identifier, Gen.identifier))
+  } yield uri"$scheme://$host:$port/${path.mkString("/")}?$query")
 
   implicit val arbitraryJBigDecimal: Arbitrary[JBigDecimal] = Arbitrary(
     implicitly[Arbitrary[BigDecimal]].arbitrary.map(bd => new JBigDecimal(bd.toString))
@@ -58,6 +68,7 @@ class CodecTest extends FlatSpec with Matchers with Checkers {
     checkEncodeDecodeToString[Double]
     checkEncodeDecodeToString[Boolean]
     checkEncodeDecodeToString[UUID]
+    checkEncodeDecodeToString[Uri]
     checkEncodeDecodeToString[BigDecimal]
     checkEncodeDecodeToString[JBigDecimal]
     checkEncodeDecodeToString[LocalTime]

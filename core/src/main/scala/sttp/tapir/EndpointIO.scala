@@ -55,6 +55,8 @@ object EndpointInput {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
     def description(d: String): PathCapture[T] = copy(info = info.description(d))
     def example(t: T): PathCapture[T] = copy(info = info.example(t))
+    def example(example: Example[T]): PathCapture[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): PathCapture[T] = copy(info = info.examples(examples))
     def validate(v: Validator[T]): PathCapture[T] = copy(codec = codec.validate(v))
   }
 
@@ -65,6 +67,8 @@ object EndpointInput {
 
     def description(d: String): PathsCapture[T] = copy(info = info.description(d))
     def example(t: T): PathsCapture[T] = copy(info = info.example(t))
+    def example(example: Example[T]): PathsCapture = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): PathsCapture = copy(info = info.examples(examples))
     def deprecated(): PathsCapture[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): PathsCapture[T] = copy(codec = codec.validate(v))
   }
@@ -76,6 +80,8 @@ object EndpointInput {
 
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
+    def example(example: Example[T]): Query[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Query[T] = copy(info = info.examples(examples))
     def deprecated(): Query[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Query[T] = copy(codec = codec.validate(v))
   }
@@ -87,6 +93,8 @@ object EndpointInput {
 
     def description(d: String): QueryParams[T] = copy(info = info.description(d))
     def example(t: T): QueryParams[T] = copy(info = info.example(t))
+    def example(example: Example[T]): PathsCapture = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): PathsCapture = copy(info = info.examples(examples))
     def deprecated(): QueryParams[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): QueryParams[T] = copy(codec = codec.validate(v))
   }
@@ -98,6 +106,8 @@ object EndpointInput {
 
     def description(d: String): Cookie[T] = copy(info = info.description(d))
     def example(t: T): Cookie[T] = copy(info = info.example(t))
+    def example(example: Example[T]): Cookie[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Cookie[T] = copy(info = info.examples(examples))
     def deprecated(): Cookie[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Cookie[T] = copy(codec = codec.validate(v))
   }
@@ -318,6 +328,8 @@ object EndpointIO {
 
     def description(d: String): Body[R, T] = copy(info = info.description(d))
     def example(t: T): Body[R, T] = copy(info = info.example(t))
+    def example(example: Example[T]): Body[R, T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Body[R, T] = copy(info = info.examples(examples))
     def validate(v: Validator[T]): Body[R, T] = copy(codec = codec.validate(v))
   }
 
@@ -347,6 +359,8 @@ object EndpointIO {
 
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
+    def example(example: Example[T]): Header[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Header[T] = copy(info = info.examples(examples))
     def deprecated(): Header[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Header[T] = copy(codec = codec.validate(v))
   }
@@ -359,6 +373,8 @@ object EndpointIO {
 
     def description(d: String): Headers[T] = copy(info = info.description(d))
     def example(t: T): Headers[T] = copy(info = info.example(t))
+    def example(example: Example[T]): Headers[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Headers[T] = copy(info = info.examples(examples))
   }
 
   //
@@ -398,9 +414,18 @@ object EndpointIO {
 
   //
 
-  case class Info[T](description: Option[String], example: Option[T], deprecated: Boolean) {
+  case class Example[+T](value: T, name: Option[String], summary: Option[String])
+
+  object Example {
+    def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
+  }
+
+  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean) {
     def description(d: String): Info[T] = copy(description = Some(d))
-    def example(t: T): Info[T] = copy(example = Some(t))
+    def example: Option[T] = examples.headOption.map(_.value)
+    def example(t: T): Info[T] = example(Example.of(t))
+    def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
+    def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
 
     def map[U](codec: Codec[T, U, _]): Info[U] =
@@ -409,7 +434,7 @@ object EndpointIO {
       }, deprecated)
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, None, deprecated = false)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false)
   }
 }
 
@@ -438,6 +463,8 @@ object StreamingEndpointIO {
 
     def description(d: String): Body[S, T] = copy(info = info.description(d))
     def example(t: T): Body[S, T] = copy(info = info.example(t))
+    def example(example: Example[T]): Body[S, T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Body[S, T] = copy(info = info.examples(examples))
 
     private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, T] = EndpointIO.StreamBodyWrapper(this)
   }

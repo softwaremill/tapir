@@ -201,6 +201,9 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
     }
   }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
 
+  implicit val uriPlainCodec: PlainCodec[Uri] =
+    string.mapDecode(raw => Try(uri"$raw").fold(DecodeResult.Error("Invalid URI", _), DecodeResult.Value(_)))(_.toString())
+
   def stringCodec[T: Schema](parse: String => T): Codec[String, T, TextPlain] =
     string.map(parse)(_.toString).schema(implicitly[Schema[T]])
 

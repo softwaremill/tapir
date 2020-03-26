@@ -68,9 +68,9 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
       case EndpointIO.Body(_, codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.schema.exists(_.isOptional))))
+        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.exists(_.isOptional))))
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, info, _)) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(true)))
+        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true)))
     }
   }
 
@@ -87,8 +87,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
     EndpointInputToParameterConverter.from(
       header,
-      objectSchemas(header.codec),
-      header.info.example.flatMap(exampleValue(header.codec, _))
+      objectSchemas(header.codec)
     )
   }
 
@@ -103,23 +102,20 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
     EndpointInputToParameterConverter.from(
       cookie,
-      objectSchemas(cookie.codec),
-      cookie.info.example.flatMap(exampleValue(cookie.codec, _))
+      objectSchemas(cookie.codec)
     )
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
     EndpointInputToParameterConverter.from(
       p,
-      objectSchemas(p.codec),
-      p.info.example.flatMap(exampleValue(p.codec, _))
+      objectSchemas(p.codec)
     )
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
     EndpointInputToParameterConverter.from(
       query,
-      objectSchemas(query.codec),
-      query.info.example.flatMap(exampleValue(query.codec, _))
+      objectSchemas(query.codec)
     )
   }
 

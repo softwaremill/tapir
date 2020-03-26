@@ -7,12 +7,14 @@ import sttp.tapir.{CodecFormat, _}
 import scala.collection.immutable.ListMap
 
 private[openapi] class CodecToMediaType(objectSchemas: ObjectSchemas) {
-  def apply[T, CF <: CodecFormat](o: Codec[_, T, CF], example: Option[T]): ListMap[String, OMediaType] = {
+  def apply[T, CF <: CodecFormat](o: Codec[_, T, CF], examples: List[EndpointIO.Example[T]]): ListMap[String, OMediaType] = {
+    val convertedExamples = ExampleConverter.convertExamples(o, examples)
+
     ListMap(
       o.format.getOrElse(CodecFormat.OctetStream()).mediaType.noCharset.toString -> OMediaType(
         Some(objectSchemas(o)),
-        example.flatMap(exampleValue(o, _)),
-        ListMap.empty,
+        convertedExamples.singleExample,
+        convertedExamples.multipleExamples,
         ListMap.empty
       )
     )
