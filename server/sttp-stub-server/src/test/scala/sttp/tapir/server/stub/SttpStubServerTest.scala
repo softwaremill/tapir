@@ -109,7 +109,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     implicit val backend = SttpBackendStub
       .apply(idMonad)
       .whenRequestMatches(endpoint)
-      .thenRespond(ResponseWrapper(1.0))
+      .thenSuccess(ResponseWrapper(1.0))
     val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
 
     response shouldBe Response.ok(ResponseWrapper(1.0))
@@ -127,8 +127,9 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     implicit val backend = SttpBackendStub
       .apply(idMonad)
       .whenInputMatches(endpoint) { amount => amount > 0 }
-      .thenRespond(ResponseWrapper(1.0))
+      .thenSuccess(ResponseWrapper(1.0))
       .whenInputMatches(endpoint) { amount => amount <= 0 }
+      .unsafe
       .thenRespondServerError()
 
     val response1 = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
@@ -153,6 +154,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     implicit val backend = SttpBackendStub
       .apply(idMonad)
       .whenDecodedInputFailure(endpoint) { case _: InvalidValue => true }
+      .unsafe
       .thenRespondWithCode(StatusCode.BadRequest)
     val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
 
