@@ -251,10 +251,23 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
     id[List[T], CF](c.format)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
+  /**
+    * Create a codec which decodes/encodes a list of low-level values to a list of high-level values, using the given
+    * base codec `c`.
+    *
+    * The schema and validator are copied from the base codec.
+    */
   implicit def list[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
     listNoMeta(c)
       .schema(c.schema.map(_.asArrayElement.as[List[U]]))
       .validate(c.validator.asIterableElements[List])
+
+  /**
+    * Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode
+    * failure is returned. The given base codec `c` is used for decoding/encoding.
+    *
+    * The schema and validator are copied from the base codec.
+    */
   implicit def listHead[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], U, CF] =
     listNoMeta(c)
       .mapDecode({
@@ -264,6 +277,13 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       })(List(_))
       .schema(c.schema)
       .validate(c.validator)
+
+  /**
+    * Create a codec which requires that a list of low-level values is empty or contains a single element. If it
+    * contains multiple elements, a decode failure is returned. The given base codec `c` is used for decoding/encoding.
+    *
+    * The schema and validator are copied from the base codec.
+    */
   implicit def listHeadOption[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Option[U], CF] =
     listNoMeta(c)
       .mapDecode({
@@ -274,6 +294,12 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       .schema(c.schema.map(_.asOptional.as[Option[U]]))
       .validate(c.validator.asOptionElement)
 
+  /**
+    * Create a codec which requires that an optional low-level value is defined. If it is `None`, a decode failure is
+    * returned. The given base codec `c` is used for decoding/encoding.
+    *
+    * The schema and validator are copied from the base codec.
+    */
   implicit def optionHead[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Option[T], U, CF] =
     id[Option[T], CF](c.format)
       .mapDecode({
@@ -282,6 +308,13 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       })(u => Some(c.encode(u)))
       .schema(c.schema)
       .validate(c.validator)
+
+  /**
+    * Create a codec which decodes/encodes an optional low-level value to an optional high-levle value.. The given
+    * base codec `c` is used for decoding/encoding.
+    *
+    * The schema and validator are copied from the base codec.
+    */
   implicit def option[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Option[T], Option[U], CF] =
     id[Option[T], CF](c.format)
       .mapDecode {
