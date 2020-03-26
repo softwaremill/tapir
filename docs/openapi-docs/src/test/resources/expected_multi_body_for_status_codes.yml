@@ -1,0 +1,53 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+        '404':
+          description: 'Unauthorized'
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/NotFound'
+                  - $ref: '#/components/schemas/Unauthorized'
+        default:
+          description: unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unknown'
+components:
+  schemas:
+    NotFound:
+      description: 'NotFound'
+      required:
+        - what
+      type: object
+      properties:
+        what:
+          type: string
+    Unauthorized:
+      description: 'Unauthorized'
+      required:
+        - realm
+      type: object
+      properties:
+        realm:
+          type: string
+    Unknown:
+      required:
+        - code
+        - msg
+      type: object
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
