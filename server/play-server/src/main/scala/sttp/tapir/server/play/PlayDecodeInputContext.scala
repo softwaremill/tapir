@@ -1,4 +1,4 @@
-package tapir.server.play
+package sttp.tapir.server.play
 
 import akka.stream.Materializer
 import play.api.mvc.RequestHeader

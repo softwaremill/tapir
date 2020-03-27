@@ -134,7 +134,7 @@ package object tests {
       .in("api" / "echo" / "headers")
       .in(cookie[Int]("c1"))
       .in(cookie[String]("c2"))
-      .out(header[List[String]]("Cookie"))
+      .out(header[List[String]]("Set-Cookie"))
 
   val in_cookies_out_cookies: Endpoint[List[Cookie], Unit, List[CookieWithMeta], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(cookies).out(setCookies)

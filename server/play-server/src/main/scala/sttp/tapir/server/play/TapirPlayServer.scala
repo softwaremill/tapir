@@ -1,4 +1,4 @@
-package tapir.server.play
+package sttp.tapir.server.play
 
 import java.nio.charset.Charset
 
@@ -18,7 +18,6 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 trait TapirPlayServer {
-
   implicit class RichPlayServerEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) {
     def toRoute(
         logic: I => Future[Either[E, O]]

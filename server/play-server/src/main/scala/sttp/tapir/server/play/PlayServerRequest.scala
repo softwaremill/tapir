@@ -1,4 +1,4 @@
-package tapir.server.play
+package sttp.tapir.server.play
 
 import java.net.URI
 
@@ -7,7 +7,6 @@ import sttp.model.Method
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
 private[play] class PlayServerRequest(request: RequestHeader) extends ServerRequest {
-
   override def method: Method = Method(request.method.toUpperCase)
   override def protocol: String = request.version
   override def uri: URI = new URI(request.uri)

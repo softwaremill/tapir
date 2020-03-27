@@ -1,4 +1,4 @@
-package tapir.server.play
+package sttp.tapir.server.play
 
 import java.io.ByteArrayInputStream
 import java.nio.charset.Charset
@@ -8,7 +8,16 @@ import akka.util.ByteString
 import play.api.mvc.{RawBuffer, Request}
 import play.core.parsers.Multipart
 import sttp.model.Part
-import sttp.tapir.{ByteArrayValueType, ByteBufferValueType, FileValueType, InputStreamValueType, MultipartValueType, RawPart, RawValueType, StringValueType}
+import sttp.tapir.{
+  ByteArrayValueType,
+  ByteBufferValueType,
+  FileValueType,
+  InputStreamValueType,
+  MultipartValueType,
+  RawPart,
+  RawValueType,
+  StringValueType
+}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -25,27 +34,43 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
       case FileValueType =>
         Future(java.nio.file.Files.write(serverOptions.temporaryFileCreator.create().path, body.toArray))
           .map(p => p.toFile)
-      case mvt: MultipartValueType => multiPartRequestToRawBody(request, mvt)
+      case mvt: MultipartValueType => multiPartRequestToRawBody(request, mvt, body)
     }
   }
 
-  private def multiPartRequestToRawBody[R](request: Request[RawBuffer], mvt: MultipartValueType)(
+  private def multiPartRequestToRawBody[R](request: Request[RawBuffer], mvt: MultipartValueType, body: ByteString)(
       implicit mat: Materializer
   ): Future[Seq[RawPart]] = {
     val bodyParser = serverOptions.playBodyParsers.multipartFormData(
       Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)
     )
-    bodyParser.apply(request).run().flatMap {
-      case Left(value) => Future.failed(new RuntimeException(s"TODO handle it $value")) // what to do here?
+    bodyParser.apply(request).run(body).flatMap {
+      case Left(_) =>
+        Future.failed(new IllegalArgumentException("Unable to parse multipart form data.")) // TODO
       case Right(value) =>
-        Future.sequence(value.files.map(f => {
+        val dataParts = value.dataParts.map {
+          case (key, value) =>
+            apply(
+              mvt.partCodecMeta(key).get.rawValueType,
+              mvt.partCodecMeta(key).get.format.mediaType.charset.map(Charset.forName),
+              request,
+              ByteString(value.flatMap(_.getBytes).toArray)
+            ).map(body => Part(key, body).asInstanceOf[RawPart])
+        }.toSeq
+
+        val fileParts = value.files.map(f => {
           apply(
             mvt.partCodecMeta(f.key).get.rawValueType,
-            f.contentType.map(Charset.forName),
+            mvt.partCodecMeta(f.key).get.format.mediaType.charset.map(Charset.forName),
             request,
             ByteString.apply(java.nio.file.Files.readAllBytes(f.ref.path))
-          ).map(body => Part(f.key, body, Map(f.key -> f.dispositionType), Seq.empty).asInstanceOf[RawPart])
-        }))
+          ).map(
+            body =>
+              Part(f.key, body, Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename), Seq.empty)
+                .asInstanceOf[RawPart]
+          )
+        })
+        Future.sequence(dataParts ++ fileParts)
     }
   }
 }

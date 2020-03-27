@@ -1,4 +1,4 @@
-package tapir.server.play
+package sttp.tapir.server.play
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -14,16 +14,24 @@ import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.{Port, PortCounter}
 
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
 
-class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] with TapirPlayServer {
+class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
   override def multipleValueHeaderSupport: Boolean = false
+  override def multipartInlineHeaderSupport: Boolean = false
   override def streamingSupport: Boolean = false
 
   private implicit val actorSystem: ActorSystem = ActorSystem()
   private implicit val materializer: ActorMaterializer = ActorMaterializer()
+
+  override protected def afterAll(): Unit = {
+    Await.result(actorSystem.terminate(), 5.seconds)
+    super.afterAll()
+  }
+
   override def pureResult[T](t: T): Future[T] = Future.successful(t)
 
   override def suspendResult[T](t: => T): Future[T] = Future(t)

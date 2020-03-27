@@ -25,6 +25,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   private val basicStringRequest = basicRequest.response(asStringAlways)
 
   def multipleValueHeaderSupport: Boolean = true
+  def multipartInlineHeaderSupport: Boolean = true
   def streamingSupport: Boolean = true
   // method matching
 
@@ -229,21 +230,6 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
-  if (streamingSupport) {
-    testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
-      basicRequest.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
-    }
-  }
-
-  testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
-    basicRequest
-      .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
-      .send()
-      .map { r =>
-        r.headers.filter(_.is("hh")).map(_.value).toList shouldBe List("v3", "v2", "v1", "v0")
-      }
-  }
-
   testServer(in_simple_multipart_out_multipart)(
     (fa: FruitAmount) => pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
   ) { baseUri =>
@@ -261,7 +247,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     (fd: FruitData) =>
       pureResult(
         FruitData(
-          Part("", writeToFile(readFromFile(fd.data.body).reverse))
+          Part("", writeToFile(readFromFile(fd.data.body).reverse), fd.data.otherDispositionParams, Seq())
             .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
         ).asRight[Unit]
       )
@@ -273,8 +259,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .send()
       .map { r =>
         r.code shouldBe StatusCode.Ok
+        if (multipartInlineHeaderSupport) r.body should include regex "X-Auth: Some\\(12Aa\\)"
         r.body should include regex "name=\"data\"[\\s\\S]*oiram hcaep"
-        r.body should include regex "X-Auth: Some\\(12Aa\\)"
       }
   }
 
@@ -282,29 +268,26 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     basicRequest.get(uri"$baseUri?fruit2=orange").send().map(_.code shouldBe StatusCode.BadRequest)
   }
 
-  if (multipleValueHeaderSupport) {
-    testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
-      baseUri =>
-        basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
-          r.headers("Cookie") shouldBe Seq("32", "etanargemop")
-        }
-    }
+  // TODO: this test previously checked for the "Cookie" response header which is not valid as in the response there is always the Set-Cookie header set
+  // This test is more or less equal to the one in line 301, so we can remove this in my opinion
+  testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
+    baseUri =>
+      basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
+        r.headers("Set-Cookie") shouldBe Seq("32", "etanargemop")
+      }
+  }
 
-    testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
-      baseUri =>
-        basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
-          r.headers("Cookie") shouldBe Seq("32", "etanargemop")
+  testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
+      .send()
+      .map { r =>
+        if (multipleValueHeaderSupport) {
+          r.headers.filter(_.is("hh")).map(_.value).toList shouldBe List("v3", "v2", "v1", "v0")
+        } else {
+          r.headers.filter(_.is("hh")).map(_.value).headOption should contain("v3, v2, v1, v0")
         }
-    }
-
-    testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
-      basicRequest
-        .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
-        .send()
-        .map { r =>
-          r.header("hh").toList shouldBe List("v3", "v2", "v1", "v0")
-        }
-    }
+      }
   }
 
   testServer(in_cookies_out_cookies)(

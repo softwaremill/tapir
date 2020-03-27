@@ -1,4 +1,4 @@
-package tapir.server.play
+package sttp.tapir.server.play
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
@@ -28,7 +28,6 @@ import sttp.tapir.{
 }
 
 object OutputToPlayResponse {
-
   def apply[O](
       defaultStatus: StatusCode,
       output: EndpointOutput[O],
@@ -39,7 +38,11 @@ object OutputToPlayResponse {
       .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
         if (a.contains(b._1)) a + (b._1 -> (a(b._1) :+ b._2)) else a + (b._1 -> List(b._2))
       }
-      .mapValues(_.mkString(";;"))
+      .map {
+        // See comment in play.api.mvc.CookieHeaderEncoding
+        case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
+        case (key, value)                                  => (key, value.mkString(", "))
+      }
     val status = outputValues.statusCode.getOrElse(defaultStatus)
 
     outputValues.body match {
@@ -120,7 +123,6 @@ object OutputToPlayResponse {
       mvt: MultipartValueType,
       part: Part[T]
   ): Option[MultipartFormData.FilePart[Source[ByteString, _]]] = {
-
     mvt.partCodecMeta(part.name).flatMap { codecMeta =>
       val entity: HttpEntity = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.body)
 
@@ -167,15 +169,19 @@ object OutputToPlayResponse {
     Option(result)
   }
 
-  private def multipartFormToStream[A](dataParts: Seq[DataPart],
-                                       fileParts: Seq[FilePart[Source[ByteString, _]]]): Source[ByteString, NotUsed] = {
+  private def multipartFormToStream[A](
+      dataParts: Seq[DataPart],
+      fileParts: Seq[FilePart[Source[ByteString, _]]]
+  ): Source[ByteString, NotUsed] = {
     val boundary: String = "--------" + scala.util.Random.alphanumeric.take(20).mkString("")
 
     def formatDataParts(dataParts: Seq[DataPart]) = {
       val result = dataParts
         .flatMap {
           case DataPart(name, value) =>
-            s"--$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name=$name\r\n\r\n$value\r\n"
+            s"""
+              --$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name="$name"\r\n\r\n$value\r\n
+            """.stripMargin
         }
         .mkString("")
       Codec.utf_8.encode(result)
