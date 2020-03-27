@@ -3,6 +3,7 @@ package sttp.tapir
 import java.util.Base64
 
 import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.EndpointInput.Auth
 import sttp.tapir.model.UsernamePassword
 
 import scala.collection.immutable.ListMap
@@ -16,7 +17,12 @@ object TapirAuth {
   val bearer: EndpointInput.Auth.Http[String] = httpAuth(BearerAuthType, credentialsCodec(BearerAuthType))
 
   object oauth2 {
-    def authorizationCode(authorizationUrl: String, tokenUrl: String, scopes: ListMap[String, String], refreshUrl: Option[String] = None) =
+    def authorizationCode(
+        authorizationUrl: String,
+        tokenUrl: String,
+        scopes: ListMap[String, String],
+        refreshUrl: Option[String] = None
+    ): Auth.Oauth2[String] =
       EndpointInput.Auth.Oauth2(
         authorizationUrl,
         tokenUrl,

@@ -4,6 +4,7 @@ import sttp.tapir.generic.internal.SchemaMagnoliaDerivation
 
 /** Mixin containing aliases for top-level types and modules in the tapir package. */
 trait TapirAliases {
+
   /** Codec.scala */
   type Codec[T, CF <: CodecFormat, R] = sttp.tapir.Codec[T, CF, R]
   val Codec = sttp.tapir.Codec

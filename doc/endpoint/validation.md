@@ -33,6 +33,9 @@ Validation rules added using the built-in validators are translated to [OpenAPI]
 When a codec is automatically derived for a type (see [custom types](customtypes.md)), validators for all types 
 (for json this is a recursive process) are looked up through implicit `Validator[T]` values.
 
+> Implicit `Validator[T]` values are used *only* when automatically deriving codecs. They are not used
+> when the codec is defined by hand.
+
 Note that to validate a nested member of a case class, it needs to have a unique type (that is, not an `Int`, as 
 providing an implicit `Validator[Int]` would validate all ints in the hierarchy), as validator lookup is type-driven.
 

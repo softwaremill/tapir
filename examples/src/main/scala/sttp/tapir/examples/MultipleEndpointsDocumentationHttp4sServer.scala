@@ -67,7 +67,7 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
   // starting the server
   BlazeServerBuilder[IO]
     .bindHttp(8080, "localhost")
-    .withHttpApp(Router("/" -> routes, "/docs" -> new SwaggerHttp4s(openApiYml).routes[IO]).orNotFound)
+    .withHttpApp(Router("/" -> (routes <+> new SwaggerHttp4s(openApiYml).routes[IO])).orNotFound)
     .resource
     .use { _ =>
       IO {

@@ -36,7 +36,7 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
   override def route[I, E, O](
       e: Endpoint[I, E, O, AkkaStream],
       fn: I => Future[Either[E, O]],
-      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): Route = {
     implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
       decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)

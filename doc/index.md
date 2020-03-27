@@ -68,33 +68,6 @@ val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksLis
   .apply(BooksFromYear("SF", 2016), 20, "xyz-abc-123")
 ```
 
-## Contents
-
-* [Quickstart](quickstart.md)
-* [Examples](examples.md)
-* [Goals of the project](goals.md)
-* [Endpoints: basics](endpoint/basics.md)
-* [Endpoints: inputs/outputs](endpoint/ios.md)
-* [Endpoints: status codes](endpoint/statuscodes.md)
-* [Endpoints: codecs](endpoint/codecs.md)
-* [Endpoints: custom types](endpoint/customtypes.md)
-* [Endpoints: validation](endpoint/validation.md)
-* [Endpoints: working with JSON](endpoint/json.md)
-* [Endpoints: forms](endpoint/forms.md)
-* [Endpoints: authentication](endpoint/auth.md)
-* [Servers: akka-http interpreter](server/akkahttp.md)
-* [Servers: http4s interpreter](server/http4s.md)
-* [Servers: finatra interpreter](server/finatra.md)
-* [Servers: options](server/options.md)
-* [Servers: logic](server/logic.md)
-* [Servers: error handling](server/errors.md)
-* [Servers: debugging](server/debugging.md)
-* [Clients: sttp client interpreter](sttp.md)
-* [Other interpreters](other_interpreters.md)
-* [Documentation: openapi interpreter](openapi.md)
-* [Create your own tapir](mytapir.md)
-* [Contributing](contributing.md)
-
 ## Other sttp projects
 
 sttp is a family of Scala HTTP-related projects, and currently includes:
@@ -102,4 +75,67 @@ sttp is a family of Scala HTTP-related projects, and currently includes:
 * [sttp client](https://github.com/softwaremill/sttp): the Scala HTTP client you always wanted!
 * sttp tapir: this project
 * [sttp model](https://github.com/softwaremill/sttp-model): simple HTTP model classes (used by client & tapir)
+
+## Sponsors
+
+Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https://softwaremill.com), a software development and consulting company. We help clients scale their business through software. Our areas of expertise include backends, distributed systems, blockchain, machine learning and data analytics.
+
+[![](https://softwaremill.com/images/header-main-logo.3449d6a3.svg "SoftwareMill")](https://softwaremill.com)
+
+# Table of contents
+
+```eval_rst
+.. toctree::
+   :maxdepth: 2
+   :caption: Getting started
+
+   quickstart
+   examples
+   goals
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Endpoints
+
+   endpoint/basics
+   endpoint/ios
+   endpoint/statuscodes
+   endpoint/codecs
+   endpoint/customtypes
+   endpoint/validation
+   endpoint/json
+   endpoint/forms
+   endpoint/auth
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Server interpreters
+
+   server/akkahttp
+   server/http4s
+   server/finatra
+   server/options
+   server/logic
+   server/errors
+   server/debugging
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Client interpreters
+   
+   sttp
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Documentation interpreters
+
+   openapi
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Other subjects
+
+   other_interpreters
+   mytapir
+   contributing
 

@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'tapir'
-copyright = u'2019, SoftwareMill'
+copyright = u'2020, SoftwareMill'
 author = u'SoftwareMill'
 
 # The version info for the project you're documenting, acts as replacement for

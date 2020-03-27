@@ -1,4 +1,4 @@
-# Anatomy an endpoint
+# Basics
 
 An endpoint is represented as a value of type `Endpoint[I, E, O, S]`, where:
 

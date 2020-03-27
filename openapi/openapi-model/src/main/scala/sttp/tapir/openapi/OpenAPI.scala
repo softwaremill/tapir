@@ -50,11 +50,18 @@ case class Info(
 case class Contact(name: Option[String], email: Option[String], url: Option[String])
 case class License(name: String, url: Option[String])
 
-// todo: variables
 case class Server(
     url: String,
-    description: Option[String]
-)
+    description: Option[String] = None,
+    variables: Option[ListMap[String, ServerVariable]] = None
+) {
+  def description(d: String): Server = copy(description = Some(d))
+  def variables(vars: (String, ServerVariable)*): Server = copy(variables = Some(ListMap(vars: _*)))
+}
+
+case class ServerVariable(enum: Option[List[String]], default: String, description: Option[String]) {
+  require(`enum`.fold(true)(_.contains(default)), "ServerVariable#default must be one of the values in enum if enum is defined")
+}
 
 // todo: responses, parameters, examples, requestBodies, headers, links, callbacks
 case class Components(
@@ -186,10 +193,18 @@ case class Header(
     content: ListMap[String, MediaType]
 )
 
-case class Reference($ref: String)
+case class Reference private ($ref: String) {
+  def dereference: String = $ref.replace(Reference.ReferencePrefix, "")
+}
+
+object Reference {
+  private val ReferencePrefix = "#/components/schemas/"
+  def apply($ref: String): Reference = new Reference(s"$ReferencePrefix${$ref}")
+}
 
 // todo: discriminator, xml, json-schema properties
 case class Schema(
+    allOf: List[ReferenceOr[Schema]] = List.empty,
     title: Option[String] = None,
     required: List[String] = List.empty,
     `type`: Option[SchemaType.SchemaType] = None,
@@ -203,7 +218,7 @@ case class Schema(
     writeOnly: Option[Boolean] = None,
     example: Option[ExampleValue] = None,
     deprecated: Option[Boolean] = None,
-    oneOf: Option[List[ReferenceOr[Schema]]] = None,
+    oneOf: List[ReferenceOr[Schema]] = List.empty,
     discriminator: Option[Discriminator] = None,
     additionalProperties: Option[ReferenceOr[Schema]] = None,
     pattern: Option[String] = None,
@@ -224,7 +239,7 @@ object Schema {
   def apply(`type`: SchemaType.SchemaType): Schema = new Schema(`type` = Some(`type`))
 
   def apply(references: List[ReferenceOr[Schema]], discriminator: Option[Discriminator]): Schema =
-    new Schema(oneOf = Some(references), discriminator = discriminator)
+    new Schema(oneOf = references, discriminator = discriminator)
 }
 
 object SchemaType extends Enumeration {
@@ -250,7 +265,10 @@ object SchemaFormat {
   val Password: Option[String] = Some("password")
 }
 
-case class ExampleValue(value: String)
+sealed trait ExampleValue
+
+case class ExampleSingleValue(value: String) extends ExampleValue
+case class ExampleMultipleValue(values: List[String]) extends ExampleValue
 
 case class SecurityScheme(
     `type`: String,

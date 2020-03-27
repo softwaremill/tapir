@@ -195,9 +195,16 @@ class ValidatorTest extends FlatSpec with Matchers {
     Duration(summaryTime, TimeUnit.NANOSECONDS).toSeconds should be <= 1L
   }
 
+  it should "show recursive validators" in {
+    val v: Validator[RecursiveName] = implicitly[Validator[RecursiveName]]
+    v.show shouldBe Some("subNames->(elements(elements(recursive)))")
+  }
+
   private def noPath[T](v: ValidationError[T]): ValidationError[T] = v.copy(path = Nil)
 }
 
 sealed trait Color
 case object Blue extends Color
 case object Red extends Color
+
+final case class RecursiveName(name: String, subNames: Option[Vector[RecursiveName]])

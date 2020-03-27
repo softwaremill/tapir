@@ -28,7 +28,7 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
   override def route[I, E, O](
       e: Endpoint[I, E, O, EntityBody[IO]],
       fn: I => IO[Either[E, O]],
-      decodeFailureHandler: Option[DecodeFailureHandler[Any]] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): HttpRoutes[IO] = {
     implicit val serverOptions: Http4sServerOptions[IO] = Http4sServerOptions
       .default[IO]

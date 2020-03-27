@@ -9,7 +9,7 @@ needed for actual json parsing/printing. Currently, [Circe](https://github.com/c
 To use Circe add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "0.12.25"
 ```
 
 Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.html)):
@@ -74,7 +74,7 @@ Now the above JSON object will render as
 To use µPickle add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "0.12.25"
 ```
 
 Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.html) and add `TapirJsonuPickle` not `TapirCirceJson`):
@@ -108,7 +108,7 @@ For more examples, including making a custom encoder/decoder, see [TapirJsonuPic
 To use Play JSON add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-play" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-json-play" % "0.12.25"
 ```
 
 Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.html) and add `TapirJsonPlay` not `TapirCirceJson`):
@@ -124,7 +124,7 @@ Play JSON requires `Reads` and `Writes` implicit values in scope for each type y
 To use Spray JSON add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "0.12.1"
+"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "0.12.25"
 ```
 
 Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.html) and add `TapirJsonSpray` not `TapirCirceJson`):

@@ -19,13 +19,13 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
   // the defaults are defined in ServerDefaults
   // this can be customised by setting the appropriate option in the server options, passed implicitly to toRoute
   implicit val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
-    decodeFailureHandler = (request, input, failure) => {
-      input match {
+    decodeFailureHandler = ctx => {
+      ctx.input match {
         // when defining how a decode failure should be handled, we need to describe the output to be used, and
         // a value for this output
         case EndpointInput.Query(_, _, _) => DecodeFailureHandling.response(stringBody)("Incorrect format!!!")
         // in other cases, using the default behavior
-        case _ => ServerDefaults.decodeFailureHandler(request, input, failure)
+        case _ => ServerDefaults.decodeFailureHandler(ctx)
       }
     }
   )

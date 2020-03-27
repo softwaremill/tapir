@@ -4,7 +4,7 @@ To expose an endpoint as an [finatra](https://twitter.github.io/finatra/) server
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "0.7.9"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "0.12.25"
 ```
 
 and import the package:
@@ -13,28 +13,63 @@ and import the package:
 import sttp.tapir.server.finatra._
 ```
 
+or if you would like to use cats-effect project, you can add the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "0.12.25"
+```
+
+and import the packate:
+
+```scala
+import sttp.tapir.server.finatra.cats._
+```
+
 This adds extension methods to the `Endpoint` type: `toRoute` and `toRouteRecoverErrors`. The first one
-requires the logic of the endpoint to be given as a function of type (note this is a Twitter `Future`):
+requires the logic of the endpoint to be given as a function of type (note this is a Twitter `Future` or a cats-effect project's `Effect` type):
 
 ```scala
 I => Future[Either[E, O]]
 ```
 
+or
+
+An effect type that supports cats-effect's `Effect[F]` type, for example, project [Catbird's](https://github.com/travisbrown/catbird) `Rerunnbale`.
+
+```scala
+I => Rerunnable[Either[E, O]]
+```
+
 The second recovers errors from failed futures, and hence requires that `E` is a subclass of `Throwable` (an exception);
-it expects a function of type `I => Future[O]`.
+it expects a function of type `I => Future[O]` or type `I => F[O]` if `F` supports cat-effect's `Effect` type.
 
 For example:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
-import scala.concurrent.Future
-import akka.http.scaladsl.server.Route
+import sttp.tapir.server.finatra._
+import com.twitter.util.Future
 
-def countCharacters(s: String): Future[Either[Unit, Int]] = 
+def countCharacters(s: String): Future[Either[Unit, Int]] =
   Future.value(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] = 
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] =
+  endpoint.in(stringBody).out(plainBody[Int])
+  
+val countCharactersRoute: FinatraRoute = countCharactersEndpoint.toRoute(countCharacters)
+```
+
+or a cats-effect's example:
+
+```scala
+import cats.effect.IO
+import sttp.tapir._
+import sttp.tapir.server.finatra.cats._
+
+def countCharacters(s: String): IO[Either[Unit, Int]] =
+  IO.pure(Right[Unit, Int](s.length))
+
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] =
   endpoint.in(stringBody).out(plainBody[Int])
   
 val countCharactersRoute: FinatraRoute = countCharactersEndpoint.toRoute(countCharacters)
@@ -45,7 +80,7 @@ arguments need to be converted to a function using a single argument using `.tup
 
 ```scala
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? 
+val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ???
 val aRoute: FinatraRoute = anEndpoint.toRoute((logic _).tupled)
 ```
 
@@ -54,7 +89,6 @@ add the created route with `addTapirRoute`.
 
 ```scala
 class MyController extends Controller with TapirController {
-  addTapirRoute(endpoint.toRoute { (s: String, i: Int) => ??? }
+  addTapirRoute(endpoint.toRoute { (s: String, i: Int) => ??? })
 }
 ```
-

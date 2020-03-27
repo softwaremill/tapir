@@ -1,0 +1,37 @@
+openapi: 3.0.1
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Clause'
+        required: true
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    Clause:
+      oneOf:
+        - $ref: '#/components/schemas/Expression'
+        - $ref: '#/components/schemas/Not'
+    Expression:
+      required:
+        - v
+      type: object
+      properties:
+        v:
+          type: string
+    Not:
+      required:
+        - not
+      type: object
+      properties:
+        not:
+          $ref: '#/components/schemas/Clause'

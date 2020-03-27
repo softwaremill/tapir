@@ -22,11 +22,13 @@ trait TapirJsonCirce {
 
   def jsonPrinter: Printer = Printer.noSpaces
 
+  // Json is a coproduct with unknown implementations
   implicit val schemaForCirceJson: Schema[Json] =
     Schema(
-      SProduct(
+      SCoproduct(
         SObjectInfo("io.circe.Json"),
-        List.empty
+        List.empty,
+        None
       )
     )
 }

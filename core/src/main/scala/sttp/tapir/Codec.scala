@@ -5,9 +5,16 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
-import java.util.UUID
+import java.text.DateFormat
+import java.time.format.{DateTimeFormatter, DateTimeParseException}
 
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part}
+import scala.concurrent.duration.{Duration => SDuration}
+import java.time._
+import java.time.temporal.TemporalUnit
+import java.util.{Date, UUID}
+
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Part, Uri}
+import sttp.model.Uri._
 import sttp.tapir.DecodeResult._
 import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import sttp.tapir.internal._
@@ -87,11 +94,45 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   implicit val bigDecimalPlainCodec: PlainCodec[BigDecimal] = plainCodec[BigDecimal](BigDecimal(_))
   implicit val javaBigDecimalPlainCodec: PlainCodec[JBigDecimal] = plainCodec[JBigDecimal](new JBigDecimal(_))
 
+  implicit val uriPlainCodec: PlainCodec[Uri] =
+    stringPlainCodecUtf8.mapDecode(raw => Try(uri"$raw").fold(DecodeResult.Error("Invalid URI", _), DecodeResult.Value(_)))(_.toString())
+
   implicit val textHtmlCodecUtf8: Codec[String, CodecFormat.TextHtml, String] = stringPlainCodecUtf8.codecFormat(CodecFormat.TextHtml())
 
   def stringCodec(charset: Charset): PlainCodec[String] = plainCodec(identity, charset)
 
-  private def plainCodec[T: Schema](parse: String => T, charset: Charset = StandardCharsets.UTF_8): PlainCodec[T] =
+  implicit val localTimePlainCodec: PlainCodec[LocalTime] = plainCodec[LocalTime](LocalTime.parse)
+  implicit val localDatePlainCodec: PlainCodec[LocalDate] = plainCodec[LocalDate](LocalDate.parse)
+  implicit val offsetDateTimePlainCodec: PlainCodec[OffsetDateTime] = plainCodec[OffsetDateTime](OffsetDateTime.parse)
+  implicit val zonedDateTimePlainCodec: PlainCodec[ZonedDateTime] = offsetDateTimePlainCodec.map(_.toZonedDateTime)(_.toOffsetDateTime)
+  implicit val instantPlainCodec: PlainCodec[Instant] = zonedDateTimePlainCodec.map(_.toInstant)(_.atZone(ZoneOffset.UTC))
+  implicit val datePlainCodec: PlainCodec[Date] = instantPlainCodec.map(Date.from)(_.toInstant)
+  implicit val zoneOffsetPlainCodec: PlainCodec[ZoneOffset] = plainCodec[ZoneOffset](ZoneOffset.of)
+  implicit val durationPlainCodec: PlainCodec[Duration] = plainCodec[Duration](Duration.parse)
+  implicit val offsetTime: PlainCodec[OffsetTime] = plainCodec[OffsetTime](OffsetTime.parse)
+  implicit val scalaDurationPlainCodec: PlainCodec[SDuration] = plainCodec[SDuration](SDuration.apply)
+
+  implicit val localDateTimeCodec: PlainCodec[LocalDateTime] =
+    new PlainCodec[LocalDateTime] {
+      val charset: Charset = StandardCharsets.UTF_8
+      override def encode(t: LocalDateTime): String = OffsetDateTime.of(t, ZoneOffset.UTC).toString
+      override def rawDecode(s: String): DecodeResult[LocalDateTime] = {
+        try {
+          try {
+            Value(LocalDateTime.parse(s))
+          } catch {
+            case _: DateTimeParseException => Value(OffsetDateTime.parse(s).toLocalDateTime)
+          }
+        } catch {
+          case e: Exception => Error(s, e)
+        }
+      }
+
+      override val meta: CodecMeta[LocalDateTime, CodecFormat.TextPlain, String] =
+        CodecMeta(implicitly, CodecFormat.TextPlain(charset), StringValueType(charset))
+    }
+
+  def plainCodec[T: Schema](parse: String => T, charset: Charset = StandardCharsets.UTF_8): PlainCodec[T] =
     new PlainCodec[T] {
       override def encode(t: T): String = t.toString
       override def rawDecode(s: String): DecodeResult[T] =
@@ -148,9 +189,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
         t.flatMap { part =>
           partCodec(part.name).toList.flatMap { codec =>
             // a single value-part might yield multiple raw-parts (e.g. for repeated fields)
-            val rawParts: Seq[RawPart] = codec.asInstanceOf[CodecForMany[Any, _, _]].encode(part.body).map { b =>
-              part.copy(body = b)
-            }
+            val rawParts: Seq[RawPart] = codec.asInstanceOf[CodecForMany[Any, _, _]].encode(part.body).map { b => part.copy(body = b) }
 
             rawParts
           }
@@ -380,8 +419,8 @@ object CodecForMany {
     }
 
     implicitly[CodecForMany[List[String], CodecFormat.TextPlain, String]]
-      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookieWithMeta)).flatMap(findNamed(name)))(
-        cv => List(CookieWithMeta(name, cv).toString)
+      .mapDecode(vs => DecodeResult.sequence(vs.map(Codec.decodeCookieWithMeta)).flatMap(findNamed(name)))(cv =>
+        List(CookieWithMeta(name, cv).toString)
       )
   }
 }
@@ -422,8 +461,8 @@ case class MultipartValueType(partCodecMetas: Map[String, AnyCodecMeta], default
   def partCodecMeta(name: String): Option[AnyCodecMeta] = partCodecMetas.get(name).orElse(defaultCodecMeta)
 }
 
-trait Decode[T, F] {
-  def rawDecode(s: F): DecodeResult[T]
+trait Decode[T, R] {
+  def rawDecode(s: R): DecodeResult[T]
 
   private[tapir] def validator: Validator[T]
 
@@ -432,9 +471,9 @@ trait Decode[T, F] {
     * - catches any exceptions that might occur, converting them to decode failures
     * - validates the result
     */
-  def decode(f: F): DecodeResult[T] = validate(tryRawDecode(f))
+  def decode(r: R): DecodeResult[T] = validate(tryRawDecode(r))
 
-  private def tryRawDecode(f: F): DecodeResult[T] = {
+  private def tryRawDecode(f: R): DecodeResult[T] = {
     Try(rawDecode(f)) match {
       case Success(r) => r
       case Failure(e) => DecodeResult.Error(f.toString, e)

@@ -41,9 +41,20 @@ private[openapi] object SecuritySchemesForEndpoints {
       SecurityScheme(
         "oauth2",
         None,
-        Some("Oauth2"),
-        Some("header"),
-        Some("bearer"),
+        None,
+        None,
+        None,
+        None,
+        Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
+        None
+      )
+    case EndpointInput.Auth.ScopedOauth2(EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _), _) =>
+      SecurityScheme(
+        "oauth2",
+        None,
+        None,
+        None,
+        None,
         None,
         Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
         None

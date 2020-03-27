@@ -64,8 +64,11 @@ when invoking the logic of the endpoint.
 
 ### Default failure handler
 
-The default decode failure handler can be adapted to return responses in a different format (other than textual). 
-To reuse the existing logic, but using a different format, create the failure handler as follows:
+The default decode failure handler is a case class, consisting of functions which decide whether to respond with
+an error or return a "no match", create error messages and create the response. 
+ 
+To reuse the existing default logic, parts of the default behavior can be swapped, e.g. to return responses in 
+a different format (other than textual):
 
 ```scala
 case class MyFailure(msg: String)
@@ -74,11 +77,12 @@ def myFailureResponse(statusCode: StatusCode, message: String): DecodeFailureHan
    (statusCode, MyFailure(message))
   )
   
-val myDecodeFailureHandler = ServerDefaults.decodeFailureHandlerUsingResponse(
-  myFailureResponse,
-  badRequestOnPathFailureIfPathShapeMatches = false,
-  badRequestOnPathInvalidIfPathShapeMatches = true,
-  validationErrorToMessage
+val myDecodeFailureHandler = ServerDefaults.decodeFailureHandler.copy(
+  response = myFailureResponse
+)
+
+implicit val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
+  decodeFailureHandler = myDecodeFailureHandler
 )
 ```
 
@@ -87,7 +91,10 @@ which should be used to create the response, as well as a value for this output.
 
 The default decode failure handler also has the option to return a `400 Bad Request`, instead of a no-match (ultimately
 leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
-and endpoint's paths are the same), but when decoding some part of the path ends in an error. 
+and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
+`badRequestOnPathErrorIfPathShapeMatches` in `ServerDefaults`.
 
-Finally, you can provide custom error messages for validation errors. By default, these messages are appended to the
-decode failure message (see the `validationErrorToMessage` method in `ServerDefaults`).
+Finally, you can provide custom error messages for validation errors (which optionally describe what failed) and 
+failure errors (which describe the source of the error).
+
+A completely custom implementation of the `DecodeFailureHandler` function can also be used.

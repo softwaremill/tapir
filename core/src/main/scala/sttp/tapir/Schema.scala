@@ -12,6 +12,7 @@ import sttp.tapir.SchemaType._
 import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
 import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
 import sttp.tapir.generic.Derived
+import sttp.tapir.internal.ModifySchemaMacro
 
 /**
   * Describes the shape of the low-level, "raw" representation of type `T`.
@@ -21,8 +22,10 @@ case class Schema[T](
     schemaType: SchemaType,
     isOptional: Boolean = false,
     description: Option[String] = None,
-    format: Option[String] = None
+    format: Option[String] = None,
+    deprecated: Boolean = false
 ) {
+
   /**
     * Returns an optional version of this schema, with `isOptional` set to true.
     */
@@ -31,19 +34,24 @@ case class Schema[T](
   /**
     * Returns a collection version of this schema, with the schema type wrapped in [[SArray]].
     * Also, sets `isOptional` to true as the collection might be empty.
+    * Also, sets 'format' to None. Formats are only applicable to the array elements, not to the array as a whole.
     */
-  def asArrayElement[U]: Schema[U] = copy(isOptional = true, schemaType = SArray(this))
+  def asArrayElement[U]: Schema[U] = copy(isOptional = true, schemaType = SArray(this), format = None)
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
   def format(f: String): Schema[T] = copy(format = Some(f))
 
+  def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
+
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 
-  def modifyUnsafe(fields: String*)(modify: Schema[_] => Schema[_]): Schema[T] = modifyAtPath(fields.toList, modify)
+  def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
-  private def modifyAtPath(fieldPath: List[String], modify: Schema[_] => Schema[_]): Schema[T] = fieldPath match {
-    case Nil => modify(this).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
+  def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.modifyMacro[T, U]
+
+  private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] = fieldPath match {
+    case Nil => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
     case f :: fs =>
       val schemaType2 = schemaType match {
         case SArray(element) if f == Schema.ModifyCollectionElements => SArray(element.modifyAtPath(fs, modify))
@@ -52,9 +60,10 @@ case class Schema[T](
             case field @ (fieldName, fieldSchema) =>
               if (fieldName == f) (fieldName, fieldSchema.modifyAtPath(fs, modify)) else field
           })
-        case s @ SOpenProduct(_, valueSchema) => s.copy(valueSchema = valueSchema.modifyAtPath(fieldPath, modify))
-        case s @ SCoproduct(_, schemas, _)    => s.copy(schemas = schemas.map(_.modifyAtPath(fieldPath, modify)))
-        case _                                => schemaType
+        case s @ SOpenProduct(_, valueSchema) if f == Schema.ModifyCollectionElements =>
+          s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))
+        case s @ SCoproduct(_, schemas, _) => s.copy(schemas = schemas.map(_.modifyAtPath(fieldPath, modify)))
+        case _                             => schemaType
       }
       copy(schemaType = schemaType2)
   }
@@ -84,6 +93,8 @@ object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
   implicit val schemaForLocalDate: Schema[LocalDate] = Schema(SDate)
   implicit val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString)
   implicit val schemaForJavaDuration: Schema[Duration] = Schema(SString)
+  implicit val schemaForLocalTime: Schema[LocalTime] = Schema(SString)
+  implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString)
   implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString)
   implicit val schemaForUUID: Schema[UUID] = Schema(SString)
   implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SString)
