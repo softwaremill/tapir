@@ -81,6 +81,9 @@ package object tests {
   val in_file_out_file: Endpoint[File, Unit, File, Nothing] =
     endpoint.post.in("api" / "echo").in(binaryBody[File]).out(binaryBody[File]).name("echo file")
 
+  val in_unit_out_json_unit: Endpoint[Unit, Unit, Unit, Nothing] =
+    endpoint.in("api").out(jsonBody[Unit])
+
   val in_unit_out_string: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.in("api").out(stringBody)
 
