@@ -1,6 +1,6 @@
 package sttp.tapir.server.stub
 
-import sttp.client.Request
+import sttp.client.{Request, StreamBody}
 import sttp.model.Method
 import sttp.model.Uri.QuerySegment
 import sttp.tapir.model.ServerRequest
@@ -31,7 +31,10 @@ class SttpDecodeInputs(r: Request[_, _], segmentIndex: Int = 0) extends DecodeIn
       .groupBy(_.k)
       .map { case (k, vs) => (k, vs.map(_.v)) }
 
-  override def bodyStream: Any = ()
+  override def bodyStream: Any = r.body match {
+    case StreamBody(s) => s
+    case _             => throw new UnsupportedOperationException("Trying to read streaming body from a non-streaming request")
+  }
 
   override def serverRequest: ServerRequest = new SttpStubServerRequest(r)
 }
