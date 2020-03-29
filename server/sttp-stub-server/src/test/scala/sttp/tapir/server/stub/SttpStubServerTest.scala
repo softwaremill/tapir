@@ -83,6 +83,3 @@ class SttpStubServerTest extends FlatSpec with Matchers {
 }
 
 final case class ResponseWrapper(response: Double)
-
-sealed trait TestError
-case class ExactError(msg: String) extends TestError
