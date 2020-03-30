@@ -36,5 +36,7 @@ object StreamingAkkaServer extends App {
     assert(result == "Hello!" * 10)
   }
 
-  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r =>
+    actorSystem.terminate().transform(_ => r)
+  }, 1.minute)
 }

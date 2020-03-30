@@ -66,7 +66,9 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
         .bindHttp(port, "localhost")
         .withHttpApp(Router("/api" -> routes).orNotFound)
         .resource
-        .use { _ => basicRequest.get(uri"http://localhost:$port/api/test/router").send().map(_.body shouldBe Right("ok")) }
+        .use { _ =>
+          basicRequest.get(uri"http://localhost:$port/api/test/router").send().map(_.body shouldBe Right("ok"))
+        }
         .unsafeRunSync()
     }
   }

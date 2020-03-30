@@ -43,7 +43,7 @@ class TapirCodecEnumeratumTest extends FlatSpec with Matchers {
       validator.validate(v) shouldBe Nil
       validator match {
         case Validator.Enum(_, Some(encode)) => encode(v) shouldBe Some(v.entryName)
-        case a                               => fail(s"Expected enum validator with encode function: got $a")
+        case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }
@@ -53,7 +53,7 @@ class TapirCodecEnumeratumTest extends FlatSpec with Matchers {
       validator.validate(v) shouldBe Nil
       validator match {
         case Validator.Enum(_, Some(encode)) => encode(v) shouldBe Some(v.value)
-        case a                               => fail(s"Expected enum validator with encode function: got $a")
+        case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }

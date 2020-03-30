@@ -16,7 +16,7 @@ case class PlayServerOptions(
     playBodyParsers: PlayBodyParsers
 ) {
 
-  lazy val logger: Logger = Logger("sttp.tapir.server.play")
+  lazy val logger: Logger = Logger(getClass.getPackageName)
 
 }
 

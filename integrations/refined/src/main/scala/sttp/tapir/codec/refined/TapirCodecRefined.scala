@@ -17,9 +17,7 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
       refinedValidatorTranslation: ValidatorForPredicate[V, P]
   ): Codec[V Refined P, CF, R] = {
     implicitly[Codec[V, CF, R]]
-      .validate(
-        refinedValidatorTranslation.validator
-      ) // in reality if this validator has to fail, it will fail before in mapDecode while trying to construct refined type
+      .validate(refinedValidatorTranslation.validator) // in reality if this validator has to fail, it will fail before in mapDecode while trying to construct refined type
       .mapDecode { v: V =>
         refineV[P](v) match {
           case Right(refined) => DecodeResult.Value(refined)

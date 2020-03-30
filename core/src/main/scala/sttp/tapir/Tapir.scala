@@ -122,7 +122,9 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
       output: EndpointOutput[O],
       runtimeClass: Class[_]
   ): StatusMapping[O] = {
-    StatusMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
+    StatusMapping(Some(statusCode), output, { a: Any =>
+      runtimeClass.isInstance(a)
+    })
   }
 
   /**

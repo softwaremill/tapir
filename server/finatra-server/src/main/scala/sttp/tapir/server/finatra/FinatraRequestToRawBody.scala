@@ -74,7 +74,9 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
   private def multiPartRequestToRawBody(request: Request, mvt: MultipartValueType): Future[Seq[RawPart]] = {
     def fileItemHeaders(headers: FileItemHeaders): Seq[Header] = {
       headers.getHeaderNames.asScala
-        .flatMap { name => headers.getHeaders(name).asScala.map(name -> _) }
+        .flatMap { name =>
+          headers.getHeaders(name).asScala.map(name -> _)
+        }
         .toSeq
         .filter(_._1.toLowerCase != "content-disposition")
         .map { case (k, v) => Header.notValidated(k, v) }

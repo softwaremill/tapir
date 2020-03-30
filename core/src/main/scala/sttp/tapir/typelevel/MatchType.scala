@@ -35,7 +35,9 @@ private[typelevel] trait GenericMatchType {
     val ct = implicitly[ClassTag[T]]
 
     { value: Any =>
-      ct.runtimeClass.isInstance(value) && ctx.dispatch(value.asInstanceOf[T]) { sub => sub.typeclass(sub.cast(value.asInstanceOf[T])) }
+      ct.runtimeClass.isInstance(value) && ctx.dispatch(value.asInstanceOf[T]) { sub =>
+        sub.typeclass(sub.cast(value.asInstanceOf[T]))
+      }
     }
   }
 
@@ -54,5 +56,7 @@ object MatchType extends GenericMatchType {
   implicit val double: MatchType[Double] = matchTypeFromPartial[Double] { case _: Double  => true }
   implicit val int: MatchType[Int] = matchTypeFromPartial[Int] { case _: Int              => true }
 
-  private[typelevel] def matchTypeFromPartial[T](pf: PartialFunction[Any, Boolean]): MatchType[T] = { a => pf.lift(a).getOrElse(false) }
+  private[typelevel] def matchTypeFromPartial[T](pf: PartialFunction[Any, Boolean]): MatchType[T] = { a =>
+    pf.lift(a).getOrElse(false)
+  }
 }

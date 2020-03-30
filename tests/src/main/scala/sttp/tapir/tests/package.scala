@@ -327,7 +327,9 @@ package object tests {
           })(_.toString.toLowerCase)
       }
       implicit def validatorForColor: Validator[Color] =
-        Validator.enum(List(Blue, Red), { c => Some(plainCodecForColor.encode(c)) })
+        Validator.enum(List(Blue, Red), { c =>
+          Some(plainCodecForColor.encode(c))
+        })
       endpoint.out(jsonBody[ColorValue])
     }
 

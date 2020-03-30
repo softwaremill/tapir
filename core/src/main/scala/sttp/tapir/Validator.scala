@@ -165,7 +165,9 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   }
   case class Product[T](fields: Map[String, ProductField[T]]) extends Single[T] {
     override def validate(t: T): List[ValidationError[_]] = {
-      fields.values.flatMap { f => f.validator.validate(f.get(t)).map(_.prependPath(f.name)) }
+      fields.values.flatMap { f =>
+        f.validator.validate(f.get(t)).map(_.prependPath(f.name))
+      }
     }.toList
   }
 
