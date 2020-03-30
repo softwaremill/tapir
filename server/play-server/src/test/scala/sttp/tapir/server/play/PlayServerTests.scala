@@ -39,7 +39,7 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
   override def route[I, E, O](
       e: Endpoint[I, E, O, Nothing],
       fn: I => Future[Either[E, O]],
-      decodeFailureHandler: Option[DecodeFailureHandler[Any]]
+      decodeFailureHandler: Option[DecodeFailureHandler]
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =
       PlayServerOptions.default.copy(decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler))
@@ -57,15 +57,13 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
       override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(port), address = "127.0.0.1", mode = Mode.Test)
       override def router: Router =
         Router.from(
-          routes.reduce(
-            (a: Routes, b: Routes) => {
-              val handler: PartialFunction[RequestHeader, Handler] = {
-                case request => a.applyOrElse(request, b)
-              }
-
-              handler
+          routes.reduce((a: Routes, b: Routes) => {
+            val handler: PartialFunction[RequestHeader, Handler] = {
+              case request => a.applyOrElse(request, b)
             }
-          )
+
+            handler
+          })
         )
     }
     val bind = IO {

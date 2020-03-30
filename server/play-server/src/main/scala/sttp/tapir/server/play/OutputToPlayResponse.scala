@@ -12,7 +12,7 @@ import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import sttp.model.{MediaType, Part, StatusCode}
-import sttp.tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -191,9 +191,7 @@ object OutputToPlayResponse {
       val name = s""""${file.key}""""
       val filename = s""""${file.filename}""""
       val contentType = file.contentType
-        .map { ct =>
-          s"${HeaderNames.CONTENT_TYPE}: $ct\r\n"
-        }
+        .map { ct => s"${HeaderNames.CONTENT_TYPE}: $ct\r\n" }
         .getOrElse("")
       Codec.utf_8.encode(
         s"--$boundary\r\n${HeaderNames.CONTENT_DISPOSITION}: form-data; name=$name; filename=$filename\r\n$contentType\r\n"

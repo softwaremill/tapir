@@ -3,7 +3,7 @@ package sttp.tapir.server.play
 import akka.stream.Materializer
 import play.api.mvc.RequestHeader
 import sttp.model.Method
-import sttp.tapir.internal.server.DecodeInputsContext
+import sttp.tapir.server.internal.DecodeInputsContext
 import sttp.tapir.model.ServerRequest
 
 private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed: Int = 0, serverOptions: PlayServerOptions)(

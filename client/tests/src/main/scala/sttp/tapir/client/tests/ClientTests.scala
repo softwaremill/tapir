@@ -153,7 +153,11 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
-    case r @ GET -> Root / "api" / "echo" / "headers"                      => Ok(headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse)): _*)
+    case r @ GET -> Root / "api" / "echo" / "headers"                      =>
+      val headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse))
+      val cookie = r.headers.find(_.name.value == "Cookie").get
+      val filtered = headers.filter(_.name.value == "Cookie") :+ Header("Set-Cookie", cookie.value.reverse)
+      Ok(headers = filtered: _*)
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
       Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
