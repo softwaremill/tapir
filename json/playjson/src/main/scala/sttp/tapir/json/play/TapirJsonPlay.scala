@@ -14,7 +14,7 @@ trait TapirJsonPlay {
       case JsError(errors)     => Error(s, JsResultException(errors))
       case JsSuccess(value, _) => Value(value)
     }
-    override def encode(t: T): String = Json.prettyPrint(Json.toJson(t))
+    override def encode(t: T): String = Json.stringify(Json.toJson(t))
     override def meta: CodecMeta[T, CodecFormat.Json, String] =
       CodecMeta(implicitly[Schema[T]], CodecFormat.Json(), StringValueType(StandardCharsets.UTF_8))
   }
