@@ -97,9 +97,7 @@ class ValidatorTest extends FlatSpec with Matchers {
   }
 
   it should "validate with custom validator" in {
-    val v = Validator.custom({ x: Int =>
-      x > 5
-    }, "X has to be greater than 5!")
+    val v = Validator.custom({ x: Int => x > 5 }, "X has to be greater than 5!")
     v.validate(0) shouldBe List(ValidationError(v, 0))
   }
 
@@ -162,9 +160,7 @@ class ValidatorTest extends FlatSpec with Matchers {
     val arrayValidator = v.asArrayElements
 
     // warm up
-    (1 to 10).foreach { _ =>
-      arrayValidator.validate(bigArray)
-    }
+    (1 to 10).foreach { _ => arrayValidator.validate(bigArray) }
 
     var summaryTime = 0L
     (1 to 100).foreach { _ =>
@@ -181,9 +177,7 @@ class ValidatorTest extends FlatSpec with Matchers {
     val bigCollection = List.fill(1000000)(1)
     val collectionValidator = v.asIterableElements[List]
     // warm up
-    (1 to 10).foreach { _ =>
-      collectionValidator.validate(bigCollection)
-    }
+    (1 to 10).foreach { _ => collectionValidator.validate(bigCollection) }
 
     var summaryTime = 0L
     (1 to 100).foreach { _ =>

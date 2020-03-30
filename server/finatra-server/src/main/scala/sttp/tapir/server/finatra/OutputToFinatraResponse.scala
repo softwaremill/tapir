@@ -81,9 +81,7 @@ object OutputToFinatraResponse {
       case mvt: MultipartValueType =>
         val entity = MultipartEntityBuilder.create()
 
-        r.flatMap(rawPartToFormBodyPart(mvt, _)).foreach { formBodyPart: FormBodyPart =>
-          entity.addPart(formBodyPart)
-        }
+        r.flatMap(rawPartToFormBodyPart(mvt, _)).foreach { formBodyPart: FormBodyPart => entity.addPart(formBodyPart) }
 
         // inputStream is split out into a val because otherwise it doesn't compile in 2.11
         val inputStream: InputStream = entity.build().getContent

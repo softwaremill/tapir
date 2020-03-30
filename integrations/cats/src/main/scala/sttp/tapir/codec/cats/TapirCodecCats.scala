@@ -29,19 +29,13 @@ trait TapirCodecCats {
 
   implicit def codecForNonEmptyList[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptyList[T], CF, R] =
     implicitly[CodecForMany[List[T], CF, R]]
-      .mapDecode { l =>
-        DecodeResult.fromOption(NonEmptyList.fromList(l))
-      }(_.toList)
+      .mapDecode { l => DecodeResult.fromOption(NonEmptyList.fromList(l)) }(_.toList)
 
   implicit def codecForNonEmptyChain[T, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptyChain[T], CF, R] =
     implicitly[CodecForMany[List[T], CF, R]]
-      .mapDecode { l =>
-        DecodeResult.fromOption(NonEmptyChain.fromSeq(l))
-      }(_.toNonEmptyList.toList)
+      .mapDecode { l => DecodeResult.fromOption(NonEmptyChain.fromSeq(l)) }(_.toNonEmptyList.toList)
 
   implicit def codecForNonEmptySet[T: Ordering, CF <: CodecFormat, R](implicit tm: Codec[T, CF, R]): CodecForMany[NonEmptySet[T], CF, R] =
     implicitly[CodecForMany[Set[T], CF, R]]
-      .mapDecode { set =>
-        DecodeResult.fromOption(NonEmptySet.fromSet(SortedSet(set.toSeq: _*)))
-      }(_.toSortedSet)
+      .mapDecode { set => DecodeResult.fromOption(NonEmptySet.fromSet(SortedSet(set.toSeq: _*))) }(_.toSortedSet)
 }

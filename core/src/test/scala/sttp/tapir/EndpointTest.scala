@@ -131,7 +131,7 @@ class EndpointTest extends FlatSpec with Matchers {
     endpoint.in("api" / "cats" / path[String]).method("XX") -> Some(Method("XX"))
   )
 
-  for((testEndpoint, expectedMethod) <- httpMethodTestData) {
+  for ((testEndpoint, expectedMethod) <- httpMethodTestData) {
     s"httpMethod for ${testEndpoint.showDetail}" should s"be $expectedMethod" in {
       testEndpoint.httpMethod shouldBe expectedMethod
     }
