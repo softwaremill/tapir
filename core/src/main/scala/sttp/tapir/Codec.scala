@@ -345,6 +345,9 @@ object MultipartCodec {
   )
 }
 
+/**
+  * The raw format of the body: what do we need to know, to read it and pass to a codec for further decoding.
+  */
 sealed trait RawBodyType[R]
 object RawBodyType {
   case class StringBody(charset: Charset) extends RawBodyType[String]
