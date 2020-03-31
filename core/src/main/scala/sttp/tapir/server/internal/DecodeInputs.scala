@@ -45,7 +45,7 @@ trait DecodeInputsContext {
   def headers: Seq[(String, String)]
 
   def queryParameter(name: String): Seq[String]
-  def queryParameters: Map[String, Seq[String]] // TODO: MultiQueryParams?
+  def queryParameters: MultiQueryParams
 
   def bodyStream: Any
 
@@ -233,7 +233,7 @@ object DecodeInputs {
         (codec.decode(ctx.queryParameter(name).toList), ctx)
 
       case EndpointInput.QueryParams(codec, _) =>
-        (codec.decode(MultiQueryParams.fromMultiMap(ctx.queryParameters)), ctx)
+        (codec.decode(ctx.queryParameters), ctx)
 
       // TODO: remove cookie input?
       case EndpointInput.Cookie(name, codec, _) =>
