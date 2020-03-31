@@ -52,24 +52,42 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def prependErrorOut[F, FE](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[F, E, FE]): Endpoint[I, FE, O, S] =
     this.copy[I, FE, O, S](errorOutput = i.and(errorOutput))
 
+  def mapIn[II](m: Mapping[I, II]): Endpoint[II, E, O, S] =
+    this.copy[II, E, O, S](input = input.map(m))
+
   def mapIn[II](f: I => II)(g: II => I): Endpoint[II, E, O, S] =
     this.copy[II, E, O, S](input = input.map(f)(g))
+
+  def mapInDecode[II](f: I => DecodeResult[II])(g: II => I): Endpoint[II, E, O, S] =
+    this.copy[II, E, O, S](input = input.mapDecode(f)(g))
 
   def mapInTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
   )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): Endpoint[CASE_CLASS, E, O, S] =
     this.copy[CASE_CLASS, E, O, S](input = input.mapTo(c)(fc))
 
+  def mapErrorOut[EE](m: Mapping[E, EE]): Endpoint[I, EE, O, S] =
+    this.copy[I, EE, O, S](errorOutput = errorOutput.map(m))
+
   def mapErrorOut[EE](f: E => EE)(g: EE => E): Endpoint[I, EE, O, S] =
     this.copy[I, EE, O, S](errorOutput = errorOutput.map(f)(g))
+
+  def mapErrorOutDecode[EE](f: E => DecodeResult[EE])(g: EE => E): Endpoint[I, EE, O, S] =
+    this.copy[I, EE, O, S](errorOutput = errorOutput.mapDecode(f)(g))
 
   def mapErrorOutTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
   )(implicit fc: FnComponents[COMPANION, E, CASE_CLASS]): Endpoint[I, CASE_CLASS, O, S] =
     this.copy[I, CASE_CLASS, O, S](errorOutput = errorOutput.mapTo(c)(fc))
 
+  def mapOut[OO](m: Mapping[O, OO]): Endpoint[I, E, OO, S] =
+    this.copy[I, E, OO, S](output = output.map(m))
+
   def mapOut[OO](f: O => OO)(g: OO => O): Endpoint[I, E, OO, S] =
     this.copy[I, E, OO, S](output = output.map(f)(g))
+
+  def mapOutDecode[OO](f: O => DecodeResult[OO])(g: OO => O): Endpoint[I, E, OO, S] =
+    this.copy[I, E, OO, S](output = output.mapDecode(f)(g))
 
   def mapOutTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION

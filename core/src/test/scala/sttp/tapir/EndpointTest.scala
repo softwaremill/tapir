@@ -93,7 +93,7 @@ class EndpointTest extends FlatSpec with Matchers {
     (endpoint.in("p1" / query[String]("par1") / query[String]("par2")), "/p1?par1={par1}&par2={par2}"),
     (endpoint.in("p1" / path[String].name("par1") / query[String]("par2")), "/p1/{par1}?par2={par2}"),
     (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
-    (endpoint.in("p2" / path[String]).mapIn(identity)(identity), "/p2/{param1}")
+    (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}")
   )
 
   for ((testEndpoint, expectedRenderPath) <- renderTestData) {
