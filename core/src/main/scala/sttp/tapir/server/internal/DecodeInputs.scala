@@ -235,7 +235,6 @@ object DecodeInputs {
       case EndpointInput.QueryParams(codec, _) =>
         (codec.decode(ctx.queryParameters), ctx)
 
-      // TODO: remove cookie input?
       case EndpointInput.Cookie(name, codec, _) =>
         val allCookies = DecodeResult
           .sequence(

@@ -8,7 +8,7 @@ import sttp.tapir.SchemaType._
 import sttp.tapir._
 
 trait TapirJsonCirce {
-  def jsonBody[T: Encoder: Decoder: Schema: Validator]: EndpointIO.Body[String, T] = anyUtf8StringBody(circeCodec[T])
+  def jsonBody[T: Encoder: Decoder: Schema: Validator]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(circeCodec[T])
 
   implicit def circeCodec[T: Encoder: Decoder: Schema: Validator]: JsonCodec[T] =
     sttp.tapir.Codec.json { s =>

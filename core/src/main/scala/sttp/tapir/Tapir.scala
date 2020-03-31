@@ -62,11 +62,10 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def binaryBody[R: RawBodyType.Binary, T: Codec[R, *, OctetStream]]: EndpointIO.Body[R, T] =
     EndpointIO.Body(implicitly[RawBodyType.Binary[R]], implicitly[Codec[R, T, OctetStream]], EndpointIO.Info.empty)
 
-  // TODO or: introduce a anyPlainBody and map over it?
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
-    EndpointIO.Body(RawBodyType.StringBody(StandardCharsets.UTF_8), implicitly, EndpointIO.Info.empty)
+    anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]](charset: Charset): EndpointIO.Body[String, T] =
-    EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
+    anyFromStringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly, charset)
 
   val multipartBody: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]] = multipartBody(MultipartCodec.Default)
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
@@ -80,12 +79,16 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def streamBody[S](schema: Schema[_], format: CodecFormat, charset: Option[Charset] = None): StreamingEndpointIO.Body[S, S] =
     StreamingEndpointIO.Body(Codec.id(format, Some(schema.as[S])), EndpointIO.Info.empty, charset)
 
-  // TODO
-  // no schema
-  def anyUtf8StringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
-    anyStringBody[T, CF](codec, StandardCharsets.UTF_8)
-  // no schema
-  def anyStringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
+  /**
+    * A body in any format, read using the given `codec`, from a raw string read using UTF-8.
+    */
+  def anyFromUtf8StringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
+    anyFromStringBody[T, CF](codec, StandardCharsets.UTF_8)
+
+  /**
+    * A body in any format, read using the given `codec`, from a raw string read using `charset`.
+    */
+  def anyFromStringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth
