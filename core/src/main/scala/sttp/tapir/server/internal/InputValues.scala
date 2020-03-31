@@ -40,7 +40,6 @@ object InputValues {
         apply(auth.input +: inputsTail, remainingInputValues)
       case (_: EndpointInput.Basic[_]) +: inputsTail =>
         remainingInputValues match {
-          // TODO: document that () is a special value, and shouldn't be mapped to
           case () +: valuesTail =>
             apply(inputsTail, valuesTail)
           case v +: valuesTail =>

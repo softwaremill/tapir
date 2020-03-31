@@ -2,7 +2,8 @@
 
 Json values are supported through codecs which encode/decode values to json strings. However, third-party libraries are
 needed for actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe), 
-[µPickle](http://www.lihaoyi.com/upickle/) and [Play JSON](https://github.com/playframework/play-json) are supported.
+[µPickle](http://www.lihaoyi.com/upickle/), [Spray JSON](https://github.com/spray/spray-json) and 
+[Play JSON](https://github.com/playframework/play-json) are supported.
 
 ## Circe
 
@@ -23,6 +24,9 @@ will create a codec using the json media type. Circe includes a couple of approa
 (manual, semi-auto and auto), so you may choose whatever suits you.
 
 Note that when using Circe's auto derivation, any encoders/decoders for custom types must be in scope as well.
+
+Additionally, the above import brings into scope the `jsonBody[T]` body input/output description, which uses the above 
+codec.
 
 For example, to automatically generate a JSON codec for a case class:
 

@@ -12,7 +12,7 @@ Validation rules are part of the [codec](codecs.html) for a given type. They can
 ```scala
 case class MyId(id: String)
 
-implicit val myIdCodec: Codec[MyId, TextPlain, _] = Codec.stringPlainCodecUtf8
+implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string
   .mapDecode(decode)(encode)
   .validate(Validator.pattern("^[A-Z].*").contramap(_.id))
 ```
@@ -87,8 +87,8 @@ case object Blue extends Color
 case object Red extends Color
 
 implicit def plainCodecForColor: PlainCodec[Color] = {
-  Codec.stringPlainCodecUtf8
-    .map[Color]({
+  Codec.string
+    .map[Color]((_: String) match {
       case "red"  => Red
       case "blue" => Blue
     })(_.toString.toLowerCase)

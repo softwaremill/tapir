@@ -6,11 +6,8 @@ An URL-encoded form input/output can be specified in two ways. First, it is poss
 `Seq[(String, String)]`, or `Map[String, String]` (which is more convenient if fields can't have multiple values):
 
 ```scala
-formBody[Seq[(String, String)]]: EndpointIO[Seq[(String, String)], 
-                                            MediaType.XWwwFormUrlencoded, _]
-                                            
-formBody[Map[String, String]]: EndpointIO[Map[String, String], 
-                                          MediaType.XWwwFormUrlencoded, _]
+formBody[Seq[(String, String)]]: EndpointIO.Body[String, Seq[(String, String)]]
+formBody[Map[String, String]]: EndpointIO.Body[String, Seq[(String, String)]]
 ```
 
 Second, form data can be mapped to a case class. The codec for the case class is automatically derived using a macro at 
@@ -31,7 +28,7 @@ Similarly as above, multipart form input/outputs can be specified in two ways. T
 use:
 
 ```scala
-multipartBody[Seq[AnyPart]]: EndpointIO[Seq[AnyPart], MediaType.MultipartFormData, _]
+multipartBody[Seq[AnyPart]]: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]]
 ```
 
 where `type AnyPart = Part[_]`. `Part` is a case class containing the `name` of the part, disposition parameters,

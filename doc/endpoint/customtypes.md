@@ -11,17 +11,15 @@ To create a custom codec, you can either directly implement the `Codec` trait, w
 information:
 
 * `encode` and `rawDecode` methods
-* codec meta-data (`CodecMeta`) consisting of:
-  * schema of the type (for documentation)
-  * validator for the type
-  * codec format (`text/plain`, `application/json` etc.)
-  * type of the raw value, to which data is serialised (`String`, `Int` etc.)
+* optional schema (for documentation)
+* optional validator
+* codec format (`text/plain`, `application/json` etc.)
 
 This might be quite a lot of work, that's why it's usually easier to map over an existing codec. To do that, you'll 
 need to provide two mappings: 
 
 * an `encode` method which encodes the custom type into the base type
-* a `decode` method which decodes the base type into the custom type, optionally reporting decode errors (the return
+* a `decode` method which decodes the base type into the custom type, optionally reporting decode failures (the return
 type is a `DecodeResult`)
 
 For example, to support a custom id type:
@@ -33,17 +31,15 @@ def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match {
 }
 def encode(id: MyId): String = id.toString
 
-implicit val myIdCodec: Codec[MyId, TextPlain, String] = Codec.stringPlainCodecUtf8
-  .mapDecode(decode)(encode)
+implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string.mapDecode(decode)(encode)
 
 // or, using the type alias for codecs in the TextPlain format and String as the raw value:
-implicit val myIdCodec: PlainCodec[MyId] = Codec.stringPlainCodecUtf8
-  .mapDecode(decode)(encode)
+implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode)
 ```
 
-> Note that inputs/outputs can also be mapped over. However, this kind of mapping is always an isomorphism, doesn't
-> allow any validation or reporting decode errors. Hence, it should be used only for grouping inputs or outputs
-> from a tuple into a custom type.
+> Note that inputs/outputs can also be mapped over. In some cases, it's enough to create an input/output mapping to one
+> of the supported types, and then map over them. However, if you have a type that's used multiple times, it's usually
+> better to define a codec for that type. 
 
 ## Automatically deriving codecs
 
@@ -113,7 +109,7 @@ implicit val sEntity: Schema[Entity] =
 
 In some cases, it might be desirable to customise the derived schemas, e.g. to add a description to a particular
 field of a case class. This can be done by looking up an implicit instance of the `Derived[Schema[T]]` type, 
-and assigning it to an implicit schema. When such an implicit `Schmea[T]` is in scope will have higher priority 
+and assigning it to an implicit schema. When such an implicit `Schema[T]` is in scope will have higher priority 
 than the built-in low-priority conversion from `Derived[Schema[T]]` to `Schema[T]`.
 
 Schemas for products/coproducts (case classes and case class families) can be traversed and modified using

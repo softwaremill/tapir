@@ -57,6 +57,7 @@ sealed trait UserError
 case class BadRequest(what: String) extends UserError
 case class NotFound(what: String) extends UserError
 
+// here we are defining an error output, but the same can be done for regular outputs
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
     statusMapping(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
@@ -68,7 +69,7 @@ val baseEndpoint = endpoint.errorOut(
 
 The solution is therefore to handwrite a function checking that a `val` (of type `Any`) is of the correct type:
 
-```
+```scala
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
     statusMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
@@ -88,7 +89,8 @@ Of course you could use `statusMappingValueMatcher` to do runtime filtering for 
 
 In the case of solving type erasure, writing by hand partial function to match value against composition of case class and sealed trait can be repetitive.
 To make that more easy, we provide an **experimental** typeclass - `MatchType` - so you can automatically derive that partial function:
-```
+
+```scala
 import sttp.tapir.typelevel.MatchType
 
 val baseEndpoint = endpoint.errorOut(

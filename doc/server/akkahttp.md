@@ -14,7 +14,6 @@ your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala vers
 "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.12.25" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
-
 Now import the package:
 
 ```scala
