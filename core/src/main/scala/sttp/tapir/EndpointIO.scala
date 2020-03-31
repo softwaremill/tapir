@@ -4,14 +4,14 @@ import java.nio.charset.Charset
 
 import sttp.model.{Method, MultiQueryParams}
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.EndpointIO.{Example, Info}
+import sttp.tapir.EndpointIO.Info
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.collection.immutable.ListMap
 
-sealed trait EndpointInput[T] extends Mappable[T] {
+sealed trait EndpointInput[T] extends EndpointIO.Mappable[T] {
   private[tapir] type ThisType[X] <: EndpointInput[X]
 
   def and[U, TU](other: EndpointInput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointInput[TU]
@@ -32,7 +32,7 @@ object EndpointInput {
       }
   }
 
-  sealed trait Basic[T] extends Single[T] with HasMetadata[T]
+  sealed trait Basic[T] extends Single[T] with EndpointIO.HasMetadata[T]
 
   case class FixedMethod[T](m: Method, codec: Codec[Unit, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedMethod[X]
@@ -167,7 +167,7 @@ object EndpointInput {
   }
 }
 
-sealed trait EndpointOutput[T] extends Mappable[T] {
+sealed trait EndpointOutput[T] extends EndpointIO.Mappable[T] {
   private[tapir] type ThisType[X] <: EndpointOutput[X]
 
   def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[T, J, IJ]): EndpointOutput[IJ]
@@ -188,7 +188,7 @@ object EndpointOutput {
       }
   }
 
-  sealed trait Basic[T] extends Single[T] with HasMetadata[T]
+  sealed trait Basic[T] extends Single[T] with EndpointIO.HasMetadata[T]
 
   //
 
@@ -420,6 +420,40 @@ object EndpointIO {
   object Info {
     def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false)
   }
+
+  trait Mappable[T] {
+    private[tapir] type ThisType[X]
+
+    def map[U: IsUnit](mapping: Mapping[T, U]): ThisType[U]
+    def map[U: IsUnit](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
+    def mapDecode[U: IsUnit](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
+    def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
+      map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
+    }
+
+    def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
+  }
+
+  trait HasMetadata[T] extends Mappable[T] {
+    private[tapir] type L
+    private[tapir] type CF <: CodecFormat
+
+    def codec: Codec[L, T, CF]
+    def info: EndpointIO.Info[T]
+    private[tapir] def copyWith[U](c: Codec[L, U, CF], i: EndpointIO.Info[U]): ThisType[U]
+
+    override def map[U: IsUnit](mapping: Mapping[T, U]): ThisType[U] = copyWith(codec.map(mapping), info.map(mapping))
+
+    def schema(s: Schema[T]): ThisType[T] = copyWith(codec.schema(s), info)
+    def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
+    def modifySchema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.modifySchema(modify), info)
+
+    def description(d: String): ThisType[T] = copyWith(codec, info.description(d))
+    def example(t: T): ThisType[T] = copyWith(codec, info.example(t))
+    def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
+    def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
+    def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
+  }
 }
 
 /*
@@ -435,7 +469,7 @@ Internally, the streaming body is converted into a wrapper `EndpointIO`, which "
 information. The `EndpointIO.StreamBodyWrapper` should only be used internally, not by the end user: there's no
 factory method in `Tapir` which would directly create an instance of it.
  */
-sealed trait StreamingEndpointIO[T, +S] extends Mappable[T] with HasMetadata[T] {
+sealed trait StreamingEndpointIO[T, +S] extends EndpointIO.Mappable[T] with EndpointIO.HasMetadata[T] {
   private[tapir] def toEndpointIO: EndpointIO[T]
 }
 
@@ -449,38 +483,4 @@ object StreamingEndpointIO {
 
     private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, T] = EndpointIO.StreamBodyWrapper(this)
   }
-}
-
-trait Mappable[T] {
-  private[tapir] type ThisType[X]
-
-  def map[U: IsUnit](mapping: Mapping[T, U]): ThisType[U]
-  def map[U: IsUnit](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
-  def mapDecode[U: IsUnit](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
-  }
-
-  def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
-}
-
-trait HasMetadata[T] extends Mappable[T] {
-  private[tapir] type L
-  private[tapir] type CF <: CodecFormat
-
-  def codec: Codec[L, T, CF]
-  def info: EndpointIO.Info[T]
-  private[tapir] def copyWith[U](c: Codec[L, U, CF], i: EndpointIO.Info[U]): ThisType[U]
-
-  override def map[U: IsUnit](mapping: Mapping[T, U]): ThisType[U] = copyWith(codec.map(mapping), info.map(mapping))
-
-  def schema(s: Schema[T]): ThisType[T] = copyWith(codec.schema(s), info)
-  def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
-  def modifySchema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.modifySchema(modify), info)
-
-  def description(d: String): ThisType[T] = copyWith(codec, info.description(d))
-  def example(t: T): ThisType[T] = copyWith(codec, info.example(t))
-  def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
-  def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
-  def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
 }

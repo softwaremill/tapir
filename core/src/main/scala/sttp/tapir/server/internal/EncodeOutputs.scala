@@ -4,7 +4,7 @@ import java.nio.charset.Charset
 
 import sttp.model.StatusCode
 import sttp.tapir.internal._
-import sttp.tapir.{Codec, CodecFormat, Mapping, EndpointIO, EndpointOutput, RawBodyType, StreamingEndpointIO}
+import sttp.tapir.{CodecFormat, Mapping, EndpointIO, EndpointOutput, RawBodyType, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 
