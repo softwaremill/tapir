@@ -14,7 +14,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     def run(outputs: Vector[EndpointOutput.Single[_]], ov: OutputValues[B], vs: Seq[Any]): OutputValues[B] = {
       (outputs, vs) match {
         case (Vector(), Seq()) => ov
-        case (outputsHead +: outputsTail, _) if outputsHead._codec.hIsUnit =>
+        case (outputsHead +: outputsTail, _) if outputsHead._mapping.hIsUnit =>
           val ov2 = encodeOutput(outputsHead, (), ov)
           run(outputsTail, ov2, vs)
         case (outputsHead +: outputsTail, vsHead +: vsTail) =>
@@ -29,7 +29,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
   }
 
   private def encodeOutput(output: EndpointOutput.Single[_], value: Any, ov: OutputValues[B]): OutputValues[B] = {
-    def encoded[T] = output._codec.asInstanceOf[Mapping[T, Any]].encode(value)
+    def encoded[T] = output._mapping.asInstanceOf[Mapping[T, Any]].encode(value)
     output match {
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value)
