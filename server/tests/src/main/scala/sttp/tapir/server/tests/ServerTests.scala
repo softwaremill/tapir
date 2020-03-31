@@ -178,7 +178,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(in_unit_out_json_unit, "unit json mapper")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
-    basicRequest.get(uri"$baseUri/api").send().map(_.body shouldBe Right("{}"))
+    basicRequest.get(uri"$baseUri/api/unit").send().map(_.body shouldBe Right("{}"))
   }
 
   testServer(in_unit_out_string, "default status mapper")((_: Unit) => pureResult("".asRight[Unit])) { baseUri =>
