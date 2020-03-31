@@ -26,7 +26,6 @@ case class Schema[T](
     deprecated: Boolean = false
 ) {
 
-  // TODO: return Schema[Option[U]]?
   /**
     * Returns an optional version of this schema, with `isOptional` set to true.
     */

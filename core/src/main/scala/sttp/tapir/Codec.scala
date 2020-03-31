@@ -290,7 +290,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
         case List(e) => DecodeResult.Value(Some(e))
         case l       => DecodeResult.Multiple(l.map(_.toString))
       })(_.toList)
-      .schema(c.schema.map(_.asOptional.as[Option[U]]))
+      .schema(c.schema.map(_.asOptional[Option[U]]))
       .validate(c.validator.asOptionElement)
 
   /**
@@ -320,7 +320,7 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
         case None    => DecodeResult.Value(None)
         case Some(v) => c.decode(v).map(Some(_))
       }(us => us.map(c.encode))
-      .schema(c.schema.map(_.asOptional.as[Option[U]]))
+      .schema(c.schema.map(_.asOptional[Option[U]]))
       .validate(c.validator.asOptionElement)
 
   def json[T: Schema: Validator](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = new JsonCodec[T] {

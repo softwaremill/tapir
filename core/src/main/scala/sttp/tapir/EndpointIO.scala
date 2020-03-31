@@ -314,7 +314,6 @@ object EndpointIO {
     }
   }
 
-  // TODO
   case class StreamBodyWrapper[S, T](wrapped: StreamingEndpointIO.Body[S, T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = StreamBodyWrapper[S, X]
     override private[tapir] type L = S
