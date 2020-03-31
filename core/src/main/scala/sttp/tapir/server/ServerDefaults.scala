@@ -81,8 +81,8 @@ object ServerDefaults {
       */
     @tailrec
     def failureSourceMessage(input: EndpointInput[_]): String = input match {
-      case EndpointInput.FixedMethod(_, _)        => s"Invalid value for: method"
-      case EndpointInput.FixedPath(_, _)          => s"Invalid value for: path segment"
+      case EndpointInput.FixedMethod(_, _, _)     => s"Invalid value for: method"
+      case EndpointInput.FixedPath(_, _, _)       => s"Invalid value for: path segment"
       case EndpointInput.PathCapture(name, _, _)  => s"Invalid value for: path parameter ${name.getOrElse("?")}"
       case EndpointInput.PathsCapture(_, _)       => s"Invalid value for: path"
       case EndpointInput.Query(name, _, _)        => s"Invalid value for: query parameter $name"

@@ -125,7 +125,7 @@ object DecodeInputs {
     pathInputs match {
       case (idxInput @ IndexedBasicInput(in, _)) +: restInputs =>
         in match {
-          case EndpointInput.FixedPath(expectedSegment, codec) =>
+          case EndpointInput.FixedPath(expectedSegment, codec, _) =>
             val (nextSegment, newCtx) = ctx.nextPathSegment
             nextSegment match {
               case Some(seg) =>
@@ -221,7 +221,7 @@ object DecodeInputs {
 
   private def matchOther(input: EndpointInput.Basic[_], ctx: DecodeInputsContext): (DecodeResult[_], DecodeInputsContext) = {
     input match {
-      case EndpointInput.FixedMethod(m, codec) =>
+      case EndpointInput.FixedMethod(m, codec, _) =>
         if (m == ctx.method) (codec.decode(()), ctx)
         else (DecodeResult.Mismatch(m.method, ctx.method.method), ctx)
 
@@ -258,7 +258,7 @@ object DecodeInputs {
       case EndpointIO.Headers(codec, _) =>
         (codec.decode(ctx.headers.map((sttp.model.Header.notValidated _).tupled).toList), ctx)
 
-      case EndpointInput.ExtractFromRequest(codec) =>
+      case EndpointInput.ExtractFromRequest(codec, _) =>
         (codec.decode(ctx.serverRequest), ctx)
 
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) =>

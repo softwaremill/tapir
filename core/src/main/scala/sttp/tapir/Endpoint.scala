@@ -23,7 +23,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def patch: Endpoint[I, E, O, S] = method(Method.PATCH)
   def connect: Endpoint[I, E, O, S] = method(Method.CONNECT)
   def trace: Endpoint[I, E, O, S] = method(Method.TRACE)
-  def method(m: sttp.model.Method): Endpoint[I, E, O, S] = in(FixedMethod(m, Codec.idPlain()))
+  def method(m: sttp.model.Method): Endpoint[I, E, O, S] = in(FixedMethod(m, Codec.idPlain(), EndpointIO.Info.empty))
 
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S] =
     this.copy[IJ, E, O, S](input = input.and(i))

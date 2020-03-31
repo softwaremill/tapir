@@ -32,95 +32,74 @@ object EndpointInput {
       }
   }
 
-  sealed trait Basic[T] extends Single[T]
+  sealed trait Basic[T] extends Single[T] with HasMetadata[T]
 
-  case class FixedMethod[T](m: Method, codec: Codec[Unit, T, TextPlain]) extends Basic[T] {
+  case class FixedMethod[T](m: Method, codec: Codec[Unit, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedMethod[X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): FixedMethod[U] = copy(codec = codec.map(mapping))
+    override private[tapir] type L = Unit
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedMethod[U] = copy(codec = c, info = i)
     override def show: String = m.method
   }
 
-  case class FixedPath[T](s: String, codec: Codec[Unit, T, TextPlain]) extends Basic[T] {
+  case class FixedPath[T](s: String, codec: Codec[Unit, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedPath[X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): FixedPath[U] = copy(codec = codec.map(mapping))
+    override private[tapir] type L = Unit
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedPath[U] = copy(codec = c, info = i)
     override def show = s"/$s"
   }
 
   case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = PathCapture[X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): PathCapture[U] =
-      copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = String
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[String, U, TextPlain], i: Info[U]): PathCapture[U] = copy(codec = c, info = i)
     override def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.validator)
 
-    // TODO: move to Basic? (all meta-methods)
     def name(n: String): PathCapture[T] = copy(name = Some(n))
-    def description(d: String): PathCapture[T] = copy(info = info.description(d))
-    def example(t: T): PathCapture[T] = copy(info = info.example(t))
-    def example(example: Example[T]): PathCapture[T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): PathCapture[T] = copy(info = info.examples(examples))
-    def validate(v: Validator[T]): PathCapture[T] = copy(codec = codec.validate(v))
   }
 
   case class PathsCapture[T](codec: Codec[List[String], T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = PathsCapture[X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): PathsCapture[U] =
-      copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = List[String]
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): PathsCapture[U] = copy(codec = c, info = i)
     override def show = s"/..."
-
-    def description(d: String): PathsCapture[T] = copy(info = info.description(d))
-    def example(t: T): PathsCapture[T] = copy(info = info.example(t))
-    def example(example: Example[T]): PathsCapture[T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): PathsCapture[T] = copy(info = info.examples(examples))
-    def deprecated(): PathsCapture[T] = copy(info = info.deprecated(true))
-    def validate(v: Validator[T]): PathsCapture[T] = copy(codec = codec.validate(v))
   }
 
   case class Query[T](name: String, codec: Codec[List[String], T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Query[X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): Query[U] = copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = List[String]
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Query[U] = copy(codec = c, info = i)
     override def show: String = addValidatorShow(s"?$name", codec.validator)
-
-    def description(d: String): Query[T] = copy(info = info.description(d))
-    def example(t: T): Query[T] = copy(info = info.example(t))
-    def example(example: Example[T]): Query[T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): Query[T] = copy(info = info.examples(examples))
-    def deprecated(): Query[T] = copy(info = info.deprecated(true))
-    def validate(v: Validator[T]): Query[T] = copy(codec = codec.validate(v))
   }
 
   case class QueryParams[T](codec: Codec[MultiQueryParams, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = QueryParams[X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): QueryParams[U] =
-      copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = MultiQueryParams
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[MultiQueryParams, U, TextPlain], i: Info[U]): QueryParams[U] =
+      copy(codec = c, info = i)
     override def show: String = s"?..."
-
-    def description(d: String): QueryParams[T] = copy(info = info.description(d))
-    def example(t: T): QueryParams[T] = copy(info = info.example(t))
-    def example(example: Example[T]): QueryParams[T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): QueryParams[T] = copy(info = info.examples(examples))
-    def deprecated(): QueryParams[T] = copy(info = info.deprecated(true))
-    def validate(v: Validator[T]): QueryParams[T] = copy(codec = codec.validate(v))
   }
 
   case class Cookie[T](name: String, codec: Codec[Option[String], T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Cookie[X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): Cookie[U] = copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = Option[String]
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[Option[String], U, TextPlain], i: Info[U]): Cookie[U] = copy(codec = c, info = i)
     override def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
-
-    def description(d: String): Cookie[T] = copy(info = info.description(d))
-    def example(t: T): Cookie[T] = copy(info = info.example(t))
-    def example(example: Example[T]): Cookie[T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): Cookie[T] = copy(info = info.examples(examples))
-    def deprecated(): Cookie[T] = copy(info = info.deprecated(true))
-    def validate(v: Validator[T]): Cookie[T] = copy(codec = codec.validate(v))
   }
 
-  case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain]) extends Basic[T] {
+  case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = ExtractFromRequest[X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): ExtractFromRequest[U] = copy(codec = codec.map(mapping))
+    override private[tapir] type L = ServerRequest
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[ServerRequest, U, TextPlain], i: Info[U]): ExtractFromRequest[U] =
+      copy(codec = c, info = i)
     override def show: String = s"{data from request}"
-
-    // TODO: validator etc.?
   }
 
   //
@@ -209,15 +188,21 @@ object EndpointOutput {
       }
   }
 
-  sealed trait Basic[I] extends Single[I]
+  sealed trait Basic[T] extends Single[T] with HasMetadata[T]
 
   //
 
-  case class StatusCode[T](documentedCodes: Map[sttp.model.StatusCode, Info[Unit]], codec: Codec[sttp.model.StatusCode, T, TextPlain])
-      extends Basic[T] {
+  case class StatusCode[T](
+      documentedCodes: Map[sttp.model.StatusCode, Info[Unit]],
+      codec: Codec[sttp.model.StatusCode, T, TextPlain],
+      info: Info[T]
+  ) extends Basic[T] {
     override private[tapir] type ThisType[X] = StatusCode[X]
-    override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](mapping: Mapping[T, U]): StatusCode[U] = copy(codec = codec.map(mapping))
+    override private[tapir] def _codec: Mapping[_, T] = codec // TODO: remove _codec?
+    override private[tapir] type L = sttp.model.StatusCode
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[sttp.model.StatusCode, U, TextPlain], i: Info[U]): StatusCode[U] =
+      copy(codec = c, info = i)
     override def show: String = s"status code - possible codes ($documentedCodes)"
 
     def description(code: sttp.model.StatusCode, d: String): StatusCode[T] = {
@@ -231,11 +216,10 @@ object EndpointOutput {
   case class FixedStatusCode[T](statusCode: sttp.model.StatusCode, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedStatusCode[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](mapping: Mapping[T, U]): FixedStatusCode[U] =
-      copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = Unit
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedStatusCode[U] = copy(codec = c, info = i)
     override def show: String = s"status code ($statusCode)"
-
-    def description(d: String): FixedStatusCode[T] = copy(info = info.description(d))
   }
 
   /**
@@ -313,13 +297,14 @@ object EndpointIO {
       }
   }
 
-  // TODO add methods to set schema/format?
   sealed trait Basic[I] extends Single[I] with EndpointInput.Basic[I] with EndpointOutput.Basic[I]
 
-  case class Body[R, T](bodyType: RawBodyType[R], codec: Codec[R, T, _ <: CodecFormat], info: Info[T]) extends Basic[T] {
+  case class Body[R, T](bodyType: RawBodyType[R], codec: Codec[R, T, CodecFormat], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Body[R, X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](mapping: Mapping[T, U]): Body[R, U] = copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = R
+    override private[tapir] type CF = CodecFormat
+    override private[tapir] def copyWith[U](c: Codec[R, U, CodecFormat], i: Info[U]): Body[R, U] = copy(codec = c, info = i)
     override def show: String = {
       val charset = bodyType.asInstanceOf[RawBodyType[_]] match {
         case RawBodyType.StringBody(charset) => s" (${charset.toString})"
@@ -328,57 +313,48 @@ object EndpointIO {
       val format = codec.format.mediaType
       addValidatorShow(s"{body as $format$charset}", codec.validator)
     }
-
-    def description(d: String): Body[R, T] = copy(info = info.description(d))
-    def example(t: T): Body[R, T] = copy(info = info.example(t))
-    def example(example: Example[T]): Body[R, T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): Body[R, T] = copy(info = info.examples(examples))
-    def validate(v: Validator[T]): Body[R, T] = copy(codec = codec.validate(v))
   }
 
   // TODO
   case class StreamBodyWrapper[S, T](wrapped: StreamingEndpointIO.Body[S, T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = StreamBodyWrapper[S, X]
     override private[tapir] def _codec: Mapping[_, T] = wrapped.codec
-    override def map[U: IsUnit](mapping: Mapping[T, U]): StreamBodyWrapper[S, U] = copy(wrapped = wrapped.map(mapping))
+    override private[tapir] type L = S
+    override private[tapir] type CF = CodecFormat
+    override private[tapir] def copyWith[U](c: Codec[S, U, CodecFormat], i: Info[U]): StreamBodyWrapper[S, U] = copy(wrapped.copyWith(c, i))
+
+    override def codec: Codec[S, T, CodecFormat] = wrapped.codec
+    override def info: Info[T] = wrapped.info
+
     override def show = s"{body as stream}"
   }
 
   case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedHeader[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](mapping: Mapping[T, U]): FixedHeader[U] =
-      copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = Unit
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedHeader[U] = copy(codec = c, info = i)
     override def show = s"{header ${h.name}: ${h.value}}"
-
-    def description(d: String): FixedHeader[T] = copy(info = info.description(d))
-    def deprecated(): FixedHeader[T] = copy(info = info.deprecated(true))
   }
 
   case class Header[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Header[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](mapping: Mapping[T, U]): Header[U] = copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = List[String]
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Header[U] = copy(codec = c, info = i)
     override def show: String = addValidatorShow(s"{header $name}", codec.validator)
-
-    def description(d: String): Header[T] = copy(info = info.description(d))
-    def example(t: T): Header[T] = copy(info = info.example(t))
-    def example(example: Example[T]): Header[T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): Header[T] = copy(info = info.examples(examples))
-    def deprecated(): Header[T] = copy(info = info.deprecated(true))
-    def validate(v: Validator[T]): Header[T] = copy(codec = codec.validate(v))
   }
 
   case class Headers[T](codec: Codec[List[sttp.model.Header], T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Headers[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](mapping: Mapping[T, U]): Headers[U] = copy(codec = codec.map(mapping), info = info.map(mapping))
+    override private[tapir] type L = List[sttp.model.Header]
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[List[sttp.model.Header], U, TextPlain], i: Info[U]): Headers[U] =
+      copy(codec = c, info = i)
     override def show = s"{multiple headers}"
-
-    def description(d: String): Headers[T] = copy(info = info.description(d))
-    def example(t: T): Headers[T] = copy(info = info.example(t))
-    def example(example: Example[T]): Headers[T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): Headers[T] = copy(info = info.examples(examples))
   }
 
   //
@@ -459,20 +435,17 @@ Internally, the streaming body is converted into a wrapper `EndpointIO`, which "
 information. The `EndpointIO.StreamBodyWrapper` should only be used internally, not by the end user: there's no
 factory method in `Tapir` which would directly create an instance of it.
  */
-sealed trait StreamingEndpointIO[T, +S] extends Mappable[T] {
+sealed trait StreamingEndpointIO[T, +S] extends Mappable[T] with HasMetadata[T] {
   private[tapir] def toEndpointIO: EndpointIO[T]
 }
 
 object StreamingEndpointIO {
-  case class Body[S, T](codec: Codec[S, T, _ <: CodecFormat], info: EndpointIO.Info[T], charset: Option[Charset])
+  case class Body[S, T](codec: Codec[S, T, CodecFormat], info: EndpointIO.Info[T], charset: Option[Charset])
       extends StreamingEndpointIO[T, S] {
     override private[tapir] type ThisType[X] = Body[S, X]
-    override def map[U: IsUnit](mapping: Mapping[T, U]): Body[S, U] = copy(codec = codec.map(mapping), info = info.map(mapping))
-
-    def description(d: String): Body[S, T] = copy(info = info.description(d))
-    def example(t: T): Body[S, T] = copy(info = info.example(t))
-    def example(example: Example[T]): Body[S, T] = copy(info = info.example(example))
-    def examples(examples: List[Example[T]]): Body[S, T] = copy(info = info.examples(examples))
+    override private[tapir] type L = S
+    override private[tapir] type CF = CodecFormat
+    override private[tapir] def copyWith[U](c: Codec[S, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
 
     private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, T] = EndpointIO.StreamBodyWrapper(this)
   }
@@ -487,4 +460,27 @@ trait Mappable[T] {
   def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
   }
+
+  def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
+}
+
+trait HasMetadata[T] extends Mappable[T] {
+  private[tapir] type L
+  private[tapir] type CF <: CodecFormat
+
+  def codec: Codec[L, T, CF]
+  def info: EndpointIO.Info[T]
+  private[tapir] def copyWith[U](c: Codec[L, U, CF], i: EndpointIO.Info[U]): ThisType[U]
+
+  override def map[U: IsUnit](mapping: Mapping[T, U]): ThisType[U] = copyWith(codec.map(mapping), info.map(mapping))
+
+  def schema(s: Schema[T]): ThisType[T] = copyWith(codec.schema(s), info)
+  def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
+  def modifySchema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.modifySchema(modify), info)
+
+  def description(d: String): ThisType[T] = copyWith(codec, info.description(d))
+  def example(t: T): ThisType[T] = copyWith(codec, info.example(t))
+  def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
+  def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
+  def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
 }

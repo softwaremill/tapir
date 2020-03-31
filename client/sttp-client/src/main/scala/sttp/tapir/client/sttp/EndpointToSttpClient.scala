@@ -61,7 +61,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         case EndpointIO.MappedTuple(tuple, codec) =>
           Some(getOutputParams(tuple.asVectorOfSingleOutputs, body, meta).flatMap { outputParams => codec.decode(outputParams) })
 
-        case EndpointOutput.StatusCode(_, codec) =>
+        case EndpointOutput.StatusCode(_, codec, _) =>
           Some(codec.decode(meta.code))
 
         case EndpointOutput.FixedStatusCode(_, codec, _) =>
@@ -112,9 +112,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
     inputs match {
       case Vector() => (uri, req)
-      case EndpointInput.FixedMethod(_, codec) +: tail =>
+      case EndpointInput.FixedMethod(_, codec, _) +: tail =>
         setInputParams(tail, params, if (codec.hIsUnit) paramIndex else paramIndex + 1, uri, req)
-      case EndpointInput.FixedPath(p, codec) +: tail =>
+      case EndpointInput.FixedPath(p, codec, _) +: tail =>
         setInputParams(
           tail,
           params,
@@ -164,7 +164,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointIO.FixedHeader(h, codec, _) +: tail =>
         val req2 = req.header(h)
         setInputParams(tail, params, if (codec.hIsUnit) paramIndex else paramIndex + 1, uri, req2)
-      case EndpointInput.ExtractFromRequest(_) +: tail =>
+      case EndpointInput.ExtractFromRequest(_, _) +: tail =>
         // ignoring
         setInputParams(tail, params, paramIndex + 1, uri, req)
       case (a: EndpointInput.Auth[_]) +: tail =>

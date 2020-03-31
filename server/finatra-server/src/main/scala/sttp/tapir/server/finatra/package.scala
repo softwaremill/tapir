@@ -118,7 +118,7 @@ package object finatra {
     endpoint.input
       .asVectorOfBasicInputs()
       .collectFirst {
-        case FixedMethod(m, _) => Method(m.method)
+        case FixedMethod(m, _, _) => Method(m.method)
       }
       .getOrElse(Method("ANY"))
   }

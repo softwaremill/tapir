@@ -102,8 +102,8 @@ object ObjectSchemasForEndpoints {
 
   private def forInput(input: EndpointInput[_]): List[ObjectTypeData] = {
     input match {
-      case EndpointInput.FixedMethod(_, _)        => List.empty
-      case EndpointInput.FixedPath(_, _)          => List.empty
+      case EndpointInput.FixedMethod(_, _, _)     => List.empty
+      case EndpointInput.FixedPath(_, _, _)       => List.empty
       case EndpointInput.PathCapture(_, codec, _) => forCodec(codec)
       case EndpointInput.PathsCapture(_, _)       => List.empty
       case EndpointInput.Query(_, codec, _)       => forCodec(codec)
@@ -119,7 +119,7 @@ object ObjectSchemasForEndpoints {
   private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData] = {
     output match {
       case EndpointOutput.OneOf(mappings, _)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
-      case EndpointOutput.StatusCode(_, _)         => List.empty
+      case EndpointOutput.StatusCode(_, _, _)      => List.empty
       case EndpointOutput.FixedStatusCode(_, _, _) => List.empty
       case EndpointOutput.MappedTuple(wrapped, _)  => forOutput(wrapped)
       case EndpointOutput.Void()                   => List.empty

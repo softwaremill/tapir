@@ -13,7 +13,7 @@ import sttp.tapir.internal._
 import scala.reflect.ClassTag
 
 trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
-  implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain())
+  implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
     EndpointInput.PathCapture(None, implicitly, EndpointIO.Info.empty)
@@ -95,9 +95,10 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     * documentation interpreters and the provided value is discarded by client interpreters.
     */
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
-    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null))
+    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty)
 
-  def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] = EndpointOutput.StatusCode(Map.empty, Codec.idPlain())
+  def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] =
+    EndpointOutput.StatusCode(Map.empty, Codec.idPlain(), EndpointIO.Info.empty)
   def statusCode(statusCode: sttp.model.StatusCode): EndpointOutput.FixedStatusCode[Unit] =
     EndpointOutput.FixedStatusCode(statusCode, Codec.idPlain(), EndpointIO.Info.empty)
 

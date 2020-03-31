@@ -40,7 +40,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
         encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
       case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
       case EndpointIO.MappedTuple(wrapped, _) => apply(wrapped, encoded, ov)
-      case EndpointOutput.StatusCode(_, _)    => ov.withStatusCode(encoded[StatusCode])
+      case EndpointOutput.StatusCode(_, _, _) => ov.withStatusCode(encoded[StatusCode])
       case EndpointOutput.OneOf(mappings, _) =>
         val enc = encoded[Any]
         val mapping = mappings

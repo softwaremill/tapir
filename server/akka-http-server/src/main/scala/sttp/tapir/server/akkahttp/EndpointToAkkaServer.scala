@@ -17,9 +17,7 @@ import scala.util.{Failure, Success}
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   def toDirective[I, E, O, T](e: Endpoint[I, E, O, AkkaStream])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
     implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
-    toDirective1(e).flatMap { values =>
-      tprovide(paramsToTuple.toTuple(values))
-    }
+    toDirective1(e).flatMap { values => tprovide(paramsToTuple.toTuple(values)) }
   }
 
   @silent("never used")
