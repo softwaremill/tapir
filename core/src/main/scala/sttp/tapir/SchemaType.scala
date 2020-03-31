@@ -40,7 +40,7 @@ object SchemaType {
     def show: String = s"object(${fields.map(f => s"${f._1}->${f._2.show}").mkString(",")}"
   }
   object SProduct {
-    def empty: SProduct = SProduct(SEmptyObject, Iterable.empty)
+    val Empty: SProduct = SProduct(SObjectInfo.Unit, Iterable.empty)
   }
   case class SCoproduct(info: SObjectInfo, schemas: List[Schema[_]], discriminator: Option[Discriminator]) extends SObject {
     override def show: String = "oneOf:" + schemas.mkString(",")
@@ -54,7 +54,9 @@ object SchemaType {
   }
 
   case class SObjectInfo(fullName: String, typeParameterShortNames: List[String] = Nil)
-  final val SEmptyObject = SObjectInfo(fullName="Unit")
+  object SObjectInfo {
+    val Unit: SObjectInfo = SObjectInfo(fullName = "Unit")
+  }
 
   case class Discriminator(propertyName: String, mappingOverride: Map[String, SRef])
 }
