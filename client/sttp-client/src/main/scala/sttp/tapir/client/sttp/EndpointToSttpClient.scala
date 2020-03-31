@@ -9,9 +9,6 @@ import sttp.model.{HeaderNames, Method, MultiQueryParams, Part, Uri}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.internal._
-import EndpointToSttpClient._
-
-import scala.util.{Failure, Success, Try}
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   def toSttpRequestUnsafe[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
@@ -31,20 +28,20 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
 
     val responseAs = fromMetadata { meta =>
-      wrapErrors(req2) {
-        val output = if (meta.isSuccess) e.output else e.errorOutput
-        if (output == EndpointOutput.Void()) {
-          throw new IllegalStateException(s"Got response: $meta, cannot map to a void output of: $e.")
-        }
+      val output = if (meta.isSuccess) e.output else e.errorOutput
+      if (output == EndpointOutput.Void()) {
+        throw new IllegalStateException(s"Got response: $meta, cannot map to a void output of: $e.")
+      }
 
-        responseAsFromOutputs(meta, output)
-      }
+      responseAsFromOutputs(meta, output)
     }.mapWithMetadata { (body, meta) =>
-      wrapErrors(req2) {
-        val output = if (meta.isSuccess) e.output else e.errorOutput
-        val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
-        params.map(p => if (meta.isSuccess) Right(p) else Left(p))
-      }
+      val output = if (meta.isSuccess) e.output else e.errorOutput
+      val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
+      params.map(p => if (meta.isSuccess) Right(p) else Left(p))
+    }.map {
+      case DecodeResult.Error(o, e) =>
+        DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req2.method} ${req2.uri}", e))
+      case other => other
     }
 
     req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], S]]
@@ -79,10 +76,13 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           None
 
         case EndpointOutput.OneOf(mappings) =>
-          val mapping = mappings
-            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code))
-            .getOrElse(throw new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs"))
-          Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta))
+          mappings
+            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
+            case Some(mapping) =>
+              Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta))
+            case None =>
+              Some(DecodeResult.Error(meta.statusText, new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs")))
+          }
 
         case EndpointOutput.Mapped(wrapped, f, _) =>
           val outputParams = getOutputParams(wrapped.asVectorOfSingleOutputs, body, meta)
@@ -251,19 +251,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private def getOrThrow[T](dr: DecodeResult[T]): T = dr match {
     case DecodeResult.Value(v)    => v
-    case DecodeResult.Error(o, e) => throw new IllegalArgumentException(s"Cannot decode from $o", e)
+    case DecodeResult.Error(_, e) => throw e
     case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
   }
 
-}
-
-object EndpointToSttpClient {
-  class ResponseDecodingException(request: Request[_, _], cause: Throwable)
-      extends RuntimeException(s"Failed to parse response of ${request.method} ${request.uri}", cause)
-
-  def wrapErrors[T](request: Request[_, _])(body: => T): T =
-    Try(body) match {
-      case Success(value)     => value
-      case Failure(exception) => throw new ResponseDecodingException(request, exception)
-    }
 }

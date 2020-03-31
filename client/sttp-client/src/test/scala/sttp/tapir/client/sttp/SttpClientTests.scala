@@ -4,7 +4,7 @@ import java.nio.ByteBuffer
 
 import cats.effect.{ContextShift, IO}
 import cats.implicits._
-import sttp.tapir.Endpoint
+import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
 import sttp.client._
 import sttp.client.asynchttpclient.fs2.AsyncHttpClientFs2Backend
@@ -25,6 +25,10 @@ class SttpClientTests extends ClientTests[fs2.Stream[IO, ByteBuffer]] {
 
   override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, fs2.Stream[IO, ByteBuffer]], port: Port, args: I): IO[Either[E, O]] = {
     e.toSttpRequestUnsafe(uri"http://localhost:$port").apply(args).send().map(_.body)
+  }
+
+  override def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, fs2.Stream[IO, ByteBuffer]], port: Port, args: I): IO[DecodeResult[Either[E, O]]] = {
+    e.toSttpRequest(uri"http://localhost:$port").apply(args).send().map(_.body)
   }
 
   override protected def afterAll(): Unit = {

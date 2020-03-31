@@ -217,6 +217,8 @@ package object tests {
   val in_optional_coproduct_json_out_optional_coproduct_json: Endpoint[Option[Entity], Unit, Option[Entity], Nothing] =
     endpoint.post.in("api" / "echo" / "coproduct").in(jsonBody[Option[Entity]]).out(jsonBody[Option[Entity]])
 
+  val not_existing_endpoint: Endpoint[Unit, String, Unit, Nothing] = endpoint.in("api"/ "not-existing").errorOut(oneOf(statusMapping(StatusCode.BadRequest, stringBody)))
+
   //
 
   @silent("never used")
