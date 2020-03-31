@@ -9,7 +9,7 @@ import com.twitter.util.Future
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.internal.{SeqToParams, _}
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
-import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
@@ -28,8 +28,8 @@ package object finatra {
                     .map { rawBody =>
                       val decodeResult = codec.decode(rawBody)
                       decodeResult match {
-                        case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
-                        case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                        case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                        case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                       }
                     }
                 case None => Future.value(values)
@@ -60,7 +60,7 @@ package object finatra {
         def handleDecodeFailure(
             e: Endpoint[_, _, _, _],
             input: EndpointInput[_],
-            failure: DecodeFailure
+            failure: DecodeResult.Failure
         ): Response = {
           val decodeFailureCtx = DecodeFailureContext(input, failure)
           val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)

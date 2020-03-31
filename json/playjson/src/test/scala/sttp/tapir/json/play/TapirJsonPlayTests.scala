@@ -26,7 +26,7 @@ class TapirJsonPlayTests extends FlatSpec with Matchers {
     codec.decode(encoded) match {
       case Value(d) =>
         d shouldBe original
-      case f: DecodeFailure =>
+      case f: DecodeResult.Failure =>
         fail(f.toString)
     }
   }
@@ -59,7 +59,7 @@ class TapirJsonPlayTests extends FlatSpec with Matchers {
     val encoded = "\"OOPS-10-10 11:20:49.029\""
 
     codec.decode(encoded) match {
-      case _: DecodeFailure =>
+      case _: DecodeResult.Failure =>
         succeed
       case Value(d) =>
         fail(s"Should not have been able to decode this date: $d")

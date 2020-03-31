@@ -76,7 +76,6 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
     case Some(s) => schema(modify(s))
   }
 
-  // TODO: format as implicit?
   def format[CF2 <: CodecFormat](f: CF2): Codec[L, H, CF2] = new Codec[L, H, CF2] {
     override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
     override def encode(h: H): L = outer.encode(h)

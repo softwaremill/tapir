@@ -13,7 +13,7 @@ import sttp.model.{Header, Part}
 import sttp.tapir.internal.SeqToParams
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
-import sttp.tapir.{RawBodyType, DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput, RawPart}
+import sttp.tapir.{RawBodyType, DecodeResult, Endpoint, EndpointIO, EndpointInput, RawPart}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -31,8 +31,8 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
                 rawBodyDirective(bodyType)
                   .map { v =>
                     codec.decode(v) match {
-                      case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
-                      case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                      case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                      case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                     }
                   }
 
@@ -70,7 +70,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       ctx: RequestContext,
       e: Endpoint[_, _, _, _],
       input: EndpointInput[_],
-      failure: DecodeFailure
+      failure: DecodeResult.Failure
   ): Directive1[I] = {
     val decodeFailureCtx = DecodeFailureContext(input, failure)
     val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)

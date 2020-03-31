@@ -25,7 +25,7 @@ class TapirJsonSprayTests extends FlatSpec with Matchers with DefaultJsonProtoco
     codec.decode(encoded) match {
       case Value(d) =>
         d shouldBe original
-      case f: DecodeFailure =>
+      case f: DecodeResult.Failure =>
         fail(f.toString)
     }
   }

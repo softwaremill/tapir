@@ -3,7 +3,7 @@ package sttp.tapir.server.internal
 import sttp.model.{Cookie, HeaderNames, Method, MultiQueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.{DecodeFailure, DecodeResult, EndpointIO, EndpointInput, StreamingEndpointIO}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 
@@ -33,7 +33,7 @@ object DecodeInputsResult {
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
-  case class Failure(input: EndpointInput.Basic[_], failure: DecodeFailure) extends DecodeInputsResult
+  case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeInputsResult
 }
 
 trait DecodeInputsContext {
@@ -187,8 +187,8 @@ object DecodeInputs {
       case Vector() => acc
       case t +: ts =>
         t match {
-          case (indexedInput, failure: DecodeFailure) => DecodeInputsResult.Failure(indexedInput.input, failure)
-          case (indexedInput, DecodeResult.Value(v))  => foldDecodedPathInputs(ts, acc.setBasicInputValue(v, indexedInput.index))
+          case (indexedInput, failure: DecodeResult.Failure) => DecodeInputsResult.Failure(indexedInput.input, failure)
+          case (indexedInput, DecodeResult.Value(v))         => foldDecodedPathInputs(ts, acc.setBasicInputValue(v, indexedInput.index))
         }
     }
   }
@@ -213,8 +213,8 @@ object DecodeInputs {
       case indexedInput +: inputsTail =>
         val (result, ctx2) = matchOther(indexedInput.input, ctx)
         result match {
-          case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, indexedInput.index), ctx2)
-          case failure: DecodeFailure => (DecodeInputsResult.Failure(indexedInput.input, failure), ctx2)
+          case DecodeResult.Value(v)         => matchOthers(inputsTail, values.setBasicInputValue(v, indexedInput.index), ctx2)
+          case failure: DecodeResult.Failure => (DecodeInputsResult.Failure(indexedInput.input, failure), ctx2)
         }
     }
   }

@@ -13,8 +13,6 @@ trait TapirAliases {
   type DecodeResult[+T] = sttp.tapir.DecodeResult[T]
   val DecodeResult = sttp.tapir.DecodeResult
 
-  type DecodeFailure = sttp.tapir.DecodeFailure
-
   /** Defaults.scala */
   val Defaults = sttp.tapir.Defaults
 

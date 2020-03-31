@@ -1,7 +1,7 @@
 package sttp.tapir.server.internal
 
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.{Mapping, DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
+import sttp.tapir.{Mapping, DecodeResult, EndpointIO, EndpointInput}
 import sttp.tapir.internal._
 
 sealed trait InputValuesResult {
@@ -11,7 +11,7 @@ object InputValuesResult {
   case class Values(values: List[Any], remainingInputValues: Vector[Any]) extends InputValuesResult {
     override def flatMap(f: Values => InputValuesResult): InputValuesResult = f(this)
   }
-  case class Failure(input: EndpointInput[_], failure: DecodeFailure) extends InputValuesResult {
+  case class Failure(input: EndpointInput[_], failure: DecodeResult.Failure) extends InputValuesResult {
     override def flatMap(f: Values => InputValuesResult): InputValuesResult = this
   }
 }
@@ -64,8 +64,8 @@ object InputValues {
         apply(inputsTail, remainingInputValues2).flatMap {
           case InputValuesResult.Values(vs, remainingInputValues3) =>
             codec.decode(SeqToParams(wrappedValue).asInstanceOf[II]) match {
-              case DecodeResult.Value(v) => InputValuesResult.Values(v :: vs, remainingInputValues3)
-              case f: DecodeFailure      => InputValuesResult.Failure(wrapped, f)
+              case DecodeResult.Value(v)   => InputValuesResult.Values(v :: vs, remainingInputValues3)
+              case f: DecodeResult.Failure => InputValuesResult.Failure(wrapped, f)
             }
         }
     }
