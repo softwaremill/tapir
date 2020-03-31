@@ -3,7 +3,7 @@ package sttp.tapir.docs.openapi.schema
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.docs.openapi.{OpenAPIDocsOptions, uniqueName}
+import sttp.tapir.docs.openapi.uniqueName
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
 import sttp.tapir.openapi.{Schema => OSchema}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
@@ -14,7 +14,7 @@ import scala.collection.mutable.ListBuffer
 object ObjectSchemasForEndpoints {
   private type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
 
-  def apply(es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
+  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjects = uniqueObjects(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
@@ -87,9 +87,7 @@ object ObjectSchemasForEndpoints {
   }
 
   private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator[_]): Seq[TypeData[_]] = {
-    p.fields.map { f =>
-      TypeData(f._2, fieldValidator(v, f._1))
-    }.toList
+    p.fields.map { f => TypeData(f._2, fieldValidator(v, f._1)) }.toList
   }
 
   private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator[_]): Seq[TypeData[_]] = {

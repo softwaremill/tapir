@@ -73,7 +73,7 @@ which you'd like to apply to an endpoint with type:
 val myEndpoint: Endpoint[(AuthToken, String, Int), ErrorInfo, Result, Nothing] = ...
 ```
 
-To avoid composing these functions by hand, tapir defines helper extension methods, `andThenFirst` and `andTheFirstE`. 
+To avoid composing these functions by hand, tapir defines helper extension methods, `andThenFirst` and `andThenFirstE`. 
 The first one should be used when errors are represented as failed wrapper types (e.g. failed futures), the second
 is errors are represented as `Either`s. 
 

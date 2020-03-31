@@ -1,0 +1,104 @@
+openapi: 3.0.1
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /{country}:
+    post:
+      operationId: postCountry
+      parameters:
+        - name: country
+          in: path
+          required: true
+          schema:
+            type: string
+          examples:
+            Example0:
+              value: Poland
+            Example1:
+              value: UK
+        - name: current-person
+          in: query
+          required: true
+          schema:
+            type: string
+          examples:
+            Example0:
+              value: alan
+            Example1:
+              value: bob
+        - name: X-Forwarded-User
+          in: header
+          required: true
+          schema:
+            type: string
+          examples:
+            Example0:
+              value: user1
+            Example1:
+              value: user2
+         - name: cookie-param
+         in: cookie
+         required: true
+         schema:
+           type: string
+         examples:
+           Example0:
+             value: cookie1
+           Example1:
+             value: cookie2
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Person'
+            examples:
+              Example0:
+                value:
+                  name: bob
+                  age: 23
+              Example1:
+                value:
+                  name: alan
+                  age: 50
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entity'
+          examples:
+            Example0:
+              value:
+                Person:
+                  name: michal
+                  age: 40
+            Example1:
+                value:
+                  Organization:
+                    name: acme
+components:
+  schemas:
+    Person:
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+    Entity:
+      oneOf:
+          - $ref: '#/components/schemas/Organization'
+          - $ref: '#/components/schemas/Person'
+    Organization:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string

@@ -1,11 +1,11 @@
 openapi: 3.0.1
 info:
-  title: Fruits
+  title: Entities
   version: '1.0'
 paths:
   /:
-    get:
-      operationId: getRoot
+    post:
+      operationId: postRoot
       responses:
         '200':
           description: ''
@@ -13,6 +13,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Entity'
+          examples:
+            Michal:
+              summary: Some summary
+              value:
+                Person:
+                  name: michal
+                  age: 40
+            Acme:
+                value:
+                  Organization:
+                    name: acme
 components:
   schemas:
     Entity:
@@ -28,8 +39,8 @@ components:
           type: string
     Person:
       required:
-      - name
-      - age
+        - name
+        - age
       type: object
       properties:
         name:

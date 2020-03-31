@@ -5,6 +5,7 @@ import io.circe.Json
 import io.circe.generic.auto._
 import org.scalatest.{FunSuite, Matchers}
 import sttp.model.{Method, StatusCode}
+import sttp.tapir.EndpointIO.Example
 import sttp.tapir._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -12,8 +13,8 @@ import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.openapi.{Contact, Info, License}
-import sttp.tapir.tests.{FruitAmount, _}
+import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
+import sttp.tapir.tests._
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
@@ -206,19 +207,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
       .out(jsonBody[Entity])
 
-    val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should match the expected yaml when using coproduct types, without parent backlinks") {
-    val expectedYaml = loadYaml("expected_coproduct_no_parent_links.yml")
-
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
-      .out(jsonBody[Entity])
-
-    implicit val openApiDocsOptions: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(linkFromChildToParent = false)
     val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
@@ -606,12 +594,78 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("support both multiple and single example values") {
-    val expectedYaml = loadYaml("expected_multiple_and_single_example_values.yml")
+  test("support example of list and not-list types") {
+    val expectedYaml = loadYaml("expected_examples_of_list_and_not_list_types.yml")
     val actualYaml = endpoint.post
       .in(query[List[String]]("friends").example(List("bob", "alice")))
       .in(query[String]("current-person").example("alan"))
       .in(jsonBody[Person].example(Person("bob", 23)))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("support multiple examples with explicit names") {
+    val expectedYaml = loadYaml("expected_multiple_examples_with_names.yml")
+    val actualYaml = endpoint.post
+      .out(jsonBody[Entity].examples(List(
+        Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")),
+        Example.of(Organization("acme"), Some("Acme"))
+      )))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("support multiple examples with default names") {
+    val expectedYaml = loadYaml("expected_multiple_examples_with_default_names.yml")
+    val actualYaml = endpoint.post
+      .in(jsonBody[Person].example(Person("bob", 23)).example(Person("matt", 30)))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("support example name even if there is a single example") {
+    val expectedYaml = loadYaml("expected_single_example_with_name.yml")
+    val actualYaml = endpoint.post
+      .out(jsonBody[Entity].example(
+        Example(Person("michal", 40), Some("Michal"), Some("Some summary"))
+      ))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+
+  test("support multiple examples with both explicit and default names ") {
+    val expectedYaml = loadYaml("expected_multiple_examples_with_explicit_and_default_names.yml")
+    val actualYaml = endpoint.post
+      .in(jsonBody[Person].examples(List(Example.of(Person("bob", 23), name=Some("Bob")), Example.of(Person("matt", 30)))))
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("support examples in different IO params") {
+    val expectedYaml = loadYaml("expected_multiple_examples.yml")
+    val actualYaml = endpoint.post
+      .in(path[String]("country").example("Poland").example("UK"))
+      .in(query[String]("current-person").example("alan").example("bob"))
+      .in(jsonBody[Person].example(Person("bob", 23)).example(Person("alan", 50)))
+      .in(header[String]("X-Forwarded-User").example("user1").example("user2"))
+      .in(cookie[String]("cookie-param").example("cookie1").example("cookie2"))
+      .out(jsonBody[Entity].example(Person("michal", 40)).example(Organization("acme")))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
@@ -686,6 +740,48 @@ class VerifyYamlTest extends FunSuite with Matchers {
       .toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml for single server with variables") {
+    val expectedYaml = loadYaml("expected_single_server_with_variables.yml")
+
+    val api = Info(
+      "Fruits",
+      "1.0"
+    )
+    val servers = List(
+      Server("https://{username}.example.com:{port}/{basePath}")
+        .description("The production API server")
+        .variables(
+          "username" -> ServerVariable(None, "demo", Some("Username")),
+          "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> ServerVariable(None, "v2", None)
+        )
+    )
+
+    val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml for multiple servers") {
+    val expectedYaml = loadYaml("expected_multiple_servers.yml")
+
+    val api = Info(
+      "Fruits",
+      "1.0"
+    )
+    val servers = List(
+      Server("https://development.example.com/v1", Some("Development server"), None),
+      Server("https://staging.example.com/v1", Some("Staging server"), None),
+      Server("https://api.example.com/v1", Some("Production server"), None)
+    )
+
+    val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
     actualYamlNoIndent shouldBe expectedYaml
   }
 

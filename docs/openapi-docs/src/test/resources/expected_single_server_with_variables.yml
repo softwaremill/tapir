@@ -1,0 +1,40 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+servers:
+  - url: https://{username}.example.com:{port}/{basePath}
+    description: The production API server
+    variables:
+      username:
+        default: demo
+        description: Username
+      port:
+        enum:
+          - '8443'
+          - '443'
+        default: '8443'
+      basePath:
+        default: v2
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: fruit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: amount
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string

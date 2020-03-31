@@ -1,13 +1,15 @@
 package sttp.tapir.docs.openapi
 
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.openapi.{ExampleValue, Parameter, ParameterIn, Schema}
+import sttp.tapir.openapi.{Parameter, ParameterIn, Schema}
 import sttp.tapir.{EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
 
 private[openapi] object EndpointInputToParameterConverter {
-  def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+  def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema]): Parameter = {
+    val examples = ExampleConverter.convertExamples(query.codec, query.info.examples)
+
     Parameter(
       query.name,
       ParameterIn.Query,
@@ -19,13 +21,14 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       None,
       schema,
-      example,
-      ListMap.empty,
+      examples.singleExample,
+      examples.multipleExamples,
       ListMap.empty
     )
   }
 
-  def from[T](pathCapture: EndpointInput.PathCapture[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+  def from[T](pathCapture: EndpointInput.PathCapture[T], schema: ReferenceOr[Schema]): Parameter = {
+    val examples = ExampleConverter.convertExamples(pathCapture.codec, pathCapture.info.examples)
     Parameter(
       pathCapture.name.getOrElse("?"),
       ParameterIn.Path,
@@ -37,13 +40,14 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       None,
       schema,
-      example,
-      ListMap.empty,
+      examples.singleExample,
+      examples.multipleExamples,
       ListMap.empty
     )
   }
 
-  def from[T](header: EndpointIO.Header[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+  def from[T](header: EndpointIO.Header[T], schema: ReferenceOr[Schema]): Parameter = {
+    val examples = ExampleConverter.convertExamples(header.codec, header.info.examples)
     Parameter(
       header.name,
       ParameterIn.Header,
@@ -55,13 +59,14 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       None,
       schema,
-      example,
-      ListMap.empty,
+      examples.singleExample,
+      examples.multipleExamples,
       ListMap.empty
     )
   }
 
-  def from[T](header: EndpointIO.FixedHeader, schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+  def from[T](header: EndpointIO.FixedHeader, schema: ReferenceOr[Schema]): Parameter = {
+    val examples = ExampleConverter.fixedExample(header.info.examples, header.value)
     Parameter(
       header.name,
       ParameterIn.Header,
@@ -73,13 +78,14 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       None,
       schema,
-      example,
-      ListMap.empty,
+      examples.singleExample,
+      examples.multipleExamples,
       ListMap.empty
     )
   }
 
-  def from[T](cookie: EndpointInput.Cookie[T], schema: ReferenceOr[Schema], example: Option[ExampleValue]): Parameter = {
+  def from[T](cookie: EndpointInput.Cookie[T], schema: ReferenceOr[Schema]): Parameter = {
+    val examples = ExampleConverter.convertExamples(cookie.codec, cookie.info.examples)
     Parameter(
       cookie.name,
       ParameterIn.Cookie,
@@ -91,8 +97,8 @@ private[openapi] object EndpointInputToParameterConverter {
       None,
       None,
       schema,
-      example,
-      ListMap.empty,
+      examples.singleExample,
+      examples.multipleExamples,
       ListMap.empty
     )
   }

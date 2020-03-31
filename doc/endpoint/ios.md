@@ -1,4 +1,4 @@
-# Defining endpoint's input/output
+# Inputs/outputs
 
 An input is described by an instance of the `EndpointInput` trait, and an output by an instance of the `EndpointOutput`
 trait. Some inputs can be used both as inputs and outputs; then, they additionally implement the `EndpointIO` trait.
