@@ -26,7 +26,7 @@ class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsConte
   }
   override def header(name: String): List[String] = req.headers.get(CaseInsensitiveString(name)).map(_.value).toList
   override def headers: Seq[(String, String)] = req.headers.toList.map(h => (h.name.value, h.value))
-  override def queryParameter(name: String): Seq[String] = queryParameters.get(name).toList
+  override def queryParameter(name: String): Seq[String] = queryParameters.getMulti(name).getOrElse(Nil)
   override val queryParameters: MultiQueryParams = MultiQueryParams.fromMultiMap(req.multiParams)
   override def bodyStream: Any = req.body
   override def serverRequest: ServerRequest = new Http4sServerRequest(req)
