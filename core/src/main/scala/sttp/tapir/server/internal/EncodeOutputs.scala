@@ -13,6 +13,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     def run(outputs: Vector[EndpointOutput.Single[_]], ov: OutputValues[B], vs: Seq[Any]): OutputValues[B] = {
       (outputs, vs) match {
         case (Vector(), Seq()) => ov
+        case (Vector(), Seq(())) => ov
         case (EndpointOutput.FixedStatusCode(sc, _) +: outputsTail, _) =>
           run(outputsTail, ov.withStatusCode(sc), vs)
         case (EndpointIO.FixedHeader(name, value, _) +: outputsTail, _) =>

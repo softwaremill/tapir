@@ -5,7 +5,6 @@ private[tapir] object ParamsToSeq {
     a match {
       [2..#case ([#v1#]) => Seq([#v1#])#
       ]
-      case ()                       => Seq()
       case v1                       => Seq(v1) // single value is a catch-all so must be last
     }
   }

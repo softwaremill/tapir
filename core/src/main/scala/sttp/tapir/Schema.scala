@@ -80,6 +80,7 @@ object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
   implicit val schemaForFloat: Schema[Float] = Schema(SNumber).format("float")
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber).format("double")
   implicit val schemaForBoolean: Schema[Boolean] = Schema(SBoolean)
+  implicit val schemaForUnit: Schema[Unit] = Schema(SProduct.empty)
   implicit val schemaForFile: Schema[File] = Schema(SBinary)
   implicit val schemaForPath: Schema[Path] = Schema(SBinary)
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary)
