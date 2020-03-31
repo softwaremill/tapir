@@ -11,7 +11,7 @@ import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.collection.immutable.ListMap
 
-sealed trait EndpointInput[T] extends CodecMappable[T] {
+sealed trait EndpointInput[T] extends Mappable[T] {
   private[tapir] type ThisType[X] <: EndpointInput[X]
 
   def and[U, TU](other: EndpointInput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointInput[TU]
@@ -36,20 +36,20 @@ object EndpointInput {
 
   case class FixedMethod[T](m: Method, codec: Codec[Unit, T, TextPlain]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedMethod[X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): FixedMethod[U] = copy(codec = codec.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): FixedMethod[U] = copy(codec = codec.map(mapping))
     override def show: String = m.method
   }
 
   case class FixedPath[T](s: String, codec: Codec[Unit, T, TextPlain]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedPath[X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): FixedPath[U] = copy(codec = codec.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): FixedPath[U] = copy(codec = codec.map(mapping))
     override def show = s"/$s"
   }
 
   case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = PathCapture[X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): PathCapture[U] =
-      copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): PathCapture[U] =
+      copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.validator)
 
     // TODO: move to Basic? (all meta-methods)
@@ -63,8 +63,8 @@ object EndpointInput {
 
   case class PathsCapture[T](codec: Codec[List[String], T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = PathsCapture[X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): PathsCapture[U] =
-      copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): PathsCapture[U] =
+      copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show = s"/..."
 
     def description(d: String): PathsCapture[T] = copy(info = info.description(d))
@@ -77,7 +77,7 @@ object EndpointInput {
 
   case class Query[T](name: String, codec: Codec[List[String], T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Query[X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): Query[U] = copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): Query[U] = copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show: String = addValidatorShow(s"?$name", codec.validator)
 
     def description(d: String): Query[T] = copy(info = info.description(d))
@@ -90,8 +90,8 @@ object EndpointInput {
 
   case class QueryParams[T](codec: Codec[MultiQueryParams, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = QueryParams[X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): QueryParams[U] =
-      copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): QueryParams[U] =
+      copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show: String = s"?..."
 
     def description(d: String): QueryParams[T] = copy(info = info.description(d))
@@ -104,7 +104,7 @@ object EndpointInput {
 
   case class Cookie[T](name: String, codec: Codec[Option[String], T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Cookie[X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): Cookie[U] = copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): Cookie[U] = copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
 
     def description(d: String): Cookie[T] = copy(info = info.description(d))
@@ -117,7 +117,7 @@ object EndpointInput {
 
   case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain]) extends Basic[T] {
     override private[tapir] type ThisType[X] = ExtractFromRequest[X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): ExtractFromRequest[U] = copy(codec = codec.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): ExtractFromRequest[U] = copy(codec = codec.map(mapping))
     override def show: String = s"{data from request}"
 
     // TODO: validator etc.?
@@ -133,12 +133,12 @@ object EndpointInput {
     case class ApiKey[T](input: EndpointInput.Single[T]) extends Auth[T] {
       override private[tapir] type ThisType[X] = ApiKey[X]
       override def show: String = s"auth(api key, via ${input.show})"
-      override def map[U: IsUnit](nextCodec: Mapping[T, U]): ApiKey[U] = copy(input = input.map(nextCodec))
+      override def map[U: IsUnit](mapping: Mapping[T, U]): ApiKey[U] = copy(input = input.map(mapping))
     }
     case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
       override private[tapir] type ThisType[X] = Http[X]
       override def show: String = s"auth($scheme http, via ${input.show})"
-      override def map[U: IsUnit](nextCodec: Mapping[T, U]): Http[U] = copy(input = input.map(nextCodec))
+      override def map[U: IsUnit](mapping: Mapping[T, U]): Http[U] = copy(input = input.map(mapping))
     }
     case class Oauth2[T](
         authorizationUrl: String,
@@ -149,7 +149,7 @@ object EndpointInput {
     ) extends Auth[T] {
       override private[tapir] type ThisType[X] = Oauth2[X]
       override def show: String = s"auth(oauth2, via ${input.show})"
-      override def map[U: IsUnit](nextCodec: Mapping[T, U]): Oauth2[U] = copy(input = input.map(nextCodec))
+      override def map[U: IsUnit](mapping: Mapping[T, U]): Oauth2[U] = copy(input = input.map(mapping))
 
       def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2[T] = ScopedOauth2(this, requiredScopes)
     }
@@ -159,7 +159,7 @@ object EndpointInput {
 
       override private[tapir] type ThisType[X] = ScopedOauth2[X]
       override def show: String = s"scoped(${oauth2.show})"
-      override def map[U: IsUnit](nextCodec: Mapping[T, U]): ScopedOauth2[U] = copy(oauth2 = oauth2.map(nextCodec))
+      override def map[U: IsUnit](mapping: Mapping[T, U]): ScopedOauth2[U] = copy(oauth2 = oauth2.map(mapping))
 
       override def input: Single[T] = oauth2.input
     }
@@ -170,14 +170,14 @@ object EndpointInput {
   case class MappedTuple[TUPLE, T](input: Tuple[TUPLE], codec: Mapping[TUPLE, T]) extends EndpointInput.Single[T] {
     override private[tapir] type ThisType[X] = MappedTuple[TUPLE, X]
     override def show: String = input.show
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](input, codec.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](input, codec.map(mapping))
   }
 
   case class Tuple[TUPLE](inputs: Vector[Single[_]]) extends EndpointInput[TUPLE] {
     override private[tapir] type ThisType[X] = EndpointInput[X]
     override def show: String = if (inputs.isEmpty) "-" else inputs.map(_.show).mkString(" ")
-    override def map[U: IsUnit](nextCodec: Mapping[TUPLE, U]): EndpointInput[U] =
-      MappedTuple[TUPLE, TUPLE](this, Mapping.id).map(nextCodec)
+    override def map[U: IsUnit](mapping: Mapping[TUPLE, U]): EndpointInput[U] =
+      MappedTuple[TUPLE, TUPLE](this, Mapping.id).map(mapping)
 
     override def and[U, TU](other: EndpointInput[U])(implicit ts: ParamConcat.Aux[TUPLE, U, TU]): EndpointInput.Tuple[TU] =
       other match {
@@ -188,7 +188,7 @@ object EndpointInput {
   }
 }
 
-sealed trait EndpointOutput[T] extends CodecMappable[T] {
+sealed trait EndpointOutput[T] extends Mappable[T] {
   private[tapir] type ThisType[X] <: EndpointOutput[X]
 
   def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[T, J, IJ]): EndpointOutput[IJ]
@@ -217,7 +217,7 @@ object EndpointOutput {
       extends Basic[T] {
     override private[tapir] type ThisType[X] = StatusCode[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): StatusCode[U] = copy(codec = codec.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): StatusCode[U] = copy(codec = codec.map(mapping))
     override def show: String = s"status code - possible codes ($documentedCodes)"
 
     def description(code: sttp.model.StatusCode, d: String): StatusCode[T] = {
@@ -231,8 +231,8 @@ object EndpointOutput {
   case class FixedStatusCode[T](statusCode: sttp.model.StatusCode, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedStatusCode[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): FixedStatusCode[U] =
-      copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): FixedStatusCode[U] =
+      copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show: String = s"status code ($statusCode)"
 
     def description(d: String): FixedStatusCode[T] = copy(info = info.description(d))
@@ -254,7 +254,7 @@ object EndpointOutput {
   case class OneOf[O, T](mappings: Seq[StatusMapping[_ <: O]], codec: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): OneOf[O, U] = copy[O, U](codec = codec.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](codec = codec.map(mapping))
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
   }
 
@@ -263,7 +263,7 @@ object EndpointOutput {
   case class Void[T]() extends EndpointOutput[T] {
     override private[tapir] type ThisType[X] = Void[X]
     override def show: String = "void"
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): Void[U] = Void()
+    override def map[U: IsUnit](mapping: Mapping[T, U]): Void[U] = Void()
 
     override def and[U, TU](other: EndpointOutput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
       other.asInstanceOf[EndpointOutput[TU]]
@@ -275,14 +275,14 @@ object EndpointOutput {
     override private[tapir] type ThisType[X] = MappedTuple[TUPLE, X]
     override private[tapir] def _codec: Mapping[_, T] = codec
     override def show: String = output.show
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](output, codec.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](output, codec.map(mapping))
   }
 
   case class Tuple[TUPLE](outputs: Vector[Single[_]]) extends EndpointOutput[TUPLE] {
     override private[tapir] type ThisType[X] = EndpointOutput[X]
     override def show: String = if (outputs.isEmpty) "-" else outputs.map(_.show).mkString(" ")
-    override def map[U: IsUnit](nextCodec: Mapping[TUPLE, U]): EndpointOutput[U] =
-      MappedTuple[TUPLE, TUPLE](this, Mapping.id).map(nextCodec)
+    override def map[U: IsUnit](mapping: Mapping[TUPLE, U]): EndpointOutput[U] =
+      MappedTuple[TUPLE, TUPLE](this, Mapping.id).map(mapping)
 
     override def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[TUPLE, J, IJ]): EndpointOutput.Tuple[IJ] =
       other match {
@@ -319,7 +319,7 @@ object EndpointIO {
   case class Body[R, T](bodyType: RawBodyType[R], codec: Codec[R, T, _ <: CodecFormat], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Body[R, X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): Body[R, U] = copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): Body[R, U] = copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show: String = {
       val charset = bodyType.asInstanceOf[RawBodyType[_]] match {
         case RawBodyType.StringBody(charset) => s" (${charset.toString})"
@@ -340,15 +340,15 @@ object EndpointIO {
   case class StreamBodyWrapper[S, T](wrapped: StreamingEndpointIO.Body[S, T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = StreamBodyWrapper[S, X]
     override private[tapir] def _codec: Mapping[_, T] = wrapped.codec
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): StreamBodyWrapper[S, U] = copy(wrapped = wrapped.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): StreamBodyWrapper[S, U] = copy(wrapped = wrapped.map(mapping))
     override def show = s"{body as stream}"
   }
 
   case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedHeader[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): FixedHeader[U] =
-      copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): FixedHeader[U] =
+      copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show = s"{header ${h.name}: ${h.value}}"
 
     def description(d: String): FixedHeader[T] = copy(info = info.description(d))
@@ -358,7 +358,7 @@ object EndpointIO {
   case class Header[T](name: String, codec: Codec[List[String], T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Header[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): Header[U] = copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): Header[U] = copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show: String = addValidatorShow(s"{header $name}", codec.validator)
 
     def description(d: String): Header[T] = copy(info = info.description(d))
@@ -372,7 +372,7 @@ object EndpointIO {
   case class Headers[T](codec: Codec[List[sttp.model.Header], T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Headers[X]
     override private[tapir] def _codec: Mapping[_, T] = codec
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): Headers[U] = copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): Headers[U] = copy(codec = codec.map(mapping), info = info.map(mapping))
     override def show = s"{multiple headers}"
 
     def description(d: String): Headers[T] = copy(info = info.description(d))
@@ -387,14 +387,14 @@ object EndpointIO {
     override private[tapir] type ThisType[X] = MappedTuple[TUPLE, X]
     override private[tapir] def _codec: Mapping[_, T] = codec
     override def show: String = io.show
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](io, codec.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](io, codec.map(mapping))
   }
 
   case class Tuple[TUPLE](ios: Vector[Single[_]]) extends EndpointIO[TUPLE] {
     override private[tapir] type ThisType[X] = EndpointIO[X]
     override def show: String = if (ios.isEmpty) "-" else ios.map(_.show).mkString(" ")
-    override def map[U: IsUnit](nextCodec: Mapping[TUPLE, U]): EndpointIO[U] =
-      MappedTuple[TUPLE, TUPLE](this, Mapping.id).map(nextCodec)
+    override def map[U: IsUnit](mapping: Mapping[TUPLE, U]): EndpointIO[U] =
+      MappedTuple[TUPLE, TUPLE](this, Mapping.id).map(mapping)
 
     override def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[TUPLE, J, IJ]): EndpointInput.Tuple[IJ] =
       other match {
@@ -459,7 +459,7 @@ Internally, the streaming body is converted into a wrapper `EndpointIO`, which "
 information. The `EndpointIO.StreamBodyWrapper` should only be used internally, not by the end user: there's no
 factory method in `Tapir` which would directly create an instance of it.
  */
-sealed trait StreamingEndpointIO[T, +S] extends CodecMappable[T] {
+sealed trait StreamingEndpointIO[T, +S] extends Mappable[T] {
   private[tapir] def toEndpointIO: EndpointIO[T]
 }
 
@@ -467,7 +467,7 @@ object StreamingEndpointIO {
   case class Body[S, T](codec: Codec[S, T, _ <: CodecFormat], info: EndpointIO.Info[T], charset: Option[Charset])
       extends StreamingEndpointIO[T, S] {
     override private[tapir] type ThisType[X] = Body[S, X]
-    override def map[U: IsUnit](nextCodec: Mapping[T, U]): Body[S, U] = copy(codec = codec.map(nextCodec), info = info.map(nextCodec))
+    override def map[U: IsUnit](mapping: Mapping[T, U]): Body[S, U] = copy(codec = codec.map(mapping), info = info.map(mapping))
 
     def description(d: String): Body[S, T] = copy(info = info.description(d))
     def example(t: T): Body[S, T] = copy(info = info.example(t))
@@ -478,18 +478,13 @@ object StreamingEndpointIO {
   }
 }
 
-trait CodecMappable[T] {
+trait Mappable[T] {
   private[tapir] type ThisType[X]
 
-  def map[U: IsUnit](nextCodec: Mapping[T, U]): ThisType[U]
+  def map[U: IsUnit](mapping: Mapping[T, U]): ThisType[U]
   def map[U: IsUnit](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U: IsUnit](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
   def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
     map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
   }
-
-  def mapOption[TT, UU](nextCodec: Codec[TT, UU, _ <: CodecFormat])(implicit ev: T =:= Option[TT]): ThisType[Option[UU]] =
-    map(Codec.option(nextCodec).asInstanceOf[Codec[T, Option[UU], CodecFormat]])
-  def mapList[TT, UU](nextCodec: Codec[TT, UU, _ <: CodecFormat])(implicit ev: T =:= List[TT]): ThisType[List[UU]] =
-    map(Codec.list(nextCodec).asInstanceOf[Codec[T, List[UU], CodecFormat]])
 }
