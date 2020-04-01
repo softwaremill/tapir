@@ -399,7 +399,7 @@ lazy val playground: Project = (project in file("playground"))
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-      "io.swagger" % "swagger-annotations" % "1.6.0",
+      "io.swagger" % "swagger-annotations" % "1.6.1",
       "io.circe" %% "circe-generic-extras" % "0.13.0"
     ),
     libraryDependencies ++= Seq(
