@@ -42,7 +42,7 @@ implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode
 .. note::
 
   Note that inputs/outputs can also be mapped over. In some cases, it's enough to create an input/output corresponding 
-  to one of the existing tyepes, and then map over them. However, if you have a type that's used multiple times, it's 
+  to one of the existing types, and then map over them. However, if you have a type that's used multiple times, it's 
   usually better to define a codec for that type. 
 ```
 
