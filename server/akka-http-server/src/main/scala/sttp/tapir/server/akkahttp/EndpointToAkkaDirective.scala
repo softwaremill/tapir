@@ -11,8 +11,8 @@ import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
 import sttp.model.{Header, Part}
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.internal.server.{DecodeInputs, DecodeInputsResult, InputValues}
-import sttp.tapir.server.{DecodeFailureHandling, ServerDefaults}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
+import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
 import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
@@ -82,16 +82,14 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       input: EndpointInput.Single[_],
       failure: DecodeFailure
   ): Directive1[I] = {
-    val handling = serverOptions.decodeFailureHandler(ctx, input, failure)
+    val decodeFailureCtx = DecodeFailureContext(input, failure)
+    val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
     handling match {
       case DecodeFailureHandling.NoMatch =>
-        serverOptions.loggingOptions.decodeFailureNotHandledMsg(e, failure, input).foreach(ctx.log.debug)
+        serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(ctx.log)
         reject
       case DecodeFailureHandling.RespondWithResponse(output, value) =>
-        serverOptions.loggingOptions.decodeFailureHandledMsg(e, failure, input, value).foreach {
-          case (msg, Some(t)) => ctx.log.debug(s"$msg; exception: {}", t)
-          case (msg, None)    => ctx.log.debug(msg)
-        }
+        serverOptions.logRequestHandling.decodeFailureHandled(e, decodeFailureCtx, value)(ctx.log)
         StandardRoute(OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, output, value))
     }
   }
@@ -108,9 +106,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       case FileValueType =>
         serverOptions
           .createFile(ctx)
-          .flatMap(
-            file => entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => file)
-          )
+          .flatMap(file => entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => file))
       case mvt: MultipartValueType =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(entity).flatMap { fd =>
           fd.parts
@@ -127,14 +123,13 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       ec: ExecutionContext
   ): Future[Part[R]] = {
     entityToRawValue(part.entity, codecMeta.rawValueType, ctx)
-      .map(
-        r =>
-          Part(
-            part.name,
-            r,
-            otherDispositionParams = part.additionalDispositionParams,
-            headers = part.additionalHeaders.map(h => Header.notValidated(h.name, h.value))
-          )
+      .map(r =>
+        Part(
+          part.name,
+          r,
+          otherDispositionParams = part.additionalDispositionParams,
+          headers = part.additionalHeaders.map(h => Header.notValidated(h.name, h.value))
+        )
       )
   }
 }

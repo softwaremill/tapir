@@ -1,5 +1,6 @@
 package sttp.tapir
 
+import sttp.tapir.generic.SealedTrait
 import sttp.tapir.generic.internal.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
 
 import scala.collection.immutable
@@ -16,7 +17,7 @@ sealed trait Validator[T] {
   def and(other: Validator[T]): Validator[T] = Validator.all(this, other)
   def or(other: Validator[T]): Validator[T] = Validator.any(this, other)
 
-  def show: Option[String]
+  def show: Option[String] = Validator.show(this)
 }
 
 object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
@@ -63,7 +64,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"${if (exclusive) ">" else ">="}$value")
   }
   case class Max[T](value: T, exclusive: Boolean)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {
@@ -73,7 +73,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"${if (exclusive) "<" else "<="}$value")
   }
   case class Pattern[T <: String](value: String) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {
@@ -83,7 +82,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"~$value")
   }
   case class MinLength[T <: String](value: Int) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {
@@ -93,7 +91,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"length>=$value")
   }
   case class MaxLength[T <: String](value: Int) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {
@@ -103,7 +100,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"length<=$value")
   }
   case class MinSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
     override def validate(t: C[T]): List[ValidationError[_]] = {
@@ -113,7 +109,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"size>=$value")
   }
   case class MaxSize[T, C[_] <: Iterable[_]](value: Int) extends Primitive[C[T]] {
     override def validate(t: C[T]): List[ValidationError[_]] = {
@@ -123,7 +118,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"size<=$value")
   }
   case class Custom[T](doValidate: T => Boolean, message: String) extends Primitive[T] {
     override def validate(t: T): List[ValidationError[_]] = {
@@ -133,7 +127,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"valid")
   }
 
   case class Enum[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]]) extends Primitive[T] {
@@ -144,7 +137,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         List(ValidationError(this, t))
       }
     }
-    override def show: Option[String] = Some(s"in(${possibleValues.mkString(",")}")
 
     /**
       * Specify how values of this type can be encoded to a raw value (typically a [[String]]). This encoding
@@ -162,7 +154,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     override def validate(t: C[E]): List[ValidationError[_]] = {
       toIterable(t).flatMap(elementValidator.validate).toList
     }
-    override def show: Option[String] = elementValidator.show.map(se => s"elements($se)")
   }
 
   case class FieldName(name: String, lowLevelName: String)
@@ -178,37 +169,30 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         f.validator.validate(f.get(t)).map(_.prependPath(f.name))
       }
     }.toList
-    override def show: Option[String] =
-      fields.flatMap {
-        case (n, f) =>
-          f.validator.show.map(n -> _)
-      }.toList match {
-        case Nil => None
-        case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
-      }
+  }
+
+  case class Coproduct[T](ctx: SealedTrait[Validator, T]) extends Single[T] {
+    override def validate(t: T): List[ValidationError[_]] = {
+      ctx.dispatch(t).validate(t)
+    }
+
+    def subtypes: Map[String, Validator[scala.Any]] = ctx.subtypes
   }
 
   case class OpenProduct[E](elementValidator: Validator[E]) extends Single[Map[String, E]] {
     override def validate(t: Map[String, E]): List[ValidationError[_]] = {
       t.flatMap { case (name, value) => elementValidator.validate(value).map(_.prependPath(FieldName(name, name))) }
     }.toList
-    override def show: Option[String] = elementValidator.show.map(se => s"elements($se)")
   }
 
   case class Mapped[TT, T](wrapped: Validator[T], g: TT => T) extends Single[TT] {
     override def validate(t: TT): List[ValidationError[_]] = wrapped.validate(g(t))
-    override def show: Option[String] = wrapped.show
   }
 
   //
 
   case class All[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def validate(t: T): List[ValidationError[_]] = validators.flatMap(_.validate(t)).toList
-    override def show: Option[String] = validators.flatMap(_.show) match {
-      case immutable.Seq()  => None
-      case immutable.Seq(s) => Some(s)
-      case ss               => Some(s"all(${ss.mkString(",")})")
-    }
 
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) All(Nil) else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
@@ -226,14 +210,60 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         results.flatten.toList
       }
     }
-    override def show: Option[String] = validators.flatMap(_.show) match {
-      case immutable.Seq()  => Some("reject")
-      case immutable.Seq(s) => Some(s)
-      case ss               => Some(s"any(${ss.mkString(",")})")
-    }
 
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) Any(Nil) else super.contramap(g)
     override def or(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else Any(validators :+ other)
+  }
+
+  //
+
+  def show[T](v: Validator[T], visited: Set[Validator[_]] = Set.empty): Option[String] = {
+    def recurse[U](vv: Validator[U]) = show(vv, visited + v)
+    if (visited.contains(v)) Some("recursive")
+    else {
+      v match {
+        case Min(value, exclusive)     => Some(s"${if (exclusive) ">" else ">="}$value")
+        case Max(value, exclusive)     => Some(s"${if (exclusive) "<" else "<="}$value")
+        case Pattern(value)            => Some(s"~$value")
+        case MinLength(value)          => Some(s"length>=$value")
+        case MaxLength(value)          => Some(s"length<=$value")
+        case MinSize(value)            => Some(s"size>=$value")
+        case MaxSize(value)            => Some(s"size<=$value")
+        case Custom(_, message)        => Some(message)
+        case Enum(possibleValues, _)   => Some(s"in(${possibleValues.mkString(",")}")
+        case CollectionElements(el, _) => recurse(el).map(se => s"elements($se)")
+        case Product(fields) =>
+          fields.flatMap {
+            case (n, f) =>
+              recurse(f.validator).map(n -> _)
+          }.toList match {
+            case Nil => None
+            case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
+          }
+        case c @ Coproduct(_) =>
+          c.subtypes.flatMap {
+            case (n, v) =>
+              recurse(v).map(n -> _)
+          }.toList match {
+            case Nil => None
+            case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
+          }
+        case OpenProduct(el)    => recurse(el).map(se => s"elements($se)")
+        case Mapped(wrapped, _) => recurse(wrapped)
+        case All(validators) =>
+          validators.flatMap(recurse(_)) match {
+            case immutable.Seq()  => None
+            case immutable.Seq(s) => Some(s)
+            case ss               => Some(s"all(${ss.mkString(",")})")
+          }
+        case Any(validators) =>
+          validators.flatMap(recurse(_)) match {
+            case immutable.Seq()  => Some("reject")
+            case immutable.Seq(s) => Some(s)
+            case ss               => Some(s"any(${ss.mkString(",")})")
+          }
+      }
+    }
   }
 
   //

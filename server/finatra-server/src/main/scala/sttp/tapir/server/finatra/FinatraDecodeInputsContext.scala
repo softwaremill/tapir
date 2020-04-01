@@ -2,8 +2,8 @@ package sttp.tapir.server.finatra
 
 import com.twitter.finagle.http.Request
 import sttp.model.Method
-import sttp.tapir.internal.server.DecodeInputsContext
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.internal.DecodeInputsContext
 
 class FinatraDecodeInputsContext(request: Request, pathConsumed: Int = 0) extends DecodeInputsContext {
   override def method: Method = Method(request.method.toString.toUpperCase)

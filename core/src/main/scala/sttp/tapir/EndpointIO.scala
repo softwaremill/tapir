@@ -4,13 +4,12 @@ import sttp.model.{Method, MultiQueryParams}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.CodecForOptional.PlainCodecForOptional
-import sttp.tapir.EndpointIO.Info
+import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 
 import scala.collection.immutable.ListMap
-import scala.reflect.ClassTag
 
 sealed trait EndpointInput[I] {
   def and[J, IJ](other: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointInput[IJ]
@@ -52,6 +51,8 @@ object EndpointInput {
     def name(n: String): PathCapture[T] = copy(name = Some(n))
     def description(d: String): PathCapture[T] = copy(info = info.description(d))
     def example(t: T): PathCapture[T] = copy(info = info.example(t))
+    def example(example: Example[T]): PathCapture[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): PathCapture[T] = copy(info = info.examples(examples))
     def validate(v: Validator[T]): PathCapture[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.validator)
   }
@@ -59,12 +60,17 @@ object EndpointInput {
   case class PathsCapture(info: EndpointIO.Info[Seq[String]]) extends Basic[Seq[String]] {
     def description(d: String): PathsCapture = copy(info = info.description(d))
     def example(t: Seq[String]): PathsCapture = copy(info = info.example(t))
+    def example(example: Example[Seq[String]]): PathsCapture = copy(info = info.example(example))
+    def examples(examples: List[Example[Seq[String]]]): PathsCapture = copy(info = info.examples(examples))
     def show = s"/..."
   }
 
   case class Query[T](name: String, codec: PlainCodecForMany[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Query[T] = copy(info = info.description(d))
     def example(t: T): Query[T] = copy(info = info.example(t))
+    def example(example: Example[T]): Query[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Query[T] = copy(info = info.examples(examples))
+    def deprecated(): Query[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Query[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"?$name", codec.validator)
   }
@@ -72,12 +78,18 @@ object EndpointInput {
   case class QueryParams(info: EndpointIO.Info[MultiQueryParams]) extends Basic[MultiQueryParams] {
     def description(d: String): QueryParams = copy(info = info.description(d))
     def example(t: MultiQueryParams): QueryParams = copy(info = info.example(t))
+    def example(example: Example[MultiQueryParams]): QueryParams = copy(info = info.example(example))
+    def examples(examples: List[Example[MultiQueryParams]]): QueryParams = copy(info = info.examples(examples))
+    def deprecated(): QueryParams = copy(info = info.deprecated(true))
     def show = s"?..."
   }
 
   case class Cookie[T](name: String, codec: PlainCodecForOptional[T], info: EndpointIO.Info[T]) extends Basic[T] {
     def description(d: String): Cookie[T] = copy(info = info.description(d))
     def example(t: T): Cookie[T] = copy(info = info.example(t))
+    def example(example: Example[T]): Cookie[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Cookie[T] = copy(info = info.examples(examples))
+    def deprecated(): Cookie[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Cookie[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
   }
@@ -99,14 +111,21 @@ object EndpointInput {
     case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
       def show = s"auth($scheme http, via ${input.show})"
     }
-    case class Oauth2(
+    case class Oauth2[T](
         authorizationUrl: String,
         tokenUrl: String,
         scopes: ListMap[String, String],
         refreshUrl: Option[String] = None,
-        input: EndpointInput.Single[String]
-    ) extends Auth[String] {
+        input: EndpointInput.Single[T]
+    ) extends Auth[T] {
       def show = s"auth(oauth2, via ${input.show})"
+      def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2[T] = ScopedOauth2(this, requiredScopes)
+    }
+
+    case class ScopedOauth2[T](oauth2: Oauth2[T], requiredScopes: Seq[String]) extends Auth[T] {
+      require(requiredScopes.forall(oauth2.scopes.keySet.contains), "all requiredScopes have to be defined on outer Oauth2#scopes")
+      def show = s"scoped(${oauth2.show})"
+      override def input: Single[T] = oauth2.input
     }
   }
 
@@ -175,9 +194,18 @@ object EndpointOutput {
     override def show: String = s"status code ($statusCode)"
   }
 
-  //
-
-  case class StatusMapping[O](statusCode: Option[sttp.model.StatusCode], ct: ClassTag[O], output: EndpointOutput[O])
+  /**
+    * Specifies that for `statusCode`, the given `output` should be used.
+    *
+    * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
+    * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
+    * type parameters).
+    */
+  case class StatusMapping[O] private[tapir] (
+      statusCode: Option[sttp.model.StatusCode],
+      output: EndpointOutput[O],
+      appliesTo: Any => Boolean
+  )
 
   case class OneOf[I](mappings: Seq[StatusMapping[_ <: I]]) extends Single[I] {
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
@@ -234,22 +262,28 @@ object EndpointIO {
   case class Body[T, CF <: CodecFormat, R](codec: CodecForOptional[T, CF, R], info: Info[T]) extends Basic[T] {
     def description(d: String): Body[T, CF, R] = copy(info = info.description(d))
     def example(t: T): Body[T, CF, R] = copy(info = info.example(t))
+    def example(example: Example[T]): Body[T, CF, R] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Body[T, CF, R] = copy(info = info.examples(examples))
     def validate(v: Validator[T]): Body[T, CF, R] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"{body as ${codec.meta.format.mediaType}}", codec.validator)
   }
 
   case class StreamBodyWrapper[S, F <: CodecFormat](wrapped: StreamingEndpointIO.Body[S, F]) extends Basic[S] {
-    def show = s"{body as stream, ${wrapped.mediaType.mediaType}}"
+    def show = s"{body as stream, ${wrapped.format.mediaType}}"
   }
 
   case class FixedHeader(name: String, value: String, info: Info[Unit]) extends Basic[Unit] {
     def description(d: String): FixedHeader = copy(info = info.description(d))
+    def deprecated(): FixedHeader = copy(info = info.deprecated(true))
     def show = s"{header $name: $value}"
   }
 
   case class Header[T](name: String, codec: PlainCodecForMany[T], info: Info[T]) extends Basic[T] {
     def description(d: String): Header[T] = copy(info = info.description(d))
     def example(t: T): Header[T] = copy(info = info.example(t))
+    def example(example: Example[T]): Header[T] = copy(info = info.example(example))
+    def examples(examples: List[Example[T]]): Header[T] = copy(info = info.examples(examples))
+    def deprecated(): Header[T] = copy(info = info.deprecated(true))
     def validate(v: Validator[T]): Header[T] = copy(codec = codec.validate(v))
     def show: String = addValidatorShow(s"{header $name}", codec.validator)
   }
@@ -257,6 +291,8 @@ object EndpointIO {
   case class Headers(info: Info[Seq[(String, String)]]) extends Basic[Seq[(String, String)]] {
     def description(d: String): Headers = copy(info = info.description(d))
     def example(t: Seq[(String, String)]): Headers = copy(info = info.example(t))
+    def example(example: Example[Seq[(String, String)]]): Headers = copy(info = info.example(example))
+    def examples(examples: List[Example[Seq[(String, String)]]]): Headers = copy(info = info.examples(examples))
     def show = s"{multiple headers}"
   }
 
@@ -290,12 +326,22 @@ object EndpointIO {
 
   //
 
-  case class Info[T](description: Option[String], example: Option[T]) {
+  case class Example[+T](value: T, name: Option[String], summary: Option[String])
+
+  object Example {
+    def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
+  }
+
+  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean) {
     def description(d: String): Info[T] = copy(description = Some(d))
-    def example(t: T): Info[T] = copy(example = Some(t))
+    def example: Option[T] = examples.headOption.map(_.value)
+    def example(t: T): Info[T] = example(Example.of(t))
+    def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
+    def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
+    def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, None)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false)
   }
 }
 
@@ -320,9 +366,11 @@ sealed trait StreamingEndpointIO[I, +S] {
 }
 
 object StreamingEndpointIO {
-  case class Body[S, CF <: CodecFormat](schema: Schema[_], mediaType: CF, info: EndpointIO.Info[String]) extends StreamingEndpointIO[S, S] {
+  case class Body[S, CF <: CodecFormat](schema: Schema[_], format: CF, info: EndpointIO.Info[String]) extends StreamingEndpointIO[S, S] {
     def description(d: String): Body[S, CF] = copy(info = info.description(d))
     def example(t: String): Body[S, CF] = copy(info = info.example(t))
+    def example(example: Example[String]): Body[S, CF] = copy(info = info.example(example))
+    def examples(examples: List[Example[String]]): Body[S, CF] = copy(info = info.examples(examples))
 
     private[tapir] override def toEndpointIO: EndpointIO.StreamBodyWrapper[S, CF] = EndpointIO.StreamBodyWrapper(this)
   }

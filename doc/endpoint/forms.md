@@ -1,4 +1,4 @@
-# Form support
+# Forms
 
 ## URL-encoded forms
 

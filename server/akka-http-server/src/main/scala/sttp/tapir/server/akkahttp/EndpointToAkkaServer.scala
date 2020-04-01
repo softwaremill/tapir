@@ -39,14 +39,12 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
   def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStream, Future]): Route = {
     toDirective1(se.endpoint) { values =>
       extractLog { log =>
-        mapResponse(
-          resp => { serverOptions.loggingOptions.requestHandledMsg(se.endpoint, resp.status.intValue()).foreach(log.debug); resp }
-        ) {
+        mapResponse(resp => { serverOptions.logRequestHandling.requestHandled(se.endpoint, resp.status.intValue())(log); resp }) {
           onComplete(se.logic(values)) {
             case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, se.endpoint.errorOutput, v)
             case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, se.endpoint.output, v)
             case Failure(e) =>
-              serverOptions.loggingOptions.logicExceptionMsg(se.endpoint).foreach(log.error(e, _))
+              serverOptions.logRequestHandling.logicException(se.endpoint, e)(log)
               throw e
           }
         }

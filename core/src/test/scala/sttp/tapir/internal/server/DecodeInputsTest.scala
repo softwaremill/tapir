@@ -5,6 +5,7 @@ import sttp.model.Method
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsContext, DecodeInputsResult}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 
 class DecodeInputsTest extends FlatSpec with Matchers {
@@ -13,7 +14,7 @@ class DecodeInputsTest extends FlatSpec with Matchers {
     case class X(v: String)
     val e = new RuntimeException()
     implicit val xCodec: PlainCodec[X] = Codec.stringPlainCodecUtf8.map(_ => throw e)(_.v)
-    val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, None))
+    val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false))
 
     // when & then
     DecodeInputs(input, StubDecodeInputContext) shouldBe DecodeInputsResult.Failure(input, DecodeResult.Error("List(v)", e))

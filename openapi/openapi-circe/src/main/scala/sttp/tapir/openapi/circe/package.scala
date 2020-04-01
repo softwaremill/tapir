@@ -23,8 +23,9 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveEncoder[OAuthFlow]
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveEncoder[OAuthFlows]
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveEncoder[SecurityScheme]
-  implicit val encoderExampleValue: Encoder[ExampleValue] = { ev: ExampleValue =>
-    parse(ev.value).right.getOrElse(Json.fromString(ev.value))
+  implicit val encoderExampleValue: Encoder[ExampleValue] = {
+    case ExampleSingleValue(value)    => parse(value).right.getOrElse(Json.fromString(value))
+    case ExampleMultipleValue(values) => Json.arr(values.map(v => parse(v).right.getOrElse(Json.fromString(v))): _*)
   }
   implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.encodeEnumeration(SchemaType)
   implicit val encoderSchema: Encoder[Schema] = deriveEncoder[Schema]
@@ -50,6 +51,7 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderOperation: Encoder[Operation] = deriveEncoder[Operation]
   implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem]
   implicit val encoderComponents: Encoder[Components] = deriveEncoder[Components]
+  implicit val encoderServerVariable: Encoder[ServerVariable] = deriveEncoder[ServerVariable]
   implicit val encoderServer: Encoder[Server] = deriveEncoder[Server]
   implicit val encoderExternalDocumentation: Encoder[ExternalDocumentation] = deriveEncoder[ExternalDocumentation]
   implicit val encoderTag: Encoder[Tag] = deriveEncoder[Tag]

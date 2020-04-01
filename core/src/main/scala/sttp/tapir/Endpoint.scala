@@ -7,8 +7,6 @@ import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 
-import scala.reflect.ClassTag
-
 /**
   * @tparam I Input parameter types.
   * @tparam E Error output parameter types.
@@ -83,6 +81,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def description(d: String): Endpoint[I, E, O, S] = copy(info = info.description(d))
   def tags(ts: List[String]): Endpoint[I, E, O, S] = copy(info = info.tags(ts))
   def tag(t: String): Endpoint[I, E, O, S] = copy(info = info.tag(t))
+  def deprecated(): Endpoint[I, E, O, S] = copy(info = info.deprecated(true))
 
   def info(i: EndpointInfo): Endpoint[I, E, O, S] = copy(info = i)
 
@@ -101,7 +100,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
           EndpointOutput.Multiple(defaultOutputs.sortByType).show
         case _ =>
           val mappings = basicOutputsMap.map {
-            case (sc, os) => StatusMapping(sc, ClassTag.Any, EndpointOutput.Multiple(os.sortByType))
+            case (sc, os) => StatusMapping(sc, EndpointOutput.Multiple(os.sortByType), _ => true)
           }
           EndpointOutput.OneOf(mappings.toSeq).show
       }
@@ -128,6 +127,11 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     */
   def showRaw: String = toString
 
+  def httpMethod: Option[Method] = {
+    import sttp.tapir.internal._
+    input.method
+  }
+
   /**
     * Renders endpoint path, by default all parametrised path and query components are replaced by {param_name} or
     * {paramN}, e.g. for
@@ -139,19 +143,26 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     * @param includeAuth Should authentication inputs be included in the result.
     */
   def renderPathTemplate(
-      renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
-      renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
-      includeAuth: Boolean = true
+    renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
+    renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
+    includeAuth: Boolean = true
   ): String =
     RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
 
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
 }
 
-case class EndpointInfo(name: Option[String], summary: Option[String], description: Option[String], tags: Vector[String]) {
+case class EndpointInfo(
+  name: Option[String],
+  summary: Option[String],
+  description: Option[String],
+  tags: Vector[String],
+  deprecated: Boolean
+) {
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
   def description(d: String): EndpointInfo = copy(description = Some(d))
   def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
   def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
+  def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
 }

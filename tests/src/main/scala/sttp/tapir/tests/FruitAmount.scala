@@ -11,3 +11,9 @@ case class StringWrapper(v: String) extends AnyVal
 case class ValidFruitAmount(fruit: StringWrapper, amount: IntWrapper)
 
 case class ColorWrapper(color: Color)
+
+sealed trait Entity {
+  def name: String
+}
+case class Person(name: String, age: Int) extends Entity
+case class Organization(name: String) extends Entity

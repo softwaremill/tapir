@@ -1,28 +1,34 @@
 package sttp.tapir.server
 
 import sttp.model.StatusCode
+import sttp.tapir.DecodeResult.InvalidValue
 import sttp.tapir._
 
 import scala.annotation.tailrec
 
 object ServerDefaults {
+
   /**
-    * By default, a 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason),
-    * or if decoding a path capture causes a validation error.
+    * The default implementation of the [[DecodeFailureHandler]].
+    *
+    * A 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason), or if
+    * decoding a path capture causes a validation error.
     *
     * Otherwise (e.g. if the method, a path segment, or path capture is missing, there's a mismatch or a decode error),
     * a "no match" is returned, which is a signal to try the next endpoint.
     *
-    * The default error messages contain information about the source of the decode error, and optionally the
-    * validation error detail that caused the failure.
+    * The error messages contain information about the source of the decode error, and optionally the validation error
+    * detail that caused the failure.
+    *
+    * This is only used for failures that occur when decoding inputs, not for exceptions that happen when the server
+    * logic is invoked.
     */
-  def decodeFailureHandler: DecodeFailureHandler[Any] =
-    DecodeFailureHandler(
-      FailureHandling.failureResponse,
+  def decodeFailureHandler: DefaultDecodeFailureHandler =
+    DefaultDecodeFailureHandler(
       FailureHandling
-        .respondWithStatusCode(_, _, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
-      FailureMessages.failureMessage,
-      ValidationMessages.validationErrorsMessage
+        .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
+      FailureHandling.failureResponse,
+      FailureMessages.failureMessage
     )
 
   object FailureHandling {
@@ -38,12 +44,11 @@ object ServerDefaults {
       * of the request matches, but decoding some path segment fails with a [[DecodeResult.InvalidValue]].
       */
     def respondWithStatusCode(
-        input: EndpointInput.Single[_],
-        failure: DecodeFailure,
+        ctx: DecodeFailureContext,
         badRequestOnPathErrorIfPathShapeMatches: Boolean,
         badRequestOnPathInvalidIfPathShapeMatches: Boolean
     ): Option[StatusCode] = {
-      input match {
+      ctx.input match {
         case _: EndpointInput.Query[_]             => Some(StatusCode.BadRequest)
         case _: EndpointInput.QueryParams          => Some(StatusCode.BadRequest)
         case _: EndpointInput.Cookie[_]            => Some(StatusCode.BadRequest)
@@ -55,15 +60,22 @@ object ServerDefaults {
         // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
         // a path shape mismatch
         case _: EndpointInput.PathCapture[_]
-            if (badRequestOnPathErrorIfPathShapeMatches && failure.isInstanceOf[DecodeResult.Error]) ||
-              (badRequestOnPathInvalidIfPathShapeMatches && failure.isInstanceOf[DecodeResult.InvalidValue]) =>
+            if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
+              (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
           Some(StatusCode.BadRequest)
         case _ => None
       }
     }
   }
 
+  /**
+    * Default messages for [[DecodeFailure]]s.
+    */
   object FailureMessages {
+
+    /**
+      * Describes the source of the failure: in which part of the request did the failure occur.
+      */
     @tailrec
     def failureSourceMessage(input: EndpointInput.Single[_]): String = input match {
       case EndpointInput.FixedMethod(_)           => s"Invalid value for: method"
@@ -84,24 +96,33 @@ object ServerDefaults {
       case _: EndpointIO.Mapped[_, _]             => "Invalid value"
     }
 
+    def combineSourceAndDetail(source: String, detail: Option[String]): String = detail match {
+      case None    => source
+      case Some(d) => s"$source ($d)"
+    }
+
     /**
-      * Default message describing the source of a decode failure, alongside with optional error details.
+      * Default message describing the source of a decode failure, alongside with optional validation details.
       */
-    def failureMessage(input: EndpointInput.Single[_], detail: Option[String]): String = {
-      val base = failureSourceMessage(input)
-      detail match {
-        case None    => base
-        case Some(d) => s"$base ($d)"
+    def failureMessage(ctx: DecodeFailureContext): String = {
+      val base = failureSourceMessage(ctx.input)
+
+      val detail = ctx.failure match {
+        case InvalidValue(errors) if errors.nonEmpty => Some(ValidationMessages.validationErrorsMessage(errors))
+        case _                                       => None
       }
+
+      combineSourceAndDetail(base, detail)
     }
   }
 
   /**
-    * Messages describing decode failures that are due to validation.
+    * Default messages when the decode failure is due to a validation error.
     */
   object ValidationMessages {
+
     /**
-      * Default message describing why a value is invalid
+      * Default message describing why a value is invalid.
       * @param valueName Name of the validated value to be used in error messages
       */
     def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String = ve.validator match {
@@ -109,17 +130,19 @@ object ServerDefaults {
         s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
       case Validator.Max(value, exclusive) =>
         s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
-      case Validator.Pattern(value)          => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
-      case Validator.MinLength(value)        => s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
-      case Validator.MaxLength(value)        => s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
-      case Validator.MinSize(value)          => s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
+      case Validator.Pattern(value)   => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
+      case Validator.MinLength(value) => s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
+      case Validator.MaxLength(value) => s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
+      case Validator.MinSize(value) =>
+        s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
       case Validator.MaxSize(value)          => s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
       case Validator.Custom(_, message)      => s"expected $valueName to pass custom validation: $message, but was '${ve.invalidValue}'"
       case Validator.Enum(possibleValues, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
     }
 
     /**
-      * Default message describing the path to an invalid value
+      * Default message describing the path to an invalid value.
+      * This is the path inside the validated object, e.g. `user.address.street.name`.
       */
     def pathMessage(ve: ValidationError[_]): Option[String] = ve.path match {
       case Nil => None
@@ -127,12 +150,12 @@ object ServerDefaults {
     }
 
     /**
-      * Default message describing the validation error: which value is invalid, and why
+      * Default message describing the validation error: which value is invalid, and why.
       */
     def validationErrorMessage(ve: ValidationError[_]): String = invalidValueMessage(ve, pathMessage(ve).getOrElse("value"))
 
     /**
-      * Default message describing a list of validation errors: which values are invalid, and why
+      * Default message describing a list of validation errors: which values are invalid, and why.
       */
     def validationErrorsMessage(ve: List[ValidationError[_]]): String = ve.map(validationErrorMessage).mkString(", ")
   }

@@ -74,16 +74,16 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     }
 
     val bodies = outputs.collect {
-      case EndpointIO.Body(m, i) => (i.description, codecToMediaType(m, i.example))
+      case EndpointIO.Body(m, i) => (i.description, codecToMediaType(m, i.examples))
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
-        (i.description, codecToMediaType(s, mt, i.example))
+        (i.description, codecToMediaType(s, mt, i.examples))
     }
     val body = bodies.headOption
 
     val statusCodeDescriptions = outputs.flatMap {
-      case EndpointOutput.StatusCode(possibleCodes)                          => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
-      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _)) => Vector(desc)
-      case _                                                                 => Vector()
+      case EndpointOutput.StatusCode(possibleCodes)                             => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
+      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _, _)) => Vector(desc)
+      case _                                                                    => Vector()
     }
 
     val description = body.flatMap(_._1).getOrElse(statusCodeDescriptions.headOption.getOrElse(""))

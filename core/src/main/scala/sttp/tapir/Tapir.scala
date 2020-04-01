@@ -2,16 +2,18 @@ package sttp.tapir
 
 import java.nio.charset.{Charset, StandardCharsets}
 
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, HeaderNames, StatusCode}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, StatusCode}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.CodecForOptional.PlainCodecForOptional
 import sttp.tapir.EndpointOutput.StatusMapping
+import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.typelevel.MatchType
 
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirDerivedInputs {
+trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput[Unit] = EndpointInput.FixedPath(s)
 
   def path[T: PlainCodec]: EndpointInput.PathCapture[T] =
@@ -26,6 +28,8 @@ trait Tapir extends TapirDerivedInputs {
 
   def header[T: PlainCodecForMany](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly[PlainCodecForMany[T]], EndpointIO.Info.empty)
+  def header(h: Header): EndpointIO.FixedHeader =
+    EndpointIO.FixedHeader(h.name, h.value, EndpointIO.Info.empty)
   def header(name: String, value: String): EndpointIO.FixedHeader =
     EndpointIO.FixedHeader(name, value, EndpointIO.Info.empty)
   def headers: EndpointIO.Headers = EndpointIO.Headers(EndpointIO.Info.empty)
@@ -67,11 +71,12 @@ trait Tapir extends TapirDerivedInputs {
     EndpointIO.Body(codec, EndpointIO.Info.empty)
 
   /**
-    * @param schema Schema of the body. Note that any schema can be passed here, as usually we'll use a schema for a
-    *               dfiferent type than `S`: e.g. the schema of the "deserialized" stream.
+    * @param schema Schema of the body. Note that any schema can be passed here, usually this will be a schema for the
+    *               "deserialized" stream.
+    * @param format The format of the stream body, which specifies its media type.
     */
-  def streamBody[S](schema: Schema[_], mediaType: CodecFormat): StreamingEndpointIO.Body[S, mediaType.type] =
-    StreamingEndpointIO.Body(schema, mediaType, EndpointIO.Info.empty)
+  def streamBody[S](schema: Schema[_], format: CodecFormat): StreamingEndpointIO.Body[S, format.type] =
+    StreamingEndpointIO.Body(schema, format, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth
 
@@ -94,15 +99,63 @@ trait Tapir extends TapirDerivedInputs {
     EndpointOutput.OneOf[I](firstCase +: otherCases)
 
   /**
-    * Create a mapping to be used in [[oneOf]] output descriptions.
+    * Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
+    * as a server) matches the runtime class of `O`.
+    *
+    * This will fail at compile-time if the type erasure of `O` is different from `O`, as a runtime check in this
+    * situation would give invalid results. In such cases, use [[statusMappingClassMatcher]],
+    * [[statusMappingValueMatcher]] or [[statusMappingFromMatchType]] instead.
+    *
+    * Should be used in [[oneOf]] output descriptions.
     */
   def statusMapping[O: ClassTag](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
-    StatusMapping(Some(statusCode), implicitly[ClassTag[O]], output)
+    macro StatusMappingMacro.classMatcherIfErasedSameAsType[O]
+
+  /**
+    * Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
+    * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def statusMappingClassMatcher[O](
+      statusCode: StatusCode,
+      output: EndpointOutput[O],
+      runtimeClass: Class[_]
+  ): StatusMapping[O] = {
+    StatusMapping(Some(statusCode), output, { a: Any =>
+      runtimeClass.isInstance(a)
+    })
+  }
+
+  /**
+    * Create a status mapping which uses `statusCode` and `output` if the provided value (when interpreting as a server
+    * matches the `matcher` predicate.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def statusMappingValueMatcher[O](statusCode: StatusCode, output: EndpointOutput[O])(
+      matcher: PartialFunction[Any, Boolean]
+  ): StatusMapping[O] =
+    StatusMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
+
+  /**
+    * Experimental!
+    *
+    * Create a status mapping which uses `statusCode` and `output` if the provided value matches the target type, as
+    * checked by [[MatchType]]. Instances of [[MatchType]] are automatically derived and recursively check that
+    * classes of all fields match, to bypass issues caused by type erasure.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def statusMappingFromMatchType[O: MatchType](statusCode: StatusCode, output: EndpointOutput[O]): StatusMapping[O] =
+    statusMappingValueMatcher(statusCode, output)(implicitly[MatchType[O]].partial)
 
   /**
     * Create a fallback mapping to be used in [[oneOf]] output descriptions.
     */
-  def statusDefaultMapping[O: ClassTag](output: EndpointOutput[O]): StatusMapping[O] = StatusMapping(None, implicitly[ClassTag[O]], output)
+  def statusDefaultMapping[O](output: EndpointOutput[O]): StatusMapping[O] = {
+    StatusMapping(None, output, _ => true)
+  }
 
   /**
     * An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
@@ -116,7 +169,7 @@ trait Tapir extends TapirDerivedInputs {
       EndpointInput.Multiple(Vector.empty),
       EndpointOutput.Void(),
       EndpointOutput.Multiple(Vector.empty),
-      EndpointInfo(None, None, None, Vector.empty)
+      EndpointInfo(None, None, None, Vector.empty, deprecated = false)
     )
 
   val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = infallibleEndpoint.copy(errorOutput = EndpointOutput.Multiple(Vector.empty))
@@ -124,13 +177,12 @@ trait Tapir extends TapirDerivedInputs {
 
 trait TapirDerivedInputs { this: Tapir =>
   def clientIp: EndpointInput[Option[String]] =
-    extractFromRequest(
-      request =>
-        request
-          .header("X-Forwarded-For")
-          .flatMap(_.split(",").headOption)
-          .orElse(request.header("Remote-Address"))
-          .orElse(request.header("X-Real-Ip"))
-          .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
+    extractFromRequest(request =>
+      request
+        .header("X-Forwarded-For")
+        .flatMap(_.split(",").headOption)
+        .orElse(request.header("Remote-Address"))
+        .orElse(request.header("X-Real-Ip"))
+        .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
     )
 }

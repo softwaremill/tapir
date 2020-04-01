@@ -1,4 +1,4 @@
-# Defining endpoint's input/output
+# Inputs/outputs
 
 An input is described by an instance of the `EndpointInput` trait, and an output by an instance of the `EndpointOutput`
 trait. Some inputs can be used both as inputs and outputs; then, they additionally implement the `EndpointIO` trait.
@@ -123,6 +123,25 @@ To match only the root path, use an empty string: `endpoint.in("")` will match `
 
 To match a path prefix, first define inputs which match the path prefix, and then capture any remaining part using
 `paths`, e.g.: `endpoint.in("api" / "download").in(paths)"`.
+
+## Streaming support
+
+Both input and output bodies can be mapped to a stream, by using `streamBody[S]`. The type `S` must match the type of
+streams that are supported by the interpreter: refer to the documentation of server/client interpreters for the
+precise type.
+
+Adding a stream body input/output influences both the type of the input/output, as well as the 4th type parameter
+of `Endpoint`, which specifies the requirements regarding supported stream types for interpreters.
+
+When using a stream body, the schema (for documentation) and format (media type) of the body must be provided by hand, 
+as they cannot be inferred from the raw stream type. For example, to specify that the output is an akka-stream, which
+is a (presumably large) serialised list of json objects mapping to the `Person` class:  
+
+```scala
+endpoint.out(streamBody[Source[ByteString, Any]](schemaFor[List[Person]], CodecFormat.Json()))
+```
+
+See also the [runnable streaming example](../examples.html). 
 
 ## Next
 

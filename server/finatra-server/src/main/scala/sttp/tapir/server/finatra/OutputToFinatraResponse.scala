@@ -1,7 +1,6 @@
 package sttp.tapir.server.finatra
 
-import java.io.{File, InputStream}
-import java.nio.ByteBuffer
+import java.io.InputStream
 
 import com.twitter.finagle.http.{Response, Status, Version}
 import com.twitter.io.{Buf, InputStreamReader, Reader}
@@ -9,18 +8,17 @@ import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import sttp.model.{Header, Part}
-import sttp.tapir.internal.server.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{
   ByteArrayValueType,
   ByteBufferValueType,
   CodecForOptional,
+  CodecFormat,
   CodecMeta,
   EndpointOutput,
   FileValueType,
   InputStreamValueType,
-  CodecFormat,
   MultipartValueType,
-  RawPart,
   StringValueType
 }
 
@@ -77,13 +75,13 @@ object OutputToFinatraResponse {
       case ByteArrayValueType  => FinatraContentBuf(Buf.ByteArray.Owned(r)) -> ct
       case ByteBufferValueType => FinatraContentBuf(Buf.ByteBuffer.Owned(r)) -> ct
       case InputStreamValueType =>
-        FinatraContentReader(Reader.fromStream(r: InputStream)) -> ct
+        FinatraContentReader(Reader.fromStream(r)) -> ct
       case FileValueType =>
-        FinatraContentReader(Reader.fromFile(r: File)) -> ct
+        FinatraContentReader(Reader.fromFile(r)) -> ct
       case mvt: MultipartValueType =>
         val entity = MultipartEntityBuilder.create()
 
-        (r: Seq[RawPart]).flatMap(rawPartToFormBodyPart(mvt, _)).foreach { formBodyPart: FormBodyPart =>
+        r.flatMap(rawPartToFormBodyPart(mvt, _)).foreach { formBodyPart: FormBodyPart =>
           entity.addPart(formBodyPart)
         }
 
@@ -101,18 +99,18 @@ object OutputToFinatraResponse {
       case StringValueType(charset) =>
         new StringBody(r.toString, ContentType.create(contentType, charset))
       case ByteArrayValueType =>
-        new ByteArrayBody(r: Array[Byte], ContentType.create(contentType), part.fileName.get)
+        new ByteArrayBody(r, ContentType.create(contentType), part.fileName.get)
       case ByteBufferValueType =>
-        val array: Array[Byte] = new Array[Byte]((r: ByteBuffer).remaining)
-        (r: ByteBuffer).get(array)
+        val array: Array[Byte] = new Array[Byte](r.remaining)
+        r.get(array)
         new ByteArrayBody(array, ContentType.create(contentType), part.fileName.get)
       case FileValueType =>
         part.fileName match {
-          case Some(filename) => new FileBody(r: File, ContentType.create(contentType), filename)
-          case None           => new FileBody(r: File, ContentType.create(contentType))
+          case Some(filename) => new FileBody(r, ContentType.create(contentType), filename)
+          case None           => new FileBody(r, ContentType.create(contentType))
         }
       case InputStreamValueType =>
-        new InputStreamBody(r: InputStream, ContentType.create(contentType), part.fileName.get)
+        new InputStreamBody(r, ContentType.create(contentType), part.fileName.get)
       case _: MultipartValueType =>
         throw new UnsupportedOperationException("Nested multipart messages are not supported.")
     }

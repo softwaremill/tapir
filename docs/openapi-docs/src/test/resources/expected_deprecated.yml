@@ -1,0 +1,12 @@
+openapi: 3.0.1
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /api:
+    get:
+      operationId: getApi
+      responses:
+        '200':
+          description: ''
+      deprecated: true
