@@ -69,7 +69,7 @@ When codecs are derived for complex types, e.g. for json mapping, schemas are lo
 Codecs contain an additional type parameter, which specifies the codec format. Each format corresponds to a media type,
 which describes the low-level format of the raw value (to which the codec encodes). Some built-in formats include 
 `text/plain`, `application/json` and `multipart/form-data`. Custom formats can be added by creating an 
-implementation of the `tapir.CodecFormat` trait.
+implementation of the `sttp.tapir.CodecFormat` trait.
 
 Thanks to codecs being parametrised by codec formats, it is possible to have a `Codec[String, MyCaseClass, TextPlain]` which 
 specifies how to serialize a case class to plain text, and a different `Codec[String, MyCaseClass, Json]`, which specifies 
