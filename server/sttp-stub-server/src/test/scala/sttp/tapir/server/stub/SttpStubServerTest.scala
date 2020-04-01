@@ -35,6 +35,23 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     response shouldBe Response.ok(ResponseWrapper(1.0))
   }
 
+  it should "combine tapir endpoint with sttp stub - multiple inputs" in {
+    import sttp.tapir.client.sttp._
+    // given
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / path[String]("id") and query[Int]("amount"))
+      .post
+      .out(jsonBody[ResponseWrapper])
+
+    implicit val backend = SttpBackendStub
+      .apply(idMonad)
+      .whenRequestMatches(endpoint)
+      .thenSuccess(ResponseWrapper(1.0))
+    val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply("id1" -> 11).send()
+
+    response shouldBe Response.ok(ResponseWrapper(1.0))
+  }
+
   it should "match with inputs" in {
     import sttp.tapir.client.sttp._
     // given
