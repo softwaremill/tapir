@@ -41,8 +41,6 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import play.api.routing.Router.Routes
 
-
-
 def countCharacters(s: String): Future[Either[Unit, Int]] = 
   Future(Right[Unit, Int](s.length))
 
