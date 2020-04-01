@@ -172,6 +172,10 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
   ) { baseUri => basicRequest.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango")) }
 
+  testServer(in_unit_out_json_unit, "unit json mapper")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
+    basicRequest.get(uri"$baseUri/api/unit").send().map(_.body shouldBe Right("{}"))
+  }
+
   testServer(in_unit_out_string, "default status mapper")((_: Unit) => pureResult("".asRight[Unit])) { baseUri =>
     basicRequest.get(uri"$baseUri/not-existing-path").send().map(_.code shouldBe StatusCode.NotFound)
   }

@@ -15,7 +15,7 @@ trait TapirJsonPlay {
         case JsError(errors)     => Error(s, JsResultException(errors))
         case JsSuccess(value, _) => Value(value)
       }
-    } { t => Json.prettyPrint(Json.toJson(t)) }
+    } { t => Json.stringify(Json.toJson(t)) }
 
   implicit val schemaForPlayJsValue: Schema[JsValue] = Schema(
     SProduct(

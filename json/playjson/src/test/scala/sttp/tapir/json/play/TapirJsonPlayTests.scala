@@ -65,4 +65,11 @@ class TapirJsonPlayTests extends FlatSpec with Matchers {
         fail(s"Should not have been able to decode this date: $d")
     }
   }
+
+  it should "encode to non-prettified Json" in {
+    val customer = Customer("Alita", 1985, None)
+    val codec = TapirJsonPlayCodec.readsWritesCodec[Customer]
+    val expected = """{"name":"Alita","yearOfBirth":1985}"""
+    codec.encode(customer) shouldBe expected
+  }
 }

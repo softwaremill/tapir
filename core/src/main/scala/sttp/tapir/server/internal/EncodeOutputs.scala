@@ -13,10 +13,16 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     @tailrec
     def run(outputs: Vector[EndpointOutput.Single[_]], ov: OutputValues[B], vs: Seq[Any]): OutputValues[B] = {
       (outputs, vs) match {
-        case (Vector(), Seq()) => ov
+        case (Vector(), Seq())   => ov
+        case (Vector(), Seq(())) => ov
         case (outputsHead +: outputsTail, _) if outputsHead._mapping.hIsUnit =>
           val ov2 = encodeOutput(outputsHead, (), ov)
           run(outputsTail, ov2, vs)
+        case (Vector(), Seq(())) => ov
+        case (EndpointOutput.FixedStatusCode(sc, _) +: outputsTail, _) =>
+          run(outputsTail, ov.withStatusCode(sc), vs)
+        case (EndpointIO.FixedHeader(name, value, _) +: outputsTail, _) =>
+          run(outputsTail, ov.withHeader(name -> value), vs)
         case (outputsHead +: outputsTail, vsHead +: vsTail) =>
           val ov2 = encodeOutput(outputsHead, vsHead, ov)
           run(outputsTail, ov2, vsTail)

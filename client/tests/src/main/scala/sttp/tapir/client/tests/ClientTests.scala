@@ -100,6 +100,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       .get should contain(sttp.model.Header.notValidated("Content-Type", "application/json".reverse))
   }
 
+  testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
+
   test(in_simple_multipart_out_raw_string.showDetail) {
     val result = send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
       .unsafeRunSync()
@@ -154,6 +156,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       }
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
+    case r @ GET -> Root / "api" / "unit"                                  => Ok("{}")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ GET -> Root / "api" / "echo" / "headers"                      => Ok(headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse)): _*)
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
