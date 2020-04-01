@@ -65,6 +65,7 @@ lazy val rootProject = (project in file("."))
     http4sServer,
     finatraServer,
     finatraServerCats,
+    playServer,
     sttpClient,
     tests,
     examples,
@@ -346,6 +347,19 @@ lazy val finatraServerCats: Project =
     )
     .settings(only2_12settings)
     .dependsOn(finatraServer % "compile->compile;test->test", serverTests % Test)
+  .dependsOn(core, serverTests % "test")
+
+lazy val playServer: Project = (project in file("server/play-server"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-play-server",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-server" % Versions.playServer,
+      "com.typesafe.play" %% "play-akka-http-server" % Versions.playServer,
+      "com.typesafe.play" %% "play" % Versions.playServer
+    )
+  )
+  .dependsOn(core, serverTests % "test")
 
 // client
 
