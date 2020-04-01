@@ -21,7 +21,3 @@ alternative authentication methods (where only one value out of many needs to be
 When interpreting a route as a server, it is useful to define the authentication input first, to be able to share the
 authentication logic among multiple endpoints easily. See [server logic](../server/logic.html) for more
 details.
-
-## Next
-
-Read on a summary on [implicits for custom types](implicits.html).

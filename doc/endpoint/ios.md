@@ -28,7 +28,7 @@ For both inputs/outputs:
 * `cookies` captures cookies from the `Cookie` header and represents them as `List[Cookie]` 
 * `setCookie(name)` captures the value & metadata of the a `Set-Cookie` header with a matching name 
 * `setCookies` captures cookies from the `Set-Cookie` header and represents them as `List[SetCookie]` 
-* `stringBody`, `plainBody[T]`, `rawBinaryBody[R]`, `binaryBody[R, T]`, `formBody[T]`, `multipartBody[T]`
+* `stringBody`, `plainBody[T]`, `jsonBody[T]`, `rawBinaryBody[R]`, `binaryBody[R, T]`, `formBody[T]`, `multipartBody[T]`
   captures the body
 * `streamBody[S]` captures the body as a stream: only a client/server interpreter supporting streams of type `S` can be 
   used with such an endpoint
@@ -44,9 +44,9 @@ Endpoint inputs/outputs can be combined in two ways. However they are combined, 
 accumulate into tuples of values.
 
 First, inputs/outputs can be combined using the `.and` method. Such a combination results in an input/output, which maps
-to a tuple of the given types, and can be stored as a value and re-used in multiple endpoints. As all other values in
-tapir, endpoint input/output descriptions are immutable. For example, an input specifying two query parameters, `start`
-(mandatory) and `limit` (optional) can be written down as:
+to a tuple of the given types. This combination can be assigned to a value and re-used in multiple endpoints. As all 
+other values in tapir, endpoint input/output descriptions are immutable. For example, an input specifying two query 
+parameters, `start` (mandatory) and `limit` (optional) can be written down as:
 
 ```scala
 val paging: EndpointInput[(UUID, Option[Int])] = 
@@ -96,7 +96,7 @@ Next, you can use `mapDecode[II](f: I => DecodeResult[II])(g: II => I)`, to hand
 low-level value to a higher-value one) can fail. There's a couple of failure reasons, captured by the alternatives
 of the `DecodeResult` trait.
 
-Mappings can also be done given an `Mapping[I, II]` instance. 
+Mappings can also be done given an `Mapping[I, II]` instance. More on that in the secion on [codecs](codecs.html).
 
 Creating a mapping between a tuple and a case class is a common operation, hence there's also a 
 `mapTo(CaseClassCompanion)` method, which automatically provides the functions to construct/deconstruct the case class:
@@ -112,8 +112,13 @@ val paging: EndpointInput[Paging] =
 Mapping methods can also be called on an endpoint (which is useful if inputs/outputs are accumulated, for example).
 The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the ones above.
 
-> Note that you shouldn't map to unit (`()`). This value is special when defining endpoints, as it's the "neutral
-> element" of the tuple-concatenation operation, which takes place when adding an input or output to an endpoint.
+```eval_rst
+.. note::
+
+  Keep in mind that you shouldn't map **to** ``Unit``. This type is special when defining endpoints, as it's the 
+  "neutral element" of the tuple-concatenation operation, which takes place when adding an input or output to an 
+  endpoint.
+```
 
 ## Path matching
 

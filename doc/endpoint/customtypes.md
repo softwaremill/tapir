@@ -18,9 +18,9 @@ information:
 This might be quite a lot of work, that's why it's usually easier to map over an existing codec. To do that, you'll 
 need to provide two mappings: 
 
-* an `encode` method which encodes the custom type into the base type
-* a `decode` method which decodes the base type into the custom type, optionally reporting decode failures (the return
-type is a `DecodeResult`)
+* a `decode` method which decodes the lower-level type into the custom type, optionally reporting decode failures 
+(the return type is a `DecodeResult`)
+* an `encode` method which encodes the custom type into the lower-level type
 
 For example, to support a custom id type:
 
@@ -31,15 +31,28 @@ def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match {
 }
 def encode(id: MyId): String = id.toString
 
-implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string.mapDecode(decode)(encode)
+implicit val myIdCodec: Codec[String, MyId, TextPlain] = 
+  Codec.string.mapDecode(decode)(encode)
 
 // or, using the type alias for codecs in the TextPlain format and String as the raw value:
 implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode)
 ```
 
-> Note that inputs/outputs can also be mapped over. In some cases, it's enough to create an input/output mapping to one
-> of the supported types, and then map over them. However, if you have a type that's used multiple times, it's usually
-> better to define a codec for that type. 
+```eval_rst
+.. note::
+
+  Note that inputs/outputs can also be mapped over. In some cases, it's enough to create an input/output corresponding 
+  to one of the existing tyepes, and then map over them. However, if you have a type that's used multiple times, it's 
+  usually better to define a codec for that type. 
+```
+
+Then, you can use the new codec e.g. to obtain an id from a query parameter or a path segment:
+
+```scala
+endpoint.in(query[MyId]("myId"))
+// or
+endpoint.in(path[MyId])
+```
 
 ## Automatically deriving codecs
 

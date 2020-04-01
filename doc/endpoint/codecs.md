@@ -2,10 +2,10 @@
 
 ## Mappings
 
-The `Mapping` trait defines a bi-directional mapping between values of type `L` and values of type `H`.
+The `Mapping[L, H]` trait defines a bi-directional mapping between values of type `L` and values of type `H`.
 
 Low-level values of type `L` can be **decoded** to a higher-level value of type `H`. The decoding can fail; this is 
-represented by a result of type `DecodeFailure`. Failures might occur due to format errors, wrong arity, exceptions, 
+represented by a result of type `DecodeResult.Failure`. Failures might occur due to format errors, wrong arity, exceptions, 
 or validation errors. Validators can be added through the `validate` method.
 
 High-level values of type `H` can be **encoded** as a low-level value of type `L`.
@@ -14,15 +14,19 @@ Mappings can be chained using one of the `map` functions.
 
 ## Codecs
 
-A `Codec[L, H, CF]` is a `Mapping[L, H]`, with additional meta-data: an optional schema, and the format of the 
+A `Codec[L, H, CF]` is a `Mapping[L, H]`, with additional meta-data: an optional schema and the format of the 
 low-level value (more on that below). 
 
 There are built-in codecs for most common types such as `String`, `Int` etc. Codecs are usually defined as implicit 
 values and resolved implicitly when they are referenced. However, they can also be provided explicitly as needed.
 
 For example, a `query[Int]("quantity")` specifies an input parameter which corresponds to the `quantity` query 
-parameter and will be mapped as an `Int`. There's an implicit `Codec[Int]` value that is referenced by the `query`
-method (which is defined in the `tapir` package). 
+parameter and will be mapped as an `Int`. There's an implicit `Codec[List[String], Int, TextPlain]` value that is 
+referenced by the `query` method (which is defined in the `sttp.tapir` package). 
+
+In this example, the low-level value is a `List[String]`, as a given query parameter can be absent, have a single or 
+many values. The high-level value is an `Int`. The codec will verify that there's a single query paramater with the 
+given name, and parse it as an int. If any of this fails, a failure will be reported. 
 
 In a server setting, if the value cannot be parsed as an int, a decoding failure is reported, and the endpoint 
 won't match the request, or a `400 Bad Request` response is returned (depending on configuration).
@@ -54,7 +58,8 @@ description and low-level format.
 
 For primitive types, the schema values are built-in, and defined in the `Schema` companion object.
 
-The schema is left unchanged when mapping a codec, as the underlying representation of the value doesn't change.
+The schema is left unchanged when mapping a codec or an input/output, as the underlying representation of the value 
+doesn't change. However, schemas can be changed for individual inputs/outputs using the `.schema(Schema)` method.
 
 When codecs are derived for complex types, e.g. for json mapping, schemas are looked up through implicit
 `Schema[T]` values. See [custom types](customtypes.html) for more details.

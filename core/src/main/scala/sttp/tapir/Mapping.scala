@@ -8,7 +8,7 @@ import scala.util.{Failure, Success, Try}
   * A bi-directional mapping between values of type `L` and values of type `H`.
   *
   * Low-level values of type `L` can be **decoded** to a higher-level value of type `H`. The decoding can fail;
-  * this is represented by a result of type [[DecodeFailure]]. Failures might occur due to format errors, wrong
+  * this is represented by a result of type [[DecodeResult.Failure]]. Failures might occur due to format errors, wrong
   * arity, exceptions, or validation errors. Validators can be added through the `validate` method.
   *
   * High-level values of type `H` can be **encoded** as a low-level value of type `L`.
