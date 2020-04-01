@@ -114,6 +114,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    server/akkahttp
    server/http4s
    server/finatra
+   server/play
    server/options
    server/logic
    server/errors
