@@ -176,6 +176,35 @@ object EndpointOutput {
 
   sealed trait Basic[I] extends Single[I]
 
+  case class BodyMappedStatusCode[T, CF <: CodecFormat, R](
+      wrapped: EndpointIO.Body[T, CF, R],
+      f: T => sttp.model.StatusCode,
+      documentedCodes: Map[sttp.model.StatusCode, Info[T]] = Map.empty[sttp.model.StatusCode, Info[T]]
+  ) extends Basic[T] {
+    def description(code: sttp.model.StatusCode, d: String): BodyMappedStatusCode[T, CF, R] = {
+      val documentedStatusCode = documentedCodes.get(code).fold(code -> Info.empty[T].description(d))(info => code -> info.description(d))
+      val updatedCodes = documentedCodes + documentedStatusCode
+      copy(documentedCodes = updatedCodes)
+    }
+    def example(code: sttp.model.StatusCode, t: T): BodyMappedStatusCode[T, CF, R] = {
+      val documentedStatusCode =
+        documentedCodes.get(code).fold(code -> Info.empty[T].example(t))(info => code -> info.example(t))
+      val updatedCodes = documentedCodes + documentedStatusCode
+      copy(documentedCodes = updatedCodes)
+    }
+    def example(code: sttp.model.StatusCode, example: Example[T]): BodyMappedStatusCode[T, CF, R] = {
+      val documentedStatusCode =
+        documentedCodes.get(code).fold(code -> Info.empty[T].example(example))(info => code -> info.example(example))
+      val updatedCodes = documentedCodes + documentedStatusCode
+      copy(documentedCodes = updatedCodes)
+    }
+    def examples(examples: Map[sttp.model.StatusCode, Example[T]]): BodyMappedStatusCode[T, CF, R] = {
+      examples.foldLeft(this)((self, e) => self.example(e._1, e._2))
+    }
+
+    def show: String = s"{body as ${wrapped.codec.meta.format.mediaType}}"
+  }
+
   //
 
   case class StatusCode(documentedCodes: Map[sttp.model.StatusCode, Info[Unit]] = Map.empty) extends Basic[sttp.model.StatusCode] {

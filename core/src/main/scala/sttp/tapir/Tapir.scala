@@ -6,6 +6,7 @@ import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNa
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.CodecForOptional.PlainCodecForOptional
+import sttp.tapir.EndpointIO.Body
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
@@ -99,6 +100,12 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     EndpointOutput.OneOf[I](firstCase +: otherCases)
 
   /**
+    * Maps the outputs to the status code based on the passed function
+    */
+  def statusFromBody[T, CF <: CodecFormat, R](wrapped: EndpointIO.Body[T, CF, R])(f: T => sttp.model.StatusCode)(
+      ): EndpointOutput.BodyMappedStatusCode[T, CF, R] = EndpointOutput.BodyMappedStatusCode[T, CF, R](wrapped, f)
+
+  /**
     * Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the runtime class of `O`.
     *
@@ -122,9 +129,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
       output: EndpointOutput[O],
       runtimeClass: Class[_]
   ): StatusMapping[O] = {
-    StatusMapping(Some(statusCode), output, { a: Any =>
-      runtimeClass.isInstance(a)
-    })
+    StatusMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
   }
 
   /**

@@ -68,8 +68,13 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
         case EndpointOutput.FixedStatusCode(_, _) =>
           None
+
         case EndpointIO.FixedHeader(_, _, _) =>
           None
+
+        case EndpointOutput.BodyMappedStatusCode(wrapped, _, _) =>
+          val so = if (wrapped.codec.meta.schema.isOptional && body == "") None else Some(body)
+          Some(wrapped.codec.rawDecode(so))
 
         case EndpointOutput.OneOf(mappings) =>
           val mapping = mappings

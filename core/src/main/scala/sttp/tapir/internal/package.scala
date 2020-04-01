@@ -125,13 +125,14 @@ package object internal {
 
   implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
     def sortByType: Vector[EndpointOutput.Basic[_]] = outputs.sortBy {
-      case _: EndpointOutput.StatusCode          => 0
-      case _: EndpointOutput.FixedStatusCode     => 0
-      case _: EndpointIO.Header[_]               => 1
-      case _: EndpointIO.Headers                 => 1
-      case _: EndpointIO.FixedHeader             => 1
-      case _: EndpointIO.Body[_, _, _]           => 2
-      case _: EndpointIO.StreamBodyWrapper[_, _] => 2
+      case _: EndpointOutput.StatusCode                    => 0
+      case _: EndpointOutput.FixedStatusCode               => 0
+      case _: EndpointIO.Header[_]                         => 1
+      case _: EndpointIO.Headers                           => 1
+      case _: EndpointIO.FixedHeader                       => 1
+      case _: EndpointIO.Body[_, _, _]                     => 2
+      case _: EndpointIO.StreamBodyWrapper[_, _]           => 2
+      case _: EndpointOutput.BodyMappedStatusCode[_, _, _] => 2
     }
   }
 
