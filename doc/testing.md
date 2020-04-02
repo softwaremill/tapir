@@ -6,7 +6,8 @@ If you are unit testing your application you should stub all external services.
 
 If you are using sttp client to send HTTP requests, and if the externals apis, 
 which yours application consumes, are described using tapir, you can create a stub of the service by converting 
-endpoints to [`SttpBackendStub`](https://sttp.softwaremill.com/en/latest/testing.html).
+endpoints to `SttpBackendStub` (see the [sttp documentation](https://sttp.softwaremill.com/en/latest/testing.html) on 
+details how the stub works).
 
 Add the dependdency:
 
