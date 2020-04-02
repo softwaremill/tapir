@@ -134,6 +134,12 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
 .. toctree::
    :maxdepth: 2
+   :caption: Testing
+
+   testing
+
+.. toctree::
+   :maxdepth: 2
    :caption: Other subjects
 
    other_interpreters
