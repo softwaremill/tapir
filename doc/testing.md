@@ -2,17 +2,26 @@
 
 ## White box testing
 
-If you are unit testing your application you should mock all external services to make your tests reliable.
-If you are using sttp client and if externals apis, which yours application consumes, 
-are described using tapir, you can do that with easy by simply converting endpoints to `SttpBackendStub`.
+If you are unit testing your application you should stub all external services.
 
-Add following import:
+If you are using [sttp client](https://github.com/softwaremill/sttp) to send HTTP requests, and if the externals apis, 
+which yours application consumes, are described using tapir, you can create a stub of the service by converting 
+endpoints to `SttpBackendStub`.
+
+Add the dependdency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.12.26"
+```
+
+And the following import:
 
 ```scala
 import sttp.tapir.server.stub._
 ``` 
 
-And convert any endpoint to `SttpBackendStub`:
+Then, convert any endpoint to `SttpBackendStub`:
+
 ```scala
   val endpoint = sttp.tapir.endpoint
       .in("api" / "sometest4")
