@@ -1,7 +1,6 @@
 package sttp.tapir.server.play
 
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import play.api.Mode
@@ -25,7 +24,6 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
   override def streamingSupport: Boolean = false
 
   private implicit val actorSystem: ActorSystem = ActorSystem()
-  private implicit val materializer: ActorMaterializer = ActorMaterializer()
 
   override protected def afterAll(): Unit = {
     Await.result(actorSystem.terminate(), 5.seconds)
