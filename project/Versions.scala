@@ -19,5 +19,5 @@ object Versions {
   val enumeratum = "1.5.15"
   val zio = "1.0.0-RC18"
   val zioInteropCats = "2.0.0.0-RC11"
-  val playServer = "2.7.4"
+  val playServer = "2.8.1"
 }
