@@ -67,4 +67,51 @@ class SchemaTest extends FlatSpec with Matchers {
     openProductSchema
       .modifyUnsafe[Nothing]()(_.description("test")) shouldBe openProductSchema.description("test")
   }
+
+  it should "correctly derived schema for list" in {
+    case class Foo(x: Int)
+    val fooSchema = implicitly[Schema[Foo]]
+    val schema = implicitly[Schema[List[Foo]]]
+    schema shouldBe fooSchema.asArrayElement
+  }
+
+  it should "correctly derived schema for list when case class of element contain seq" in {
+    case class Foo(x: Seq[Int])
+    val fooSchema = implicitly[Schema[Foo]]
+    val schema = implicitly[Schema[List[Foo]]]
+    schema shouldBe fooSchema.asArrayElement
+  }
+
+  it should "correctly derived schema for list when case class of element contain nested seq" in {
+    case class Foo(x: Seq[Seq[Int]])
+    val fooSchema = implicitly[Schema[Foo]]
+    val schema = implicitly[Schema[List[Foo]]]
+
+    //this test break here list is interpreted as an recursive ADT (head, tail, etc.., etc..)
+    schema shouldBe fooSchema.asArrayElement
+  }
+
+
+  it should "correctly derived schema for seq" in {
+    case class Foo(x: Int)
+    val fooSchema = implicitly[Schema[Foo]]
+    val schema = implicitly[Schema[Seq[Foo]]]
+    schema shouldBe fooSchema.asArrayElement
+  }
+
+  it should "correctly derived schema for seq when case class of element contain seq" in {
+    case class Foo(x: Seq[Int])
+    val fooSchema = implicitly[Schema[Foo]]
+    val schema = implicitly[Schema[Seq[Foo]]]
+    schema shouldBe fooSchema.asArrayElement
+  }
+
+  it should "correctly derived schema for seq when case class of element contain nested seq" in {
+    case class Foo(x: Seq[Seq[Int]])
+    val fooSchema = implicitly[Schema[Foo]]
+    // val schema = implicitly[Schema[Seq[Foo]]] this don't compile: could not find implicit value
+    // but the next line work fine
+    val schema = Schema.schemaForIterable[Foo, Seq](fooSchema)
+    schema shouldBe fooSchema.asArrayElement
+  }
 }
