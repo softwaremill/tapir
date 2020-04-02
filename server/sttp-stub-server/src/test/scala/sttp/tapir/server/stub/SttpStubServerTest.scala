@@ -19,10 +19,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     // given
     val endpoint = sttp.tapir.endpoint
       .in("api" / "sometest4")
-      .in(
-        query[Int]("amount")
-          .validate(Validator.min(0))
-      )
+      .in(query[Int]("amount"))
       .post
       .out(jsonBody[ResponseWrapper])
 
@@ -66,7 +63,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .whenInputMatches(endpoint) { amount => amount > 0 }
       .thenSuccess(ResponseWrapper(1.0))
       .whenInputMatches(endpoint) { amount => amount <= 0 }
-      .genericResponse
+      .generic
       .thenRespondServerError()
 
     val response1 = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
@@ -91,7 +88,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     implicit val backend = SttpBackendStub
       .apply(idMonad)
       .whenDecodingInputFailure(endpoint)
-      .genericResponse
+      .generic
       .thenRespondWithCode(StatusCode.BadRequest)
     val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
 

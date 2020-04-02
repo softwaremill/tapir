@@ -57,7 +57,10 @@ trait SttpStubServer {
       def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S] =
         whenRequest.thenRespond(sttp.client.Response[E](errorResponse, statusCode))
 
-      def genericResponse: stub.WhenRequest = whenRequest
+      /**
+        * Exposes underlying generic stubbing which allows to stub with an arbitrary response
+        */
+      def generic: stub.WhenRequest = whenRequest
     }
   }
 }
