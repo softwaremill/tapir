@@ -6,7 +6,7 @@ To expose endpoint as a [play-server](https://www.playframework.com/) first add 
 ```
 and 
 ```scala
-"com.typesafe.play" %% "play-akka-http-server" % "2.7.3"
+"com.typesafe.play" %% "play-akka-http-server" % "2.7.4"
 ```
 
 or
