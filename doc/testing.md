@@ -23,16 +23,16 @@ import sttp.tapir.server.stub._
 Then, convert any endpoint to `SttpBackendStub`:
 
 ```scala
-  val endpoint = sttp.tapir.endpoint
-      .in("api" / "sometest4")
-      .in(query[Int]("amount"))
-      .post
-      .out(jsonBody[ResponseWrapper])
+val endpoint = sttp.tapir.endpoint
+  .in("api" / "sometest4")
+  .in(query[Int]("amount"))
+  .post
+  .out(jsonBody[ResponseWrapper])
 
-    implicit val backend = SttpBackendStub
-      .apply(idMonad)
-      .whenRequestMatches(endpoint)
-      .thenSuccess(ResponseWrapper(1.0))
+implicit val backend = SttpBackendStub
+  .apply(idMonad)
+  .whenRequestMatches(endpoint)
+  .thenSuccess(ResponseWrapper(1.0))
 ```
 
 ## Black box testing
