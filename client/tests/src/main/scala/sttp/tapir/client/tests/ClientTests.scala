@@ -14,7 +14,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
-import sttp.tapir._
+import sttp.tapir.{DecodeResult, _}
 import sttp.tapir.tests._
 import TestUtil._
 import org.http4s.multipart
@@ -138,6 +138,12 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     ) shouldBe "mango cranberry"
   }
 
+  test("not existing endpoint, with error output not matching 404") {
+    safeSend(not_existing_endpoint, port, ()).unsafeRunSync() should matchPattern {
+      case DecodeResult.Error(_, _: IllegalArgumentException) =>
+    }
+  }
+
   //
 
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
@@ -203,6 +209,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   type Port = Int
 
   def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[Either[E, O]]
+  def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
 
   def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {
