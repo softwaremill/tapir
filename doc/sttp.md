@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.12.26"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.12.27"
 ```
 
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
