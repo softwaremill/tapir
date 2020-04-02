@@ -323,17 +323,22 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       .schema(c.schema.map(_.asOptional[Option[U]]))
       .validate(c.validator.asOptionElement)
 
-  def json[T: Schema: Validator](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = new JsonCodec[T] {
-    private def isOptional = schema.exists(_.isOptional)
-    override def rawDecode(s: String): DecodeResult[T] = {
+  def fromDecodeAndMeta[L, H: Schema: Validator: IsUnit, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
+    new Codec[L, H, CF] {
+      override def rawDecode(l: L): DecodeResult[H] = f(l)
+      override def encode(h: H): L = g(h)
+      override def schema: Option[Schema[H]] = Some(implicitly[Schema[H]])
+      override def validator: Validator[H] = implicitly[Validator[H]]
+      override def format: CF = cf
+      override def hIsUnit: Boolean = implicitly[IsUnit[H]].isUnit
+    }
+
+  def json[T: Schema: Validator: IsUnit](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
+    val isOptional = implicitly[Schema[T]].isOptional
+    fromDecodeAndMeta(CodecFormat.Json())({ (s: String) =>
       val toDecode = if (isOptional && s == "") "null" else s
       _rawDecode(toDecode)
-    }
-    override def encode(t: T): String = if (isOptional && t == None) "" else _encode(t)
-    override def schema: Option[Schema[T]] = Some(implicitly[Schema[T]])
-    override def validator: Validator[T] = implicitly[Validator[T]]
-    override def format: CodecFormat.Json = CodecFormat.Json()
-    override def hIsUnit: Boolean = false
+    })(t => if (isOptional && t == None) "" else _encode(t))
   }
 }
 
