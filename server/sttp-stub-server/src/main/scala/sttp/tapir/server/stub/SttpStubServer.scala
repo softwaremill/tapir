@@ -3,8 +3,8 @@ package sttp.tapir.server.stub
 import sttp.client.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
-import sttp.tapir.{DecodeFailure, Endpoint}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.{DecodeResult, Endpoint}
 
 trait SttpStubServer {
 
@@ -24,8 +24,12 @@ trait SttpStubServer {
       new TypeAwareWhenRequest(
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
-            case DecodeInputsResult.Failure(_, _)  => false
-            case values: DecodeInputsResult.Values => inputMatcher(SeqToParams(InputValues(endpoint.input, values)).asInstanceOf[I])
+            case DecodeInputsResult.Failure(_, _) => false
+            case values: DecodeInputsResult.Values =>
+              InputValues(endpoint.input, values) match {
+                case InputValuesResult.Values(values, _) => inputMatcher(SeqToParams(values).asInstanceOf[I])
+                case InputValuesResult.Failure(_, _)     => false
+              }
           }
         )
       )
@@ -33,7 +37,7 @@ trait SttpStubServer {
 
     def whenDecodingInputFailureMatches[E, O](
         endpoint: Endpoint[_, E, O, _]
-    )(failureMatcher: PartialFunction[DecodeFailure, Boolean]): TypeAwareWhenRequest[E, O] = {
+    )(failureMatcher: PartialFunction[DecodeResult.Failure, Boolean]): TypeAwareWhenRequest[E, O] = {
       new TypeAwareWhenRequest(
         new stub.WhenRequest(req => {
           val result = DecodeInputs(endpoint.input, new SttpDecodeInputs(req))

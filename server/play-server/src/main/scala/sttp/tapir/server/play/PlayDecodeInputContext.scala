@@ -2,7 +2,7 @@ package sttp.tapir.server.play
 
 import akka.stream.Materializer
 import play.api.mvc.RequestHeader
-import sttp.model.Method
+import sttp.model.{Method, MultiQueryParams}
 import sttp.tapir.server.internal.DecodeInputsContext
 import sttp.tapir.model.ServerRequest
 
@@ -26,7 +26,7 @@ private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed:
   override def header(name: String): List[String] = request.headers.toMap.get(name).toList.flatten
   override def headers: Seq[(String, String)] = request.headers.headers
   override def queryParameter(name: String): Seq[String] = request.queryString.get(name).toSeq.flatten
-  override def queryParameters: Map[String, Seq[String]] = request.queryString
+  override def queryParameters: MultiQueryParams = MultiQueryParams.fromMultiMap(request.queryString)
   override def bodyStream: Any = throw new UnsupportedOperationException("Play doesn't support request body streaming")
 
   override def serverRequest: ServerRequest = new PlayServerRequest(request)

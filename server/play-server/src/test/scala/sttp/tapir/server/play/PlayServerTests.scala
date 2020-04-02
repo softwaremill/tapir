@@ -72,5 +72,5 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
     Resource.make(bind)(s => IO(s.stop())).map(_ => ())
   }
 
-  override def portCounter: PortCounter = new PortCounter(38000)
+  override val portCounter: PortCounter = new PortCounter(38000)
 }

@@ -237,13 +237,6 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
-  testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
-    basicRequest
-      .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
-      .send()
-      .map { r => r.headers.filter(_.is("hh")).map(_.value).toList shouldBe List("v3", "v2", "v1", "v0") }
-  }
-
   testServer(in_simple_multipart_out_multipart)((fa: FruitAmount) =>
     pureResult(FruitAmount(fa.fruit + " apple", fa.amount * 2).asRight[Unit])
   ) { baseUri =>

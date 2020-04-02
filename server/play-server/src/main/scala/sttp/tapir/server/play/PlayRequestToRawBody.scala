@@ -8,37 +8,29 @@ import akka.util.ByteString
 import play.api.mvc.{RawBuffer, Request}
 import play.core.parsers.Multipart
 import sttp.model.Part
-import sttp.tapir.{
-  ByteArrayValueType,
-  ByteBufferValueType,
-  FileValueType,
-  InputStreamValueType,
-  MultipartValueType,
-  RawPart,
-  RawValueType,
-  StringValueType
-}
+import sttp.tapir.{RawBodyType, RawPart}
+import sttp.tapir.internal._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
-  def apply[R](rawBodyType: RawValueType[R], charset: Option[Charset], request: Request[RawBuffer], body: ByteString)(
+  def apply[R](bodyType: RawBodyType[R], charset: Option[Charset], request: Request[RawBuffer], body: ByteString)(
       implicit mat: Materializer
   ): Future[R] = {
-    rawBodyType match {
-      case StringValueType(defaultCharset) => Future(new String(body.toArray, charset.getOrElse(defaultCharset)))
-      case ByteArrayValueType              => Future(body.toArray)
-      case ByteBufferValueType             => Future(body.toByteBuffer)
-      case InputStreamValueType            => Future(body.toArray).map(new ByteArrayInputStream(_))
-      case FileValueType =>
+    bodyType match {
+      case RawBodyType.StringBody(defaultCharset) => Future(new String(body.toArray, charset.getOrElse(defaultCharset)))
+      case RawBodyType.ByteArrayBody              => Future(body.toArray)
+      case RawBodyType.ByteBufferBody             => Future(body.toByteBuffer)
+      case RawBodyType.InputStreamBody            => Future(body.toArray).map(new ByteArrayInputStream(_))
+      case RawBodyType.FileBody =>
         Future(java.nio.file.Files.write(serverOptions.temporaryFileCreator.create().path, body.toArray))
           .map(p => p.toFile)
-      case mvt: MultipartValueType => multiPartRequestToRawBody(request, mvt, body)
+      case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)
     }
   }
 
-  private def multiPartRequestToRawBody[R](request: Request[RawBuffer], mvt: MultipartValueType, body: ByteString)(
+  private def multiPartRequestToRawBody[R](request: Request[RawBuffer], m: RawBodyType.MultipartBody, body: ByteString)(
       implicit mat: Materializer
   ): Future[Seq[RawPart]] = {
     val bodyParser = serverOptions.playBodyParsers.multipartFormData(
@@ -51,8 +43,8 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
         val dataParts = value.dataParts.map {
           case (key, value) =>
             apply(
-              mvt.partCodecMeta(key).get.rawValueType,
-              mvt.partCodecMeta(key).get.format.mediaType.charset.map(Charset.forName),
+              m.partType(key).get,
+              charset(m.partType(key).get),
               request,
               ByteString(value.flatMap(_.getBytes).toArray)
             ).map(body => Part(key, body).asInstanceOf[RawPart])
@@ -60,8 +52,8 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
 
         val fileParts = value.files.map(f => {
           apply(
-            mvt.partCodecMeta(f.key).get.rawValueType,
-            mvt.partCodecMeta(f.key).get.format.mediaType.charset.map(Charset.forName),
+            m.partType(f.key).get,
+            charset(m.partType(f.key).get),
             request,
             ByteString.apply(java.nio.file.Files.readAllBytes(f.ref.path))
           ).map(body =>

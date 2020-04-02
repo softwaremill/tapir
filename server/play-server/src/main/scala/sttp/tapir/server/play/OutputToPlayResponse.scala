@@ -13,19 +13,7 @@ import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import sttp.model.{MediaType, Part, StatusCode}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{
-  ByteArrayValueType,
-  ByteBufferValueType,
-  CodecForOptional,
-  CodecFormat,
-  CodecMeta,
-  EndpointOutput,
-  FileValueType,
-  InputStreamValueType,
-  MultipartValueType,
-  RawPart,
-  StringValueType
-}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
 
 object OutputToPlayResponse {
   def apply[O](
@@ -55,76 +43,71 @@ object OutputToPlayResponse {
 
   private val encodeOutputs: EncodeOutputs[HttpEntity] =
     new EncodeOutputs[HttpEntity](new EncodeOutputBody[HttpEntity] {
-      override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: CodecFormat, Any]): HttpEntity =
-        rawValueToResponseEntity(codec.meta, v)
-      override def streamValueToBody(v: Any, codecFormat: CodecFormat): HttpEntity =
-        HttpEntity.Streamed(v.asInstanceOf[Source[ByteString, _]], None, mediaTypeToContentFormat(codecFormat.mediaType))
+      override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): HttpEntity =
+        rawValueToResponseEntity(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format), v)
+      override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): HttpEntity =
+        HttpEntity.Streamed(v.asInstanceOf[Source[ByteString, _]], None, formatToContentType(format))
+
     })
 
-  private def rawValueToResponseEntity[M <: CodecFormat, R](codecMeta: CodecMeta[_, M, R], r: R): HttpEntity = {
-    val contentType = mediaTypeToContentFormat(codecMeta.format.mediaType)
-
-    codecMeta.rawValueType match {
-      case StringValueType(charset) =>
+  private def rawValueToResponseEntity[R](bodyType: RawBodyType[R], contentType: Option[String], r: R): HttpEntity = {
+    bodyType match {
+      case RawBodyType.StringBody(charset) =>
         val str = r.asInstanceOf[String]
         HttpEntity.Strict(ByteString(str, charset), contentType)
 
-      case ByteArrayValueType =>
+      case RawBodyType.ByteArrayBody =>
         val bytes = r.asInstanceOf[Array[Byte]]
         HttpEntity.Strict(ByteString(bytes), contentType)
 
-      case ByteBufferValueType =>
+      case RawBodyType.ByteBufferBody =>
         val byteBuffer = r.asInstanceOf[ByteBuffer]
         HttpEntity.Strict(ByteString(byteBuffer), contentType)
 
-      case InputStreamValueType =>
+      case RawBodyType.InputStreamBody =>
         val stream = r.asInstanceOf[InputStream]
         HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), None, contentType)
 
-      case FileValueType =>
+      case RawBodyType.FileBody =>
         val path = r.asInstanceOf[File].toPath
         val fileSize = Some(Files.size(path))
         val file = FileIO.fromPath(path)
         HttpEntity.Streamed(file, fileSize, contentType)
 
-      case mvt: MultipartValueType =>
+      case m: RawBodyType.MultipartBody =>
         val rawParts = r.asInstanceOf[Seq[RawPart]]
 
         val dataParts = rawParts
           .filter { part =>
-            mvt.partCodecMeta(part.name).exists { rawPart =>
-              rawPart.rawValueType match {
-                case StringValueType(_)  => true
-                case ByteArrayValueType  => true
-                case ByteBufferValueType => true
-                case _                   => false
-              }
+            m.partType(part.name).exists {
+              case RawBodyType.StringBody(_)  => true
+              case RawBodyType.ByteArrayBody  => true
+              case RawBodyType.ByteBufferBody => true
+              case _                          => false
             }
           }
-          .flatMap(rawPartsToDataPart(mvt, _))
+          .flatMap(rawPartsToDataPart(m, _))
 
         val fileParts = rawParts
           .filter { part =>
-            mvt.partCodecMeta(part.name).exists { rawPart =>
-              rawPart.rawValueType match {
-                case InputStreamValueType => true
-                case FileValueType        => true
-                case _                    => false
-              }
+            m.partType(part.name).exists {
+              case RawBodyType.InputStreamBody => true
+              case RawBodyType.FileBody        => true
+              case _                           => false
             }
           }
-          .flatMap(rawPartsToFilePart(mvt, _))
+          .flatMap(rawPartsToFilePart(m, _))
 
         HttpEntity.Streamed(multipartFormToStream(dataParts, fileParts), None, contentType)
     }
   }
 
   private def rawPartsToFilePart[T](
-      mvt: MultipartValueType,
+      m: RawBodyType.MultipartBody,
       part: Part[T]
   ): Option[MultipartFormData.FilePart[Source[ByteString, _]]] = {
-    mvt.partCodecMeta(part.name).flatMap { codecMeta =>
-      val entity: HttpEntity = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.body)
+    m.partType(part.name).flatMap { partType =>
+      val entity: HttpEntity = rawValueToResponseEntity(partType.asInstanceOf[RawBodyType[Any]], part.contentType, part.body)
 
       for {
         fileName <- part.fileName
@@ -134,18 +117,15 @@ object OutputToPlayResponse {
     }
   }
 
-  private def rawPartsToDataPart[T](
-      mvt: MultipartValueType,
-      part: Part[T]
-  ): Option[MultipartFormData.DataPart] = {
-    mvt.partCodecMeta(part.name).flatMap { codecMeta =>
-      val charset = codecMeta.rawValueType match {
-        case valueType: StringValueType => valueType.charset
-        case _                          => Charset.defaultCharset()
+  private def rawPartsToDataPart[T](m: RawBodyType.MultipartBody, part: Part[T]): Option[MultipartFormData.DataPart] = {
+    m.partType(part.name).flatMap { partType =>
+      val charset = partType match {
+        case valueType: RawBodyType.StringBody => valueType.charset
+        case _                                 => Charset.defaultCharset()
       }
 
       val maybeData: Option[String] =
-        rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: CodecFormat, Any]], part.body) match {
+        rawValueToResponseEntity(partType.asInstanceOf[RawBodyType[Any]], part.contentType, part.body) match {
           case HttpEntity.Strict(data, _)   => Some(data.decodeString(charset))
           case HttpEntity.Streamed(_, _, _) => None
           case HttpEntity.Chunked(_, _)     => None
@@ -155,15 +135,15 @@ object OutputToPlayResponse {
     }
   }
 
-  private def mediaTypeToContentFormat(mediaType: MediaType): Option[String] = {
-    val result = mediaType.copy(charset = mediaType.charset.map(_.toLowerCase)) match {
+  private def formatToContentType(format: CodecFormat): Option[String] = {
+    val result = format.mediaType.copy(charset = format.mediaType.charset.map(_.toLowerCase)) match {
       case MediaType.ApplicationJson               => ContentTypes.JSON
-      case MediaType.TextPlain                     => ContentTypes.TEXT(Codec.javaSupported(mediaType.charset.getOrElse("utf-8")))
+      case MediaType.TextPlain                     => ContentTypes.TEXT(Codec.javaSupported(format.mediaType.charset.getOrElse("utf-8")))
       case MediaType.TextPlainUtf8                 => ContentTypes.TEXT(Codec.utf_8)
       case MediaType.ApplicationOctetStream        => ContentTypes.BINARY
       case MediaType.ApplicationXWwwFormUrlencoded => ContentTypes.FORM
       case MediaType.MultipartFormData             => "multipart/form-data"
-      case _                                       => throw new IllegalArgumentException(s"Cannot parse content type: $mediaType")
+      case _                                       => throw new IllegalArgumentException(s"Cannot parse content type: $format")
     }
 
     Option(result)

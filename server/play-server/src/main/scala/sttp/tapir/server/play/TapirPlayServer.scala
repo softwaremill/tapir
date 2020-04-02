@@ -8,10 +8,10 @@ import play.api.http.HttpEntity
 import play.api.mvc._
 import play.api.routing.Router.Routes
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.ServerDefaults.StatusCodes
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
-import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -22,8 +22,8 @@ trait TapirPlayServer {
     def toRoute(
         logic: I => Future[Either[E, O]]
     )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
-      def valuesToResponse(values: DecodeInputsResult.Values): Future[Result] = {
-        val i = SeqToParams(InputValues(e.input, values)).asInstanceOf[I]
+      def valuesToResponse(values: Seq[Any]): Future[Result] = {
+        val i = SeqToParams(values).asInstanceOf[I]
         logic(i)
           .map {
             case Right(result) => OutputToPlayResponse(ServerDefaults.StatusCodes.success, e.output, result)
@@ -32,9 +32,8 @@ trait TapirPlayServer {
       }
       def handleDecodeFailure(
           e: Endpoint[_, _, _, _],
-          req: RequestHeader,
-          input: EndpointInput.Single[_],
-          failure: DecodeFailure
+          input: EndpointInput[_],
+          failure: DecodeResult.Failure
       ): Result = {
         val decodeFailureCtx = DecodeFailureContext(input, failure)
         val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
@@ -52,19 +51,18 @@ trait TapirPlayServer {
         result match {
           case values: DecodeInputsResult.Values =>
             values.bodyInput match {
-              case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
+              case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
                 new PlayRequestToRawBody(serverOptions)
                   .apply(
-                    codec.meta.rawValueType,
+                    bodyType,
                     request.charset.map(Charset.forName),
                     request,
                     request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))
                   )
                   .map { rawBody =>
-                    val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, true))
-                    decodeResult match {
-                      case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
-                      case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                    codec.decode(rawBody) match {
+                      case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                      case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                     }
                   }
               case None => Future(values)
@@ -90,9 +88,12 @@ trait TapirPlayServer {
           serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
             decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1, 0, serverOptions))).flatMap {
               case values: DecodeInputsResult.Values =>
-                valuesToResponse(values)
+                InputValues(e.input, values) match {
+                  case InputValuesResult.Values(values, _)       => valuesToResponse(values)
+                  case InputValuesResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e, input, failure))
+                }
               case DecodeInputsResult.Failure(input, failure) =>
-                Future.successful(handleDecodeFailure(e, request, input, failure))
+                Future.successful(handleDecodeFailure(e, input, failure))
             }
           }
         }
