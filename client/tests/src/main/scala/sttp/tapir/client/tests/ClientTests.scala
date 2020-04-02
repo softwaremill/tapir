@@ -14,7 +14,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
 import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
-import sttp.tapir._
+import sttp.tapir.{DecodeResult, _}
 import sttp.tapir.tests._
 import TestUtil._
 import org.http4s.multipart
@@ -140,6 +140,12 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     ) shouldBe "mango cranberry"
   }
 
+  test("not existing endpoint, with error output not matching 404") {
+    safeSend(not_existing_endpoint, port, ()).unsafeRunSync() should matchPattern {
+      case DecodeResult.Error(_, _: IllegalArgumentException) =>
+    }
+  }
+
   //
 
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
@@ -158,7 +164,13 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
     case r @ GET -> Root / "api" / "unit"                                  => Ok("{}")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
-    case r @ GET -> Root / "api" / "echo" / "headers"                      => Ok(headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse)): _*)
+    case r @ GET -> Root / "api" / "echo" / "headers" =>
+      val headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse))
+      val filteredHeaders = r.headers.find(_.name.value == "Cookie") match {
+        case Some(c) => headers.filter(_.name.value == "Cookie") :+ Header("Set-Cookie", c.value.reverse)
+        case None    => headers
+      }
+      Ok(headers = filteredHeaders: _*)
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
       Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
@@ -199,6 +211,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   type Port = Int
 
   def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[Either[E, O]]
+  def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
 
   def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {

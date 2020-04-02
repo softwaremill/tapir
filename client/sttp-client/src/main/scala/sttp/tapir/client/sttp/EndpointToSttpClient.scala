@@ -35,10 +35,15 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
       responseAsFromOutputs(meta, output)
     }.mapWithMetadata { (body, meta) =>
-      val output = if (meta.isSuccess) e.output else e.errorOutput
-      val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
-      params.map(p => if (meta.isSuccess) Right(p) else Left(p))
-    }
+        val output = if (meta.isSuccess) e.output else e.errorOutput
+        val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
+        params.map(p => if (meta.isSuccess) Right(p) else Left(p))
+      }
+      .map {
+        case DecodeResult.Error(o, e) =>
+          DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req2.method} ${req2.uri}", e))
+        case other => other
+      }
 
     req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], S]]
   }
@@ -71,11 +76,18 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           if (codec.hIsUnit) None else Some(codec.decode(()))
 
         case EndpointOutput.OneOf(mappings, codec) =>
-          val mapping = mappings
-            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code))
-            .getOrElse(throw new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs"))
-          Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta).flatMap(codec.decode))
-
+          mappings
+            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
+            case Some(mapping) =>
+              Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta).flatMap(codec.decode))
+            case None =>
+              Some(
+                DecodeResult.Error(
+                  meta.statusText,
+                  new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs")
+                )
+              )
+          }
         case EndpointOutput.MappedTuple(tuple, codec) =>
           Some(getOutputParams(tuple.asVectorOfSingleOutputs, body, meta).flatMap(codec.decode))
       }
@@ -247,7 +259,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private def getOrThrow[T](dr: DecodeResult[T]): T = dr match {
     case DecodeResult.Value(v)    => v
-    case DecodeResult.Error(o, e) => throw new IllegalArgumentException(s"Cannot decode from $o", e)
+    case DecodeResult.Error(_, e) => throw e
     case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
   }
+
 }
