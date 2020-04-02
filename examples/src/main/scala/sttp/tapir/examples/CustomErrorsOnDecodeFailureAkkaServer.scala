@@ -51,7 +51,5 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
     assert(result2 == Left("Incorrect format!!!"))
   }
 
-  Await.result(bindAndCheck.transformWith { r =>
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }

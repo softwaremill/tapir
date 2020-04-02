@@ -43,9 +43,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
             case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
             case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
           }
-          .flatTap { response =>
-            serverOptions.logRequestHandling.requestHandled(se.endpoint, response.status.code)
-          }
+          .flatTap { response => serverOptions.logRequestHandling.requestHandled(se.endpoint, response.status.code) }
           .onError {
             case e: Exception => serverOptions.logRequestHandling.logicException(se.endpoint, e)
           }

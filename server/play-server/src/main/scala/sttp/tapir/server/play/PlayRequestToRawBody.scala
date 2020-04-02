@@ -64,10 +64,9 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
             mvt.partCodecMeta(f.key).get.format.mediaType.charset.map(Charset.forName),
             request,
             ByteString.apply(java.nio.file.Files.readAllBytes(f.ref.path))
-          ).map(
-            body =>
-              Part(f.key, body, Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename), Seq.empty)
-                .asInstanceOf[RawPart]
+          ).map(body =>
+            Part(f.key, body, Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename), Seq.empty)
+              .asInstanceOf[RawPart]
           )
         })
         Future.sequence(dataParts ++ fileParts)

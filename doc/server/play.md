@@ -12,7 +12,7 @@ and
 or
 
 ```scala
-"com.typesafe.play" %% "play-netty-http-server" % "2.7.3"
+"com.typesafe.play" %% "play-netty-http-server" % "2.7.4"
 ```
 
 depending on whether you want to use netty or akka based http-server under the hood.

@@ -22,9 +22,7 @@ trait ValidatorMagnoliaDerivation {
   @silent("never used")
   def dispatch[T](ctx: SealedTrait[Validator, T]): Validator[T] =
     Validator.Coproduct(new generic.SealedTrait[Validator, T] {
-      override def dispatch(t: T): Typeclass[T] = ctx.dispatch(t) { v =>
-        v.typeclass.asInstanceOf[Validator[T]]
-      }
+      override def dispatch(t: T): Typeclass[T] = ctx.dispatch(t) { v => v.typeclass.asInstanceOf[Validator[T]] }
 
       override def subtypes: Map[String, Typeclass[Any]] =
         ctx.subtypes.map(st => st.typeName.full -> st.typeclass.asInstanceOf[Validator[scala.Any]]).toMap

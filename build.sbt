@@ -347,7 +347,6 @@ lazy val finatraServerCats: Project =
     )
     .settings(only2_12settings)
     .dependsOn(finatraServer % "compile->compile;test->test", serverTests % Test)
-  .dependsOn(core, serverTests % "test")
 
 lazy val playServer: Project = (project in file("server/play-server"))
   .settings(commonSettings)
@@ -359,7 +358,7 @@ lazy val playServer: Project = (project in file("server/play-server"))
       "com.typesafe.play" %% "play" % Versions.playServer
     )
   )
-  .dependsOn(core, serverTests % "test")
+  .dependsOn(core, serverTests % Test)
 
 // client
 

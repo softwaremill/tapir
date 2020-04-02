@@ -40,9 +40,7 @@ class SwaggerFinatra(yaml: String, contextPath: String = "docs", yamlName: Strin
     response.movedPermanently.location(s"/$contextPath/index.html?url=/$contextPath/$yamlName")
   }
 
-  get(route = s"/$contextPath/$yamlName") { _: Request =>
-    response.ok(yaml).contentType("application/yaml")
-  }
+  get(route = s"/$contextPath/$yamlName") { _: Request => response.ok(yaml).contentType("application/yaml") }
 
   get(route = s"/$contextPath/:swaggerResource") { req: Request =>
     val sResource: String = req.getParam("swaggerResource")
