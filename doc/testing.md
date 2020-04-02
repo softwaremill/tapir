@@ -9,7 +9,7 @@ which yours application consumes, are described using tapir, you can create a st
 endpoints to `SttpBackendStub` (see the [sttp documentation](https://sttp.softwaremill.com/en/latest/testing.html) on 
 details how the stub works).
 
-Add the dependdency:
+Add the dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.12.28"
