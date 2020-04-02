@@ -3,6 +3,7 @@ package sttp.tapir
 import sttp.model.{Method, StatusCode}
 
 import scala.collection.immutable.ListMap
+import scala.collection.mutable
 
 package object internal {
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
@@ -90,12 +91,16 @@ package object internal {
         case s: EndpointOutput.OneOf[_] =>
           Right(
             ListMap(
-              s.mappings
+              (s.mappings
                 .map(c => (c.output.asBasicOutputsOrMap, c.statusCode))
-                .map {
-                  case (Left(basicOutputs), statusCode) => statusCode -> basicOutputs
-                  case (Right(_), _)                    => throwMultipleOneOfMappings
-                }: _*
+                .foldLeft(Map.empty[Option[StatusCode], BasicOutputs]) { (acc, e) =>
+                  e match {
+                    case (Left(basicOutputs), statusCode) =>
+                      acc + (statusCode -> acc.get(statusCode).fold(basicOutputs)(e => e ++ basicOutputs))
+                    case (Right(_), _) => throwMultipleOneOfMappings
+                  }
+                }
+                .toList): _*
             )
           )
         case f: EndpointOutput.FixedStatusCode => Right(ListMap(Some(f.statusCode) -> Vector(f)))
