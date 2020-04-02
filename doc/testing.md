@@ -11,7 +11,7 @@ endpoints to `SttpBackendStub`.
 Add the dependdency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.12.27"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.12.28"
 ```
 
 And the following import:
