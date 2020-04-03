@@ -2,7 +2,6 @@ package sttp.tapir
 
 import java.util.Base64
 
-import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput.Auth
 import sttp.tapir.model.UsernamePassword
 
@@ -13,8 +12,9 @@ object TapirAuth {
   private val BearerAuthType = "Bearer"
 
   def apiKey[T](input: EndpointInput.Single[T]): EndpointInput.Auth.ApiKey[T] = EndpointInput.Auth.ApiKey[T](input)
-  val basic: EndpointInput.Auth.Http[UsernamePassword] = httpAuth(BasicAuthType, credentialsCodec(BasicAuthType).map(usernamePasswordCodec))
-  val bearer: EndpointInput.Auth.Http[String] = httpAuth(BearerAuthType, credentialsCodec(BearerAuthType))
+  val basic: EndpointInput.Auth.Http[UsernamePassword] =
+    httpAuth(BasicAuthType, stringPrefixWithSpace(BasicAuthType).map(usernamePasswordMapping))
+  val bearer: EndpointInput.Auth.Http[String] = httpAuth(BearerAuthType, stringPrefixWithSpace(BearerAuthType))
 
   object oauth2 {
     def authorizationCode(
@@ -28,14 +28,16 @@ object TapirAuth {
         tokenUrl,
         scopes,
         refreshUrl,
-        header[String]("Authorization").map(credentialsCodec(BearerAuthType))
+        header[String]("Authorization").map(stringPrefixWithSpace(BearerAuthType))
       )
   }
 
-  private def httpAuth[T](authType: String, codec: Codec[String, T, TextPlain]): EndpointInput.Auth.Http[T] =
-    EndpointInput.Auth.Http(authType, header[String]("Authorization").map(codec))
+  private def httpAuth[T](authType: String, mapping: Mapping[String, T]): EndpointInput.Auth.Http[T] =
+    EndpointInput.Auth.Http(authType, header[String]("Authorization").map(mapping))
 
-  private def usernamePasswordCodec: Mapping[String, UsernamePassword] = {
+  private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefix(prefix + " ")
+
+  def usernamePasswordMapping: Mapping[String, UsernamePassword] = {
     def decode(s: String): DecodeResult[UsernamePassword] =
       try {
         val s2 = new String(Base64.getDecoder.decode(s))
@@ -54,14 +56,5 @@ object TapirAuth {
       Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes("UTF-8"))
 
     Mapping.fromDecode(decode)(encode)
-  }
-
-  private def credentialsCodec(authType: String): Codec[String, String, TextPlain] = {
-    val authTypeWithSpace = authType + " "
-    val prefixLength = authTypeWithSpace.length
-    def removeAuthType(v: String): DecodeResult[String] =
-      if (v.startsWith(authType)) DecodeResult.Value(v.substring(prefixLength))
-      else DecodeResult.Error(v, new IllegalArgumentException(s"The given value doesn't start with $authType"))
-    Codec.string.mapDecode(removeAuthType)(v => s"$authType $v")
   }
 }

@@ -90,6 +90,18 @@ object Mapping {
     override def validator: Validator[H] = Validator.pass
     override def hIsUnit: Boolean = implicitly[IsUnit[H]].isUnit
   }
+
+  /**
+    * A mapping which, during encoding, adds the given `prefix`. When decoding, the prefix is removed (if present),
+    * otherwise an error is reported.
+    */
+  def stringPrefix(prefix: String): Mapping[String, String] = {
+    val prefixLength = prefix.length
+    def removePrefix(v: String): DecodeResult[String] =
+      if (v.startsWith(prefix)) DecodeResult.Value(v.substring(prefixLength))
+      else DecodeResult.Error(v, new IllegalArgumentException(s"The given value doesn't start with $prefix"))
+    Mapping.fromDecode(removePrefix)(v => s"$prefix$v")
+  }
 }
 
 trait IsUnit[T] {
