@@ -3,7 +3,7 @@ package sttp.tapir.server.internal
 import sttp.model.{Cookie, HeaderNames, Method, MultiQueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.{CodecFormat, DecodeFailure, DecodeResult, EndpointIO, EndpointInput}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamingEndpointIO}
 
 import scala.annotation.tailrec
 
@@ -13,16 +13,15 @@ object DecodeInputsResult {
   /**
     * @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint.
     */
-  case class Values(basicInputsValues: Vector[Any], bodyInputWithIndex: Option[(EndpointIO.Body[_, _, _], Int)])
-      extends DecodeInputsResult {
-    def addBodyInput(input: EndpointIO.Body[_, _ <: CodecFormat, _], bodyIndex: Int): Values = {
+  case class Values(basicInputsValues: Vector[Any], bodyInputWithIndex: Option[(EndpointIO.Body[_, _], Int)]) extends DecodeInputsResult {
+    def addBodyInput(input: EndpointIO.Body[_, _], bodyIndex: Int): Values = {
       if (bodyInputWithIndex.isDefined) {
         throw new IllegalStateException(s"Double body definition: $input")
       }
 
       copy(bodyInputWithIndex = Some((input, bodyIndex)))
     }
-    def bodyInput: Option[EndpointIO.Body[_, _, _]] = bodyInputWithIndex.map(_._1)
+    def bodyInput: Option[EndpointIO.Body[_, _]] = bodyInputWithIndex.map(_._1)
 
     /**
       * Sets the value of the body input, once it is known, if a body input is defined.
@@ -34,7 +33,7 @@ object DecodeInputsResult {
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
-  case class Failure(input: EndpointInput.Basic[_], failure: DecodeFailure) extends DecodeInputsResult
+  case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeInputsResult
 }
 
 trait DecodeInputsContext {
@@ -46,7 +45,7 @@ trait DecodeInputsContext {
   def headers: Seq[(String, String)]
 
   def queryParameter(name: String): Seq[String]
-  def queryParameters: Map[String, Seq[String]]
+  def queryParameters: MultiQueryParams
 
   def bodyStream: Any
 
@@ -70,7 +69,7 @@ object DecodeInputs {
     // We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
     // An exact-path check is done after method & path matching
 
-    val basicInputs = assignInputIndexes(input.asVectorOfBasicInputs(), 0, Vector.empty)
+    val basicInputs = input.asVectorOfBasicInputs().zipWithIndex.map(IndexedBasicInput.tupled)
 
     val methodInputs = basicInputs.filter(t => isRequestMethod(t.input))
     val pathInputs = basicInputs.filter(t => isPath(t.input))
@@ -124,14 +123,15 @@ object DecodeInputs {
       lastPathInput: IndexedBasicInput
   ): (DecodeInputsResult, DecodeInputsContext) = {
     pathInputs match {
-      case (idxInput @ IndexedBasicInput(in, idx)) +: restInputs =>
+      case (idxInput @ IndexedBasicInput(in, _)) +: restInputs =>
         in match {
-          case EndpointInput.FixedPath(expectedSegment) =>
+          case EndpointInput.FixedPath(expectedSegment, codec, _) =>
             val (nextSegment, newCtx) = ctx.nextPathSegment
             nextSegment match {
               case Some(seg) =>
                 if (seg == expectedSegment) {
-                  matchPathInner(restInputs, newCtx, decodeValues, decodedPathInputs, idxInput)
+                  val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, codec.decode(seg)))
+                  matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput)
                 } else {
                   val failure = DecodeInputsResult.Failure(in, DecodeResult.Mismatch(expectedSegment, seg))
                   (failure, newCtx)
@@ -139,7 +139,8 @@ object DecodeInputs {
               case None =>
                 if (expectedSegment.isEmpty) {
                   // FixedPath("") matches an empty path
-                  matchPathInner(restInputs, newCtx, decodeValues, decodedPathInputs, idxInput)
+                  val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, codec.decode("")))
+                  matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput)
                 } else {
                   // shape path mismatch - input path too short
                   val failure = DecodeInputsResult.Failure(in, DecodeResult.Missing)
@@ -156,9 +157,10 @@ object DecodeInputs {
                 val failure = DecodeInputsResult.Failure(in, DecodeResult.Missing)
                 (failure, newCtx)
             }
-          case _: EndpointInput.PathsCapture =>
+          case i: EndpointInput.PathsCapture[_] =>
             val (paths, newCtx) = collectRemainingPath(Vector.empty, ctx)
-            matchPathInner(restInputs, newCtx, decodeValues.setBasicInputValue(paths, idx), decodedPathInputs, idxInput)
+            val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.decode(paths.toList)))
+            matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput)
           case _ =>
             throw new IllegalStateException(s"Unexpected EndpointInput ${in.show} encountered. This is most likely a bug in the library")
         }
@@ -185,8 +187,8 @@ object DecodeInputs {
       case Vector() => acc
       case t +: ts =>
         t match {
-          case (indexedInput, failure: DecodeFailure) => DecodeInputsResult.Failure(indexedInput.input, failure)
-          case (indexedInput, DecodeResult.Value(v))  => foldDecodedPathInputs(ts, acc.setBasicInputValue(v, indexedInput.index))
+          case (indexedInput, failure: DecodeResult.Failure) => DecodeInputsResult.Failure(indexedInput.input, failure)
+          case (indexedInput, DecodeResult.Value(v))         => foldDecodedPathInputs(ts, acc.setBasicInputValue(v, indexedInput.index))
         }
     }
   }
@@ -206,25 +208,34 @@ object DecodeInputs {
   ): (DecodeInputsResult, DecodeInputsContext) = {
     inputs match {
       case Vector() => (values, ctx)
-
-      case IndexedBasicInput(input @ EndpointInput.FixedMethod(m), _) +: inputsTail =>
-        if (m == ctx.method) matchOthers(inputsTail, values, ctx)
-        else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(m.method, ctx.method.method)), ctx)
-
-      case IndexedBasicInput(input @ EndpointIO.FixedHeader(n, v, _), _) +: inputsTail =>
-        if (List(v) == ctx.header(n)) matchOthers(inputsTail, values, ctx)
-        else (DecodeInputsResult.Failure(input, DecodeResult.Mismatch(List(v).mkString, ctx.header(n).mkString)), ctx)
-
-      case IndexedBasicInput(input @ EndpointInput.Query(name, codec, _), index) +: inputsTail =>
-        codec.decode(ctx.queryParameter(name).toList) match {
-          case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
-          case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
+      case IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index) +: inputsTail =>
+        matchOthers(inputsTail, values.addBodyInput(input, index), ctx)
+      case indexedInput +: inputsTail =>
+        val (result, ctx2) = matchOther(indexedInput.input, ctx)
+        result match {
+          case DecodeResult.Value(v)         => matchOthers(inputsTail, values.setBasicInputValue(v, indexedInput.index), ctx2)
+          case failure: DecodeResult.Failure => (DecodeInputsResult.Failure(indexedInput.input, failure), ctx2)
         }
+    }
+  }
 
-      case IndexedBasicInput(EndpointInput.QueryParams(_), index) +: inputsTail =>
-        matchOthers(inputsTail, values.setBasicInputValue(MultiQueryParams.fromMultiMap(ctx.queryParameters), index), ctx)
+  private def matchOther(input: EndpointInput.Basic[_], ctx: DecodeInputsContext): (DecodeResult[_], DecodeInputsContext) = {
+    input match {
+      case EndpointInput.FixedMethod(m, codec, _) =>
+        if (m == ctx.method) (codec.decode(()), ctx)
+        else (DecodeResult.Mismatch(m.method, ctx.method.method), ctx)
 
-      case IndexedBasicInput(input @ EndpointInput.Cookie(name, codec, _), index) +: inputsTail =>
+      case EndpointIO.FixedHeader(sttp.model.Header(n, v), codec, _) =>
+        if (List(v) == ctx.header(n)) (codec.decode(()), ctx)
+        else (DecodeResult.Mismatch(List(v).mkString, ctx.header(n).mkString), ctx)
+
+      case EndpointInput.Query(name, codec, _) =>
+        (codec.decode(ctx.queryParameter(name).toList), ctx)
+
+      case EndpointInput.QueryParams(codec, _) =>
+        (codec.decode(ctx.queryParameters), ctx)
+
+      case EndpointInput.Cookie(name, codec, _) =>
         val allCookies = DecodeResult
           .sequence(
             ctx.headers
@@ -237,47 +248,38 @@ object DecodeInputs {
               )
           )
           .map(_.flatten)
-        val cookieValue = allCookies.map(_.find(_.name == name).map(_.value)).flatMap(codec.decode)
-        cookieValue match {
-          case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
-          case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
-        }
+        val decodedCookieValue = allCookies.map(_.find(_.name == name).map(_.value)).flatMap(codec.decode)
+        (decodedCookieValue, ctx)
 
-      case IndexedBasicInput(input @ EndpointIO.Header(name, codec, _), index) +: inputsTail =>
-        codec.decode(ctx.header(name)) match {
-          case DecodeResult.Value(v)  => matchOthers(inputsTail, values.setBasicInputValue(v, index), ctx)
-          case failure: DecodeFailure => (DecodeInputsResult.Failure(input, failure), ctx)
-        }
+      case EndpointIO.Header(name, codec, _) =>
+        (codec.decode(ctx.header(name)), ctx)
 
-      case IndexedBasicInput(EndpointIO.Headers(_), index) +: inputsTail =>
-        matchOthers(inputsTail, values.setBasicInputValue(ctx.headers, index), ctx)
+      case EndpointIO.Headers(codec, _) =>
+        (codec.decode(ctx.headers.map((sttp.model.Header.notValidated _).tupled).toList), ctx)
 
-      case IndexedBasicInput(EndpointInput.ExtractFromRequest(f), index) +: inputsTail =>
-        matchOthers(inputsTail, values.setBasicInputValue(f(ctx.serverRequest), index), ctx)
+      case EndpointInput.ExtractFromRequest(codec, _) =>
+        (codec.decode(ctx.serverRequest), ctx)
 
-      case IndexedBasicInput(input @ EndpointIO.Body(_, _), index) +: inputsTail =>
-        matchOthers(inputsTail, values.addBodyInput(input, index), ctx)
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) =>
+        (codec.decode(ctx.bodyStream), ctx)
 
-      case IndexedBasicInput(EndpointIO.StreamBodyWrapper(_), index) +: inputsTail =>
-        matchOthers(inputsTail, values.setBasicInputValue(ctx.bodyStream, index), ctx)
-
-      case indexedInput +: _ =>
+      case input =>
         throw new IllegalStateException(
-          s"Unexpected EndpointInput ${indexedInput.input.show} encountered. This is most likely a bug in the library"
+          s"Unexpected EndpointInput ${input.show} encountered. This is most likely a bug in the library"
         )
     }
   }
 
   private val isRequestMethod: EndpointInput.Basic[_] => Boolean = {
-    case _: EndpointInput.FixedMethod => true
-    case _                            => false
+    case _: EndpointInput.FixedMethod[_] => true
+    case _                               => false
   }
 
   private val isPath: EndpointInput.Basic[_] => Boolean = {
-    case _: EndpointInput.FixedPath      => true
-    case _: EndpointInput.PathCapture[_] => true
-    case _: EndpointInput.PathsCapture   => true
-    case _                               => false
+    case _: EndpointInput.FixedPath[_]    => true
+    case _: EndpointInput.PathCapture[_]  => true
+    case _: EndpointInput.PathsCapture[_] => true
+    case _                                => false
   }
 
   private type DecodeInputResultTransform = (DecodeInputsResult.Values, DecodeInputsContext) => (DecodeInputsResult, DecodeInputsContext)
@@ -289,36 +291,6 @@ object DecodeInputs {
           case r                                          => r
         }
       case _ => (values, ctx)
-    }
-  }
-
-  private val NoIndex = -1
-
-  /**
-    * Each basic input produces either 0 or 1 value. Assigning an index (which will be used to fill in a value int
-    * the `basicInputsValues` vector later) only to those inputs, which do produce a value.
-    */
-  @tailrec
-  private def assignInputIndexes(
-      inputs: Vector[EndpointInput.Basic[_]],
-      nextIndex: Int,
-      acc: Vector[IndexedBasicInput]
-  ): Vector[IndexedBasicInput] = {
-    inputs match {
-      case Vector()                                   => acc
-      case (input: EndpointInput.FixedMethod) +: tail => assignInputIndexes(tail, nextIndex, acc :+ IndexedBasicInput(input, NoIndex))
-      case (input: EndpointInput.FixedPath) +: tail   => assignInputIndexes(tail, nextIndex, acc :+ IndexedBasicInput(input, NoIndex))
-      case (input: EndpointIO.FixedHeader) +: tail    => assignInputIndexes(tail, nextIndex, acc :+ IndexedBasicInput(input, NoIndex))
-      case input +: tail                              => assignInputIndexes(tail, nextIndex + 1, acc :+ IndexedBasicInput(input, nextIndex))
-    }
-  }
-
-  //
-
-  def rawBodyValueToOption(v: Any, allowsOption: Boolean): Option[Any] = {
-    v match {
-      case "" if allowsOption => None
-      case _                  => Some(v)
     }
   }
 }

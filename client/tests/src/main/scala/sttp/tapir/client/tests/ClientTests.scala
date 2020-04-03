@@ -60,7 +60,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     MultiQueryParams.fromMap(Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")),
     Right("kind=very good&name=apple&weight=42")
   )
-  testClient(in_paths_out_string, Seq("fruit", "apple", "amount", "50"), Right("apple 50 None"))
+  testClient(in_paths_out_string, List("fruit", "apple", "amount", "50"), Right("apple 50 None"))
   testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
   testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
   testClient(in_cookie_cookie_out_header, (23, "pomegranate"), Right(List("etanargemop=2c ;32=1c")))
@@ -85,17 +85,19 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   //
 
   test(in_headers_out_headers.showDetail) {
-    send(in_headers_out_headers, port, List(("X-Fruit", "apple"), ("Y-Fruit", "Orange")))
-      .unsafeRunSync()
-      .right
-      .get should contain allOf (("X-Fruit", "elppa"), ("Y-Fruit", "egnarO"))
+    send(
+      in_headers_out_headers,
+      port,
+      List(sttp.model.Header.notValidated("X-Fruit", "apple"), sttp.model.Header.notValidated("Y-Fruit", "Orange"))
+    ).unsafeRunSync().right.get should contain allOf (sttp.model.Header.notValidated("X-Fruit", "elppa"), sttp.model.Header
+      .notValidated("Y-Fruit", "egnarO"))
   }
 
   test(in_json_out_headers.showDetail) {
     send(in_json_out_headers, port, FruitAmount("apple", 10))
       .unsafeRunSync()
       .right
-      .get should contain(("Content-Type", "application/json".reverse))
+      .get should contain(sttp.model.Header.notValidated("Content-Type", "application/json".reverse))
   }
 
   testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))

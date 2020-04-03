@@ -32,6 +32,11 @@ case class Schema[T](
   def asOptional[U]: Schema[U] = copy(isOptional = true)
 
   /**
+    * Returns a required version of this schema, with `isOptional` set to false.
+    */
+  def asRequired[U]: Schema[U] = copy(isOptional = false)
+
+  /**
     * Returns a collection version of this schema, with the schema type wrapped in [[SArray]].
     * Also, sets `isOptional` to true as the collection might be empty.
     * Also, sets 'format' to None. Formats are only applicable to the array elements, not to the array as a whole.

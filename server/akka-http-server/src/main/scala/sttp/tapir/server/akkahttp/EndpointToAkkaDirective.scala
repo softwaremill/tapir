@@ -11,24 +11,9 @@ import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
 import sttp.model.{Header, Part}
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
-import sttp.tapir.{
-  ByteArrayValueType,
-  ByteBufferValueType,
-  CodecMeta,
-  DecodeFailure,
-  DecodeResult,
-  Endpoint,
-  EndpointIO,
-  EndpointInput,
-  FileValueType,
-  InputStreamValueType,
-  MultipartValueType,
-  RawPart,
-  RawValueType,
-  StringValueType
-}
+import sttp.tapir.{RawBodyType, DecodeResult, Endpoint, EndpointIO, EndpointInput, RawPart}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -42,12 +27,12 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         result match {
           case values: DecodeInputsResult.Values =>
             values.bodyInput match {
-              case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
-                rawBodyDirective(codec.meta.rawValueType)
+              case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
+                rawBodyDirective(bodyType)
                   .map { v =>
-                    codec.decode(DecodeInputs.rawBodyValueToOption(v, codec.meta.schema.isOptional)) match {
-                      case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
-                      case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                    codec.decode(v) match {
+                      case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                      case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                     }
                   }
 
@@ -59,7 +44,12 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
 
       extractRequestContext.flatMap { ctx =>
         decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
-          case values: DecodeInputsResult.Values          => provide(SeqToParams(InputValues(e.input, values)).asInstanceOf[I])
+          case values: DecodeInputsResult.Values =>
+            InputValues(e.input, values) match {
+              case InputValuesResult.Values(values, _)       => provide(SeqToParams(values).asInstanceOf[I])
+              case InputValuesResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
+            }
+
           case DecodeInputsResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
         }
       }
@@ -68,7 +58,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     inputDirectives
   }
 
-  private def rawBodyDirective(bodyType: RawValueType[_]): Directive1[Any] = extractRequestContext.flatMap { ctx =>
+  private def rawBodyDirective(bodyType: RawBodyType[_]): Directive1[Any] = extractRequestContext.flatMap { ctx =>
     extractMaterializer.flatMap { implicit materializer =>
       extractExecutionContext.flatMap { implicit ec =>
         onSuccess(entityToRawValue(ctx.request.entity, bodyType, ctx)).asInstanceOf[Directive1[Any]]
@@ -79,8 +69,8 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
   private def decodeFailureDirective[I](
       ctx: RequestContext,
       e: Endpoint[_, _, _, _],
-      input: EndpointInput.Single[_],
-      failure: DecodeFailure
+      input: EndpointInput[_],
+      failure: DecodeResult.Failure
   ): Directive1[I] = {
     val decodeFailureCtx = DecodeFailureContext(input, failure)
     val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
@@ -94,23 +84,27 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     }
   }
 
-  private def entityToRawValue[R](entity: HttpEntity, rawValueType: RawValueType[R], ctx: RequestContext)(
+  private def entityToRawValue[R](
+      entity: HttpEntity,
+      bodyType: RawBodyType[R],
+      ctx: RequestContext
+  )(
       implicit mat: Materializer,
       ec: ExecutionContext
   ): Future[R] = {
-    rawValueType match {
-      case StringValueType(_)   => implicitly[FromEntityUnmarshaller[String]].apply(entity)
-      case ByteArrayValueType   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(entity)
-      case ByteBufferValueType  => implicitly[FromEntityUnmarshaller[ByteString]].apply(entity).map(_.asByteBuffer)
-      case InputStreamValueType => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(entity).map(new ByteArrayInputStream(_))
-      case FileValueType =>
+    bodyType match {
+      case RawBodyType.StringBody(_)   => implicitly[FromEntityUnmarshaller[String]].apply(entity)
+      case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(entity)
+      case RawBodyType.ByteBufferBody  => implicitly[FromEntityUnmarshaller[ByteString]].apply(entity).map(_.asByteBuffer)
+      case RawBodyType.InputStreamBody => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(entity).map(new ByteArrayInputStream(_))
+      case RawBodyType.FileBody =>
         serverOptions
           .createFile(ctx)
           .flatMap(file => entity.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => file))
-      case mvt: MultipartValueType =>
+      case m: RawBodyType.MultipartBody =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(entity).flatMap { fd =>
           fd.parts
-            .mapConcat(part => mvt.partCodecMeta(part.name).map((part, _)).toList)
+            .mapConcat(part => m.partType(part.name).map((part, _)).toList)
             .mapAsync[RawPart](1) { case (part, codecMeta) => toRawPart(part, codecMeta, ctx) }
             .runWith[Future[scala.collection.immutable.Seq[RawPart]]](Sink.seq)
             .asInstanceOf[Future[R]]
@@ -118,11 +112,11 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     }
   }
 
-  private def toRawPart[R](part: Multipart.FormData.BodyPart, codecMeta: CodecMeta[_, _, R], ctx: RequestContext)(
+  private def toRawPart[R](part: Multipart.FormData.BodyPart, bodyType: RawBodyType[R], ctx: RequestContext)(
       implicit mat: Materializer,
       ec: ExecutionContext
   ): Future[Part[R]] = {
-    entityToRawValue(part.entity, codecMeta.rawValueType, ctx)
+    entityToRawValue(part.entity, bodyType, ctx)
       .map(r =>
         Part(
           part.name,

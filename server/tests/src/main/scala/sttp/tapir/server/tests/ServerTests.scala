@@ -151,7 +151,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     basicRequest
       .post(uri"$baseUri/api/echo")
       .body("""{"fruit":"banana","amount":12}""")
-      .header(HeaderNames.Accept, sttp.model.MediaType.ApplicationJson.toString) //TODO
+      .header(HeaderNames.Accept, sttp.model.MediaType.ApplicationJson.toString)
       .send()
       .map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
@@ -161,7 +161,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .post(uri"$baseUri/api/echo")
       .body("""{"fruit":"banana","amount":12}""")
       .send()
-      .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString)) //TODO
+      .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString))
   }
 
   testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { baseUri =>
@@ -213,13 +213,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
   }
 
-  testServer(in_headers_out_headers)((hs: Seq[(String, String)]) => pureResult(hs.map(h => h.copy(_2 = h._2.reverse)).asRight[Unit])) {
-    baseUri =>
-      basicRequest
-        .get(uri"$baseUri/api/echo/headers")
-        .headers(Header.unsafeApply("X-Fruit", "apple"), Header.unsafeApply("Y-Fruit", "Orange"))
-        .send()
-        .map(_.headers should contain allOf (Header.unsafeApply("X-Fruit", "elppa"), Header.unsafeApply("Y-Fruit", "egnarO")))
+  testServer(in_headers_out_headers)((hs: List[Header]) =>
+    pureResult(hs.map(h => Header.notValidated(h.name, h.value.reverse)).asRight[Unit])
+  ) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri/api/echo/headers")
+      .headers(Header.unsafeApply("X-Fruit", "apple"), Header.unsafeApply("Y-Fruit", "Orange"))
+      .send()
+      .map(_.headers should contain allOf (Header.unsafeApply("X-Fruit", "elppa"), Header.unsafeApply("Y-Fruit", "egnarO")))
   }
 
   testServer(in_paths_out_string)((ps: Seq[String]) => pureResult(ps.mkString(" ").asRight[Unit])) { baseUri =>
@@ -493,11 +494,11 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     "two endpoints with a body defined as the first input: should only consume body when the path matches",
     NonEmptyList.of(
       route(
-        endpoint.post.in(binaryBody[Array[Byte]]).in("p1").out(stringBody),
+        endpoint.post.in(rawBinaryBody[Array[Byte]]).in("p1").out(stringBody),
         (s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])
       ),
       route(
-        endpoint.post.in(binaryBody[Array[Byte]]).in("p2").out(stringBody),
+        endpoint.post.in(rawBinaryBody[Array[Byte]]).in("p2").out(stringBody),
         (s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit])
       )
     )

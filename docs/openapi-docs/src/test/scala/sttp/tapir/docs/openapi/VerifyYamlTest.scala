@@ -74,9 +74,9 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should support tags") {
-    val userTaggedEndpointShow = endpoint.tag("user").in("user" / "show").get.out(plainBody[String])
-    val userTaggedEdnpointSearch = endpoint.tags(List("user", "admin")).in("user" / "search").get.out(plainBody[String])
-    val adminTaggedEndpointAdd = endpoint.tag("admin").in("admin" / "add").get.out(plainBody[String])
+    val userTaggedEndpointShow = endpoint.tag("user").in("user" / "show").get.out(stringBody)
+    val userTaggedEdnpointSearch = endpoint.tags(List("user", "admin")).in("user" / "search").get.out(stringBody)
+    val adminTaggedEndpointAdd = endpoint.tag("admin").in("admin" / "add").get.out(stringBody)
 
     val expectedYaml = loadYaml("expected_tags.yml")
 
@@ -269,7 +269,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("should unfold nested hierarchy") {
     val e: Endpoint[Book, Unit, String, Nothing] = endpoint
       .in(jsonBody[Book])
-      .out(plainBody[String])
+      .out(stringBody)
     val expectedYaml = loadYaml("expected_unfolded_hierarchy.yml")
 
     val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -279,7 +279,7 @@ class VerifyYamlTest extends FunSuite with Matchers {
   }
 
   test("should unfold arrays") {
-    val e = endpoint.in(jsonBody[List[FruitAmount]]).out(plainBody[String])
+    val e = endpoint.in(jsonBody[List[FruitAmount]]).out(stringBody)
     val expectedYaml = loadYaml("expected_unfolded_array.yml")
 
     val actualYaml = e.toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -610,10 +610,14 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("support multiple examples with explicit names") {
     val expectedYaml = loadYaml("expected_multiple_examples_with_names.yml")
     val actualYaml = endpoint.post
-      .out(jsonBody[Entity].examples(List(
-        Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")),
-        Example.of(Organization("acme"), Some("Acme"))
-      )))
+      .out(
+        jsonBody[Entity].examples(
+          List(
+            Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")),
+            Example.of(Organization("acme"), Some("Acme"))
+          )
+        )
+      )
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
@@ -635,9 +639,11 @@ class VerifyYamlTest extends FunSuite with Matchers {
   test("support example name even if there is a single example") {
     val expectedYaml = loadYaml("expected_single_example_with_name.yml")
     val actualYaml = endpoint.post
-      .out(jsonBody[Entity].example(
-        Example(Person("michal", 40), Some("Michal"), Some("Some summary"))
-      ))
+      .out(
+        jsonBody[Entity].example(
+          Example(Person("michal", 40), Some("Michal"), Some("Some summary"))
+        )
+      )
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 
@@ -645,11 +651,10 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-
   test("support multiple examples with both explicit and default names ") {
     val expectedYaml = loadYaml("expected_multiple_examples_with_explicit_and_default_names.yml")
     val actualYaml = endpoint.post
-      .in(jsonBody[Person].examples(List(Example.of(Person("bob", 23), name=Some("Bob")), Example.of(Person("matt", 30)))))
+      .in(jsonBody[Person].examples(List(Example.of(Person("bob", 23), name = Some("Bob")), Example.of(Person("matt", 30)))))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
 

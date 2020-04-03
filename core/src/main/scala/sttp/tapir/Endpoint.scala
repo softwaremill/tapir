@@ -14,16 +14,16 @@ import sttp.tapir.typelevel.{FnComponents, ParamConcat}
   * @tparam S The type of streams that are used by this endpoint's inputs/outputs. `Nothing`, if no streams are used.
   */
 case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointOutput[E], output: EndpointOutput[O], info: EndpointInfo) {
-  def get: Endpoint[I, E, O, S] = in(FixedMethod(Method.GET))
-  def post: Endpoint[I, E, O, S] = in(FixedMethod(Method.POST))
-  def head: Endpoint[I, E, O, S] = in(FixedMethod(Method.HEAD))
-  def put: Endpoint[I, E, O, S] = in(FixedMethod(Method.PUT))
-  def delete: Endpoint[I, E, O, S] = in(FixedMethod(Method.DELETE))
-  def options: Endpoint[I, E, O, S] = in(FixedMethod(Method.OPTIONS))
-  def patch: Endpoint[I, E, O, S] = in(FixedMethod(Method.PATCH))
-  def connect: Endpoint[I, E, O, S] = in(FixedMethod(Method.CONNECT))
-  def trace: Endpoint[I, E, O, S] = in(FixedMethod(Method.TRACE))
-  def method(m: String): Endpoint[I, E, O, S] = in(FixedMethod(Method(m)))
+  def get: Endpoint[I, E, O, S] = method(Method.GET)
+  def post: Endpoint[I, E, O, S] = method(Method.POST)
+  def head: Endpoint[I, E, O, S] = method(Method.HEAD)
+  def put: Endpoint[I, E, O, S] = method(Method.PUT)
+  def delete: Endpoint[I, E, O, S] = method(Method.DELETE)
+  def options: Endpoint[I, E, O, S] = method(Method.OPTIONS)
+  def patch: Endpoint[I, E, O, S] = method(Method.PATCH)
+  def connect: Endpoint[I, E, O, S] = method(Method.CONNECT)
+  def trace: Endpoint[I, E, O, S] = method(Method.TRACE)
+  def method(m: sttp.model.Method): Endpoint[I, E, O, S] = in(FixedMethod(m, Codec.idPlain(), EndpointIO.Info.empty))
 
   def in[J, IJ](i: EndpointInput[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): Endpoint[IJ, E, O, S] =
     this.copy[IJ, E, O, S](input = input.and(i))
@@ -52,24 +52,42 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def prependErrorOut[F, FE](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[F, E, FE]): Endpoint[I, FE, O, S] =
     this.copy[I, FE, O, S](errorOutput = i.and(errorOutput))
 
+  def mapIn[II](m: Mapping[I, II]): Endpoint[II, E, O, S] =
+    this.copy[II, E, O, S](input = input.map(m))
+
   def mapIn[II](f: I => II)(g: II => I): Endpoint[II, E, O, S] =
     this.copy[II, E, O, S](input = input.map(f)(g))
+
+  def mapInDecode[II](f: I => DecodeResult[II])(g: II => I): Endpoint[II, E, O, S] =
+    this.copy[II, E, O, S](input = input.mapDecode(f)(g))
 
   def mapInTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
   )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): Endpoint[CASE_CLASS, E, O, S] =
     this.copy[CASE_CLASS, E, O, S](input = input.mapTo(c)(fc))
 
+  def mapErrorOut[EE](m: Mapping[E, EE]): Endpoint[I, EE, O, S] =
+    this.copy[I, EE, O, S](errorOutput = errorOutput.map(m))
+
   def mapErrorOut[EE](f: E => EE)(g: EE => E): Endpoint[I, EE, O, S] =
     this.copy[I, EE, O, S](errorOutput = errorOutput.map(f)(g))
+
+  def mapErrorOutDecode[EE](f: E => DecodeResult[EE])(g: EE => E): Endpoint[I, EE, O, S] =
+    this.copy[I, EE, O, S](errorOutput = errorOutput.mapDecode(f)(g))
 
   def mapErrorOutTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
   )(implicit fc: FnComponents[COMPANION, E, CASE_CLASS]): Endpoint[I, CASE_CLASS, O, S] =
     this.copy[I, CASE_CLASS, O, S](errorOutput = errorOutput.mapTo(c)(fc))
 
+  def mapOut[OO](m: Mapping[O, OO]): Endpoint[I, E, OO, S] =
+    this.copy[I, E, OO, S](output = output.map(m))
+
   def mapOut[OO](f: O => OO)(g: OO => O): Endpoint[I, E, OO, S] =
     this.copy[I, E, OO, S](output = output.map(f)(g))
+
+  def mapOutDecode[OO](f: O => DecodeResult[OO])(g: OO => O): Endpoint[I, E, OO, S] =
+    this.copy[I, E, OO, S](output = output.mapDecode(f)(g))
 
   def mapOutTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
@@ -97,17 +115,17 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
 
       basicOutputsMap.get(None) match {
         case Some(defaultOutputs) if basicOutputsMap.size == 1 =>
-          EndpointOutput.Multiple(defaultOutputs.sortByType).show
+          EndpointOutput.Tuple(defaultOutputs.sortByType).show
         case _ =>
           val mappings = basicOutputsMap.map {
-            case (sc, os) => StatusMapping(sc, EndpointOutput.Multiple(os.sortByType), _ => true)
+            case (sc, os) => StatusMapping(sc, EndpointOutput.Tuple(os.sortByType), _ => true)
           }
-          EndpointOutput.OneOf(mappings.toSeq).show
+          EndpointOutput.OneOf(mappings.toSeq, Mapping.id).show
       }
     }
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
-    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortBy(basicInputSortIndex)).show
+    val showInputs = EndpointInput.Tuple(input.asVectorOfBasicInputs().sortBy(basicInputSortIndex)).show
     val showSuccessOutputs = showOutputs(output)
     val showErrorOutputs = showOutputs(errorOutput)
 
@@ -146,8 +164,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
       renderPathParam: RenderPathParam = RenderPathTemplate.Defaults.path,
       renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
       includeAuth: Boolean = true
-  ): String =
-    RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
+  ): String = RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
 
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, f)
 }

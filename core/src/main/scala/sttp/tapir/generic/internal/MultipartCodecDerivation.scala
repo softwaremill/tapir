@@ -1,22 +1,32 @@
 package sttp.tapir.generic.internal
 
+import sttp.tapir.MultipartCodec
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{AnyPart, Codec, CodecFormat}
 
+import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
 trait MultipartCodecDerivation {
   implicit def multipartCaseClassCodec[T <: Product with Serializable](
       implicit conf: Configuration
-  ): Codec[T, CodecFormat.MultipartFormData, Seq[AnyPart]] =
+  ): MultipartCodec[T] =
     macro MultipartCodecDerivation.generateForCaseClass[T]
 }
 
 object MultipartCodecDerivation {
   def generateForCaseClass[T: c.WeakTypeTag](
       c: blackbox.Context
-  )(conf: c.Expr[Configuration]): c.Expr[Codec[T, CodecFormat.MultipartFormData, Seq[AnyPart]]] = {
+  )(conf: c.Expr[Configuration]): c.Expr[MultipartCodec[T]] = {
     import c.universe._
+
+    @tailrec
+    def firstNotEmpty(candidates: List[() => (Tree, Tree)]): (Tree, Tree) = candidates match {
+      case Nil => (EmptyTree, EmptyTree)
+      case h :: t =>
+        val (a, b) = h()
+        val result = c.typecheck(b, silent = true)
+        if (result == EmptyTree) firstNotEmpty(t) else (a, result)
+    }
 
     val t = weakTypeOf[T]
     val util = new CaseClassUtil[c.type, T](c)
@@ -28,21 +38,59 @@ object MultipartCodecDerivation {
     val fieldsWithCodecs = fields.map { field =>
       val codecType = if (fieldIsPart(field)) partTypeArg(field) else field.typeSignature
 
-      val plainCodec = c.typecheck(q"implicitly[sttp.tapir.CodecForMany[$codecType, sttp.tapir.CodecFormat.TextPlain, _]]", silent = true)
-      val codec = if (plainCodec == EmptyTree) {
-        c.typecheck(q"implicitly[sttp.tapir.CodecForMany[$codecType, _ <: sttp.tapir.CodecFormat, _]]")
-      } else plainCodec
+      val codecsToCheck = List(
+        () =>
+          (
+            q"sttp.tapir.RawBodyType.StringBody(java.nio.charset.StandardCharsets.UTF_8)",
+            q"implicitly[sttp.tapir.Codec[List[String], $codecType, sttp.tapir.CodecFormat.TextPlain]]"
+          ),
+        () =>
+          (
+            q"sttp.tapir.RawBodyType.StringBody(java.nio.charset.StandardCharsets.UTF_8)",
+            q"implicitly[sttp.tapir.Codec[List[String], $codecType, _ <: sttp.tapir.CodecFormat]]"
+          ),
+        () =>
+          (
+            q"sttp.tapir.RawBodyType.ByteArrayBody",
+            q"implicitly[sttp.tapir.Codec[List[Array[Byte]], $codecType, _ <: sttp.tapir.CodecFormat]]"
+          ),
+        () =>
+          (
+            q"sttp.tapir.RawBodyType.InputStreamBody",
+            q"implicitly[sttp.tapir.Codec[List[java.io.InputStream], $codecType, _ <: sttp.tapir.CodecFormat]]"
+          ),
+        () =>
+          (
+            q"sttp.tapir.RawBodyType.ByteBufferBody",
+            q"implicitly[sttp.tapir.Codec[List[java.nio.ByteBuffer], $codecType, _ <: sttp.tapir.CodecFormat]]"
+          ),
+        () =>
+          (q"sttp.tapir.RawBodyType.FileBody", q"implicitly[sttp.tapir.Codec[List[java.io.File], $codecType, _ <: sttp.tapir.CodecFormat]]")
+      )
+
+      val codec = firstNotEmpty(codecsToCheck)
+      if (codec._2 == EmptyTree) {
+        c.abort(c.enclosingPosition, s"Cannot find a codec between a List[T] for some basic type T and: $codecType")
+      }
 
       (field, codec)
     }
 
     val partCodecPairs = fieldsWithCodecs.map {
-      case (field, codec) =>
+      case (field, (_, codec)) =>
         val fieldName = field.name.decodedName.toString
         q"""$conf.toLowLevelName($fieldName) -> $codec"""
     }
 
     val partCodecs = q"""Map(..$partCodecPairs)"""
+
+    val partBodyTypesPairs = fieldsWithCodecs.map {
+      case (field, (bodyType, _)) =>
+        val fieldName = field.name.decodedName.toString
+        q"""$conf.toLowLevelName($fieldName) -> $bodyType"""
+    }
+
+    val partBodyTypes = q"""Map(..$partBodyTypesPairs)"""
 
     val encodeParams: Iterable[Tree] = fields.map { field =>
       val fieldName = field.name.asInstanceOf[TermName]
@@ -81,20 +129,24 @@ object MultipartCodecDerivation {
 
     val codecTree = q"""
       {
-        def decode(parts: Seq[sttp.tapir.AnyPart]): $t = {
-          val partsByName: Map[String, sttp.tapir.AnyPart] = parts.map(p => p.name -> p).toMap
+        def decode(parts: Seq[sttp.tapir.RawPart]): $t = {
+          val partsByName: Map[String, sttp.tapir.RawPart] = parts.map(p => p.name -> p).toMap
           val values = List(..$decodeParams)
           ${util.instanceFromValues}
         }
-        def encode(o: $t): Seq[sttp.tapir.AnyPart] = List(..$encodeParams)
+        def encode(o: $t): Seq[sttp.tapir.RawPart] = List(..$encodeParams)
 
-        sttp.tapir.Codec.multipartCodec($partCodecs, None)
+        val bodyType = sttp.tapir.RawBodyType.MultipartBody($partBodyTypes, None)
+        val codec = sttp.tapir.Codec.rawPartCodec($partCodecs, None)
           .map(decode _)(encode _)
           .schema(${util.schema})
           .validate(implicitly[sttp.tapir.Validator[$t]])
+          
+        (bodyType, codec)  
       }
      """
     Debug.logGeneratedCode(c)(t.typeSymbol.fullName, codecTree)
-    c.Expr[Codec[T, CodecFormat.MultipartFormData, Seq[AnyPart]]](codecTree)
+
+    c.Expr[MultipartCodec[T]](codecTree)
   }
 }

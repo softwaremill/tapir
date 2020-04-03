@@ -12,12 +12,12 @@ Validation rules are part of the [codec](codecs.html) for a given type. They can
 ```scala
 case class MyId(id: String)
 
-implicit val myIdCodec: Codec[MyId, TextPlain, _] = Codec.stringPlainCodecUtf8
+implicit val myIdCodec: Codec[String, MyId, TextPlain] = Codec.string
   .mapDecode(decode)(encode)
   .validate(Validator.pattern("^[A-Z].*").contramap(_.id))
 ```
  
-Or added to individual inputs/outputs:
+Validators can also be added to individual inputs/outputs, in addition to whatever the codec provides:
 
 ```scala
 val e = endpoint.in(
@@ -33,8 +33,12 @@ Validation rules added using the built-in validators are translated to [OpenAPI]
 When a codec is automatically derived for a type (see [custom types](customtypes.md)), validators for all types 
 (for json this is a recursive process) are looked up through implicit `Validator[T]` values.
 
-> Implicit `Validator[T]` values are used *only* when automatically deriving codecs. They are not used
-> when the codec is defined by hand.
+```eval_rst
+.. note::
+
+  Implicit ``Validator[T]`` values are used *only* when automatically deriving codecs. They are not used
+  when the codec is defined by hand.
+```
 
 Note that to validate a nested member of a case class, it needs to have a unique type (that is, not an `Int`, as 
 providing an implicit `Validator[Int]` would validate all ints in the hierarchy), as validator lookup is type-driven.
@@ -62,9 +66,6 @@ val e: Endpoint[FruitAmount, Unit, Unit, Nothing] = {
 Codecs support reporting decoding failures, by returning a `DecodeResult` from the `Codec.decode` method. However, this 
 is meant for input/output values which are in an incorrect low-level format, when parsing a "raw value" fails. In other 
 words, decoding failures should be reported for format failures, not business validation errors.
- 
-Decoding failures should be reported when the input is in an incorrect low-level format, when parsing a "raw value"
-fails. In other words, decoding failures should be reported for format failures, not business validation errors.
 
 To customise error messages that are returned upon validation/decode failures by the server, see 
 [error handling](../server/errors.html).
@@ -87,8 +88,8 @@ case object Blue extends Color
 case object Red extends Color
 
 implicit def plainCodecForColor: PlainCodec[Color] = {
-  Codec.stringPlainCodecUtf8
-    .map[Color]({
+  Codec.string
+    .map[Color]((_: String) match {
       case "red"  => Red
       case "blue" => Blue
     })(_.toString.toLowerCase)

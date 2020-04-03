@@ -17,17 +17,17 @@ class TapirJsonuPickleTests extends FlatSpec with Matchers {
     implicit val rw: ReadWriter[Customer] = macroRW
   }
 
-  val customerDecoder: JsonCodec[Customer] = TapirJsonuPickleCodec.encoderDecoderCodec[Customer]
+  val customerDecoder: JsonCodec[Customer] = TapirJsonuPickleCodec.readWriterCodec[Customer]
 
   // Helper to test encoding then decoding an object is the same as the original
-  def testEncodeDecode[T: ReadWriter: Schema](original: T): Assertion = {
-    val codec = TapirJsonuPickleCodec.encoderDecoderCodec[T]
+  def testEncodeDecode[T: ReadWriter: Schema: Validator](original: T): Assertion = {
+    val codec = TapirJsonuPickleCodec.readWriterCodec[T]
 
     val encoded = codec.encode(original)
     codec.decode(encoded) match {
       case Value(d) =>
         d shouldBe original
-      case f: DecodeFailure =>
+      case f: DecodeResult.Failure =>
         fail(f.toString)
     }
   }
@@ -78,11 +78,11 @@ class TapirJsonuPickleTests extends FlatSpec with Matchers {
   it should "Fail to encode a badly formatted date" in {
     import DateConversionUtil._
 
-    val codec = TapirJsonuPickleCodec.encoderDecoderCodec[Date]
+    val codec = TapirJsonuPickleCodec.readWriterCodec[Date]
     val encoded = "\"OOPS-10-10 11:20:49.029\""
 
     codec.decode(encoded) match {
-      case _: DecodeFailure =>
+      case _: DecodeResult.Failure =>
         succeed
       case Value(d) =>
         fail(s"Should not have been able to decode this date: $d")

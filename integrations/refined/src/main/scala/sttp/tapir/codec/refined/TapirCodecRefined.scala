@@ -11,12 +11,12 @@ import shapeless.Witness
 import scala.reflect.ClassTag
 
 trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
-  implicit def codecForRefined[V, P, CF <: CodecFormat, R](
-      implicit tm: Codec[V, CF, R],
+  implicit def codecForRefined[R, V, P, CF <: CodecFormat](
+      implicit tm: Codec[R, V, CF],
       refinedValidator: Validate[V, P],
       refinedValidatorTranslation: ValidatorForPredicate[V, P]
-  ): Codec[V Refined P, CF, R] = {
-    implicitly[Codec[V, CF, R]]
+  ): Codec[R, V Refined P, CF] = {
+    implicitly[Codec[R, V, CF]]
       .validate(
         refinedValidatorTranslation.validator
       ) // in reality if this validator has to fail, it will fail before in mapDecode while trying to construct refined type

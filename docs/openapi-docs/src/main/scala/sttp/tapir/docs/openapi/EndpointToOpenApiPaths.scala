@@ -67,10 +67,10 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
 
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
-      case EndpointIO.Body(codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.meta.schema.isOptional)))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
-        Right(RequestBody(i.description, codecToMediaType(s, mt, i.examples), Some(true)))
+      case EndpointIO.Body(_, codec, info) =>
+        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.exists(_.isOptional))))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, info, _)) =>
+        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true)))
     }
   }
 
@@ -80,49 +80,34 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
       case h: EndpointIO.Header[_]         => headerToParameter(h)
       case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
-      case f: EndpointIO.FixedHeader       => fixedHeaderToParameter(f)
+      case f: EndpointIO.FixedHeader[_]    => fixedHeaderToParameter(f)
     }
   }
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
-    EndpointInputToParameterConverter.from(
-      header,
-      objectSchemas(header.codec)
-    )
+    EndpointInputToParameterConverter.from(header, objectSchemas(header.codec))
   }
 
-  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader) = {
-    EndpointInputToParameterConverter.from(
-      header,
-      Right(OSchema(OSchemaType.String))
-    )
+  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) = {
+    EndpointInputToParameterConverter.from(header, Right(OSchema(OSchemaType.String)))
   }
 
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
-    EndpointInputToParameterConverter.from(
-      cookie,
-      objectSchemas(cookie.codec)
-    )
+    EndpointInputToParameterConverter.from(cookie, objectSchemas(cookie.codec))
   }
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    EndpointInputToParameterConverter.from(
-      p,
-      objectSchemas(p.codec)
-    )
+    EndpointInputToParameterConverter.from(p, objectSchemas(p.codec))
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
-    EndpointInputToParameterConverter.from(
-      query,
-      objectSchemas(query.codec)
-    )
+    EndpointInputToParameterConverter.from(query, objectSchemas(query.codec))
   }
 
   private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
     inputs
       .collect {
-        case EndpointInput.PathCapture(_, name, _) => Left(name)
-        case EndpointInput.FixedPath(s)            => Right(s)
+        case EndpointInput.PathCapture(name, _, _) => Left(name)
+        case EndpointInput.FixedPath(s, _, _)      => Right(s)
       }
       .foldLeft((Vector.empty[String], 1)) {
         case ((acc, i), component) =>

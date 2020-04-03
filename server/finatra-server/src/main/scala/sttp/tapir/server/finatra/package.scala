@@ -8,8 +8,8 @@ import com.twitter.util.logging.Logging
 import com.twitter.util.Future
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.internal.{SeqToParams, _}
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
-import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
@@ -22,14 +22,14 @@ package object finatra {
           result match {
             case values: DecodeInputsResult.Values =>
               values.bodyInput match {
-                case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
+                case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
                   new FinatraRequestToRawBody(serverOptions)
-                    .apply(codec.meta.rawValueType, request.content, request.charset.map(Charset.forName), request)
+                    .apply(bodyType, request.content, request.charset.map(Charset.forName), request)
                     .map { rawBody =>
-                      val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, codec.meta.schema.isOptional))
+                      val decodeResult = codec.decode(rawBody)
                       decodeResult match {
-                        case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
-                        case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                        case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                        case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                       }
                     }
                 case None => Future.value(values)
@@ -38,8 +38,8 @@ package object finatra {
           }
         }
 
-        def valuesToResponse(values: DecodeInputsResult.Values): Future[Response] = {
-          val i = SeqToParams(InputValues(e.input, values)).asInstanceOf[I]
+        def valuesToResponse(values: List[Any]): Future[Response] = {
+          val i = SeqToParams(values).asInstanceOf[I]
 
           logic(i)
             .map {
@@ -59,8 +59,8 @@ package object finatra {
 
         def handleDecodeFailure(
             e: Endpoint[_, _, _, _],
-            input: EndpointInput.Single[_],
-            failure: DecodeFailure
+            input: EndpointInput[_],
+            failure: DecodeResult.Failure
         ): Response = {
           val decodeFailureCtx = DecodeFailureContext(input, failure)
           val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
@@ -76,7 +76,11 @@ package object finatra {
         }
 
         decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
-          case values: DecodeInputsResult.Values          => valuesToResponse(values)
+          case values: DecodeInputsResult.Values =>
+            InputValues(e.input, values) match {
+              case InputValuesResult.Values(values, _)       => valuesToResponse(values)
+              case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))
+            }
           case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))
         }
       }
@@ -101,10 +105,10 @@ package object finatra {
     val p = input
       .asVectorOfBasicInputs()
       .collect {
-        case segment: EndpointInput.FixedPath => segment.show
-        case PathCapture(_, Some(name), _)    => s"/:$name"
-        case PathCapture(_, _, _)             => "/:param"
-        case EndpointInput.PathsCapture(_)    => "/:*"
+        case segment: EndpointInput.FixedPath[_] => segment.show
+        case PathCapture(Some(name), _, _)       => s"/:$name"
+        case PathCapture(_, _, _)                => "/:param"
+        case EndpointInput.PathsCapture(_, _)    => "/:*"
       }
       .mkString
     if (p.isEmpty) "/:*" else p
@@ -114,7 +118,7 @@ package object finatra {
     endpoint.input
       .asVectorOfBasicInputs()
       .collectFirst {
-        case FixedMethod(m) => Method(m.method)
+        case FixedMethod(m, _, _) => Method(m.method)
       }
       .getOrElse(Method("ANY"))
   }

@@ -72,7 +72,7 @@ class EndpointTest extends FlatSpec with Matchers {
     (endpoint.in("p1" / path[String]("p2") / paths), "/p1 /[p2] /... -> -/-"),
     (
       endpoint.post.in(query[String]("q1")).in(query[Option[Int]]("q2")).in(stringBody).errorOut(stringBody),
-      "POST ?q1 ?q2 {body as text/plain; charset=UTF-8} -> {body as text/plain; charset=UTF-8}/-"
+      "POST ?q1 ?q2 {body as text/plain (UTF-8)} -> {body as text/plain (UTF-8)}/-"
     ),
     (endpoint.get.in(header[String]("X-header")).out(header[String]("Y-header")), "GET {header X-header} -> -/{header Y-header}")
   )
@@ -93,7 +93,7 @@ class EndpointTest extends FlatSpec with Matchers {
     (endpoint.in("p1" / query[String]("par1") / query[String]("par2")), "/p1?par1={par1}&par2={par2}"),
     (endpoint.in("p1" / path[String].name("par1") / query[String]("par2")), "/p1/{par1}?par2={par2}"),
     (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
-    (endpoint.in("p1" / path[String]).mapIn(identity)(identity), "/p1/{param1}")
+    (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}")
   )
 
   for ((testEndpoint, expectedRenderPath) <- renderTestData) {
@@ -128,10 +128,10 @@ class EndpointTest extends FlatSpec with Matchers {
     endpoint.in("api" / "cats" / path[String]).connect -> Some(Method.CONNECT),
     endpoint.in("api" / "cats" / path[String]).delete -> Some(Method.DELETE),
     endpoint.in("api" / "cats" / path[String]).options -> Some(Method.OPTIONS),
-    endpoint.in("api" / "cats" / path[String]).method("XX") -> Some(Method("XX"))
+    endpoint.in("api" / "cats" / path[String]).method(Method("XX")) -> Some(Method("XX"))
   )
 
-  for((testEndpoint, expectedMethod) <- httpMethodTestData) {
+  for ((testEndpoint, expectedMethod) <- httpMethodTestData) {
     s"httpMethod for ${testEndpoint.showDetail}" should s"be $expectedMethod" in {
       testEndpoint.httpMethod shouldBe expectedMethod
     }

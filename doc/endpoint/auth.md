@@ -24,4 +24,4 @@ details.
 
 ## Next
 
-Read on a summary on [implicits for custom types](implicits.html).
+Read on about [datatypes integrations](integrations.html).

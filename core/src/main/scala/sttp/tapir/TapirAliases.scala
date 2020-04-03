@@ -6,35 +6,12 @@ import sttp.tapir.generic.internal.SchemaMagnoliaDerivation
 trait TapirAliases {
 
   /** Codec.scala */
-  type Codec[T, CF <: CodecFormat, R] = sttp.tapir.Codec[T, CF, R]
+  type Codec[L, H, CF <: CodecFormat] = sttp.tapir.Codec[L, H, CF]
   val Codec = sttp.tapir.Codec
-
-  type CodecForOptional[T, CF <: CodecFormat, R] = sttp.tapir.CodecForOptional[T, CF, R]
-  val CodecForOptional = sttp.tapir.CodecForOptional
-
-  type CodecForMany[T, CF <: CodecFormat, R] = sttp.tapir.CodecForMany[T, CF, R]
-  val CodecForMany = sttp.tapir.CodecForMany
-
-  type CodecMeta[T, CF <: CodecFormat, R] = sttp.tapir.CodecMeta[T, CF, R]
-  val CodecMeta = sttp.tapir.CodecMeta
-
-  type RawValueType[R] = sttp.tapir.RawValueType[R]
-  type StringValueType = sttp.tapir.StringValueType
-
-  val ByteArrayValueType = sttp.tapir.ByteArrayValueType
-  val ByteBufferValueType = sttp.tapir.ByteBufferValueType
-  val InputStreamValueType = sttp.tapir.InputStreamValueType
-  val FileValueType = sttp.tapir.FileValueType
-  type MultipartValueType = sttp.tapir.MultipartValueType
-  val MultipartValueType = sttp.tapir.MultipartValueType
-
-  type Decode[F, T] = sttp.tapir.Decode[F, T]
 
   /** DecodeResult.scala */
   type DecodeResult[+T] = sttp.tapir.DecodeResult[T]
   val DecodeResult = sttp.tapir.DecodeResult
-
-  type DecodeFailure = sttp.tapir.DecodeFailure
 
   /** Defaults.scala */
   val Defaults = sttp.tapir.Defaults
@@ -59,16 +36,11 @@ trait TapirAliases {
   type StreamingEndpointIO[I, +S] = sttp.tapir.StreamingEndpointIO[I, S]
   val StreamingEndpointIO = sttp.tapir.StreamingEndpointIO
 
-  /** CodecFormat.scala */
-  type CodecFormat = sttp.tapir.CodecFormat
-  val CodecFormat = sttp.tapir.CodecFormat
-
   /** package.scala */
   type RawPart = sttp.tapir.RawPart
   type AnyPart = sttp.tapir.AnyPart
-  type AnyCodec = sttp.tapir.AnyCodec
-  type AnyCodecForMany = sttp.tapir.AnyCodecForMany
-  type AnyCodecMeta = sttp.tapir.AnyCodecMeta
+  type AnyListCodec = sttp.tapir.AnyListCodec
+  type MultipartCodec[T] = sttp.tapir.MultipartCodec[T]
 
   /** RenderPathTemplate.scala */
   val RenderPathTemplate = sttp.tapir.RenderPathTemplate

@@ -7,9 +7,9 @@ import com.github.ghik.silencer.silent
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import org.log4s._
 import sttp.tapir.internal.SeqToParams
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
+import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
-import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.reflect.ClassTag
 
@@ -22,11 +22,11 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         result match {
           case values: DecodeInputsResult.Values =>
             values.bodyInput match {
-              case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
-                new Http4sRequestToRawBody(serverOptions).apply(req.body, codec.meta.rawValueType, req.charset, req).map { v =>
-                  codec.decode(DecodeInputs.rawBodyValueToOption(v, codec.meta.schema.isOptional)) match {
-                    case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
-                    case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+              case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
+                new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req).map { v =>
+                  codec.decode(v) match {
+                    case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                    case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                   }
                 }
 
@@ -36,8 +36,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         }
       }
 
-      def valuesToResponse(values: DecodeInputsResult.Values): F[Response[F]] = {
-        val i = SeqToParams(InputValues(se.endpoint.input, values)).asInstanceOf[I]
+      def valuesToResponse(values: List[Any]): F[Response[F]] = {
+        val i = SeqToParams(values).asInstanceOf[I]
         se.logic(i)
           .map {
             case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
@@ -50,7 +50,11 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       }
 
       OptionT(decodeBody(internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
-        case values: DecodeInputsResult.Values          => valuesToResponse(values).map(_.some)
+        case values: DecodeInputsResult.Values =>
+          InputValues(se.endpoint.input, values) match {
+            case InputValuesResult.Values(values, _)       => valuesToResponse(values).map(_.some)
+            case InputValuesResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
+          }
         case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
       })
     }
@@ -81,8 +85,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
   private def handleDecodeFailure[I](
       e: Endpoint[_, _, _, _],
-      input: EndpointInput.Single[_],
-      failure: DecodeFailure
+      input: EndpointInput[_],
+      failure: DecodeResult.Failure
   ): F[Option[Response[F]]] = {
     val decodeFailureCtx = DecodeFailureContext(input, failure)
     val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
