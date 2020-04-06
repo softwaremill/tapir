@@ -1,9 +1,18 @@
 # Working with JSON
 
-Json values are supported through codecs which encode/decode values to json strings. However, third-party libraries are
-needed for actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe), 
+Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a 
+third-party library to perform the actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe), 
 [µPickle](http://www.lihaoyi.com/upickle/), [Spray JSON](https://github.com/spray/spray-json) and 
 [Play JSON](https://github.com/playframework/play-json) are supported.
+
+All of the integrations, when imported into scope, define a `jsonBody[T]` method. This method depends on 
+library-specific implicits being in scope, and derives from them a json codec. The derivation also requires implicit
+`Schema[T]` and `Validator[T]` instances, which should be automatically derived. For more details see documentation 
+on supporting [custom types](customtypes.html).
+
+If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `anyJsonBody[T]` method instead. 
+This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses 
+the json codec that is in scope.
 
 ## Circe
 
