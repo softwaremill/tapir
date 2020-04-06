@@ -9,9 +9,9 @@ import com.github.plokhotnyuk.jsoniter_scala.core._
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonJsoniter {
-  def jsonBody[T: JsonValueCodec: Schema: Validator]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(circeCodec[T])
+  def jsonBody[T: JsonValueCodec: Schema: Validator]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(jsoniterCodec[T])
 
-  implicit def circeCodec[T: JsonValueCodec: Schema: Validator]: JsonCodec[T] =
+  implicit def jsoniterCodec[T: JsonValueCodec: Schema: Validator]: JsonCodec[T] =
     sttp.tapir.Codec.json { s =>
       Try(readFromString[T](s)) match {
         case Failure(error) => Error(s, error)
