@@ -48,6 +48,7 @@ lazy val rootProject = (project in file("."))
     refined,
     enumeratum,
     circeJson,
+    jsoniterScala,
     playJson,
     sprayJson,
     uPickleJson,
@@ -200,6 +201,17 @@ lazy val tethysJson: Project = (project in file("json/tethys"))
     libraryDependencies ++= Seq(
       "com.tethys-json" %% "tethys-core" % Versions.tethys,
       "com.tethys-json" %% "tethys-jackson" % Versions.tethys
+    )
+  )
+  .dependsOn(core)
+
+lazy val jsoniterScala: Project = (project in file("json/jsoniter"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-jsoniter-scala",
+    libraryDependencies ++= Seq(
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.1.12",
+      scalaTest % Test
     )
   )
   .dependsOn(core)
