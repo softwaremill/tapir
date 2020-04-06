@@ -3,7 +3,7 @@ package sttp.tapir
 import java.nio.charset.{Charset, StandardCharsets}
 
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, MultiQueryParams, StatusCode}
-import sttp.tapir.CodecFormat.{OctetStream, TextPlain}
+import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain}
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
@@ -56,6 +56,14 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def plainBody[T: Codec[String, *, TextPlain]]: EndpointIO.Body[String, T] = plainBody(StandardCharsets.UTF_8)
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
+
+  /**
+    * Json codecs are usually derived from json-library-specific implicits. That's why integrations with
+    * various json libraries define `jsonBody` methods, which directly require the library-specific implicits.
+    *
+    * If you have a custom json codec, you should use this method instead.
+    */
+  def anyJsonBody[T: Codec[String, *, Json]]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
 
   def rawBinaryBody[R: RawBodyType.Binary](implicit codec: Codec[R, R, OctetStream]): EndpointIO.Body[R, R] =
     EndpointIO.Body(implicitly[RawBodyType.Binary[R]], codec, EndpointIO.Info.empty)
