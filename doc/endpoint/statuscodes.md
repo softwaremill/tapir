@@ -26,7 +26,7 @@ case object NoContent extends ErrorInfo
 
 // here we are defining an error output, but the same can be done for regular outputs
 val baseEndpoint = endpoint.errorOut(
-  oneOf(
+  oneOf[ErrorInfo](
     statusMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
     statusMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
     statusMapping(StatusCode.NoContent, emptyOutput.map(_ => NoContent)(_ => ())),
