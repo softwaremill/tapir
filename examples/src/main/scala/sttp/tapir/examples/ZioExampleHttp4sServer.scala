@@ -6,13 +6,15 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
-import zio.{IO, Runtime, Task, UIO}
+import zio.{Has, IO, Runtime, Task, UIO, ZIO, ZLayer, ZEnv}
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.http4s._
 import sttp.tapir.swagger.http4s.SwaggerHttp4s
 import cats.implicits._
-import LayerEndpoint.UserService
+import UserLayer.UserService
+import sttp.tapir.examples.ZioExampleHttp4sServer.Pet
+import zio.console.Console
 
 object ZioExampleHttp4sServer extends App {
   // extension methods for ZIO; not a strict requirement, but they make working with ZIO much nicer
@@ -29,7 +31,7 @@ object ZioExampleHttp4sServer extends App {
   import io.circe.generic.auto._
   import sttp.tapir.json.circe._
 
-  // Simple Pet Endpoint
+  // Sample endpoint, with the logic implemented directly using .toZioRoutes
   val petEndpoint: Endpoint[Int, String, Pet, Nothing] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
@@ -41,18 +43,20 @@ object ZioExampleHttp4sServer extends App {
     }
   }
 
-  // ZIO Endpoint with a custom Application Layer, implemented as ZLayer
-  val zioEndpoint: Endpoint[Int, String, Pet, Nothing] =
-    endpoint.get.in("zio" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
+  // Same endpoint as above, but using a custom application layer
+  val pet2Endpoint: Endpoint[Int, String, Pet, Nothing] =
+    endpoint.get.in("pet2" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val zioRoutes: HttpRoutes[Task] = zioEndpoint.toZioRoutes(petId => UserService.hello(petId).provideLayer(LayerEndpoint.liveEnv))
+  val pet2Routes: HttpRoutes[Task] = pet2Endpoint.toZioRoutes(petId => UserService.hello(petId).provideLayer(UserLayer.liveEnv))
 
-  // Final service is just a conjunction of different  Routes
-  val service: HttpRoutes[Task] = petRoutes <+> zioRoutes
+  // Final service is just a conjunction of different Routes
+  implicit val runtime: Runtime[ZEnv] = Runtime.default
+  val service: HttpRoutes[Task] = petRoutes <+> pet2Routes
 
-  // Or, using server logic:
+  //
+  // Same as above, but combining endpoint description with server logic:
+  //
 
-  // Simple Pet Server Logic
   val petServerEndpoint = petEndpoint.zioServerLogic { petId =>
     if (petId == 35) {
       UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
@@ -60,30 +64,42 @@ object ZioExampleHttp4sServer extends App {
       IO.fail("Unknown pet id")
     }
   }
-
   val petServerRoutes: HttpRoutes[Task] = petServerEndpoint.toRoutes
 
-  // Simple Pet Server Logic
-  val zioServerEndpoint = zioEndpoint.zioServerLogic { petId => UserService.hello(petId).provideLayer(LayerEndpoint.liveEnv) }
-
-  val zioServerRoutes: HttpRoutes[Task] = petServerEndpoint.toRoutes
-
-  val service2: HttpRoutes[Task] = petServerRoutes <+> zioServerRoutes
+  val pet2ServerEndpoint = pet2Endpoint.zioServerLogic { petId => UserService.hello(petId).provideLayer(UserLayer.liveEnv) }
+  val pet2ServerRoutes: HttpRoutes[Task] = petServerEndpoint.toRoutes
 
   import sttp.tapir.docs.openapi._
   import sttp.tapir.openapi.circe.yaml._
   val yaml = List(petEndpoint).toOpenAPI("Our pets", "1.0").toYaml
 
-  {
-    val runtime = Runtime.default
+  val serve = BlazeServerBuilder[Task]
+    .bindHttp(8080, "localhost")
+    .withHttpApp(Router("/" -> (service <+> new SwaggerHttp4s(yaml).routes[Task])).orNotFound)
+    .serve
+    .compile
+    .drain
 
-    val serve = BlazeServerBuilder[Task]
-      .bindHttp(8080, "localhost")
-      .withHttpApp(Router("/" -> (service <+> new SwaggerHttp4s(yaml).routes[Task])).orNotFound)
-      .serve
-      .compile
-      .drain
+  runtime.unsafeRun(serve)
+}
 
-    runtime.unsafeRun(serve)
+object UserLayer {
+  type UserService = Has[UserService.Service]
+
+  object UserService {
+    trait Service {
+      def hello(id: Int): ZIO[Any, String, Pet]
+    }
+
+    val live: ZLayer[Console, Nothing, Has[Service]] = ZLayer.fromFunction { console: Console => (id: Int) =>
+      {
+        console.get.putStrLn(s"Got Pet request for $id") >>
+          ZIO.succeed(Pet(id.toString, "https://zio.dev"))
+      }
+    }
+
+    def hello(id: Int): ZIO[UserService, String, Pet] = ZIO.accessM(_.get.hello(id))
   }
+
+  val liveEnv: ZLayer[Any, Nothing, Has[UserService.Service]] = Console.live >>> UserService.live
 }
