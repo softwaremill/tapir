@@ -2,11 +2,12 @@ package sttp.tapir.server.internal
 
 import java.nio.charset.Charset
 
-import sttp.model.StatusCode
+import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.internal._
-import sttp.tapir.{CodecFormat, Mapping, EndpointIO, EndpointOutput, RawBodyType, StreamingEndpointIO}
+import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamingEndpointIO}
 
 import scala.annotation.tailrec
+import scala.util.Try
 
 class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
   def apply(output: EndpointOutput[_], v: Any, initialOutputValues: OutputValues[B]): OutputValues[B] = {
@@ -65,6 +66,13 @@ case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], s
   def withHeader(h: (String, String)): OutputValues[B] = copy(headers = headers :+ h)
 
   def withStatusCode(sc: StatusCode): OutputValues[B] = copy(statusCode = Some(sc))
+
+  def contentLength: Option[Long] =
+    headers
+      .collectFirst {
+        case (k, v) if HeaderNames.ContentLength.equalsIgnoreCase(k) => v
+      }
+      .flatMap(v => Try(v.toLong).toOption)
 }
 object OutputValues {
   def empty[B]: OutputValues[B] = OutputValues[B](None, Vector.empty, None)

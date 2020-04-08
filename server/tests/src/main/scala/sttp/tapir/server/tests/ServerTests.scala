@@ -232,8 +232,17 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   if (streamingSupport) {
+    val penPineapple = "pen pineapple apple pen"
+
     testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
-      basicRequest.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
+      basicRequest.post(uri"$baseUri/api/echo").body(penPineapple).send().map(_.body shouldBe Right(penPineapple))
+    }
+
+    testServer(in_stream_out_stream_with_content_length[S])((in: (Long, S)) => pureResult(in.asRight[Unit])) { baseUri =>
+      basicRequest.post(uri"$baseUri/api/echo").contentLength(penPineapple.length).body(penPineapple).send().map { response =>
+        response.body shouldBe Right(penPineapple)
+        response.contentLength shouldBe Some(penPineapple.length)
+      }
     }
   }
 

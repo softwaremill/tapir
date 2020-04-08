@@ -10,7 +10,7 @@ import sttp.tapir.json.circe._
 import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, MultiQueryParams, StatusCode}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, MultiQueryParams, StatusCode}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model._
 
@@ -120,6 +120,11 @@ package object tests {
   def in_stream_out_stream[S]: Endpoint[S, Unit, S, S] = {
     val sb = streamBody[S](schemaFor[String], CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
     endpoint.post.in("api" / "echo").in(sb).out(sb)
+  }
+
+  def in_stream_out_stream_with_content_length[S]: Endpoint[(Long, S), Unit, (Long, S), S] = {
+    val sb = streamBody[S](schemaFor[String], CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+    endpoint.post.in("api" / "echo").in(header[Long](HeaderNames.ContentLength)).in(sb).out(header[Long](HeaderNames.ContentLength)).out(sb)
   }
 
   val in_simple_multipart_out_multipart: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =

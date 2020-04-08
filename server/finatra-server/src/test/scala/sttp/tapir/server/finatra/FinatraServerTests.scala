@@ -18,6 +18,8 @@ import scala.reflect.ClassTag
 import scala.concurrent.duration._
 
 class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
+  override def streamingSupport: Boolean = false
+
   private val futurePool = FuturePool.unboundedPool
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global

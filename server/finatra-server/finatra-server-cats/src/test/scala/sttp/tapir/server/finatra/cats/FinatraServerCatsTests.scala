@@ -12,6 +12,8 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
 class FinatraServerCatsTests extends ServerTests[IO, Nothing, FinatraRoute] {
+  override def streamingSupport: Boolean = false
+
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
