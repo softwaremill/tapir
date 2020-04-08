@@ -51,6 +51,8 @@ case class Schema[T](
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 
+  def description[U](path: T => U, description: String): Schema[T] = macro ModifySchemaMacro.descriptionMacro[T, U]
+
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
   def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.modifyMacro[T, U]

@@ -4,6 +4,8 @@ import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.SchemaType._
 
 class SchemaMacroTest extends FlatSpec with Matchers {
+  behavior of "apply modification"
+
   it should "modify basic schema" in {
     implicitly[Schema[String]].modify(x => x)(_.description("test")) shouldBe implicitly[Schema[String]]
       .copy(description = Some("test"))
@@ -89,6 +91,17 @@ class SchemaMacroTest extends FlatSpec with Matchers {
   it should "modify open product" in {
     val schema = implicitly[Schema[Map[String, String]]]
     schema.modify(x => x)(_.description("test")) shouldBe schema.description("test")
+  }
+
+  behavior of "apply description"
+
+  it should "add description to product" in {
+    val expected = Schema(
+      SProduct(SObjectInfo("sttp.tapir.Person"),
+        List(("name", Schema(SString)), ("age", Schema(SInteger).description("test"))))
+    )
+
+    implicitly[Schema[Person]].description(_.age, "test") shouldBe expected
   }
 }
 
