@@ -176,6 +176,17 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     testServer(in_input_stream_out_input_stream)((is: InputStream) =>
       pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
     ) { baseUri => basicRequest.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango")) }
+
+    testServer(in_string_out_stream_with_header)((input: String) =>
+      pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))
+    ) { baseUri =>
+      basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send().map { r =>
+        r.body.map(_.length) shouldBe Right(128)
+        r.body.map(_.foreach(b => b shouldBe 0))
+        r.headers.map(_.name) should contain(HeaderNames.ContentLength)
+        r.header(HeaderNames.ContentLength) shouldBe Some("128")
+      }
+    }
   }
 
   testServer(in_unit_out_json_unit, "unit json mapper")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
