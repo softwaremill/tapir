@@ -21,6 +21,7 @@ import tapir.tests._
 import scala.reflect.ClassTag
 
 trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll {
+  def streamingSupport = true
 
   // method matching
 
@@ -229,14 +230,16 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   val penPineapple = "pen pineapple apple pen"
 
-  testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/api/echo").body(penPineapple).send().map(_.body shouldBe Right(penPineapple))
-  }
+  if (streamingSupport) {
+    testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
+      sttp.post(uri"$baseUri/api/echo").body(penPineapple).send().map(_.body shouldBe Right(penPineapple))
+    }
 
-  testServer(in_stream_out_stream_with_content_length[S])((in: (Long, S)) => pureResult(in.asRight[Unit])) { baseUri =>
-    sttp.post(uri"$baseUri/api/echo").contentLength(penPineapple.length).body(penPineapple).send().map { response =>
-      response.body shouldBe Right(penPineapple)
-      response.contentLength shouldBe Some(penPineapple.length)
+    testServer(in_stream_out_stream_with_content_length[S])((in: (Long, S)) => pureResult(in.asRight[Unit])) { baseUri =>
+      sttp.post(uri"$baseUri/api/echo").contentLength(penPineapple.length).body(penPineapple).send().map { response =>
+        response.body shouldBe Right(penPineapple)
+        response.contentLength shouldBe Some(penPineapple.length)
+      }
     }
   }
 
