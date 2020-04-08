@@ -14,6 +14,8 @@ import tapir.server.tests.ServerTests
 import scala.reflect.ClassTag
 
 class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
+  override def streamingSupport: Boolean = false
+
   private val futurePool = FuturePool.unboundedPool
 
   override def pureResult[T](t: T): Future[T] = Future.value(t)

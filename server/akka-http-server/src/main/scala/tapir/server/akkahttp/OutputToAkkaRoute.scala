@@ -23,8 +23,10 @@ import tapir.{
   RawPart,
   StringValueType
 }
+import scala.util.Try
 
 private[akkahttp] object OutputToAkkaRoute {
+  private type EntityFromLength = Option[Long] => ResponseEntity
 
   def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
     val outputValues = encodeOutputs(output, v, OutputValues.empty)
@@ -33,7 +35,8 @@ private[akkahttp] object OutputToAkkaRoute {
     val akkaHeaders = parseHeadersOrThrow(outputValues.headers)
 
     val completeRoute = outputValues.body match {
-      case Some(entity) =>
+      case Some(entityFromLength) =>
+        val entity = entityFromLength(outputValues.contentLength)
         complete(HttpResponse(entity = overrideContentTypeIfDefined(entity, akkaHeaders), status = statusCode))
       case None => complete(HttpResponse(statusCode))
     }
@@ -45,14 +48,17 @@ private[akkahttp] object OutputToAkkaRoute {
     }
   }
 
-  private val encodeOutputs: EncodeOutputs[ResponseEntity] = new EncodeOutputs(new EncodeOutputBody[ResponseEntity] {
-    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): ResponseEntity =
-      rawValueToResponseEntity(codec.meta, v)
-    override def streamValueToBody(v: Any, mediaType: MediaType): ResponseEntity =
-      HttpEntity(mediaTypeToContentType(mediaType), v.asInstanceOf[AkkaStream])
+  // We can only create the entity once we know if its size is defined; depending on this, the body might end up
+  // as a chunked or normal response. That's why here we return a function creating the entity basing on the length,
+  // which might be only known when all other outputs are encoded.
+  private val encodeOutputs: EncodeOutputs[EntityFromLength] = new EncodeOutputs(new EncodeOutputBody[EntityFromLength] {
+    override def rawValueToBody(v: Any, codec: CodecForOptional[_, _ <: MediaType, Any]): EntityFromLength = contentLength =>
+      rawValueToResponseEntity(codec.meta, contentLength, v)
+    override def streamValueToBody(v: Any, mediaType: MediaType): EntityFromLength = contentLength =>
+      streamToEntity(mediaTypeToContentType(mediaType), contentLength, v.asInstanceOf[AkkaStream])
   })
 
-  private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], r: R): ResponseEntity = {
+  private def rawValueToResponseEntity[M <: MediaType, R](codecMeta: CodecMeta[_, M, R], contentLength: Option[Long],r: R): ResponseEntity = {
     val ct = mediaTypeToContentType(codecMeta.mediaType)
     codecMeta.rawValueType match {
       case StringValueType(charset) =>
@@ -62,12 +68,19 @@ private[akkahttp] object OutputToAkkaRoute {
         }
       case ByteArrayValueType   => HttpEntity(ct, r)
       case ByteBufferValueType  => HttpEntity(ct, ByteString(r))
-      case InputStreamValueType => HttpEntity(ct, StreamConverters.fromInputStream(() => r))
+      case InputStreamValueType => streamToEntity(ct, contentLength, StreamConverters.fromInputStream(() => r))
       case FileValueType        => HttpEntity.fromPath(ct, r.toPath)
       case mvt: MultipartValueType =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(mvt, _))
         val body = Multipart.FormData(parts: _*)
         body.toEntity()
+    }
+  }
+
+  private def streamToEntity(contentType: ContentType, contentLength: Option[Long], stream: AkkaStream): ResponseEntity = {
+    contentLength match {
+      case None    => HttpEntity(contentType, stream)
+      case Some(l) => HttpEntity(contentType, l, stream)
     }
   }
 
@@ -77,7 +90,8 @@ private[akkahttp] object OutputToAkkaRoute {
         case (hk, hv) => parseHeaderOrThrow(hk, hv)
       }
 
-      val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], part.body) match {
+      val partContentLength = part.header("Content-Length").flatMap(v => Try(v.toLong).toOption)
+      val body = rawValueToResponseEntity(codecMeta.asInstanceOf[CodecMeta[_, _ <: MediaType, Any]], partContentLength, part.body) match {
         case b: BodyPartEntity => overrideContentTypeIfDefined(b, headers)
         case _                 => throw new IllegalArgumentException(s"${codecMeta.rawValueType} is not supported in multipart bodies")
       }

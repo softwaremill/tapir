@@ -115,6 +115,11 @@ package object tests {
     endpoint.post.in("api" / "echo").in(sb).out(sb)
   }
 
+  def in_stream_out_stream_with_content_length[S]: Endpoint[(Long, S), Unit, (Long, S), S] = {
+    val sb = streamBody[S](schemaFor[String], MediaType.TextPlain())
+    endpoint.post.in("api" / "echo").in(header[Long]("Content-Length")).in(sb).out(header[Long]("Content-Length")).out(sb)
+  }
+
   val in_simple_multipart_out_multipart: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitAmount]).out(multipartBody[FruitAmount]).name("echo simple")
 
