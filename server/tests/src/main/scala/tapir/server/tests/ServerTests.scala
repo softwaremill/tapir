@@ -168,6 +168,16 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     sttp.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
+  testServer(in_string_out_stream_with_header)((input: String) => pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))) {
+    baseUri =>
+      sttp.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send().map { r =>
+        r.body.map(_.length) shouldBe Right(128)
+        r.body.map(_.foreach(b => b shouldBe 0))
+        r.headers.map(_._1) should contain("Content-Length")
+        r.header("Content-Length") shouldBe Some("128")
+      }
+  }
+
   testServer(in_unit_out_string, "default status mapper")((_: Unit) => pureResult("".asRight[Unit])) { baseUri =>
     sttp.get(uri"$baseUri/not-existing-path").send().map(_.code shouldBe StatusCodes.NotFound)
   }
