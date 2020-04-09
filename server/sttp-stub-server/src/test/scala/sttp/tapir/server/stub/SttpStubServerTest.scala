@@ -27,9 +27,27 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .apply(idMonad)
       .whenRequestMatches(endpoint)
       .thenSuccess(ResponseWrapper(1.0))
-    val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
+    val response: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
 
-    response shouldBe Response.ok(ResponseWrapper(1.0))
+    response shouldBe Response.ok(Right(ResponseWrapper(1.0)))
+  }
+
+  it should "combine tapir endpoint with sttp stub - errors" in {
+    import sttp.tapir.client.sttp._
+    // given
+    val endpoint = sttp.tapir.endpoint
+      .in("api" / "sometest4")
+      .in(query[Int]("amount"))
+      .post
+      .errorOut(jsonBody[ResponseWrapper])
+
+    implicit val backend = SttpBackendStub
+      .apply(idMonad)
+      .whenRequestMatches(endpoint)
+      .thenError(ResponseWrapper(1.0), StatusCode.BadRequest)
+    val response: Identity[Response[Either[ResponseWrapper, Unit]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
+
+    response shouldBe Response(Left(ResponseWrapper(1.0)), StatusCode.BadRequest)
   }
 
   it should "combine tapir endpoint with sttp stub - multiple inputs" in {
@@ -44,9 +62,10 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .apply(idMonad)
       .whenRequestMatches(endpoint)
       .thenSuccess(ResponseWrapper(1.0))
-    val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply("id1" -> 11).send()
+    val response: Identity[Response[Either[Unit, ResponseWrapper]]] =
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply("id1" -> 11).send()
 
-    response shouldBe Response.ok(ResponseWrapper(1.0))
+    response shouldBe Response.ok(Right(ResponseWrapper(1.0)))
   }
 
   it should "match with inputs" in {
@@ -58,7 +77,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .post
       .out(jsonBody[ResponseWrapper])
 
-    implicit val backend = SttpBackendStub
+    implicit val backend: SttpBackendStub[Identity, Nothing] = SttpBackendStub
       .apply(idMonad)
       .whenInputMatches(endpoint) { amount => amount > 0 }
       .thenSuccess(ResponseWrapper(1.0))
@@ -66,10 +85,10 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .generic
       .thenRespondServerError()
 
-    val response1 = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
-    val response2 = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
+    val response1: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
+    val response2: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
 
-    response1 shouldBe Response.ok(ResponseWrapper(1.0))
+    response1 shouldBe Response.ok(Right(ResponseWrapper(1.0)))
     response2 shouldBe Response.apply(Left(()), StatusCode.InternalServerError, "Internal server error")
   }
 
@@ -85,12 +104,12 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .post
       .out(jsonBody[ResponseWrapper])
 
-    implicit val backend = SttpBackendStub
+    implicit val backend: SttpBackendStub[Identity, Nothing] = SttpBackendStub
       .apply(idMonad)
       .whenDecodingInputFailure(endpoint)
       .generic
       .thenRespondWithCode(StatusCode.BadRequest)
-    val response = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
+    val response: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
 
     response shouldBe Response(Left(()), StatusCode.BadRequest)
   }

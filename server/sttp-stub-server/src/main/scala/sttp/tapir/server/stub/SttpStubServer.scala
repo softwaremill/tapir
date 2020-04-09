@@ -56,10 +56,10 @@ trait SttpStubServer {
     class TypeAwareWhenRequest[E, O](whenRequest: stub.WhenRequest) {
 
       def thenSuccess(response: O): SttpBackendStub[F, S] =
-        whenRequest.thenRespond(response)
+        whenRequest.thenRespond(Right(response))
 
       def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S] =
-        whenRequest.thenRespond(sttp.client.Response[E](errorResponse, statusCode))
+        whenRequest.thenRespond(sttp.client.Response[Either[E, O]](Left(errorResponse), statusCode))
 
       /**
         * Exposes underlying generic stubbing which allows to stub with an arbitrary response
