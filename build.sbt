@@ -51,6 +51,7 @@ lazy val rootProject = (project in file("."))
     playJson,
     sprayJson,
     uPickleJson,
+    tethysJson,
     openapiModel,
     openapiCirce,
     openapiCirceYaml,
@@ -188,6 +189,17 @@ lazy val uPickleJson: Project = (project in file("json/upickle"))
     libraryDependencies ++= Seq(
       "com.lihaoyi" %% "upickle" % Versions.upickle,
       scalaTest % Test
+    )
+  )
+  .dependsOn(core)
+
+lazy val tethysJson: Project = (project in file("json/tethys"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-tethys",
+    libraryDependencies ++= Seq(
+      "com.tethys-json" %% "tethys-core" % Versions.tethys,
+      "com.tethys-json" %% "tethys-jackson" % Versions.tethys
     )
   )
   .dependsOn(core)

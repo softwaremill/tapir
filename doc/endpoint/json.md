@@ -148,6 +148,23 @@ import sttp.tapir.json.spray._
 
 Spray JSON requires a `JsonFormat` implicit value in scope for each type you want to serialize. 
 
+## Tethys JSON
+
+To use Tethys JSON add the following dependency to your project:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "0.13.1"
+```
+
+Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../mytapir.html) and add `TapirJsonTethys` not `TapirCirceJson`):
+
+```scala
+import sttp.tapir.json.tethysjson._
+```
+
+Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for each type you want to serialize. 
+
+
 ## Other JSON libraries
 
 To add support for additional JSON libraries, see the
