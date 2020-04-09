@@ -1,4 +1,4 @@
-val scala2_12 = "2.12.10"
+val scala2_12 = "2.12.11"
 val scala2_13 = "2.13.1"
 
 lazy val is2_12 = settingKey[Boolean]("Is the scala version 2.12.")
