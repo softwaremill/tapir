@@ -10,4 +10,11 @@ package object tapir extends Tapir {
   type AnyListCodec = Codec[_ <: List[_], _, _ <: CodecFormat]
 
   type MultipartCodec[T] = (RawBodyType.MultipartBody, Codec[Seq[RawPart], T, CodecFormat.MultipartFormData])
+
+  private[tapir] type UnTuple = Any => Vector[Any]
+  private[tapir] type MkTuple = Vector[Any] => Vector[Any]
+
+  object UnTuple {
+    val Single: UnTuple = v => Vector(v)
+  }
 }

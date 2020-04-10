@@ -3,21 +3,16 @@ package sttp.tapir
 import java.nio.charset.Charset
 
 import sttp.model.{Method, StatusCode}
+import sttp.tapir.typelevel.ParamConcat
 
 import scala.collection.immutable.ListMap
 
 package object internal {
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
-    def asVectorOfSingleInputs: Vector[EndpointInput.Single[_]] = input match {
-      case s: EndpointInput.Single[_] => Vector(s)
-      case m: EndpointInput.Tuple[_]  => m.inputs.flatMap(_.asVectorOfSingleInputs)
-      case m: EndpointIO.Tuple[_]     => m.ios.flatMap(_.asVectorOfSingleInputs)
-    }
-
     def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] = input match {
       case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
-      case EndpointInput.Tuple(inputs)                  => inputs.flatMap(_.traverseInputs(handle))
-      case EndpointIO.Tuple(inputs)                     => inputs.flatMap(_.traverseInputs(handle))
+      case EndpointInput.Tuple(inputs, _)               => inputs.flatMap(_.traverseInputs(handle))
+      case EndpointIO.Tuple(inputs, _, _)               => inputs.flatMap(_.traverseInputs(handle))
       case EndpointInput.MappedTuple(wrapped, _)        => wrapped.traverseInputs(handle)
       case EndpointIO.MappedTuple(wrapped, _)           => wrapped.traverseInputs(handle)
       case a: EndpointInput.Auth[_]                     => a.input.traverseInputs(handle)
@@ -56,13 +51,6 @@ package object internal {
   }
 
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
-    def asVectorOfSingleOutputs: Vector[EndpointOutput.Single[_]] = output match {
-      case s: EndpointOutput.Single[_] => Vector(s)
-      case _: EndpointOutput.Void[_]   => Vector()
-      case m: EndpointOutput.Tuple[_]  => m.outputs.flatMap(_.asVectorOfSingleOutputs)
-      case m: EndpointIO.Tuple[_]      => m.ios.flatMap(_.asVectorOfSingleOutputs)
-    }
-
     // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code
     // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
     // to the status code specified using `statusMapping` or `statusCode(_)`.
@@ -84,8 +72,8 @@ package object internal {
       }
 
       output match {
-        case EndpointOutput.Tuple(outputs)          => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
-        case EndpointIO.Tuple(outputs)              => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointOutput.Tuple(outputs, _)       => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointIO.Tuple(outputs, _, _)        => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
         case EndpointOutput.MappedTuple(wrapped, _) => wrapped.asBasicOutputsOrMap
         case EndpointIO.MappedTuple(wrapped, _)     => wrapped.asBasicOutputsOrMap
         case _: EndpointOutput.Void[_]              => Left(Vector.empty)
@@ -110,8 +98,8 @@ package object internal {
 
     private[internal] def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] = output match {
       case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
-      case EndpointOutput.Tuple(outputs)                 => outputs.flatMap(_.traverseOutputs(handle))
-      case EndpointIO.Tuple(outputs)                     => outputs.flatMap(_.traverseOutputs(handle))
+      case EndpointOutput.Tuple(outputs, _)              => outputs.flatMap(_.traverseOutputs(handle))
+      case EndpointIO.Tuple(outputs, _, _)               => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointOutput.MappedTuple(wrapped, _)        => wrapped.traverseOutputs(handle)
       case EndpointIO.MappedTuple(wrapped, _)            => wrapped.traverseOutputs(handle)
       case s: EndpointOutput.OneOf[_, _]                 => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
@@ -152,6 +140,33 @@ package object internal {
     bodyType match {
       case RawBodyType.StringBody(charset) => Some(charset)
       case _                               => None
+    }
+  }
+
+  private[tapir] def combineUnTuple(left: UnTuple, right: UnTuple, concat: ParamConcat[_, _]): UnTuple = { tuple =>
+    lazy val params = ParamsToSeq(tuple).toVector
+    (concat.leftArity, concat.rightArity) match {
+      case (0, 0) => Vector((), ())
+      case (0, 1) => Vector((), tuple)
+      case (0, _) => () +: right(tuple)
+      case (1, 0) => Vector(tuple, ())
+      case (1, 1) => params
+      case (1, _) => params.head +: right(SeqToParams(params.tail))
+      case (_, 0) => left(tuple).:+(())
+      case (_, 1) => left(SeqToParams(params.init)) :+ params.last
+      case (a, b) => left(SeqToParams(params.take(a))) ++ right(SeqToParams(params.takeRight(b)))
+    }
+  }
+
+  private[tapir] def combineMkTuple(left: MkTuple, right: MkTuple, concat: ParamConcat[_, _]): MkTuple = { values =>
+    (concat.leftArity, concat.rightArity) match {
+      case (0, 0) => Vector()
+      case (0, _) => right(values)
+      case (_, 0) => left(values)
+      case (1, 1) => values
+      case (1, _) => values.head +: right(values.tail)
+      case (_, 1) => left(values.init) :+ values.last
+      case (a, b) => left(values.take(a)) ++ right(values.takeRight(b))
     }
   }
 }

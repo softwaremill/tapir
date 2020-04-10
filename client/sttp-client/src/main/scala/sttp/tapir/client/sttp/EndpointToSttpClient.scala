@@ -18,9 +18,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   def toSttpRequest[S, O, E, I](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], S] = { params =>
     val (uri, req1) =
       setInputParams(
-        e.input.asVectorOfSingleInputs,
-        paramsTupleToParams(params),
-        0,
+        e.input,
+        params,
         baseUri,
         basicRequest.asInstanceOf[PartialAnyRequest]
       )
@@ -36,7 +35,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       responseAsFromOutputs(meta, output)
     }.mapWithMetadata { (body, meta) =>
         val output = if (meta.isSuccess) e.output else e.errorOutput
-        val params = getOutputParams(output.asVectorOfSingleOutputs, body, meta)
+        val params = getOutputParams(output, body, meta)
         params.map(p => if (meta.isSuccess) Right(p) else Left(p))
       }
       .map {
@@ -48,144 +47,129 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], S]]
   }
 
-  private def getOutputParams(outputs: Vector[EndpointOutput.Single[_]], body: Any, meta: ResponseMetadata): DecodeResult[Any] = {
-    val partialDecodeResults = outputs
-      .flatMap {
-        case EndpointIO.Body(_, codec, _) =>
-          Some(codec.decode(body))
-
-        case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) =>
-          Some(codec.decode(body))
-
-        case EndpointIO.Header(name, codec, _) =>
-          Some(codec.decode(meta.headers(name).toList))
-
-        case EndpointIO.Headers(codec, _) =>
-          Some(codec.decode(meta.headers.toList))
-
-        case EndpointIO.MappedTuple(tuple, codec) =>
-          Some(getOutputParams(tuple.asVectorOfSingleOutputs, body, meta).flatMap { outputParams => codec.decode(outputParams) })
-
-        case EndpointOutput.StatusCode(_, codec, _) =>
-          Some(codec.decode(meta.code))
-
-        case EndpointOutput.FixedStatusCode(_, codec, _) =>
-          if (codec.hIsUnit) None else Some(codec.decode(()))
-
-        case EndpointIO.FixedHeader(_, codec, _) =>
-          if (codec.hIsUnit) None else Some(codec.decode(()))
-
-        case EndpointOutput.OneOf(mappings, codec) =>
-          mappings
-            .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
-            case Some(mapping) =>
-              Some(getOutputParams(mapping.output.asVectorOfSingleOutputs, body, meta).flatMap(codec.decode))
-            case None =>
-              Some(
-                DecodeResult.Error(
-                  meta.statusText,
-                  new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $outputs")
-                )
-              )
-          }
-        case EndpointOutput.MappedTuple(tuple, codec) =>
-          Some(getOutputParams(tuple.asVectorOfSingleOutputs, body, meta).flatMap(codec.decode))
+  private def getOutputParams(output: EndpointOutput[_], body: Any, meta: ResponseMetadata): DecodeResult[Any] = output match {
+    case EndpointIO.Body(_, codec, _)                                        => codec.decode(body)
+    case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) => codec.decode(body)
+    case EndpointIO.Header(name, codec, _)                                   => codec.decode(meta.headers(name).toList)
+    case EndpointIO.Headers(codec, _)                                        => codec.decode(meta.headers.toList)
+    case EndpointOutput.StatusCode(_, codec, _)                              => codec.decode(meta.code)
+    case EndpointOutput.FixedStatusCode(_, codec, _)                         => codec.decode(())
+    case EndpointIO.FixedHeader(_, codec, _)                                 => codec.decode(())
+    case EndpointOutput.OneOf(mappings, codec) =>
+      mappings
+        .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
+        case Some(mapping) =>
+          getOutputParams(mapping.output, body, meta).flatMap(codec.decode)
+        case None =>
+          DecodeResult.Error(
+            meta.statusText,
+            new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $output")
+          )
       }
 
-    DecodeResult.sequence(partialDecodeResults).map(SeqToParams(_))
+    case EndpointIO.MappedTuple(tuple, codec)     => getOutputParams(tuple, body, meta).flatMap(codec.decode)
+    case EndpointOutput.MappedTuple(tuple, codec) => getOutputParams(tuple, body, meta).flatMap(codec.decode)
+
+    case EndpointOutput.Void() => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
+
+    case EndpointOutput.Tuple(outputs, mkTuple) => handleOutputTuple(outputs, mkTuple, body, meta)
+    case EndpointIO.Tuple(outputs, mkTuple, _)  => handleOutputTuple(outputs, mkTuple, body, meta)
   }
+
+  private def handleOutputTuple(
+      outputs: Vector[EndpointOutput[_]],
+      mkTuple: MkTuple,
+      body: Any,
+      meta: ResponseMetadata
+  ): DecodeResult[Any] =
+    DecodeResult.sequence(outputs.map(getOutputParams(_, body, meta))).map(vs => SeqToParams(mkTuple(vs.toVector)))
 
   private type PartialAnyRequest = PartialRequest[Any, Any]
 
-  private def paramsTupleToParams[I](params: I): Vector[Any] = ParamsToSeq(params).toVector
-
+  @scala.annotation.tailrec
   private def setInputParams[I](
-      inputs: Vector[EndpointInput.Single[_]],
-      params: Vector[Any],
-      paramIndex: Int,
+      input: EndpointInput[I],
+      value: I,
       uri: Uri,
       req: PartialAnyRequest
   ): (Uri, PartialAnyRequest) = {
-    def handleMapped[II, T](
-        tuple: EndpointInput[II],
-        codec: Mapping[T, II],
-        tail: Vector[EndpointInput.Single[_]]
-    ): (Uri, PartialAnyRequest) = {
-      val (uri2, req2) = setInputParams(
-        tuple.asVectorOfSingleInputs,
-        paramsTupleToParams(codec.encode(params(paramIndex).asInstanceOf[II])),
-        0,
-        uri,
-        req
-      )
-
-      setInputParams(tail, params, paramIndex + 1, uri2, req2)
-    }
-
-    inputs match {
-      case Vector() => (uri, req)
-      case EndpointInput.FixedMethod(_, codec, _) +: tail =>
-        setInputParams(tail, params, if (codec.hIsUnit) paramIndex else paramIndex + 1, uri, req)
-      case EndpointInput.FixedPath(p, codec, _) +: tail =>
-        setInputParams(
-          tail,
-          params,
-          if (codec.hIsUnit) paramIndex else paramIndex + 1,
-          uri.copy(pathSegments = uri.pathSegments :+ PathSegment(p)),
-          req
-        )
-      case EndpointInput.PathCapture(_, codec, _) +: tail =>
-        val v = codec.asInstanceOf[PlainCodec[Any]].encode(params(paramIndex): Any)
-        setInputParams(tail, params, paramIndex + 1, uri.copy(pathSegments = uri.pathSegments :+ PathSegment(v)), req)
-      case EndpointInput.PathsCapture(codec, _) +: tail =>
-        val ps = codec.encode(params(paramIndex).asInstanceOf[List[String]])
-        setInputParams(tail, params, paramIndex + 1, uri.copy(pathSegments = uri.pathSegments ++ ps.map(PathSegment(_))), req)
-      case EndpointInput.Query(name, codec, _) +: tail =>
-        val uri2 = codec
-          .encode(params(paramIndex))
-          .foldLeft(uri) { case (u, v) => u.param(name, v) }
-        setInputParams(tail, params, paramIndex + 1, uri2, req)
-      case EndpointInput.Cookie(name, codec, _) +: tail =>
-        val req2 = codec
-          .encode(params(paramIndex))
-          .foldLeft(req) { case (r, v) => r.cookie(name, v) }
-        setInputParams(tail, params, paramIndex + 1, uri, req2)
-      case EndpointInput.QueryParams(codec, _) +: tail =>
-        val mqp = codec.encode(params(paramIndex))
+    input match {
+      case EndpointInput.FixedMethod(_, _, _) => (uri, req)
+      case EndpointInput.FixedPath(p, _, _)   => (uri.copy(pathSegments = uri.pathSegments :+ PathSegment(p)), req)
+      case EndpointInput.PathCapture(_, codec, _) =>
+        val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
+        (uri.copy(pathSegments = uri.pathSegments :+ PathSegment(v)), req)
+      case EndpointInput.PathsCapture(codec, _) =>
+        val ps = codec.encode(value)
+        (uri.copy(pathSegments = uri.pathSegments ++ ps.map(PathSegment(_))), req)
+      case EndpointInput.Query(name, codec, _) =>
+        val uri2 = codec.encode(value).foldLeft(uri) { case (u, v) => u.param(name, v) }
+        (uri2, req)
+      case EndpointInput.Cookie(name, codec, _) =>
+        val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.cookie(name, v) }
+        (uri, req2)
+      case EndpointInput.QueryParams(codec, _) =>
+        val mqp = codec.encode(value)
         val uri2 = uri.params(mqp.toSeq: _*)
-        setInputParams(tail, params, paramIndex + 1, uri2, req)
-      case EndpointIO.Body(bodyType, codec, _) +: tail =>
-        val req2 = setBody(params(paramIndex), bodyType, codec, req)
-        setInputParams(tail, params, paramIndex + 1, uri, req2)
-      case EndpointIO.StreamBodyWrapper(_) +: tail =>
-        val req2 = req.streamBody(params(paramIndex))
-        setInputParams(tail, params, paramIndex + 1, uri, req2)
-      case EndpointIO.Header(name, codec, _) +: tail =>
+        (uri2, req)
+      case EndpointIO.Body(bodyType, codec, _) =>
+        val req2 = setBody(value, bodyType, codec, req)
+        (uri, req2)
+      case EndpointIO.StreamBodyWrapper(_) =>
+        val req2 = req.streamBody(value)
+        (uri, req2)
+      case EndpointIO.Header(name, codec, _) =>
         val req2 = codec
-          .encode(params(paramIndex))
+          .encode(value)
           .foldLeft(req) { case (r, v) => r.header(name, v) }
-        setInputParams(tail, params, paramIndex + 1, uri, req2)
-      case EndpointIO.Headers(codec, _) +: tail =>
-        val headers = codec.encode(params(paramIndex))
+        (uri, req2)
+      case EndpointIO.Headers(codec, _) =>
+        val headers = codec.encode(value)
         val req2 = headers.foldLeft(req) {
           case (r, h) =>
             val replaceExisting = HeaderNames.ContentType.equalsIgnoreCase(h.name) || HeaderNames.ContentLength.equalsIgnoreCase(h.name)
             r.header(h, replaceExisting)
         }
-        setInputParams(tail, params, paramIndex + 1, uri, req2)
-      case EndpointIO.FixedHeader(h, codec, _) +: tail =>
+        (uri, req2)
+      case EndpointIO.FixedHeader(h, _, _) =>
         val req2 = req.header(h)
-        setInputParams(tail, params, if (codec.hIsUnit) paramIndex else paramIndex + 1, uri, req2)
-      case EndpointInput.ExtractFromRequest(_, _) +: tail =>
+        (uri, req2)
+      case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
-        setInputParams(tail, params, paramIndex + 1, uri, req)
-      case (a: EndpointInput.Auth[_]) +: tail =>
-        setInputParams(a.input +: tail, params, paramIndex, uri, req)
-      case EndpointInput.MappedTuple(tuple, codec) +: tail =>
-        handleMapped(tuple, codec, tail)
-      case EndpointIO.MappedTuple(tuple, codec) +: tail =>
-        handleMapped(tuple, codec, tail)
+        (uri, req)
+      case a: EndpointInput.Auth[_]                => setInputParams(a.input, value, uri, req)
+      case EndpointInput.Tuple(inputs, unTuple)    => handleInputTuple(inputs, value, unTuple, uri, req)
+      case EndpointIO.Tuple(inputs, _, unTuple)    => handleInputTuple(inputs, value, unTuple, uri, req)
+      case EndpointInput.MappedTuple(tuple, codec) => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
+      case EndpointIO.MappedTuple(tuple, codec)    => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
     }
+  }
+
+  def handleInputTuple(
+      inputs: Vector[EndpointInput[_]],
+      value: Any,
+      unTuple: UnTuple,
+      uri: Uri,
+      req: PartialAnyRequest
+  ): (Uri, PartialAnyRequest) = {
+    val inputsValues = unTuple(value)
+    if ((inputs.isEmpty && value != (())) || (inputs.nonEmpty && inputsValues.length != inputs.length))
+      throw new IllegalArgumentException(s"Mismatch between input value: $value, and inputs: $inputs")
+
+    inputs.zip(inputsValues).foldLeft((uri, req)) {
+      case ((uri2, req2), (input, inputValue)) =>
+        setInputParams(input.asInstanceOf[EndpointInput[Any]], inputValue, uri2, req2)
+    }
+  }
+
+  private def handleMapped[II, T](
+      tuple: EndpointInput[II],
+      codec: Mapping[T, II],
+      value: Any,
+      uri: Uri,
+      req: PartialAnyRequest
+  ): (Uri, PartialAnyRequest) = {
+    setInputParams(tuple.asInstanceOf[EndpointInput[Any]], codec.encode(value.asInstanceOf[II]), uri, req)
   }
 
   private def setBody[R, T, CF <: CodecFormat](
@@ -249,8 +233,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
   private def bodyIsStream[I](out: EndpointOutput[I]): Boolean = {
     out match {
       case _: EndpointIO.StreamBodyWrapper[_, _]  => true
-      case EndpointIO.Tuple(inputs)               => inputs.exists(i => bodyIsStream(i))
-      case EndpointOutput.Tuple(inputs)           => inputs.exists(i => bodyIsStream(i))
+      case EndpointIO.Tuple(inputs, _, _)         => inputs.exists(i => bodyIsStream(i))
+      case EndpointOutput.Tuple(inputs, _)        => inputs.exists(i => bodyIsStream(i))
       case EndpointIO.MappedTuple(wrapped, _)     => bodyIsStream(wrapped)
       case EndpointOutput.MappedTuple(wrapped, _) => bodyIsStream(wrapped)
       case _                                      => false

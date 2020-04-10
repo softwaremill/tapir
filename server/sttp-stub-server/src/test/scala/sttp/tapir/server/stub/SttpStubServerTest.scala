@@ -50,6 +50,21 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     response shouldBe Response(Left(ResponseWrapper(1.0)), StatusCode.BadRequest)
   }
 
+  /*
+  Mismatch between input value: (id1,11), and inputs:
+
+  Vector(
+    Tuple(
+      Vector(
+        Tuple(Vector(FixedPath(api, x, Info(None, List(), false)), PathCapture(Some(id), x, Info(None, List(), false))), x),
+        Query(amount, x, Info(None, List(), false))
+      ),
+      x
+    ),
+    FixedMethod(POST, x, Info(None, List(), false))
+  )
+   */
+
   it should "combine tapir endpoint with sttp stub - multiple inputs" in {
     import sttp.tapir.client.sttp._
     // given

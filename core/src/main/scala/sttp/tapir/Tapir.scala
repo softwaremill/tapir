@@ -182,19 +182,20 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   /**
     * An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
     */
-  def emptyOutput: EndpointOutput[Unit] = EndpointOutput.Tuple(Vector.empty)
+  def emptyOutput: EndpointOutput[Unit] = EndpointOutput.Tuple(Vector.empty, identity)
 
   def schemaFor[T: Schema]: Schema[T] = implicitly[Schema[T]]
 
   val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing] =
     Endpoint[Unit, Nothing, Unit, Nothing](
-      EndpointInput.Tuple(Vector.empty),
+      EndpointInput.Tuple(Vector.empty, UnTuple.Single),
       EndpointOutput.Void(),
-      EndpointOutput.Tuple(Vector.empty),
+      EndpointOutput.Tuple(Vector.empty, identity),
       EndpointInfo(None, None, None, Vector.empty, deprecated = false)
     )
 
-  val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = infallibleEndpoint.copy(errorOutput = EndpointOutput.Tuple(Vector.empty))
+  // TODO
+  val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = infallibleEndpoint.copy(errorOutput = EndpointOutput.Tuple(Vector.empty, identity))
 }
 
 trait TapirDerivedInputs { this: Tapir =>

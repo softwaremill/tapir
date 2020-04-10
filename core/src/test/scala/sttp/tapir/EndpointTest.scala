@@ -71,10 +71,16 @@ class EndpointTest extends FlatSpec with Matchers {
     endpoint.in(i1) shouldBe endpoint.copy(input = i1)
   }
 
+  def detuple(input: EndpointInput[_]): Any = input match {
+    case EndpointInput.Tuple(inputs, _) => inputs.map(detuple)
+    case EndpointIO.Tuple(inputs, _, _) => inputs.map(detuple)
+    case i                              => i
+  }
+
   it should "combine two inputs" in {
     val i1 = query[String]("q1")
     val i2 = query[String]("q2")
-    endpoint.in(i1).in(i2) shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i1, i2)))
+    detuple(endpoint.in(i1).in(i2).input) shouldBe Vector(i1, i2)
   }
 
   it should "combine four inputs in two groups" in {
@@ -82,7 +88,7 @@ class EndpointTest extends FlatSpec with Matchers {
     val i2 = query[String]("q2")
     val i3 = query[String]("q3")
     val i4 = query[String]("q4")
-    endpoint.in(i1.and(i2)).in(i3.and(i4)) shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i1, i2, i3, i4)))
+    detuple(endpoint.in(i1.and(i2)).in(i3.and(i4)).input) shouldBe Vector(i1, i2, i3, i4)
   }
 
   it should "combine four inputs in two groups, through an extend method (right)" in {
@@ -96,8 +102,8 @@ class EndpointTest extends FlatSpec with Matchers {
     val extended1: Endpoint[(String, String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1))
     val extended2: Endpoint[((String, String), String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1.and(i2)))
 
-    extended1 shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i1, i3, i4)))
-    extended2 shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(EndpointInput.Tuple(Vector(i1, i2)), i3, i4)))
+    detuple(extended1.input) shouldBe Vector(i1, i3, i4)
+    detuple(extended2.input) shouldBe Vector(Vector(i1, i2), i3, i4)
   }
 
   it should "combine four inputs in two groups, through an extend method (left)" in {
@@ -111,8 +117,8 @@ class EndpointTest extends FlatSpec with Matchers {
     val extended1: Endpoint[(String, String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1))
     val extended2: Endpoint[(String, String, (String, String)), Unit, Unit, Nothing] = extend(endpoint.in(i1.and(i2)))
 
-    extended1 shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i3, i4, i1)))
-    extended2 shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i3, i4, EndpointInput.Tuple(Vector(i1, i2)))))
+    detuple(extended1.input) shouldBe Vector(i3, i4, i1)
+    detuple(extended2.input) shouldBe Vector(i3, i4, Vector(i1, i2))
   }
 
   val showTestData = List(

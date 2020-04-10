@@ -27,9 +27,11 @@ object EndpointInput {
 
     def and[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] =
       other match {
-        case Tuple(inputs) if concat.rightIsTuple         => Tuple(this +: inputs)
-        case EndpointIO.Tuple(ios) if concat.rightIsTuple => Tuple(this +: ios)
-        case i                                            => Tuple(Vector(this, i))
+        case Tuple(inputs, unTupleRight) if concat.rightIsTuple =>
+          Tuple(this +: inputs, combineUnTuple(UnTuple.Single, unTupleRight, concat))
+        case EndpointIO.Tuple(ios, _, unTupleRight) if concat.rightIsTuple =>
+          Tuple(this +: ios, combineUnTuple(UnTuple.Single, unTupleRight, concat))
+        case i => Tuple(Vector(this, i), combineUnTuple(UnTuple.Single, UnTuple.Single, concat))
       }
   }
 
@@ -157,9 +159,11 @@ object EndpointInput {
     override def map[U: IsUnit](m: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](input, mapping.map(m))
   }
 
-  case class Tuple[TUPLE](inputs: Vector[EndpointInput[_]]) extends EndpointInput[TUPLE] {
+  // unTuple: vector representation of TUPLE => values for `inputs`
+  case class Tuple[TUPLE](inputs: Vector[EndpointInput[_]], private[tapir] val unTuple: UnTuple) extends EndpointInput[TUPLE] {
     override private[tapir] type ThisType[X] = EndpointInput[X]
     override private[tapir] def hIsUnit: Boolean = false
+
     override def show: String = if (inputs.isEmpty) "-" else inputs.map(_.show).mkString(" ")
     override def map[U: IsUnit](m: Mapping[TUPLE, U]): EndpointInput[U] =
       MappedTuple[TUPLE, TUPLE](this, Mapping.id).map(m)
@@ -169,12 +173,14 @@ object EndpointInput {
         other.asInstanceOf[EndpointInput[TU]] // the tuple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case Tuple(m) if concat.bothTuples              => Tuple(inputs ++ m)
-          case Tuple(m) if concat.rightIsTuple            => Tuple(this +: m)
-          case EndpointIO.Tuple(m) if concat.bothTuples   => Tuple(inputs ++ m)
-          case EndpointIO.Tuple(m) if concat.rightIsTuple => Tuple(this +: m)
-          case i if concat.leftIsTuple                    => Tuple(inputs :+ i)
-          case i                                          => Tuple(Vector(this, i))
+          case Tuple(m, unTupleRight) if concat.bothTuples   => Tuple(inputs ++ m, combineUnTuple(unTuple, unTupleRight, concat))
+          case Tuple(m, unTupleRight) if concat.rightIsTuple => Tuple(this +: m, combineUnTuple(unTuple, unTupleRight, concat))
+          case EndpointIO.Tuple(m, _, unTupleRight) if concat.bothTuples =>
+            Tuple(inputs ++ m, combineUnTuple(unTuple, unTupleRight, concat))
+          case EndpointIO.Tuple(m, _, unTupleRight) if concat.rightIsTuple =>
+            Tuple(this +: m, combineUnTuple(unTuple, unTupleRight, concat))
+          case i if concat.leftIsTuple => Tuple(inputs :+ i, combineUnTuple(unTuple, UnTuple.Single, concat))
+          case i                       => Tuple(Vector(this, i), combineUnTuple(unTuple, UnTuple.Single, concat))
         }
   }
 }
@@ -195,10 +201,11 @@ object EndpointOutput {
 
     def and[U, TU](other: EndpointOutput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
       other match {
-        case Tuple(outputs) if concat.rightIsTuple        => Tuple(this +: outputs)
-        case EndpointIO.Tuple(ios) if concat.rightIsTuple => Tuple(this +: ios)
-        case Void()                                       => this.asInstanceOf[EndpointOutput[TU]]
-        case o                                            => Tuple(Vector(this, o))
+        case Tuple(outputs, mkTupleRight) if concat.rightIsTuple => Tuple(this +: outputs, combineMkTuple(identity, mkTupleRight, concat))
+        case EndpointIO.Tuple(ios, mkTupleRight, _) if concat.rightIsTuple =>
+          Tuple(this +: ios, combineMkTuple(identity, mkTupleRight, concat))
+        case Void() => this.asInstanceOf[EndpointOutput[TU]]
+        case o      => Tuple(Vector(this, o), combineMkTuple(identity, identity, concat))
       }
   }
 
@@ -277,7 +284,7 @@ object EndpointOutput {
     override def map[U: IsUnit](m: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](output, mapping.map(m))
   }
 
-  case class Tuple[TUPLE](outputs: Vector[EndpointOutput[_]]) extends EndpointOutput[TUPLE] {
+  case class Tuple[TUPLE](outputs: Vector[EndpointOutput[_]], private[tapir] val mkTuple: MkTuple) extends EndpointOutput[TUPLE] {
     override private[tapir] type ThisType[X] = EndpointOutput[X]
     override private[tapir] def hIsUnit = false
     override def show: String = if (outputs.isEmpty) "-" else outputs.map(_.show).mkString(" ")
@@ -289,13 +296,15 @@ object EndpointOutput {
         other.asInstanceOf[EndpointOutput[IJ]] // the tuple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case Tuple(m) if concat.bothTuples              => Tuple(outputs ++ m)
-          case Tuple(m) if concat.rightIsTuple            => Tuple(this +: m)
-          case EndpointIO.Tuple(m) if concat.bothTuples   => Tuple(outputs ++ m)
-          case EndpointIO.Tuple(m) if concat.rightIsTuple => Tuple(this +: m)
-          case Void()                                     => this.asInstanceOf[EndpointOutput.Tuple[IJ]]
-          case o if concat.leftIsTuple                    => Tuple(outputs :+ o)
-          case o                                          => Tuple(Vector(this, o))
+          case Tuple(m, mkTupleRight) if concat.bothTuples   => Tuple(outputs ++ m, combineMkTuple(mkTuple, mkTupleRight, concat))
+          case Tuple(m, mkTupleRight) if concat.rightIsTuple => Tuple(this +: m, combineMkTuple(mkTuple, mkTupleRight, concat))
+          case EndpointIO.Tuple(m, mkTupleRight, _) if concat.bothTuples =>
+            Tuple(outputs ++ m, combineMkTuple(mkTuple, mkTupleRight, concat))
+          case EndpointIO.Tuple(m, mkTupleRight, _) if concat.rightIsTuple =>
+            Tuple(this +: m, combineMkTuple(mkTuple, mkTupleRight, concat))
+          case Void()                  => this.asInstanceOf[EndpointOutput.Tuple[IJ]]
+          case o if concat.leftIsTuple => Tuple(outputs :+ o, combineMkTuple(mkTuple, identity, concat))
+          case o                       => Tuple(Vector(this, o), combineMkTuple(mkTuple, identity, concat))
         }
   }
 }
@@ -312,10 +321,12 @@ object EndpointIO {
   sealed trait Single[I] extends EndpointIO[I] with EndpointInput.Single[I] with EndpointOutput.Single[I] {
     private[tapir] type ThisType[X] <: EndpointIO.Single[X]
 
-    def and[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ] =
+    def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ] =
       other match {
-        case s: Single[_]   => Tuple(Vector(this, s))
-        case Tuple(outputs) => Tuple(this +: outputs)
+        case s: Single[_] =>
+          Tuple(Vector(this, s), combineMkTuple(identity, identity, concat), combineUnTuple(UnTuple.Single, UnTuple.Single, concat))
+        case Tuple(outputs, mkTupleRight, unTupleRight) =>
+          Tuple(this +: outputs, combineMkTuple(identity, mkTupleRight, concat), combineUnTuple(UnTuple.Single, unTupleRight, concat))
       }
   }
 
@@ -384,7 +395,8 @@ object EndpointIO {
     override def map[U: IsUnit](m: Mapping[T, U]): MappedTuple[TUPLE, U] = copy[TUPLE, U](io, mapping.map(m))
   }
 
-  case class Tuple[TUPLE](ios: Vector[EndpointIO[_]]) extends EndpointIO[TUPLE] {
+  case class Tuple[TUPLE](ios: Vector[EndpointIO[_]], private[tapir] val mkTuple: MkTuple, private[tapir] val unTuple: UnTuple)
+      extends EndpointIO[TUPLE] {
     override private[tapir] type ThisType[X] = EndpointIO[X]
     override private[tapir] def hIsUnit = false
     override def show: String = if (ios.isEmpty) "-" else ios.map(_.show).mkString(" ")
@@ -396,34 +408,47 @@ object EndpointIO {
         other.asInstanceOf[EndpointInput[IJ]] // the tuple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case EndpointInput.Tuple(m) if concat.bothTuples   => EndpointInput.Tuple((ios: Vector[EndpointInput[_]]) ++ m)
-          case EndpointInput.Tuple(m) if concat.rightIsTuple => EndpointInput.Tuple(this +: m)
-          case EndpointIO.Tuple(m) if concat.bothTuples      => EndpointInput.Tuple((ios: Vector[EndpointInput[_]]) ++ m)
-          case EndpointIO.Tuple(m) if concat.rightIsTuple    => EndpointInput.Tuple(this +: m)
-          case i if concat.leftIsTuple                       => EndpointInput.Tuple((ios: Vector[EndpointInput[_]]) :+ i)
-          case i                                             => EndpointInput.Tuple(Vector(this, i))
+          case EndpointInput.Tuple(m, unTupleRight) if concat.bothTuples =>
+            EndpointInput.Tuple((ios: Vector[EndpointInput[_]]) ++ m, combineUnTuple(unTuple, unTupleRight, concat))
+          case EndpointInput.Tuple(m, unTupleRight) if concat.rightIsTuple =>
+            EndpointInput.Tuple(this +: m, combineUnTuple(unTuple, unTupleRight, concat))
+          case EndpointIO.Tuple(m, _, unTupleRight) if concat.bothTuples =>
+            EndpointInput.Tuple((ios: Vector[EndpointInput[_]]) ++ m, combineUnTuple(unTuple, unTupleRight, concat))
+          case EndpointIO.Tuple(m, _, unTupleRight) if concat.rightIsTuple =>
+            EndpointInput.Tuple(this +: m, combineUnTuple(unTuple, unTupleRight, concat))
+          case i if concat.leftIsTuple =>
+            EndpointInput.Tuple((ios: Vector[EndpointInput[_]]) :+ i, combineUnTuple(unTuple, UnTuple.Single, concat))
+          case i => EndpointInput.Tuple(Vector(this, i), combineUnTuple(unTuple, UnTuple.Single, concat))
         }
     override def and[J, IJ](other: EndpointOutput[J])(implicit concat: ParamConcat.Aux[TUPLE, J, IJ]): EndpointOutput[IJ] =
       if (ios.isEmpty)
         other.asInstanceOf[EndpointOutput[IJ]] // the tuple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case EndpointOutput.Tuple(m) if concat.bothTuples   => EndpointOutput.Tuple((ios: Vector[EndpointOutput[_]]) ++ m)
-          case EndpointOutput.Tuple(m) if concat.rightIsTuple => EndpointOutput.Tuple(this +: m)
-          case EndpointIO.Tuple(m) if concat.bothTuples       => EndpointOutput.Tuple((ios: Vector[EndpointOutput[_]]) ++ m)
-          case EndpointIO.Tuple(m) if concat.rightIsTuple     => EndpointOutput.Tuple(this +: m)
-          case EndpointOutput.Void()                          => this.asInstanceOf[EndpointOutput.Tuple[IJ]]
-          case io if concat.leftIsTuple                       => EndpointOutput.Tuple((ios: Vector[EndpointOutput[_]]) :+ io)
-          case io                                             => EndpointOutput.Tuple(Vector(this, io))
+          case EndpointOutput.Tuple(m, mkTupleRight) if concat.bothTuples =>
+            EndpointOutput.Tuple((ios: Vector[EndpointOutput[_]]) ++ m, combineMkTuple(mkTuple, mkTupleRight, concat))
+          case EndpointOutput.Tuple(m, mkTupleRight) if concat.rightIsTuple =>
+            EndpointOutput.Tuple(this +: m, combineMkTuple(mkTuple, mkTupleRight, concat))
+          case EndpointIO.Tuple(m, mkTupleRight, _) if concat.bothTuples =>
+            EndpointOutput.Tuple((ios: Vector[EndpointOutput[_]]) ++ m, combineMkTuple(mkTuple, mkTupleRight, concat))
+          case EndpointIO.Tuple(m, mkTupleRight, _) if concat.rightIsTuple =>
+            EndpointOutput.Tuple(this +: m, combineMkTuple(mkTuple, mkTupleRight, concat))
+          case EndpointOutput.Void() => this.asInstanceOf[EndpointOutput.Tuple[IJ]]
+          case io if concat.leftIsTuple =>
+            EndpointOutput.Tuple((ios: Vector[EndpointOutput[_]]) :+ io, combineMkTuple(mkTuple, identity, concat))
+          case io => EndpointOutput.Tuple(Vector(this, io), combineMkTuple(mkTuple, identity, concat))
         }
     override def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[TUPLE, J, IJ]): EndpointIO[IJ] =
       if (ios.isEmpty) other.asInstanceOf[EndpointIO[IJ]] // the tuple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case Tuple(m) if concat.bothTuples   => Tuple(ios ++ m)
-          case Tuple(m) if concat.rightIsTuple => Tuple(this +: m)
-          case io if concat.leftIsTuple        => Tuple(ios :+ io)
-          case io                              => Tuple(Vector(this, io))
+          case Tuple(m, mkTupleRight, unTupleRight) if concat.bothTuples =>
+            Tuple(ios ++ m, combineMkTuple(mkTuple, mkTupleRight, concat), combineUnTuple(unTuple, unTupleRight, concat))
+          case Tuple(m, mkTupleRight, unTupleRight) if concat.rightIsTuple =>
+            Tuple(this +: m, combineMkTuple(mkTuple, mkTupleRight, concat), combineUnTuple(unTuple, unTupleRight, concat))
+          case io if concat.leftIsTuple =>
+            Tuple(ios :+ io, combineMkTuple(mkTuple, identity, concat), combineUnTuple(unTuple, UnTuple.Single, concat))
+          case io => Tuple(Vector(this, io), combineMkTuple(mkTuple, identity, concat), combineUnTuple(unTuple, UnTuple.Single, concat))
         }
   }
 

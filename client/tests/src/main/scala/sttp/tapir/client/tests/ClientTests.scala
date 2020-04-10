@@ -82,6 +82,12 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_optional_json_out_optional_json.name("defined"), Some(FruitAmount("orange", 11)), Right(Some(FruitAmount("orange", 11))))
   testClient(in_optional_json_out_optional_json.name("empty"), None, Right(None))
 
+  testClient(
+    in_4query_out_4header_extended.in("api" / "echo" / "param-to-upper-header"),
+    (("1", "2"), "3", "4"),
+    Right((("1", "2"), "3", "4"))
+  )
+
   //
 
   test(in_headers_out_headers.showDetail) {
@@ -173,6 +179,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       Ok(headers = filteredHeaders: _*)
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
       Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
+    case r @ GET -> Root / "api" / "echo" / "param-to-upper-header" =>
+      Ok(headers = r.uri.multiParams.map { case (k, v) => Header(k.toUpperCase(), v.headOption.getOrElse("?")) }.toSeq: _*)
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
         val parts: Vector[multipart.Part[IO]] = mp.parts

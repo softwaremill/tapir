@@ -112,7 +112,7 @@ object ObjectSchemasForEndpoints {
       case _: EndpointInput.Auth[_]               => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
       case EndpointInput.MappedTuple(wrapped, _)  => forInput(wrapped)
-      case EndpointInput.Tuple(inputs)            => inputs.toList.flatMap(forInput)
+      case EndpointInput.Tuple(inputs, _)         => inputs.toList.flatMap(forInput)
       case op: EndpointIO[_]                      => forIO(op)
     }
   }
@@ -123,14 +123,14 @@ object ObjectSchemasForEndpoints {
       case EndpointOutput.FixedStatusCode(_, _, _) => List.empty
       case EndpointOutput.MappedTuple(wrapped, _)  => forOutput(wrapped)
       case EndpointOutput.Void()                   => List.empty
-      case EndpointOutput.Tuple(outputs)           => outputs.toList.flatMap(forOutput)
+      case EndpointOutput.Tuple(outputs, _)        => outputs.toList.flatMap(forOutput)
       case op: EndpointIO[_]                       => forIO(op)
     }
   }
 
   private def forIO(io: EndpointIO[_]): List[ObjectTypeData] = {
     io match {
-      case EndpointIO.Tuple(ios)          => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
+      case EndpointIO.Tuple(ios, _, _)    => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
       case EndpointIO.Header(_, codec, _) => forCodec(codec)
       case EndpointIO.Headers(_, _)       => List.empty
       case EndpointIO.Body(_, codec, _)   => forCodec(codec)

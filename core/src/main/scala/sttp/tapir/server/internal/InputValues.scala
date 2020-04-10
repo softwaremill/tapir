@@ -26,8 +26,8 @@ object InputValues {
 
   private def apply(input: EndpointInput[_], remainingBasicValues: Vector[Any]): InputValuesResult = {
     input match {
-      case EndpointInput.Tuple(inputs)               => handleTuple(inputs, Vector(), remainingBasicValues)
-      case EndpointIO.Tuple(inputs)                  => handleTuple(inputs, Vector(), remainingBasicValues)
+      case EndpointInput.Tuple(inputs, _)            => handleTuple(inputs, Vector(), remainingBasicValues)
+      case EndpointIO.Tuple(inputs, _, _)            => handleTuple(inputs, Vector(), remainingBasicValues)
       case EndpointInput.MappedTuple(wrapped, codec) => handleMappedTuple(wrapped, codec, remainingBasicValues)
       case EndpointIO.MappedTuple(wrapped, codec)    => handleMappedTuple(wrapped, codec, remainingBasicValues)
       case auth: EndpointInput.Auth[_]               => apply(auth.input, remainingBasicValues)
