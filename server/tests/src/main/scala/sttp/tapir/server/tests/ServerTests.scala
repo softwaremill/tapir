@@ -563,6 +563,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       basicRequest.get(uri"$baseUri/p2").send().map(_.code shouldBe StatusCode.Ok)
   }
 
+  testServer(in_4query_out_4header_extended)(in => pureResult(in.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri?a=1&b=2&x=3&y=4")
+      .send()
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("A" -> "1", "B" -> "2", "X" -> "3", "Y" -> "4"))
+  }
+
   //
 
   def throwFruits(name: String): R[String] = name match {

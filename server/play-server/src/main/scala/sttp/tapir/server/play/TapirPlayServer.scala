@@ -7,7 +7,6 @@ import akka.util.ByteString
 import play.api.http.HttpEntity
 import play.api.mvc._
 import play.api.routing.Router.Routes
-import sttp.tapir.internal.SeqToParams
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.ServerDefaults.StatusCodes
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
@@ -22,8 +21,8 @@ trait TapirPlayServer {
     def toRoute(
         logic: I => Future[Either[E, O]]
     )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
-      def valuesToResponse(values: Seq[Any]): Future[Result] = {
-        val i = SeqToParams(values).asInstanceOf[I]
+      def valueToResponse(value: Any): Future[Result] = {
+        val i = value.asInstanceOf[I]
         logic(i)
           .map {
             case Right(result) => OutputToPlayResponse(ServerDefaults.StatusCodes.success, e.output, result)
@@ -89,7 +88,7 @@ trait TapirPlayServer {
             decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1, 0, serverOptions))).flatMap {
               case values: DecodeInputsResult.Values =>
                 InputValues(e.input, values) match {
-                  case InputValuesResult.Values(values, _)       => valuesToResponse(values)
+                  case hv: InputValuesResult.HasValue            => valueToResponse(hv.value)
                   case InputValuesResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e, input, failure))
                 }
               case DecodeInputsResult.Failure(input, failure) =>

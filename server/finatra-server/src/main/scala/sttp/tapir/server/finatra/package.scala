@@ -7,7 +7,7 @@ import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.util.logging.Logging
 import com.twitter.util.Future
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
-import sttp.tapir.internal.{SeqToParams, _}
+import sttp.tapir.internal._
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
@@ -38,8 +38,8 @@ package object finatra {
           }
         }
 
-        def valuesToResponse(values: List[Any]): Future[Response] = {
-          val i = SeqToParams(values).asInstanceOf[I]
+        def valueToResponse(value: Any): Future[Response] = {
+          val i = value.asInstanceOf[I]
 
           logic(i)
             .map {
@@ -78,7 +78,7 @@ package object finatra {
         decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
           case values: DecodeInputsResult.Values =>
             InputValues(e.input, values) match {
-              case InputValuesResult.Values(values, _)       => valuesToResponse(values)
+              case hv: InputValuesResult.HasValue            => valueToResponse(hv.value)
               case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))
             }
           case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))

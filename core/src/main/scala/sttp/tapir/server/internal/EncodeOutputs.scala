@@ -10,27 +10,33 @@ import scala.annotation.tailrec
 import scala.util.Try
 
 class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
-  def apply(output: EndpointOutput[_], v: Any, initialOutputValues: OutputValues[B]): OutputValues[B] = {
-    @tailrec
-    def run(outputs: Vector[EndpointOutput.Single[_]], ov: OutputValues[B], vs: Seq[Any]): OutputValues[B] = {
-      (outputs, vs) match {
-        case (Vector(), Seq())   => ov
-        case (Vector(), Seq(())) => ov
-        case (outputsHead +: outputsTail, _) if outputsHead._mapping.hIsUnit =>
-          val ov2 = encodeOutput(outputsHead, (), ov)
-          run(outputsTail, ov2, vs)
-        case (outputsHead +: outputsTail, vsHead +: vsTail) =>
-          val ov2 = encodeOutput(outputsHead, vsHead, ov)
-          run(outputsTail, ov2, vsTail)
-        case _ =>
-          throw new IllegalStateException(s"Outputs and output values don't match in output: $output, values: ${ParamsToSeq(v)}")
-      }
+  def apply(output: EndpointOutput[_], value: Any, ov: OutputValues[B]): OutputValues[B] = {
+    output match {
+      case s: EndpointOutput.Single[_]   => applySingle(s, value, ov)
+      case s: EndpointIO.Single[_]       => applySingle(s, value, ov)
+      case EndpointOutput.Tuple(outputs) => applyVector(outputs, ParamsToSeq(value), ov)
+      case EndpointIO.Tuple(outputs)     => applyVector(outputs, ParamsToSeq(value), ov)
+      case EndpointOutput.Void()         => throw new IllegalArgumentException("Cannot encode a void output!")
     }
-
-    run(output.asVectorOfSingleOutputs, initialOutputValues, ParamsToSeq(v))
   }
 
-  private def encodeOutput(output: EndpointOutput.Single[_], value: Any, ov: OutputValues[B]): OutputValues[B] = {
+  @tailrec
+  private def applyVector(outputs: Vector[EndpointOutput[_]], vs: Seq[Any], ov: OutputValues[B]): OutputValues[B] = {
+    (outputs, vs) match {
+      case (Vector(), Seq())   => ov
+      case (Vector(), Seq(())) => ov
+      case (outputsHead +: outputsTail, _) if outputsHead.hIsUnit =>
+        val ov2 = apply(outputsHead, (), ov)
+        applyVector(outputsTail, vs, ov2)
+      case (outputsHead +: outputsTail, vsHead +: vsTail) =>
+        val ov2 = apply(outputsHead, vsHead, ov)
+        applyVector(outputsTail, vsTail, ov2)
+      case _ =>
+        throw new IllegalStateException(s"Outputs and output values don't match in outputs: $outputs, values: $vs")
+    }
+  }
+
+  private def applySingle(output: EndpointOutput.Single[_], value: Any, ov: OutputValues[B]): OutputValues[B] = {
     def encoded[T] = output._mapping.asInstanceOf[Mapping[T, Any]].encode(value)
     output match {
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)

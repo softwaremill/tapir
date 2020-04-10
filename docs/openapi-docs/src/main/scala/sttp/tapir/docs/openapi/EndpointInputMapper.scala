@@ -11,9 +11,9 @@ private[openapi] class EndpointInputMapper[S](
     case single: EndpointInput.Single[_] => mapInputSingle(single, s)
     case eio: EndpointIO[_]              => mapIO(eio, s)
     case EndpointInput.Tuple(inputs) =>
-      val (inputs2, s2) = inputs.foldLeft((Vector.empty[EndpointInput.Single[_]], s)) {
+      val (inputs2, s2) = inputs.foldLeft((Vector.empty[EndpointInput[_]], s)) {
         case ((rebuilt, s3), nested) =>
-          val (nested2, s4) = mapInputSingle(nested, s3)
+          val (nested2, s4) = mapInput(nested, s3)
           (rebuilt :+ nested2, s4)
       }
       (EndpointInput.Tuple(inputs2), s2)
@@ -30,9 +30,9 @@ private[openapi] class EndpointInputMapper[S](
   private def mapIO(ei: EndpointIO[_], s: S): (EndpointIO[_], S) = ei match {
     case single: EndpointIO.Single[_] => mapIOSingle(single, s)
     case EndpointIO.Tuple(inputs) =>
-      val (inputs2, s2) = inputs.foldLeft((Vector.empty[EndpointIO.Single[_]], s)) {
+      val (inputs2, s2) = inputs.foldLeft((Vector.empty[EndpointIO[_]], s)) {
         case ((rebuilt, s3), nested) =>
-          val (nested2, s4) = mapIOSingle(nested, s3)
+          val (nested2, s4) = mapIO(nested, s3)
           (rebuilt :+ nested2, s4)
       }
       (EndpointIO.Tuple(inputs2), s2)

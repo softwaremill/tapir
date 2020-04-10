@@ -115,9 +115,10 @@ The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the o
 ```eval_rst
 .. note::
 
-  Keep in mind that you shouldn't map **to** ``Unit``. This type is special when defining endpoints, as it's the 
-  "neutral element" of the tuple-concatenation operation, which takes place when adding an input or output to an 
-  endpoint.
+  Keep in mind that you shouldn't map **to** ``Unit`` or tuples. These types are special when defining endpoints,
+  as unti is used as a "neutral element", and tuples are used when combining multiple inputs/outputs. For example,
+  mapping a query input to a tuple of values would cause an error, as tapir wouldn't then know if the value corresponds
+  to a single input, or two combined inputs.
 ```
 
 ## Path matching

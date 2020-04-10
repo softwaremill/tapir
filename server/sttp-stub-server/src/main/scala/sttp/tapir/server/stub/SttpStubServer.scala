@@ -2,7 +2,6 @@ package sttp.tapir.server.stub
 
 import sttp.client.testing.SttpBackendStub
 import sttp.model.StatusCode
-import sttp.tapir.internal.SeqToParams
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.{DecodeResult, Endpoint}
 
@@ -27,8 +26,8 @@ trait SttpStubServer {
             case DecodeInputsResult.Failure(_, _) => false
             case values: DecodeInputsResult.Values =>
               InputValues(endpoint.input, values) match {
-                case InputValuesResult.Values(values, _) => inputMatcher(SeqToParams(values).asInstanceOf[I])
-                case InputValuesResult.Failure(_, _)     => false
+                case hv: InputValuesResult.HasValue  => inputMatcher(hv.value.asInstanceOf[I])
+                case InputValuesResult.Failure(_, _) => false
               }
           }
         )

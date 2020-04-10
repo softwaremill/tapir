@@ -10,8 +10,8 @@ package object internal {
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
     def asVectorOfSingleInputs: Vector[EndpointInput.Single[_]] = input match {
       case s: EndpointInput.Single[_] => Vector(s)
-      case m: EndpointInput.Tuple[_]  => m.inputs
-      case m: EndpointIO.Tuple[_]     => m.ios
+      case m: EndpointInput.Tuple[_]  => m.inputs.flatMap(_.asVectorOfSingleInputs)
+      case m: EndpointIO.Tuple[_]     => m.ios.flatMap(_.asVectorOfSingleInputs)
     }
 
     def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] = input match {
@@ -59,8 +59,8 @@ package object internal {
     def asVectorOfSingleOutputs: Vector[EndpointOutput.Single[_]] = output match {
       case s: EndpointOutput.Single[_] => Vector(s)
       case _: EndpointOutput.Void[_]   => Vector()
-      case m: EndpointOutput.Tuple[_]  => m.outputs
-      case m: EndpointIO.Tuple[_]      => m.ios
+      case m: EndpointOutput.Tuple[_]  => m.outputs.flatMap(_.asVectorOfSingleOutputs)
+      case m: EndpointIO.Tuple[_]      => m.ios.flatMap(_.asVectorOfSingleOutputs)
     }
 
     // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code

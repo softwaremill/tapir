@@ -10,7 +10,6 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
 import sttp.model.{Header, Part}
-import sttp.tapir.internal.SeqToParams
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
 import sttp.tapir.{RawBodyType, DecodeResult, Endpoint, EndpointIO, EndpointInput, RawPart}
@@ -46,7 +45,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
           case values: DecodeInputsResult.Values =>
             InputValues(e.input, values) match {
-              case InputValuesResult.Values(values, _)       => provide(SeqToParams(values).asInstanceOf[I])
+              case hv: InputValuesResult.HasValue            => provide(hv.value.asInstanceOf[I])
               case InputValuesResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
             }
 

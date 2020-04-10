@@ -6,7 +6,6 @@ import cats.implicits._
 import com.github.ghik.silencer.silent
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import org.log4s._
-import sttp.tapir.internal.SeqToParams
 import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
@@ -36,8 +35,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         }
       }
 
-      def valuesToResponse(values: List[Any]): F[Response[F]] = {
-        val i = SeqToParams(values).asInstanceOf[I]
+      def valueToResponse(value: Any): F[Response[F]] = {
+        val i = value.asInstanceOf[I]
         se.logic(i)
           .map {
             case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
@@ -52,7 +51,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       OptionT(decodeBody(internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values =>
           InputValues(se.endpoint.input, values) match {
-            case InputValuesResult.Values(values, _)       => valuesToResponse(values).map(_.some)
+            case hv: InputValuesResult.HasValue            => valueToResponse(hv.value).map(_.some)
             case InputValuesResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
           }
         case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)

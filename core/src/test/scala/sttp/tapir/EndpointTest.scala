@@ -66,6 +66,55 @@ class EndpointTest extends FlatSpec with Matchers {
     exception.getMessage contains "required: tapir.EndpointIO[?]"
   }
 
+  it should "create a single input" in {
+    val i1 = query[String]("q1")
+    endpoint.in(i1) shouldBe endpoint.copy(input = i1)
+  }
+
+  it should "combine two inputs" in {
+    val i1 = query[String]("q1")
+    val i2 = query[String]("q2")
+    endpoint.in(i1).in(i2) shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i1, i2)))
+  }
+
+  it should "combine four inputs in two groups" in {
+    val i1 = query[String]("q1")
+    val i2 = query[String]("q2")
+    val i3 = query[String]("q3")
+    val i4 = query[String]("q4")
+    endpoint.in(i1.and(i2)).in(i3.and(i4)) shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i1, i2, i3, i4)))
+  }
+
+  it should "combine four inputs in two groups, through an extend method (right)" in {
+    val i1 = query[String]("q1")
+    val i2 = query[String]("q2")
+    val i3 = query[String]("q3")
+    val i4 = query[String]("q4")
+    val i34 = i3.and(i4)
+
+    def extend[I, E, O](e: Endpoint[I, E, O, Nothing]): Endpoint[(I, String, String), E, O, Nothing] = e.in(i34)
+    val extended1: Endpoint[(String, String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1))
+    val extended2: Endpoint[((String, String), String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1.and(i2)))
+
+    extended1 shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i1, i3, i4)))
+    extended2 shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(EndpointInput.Tuple(Vector(i1, i2)), i3, i4)))
+  }
+
+  it should "combine four inputs in two groups, through an extend method (left)" in {
+    val i1 = query[String]("q1")
+    val i2 = query[String]("q2")
+    val i3 = query[String]("q3")
+    val i4 = query[String]("q4")
+    val i34 = i3.and(i4)
+
+    def extend[I, E, O](e: Endpoint[I, E, O, Nothing]): Endpoint[(String, String, I), E, O, Nothing] = e.prependIn(i34)
+    val extended1: Endpoint[(String, String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1))
+    val extended2: Endpoint[(String, String, (String, String)), Unit, Unit, Nothing] = extend(endpoint.in(i1.and(i2)))
+
+    extended1 shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i3, i4, i1)))
+    extended2 shouldBe endpoint.copy(input = EndpointInput.Tuple(Vector(i3, i4, EndpointInput.Tuple(Vector(i1, i2)))))
+  }
+
   val showTestData = List(
     (endpoint.name("E1").in("p1"), "[E1] /p1 -> -/-"),
     (endpoint.get.in("p1" / "p2"), "GET /p1 /p2 -> -/-"),
