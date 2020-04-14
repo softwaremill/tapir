@@ -1,7 +1,7 @@
 package sttp.tapir.server.internal
 
-import sttp.tapir.internal.SeqToParams
-import sttp.tapir.{Mapping, DecodeResult, EndpointIO, EndpointInput}
+import sttp.tapir.internal.{MkParams, SeqToParams}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, Mapping}
 
 sealed trait InputValuesResult
 object InputValuesResult {
@@ -26,8 +26,8 @@ object InputValues {
 
   private def apply(input: EndpointInput[_], remainingBasicValues: Vector[Any]): InputValuesResult = {
     input match {
-      case EndpointInput.Multiple(inputs, _, _)         => handleTuple(inputs, Vector(), remainingBasicValues)
-      case EndpointIO.Multiple(inputs, _, _)            => handleTuple(inputs, Vector(), remainingBasicValues)
+      case EndpointInput.Multiple(inputs, mkParams, _)  => handleMultiple(inputs, mkParams, Vector(), remainingBasicValues)
+      case EndpointIO.Multiple(inputs, mkParams, _)     => handleMultiple(inputs, mkParams, Vector(), remainingBasicValues)
       case EndpointInput.MappedMultiple(wrapped, codec) => handleMappedTuple(wrapped, codec, remainingBasicValues)
       case EndpointIO.MappedMultiple(wrapped, codec)    => handleMappedTuple(wrapped, codec, remainingBasicValues)
       case auth: EndpointInput.Auth[_]                  => apply(auth.input, remainingBasicValues)
@@ -42,16 +42,21 @@ object InputValues {
   }
 
   @scala.annotation.tailrec
-  private def handleTuple(inputs: Vector[EndpointInput[_]], acc: Vector[Any], remainingBasicValues: Vector[Any]): InputValuesResult = {
+  private def handleMultiple(
+      inputs: Vector[EndpointInput[_]],
+      mkParams: MkParams,
+      acc: Vector[Any],
+      remainingBasicValues: Vector[Any]
+  ): InputValuesResult = {
     inputs match {
       case Vector() =>
         if (acc.isEmpty) InputValuesResult.NoValue(remainingBasicValues)
-        else InputValuesResult.Value(SeqToParams(acc), remainingBasicValues)
+        else InputValuesResult.Value(mkParams(acc), remainingBasicValues)
       case input +: inputsTail =>
         apply(input, remainingBasicValues) match {
           case InputValuesResult.Value(inputValue, remainingBasicValues2) =>
-            handleTuple(inputsTail, acc :+ inputValue, remainingBasicValues2)
-          case InputValuesResult.NoValue(remainingBasicValues2) => handleTuple(inputsTail, acc, remainingBasicValues2)
+            handleMultiple(inputsTail, mkParams, acc :+ inputValue, remainingBasicValues2)
+          case InputValuesResult.NoValue(remainingBasicValues2) => handleMultiple(inputsTail, mkParams, acc, remainingBasicValues2)
           case f: InputValuesResult.Failure                     => f
         }
     }

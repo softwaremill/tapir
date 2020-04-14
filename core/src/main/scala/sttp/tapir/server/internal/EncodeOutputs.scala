@@ -3,7 +3,6 @@ package sttp.tapir.server.internal
 import java.nio.charset.Charset
 
 import sttp.model.{HeaderNames, StatusCode}
-import sttp.tapir.internal._
 import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamingEndpointIO}
 
 import scala.annotation.tailrec
@@ -12,11 +11,11 @@ import scala.util.Try
 class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
   def apply(output: EndpointOutput[_], value: Any, ov: OutputValues[B]): OutputValues[B] = {
     output match {
-      case s: EndpointOutput.Single[_]            => applySingle(s, value, ov)
-      case s: EndpointIO.Single[_]                => applySingle(s, value, ov)
-      case EndpointOutput.Multiple(outputs, _, _) => applyVector(outputs, ParamsToSeq(value), ov)
-      case EndpointIO.Multiple(outputs, _, _)     => applyVector(outputs, ParamsToSeq(value), ov)
-      case EndpointOutput.Void()                  => throw new IllegalArgumentException("Cannot encode a void output!")
+      case s: EndpointOutput.Single[_]                   => applySingle(s, value, ov)
+      case s: EndpointIO.Single[_]                       => applySingle(s, value, ov)
+      case EndpointOutput.Multiple(outputs, _, unParams) => applyVector(outputs, unParams(value), ov)
+      case EndpointIO.Multiple(outputs, _, unParams)     => applyVector(outputs, unParams(value), ov)
+      case EndpointOutput.Void()                         => throw new IllegalArgumentException("Cannot encode a void output!")
     }
   }
 
@@ -25,9 +24,6 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
     (outputs, vs) match {
       case (Vector(), Seq())   => ov
       case (Vector(), Seq(())) => ov
-      case (outputsHead +: outputsTail, _) if outputsHead.hIsUnit =>
-        val ov2 = apply(outputsHead, (), ov)
-        applyVector(outputsTail, vs, ov2)
       case (outputsHead +: outputsTail, vsHead +: vsTail) =>
         val ov2 = apply(outputsHead, vsHead, ov)
         applyVector(outputsTail, vsTail, ov2)
