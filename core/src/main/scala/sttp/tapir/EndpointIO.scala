@@ -201,11 +201,12 @@ object EndpointOutput {
 
     def and[U, TU](other: EndpointOutput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
       other match {
-        case Tuple(outputs, mkTupleRight) if concat.rightIsTuple => Tuple(this +: outputs, combineMkTuple(identity, mkTupleRight, concat))
+        case Tuple(outputs, mkTupleRight) if concat.rightIsTuple =>
+          Tuple(this +: outputs, combineMkTuple(MkTuple.Single, mkTupleRight, concat))
         case EndpointIO.Tuple(ios, mkTupleRight, _) if concat.rightIsTuple =>
-          Tuple(this +: ios, combineMkTuple(identity, mkTupleRight, concat))
+          Tuple(this +: ios, combineMkTuple(MkTuple.Single, mkTupleRight, concat))
         case Void() => this.asInstanceOf[EndpointOutput[TU]]
-        case o      => Tuple(Vector(this, o), combineMkTuple(identity, identity, concat))
+        case o      => Tuple(Vector(this, o), combineMkTuple(MkTuple.Single, MkTuple.Single, concat))
       }
   }
 
@@ -303,8 +304,8 @@ object EndpointOutput {
           case EndpointIO.Tuple(m, mkTupleRight, _) if concat.rightIsTuple =>
             Tuple(this +: m, combineMkTuple(mkTuple, mkTupleRight, concat))
           case Void()                  => this.asInstanceOf[EndpointOutput.Tuple[IJ]]
-          case o if concat.leftIsTuple => Tuple(outputs :+ o, combineMkTuple(mkTuple, identity, concat))
-          case o                       => Tuple(Vector(this, o), combineMkTuple(mkTuple, identity, concat))
+          case o if concat.leftIsTuple => Tuple(outputs :+ o, combineMkTuple(mkTuple, MkTuple.Single, concat))
+          case o                       => Tuple(Vector(this, o), combineMkTuple(mkTuple, MkTuple.Single, concat))
         }
   }
 }
@@ -324,9 +325,13 @@ object EndpointIO {
     def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ] =
       other match {
         case s: Single[_] =>
-          Tuple(Vector(this, s), combineMkTuple(identity, identity, concat), combineUnTuple(UnTuple.Single, UnTuple.Single, concat))
+          Tuple(
+            Vector(this, s),
+            combineMkTuple(MkTuple.Single, MkTuple.Single, concat),
+            combineUnTuple(UnTuple.Single, UnTuple.Single, concat)
+          )
         case Tuple(outputs, mkTupleRight, unTupleRight) =>
-          Tuple(this +: outputs, combineMkTuple(identity, mkTupleRight, concat), combineUnTuple(UnTuple.Single, unTupleRight, concat))
+          Tuple(this +: outputs, combineMkTuple(MkTuple.Single, mkTupleRight, concat), combineUnTuple(UnTuple.Single, unTupleRight, concat))
       }
   }
 
@@ -435,8 +440,8 @@ object EndpointIO {
             EndpointOutput.Tuple(this +: m, combineMkTuple(mkTuple, mkTupleRight, concat))
           case EndpointOutput.Void() => this.asInstanceOf[EndpointOutput.Tuple[IJ]]
           case io if concat.leftIsTuple =>
-            EndpointOutput.Tuple((ios: Vector[EndpointOutput[_]]) :+ io, combineMkTuple(mkTuple, identity, concat))
-          case io => EndpointOutput.Tuple(Vector(this, io), combineMkTuple(mkTuple, identity, concat))
+            EndpointOutput.Tuple((ios: Vector[EndpointOutput[_]]) :+ io, combineMkTuple(mkTuple, MkTuple.Single, concat))
+          case io => EndpointOutput.Tuple(Vector(this, io), combineMkTuple(mkTuple, MkTuple.Single, concat))
         }
     override def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[TUPLE, J, IJ]): EndpointIO[IJ] =
       if (ios.isEmpty) other.asInstanceOf[EndpointIO[IJ]] // the tuple must correspond to Unit, which is a neutral element of concatenation
@@ -447,8 +452,9 @@ object EndpointIO {
           case Tuple(m, mkTupleRight, unTupleRight) if concat.rightIsTuple =>
             Tuple(this +: m, combineMkTuple(mkTuple, mkTupleRight, concat), combineUnTuple(unTuple, unTupleRight, concat))
           case io if concat.leftIsTuple =>
-            Tuple(ios :+ io, combineMkTuple(mkTuple, identity, concat), combineUnTuple(unTuple, UnTuple.Single, concat))
-          case io => Tuple(Vector(this, io), combineMkTuple(mkTuple, identity, concat), combineUnTuple(unTuple, UnTuple.Single, concat))
+            Tuple(ios :+ io, combineMkTuple(mkTuple, MkTuple.Single, concat), combineUnTuple(unTuple, UnTuple.Single, concat))
+          case io =>
+            Tuple(Vector(this, io), combineMkTuple(mkTuple, MkTuple.Single, concat), combineUnTuple(unTuple, UnTuple.Single, concat))
         }
   }
 

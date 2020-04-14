@@ -82,7 +82,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       body: Any,
       meta: ResponseMetadata
   ): DecodeResult[Any] =
-    DecodeResult.sequence(outputs.map(getOutputParams(_, body, meta))).map(vs => SeqToParams(mkTuple(vs.toVector)))
+    DecodeResult.sequence(outputs.map(getOutputParams(_, body, meta))).map(vs => mkTuple(vs.toVector))
 
   private type PartialAnyRequest = PartialRequest[Any, Any]
 

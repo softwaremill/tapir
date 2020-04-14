@@ -115,10 +115,10 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
 
       basicOutputsMap.get(None) match {
         case Some(defaultOutputs) if basicOutputsMap.size == 1 =>
-          EndpointOutput.Tuple(defaultOutputs.sortByType, identity).show
+          EndpointOutput.Tuple(defaultOutputs.sortByType, MkTuple.Single).show
         case _ =>
           val mappings = basicOutputsMap.map {
-            case (sc, os) => StatusMapping(sc, EndpointOutput.Tuple(os.sortByType, identity), _ => true)
+            case (sc, os) => StatusMapping(sc, EndpointOutput.Tuple(os.sortByType, MkTuple.Single), _ => true)
           }
           EndpointOutput.OneOf(mappings.toSeq, Mapping.id).show
       }

@@ -160,13 +160,13 @@ package object internal {
 
   private[tapir] def combineMkTuple(left: MkTuple, right: MkTuple, concat: ParamConcat[_, _]): MkTuple = { values =>
     (concat.leftArity, concat.rightArity) match {
-      case (0, 0) => Vector()
+      case (0, 0) => () // SeqToParams(Vector())
       case (0, _) => right(values)
       case (_, 0) => left(values)
-      case (1, 1) => values
-      case (1, _) => values.head +: right(values.tail)
-      case (_, 1) => left(values.init) :+ values.last
-      case (a, b) => left(values.take(a)) ++ right(values.takeRight(b))
+      case (1, 1) => SeqToParams(values)
+      case (1, _) => SeqToParams(values.head +: ParamsToSeq(right(values.tail)))
+      case (_, 1) => SeqToParams(ParamsToSeq(left(values.init)) :+ values.last)
+      case (a, b) => SeqToParams(ParamsToSeq(left(values.take(a))) ++ ParamsToSeq(right(values.takeRight(b))))
     }
   }
 }
