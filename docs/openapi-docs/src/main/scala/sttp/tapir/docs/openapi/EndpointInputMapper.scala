@@ -10,13 +10,13 @@ private[openapi] class EndpointInputMapper[S](
   def mapInput(ei: EndpointInput[_], s: S): (EndpointInput[_], S) = ei match {
     case single: EndpointInput.Single[_] => mapInputSingle(single, s)
     case eio: EndpointIO[_]              => mapIO(eio, s)
-    case EndpointInput.Multiple(inputs, unParams) =>
+    case EndpointInput.Multiple(inputs, mkParams, unParams) =>
       val (inputs2, s2) = inputs.foldLeft((Vector.empty[EndpointInput[_]], s)) {
         case ((rebuilt, s3), nested) =>
           val (nested2, s4) = mapInput(nested, s3)
           (rebuilt :+ nested2, s4)
       }
-      (EndpointInput.Multiple(inputs2, unParams), s2)
+      (EndpointInput.Multiple(inputs2, mkParams, unParams), s2)
   }
 
   private def mapInputSingle(ei: EndpointInput.Single[_], s: S): (EndpointInput.Single[_], S) = ei match {

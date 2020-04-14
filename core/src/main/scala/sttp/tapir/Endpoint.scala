@@ -115,17 +115,17 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
 
       basicOutputsMap.get(None) match {
         case Some(defaultOutputs) if basicOutputsMap.size == 1 =>
-          EndpointOutput.Multiple(defaultOutputs.sortByType, MkParams.Empty).show
+          EndpointOutput.Multiple(defaultOutputs.sortByType, MkParams.Empty, UnParams.Empty).show
         case _ =>
           val mappings = basicOutputsMap.map {
-            case (sc, os) => StatusMapping(sc, EndpointOutput.Multiple(os.sortByType, MkParams.Empty), _ => true)
+            case (sc, os) => StatusMapping(sc, EndpointOutput.Multiple(os.sortByType, MkParams.Empty, UnParams.Empty), _ => true)
           }
           EndpointOutput.OneOf(mappings.toSeq, Mapping.id).show
       }
     }
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
-    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortBy(basicInputSortIndex), UnParams.Empty).show
+    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortBy(basicInputSortIndex), MkParams.Empty, UnParams.Empty).show
     val showSuccessOutputs = showOutputs(output)
     val showErrorOutputs = showOutputs(errorOutput)
 

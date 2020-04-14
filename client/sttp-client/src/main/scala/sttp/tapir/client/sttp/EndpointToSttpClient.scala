@@ -72,8 +72,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
     case EndpointOutput.Void() => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
 
-    case EndpointOutput.Multiple(outputs, mkParams) => handleOutputTuple(outputs, mkParams, body, meta)
-    case EndpointIO.Multiple(outputs, mkParams, _)  => handleOutputTuple(outputs, mkParams, body, meta)
+    case EndpointOutput.Multiple(outputs, mkParams, _) => handleOutputTuple(outputs, mkParams, body, meta)
+    case EndpointIO.Multiple(outputs, mkParams, _)     => handleOutputTuple(outputs, mkParams, body, meta)
   }
 
   private def handleOutputTuple(
@@ -137,11 +137,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         (uri, req)
-      case a: EndpointInput.Auth[_]                   => setInputParams(a.input, value, uri, req)
-      case EndpointInput.Multiple(inputs, unParams)   => handleInputTuple(inputs, value, unParams, uri, req)
-      case EndpointIO.Multiple(inputs, _, unParams)   => handleInputTuple(inputs, value, unParams, uri, req)
-      case EndpointInput.MappedMultiple(tuple, codec) => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
-      case EndpointIO.MappedMultiple(tuple, codec)    => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
+      case a: EndpointInput.Auth[_]                    => setInputParams(a.input, value, uri, req)
+      case EndpointInput.Multiple(inputs, _, unParams) => handleInputTuple(inputs, value, unParams, uri, req)
+      case EndpointIO.Multiple(inputs, _, unParams)    => handleInputTuple(inputs, value, unParams, uri, req)
+      case EndpointInput.MappedMultiple(tuple, codec)  => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
+      case EndpointIO.MappedMultiple(tuple, codec)     => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
     }
   }
 
@@ -234,7 +234,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     out match {
       case _: EndpointIO.StreamBodyWrapper[_, _]     => true
       case EndpointIO.Multiple(inputs, _, _)         => inputs.exists(i => bodyIsStream(i))
-      case EndpointOutput.Multiple(inputs, _)        => inputs.exists(i => bodyIsStream(i))
+      case EndpointOutput.Multiple(inputs, _, _)     => inputs.exists(i => bodyIsStream(i))
       case EndpointIO.MappedMultiple(wrapped, _)     => bodyIsStream(wrapped)
       case EndpointOutput.MappedMultiple(wrapped, _) => bodyIsStream(wrapped)
       case _                                         => false

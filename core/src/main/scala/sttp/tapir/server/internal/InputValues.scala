@@ -26,7 +26,7 @@ object InputValues {
 
   private def apply(input: EndpointInput[_], remainingBasicValues: Vector[Any]): InputValuesResult = {
     input match {
-      case EndpointInput.Multiple(inputs, _)            => handleTuple(inputs, Vector(), remainingBasicValues)
+      case EndpointInput.Multiple(inputs, _, _)         => handleTuple(inputs, Vector(), remainingBasicValues)
       case EndpointIO.Multiple(inputs, _, _)            => handleTuple(inputs, Vector(), remainingBasicValues)
       case EndpointInput.MappedMultiple(wrapped, codec) => handleMappedTuple(wrapped, codec, remainingBasicValues)
       case EndpointIO.MappedMultiple(wrapped, codec)    => handleMappedTuple(wrapped, codec, remainingBasicValues)

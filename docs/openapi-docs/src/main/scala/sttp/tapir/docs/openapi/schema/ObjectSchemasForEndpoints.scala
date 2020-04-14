@@ -112,7 +112,7 @@ object ObjectSchemasForEndpoints {
       case _: EndpointInput.Auth[_]                 => List.empty
       case _: EndpointInput.ExtractFromRequest[_]   => List.empty
       case EndpointInput.MappedMultiple(wrapped, _) => forInput(wrapped)
-      case EndpointInput.Multiple(inputs, _)        => inputs.toList.flatMap(forInput)
+      case EndpointInput.Multiple(inputs, _, _)     => inputs.toList.flatMap(forInput)
       case op: EndpointIO[_]                        => forIO(op)
     }
   }
@@ -123,7 +123,7 @@ object ObjectSchemasForEndpoints {
       case EndpointOutput.FixedStatusCode(_, _, _)   => List.empty
       case EndpointOutput.MappedMultiple(wrapped, _) => forOutput(wrapped)
       case EndpointOutput.Void()                     => List.empty
-      case EndpointOutput.Multiple(outputs, _)       => outputs.toList.flatMap(forOutput)
+      case EndpointOutput.Multiple(outputs, _, _)    => outputs.toList.flatMap(forOutput)
       case op: EndpointIO[_]                         => forIO(op)
     }
   }

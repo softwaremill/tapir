@@ -89,7 +89,7 @@ package object internal {
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
     def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] = input match {
       case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
-      case EndpointInput.Multiple(inputs, _)            => inputs.flatMap(_.traverseInputs(handle))
+      case EndpointInput.Multiple(inputs, _, _)         => inputs.flatMap(_.traverseInputs(handle))
       case EndpointIO.Multiple(inputs, _, _)            => inputs.flatMap(_.traverseInputs(handle))
       case EndpointInput.MappedMultiple(wrapped, _)     => wrapped.traverseInputs(handle)
       case EndpointIO.MappedMultiple(wrapped, _)        => wrapped.traverseInputs(handle)
@@ -150,7 +150,7 @@ package object internal {
       }
 
       output match {
-        case EndpointOutput.Multiple(outputs, _)       => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointOutput.Multiple(outputs, _, _)    => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
         case EndpointIO.Multiple(outputs, _, _)        => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
         case EndpointOutput.MappedMultiple(wrapped, _) => wrapped.asBasicOutputsOrMap
         case EndpointIO.MappedMultiple(wrapped, _)     => wrapped.asBasicOutputsOrMap
@@ -176,7 +176,7 @@ package object internal {
 
     private[internal] def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] = output match {
       case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
-      case EndpointOutput.Multiple(outputs, _)           => outputs.flatMap(_.traverseOutputs(handle))
+      case EndpointOutput.Multiple(outputs, _, _)        => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointIO.Multiple(outputs, _, _)            => outputs.flatMap(_.traverseOutputs(handle))
       case EndpointOutput.MappedMultiple(wrapped, _)     => wrapped.traverseOutputs(handle)
       case EndpointIO.MappedMultiple(wrapped, _)         => wrapped.traverseOutputs(handle)

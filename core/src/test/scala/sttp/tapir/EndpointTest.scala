@@ -72,9 +72,9 @@ class EndpointTest extends FlatSpec with Matchers {
   }
 
   def detuple(input: EndpointInput[_]): Any = input match {
-    case EndpointInput.Multiple(inputs, _) => inputs.map(detuple)
-    case EndpointIO.Multiple(inputs, _, _) => inputs.map(detuple)
-    case i                                 => i
+    case EndpointInput.Multiple(inputs, _, _) => inputs.map(detuple)
+    case EndpointIO.Multiple(inputs, _, _)    => inputs.map(detuple)
+    case i                                    => i
   }
 
   it should "combine two inputs" in {

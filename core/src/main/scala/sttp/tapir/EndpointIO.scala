@@ -27,11 +27,9 @@ object EndpointInput {
 
     def and[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] =
       other match {
-        case Multiple(inputs, unParamsRight) if concat.rightIsTuple =>
-          Multiple(this +: inputs, combineUnParams(UnParams.Single, unParamsRight, concat))
-        case EndpointIO.Multiple(ios, _, unParamsRight) if concat.rightIsTuple =>
-          Multiple(this +: ios, combineUnParams(UnParams.Single, unParamsRight, concat))
-        case i => Multiple(Vector(this, i), combineUnParams(UnParams.Single, UnParams.Single, concat))
+        case Multiple(inputs, _, _) if concat.rightIsTuple         => Multiple.combine(this +: inputs, concat, this, other)
+        case EndpointIO.Multiple(ios, _, _) if concat.rightIsTuple => Multiple.combine(this +: ios, concat, this, other)
+        case i                                                     => Multiple.combine(Vector(this, i), concat, this, other)
       }
   }
 
@@ -159,7 +157,11 @@ object EndpointInput {
     override def map[U: IsUnit](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](input, mapping.map(m))
   }
 
-  case class Multiple[PARAMS](inputs: Vector[EndpointInput[_]], private[tapir] val unParams: UnParams) extends EndpointInput[PARAMS] {
+  case class Multiple[PARAMS](
+      inputs: Vector[EndpointInput[_]],
+      private[tapir] val mkParams: MkParams,
+      private[tapir] val unParams: UnParams
+  ) extends EndpointInput[PARAMS] {
     override private[tapir] type ThisType[X] = EndpointInput[X]
     override private[tapir] def hIsUnit: Boolean = false
 
@@ -172,15 +174,31 @@ object EndpointInput {
         other.asInstanceOf[EndpointInput[TU]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case Multiple(m, unParamsRight) if concat.bothTuples   => Multiple(inputs ++ m, combineUnParams(unParams, unParamsRight, concat))
-          case Multiple(m, unParamsRight) if concat.rightIsTuple => Multiple(this +: m, combineUnParams(unParams, unParamsRight, concat))
-          case EndpointIO.Multiple(m, _, unParamsRight) if concat.bothTuples =>
-            Multiple(inputs ++ m, combineUnParams(unParams, unParamsRight, concat))
-          case EndpointIO.Multiple(m, _, unParamsRight) if concat.rightIsTuple =>
-            Multiple(this +: m, combineUnParams(unParams, unParamsRight, concat))
-          case i if concat.leftIsTuple => Multiple(inputs :+ i, combineUnParams(unParams, UnParams.Single, concat))
-          case i                       => Multiple(Vector(this, i), combineUnParams(unParams, UnParams.Single, concat))
+          case Multiple(m, _, _) if concat.bothTuples              => Multiple.combine(inputs ++ m, concat, this, other)
+          case Multiple(m, _, _) if concat.rightIsTuple            => Multiple.combine(this +: m, concat, this, other)
+          case EndpointIO.Multiple(m, _, _) if concat.bothTuples   => Multiple.combine(inputs ++ m, concat, this, other)
+          case EndpointIO.Multiple(m, _, _) if concat.rightIsTuple => Multiple.combine(this +: m, concat, this, other)
+          case i if concat.leftIsTuple                             => Multiple.combine(inputs :+ i, concat, this, other)
+          case i                                                   => Multiple.combine(Vector(this, i), concat, this, other)
         }
+  }
+
+  object Multiple {
+    private[tapir] def combine[R, T, U](
+        combinedInputs: Vector[EndpointInput[_]],
+        concat: ParamConcat[T, U],
+        left: EndpointInput[_],
+        right: EndpointInput[_]
+    ): Multiple[R] = {
+      def fromInput(i: EndpointInput[_]): (MkParams, UnParams) = i match {
+        case EndpointInput.Multiple(_, m, u) => (m, u)
+        case EndpointIO.Multiple(_, m, u)    => (m, u)
+        case _                               => (MkParams.Single, UnParams.Single)
+      }
+      val (mkParamsLeft, unParamsLeft) = fromInput(left)
+      val (mkParamsRight, unParamsRight) = fromInput(right)
+      Multiple(combinedInputs, combineMkParams(mkParamsLeft, mkParamsRight, concat), combineUnParams(unParamsLeft, unParamsRight, concat))
+    }
   }
 }
 
@@ -200,12 +218,10 @@ object EndpointOutput {
 
     def and[U, TU](other: EndpointOutput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
       other match {
-        case Multiple(outputs, mkParamsRight) if concat.rightIsTuple =>
-          Multiple(this +: outputs, combineMkParams(MkParams.Single, mkParamsRight, concat))
-        case EndpointIO.Multiple(ios, mkParamsRight, _) if concat.rightIsTuple =>
-          Multiple(this +: ios, combineMkParams(MkParams.Single, mkParamsRight, concat))
-        case Void() => this.asInstanceOf[EndpointOutput[TU]]
-        case o      => Multiple(Vector(this, o), combineMkParams(MkParams.Single, MkParams.Single, concat))
+        case Multiple(outputs, _, _) if concat.rightIsTuple        => Multiple.combine(this +: outputs, concat, this, other)
+        case EndpointIO.Multiple(ios, _, _) if concat.rightIsTuple => Multiple.combine(this +: ios, concat, this, other)
+        case Void()                                                => this.asInstanceOf[EndpointOutput[TU]]
+        case o                                                     => Multiple.combine(Vector(this, o), concat, this, other)
       }
   }
 
@@ -284,7 +300,11 @@ object EndpointOutput {
     override def map[U: IsUnit](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](output, mapping.map(m))
   }
 
-  case class Multiple[PARAMS](outputs: Vector[EndpointOutput[_]], private[tapir] val mkParams: MkParams) extends EndpointOutput[PARAMS] {
+  case class Multiple[PARAMS](
+      outputs: Vector[EndpointOutput[_]],
+      private[tapir] val mkParams: MkParams,
+      private[tapir] val unParams: UnParams
+  ) extends EndpointOutput[PARAMS] {
     override private[tapir] type ThisType[X] = EndpointOutput[X]
     override private[tapir] def hIsUnit = false
     override def show: String = if (outputs.isEmpty) "-" else outputs.map(_.show).mkString(" ")
@@ -296,16 +316,32 @@ object EndpointOutput {
         other.asInstanceOf[EndpointOutput[IJ]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case Multiple(m, mkParamsRight) if concat.bothTuples   => Multiple(outputs ++ m, combineMkParams(mkParams, mkParamsRight, concat))
-          case Multiple(m, mkParamsRight) if concat.rightIsTuple => Multiple(this +: m, combineMkParams(mkParams, mkParamsRight, concat))
-          case EndpointIO.Multiple(m, mkParamsRight, _) if concat.bothTuples =>
-            Multiple(outputs ++ m, combineMkParams(mkParams, mkParamsRight, concat))
-          case EndpointIO.Multiple(m, mkParamsRight, _) if concat.rightIsTuple =>
-            Multiple(this +: m, combineMkParams(mkParams, mkParamsRight, concat))
-          case Void()                  => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
-          case o if concat.leftIsTuple => Multiple(outputs :+ o, combineMkParams(mkParams, MkParams.Single, concat))
-          case o                       => Multiple(Vector(this, o), combineMkParams(mkParams, MkParams.Single, concat))
+          case Multiple(m, _, _) if concat.bothTuples              => Multiple.combine(outputs ++ m, concat, this, other)
+          case Multiple(m, _, _) if concat.rightIsTuple            => Multiple.combine(this +: m, concat, this, other)
+          case EndpointIO.Multiple(m, _, _) if concat.bothTuples   => Multiple.combine(outputs ++ m, concat, this, other)
+          case EndpointIO.Multiple(m, _, _) if concat.rightIsTuple => Multiple.combine(this +: m, concat, this, other)
+          case Void()                                              => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
+          case o if concat.leftIsTuple                             => Multiple.combine(outputs :+ o, concat, this, other)
+          case o                                                   => Multiple.combine(Vector(this, o), concat, this, other)
         }
+  }
+
+  object Multiple {
+    private[tapir] def combine[R, T, U](
+        combinedOutputs: Vector[EndpointOutput[_]],
+        concat: ParamConcat[T, U],
+        left: EndpointOutput[_],
+        right: EndpointOutput[_]
+    ): Multiple[R] = {
+      def fromOutput(o: EndpointOutput[_]): (MkParams, UnParams) = o match {
+        case EndpointOutput.Multiple(_, m, u) => (m, u)
+        case EndpointIO.Multiple(_, m, u)     => (m, u)
+        case _                                => (MkParams.Single, UnParams.Single)
+      }
+      val (mkParamsLeft, unParamsLeft) = fromOutput(left)
+      val (mkParamsRight, unParamsRight) = fromOutput(right)
+      Multiple(combinedOutputs, combineMkParams(mkParamsLeft, mkParamsRight, concat), combineUnParams(unParamsLeft, unParamsRight, concat))
+    }
   }
 }
 
@@ -323,18 +359,8 @@ object EndpointIO {
 
     def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ] =
       other match {
-        case s: Single[_] =>
-          Multiple(
-            Vector(this, s),
-            combineMkParams(MkParams.Single, MkParams.Single, concat),
-            combineUnParams(UnParams.Single, UnParams.Single, concat)
-          )
-        case Multiple(outputs, mkParamsRight, unParamsRight) =>
-          Multiple(
-            this +: outputs,
-            combineMkParams(MkParams.Single, mkParamsRight, concat),
-            combineUnParams(UnParams.Single, unParamsRight, concat)
-          )
+        case s: Single[_]                                    => Multiple.combine(Vector(this, s), concat, this, other)
+        case Multiple(outputs, mkParamsRight, unParamsRight) => Multiple.combine(this +: outputs, concat, this, other)
       }
   }
 
@@ -416,54 +442,60 @@ object EndpointIO {
         other.asInstanceOf[EndpointInput[IJ]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case EndpointInput.Multiple(m, unParamsRight) if concat.bothTuples =>
-            EndpointInput.Multiple((ios: Vector[EndpointInput[_]]) ++ m, combineUnParams(unParams, unParamsRight, concat))
-          case EndpointInput.Multiple(m, unParamsRight) if concat.rightIsTuple =>
-            EndpointInput.Multiple(this +: m, combineUnParams(unParams, unParamsRight, concat))
-          case EndpointIO.Multiple(m, _, unParamsRight) if concat.bothTuples =>
-            EndpointInput.Multiple((ios: Vector[EndpointInput[_]]) ++ m, combineUnParams(unParams, unParamsRight, concat))
-          case EndpointIO.Multiple(m, _, unParamsRight) if concat.rightIsTuple =>
-            EndpointInput.Multiple(this +: m, combineUnParams(unParams, unParamsRight, concat))
-          case i if concat.leftIsTuple =>
-            EndpointInput.Multiple((ios: Vector[EndpointInput[_]]) :+ i, combineUnParams(unParams, UnParams.Single, concat))
-          case i => EndpointInput.Multiple(Vector(this, i), combineUnParams(unParams, UnParams.Single, concat))
+          case EndpointInput.Multiple(m, _, _) if concat.bothTuples =>
+            EndpointInput.Multiple.combine((ios: Vector[EndpointInput[_]]) ++ m, concat, this, other)
+          case EndpointInput.Multiple(m, _, _) if concat.rightIsTuple => EndpointInput.Multiple.combine(this +: m, concat, this, other)
+          case EndpointIO.Multiple(m, _, _) if concat.bothTuples =>
+            EndpointInput.Multiple.combine((ios: Vector[EndpointInput[_]]) ++ m, concat, this, other)
+          case EndpointIO.Multiple(m, _, _) if concat.rightIsTuple => EndpointInput.Multiple.combine(this +: m, concat, this, other)
+          case i if concat.leftIsTuple                             => EndpointInput.Multiple.combine((ios: Vector[EndpointInput[_]]) :+ i, concat, this, other)
+          case i                                                   => EndpointInput.Multiple.combine(Vector(this, i), concat, this, other)
         }
     override def and[J, IJ](other: EndpointOutput[J])(implicit concat: ParamConcat.Aux[PARAMS, J, IJ]): EndpointOutput[IJ] =
       if (ios.isEmpty)
         other.asInstanceOf[EndpointOutput[IJ]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case EndpointOutput.Multiple(m, mkParamsRight) if concat.bothTuples =>
-            EndpointOutput.Multiple((ios: Vector[EndpointOutput[_]]) ++ m, combineMkParams(mkParams, mkParamsRight, concat))
-          case EndpointOutput.Multiple(m, mkParamsRight) if concat.rightIsTuple =>
-            EndpointOutput.Multiple(this +: m, combineMkParams(mkParams, mkParamsRight, concat))
-          case EndpointIO.Multiple(m, mkParamsRight, _) if concat.bothTuples =>
-            EndpointOutput.Multiple((ios: Vector[EndpointOutput[_]]) ++ m, combineMkParams(mkParams, mkParamsRight, concat))
-          case EndpointIO.Multiple(m, mkParamsRight, _) if concat.rightIsTuple =>
-            EndpointOutput.Multiple(this +: m, combineMkParams(mkParams, mkParamsRight, concat))
+          case EndpointOutput.Multiple(m, _, _) if concat.bothTuples =>
+            EndpointOutput.Multiple.combine((ios: Vector[EndpointOutput[_]]) ++ m, concat, this, other)
+          case EndpointOutput.Multiple(m, _, _) if concat.rightIsTuple =>
+            EndpointOutput.Multiple.combine(this +: m, concat, this, other)
+          case EndpointIO.Multiple(m, _, _) if concat.bothTuples =>
+            EndpointOutput.Multiple.combine((ios: Vector[EndpointOutput[_]]) ++ m, concat, this, other)
+          case EndpointIO.Multiple(m, _, _) if concat.rightIsTuple =>
+            EndpointOutput.Multiple.combine(this +: m, concat, this, other)
           case EndpointOutput.Void() => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
           case io if concat.leftIsTuple =>
-            EndpointOutput.Multiple((ios: Vector[EndpointOutput[_]]) :+ io, combineMkParams(mkParams, MkParams.Single, concat))
-          case io => EndpointOutput.Multiple(Vector(this, io), combineMkParams(mkParams, MkParams.Single, concat))
+            EndpointOutput.Multiple.combine((ios: Vector[EndpointOutput[_]]) :+ io, concat, this, other)
+          case io => EndpointOutput.Multiple.combine(Vector(this, io), concat, this, other)
         }
     override def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[PARAMS, J, IJ]): EndpointIO[IJ] =
       if (ios.isEmpty)
         other.asInstanceOf[EndpointIO[IJ]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
       else
         other match {
-          case Multiple(m, mkParamsRight, unParamsRight) if concat.bothTuples =>
-            Multiple(ios ++ m, combineMkParams(mkParams, mkParamsRight, concat), combineUnParams(unParams, unParamsRight, concat))
-          case Multiple(m, mkParamsRight, unParamsRight) if concat.rightIsTuple =>
-            Multiple(this +: m, combineMkParams(mkParams, mkParamsRight, concat), combineUnParams(unParams, unParamsRight, concat))
-          case io if concat.leftIsTuple =>
-            Multiple(ios :+ io, combineMkParams(mkParams, MkParams.Single, concat), combineUnParams(unParams, UnParams.Single, concat))
-          case io =>
-            Multiple(
-              Vector(this, io),
-              combineMkParams(mkParams, MkParams.Single, concat),
-              combineUnParams(unParams, UnParams.Single, concat)
-            )
+          case Multiple(m, _, _) if concat.bothTuples   => Multiple.combine(ios ++ m, concat, this, other)
+          case Multiple(m, _, _) if concat.rightIsTuple => Multiple.combine(this +: m, concat, this, other)
+          case io if concat.leftIsTuple                 => Multiple.combine(ios :+ io, concat, this, other)
+          case io                                       => Multiple.combine(Vector(this, io), concat, this, other)
         }
+  }
+
+  object Multiple {
+    private[tapir] def combine[R, T, U](
+        combinedOutputs: Vector[EndpointIO[_]],
+        concat: ParamConcat[T, U],
+        left: EndpointIO[_],
+        right: EndpointIO[_]
+    ): Multiple[R] = {
+      def fromIO(o: EndpointIO[_]): (MkParams, UnParams) = o match {
+        case EndpointIO.Multiple(_, m, u) => (m, u)
+        case _                            => (MkParams.Single, UnParams.Single)
+      }
+      val (mkParamsLeft, unParamsLeft) = fromIO(left)
+      val (mkParamsRight, unParamsRight) = fromIO(right)
+      Multiple(combinedOutputs, combineMkParams(mkParamsLeft, mkParamsRight, concat), combineUnParams(unParamsLeft, unParamsRight, concat))
+    }
   }
 
   //
