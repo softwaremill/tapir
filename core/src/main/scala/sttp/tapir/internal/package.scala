@@ -8,13 +8,91 @@ import sttp.tapir.typelevel.ParamConcat
 import scala.collection.immutable.ListMap
 
 package object internal {
+
+  /**
+    * A union type: () | value | 2+ tuple. Represents the possible parameters of an endpoint's input/output:
+    * no parameters, a single parameter (a "stand-alone" value instead of a 1-tuple), and multiple parameters.
+    */
+  type Params = Any
+
+  /**
+    * Converts parameters into a vector of values (0, 1 or 2+ elements).
+    */
+  type UnParams = Params => Vector[Any]
+
+  object UnParams {
+
+    /**
+      * Convert a single parameter (a "stand-alone" value) into a vector of length 1.
+      */
+    val Single: UnParams = p => Vector(p)
+
+    /**
+      * Convert a unit parameter into a vector of length 0.
+      */
+    val Empty: UnParams = _ => Vector()
+  }
+
+  /**
+    * Converts a vector of values into a single value representing the parameters.
+    */
+  type MkParams = Vector[Any] => Params
+
+  object MkParams {
+
+    /**
+      * Convert a vector of length 1 into a "stand-alone" value (parameters). Using with other vectors is a bug.
+      */
+    val Single: MkParams = {
+      case Vector(v) => v
+      case vs        => throw new IllegalArgumentException(s"A single value was required, but got: $vs")
+    }
+
+    /**
+      * Convert a vector of length 0 into a unit. Using with other vectors is a bug.
+      */
+    val Empty: MkParams = {
+      case Vector() => ()
+      case vs       => throw new IllegalArgumentException(s"An empty vector was required, but got: $vs")
+    }
+  }
+
+  def combineUnParams(left: UnParams, right: UnParams, concat: ParamConcat[_, _]): UnParams = { params =>
+    lazy val values = ParamsToSeq(params).toVector
+    (concat.leftArity, concat.rightArity) match {
+      case (0, 0) => Vector((), ())
+      case (0, 1) => Vector((), params)
+      case (0, _) => () +: right(params)
+      case (1, 0) => Vector(params, ())
+      case (1, 1) => values
+      case (1, _) => values.head +: right(SeqToParams(values.tail))
+      case (_, 0) => left(params).:+(())
+      case (_, 1) => left(SeqToParams(values.init)) :+ values.last
+      case (a, b) => left(SeqToParams(values.take(a))) ++ right(SeqToParams(values.takeRight(b)))
+    }
+  }
+
+  def combineMkParams(left: MkParams, right: MkParams, concat: ParamConcat[_, _]): MkParams = { values =>
+    (concat.leftArity, concat.rightArity) match {
+      case (0, 0) => () // SeqToParams(Vector())
+      case (0, _) => right(values)
+      case (_, 0) => left(values)
+      case (1, 1) => SeqToParams(values)
+      case (1, _) => SeqToParams(values.head +: ParamsToSeq(right(values.tail)))
+      case (_, 1) => SeqToParams(ParamsToSeq(left(values.init)) :+ values.last)
+      case (a, b) => SeqToParams(ParamsToSeq(left(values.take(a))) ++ ParamsToSeq(right(values.takeRight(b))))
+    }
+  }
+
+  //
+
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
     def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] = input match {
       case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
-      case EndpointInput.Tuple(inputs, _)               => inputs.flatMap(_.traverseInputs(handle))
-      case EndpointIO.Tuple(inputs, _, _)               => inputs.flatMap(_.traverseInputs(handle))
-      case EndpointInput.MappedTuple(wrapped, _)        => wrapped.traverseInputs(handle)
-      case EndpointIO.MappedTuple(wrapped, _)           => wrapped.traverseInputs(handle)
+      case EndpointInput.Multiple(inputs, _)            => inputs.flatMap(_.traverseInputs(handle))
+      case EndpointIO.Multiple(inputs, _, _)            => inputs.flatMap(_.traverseInputs(handle))
+      case EndpointInput.MappedMultiple(wrapped, _)     => wrapped.traverseInputs(handle)
+      case EndpointIO.MappedMultiple(wrapped, _)        => wrapped.traverseInputs(handle)
       case a: EndpointInput.Auth[_]                     => a.input.traverseInputs(handle)
       case _                                            => Vector.empty
     }
@@ -72,11 +150,11 @@ package object internal {
       }
 
       output match {
-        case EndpointOutput.Tuple(outputs, _)       => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
-        case EndpointIO.Tuple(outputs, _, _)        => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
-        case EndpointOutput.MappedTuple(wrapped, _) => wrapped.asBasicOutputsOrMap
-        case EndpointIO.MappedTuple(wrapped, _)     => wrapped.asBasicOutputsOrMap
-        case _: EndpointOutput.Void[_]              => Left(Vector.empty)
+        case EndpointOutput.Multiple(outputs, _)       => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointIO.Multiple(outputs, _, _)        => mergeMultiple(outputs.map(_.asBasicOutputsOrMap))
+        case EndpointOutput.MappedMultiple(wrapped, _) => wrapped.asBasicOutputsOrMap
+        case EndpointIO.MappedMultiple(wrapped, _)     => wrapped.asBasicOutputsOrMap
+        case _: EndpointOutput.Void[_]                 => Left(Vector.empty)
         case s: EndpointOutput.OneOf[_, _] =>
           Right(
             ListMap(
@@ -98,10 +176,10 @@ package object internal {
 
     private[internal] def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] = output match {
       case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
-      case EndpointOutput.Tuple(outputs, _)              => outputs.flatMap(_.traverseOutputs(handle))
-      case EndpointIO.Tuple(outputs, _, _)               => outputs.flatMap(_.traverseOutputs(handle))
-      case EndpointOutput.MappedTuple(wrapped, _)        => wrapped.traverseOutputs(handle)
-      case EndpointIO.MappedTuple(wrapped, _)            => wrapped.traverseOutputs(handle)
+      case EndpointOutput.Multiple(outputs, _)           => outputs.flatMap(_.traverseOutputs(handle))
+      case EndpointIO.Multiple(outputs, _, _)            => outputs.flatMap(_.traverseOutputs(handle))
+      case EndpointOutput.MappedMultiple(wrapped, _)     => wrapped.traverseOutputs(handle)
+      case EndpointIO.MappedMultiple(wrapped, _)         => wrapped.traverseOutputs(handle)
       case s: EndpointOutput.OneOf[_, _]                 => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
       case _                                             => Vector.empty
     }
@@ -136,37 +214,10 @@ package object internal {
     def as[U]: Schema[U] = s.asInstanceOf[Schema[U]]
   }
 
-  private[tapir] def charset(bodyType: RawBodyType[_]): Option[Charset] = {
+  def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {
       case RawBodyType.StringBody(charset) => Some(charset)
       case _                               => None
-    }
-  }
-
-  private[tapir] def combineUnTuple(left: UnTuple, right: UnTuple, concat: ParamConcat[_, _]): UnTuple = { tuple =>
-    lazy val params = ParamsToSeq(tuple).toVector
-    (concat.leftArity, concat.rightArity) match {
-      case (0, 0) => Vector((), ())
-      case (0, 1) => Vector((), tuple)
-      case (0, _) => () +: right(tuple)
-      case (1, 0) => Vector(tuple, ())
-      case (1, 1) => params
-      case (1, _) => params.head +: right(SeqToParams(params.tail))
-      case (_, 0) => left(tuple).:+(())
-      case (_, 1) => left(SeqToParams(params.init)) :+ params.last
-      case (a, b) => left(SeqToParams(params.take(a))) ++ right(SeqToParams(params.takeRight(b)))
-    }
-  }
-
-  private[tapir] def combineMkTuple(left: MkTuple, right: MkTuple, concat: ParamConcat[_, _]): MkTuple = { values =>
-    (concat.leftArity, concat.rightArity) match {
-      case (0, 0) => () // SeqToParams(Vector())
-      case (0, _) => right(values)
-      case (_, 0) => left(values)
-      case (1, 1) => SeqToParams(values)
-      case (1, _) => SeqToParams(values.head +: ParamsToSeq(right(values.tail)))
-      case (_, 1) => SeqToParams(ParamsToSeq(left(values.init)) :+ values.last)
-      case (a, b) => SeqToParams(ParamsToSeq(left(values.take(a))) ++ ParamsToSeq(right(values.takeRight(b))))
     }
   }
 }

@@ -67,22 +67,22 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
           )
       }
 
-    case EndpointIO.MappedTuple(tuple, codec)     => getOutputParams(tuple, body, meta).flatMap(codec.decode)
-    case EndpointOutput.MappedTuple(tuple, codec) => getOutputParams(tuple, body, meta).flatMap(codec.decode)
+    case EndpointIO.MappedMultiple(tuple, codec)     => getOutputParams(tuple, body, meta).flatMap(codec.decode)
+    case EndpointOutput.MappedMultiple(tuple, codec) => getOutputParams(tuple, body, meta).flatMap(codec.decode)
 
     case EndpointOutput.Void() => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
 
-    case EndpointOutput.Tuple(outputs, mkTuple) => handleOutputTuple(outputs, mkTuple, body, meta)
-    case EndpointIO.Tuple(outputs, mkTuple, _)  => handleOutputTuple(outputs, mkTuple, body, meta)
+    case EndpointOutput.Multiple(outputs, mkParams) => handleOutputTuple(outputs, mkParams, body, meta)
+    case EndpointIO.Multiple(outputs, mkParams, _)  => handleOutputTuple(outputs, mkParams, body, meta)
   }
 
   private def handleOutputTuple(
       outputs: Vector[EndpointOutput[_]],
-      mkTuple: MkTuple,
+      mkParams: MkParams,
       body: Any,
       meta: ResponseMetadata
   ): DecodeResult[Any] =
-    DecodeResult.sequence(outputs.map(getOutputParams(_, body, meta))).map(vs => mkTuple(vs.toVector))
+    DecodeResult.sequence(outputs.map(getOutputParams(_, body, meta))).map(vs => mkParams(vs.toVector))
 
   private type PartialAnyRequest = PartialRequest[Any, Any]
 
@@ -137,22 +137,22 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         (uri, req)
-      case a: EndpointInput.Auth[_]                => setInputParams(a.input, value, uri, req)
-      case EndpointInput.Tuple(inputs, unTuple)    => handleInputTuple(inputs, value, unTuple, uri, req)
-      case EndpointIO.Tuple(inputs, _, unTuple)    => handleInputTuple(inputs, value, unTuple, uri, req)
-      case EndpointInput.MappedTuple(tuple, codec) => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
-      case EndpointIO.MappedTuple(tuple, codec)    => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
+      case a: EndpointInput.Auth[_]                   => setInputParams(a.input, value, uri, req)
+      case EndpointInput.Multiple(inputs, unParams)   => handleInputTuple(inputs, value, unParams, uri, req)
+      case EndpointIO.Multiple(inputs, _, unParams)   => handleInputTuple(inputs, value, unParams, uri, req)
+      case EndpointInput.MappedMultiple(tuple, codec) => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
+      case EndpointIO.MappedMultiple(tuple, codec)    => handleMapped(tuple, codec.asInstanceOf[Mapping[Any, Any]], value, uri, req)
     }
   }
 
   def handleInputTuple(
       inputs: Vector[EndpointInput[_]],
       value: Any,
-      unTuple: UnTuple,
+      unParams: UnParams,
       uri: Uri,
       req: PartialAnyRequest
   ): (Uri, PartialAnyRequest) = {
-    val inputsValues = unTuple(value)
+    val inputsValues = unParams(value)
     if ((inputs.isEmpty && value != (())) || (inputs.nonEmpty && inputsValues.length != inputs.length))
       throw new IllegalArgumentException(s"Mismatch between input value: $value, and inputs: $inputs")
 
@@ -232,12 +232,12 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Boolean = {
     out match {
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => true
-      case EndpointIO.Tuple(inputs, _, _)         => inputs.exists(i => bodyIsStream(i))
-      case EndpointOutput.Tuple(inputs, _)        => inputs.exists(i => bodyIsStream(i))
-      case EndpointIO.MappedTuple(wrapped, _)     => bodyIsStream(wrapped)
-      case EndpointOutput.MappedTuple(wrapped, _) => bodyIsStream(wrapped)
-      case _                                      => false
+      case _: EndpointIO.StreamBodyWrapper[_, _]     => true
+      case EndpointIO.Multiple(inputs, _, _)         => inputs.exists(i => bodyIsStream(i))
+      case EndpointOutput.Multiple(inputs, _)        => inputs.exists(i => bodyIsStream(i))
+      case EndpointIO.MappedMultiple(wrapped, _)     => bodyIsStream(wrapped)
+      case EndpointOutput.MappedMultiple(wrapped, _) => bodyIsStream(wrapped)
+      case _                                         => false
     }
   }
 

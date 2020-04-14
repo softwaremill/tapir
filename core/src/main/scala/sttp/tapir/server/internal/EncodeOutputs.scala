@@ -12,11 +12,11 @@ import scala.util.Try
 class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
   def apply(output: EndpointOutput[_], value: Any, ov: OutputValues[B]): OutputValues[B] = {
     output match {
-      case s: EndpointOutput.Single[_]      => applySingle(s, value, ov)
-      case s: EndpointIO.Single[_]          => applySingle(s, value, ov)
-      case EndpointOutput.Tuple(outputs, _) => applyVector(outputs, ParamsToSeq(value), ov)
-      case EndpointIO.Tuple(outputs, _, _)  => applyVector(outputs, ParamsToSeq(value), ov)
-      case EndpointOutput.Void()            => throw new IllegalArgumentException("Cannot encode a void output!")
+      case s: EndpointOutput.Single[_]         => applySingle(s, value, ov)
+      case s: EndpointIO.Single[_]             => applySingle(s, value, ov)
+      case EndpointOutput.Multiple(outputs, _) => applyVector(outputs, ParamsToSeq(value), ov)
+      case EndpointIO.Multiple(outputs, _, _)  => applyVector(outputs, ParamsToSeq(value), ov)
+      case EndpointOutput.Void()               => throw new IllegalArgumentException("Cannot encode a void output!")
     }
   }
 
@@ -46,16 +46,16 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
         ov.withBody(encodeOutputBody.streamValueToBody(encoded, codec.format, charset))
       case EndpointIO.Header(name, _, _) =>
         encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
-      case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
-      case EndpointIO.MappedTuple(wrapped, _) => apply(wrapped, encoded, ov)
-      case EndpointOutput.StatusCode(_, _, _) => ov.withStatusCode(encoded[StatusCode])
+      case EndpointIO.Headers(_, _)              => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
+      case EndpointIO.MappedMultiple(wrapped, _) => apply(wrapped, encoded, ov)
+      case EndpointOutput.StatusCode(_, _, _)    => ov.withStatusCode(encoded[StatusCode])
       case EndpointOutput.OneOf(mappings, _) =>
         val enc = encoded[Any]
         val mapping = mappings
           .find(mapping => mapping.appliesTo(enc))
           .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $enc, in output: $output"))
         apply(mapping.output, enc, mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
-      case EndpointOutput.MappedTuple(wrapped, _) => apply(wrapped, encoded, ov)
+      case EndpointOutput.MappedMultiple(wrapped, _) => apply(wrapped, encoded, ov)
     }
   }
 }

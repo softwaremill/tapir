@@ -90,7 +90,7 @@ object ServerDefaults {
       case EndpointInput.Cookie(name, _, _)       => s"Invalid value for: cookie $name"
       case _: EndpointInput.ExtractFromRequest[_] => "Invalid value"
       case a: EndpointInput.Auth[_]               => failureSourceMessage(a.input)
-      case _: EndpointInput.MappedTuple[_, _]     => "Invalid value"
+      case _: EndpointInput.MappedMultiple[_, _]  => "Invalid value"
       case _: EndpointIO.Body[_, _]               => s"Invalid value for: body"
       case _: EndpointIO.StreamBodyWrapper[_, _]  => s"Invalid value for: body"
       case EndpointIO.Header(name, _, _)          => s"Invalid value for: header $name"

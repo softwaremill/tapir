@@ -102,42 +102,42 @@ object ObjectSchemasForEndpoints {
 
   private def forInput(input: EndpointInput[_]): List[ObjectTypeData] = {
     input match {
-      case EndpointInput.FixedMethod(_, _, _)     => List.empty
-      case EndpointInput.FixedPath(_, _, _)       => List.empty
-      case EndpointInput.PathCapture(_, codec, _) => forCodec(codec)
-      case EndpointInput.PathsCapture(_, _)       => List.empty
-      case EndpointInput.Query(_, codec, _)       => forCodec(codec)
-      case EndpointInput.Cookie(_, codec, _)      => forCodec(codec)
-      case EndpointInput.QueryParams(_, _)        => List.empty
-      case _: EndpointInput.Auth[_]               => List.empty
-      case _: EndpointInput.ExtractFromRequest[_] => List.empty
-      case EndpointInput.MappedTuple(wrapped, _)  => forInput(wrapped)
-      case EndpointInput.Tuple(inputs, _)         => inputs.toList.flatMap(forInput)
-      case op: EndpointIO[_]                      => forIO(op)
+      case EndpointInput.FixedMethod(_, _, _)       => List.empty
+      case EndpointInput.FixedPath(_, _, _)         => List.empty
+      case EndpointInput.PathCapture(_, codec, _)   => forCodec(codec)
+      case EndpointInput.PathsCapture(_, _)         => List.empty
+      case EndpointInput.Query(_, codec, _)         => forCodec(codec)
+      case EndpointInput.Cookie(_, codec, _)        => forCodec(codec)
+      case EndpointInput.QueryParams(_, _)          => List.empty
+      case _: EndpointInput.Auth[_]                 => List.empty
+      case _: EndpointInput.ExtractFromRequest[_]   => List.empty
+      case EndpointInput.MappedMultiple(wrapped, _) => forInput(wrapped)
+      case EndpointInput.Multiple(inputs, _)        => inputs.toList.flatMap(forInput)
+      case op: EndpointIO[_]                        => forIO(op)
     }
   }
   private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData] = {
     output match {
-      case EndpointOutput.OneOf(mappings, _)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
-      case EndpointOutput.StatusCode(_, _, _)      => List.empty
-      case EndpointOutput.FixedStatusCode(_, _, _) => List.empty
-      case EndpointOutput.MappedTuple(wrapped, _)  => forOutput(wrapped)
-      case EndpointOutput.Void()                   => List.empty
-      case EndpointOutput.Tuple(outputs, _)        => outputs.toList.flatMap(forOutput)
-      case op: EndpointIO[_]                       => forIO(op)
+      case EndpointOutput.OneOf(mappings, _)         => mappings.flatMap(mapping => forOutput(mapping.output)).toList
+      case EndpointOutput.StatusCode(_, _, _)        => List.empty
+      case EndpointOutput.FixedStatusCode(_, _, _)   => List.empty
+      case EndpointOutput.MappedMultiple(wrapped, _) => forOutput(wrapped)
+      case EndpointOutput.Void()                     => List.empty
+      case EndpointOutput.Multiple(outputs, _)       => outputs.toList.flatMap(forOutput)
+      case op: EndpointIO[_]                         => forIO(op)
     }
   }
 
   private def forIO(io: EndpointIO[_]): List[ObjectTypeData] = {
     io match {
-      case EndpointIO.Tuple(ios, _, _)    => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
+      case EndpointIO.Multiple(ios, _, _) => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
       case EndpointIO.Header(_, codec, _) => forCodec(codec)
       case EndpointIO.Headers(_, _)       => List.empty
       case EndpointIO.Body(_, codec, _)   => forCodec(codec)
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) =>
         objectSchemas(TypeData(codec.schema.getOrElse(TSchema(TSchemaType.SBinary)), Validator.pass))
-      case EndpointIO.MappedTuple(wrapped, _) => forInput(wrapped) ++ forOutput(wrapped)
-      case EndpointIO.FixedHeader(_, _, _)    => List.empty
+      case EndpointIO.MappedMultiple(wrapped, _) => forInput(wrapped) ++ forOutput(wrapped)
+      case EndpointIO.FixedHeader(_, _, _)       => List.empty
     }
   }
 
