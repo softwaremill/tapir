@@ -13,7 +13,6 @@ import scala.collection.immutable.ListMap
 
 sealed trait EndpointInput[T] extends EndpointIO.Mappable[T] {
   private[tapir] type ThisType[X] <: EndpointInput[X]
-  private[tapir] def hIsUnit: Boolean
 
   def and[U, TU](other: EndpointInput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointInput[TU]
   def /[U, TU](other: EndpointInput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] = and(other)
@@ -33,9 +32,7 @@ object EndpointInput {
       }
   }
 
-  sealed trait Basic[T] extends Single[T] with EndpointIO.HasMetadata[T] {
-    override private[tapir] def hIsUnit: Boolean = codec.hIsUnit
-  }
+  sealed trait Basic[T] extends Single[T] with EndpointIO.HasMetadata[T]
 
   case class FixedMethod[T](m: Method, codec: Codec[Unit, T, TextPlain], info: EndpointIO.Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = FixedMethod[X]
@@ -108,7 +105,6 @@ object EndpointInput {
   //
 
   trait Auth[T] extends EndpointInput.Single[T] {
-    override private[tapir] def hIsUnit: Boolean = input.hIsUnit
     def input: EndpointInput.Single[T]
   }
 
@@ -116,12 +112,12 @@ object EndpointInput {
     case class ApiKey[T](input: EndpointInput.Single[T]) extends Auth[T] {
       override private[tapir] type ThisType[X] = ApiKey[X]
       override def show: String = s"auth(api key, via ${input.show})"
-      override def map[U: IsUnit](mapping: Mapping[T, U]): ApiKey[U] = copy(input = input.map(mapping))
+      override def map[U](mapping: Mapping[T, U]): ApiKey[U] = copy(input = input.map(mapping))
     }
     case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
       override private[tapir] type ThisType[X] = Http[X]
       override def show: String = s"auth($scheme http, via ${input.show})"
-      override def map[U: IsUnit](mapping: Mapping[T, U]): Http[U] = copy(input = input.map(mapping))
+      override def map[U](mapping: Mapping[T, U]): Http[U] = copy(input = input.map(mapping))
     }
     case class Oauth2[T](
         authorizationUrl: String,
@@ -132,7 +128,7 @@ object EndpointInput {
     ) extends Auth[T] {
       override private[tapir] type ThisType[X] = Oauth2[X]
       override def show: String = s"auth(oauth2, via ${input.show})"
-      override def map[U: IsUnit](mapping: Mapping[T, U]): Oauth2[U] = copy(input = input.map(mapping))
+      override def map[U](mapping: Mapping[T, U]): Oauth2[U] = copy(input = input.map(mapping))
 
       def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2[T] = ScopedOauth2(this, requiredScopes)
     }
@@ -142,7 +138,7 @@ object EndpointInput {
 
       override private[tapir] type ThisType[X] = ScopedOauth2[X]
       override def show: String = s"scoped(${oauth2.show})"
-      override def map[U: IsUnit](mapping: Mapping[T, U]): ScopedOauth2[U] = copy(oauth2 = oauth2.map(mapping))
+      override def map[U](mapping: Mapping[T, U]): ScopedOauth2[U] = copy(oauth2 = oauth2.map(mapping))
 
       override def input: Single[T] = oauth2.input
     }
@@ -152,9 +148,8 @@ object EndpointInput {
 
   case class MappedMultiple[PARAMS, T](input: Multiple[PARAMS], mapping: Mapping[PARAMS, T]) extends EndpointInput.Single[T] {
     override private[tapir] type ThisType[X] = MappedMultiple[PARAMS, X]
-    override private[tapir] def hIsUnit: Boolean = mapping.hIsUnit
     override def show: String = input.show
-    override def map[U: IsUnit](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](input, mapping.map(m))
+    override def map[U](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](input, mapping.map(m))
   }
 
   case class Multiple[PARAMS](
@@ -163,10 +158,9 @@ object EndpointInput {
       private[tapir] val unParams: UnParams
   ) extends EndpointInput[PARAMS] {
     override private[tapir] type ThisType[X] = EndpointInput[X]
-    override private[tapir] def hIsUnit: Boolean = false
 
     override def show: String = if (inputs.isEmpty) "-" else inputs.map(_.show).mkString(" ")
-    override def map[U: IsUnit](m: Mapping[PARAMS, U]): EndpointInput[U] =
+    override def map[U](m: Mapping[PARAMS, U]): EndpointInput[U] =
       MappedMultiple[PARAMS, PARAMS](this, Mapping.id).map(m)
 
     override def and[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[PARAMS, U, TU]): EndpointInput[TU] =
@@ -204,7 +198,6 @@ object EndpointInput {
 
 sealed trait EndpointOutput[T] extends EndpointIO.Mappable[T] {
   private[tapir] type ThisType[X] <: EndpointOutput[X]
-  private[tapir] def hIsUnit: Boolean
 
   def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[T, J, IJ]): EndpointOutput[IJ]
 
@@ -214,7 +207,6 @@ sealed trait EndpointOutput[T] extends EndpointIO.Mappable[T] {
 object EndpointOutput {
   sealed trait Single[T] extends EndpointOutput[T] {
     private[tapir] def _mapping: Mapping[_, T]
-    override private[tapir] def hIsUnit: Boolean = _mapping.hIsUnit
 
     def and[U, TU](other: EndpointOutput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
       other match {
@@ -275,7 +267,7 @@ object EndpointOutput {
   case class OneOf[O, T](mappings: Seq[StatusMapping[_ <: O]], codec: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
     override private[tapir] def _mapping: Mapping[_, T] = codec
-    override def map[U: IsUnit](mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](codec = codec.map(mapping))
+    override def map[U](mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](codec = codec.map(mapping))
     override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
   }
 
@@ -283,9 +275,8 @@ object EndpointOutput {
 
   case class Void[T]() extends EndpointOutput[T] {
     override private[tapir] type ThisType[X] = Void[X]
-    override private[tapir] def hIsUnit = false
     override def show: String = "void"
-    override def map[U: IsUnit](mapping: Mapping[T, U]): Void[U] = Void()
+    override def map[U](mapping: Mapping[T, U]): Void[U] = Void()
 
     override def and[U, TU](other: EndpointOutput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
       other.asInstanceOf[EndpointOutput[TU]]
@@ -297,7 +288,7 @@ object EndpointOutput {
     override private[tapir] type ThisType[X] = MappedMultiple[PARAMS, X]
     override private[tapir] def _mapping: Mapping[_, T] = mapping
     override def show: String = output.show
-    override def map[U: IsUnit](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](output, mapping.map(m))
+    override def map[U](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](output, mapping.map(m))
   }
 
   case class Multiple[PARAMS](
@@ -306,9 +297,8 @@ object EndpointOutput {
       private[tapir] val unParams: UnParams
   ) extends EndpointOutput[PARAMS] {
     override private[tapir] type ThisType[X] = EndpointOutput[X]
-    override private[tapir] def hIsUnit = false
     override def show: String = if (outputs.isEmpty) "-" else outputs.map(_.show).mkString(" ")
-    override def map[U: IsUnit](m: Mapping[PARAMS, U]): EndpointOutput[U] =
+    override def map[U](m: Mapping[PARAMS, U]): EndpointOutput[U] =
       MappedMultiple[PARAMS, PARAMS](this, Mapping.id).map(m)
 
     override def and[J, IJ](other: EndpointOutput[J])(implicit concat: ParamConcat.Aux[PARAMS, J, IJ]): EndpointOutput[IJ] =
@@ -359,14 +349,12 @@ object EndpointIO {
 
     def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ] =
       other match {
-        case s: Single[_]                                    => Multiple.combine(Vector(this, s), concat, this, other)
-        case Multiple(outputs, mkParamsRight, unParamsRight) => Multiple.combine(this +: outputs, concat, this, other)
+        case s: Single[_]            => Multiple.combine(Vector(this, s), concat, this, other)
+        case Multiple(outputs, _, _) => Multiple.combine(this +: outputs, concat, this, other)
       }
   }
 
-  sealed trait Basic[I] extends Single[I] with EndpointInput.Basic[I] with EndpointOutput.Basic[I] {
-    override private[tapir] def hIsUnit: Boolean = codec.hIsUnit
-  }
+  sealed trait Basic[I] extends Single[I] with EndpointInput.Basic[I] with EndpointOutput.Basic[I]
 
   case class Body[R, T](bodyType: RawBodyType[R], codec: Codec[R, T, CodecFormat], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = Body[R, X]
@@ -426,15 +414,14 @@ object EndpointIO {
     override private[tapir] type ThisType[X] = MappedMultiple[PARAMS, X]
     override private[tapir] def _mapping: Mapping[_, T] = mapping
     override def show: String = io.show
-    override def map[U: IsUnit](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](io, mapping.map(m))
+    override def map[U](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](io, mapping.map(m))
   }
 
   case class Multiple[PARAMS](ios: Vector[EndpointIO[_]], private[tapir] val mkParams: MkParams, private[tapir] val unParams: UnParams)
       extends EndpointIO[PARAMS] {
     override private[tapir] type ThisType[X] = EndpointIO[X]
-    override private[tapir] def hIsUnit = false
     override def show: String = if (ios.isEmpty) "-" else ios.map(_.show).mkString(" ")
-    override def map[U: IsUnit](mapping: Mapping[PARAMS, U]): EndpointIO[U] =
+    override def map[U](mapping: Mapping[PARAMS, U]): EndpointIO[U] =
       MappedMultiple[PARAMS, PARAMS](this, Mapping.id).map(mapping)
 
     override def and[J, IJ](other: EndpointInput[J])(implicit concat: ParamConcat.Aux[PARAMS, J, IJ]): EndpointInput[IJ] =
@@ -530,9 +517,9 @@ object EndpointIO {
   trait Mappable[T] {
     private[tapir] type ThisType[X]
 
-    def map[U: IsUnit](mapping: Mapping[T, U]): ThisType[U]
-    def map[U: IsUnit](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
-    def mapDecode[U: IsUnit](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
+    def map[U](mapping: Mapping[T, U]): ThisType[U]
+    def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
+    def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
     def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
       map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
     }
@@ -548,7 +535,7 @@ object EndpointIO {
     def info: EndpointIO.Info[T]
     private[tapir] def copyWith[U](c: Codec[L, U, CF], i: EndpointIO.Info[U]): ThisType[U]
 
-    override def map[U: IsUnit](mapping: Mapping[T, U]): ThisType[U] = copyWith(codec.map(mapping), info.map(mapping))
+    override def map[U](mapping: Mapping[T, U]): ThisType[U] = copyWith(codec.map(mapping), info.map(mapping))
 
     def schema(s: Schema[T]): ThisType[T] = copyWith(codec.schema(s), info)
     def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)

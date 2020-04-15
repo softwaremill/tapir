@@ -50,17 +50,16 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
   def schema: Option[Schema[H]]
   def format: CF
 
-  override def map[HH: IsUnit](codec: Mapping[H, HH]): Codec[L, HH, CF] = new Codec[L, HH, CF] {
+  override def map[HH](codec: Mapping[H, HH]): Codec[L, HH, CF] = new Codec[L, HH, CF] {
     override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(codec.rawDecode)
     override def encode(hh: HH): L = outer.encode(codec.encode(hh))
     override def schema: Option[Schema[HH]] = outer.schema.map(_.as[HH])
     override def validator: Validator[HH] = outer.validator.contramap(codec.encode).and(codec.validator)
     override def format: CF = outer.format
-    override def hIsUnit: Boolean = implicitly[IsUnit[HH]].isUnit
   }
 
-  def mapDecode[HH: IsUnit](f: H => DecodeResult[HH])(g: HH => H): Codec[L, HH, CF] = map(Mapping.fromDecode(f)(g))
-  def map[HH: IsUnit](f: H => HH)(g: HH => H): Codec[L, HH, CF] = mapDecode(f.andThen(Value(_)))(g)
+  def mapDecode[HH](f: H => DecodeResult[HH])(g: HH => H): Codec[L, HH, CF] = map(Mapping.fromDecode(f)(g))
+  def map[HH](f: H => HH)(g: HH => H): Codec[L, HH, CF] = mapDecode(f.andThen(Value(_)))(g)
 
   def schema(s2: Schema[H]): Codec[L, H, CF] = new Codec[L, H, CF] {
     override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
@@ -68,7 +67,6 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
     override def schema: Option[Schema[H]] = Some(s2)
     override def validator: Validator[H] = outer.validator
     override def format: CF = outer.format
-    override def hIsUnit: Boolean = outer.hIsUnit
   }
   def schema(s2: Option[Schema[H]]): Codec[L, H, CF] = s2.map(schema).getOrElse(this)
   def modifySchema(modify: Schema[H] => Schema[H]): Codec[L, H, CF] = schema match {
@@ -82,7 +80,6 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
     override def schema: Option[Schema[H]] = outer.schema
     override def validator: Validator[H] = outer.validator
     override def format: CF2 = f
-    override def hIsUnit: Boolean = outer.hIsUnit
   }
 
   override def validate(v: Validator[H]): Codec[L, H, CF] = new Codec[L, H, CF] {
@@ -91,7 +88,6 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
     override def schema: Option[Schema[H]] = outer.schema
     override def validator: Validator[H] = addEncodeToEnumValidator(v).and(outer.validator)
     override def format: CF = outer.format
-    override def hIsUnit: Boolean = outer.hIsUnit
   }
 }
 
@@ -99,15 +95,14 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
 
-  def id[L: IsUnit, CF <: CodecFormat](f: CF, s: Option[Schema[L]] = None): Codec[L, L, CF] = new Codec[L, L, CF] {
+  def id[L, CF <: CodecFormat](f: CF, s: Option[Schema[L]] = None): Codec[L, L, CF] = new Codec[L, L, CF] {
     override def rawDecode(l: L): DecodeResult[L] = Value(l)
     override def encode(h: L): L = h
     override def schema: Option[Schema[L]] = s
     override def validator: Validator[L] = Validator.pass
     override def format: CF = f
-    override def hIsUnit: Boolean = implicitly[IsUnit[L]].isUnit
   }
-  def idPlain[L: IsUnit](s: Option[Schema[L]] = None): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
+  def idPlain[L](s: Option[Schema[L]] = None): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
 
   implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Some(Schema(SchemaType.SString)))
 
@@ -223,7 +218,6 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       override def schema: Option[Schema[Seq[RawPart]]] = None
       override def validator: Validator[Seq[RawPart]] = Validator.pass
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
-      override def hIsUnit: Boolean = false
     }
 
   //
@@ -323,17 +317,16 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       .schema(c.schema.map(_.asOptional[Option[U]]))
       .validate(c.validator.asOptionElement)
 
-  def fromDecodeAndMeta[L, H: Schema: Validator: IsUnit, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
+  def fromDecodeAndMeta[L, H: Schema: Validator, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
     new Codec[L, H, CF] {
       override def rawDecode(l: L): DecodeResult[H] = f(l)
       override def encode(h: H): L = g(h)
       override def schema: Option[Schema[H]] = Some(implicitly[Schema[H]])
       override def validator: Validator[H] = implicitly[Validator[H]]
       override def format: CF = cf
-      override def hIsUnit: Boolean = implicitly[IsUnit[H]].isUnit
     }
 
-  def json[T: Schema: Validator: IsUnit](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
+  def json[T: Schema: Validator](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
     val isOptional = implicitly[Schema[T]].isOptional
     fromDecodeAndMeta(CodecFormat.Json())({ (s: String) =>
       val toDecode = if (isOptional && s == "") "null" else s
