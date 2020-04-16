@@ -333,6 +333,12 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
+  testServer(in_content_type_out_string)((ct: String) => pureResult(ct.asRight[Unit])) { baseUri =>
+    basicRequest.get(uri"$baseUri/api/echo").contentType("application/dicom+json").send().map { r =>
+      r.body shouldBe Right("application/dicom+json")
+    }
+  }
+
   testServer(in_unit_out_header_redirect)(_ => pureResult("http://new.com".asRight[Unit])) { baseUri =>
     basicRequest.followRedirects(false).get(uri"$baseUri").send().map { r =>
       r.code shouldBe StatusCode.PermanentRedirect

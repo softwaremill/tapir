@@ -17,6 +17,7 @@ private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends Dec
   }
   override def header(name: String): List[String] = {
     if (HeaderNames.ContentLength.equalsIgnoreCase(name)) req.request.entity.contentLengthOption.map(_.toString).toList
+    else if (HeaderNames.ContentType.equalsIgnoreCase(name)) List(req.request.entity.contentType.toString())
     else req.request.headers.filter(_.is(name.toLowerCase)).map(_.value()).toList
   }
   override def headers: Seq[(String, String)] = req.request.headers.map(h => (h.name(), h.value()))
