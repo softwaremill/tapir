@@ -97,11 +97,10 @@ class SchemaMacroTest extends FlatSpec with Matchers {
 
   it should "add description to product" in {
     val expected = Schema(
-      SProduct(SObjectInfo("sttp.tapir.Person"),
-        List(("name", Schema(SString)), ("age", Schema(SInteger).description("test"))))
+      SProduct(SObjectInfo("sttp.tapir.Person"), List(("name", Schema(SString)), ("age", Schema(SInteger).description("test"))))
     )
 
-    implicitly[Schema[Person]].description(_.age, "test") shouldBe expected
+    implicitly[Schema[Person]].setDescription(_.age, "test") shouldBe expected
   }
 }
 
