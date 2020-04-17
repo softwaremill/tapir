@@ -84,6 +84,21 @@ package object internal {
     }
   }
 
+  def combine[R[_] <: EndpointTransput[_], T, U, V](
+      create: (MkParams, UnParams) => R[V],
+      concat: ParamConcat[T, U],
+      left: R[T],
+      right: R[U]
+  ): R[V] = {
+    def extract(r: R[_]): (MkParams, UnParams) = r match {
+      case m: EndpointTransput.Multiple[_] => (m.mkParams, m.unParams)
+      case _                               => (MkParams.Single, UnParams.Single)
+    }
+    val (mkParamsLeft, unParamsLeft) = extract(left)
+    val (mkParamsRight, unParamsRight) = extract(right)
+    create(combineMkParams(mkParamsLeft, mkParamsRight, concat), combineUnParams(unParamsLeft, unParamsRight, concat))
+  }
+
   //
 
   implicit class RichEndpointInput[I](input: EndpointInput[I]) {
