@@ -90,6 +90,29 @@ class SchemaMacroTest extends FlatSpec with Matchers {
     val schema = implicitly[Schema[Map[String, String]]]
     schema.modify(x => x)(_.description("test")) shouldBe schema.description("test")
   }
+
+  it should "use implicit instances from companion object" in {
+    case class TopData(one: Int)
+    object TopData {
+      implicit val schema: Schema[TopData] =
+        Schema.derivedSchema[TopData].description("Should see this")
+    }
+
+    val schema = Schema.derivedSchema[TopData]
+    //val schema = implicitly[Schema[TopData]]
+
+    schema shouldBe Schema(
+      SProduct(
+        SObjectInfo("sttp.tapir.SchemaMacroTest.<local SchemaMacroTest>.TopData", List()),
+        List(("one", Schema(SInteger, false, None, None, false)))
+      ),
+      false,
+      Some("Should see this"), // <-- Will be gone
+      None,
+      false
+    )
+
+  }
 }
 
 case class ArrayWrapper(f1: List[String])
