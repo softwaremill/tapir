@@ -256,6 +256,32 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       .validate(c.validator.asIterableElements[List])
 
   /**
+    * Create a codec which decodes/encodes a list of low-level values to a set of high-level values, using the given
+    * base codec `c`.
+    *
+    * The schema and validator are copied from the base codec.
+    */
+  implicit def set[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Set[U], CF] =
+    Codec
+      .id[List[T], CF](c.format)
+      .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toSet))(us => us.map(c.encode).toList)
+      .schema(c.schema.map(_.asArrayElement.as[Set[U]]))
+      .validate(c.validator.asIterableElements[Set])
+
+  /**
+    * Create a codec which decodes/encodes a list of low-level values to a vector of high-level values, using the given
+    * base codec `c`.
+    *
+    * The schema and validator are copied from the base codec.
+    */
+  implicit def vector[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Vector[U], CF] =
+    Codec
+      .id[List[T], CF](c.format)
+      .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toVector))(us => us.map(c.encode).toList)
+      .schema(c.schema.map(_.asArrayElement.as[Vector[U]]))
+      .validate(c.validator.asIterableElements[Vector])
+
+  /**
     * Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode
     * failure is returned. The given base codec `c` is used for decoding/encoding.
     *

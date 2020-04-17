@@ -117,6 +117,38 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
     codec.decode("f1=10&f1=12") shouldBe DecodeResult.Value(Test1(List(10, 12)))
   }
 
+
+  it should "generate a codec for a one-arg case class with set" in {
+    // given
+    case class Test1(f1: Set[Int])
+    val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
+
+    // when
+    codec.encode(Test1(Set.empty)) shouldBe ""
+    codec.encode(Test1(Set(10))) shouldBe "f1=10"
+    codec.encode(Test1(Set(10, 12))) shouldBe "f1=10&f1=12"
+
+    codec.decode("") shouldBe DecodeResult.Value(Test1(Set.empty))
+    codec.decode("f1=10") shouldBe DecodeResult.Value(Test1(Set(10)))
+    codec.decode("f1=10&f1=12") shouldBe DecodeResult.Value(Test1(Set(10, 12)))
+    codec.decode("f1=10&f1=12&f1=12") shouldBe DecodeResult.Value(Test1(Set(10, 12)))
+  }
+
+  it should "generate a codec for a one-arg case class with vector" in {
+    // given
+    case class Test1(f1: Vector[Int])
+    val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
+
+    // when
+    codec.encode(Test1(Vector.empty)) shouldBe ""
+    codec.encode(Test1(Vector(10))) shouldBe "f1=10"
+    codec.encode(Test1(Vector(10, 12))) shouldBe "f1=10&f1=12"
+
+    codec.decode("") shouldBe DecodeResult.Value(Test1(Vector.empty))
+    codec.decode("f1=10") shouldBe DecodeResult.Value(Test1(Vector(10)))
+    codec.decode("f1=10&f1=12") shouldBe DecodeResult.Value(Test1(Vector(10, 12)))
+  }
+
   it should "generate a codec for a one-arg case class using implicit validator" in {
     // given
     case class Test1(f1: Int)
