@@ -1,14 +1,14 @@
 package sttp.tapir.generic.internal
 
 import com.github.ghik.silencer.silent
-import magnolia.{CaseClass, Magnolia, SealedTrait}
+import magnolia.{Magnolia, ReadOnlyCaseClass, SealedTrait}
 import sttp.tapir.{Validator, generic}
 import sttp.tapir.generic.Configuration
 
 trait ValidatorMagnoliaDerivation {
   type Typeclass[T] = Validator[T]
 
-  def combine[T](ctx: CaseClass[Validator, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
+  def combine[T](ctx: ReadOnlyCaseClass[Validator, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
     Validator.Product(ctx.parameters.map { p =>
       p.label -> new Validator.ProductField[T] {
         override type FieldType = p.PType

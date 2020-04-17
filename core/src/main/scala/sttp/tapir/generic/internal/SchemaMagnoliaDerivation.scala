@@ -14,7 +14,7 @@ trait SchemaMagnoliaDerivation {
   type Typeclass[T] = Schema[T]
 
   @silent("discarded")
-  def combine[T](ctx: CaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
+  def combine[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withProgressCache { cache =>
       val cacheKey = ctx.typeName.full
       if (cache.contains(cacheKey)) {

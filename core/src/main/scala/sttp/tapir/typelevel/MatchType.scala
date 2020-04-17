@@ -1,6 +1,6 @@
 package sttp.tapir.typelevel
 
-import magnolia.{CaseClass, Magnolia, Param, SealedTrait}
+import magnolia.{Magnolia, ReadOnlyCaseClass, ReadOnlyParam, SealedTrait}
 
 import scala.reflect.ClassTag
 
@@ -18,12 +18,12 @@ trait MatchType[T] {
 private[typelevel] trait GenericMatchType {
   type Typeclass[T] = MatchType[T]
 
-  def combine[T: ClassTag](ctx: CaseClass[Typeclass, T]): Typeclass[T] = {
+  def combine[T: ClassTag](ctx: ReadOnlyCaseClass[Typeclass, T]): Typeclass[T] = {
     val ct = implicitly[ClassTag[T]]
 
     { value: Any =>
       ct.runtimeClass.isInstance(value) &&
-      ctx.parameters.forall { param: Param[Typeclass, T] =>
+      ctx.parameters.forall { param: ReadOnlyParam[Typeclass, T] =>
         {
           param.typeclass(param.dereference(value.asInstanceOf[T]))
         }
