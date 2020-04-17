@@ -1,13 +1,26 @@
 package sttp.tapir.server.akkahttp
 
-import akka.http.scaladsl.model.Uri
+import java.util.Locale
+
+import akka.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
+import akka.http.scaladsl.model.{HttpHeader, Uri}
 import akka.http.scaladsl.server.RequestContext
-import sttp.model.{HeaderNames, Method, MultiQueryParams}
+import sttp.model.{Method, MultiQueryParams}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 
 private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
-  override def method: Method = Method(req.request.method.value.toUpperCase)
+
+  // Add low-level headers that have been removed by akka-http.
+  // https://doc.akka.io/docs/akka-http/current/common/http-model.html?language=scala#http-headers
+  // https://github.com/softwaremill/tapir/issues/331
+  private lazy val allHeaders: List[HttpHeader] = {
+    val contentLength = req.request.entity.contentLengthOption.map(`Content-Length`(_))
+    val contentType = `Content-Type`(req.request.entity.contentType)
+    contentType :: contentLength.toList ++ req.request.headers
+  }
+
+  override def method: Method = Method(req.request.method.value)
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
     req.unmatchedPath match {
       case Uri.Path.Slash(pathTail)      => new AkkaDecodeInputsContext(req.withUnmatchedPath(pathTail)).nextPathSegment
@@ -16,11 +29,10 @@ private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends Dec
     }
   }
   override def header(name: String): List[String] = {
-    if (HeaderNames.ContentLength.equalsIgnoreCase(name)) req.request.entity.contentLengthOption.map(_.toString).toList
-    else if (HeaderNames.ContentType.equalsIgnoreCase(name)) List(req.request.entity.contentType.toString())
-    else req.request.headers.filter(_.is(name.toLowerCase)).map(_.value()).toList
+    val nameInLowerCase = name.toLowerCase(Locale.ROOT)
+    allHeaders.filter(_.is(nameInLowerCase)).map(_.value)
   }
-  override def headers: Seq[(String, String)] = req.request.headers.map(h => (h.name(), h.value()))
+  override def headers: Seq[(String, String)] = allHeaders.map(h => (h.name, h.value))
   override def queryParameter(name: String): Seq[String] = req.request.uri.query().getAll(name).reverse
   override def queryParameters: MultiQueryParams = MultiQueryParams.fromSeq(req.request.uri.query())
   override def bodyStream: Any = req.request.entity.dataBytes
