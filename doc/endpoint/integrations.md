@@ -45,3 +45,26 @@ enumerations. To use, add the following dependency:
 Then, `import sttp.tapir.codec.enumeratum`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
 
 This will bring into scope implicit values for values extending `*EnumEntry`.
+
+## Enumeration integration
+
+There is no library for the use of the build in scala `Enumeration`, but it can be implemented by hand.
+
+The example code below will generate [enums](https://swagger.io/docs/specification/data-models/enums/) to the open-api documentation.
+
+```scala
+trait EnumHelper { e: Enumeration =>
+    import io.circe._
+
+    implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
+    implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
+
+    implicit val schemaForEnum: Schema[e.Value] = Schema(SchemaType.SString)
+    implicit def validatorForEnum: Validator[e.Value] = Validator.`enum`(e.values.toList, v => Option(v))
+}
+object Color extends Enumeration with EnumHelper {
+    type Color = Value
+    val Blue = Value("blue")
+    val Red   = Value("red")
+}
+``` 
