@@ -29,7 +29,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .thenSuccess(ResponseWrapper(1.0))
     val response: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
 
-    response shouldBe Response.ok(Right(ResponseWrapper(1.0)))
+    response.body shouldBe Right(ResponseWrapper(1.0))
   }
 
   it should "combine tapir endpoint with sttp stub - errors" in {
@@ -80,7 +80,24 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     val response: Identity[Response[Either[Unit, ResponseWrapper]]] =
       endpoint.toSttpRequestUnsafe(uri"http://test.com").apply("id1" -> 11).send()
 
-    response shouldBe Response.ok(Right(ResponseWrapper(1.0)))
+    response.body shouldBe Right(ResponseWrapper(1.0))
+  }
+
+  it should "combine tapir endpoint with sttp stub - header output" in {
+    import sttp.tapir.client.sttp._
+    // given
+    val endpoint = sttp.tapir.endpoint.post
+      .out(header[String]("X"))
+
+    implicit val backend = SttpBackendStub
+      .apply(idMonad)
+      .whenRequestMatches(endpoint)
+      .thenSuccess("x")
+    val response: Identity[Response[Either[Unit, String]]] =
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(()).send()
+
+    response.body shouldBe Right("x")
+    response.header("X") shouldBe Some("x")
   }
 
   it should "match with inputs" in {
@@ -103,8 +120,10 @@ class SttpStubServerTest extends FlatSpec with Matchers {
     val response1: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
     val response2: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
 
-    response1 shouldBe Response.ok(Right(ResponseWrapper(1.0)))
-    response2 shouldBe Response.apply(Left(()), StatusCode.InternalServerError, "Internal server error")
+    response1.body shouldBe Right(ResponseWrapper(1.0))
+    response2.body shouldBe Left(())
+    response2.code shouldBe StatusCode.InternalServerError
+    response2.statusText shouldBe "Internal server error"
   }
 
   it should "match with decode failure" in {

@@ -1,15 +1,27 @@
 package sttp.tapir.server.stub
 
+import java.nio.charset.Charset
+
 import sttp.client.testing.SttpBackendStub
 import sttp.model.StatusCode
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
-import sttp.tapir.{DecodeResult, Endpoint}
+import sttp.tapir.internal.ParamsAsAny
+import sttp.tapir.server.internal.{
+  DecodeInputs,
+  DecodeInputsResult,
+  EncodeOutputBody,
+  EncodeOutputs,
+  InputValues,
+  InputValuesResult,
+  OutputValues
+}
+import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointOutput, RawBodyType}
 
 trait SttpStubServer {
 
   implicit class RichSttpBackendStub[F[_], S](val stub: SttpBackendStub[F, S]) {
-    def whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[E, O] = {
+    def whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[_, E, O] = {
       new TypeAwareWhenRequest(
+        endpoint,
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
             case DecodeInputsResult.Failure(_, _) => false
@@ -19,8 +31,9 @@ trait SttpStubServer {
       )
     }
 
-    def whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[E, O] = {
+    def whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[I, E, O] = {
       new TypeAwareWhenRequest(
+        endpoint,
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
             case DecodeInputsResult.Failure(_, _) => false
@@ -36,8 +49,9 @@ trait SttpStubServer {
 
     def whenDecodingInputFailureMatches[E, O](
         endpoint: Endpoint[_, E, O, _]
-    )(failureMatcher: PartialFunction[DecodeResult.Failure, Boolean]): TypeAwareWhenRequest[E, O] = {
+    )(failureMatcher: PartialFunction[DecodeResult.Failure, Boolean]): TypeAwareWhenRequest[_, E, O] = {
       new TypeAwareWhenRequest(
+        endpoint,
         new stub.WhenRequest(req => {
           val result = DecodeInputs(endpoint.input, new SttpDecodeInputs(req))
           result match {
@@ -48,17 +62,34 @@ trait SttpStubServer {
       )
     }
 
-    def whenDecodingInputFailure[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[E, O] = {
+    def whenDecodingInputFailure[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[_, E, O] = {
       whenDecodingInputFailureMatches(endpoint) { case _ => true }
     }
 
-    class TypeAwareWhenRequest[E, O](whenRequest: stub.WhenRequest) {
+    class TypeAwareWhenRequest[I, E, O](endpoint: Endpoint[I, E, O, _], whenRequest: stub.WhenRequest) {
 
       def thenSuccess(response: O): SttpBackendStub[F, S] =
-        whenRequest.thenRespond(Right(response))
+        thenRespondWithOutput(endpoint.output, response, StatusCode.Ok)
 
       def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S] =
-        whenRequest.thenRespond(sttp.client.Response[Either[E, O]](Left(errorResponse), statusCode))
+        thenRespondWithOutput(endpoint.errorOutput, errorResponse, statusCode)
+
+      private def thenRespondWithOutput(output: EndpointOutput[_], responseValue: Any, statusCode: StatusCode): SttpBackendStub[F, S] = {
+        val encodeOutputBody = new EncodeOutputBody[Any] {
+          override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): Any = v
+          override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): Any = v
+        }
+        val outputValues = new EncodeOutputs[Any](encodeOutputBody).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
+        whenRequest.thenRespond(
+          sttp.client.Response(
+            outputValues.body.getOrElse(()),
+            outputValues.statusCode.getOrElse(statusCode),
+            "",
+            outputValues.headers.map { case (k, v) => sttp.model.Header.unsafeApply(k, v) },
+            Nil
+          )
+        )
+      }
 
       /**
         * Exposes underlying generic stubbing which allows to stub with an arbitrary response
