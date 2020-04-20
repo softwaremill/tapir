@@ -585,6 +585,20 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("A" -> "1", "B" -> "2", "X" -> "3", "Y" -> "4"))
   }
 
+  testServer(in_3query_out_3header_mapped_to_tuple)(in => pureResult(in.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri?p1=1&p2=2&p3=3")
+      .send()
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("P1" -> "1", "P2" -> "2", "P3" -> "3"))
+  }
+
+  testServer(in_2query_out_2query_mapped_to_unit)(in => pureResult(in.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri?p1=1&p2=2")
+      .send()
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("P1" -> "DEFAULT_HEADER", "P2" -> "2"))
+  }
+
   //
 
   def throwFruits(name: String): R[String] = name match {

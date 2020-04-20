@@ -112,15 +112,6 @@ val paging: EndpointInput[Paging] =
 Mapping methods can also be called on an endpoint (which is useful if inputs/outputs are accumulated, for example).
 The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the ones above.
 
-```eval_rst
-.. note::
-
-  Keep in mind that you shouldn't map **to** ``Unit`` or tuples. These types are special when defining endpoints,
-  as unti is used as a "neutral element", and tuples are used when combining multiple inputs/outputs. For example,
-  mapping a query input to a tuple of values would cause an error, as tapir wouldn't then know if the value corresponds
-  to a single input, or two combined inputs.
-```
-
 ## Path matching
 
 By default (as with all other types of inputs), if no path input/path segments are defined, any path will match.

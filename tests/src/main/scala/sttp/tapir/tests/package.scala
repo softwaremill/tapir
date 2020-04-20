@@ -258,6 +258,23 @@ package object tests {
     addInputAndOutput(endpoint.in(query[String]("a").and(query[String]("b"))).out(header[String]("A").and(header[String]("B"))))
   }
 
+  val in_3query_out_3header_mapped_to_tuple: Endpoint[(String, String, String, String), Unit, (String, String, String, String), Nothing] =
+    endpoint
+      .in(query[String]("p1"))
+      .in(query[String]("p2").map(x => (x, x))(_._1))
+      .in(query[String]("p3"))
+      .out(header[String]("P1"))
+      .out(header[String]("P2").map(x => (x, x))(_._1))
+      .out(header[String]("P3"))
+
+  val in_2query_out_2query_mapped_to_unit: Endpoint[String, Unit, String, Nothing] =
+    endpoint
+      .in(query[String]("p1").map(_ => ())(_ => "DEFAULT_PARAM"))
+      .in(query[String]("p2"))
+      .out(header[String]("P1").map(_ => ())(_ => "DEFAULT_HEADER"))
+      .out(header[String]("P2"))
+      .name("mapped to unit")
+
   //
 
   @silent("never used")

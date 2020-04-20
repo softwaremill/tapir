@@ -17,6 +17,17 @@ class SttpClientTestUsingStub extends FunSuite with Matchers {
     response.header("Y") shouldBe Some("x")
   }
 
+  testClient(in_3query_out_3header_mapped_to_tuple, ("a", "b", "c", "d"), Right(("e", "f", "g", "h"))) { response =>
+    response.header("P1") shouldBe Some("e")
+    response.header("P2") shouldBe Some("f")
+    response.header("P3") shouldBe Some("h")
+  }
+
+  testClient(in_2query_out_2query_mapped_to_unit, "a", Right("b")) { response =>
+    response.header("P1") shouldBe Some("DEFAULT_HEADER")
+    response.header("P2") shouldBe Some("b")
+  }
+
   def testClient[I, E, O](endpoint: Endpoint[I, E, O, Nothing], inputValue: I, outputValue: Either[E, O])(
       verifyResponse: Response[Either[E, O]] => Unit
   ): Unit = {
