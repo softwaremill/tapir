@@ -18,9 +18,6 @@ trait ParamConcat[T, U] {
 
   def leftArity: Int
   def rightArity: Int
-  def leftIsTuple: Boolean = leftArity > 1
-  def rightIsTuple: Boolean = rightArity > 1
-  def bothTuples: Boolean = leftIsTuple && rightIsTuple
 }
 
 object ParamConcat extends LowPriorityTupleConcat4 {
