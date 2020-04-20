@@ -2,7 +2,6 @@ package sttp.tapir
 
 import sttp.model.Method
 import sttp.tapir.EndpointInput.FixedMethod
-import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
@@ -115,17 +114,17 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
 
       basicOutputsMap.get(None) match {
         case Some(defaultOutputs) if basicOutputsMap.size == 1 =>
-          EndpointOutput.Multiple(defaultOutputs.sortByType, MkParams.Empty, UnParams.Empty).show
+          showMultiple(defaultOutputs.sortByType)
         case _ =>
           val mappings = basicOutputsMap.map {
-            case (sc, os) => StatusMapping(sc, EndpointOutput.Multiple(os.sortByType, MkParams.Empty, UnParams.Empty), _ => true)
+            case (_, os) => showMultiple(os)
           }
-          EndpointOutput.OneOf(mappings.toSeq, Mapping.id[Any]).show
+          showOneOf(mappings.toSeq)
       }
     }
 
     val namePrefix = info.name.map("[" + _ + "] ").getOrElse("")
-    val showInputs = EndpointInput.Multiple(input.asVectorOfBasicInputs().sortBy(basicInputSortIndex), MkParams.Empty, UnParams.Empty).show
+    val showInputs = showMultiple(input.asVectorOfBasicInputs().sortBy(basicInputSortIndex))
     val showSuccessOutputs = showOutputs(output)
     val showErrorOutputs = showOutputs(errorOutput)
 

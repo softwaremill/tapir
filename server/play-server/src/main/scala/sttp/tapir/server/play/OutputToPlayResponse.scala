@@ -12,6 +12,7 @@ import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import sttp.model.{MediaType, Part, StatusCode}
+import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
 
@@ -21,7 +22,7 @@ object OutputToPlayResponse {
       output: EndpointOutput[O],
       v: Any
   ): Result = {
-    val outputValues = encodeOutputs(output, v, OutputValues.empty)
+    val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
     val headers: Map[String, String] = outputValues.headers
       .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
         if (a.contains(b._1)) a + (b._1 -> (a(b._1) :+ b._2)) else a + (b._1 -> List(b._2))

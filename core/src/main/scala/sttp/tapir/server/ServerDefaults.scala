@@ -81,22 +81,22 @@ object ServerDefaults {
       */
     @tailrec
     def failureSourceMessage(input: EndpointInput[_]): String = input match {
-      case EndpointInput.FixedMethod(_, _, _)     => s"Invalid value for: method"
-      case EndpointInput.FixedPath(_, _, _)       => s"Invalid value for: path segment"
-      case EndpointInput.PathCapture(name, _, _)  => s"Invalid value for: path parameter ${name.getOrElse("?")}"
-      case EndpointInput.PathsCapture(_, _)       => s"Invalid value for: path"
-      case EndpointInput.Query(name, _, _)        => s"Invalid value for: query parameter $name"
-      case EndpointInput.QueryParams(_, _)        => "Invalid value for: query parameters"
-      case EndpointInput.Cookie(name, _, _)       => s"Invalid value for: cookie $name"
-      case _: EndpointInput.ExtractFromRequest[_] => "Invalid value"
-      case a: EndpointInput.Auth[_]               => failureSourceMessage(a.input)
-      case _: EndpointInput.MappedMultiple[_, _]  => "Invalid value"
-      case _: EndpointIO.Body[_, _]               => s"Invalid value for: body"
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => s"Invalid value for: body"
-      case EndpointIO.Header(name, _, _)          => s"Invalid value for: header $name"
-      case EndpointIO.FixedHeader(name, _, _)     => s"Invalid value for: header $name"
-      case EndpointIO.Headers(_, _)               => s"Invalid value for: headers"
-      case _                                      => "Invalid value"
+      case EndpointInput.FixedMethod(_, _, _)      => s"Invalid value for: method"
+      case EndpointInput.FixedPath(_, _, _)        => s"Invalid value for: path segment"
+      case EndpointInput.PathCapture(name, _, _)   => s"Invalid value for: path parameter ${name.getOrElse("?")}"
+      case EndpointInput.PathsCapture(_, _)        => s"Invalid value for: path"
+      case EndpointInput.Query(name, _, _)         => s"Invalid value for: query parameter $name"
+      case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
+      case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
+      case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
+      case a: EndpointInput.Auth[_]                => failureSourceMessage(a.input)
+      case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
+      case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"
+      case _: EndpointIO.StreamBodyWrapper[_, _]   => s"Invalid value for: body"
+      case EndpointIO.Header(name, _, _)           => s"Invalid value for: header $name"
+      case EndpointIO.FixedHeader(name, _, _)      => s"Invalid value for: header $name"
+      case EndpointIO.Headers(_, _)                => s"Invalid value for: headers"
+      case _                                       => "Invalid value"
     }
 
     def combineSourceAndDetail(source: String, detail: Option[String]): String = detail match {

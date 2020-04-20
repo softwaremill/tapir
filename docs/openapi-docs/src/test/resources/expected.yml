@@ -58,9 +58,9 @@ paths:
   /api/delete:
     delete:
       operationId: deleteApiDelete
-    responses:
-      '200':
-        description: ok
+      responses:
+        '200':
+          description: ok
 components:
   schemas:
     FruitAmount:

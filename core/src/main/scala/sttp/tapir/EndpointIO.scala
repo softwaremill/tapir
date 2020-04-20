@@ -62,17 +62,29 @@ object EndpointTransput {
     def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
   }
 
-  sealed trait Multiple[PARAMS] extends EndpointTransput[PARAMS] {
-    private[tapir] def mkParams: MkParams
-    private[tapir] def unParams: UnParams
+  sealed trait Pair[T] extends EndpointTransput[T] {
+    def left: EndpointTransput[_]
+    def right: EndpointTransput[_]
+
+    private[tapir] val combine: CombineParams
+    private[tapir] val split: SplitParams
+
+    override def show: String = {
+      def flattenedPairs(et: EndpointTransput[_]): Vector[EndpointTransput[_]] = et match {
+        case p: Pair[_] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
+        case other      => Vector(other)
+      }
+      showMultiple(flattenedPairs(this))
+    }
   }
 }
 
 sealed trait EndpointInput[T] extends EndpointTransput[T] {
   private[tapir] type ThisType[X] <: EndpointInput[X]
 
-  def and[U, TU](other: EndpointInput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointInput[TU]
-  def /[U, TU](other: EndpointInput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] = and(other)
+  def and[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] =
+    EndpointInput.Pair(this, other, mkCombine(concat), mkSplit(concat))
+  def /[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] = and(other)
 }
 
 object EndpointInput {
@@ -80,13 +92,6 @@ object EndpointInput {
 
   sealed trait Single[T] extends EndpointInput[T] {
     private[tapir] type ThisType[X] <: EndpointInput.Single[X]
-
-    def and[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] =
-      other match {
-        case Multiple(inputs, _, _) if concat.rightIsTuple         => combine(Multiple(this +: inputs, _, _), concat, this, other)
-        case EndpointIO.Multiple(ios, _, _) if concat.rightIsTuple => combine(Multiple(this +: ios, _, _), concat, this, other)
-        case i                                                     => combine(Multiple(Vector(this, i), _, _), concat, this, other)
-      }
   }
 
   sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
@@ -203,56 +208,34 @@ object EndpointInput {
 
   //
 
-  case class MappedMultiple[PARAMS, T](input: Multiple[PARAMS], mapping: Mapping[PARAMS, T]) extends EndpointInput.Single[T] {
-    override private[tapir] type ThisType[X] = MappedMultiple[PARAMS, X]
+  case class MappedPair[T, U, TU, V](input: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointInput.Single[V] {
+    override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
     override def show: String = input.show
-    override def map[U](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](input, mapping.map(m))
+    override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](input, mapping.map(m))
   }
 
-  case class Multiple[PARAMS](
-      inputs: Vector[EndpointInput[_]],
-      private[tapir] val mkParams: MkParams,
-      private[tapir] val unParams: UnParams
-  ) extends EndpointInput[PARAMS]
-      with EndpointTransput.Multiple[PARAMS] {
+  case class Pair[T, U, TU](
+      left: EndpointInput[T],
+      right: EndpointInput[U],
+      private[tapir] val combine: CombineParams,
+      private[tapir] val split: SplitParams
+  ) extends EndpointInput[TU]
+      with EndpointTransput.Pair[TU] {
     override private[tapir] type ThisType[X] = EndpointInput[X]
-
-    override def show: String = if (inputs.isEmpty) "-" else inputs.map(_.show).mkString(" ")
-    override def map[U](m: Mapping[PARAMS, U]): EndpointInput[U] =
-      MappedMultiple[PARAMS, PARAMS](this, Mapping.id).map(m)
-
-    override def and[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[PARAMS, U, TU]): EndpointInput[TU] =
-      if (inputs.isEmpty)
-        other.asInstanceOf[EndpointInput[TU]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
-      else
-        other match {
-          case Multiple(m, _, _) if concat.bothTuples              => combine(Multiple(inputs ++ m, _, _), concat, this, other)
-          case Multiple(m, _, _) if concat.rightIsTuple            => combine(Multiple(this +: m, _, _), concat, this, other)
-          case EndpointIO.Multiple(m, _, _) if concat.bothTuples   => combine(Multiple(inputs ++ m, _, _), concat, this, other)
-          case EndpointIO.Multiple(m, _, _) if concat.rightIsTuple => combine(Multiple(this +: m, _, _), concat, this, other)
-          case i if concat.leftIsTuple                             => combine(Multiple(inputs :+ i, _, _), concat, this, other)
-          case i                                                   => combine(Multiple(Vector(this, i), _, _), concat, this, other)
-        }
+    override def map[V](m: Mapping[TU, V]): EndpointInput[V] = MappedPair[T, U, TU, V](this, m)
   }
 }
 
 sealed trait EndpointOutput[T] extends EndpointTransput[T] {
   private[tapir] type ThisType[X] <: EndpointOutput[X]
 
-  def and[J, IJ](other: EndpointOutput[J])(implicit ts: ParamConcat.Aux[T, J, IJ]): EndpointOutput[IJ]
+  def and[J, IJ](other: EndpointOutput[J])(implicit concat: ParamConcat.Aux[T, J, IJ]): EndpointOutput[IJ] =
+    EndpointOutput.Pair(this, other, mkCombine(concat), mkSplit(concat))
 }
 
 object EndpointOutput {
   sealed trait Single[T] extends EndpointOutput[T] {
     private[tapir] def _mapping: Mapping[_, T]
-
-    def and[U, TU](other: EndpointOutput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
-      other match {
-        case Multiple(outputs, _, _) if concat.rightIsTuple        => combine(Multiple(this +: outputs, _, _), concat, this, other)
-        case EndpointIO.Multiple(ios, _, _) if concat.rightIsTuple => combine(Multiple(this +: ios, _, _), concat, this, other)
-        case Void()                                                => this.asInstanceOf[EndpointOutput[TU]]
-        case o                                                     => combine(Multiple(Vector(this, o), _, _), concat, this, other)
-      }
   }
 
   sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T] {
@@ -306,7 +289,7 @@ object EndpointOutput {
     override private[tapir] type ThisType[X] = OneOf[O, X]
     override private[tapir] def _mapping: Mapping[_, T] = codec
     override def map[U](mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](codec = codec.map(mapping))
-    override def show: String = s"status one of(${mappings.map(_.output.show).mkString("|")})"
+    override def show: String = showOneOf(mappings.map(_.output.show))
   }
 
   //
@@ -316,61 +299,41 @@ object EndpointOutput {
     override def show: String = "void"
     override def map[U](mapping: Mapping[T, U]): Void[U] = Void()
 
-    override def and[U, TU](other: EndpointOutput[U])(implicit ts: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
+    override def and[U, TU](other: EndpointOutput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointOutput[TU] =
       other.asInstanceOf[EndpointOutput[TU]]
   }
 
   //
 
-  case class MappedMultiple[PARAMS, T](output: Multiple[PARAMS], mapping: Mapping[PARAMS, T]) extends EndpointOutput.Single[T] {
-    override private[tapir] type ThisType[X] = MappedMultiple[PARAMS, X]
-    override private[tapir] def _mapping: Mapping[_, T] = mapping
+  case class MappedPair[T, U, TU, V](output: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointOutput.Single[V] {
+    override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
+    override private[tapir] def _mapping: Mapping[_, V] = mapping
     override def show: String = output.show
-    override def map[U](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](output, mapping.map(m))
+    override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](output, mapping.map(m))
   }
 
-  case class Multiple[PARAMS](
-      outputs: Vector[EndpointOutput[_]],
-      private[tapir] val mkParams: MkParams,
-      private[tapir] val unParams: UnParams
-  ) extends EndpointOutput[PARAMS]
-      with EndpointTransput.Multiple[PARAMS] {
+  case class Pair[T, U, TU](
+      left: EndpointOutput[T],
+      right: EndpointOutput[U],
+      private[tapir] val combine: CombineParams,
+      private[tapir] val split: SplitParams
+  ) extends EndpointOutput[TU]
+      with EndpointTransput.Pair[TU] {
     override private[tapir] type ThisType[X] = EndpointOutput[X]
-    override def show: String = if (outputs.isEmpty) "-" else outputs.map(_.show).mkString(" ")
-    override def map[U](m: Mapping[PARAMS, U]): EndpointOutput[U] =
-      MappedMultiple[PARAMS, PARAMS](this, Mapping.id).map(m)
-
-    override def and[J, IJ](other: EndpointOutput[J])(implicit concat: ParamConcat.Aux[PARAMS, J, IJ]): EndpointOutput[IJ] =
-      if (outputs.isEmpty)
-        other.asInstanceOf[EndpointOutput[IJ]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
-      else
-        other match {
-          case Multiple(m, _, _) if concat.bothTuples              => combine(Multiple(outputs ++ m, _, _), concat, this, other)
-          case Multiple(m, _, _) if concat.rightIsTuple            => combine(Multiple(this +: m, _, _), concat, this, other)
-          case EndpointIO.Multiple(m, _, _) if concat.bothTuples   => combine(Multiple(outputs ++ m, _, _), concat, this, other)
-          case EndpointIO.Multiple(m, _, _) if concat.rightIsTuple => combine(Multiple(this +: m, _, _), concat, this, other)
-          case Void()                                              => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
-          case o if concat.leftIsTuple                             => combine(Multiple(outputs :+ o, _, _), concat, this, other)
-          case o                                                   => combine(Multiple(Vector(this, o), _, _), concat, this, other)
-        }
+    override def map[V](m: Mapping[TU, V]): EndpointOutput[V] = MappedPair[T, U, TU, V](this, m)
   }
 }
 
 sealed trait EndpointIO[T] extends EndpointInput[T] with EndpointOutput[T] {
   private[tapir] type ThisType[X] <: EndpointInput[X] with EndpointOutput[X]
 
-  def and[J, IJ](other: EndpointIO[J])(implicit ts: ParamConcat.Aux[T, J, IJ]): EndpointOutput[IJ]
+  def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[T, J, IJ]): EndpointIO[IJ] =
+    EndpointIO.Pair(this, other, mkCombine(concat), mkSplit(concat))
 }
 
 object EndpointIO {
   sealed trait Single[I] extends EndpointIO[I] with EndpointInput.Single[I] with EndpointOutput.Single[I] {
     private[tapir] type ThisType[X] <: EndpointIO.Single[X]
-
-    def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointIO[IJ] =
-      other match {
-        case s: Single[_]            => combine(Multiple(Vector(this, s), _, _), concat, this, other)
-        case Multiple(outputs, _, _) => combine(Multiple(this +: outputs, _, _), concat, this, other)
-      }
   }
 
   sealed trait Basic[I] extends Single[I] with EndpointInput.Basic[I] with EndpointOutput.Basic[I]
@@ -399,7 +362,7 @@ object EndpointIO {
     override def codec: Codec[S, T, CodecFormat] = wrapped.codec
     override def info: Info[T] = wrapped.info
 
-    override def show = wrapped.show
+    override def show: String = wrapped.show
   }
 
   case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -424,69 +387,35 @@ object EndpointIO {
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[List[sttp.model.Header], U, TextPlain], i: Info[U]): Headers[U] =
       copy(codec = c, info = i)
-    override def show = s"{multiple headers}"
+    override def show = "{multiple headers}"
+  }
+
+  case class Empty[T](codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T] {
+    override private[tapir] type ThisType[X] = Empty[X]
+    override private[tapir] type L = Unit
+    override private[tapir] type CF = TextPlain
+    override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): Empty[U] = copy(codec = c, info = i)
+    override def show = "-"
   }
 
   //
 
-  case class MappedMultiple[PARAMS, T](io: Multiple[PARAMS], mapping: Mapping[PARAMS, T]) extends EndpointIO.Single[T] {
-    override private[tapir] type ThisType[X] = MappedMultiple[PARAMS, X]
-    override private[tapir] def _mapping: Mapping[_, T] = mapping
+  case class MappedPair[T, U, TU, V](io: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointIO.Single[V] {
+    override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
+    override private[tapir] def _mapping: Mapping[_, V] = mapping
     override def show: String = io.show
-    override def map[U](m: Mapping[T, U]): MappedMultiple[PARAMS, U] = copy[PARAMS, U](io, mapping.map(m))
+    override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](io, mapping.map(m))
   }
 
-  case class Multiple[PARAMS](ios: Vector[EndpointIO[_]], private[tapir] val mkParams: MkParams, private[tapir] val unParams: UnParams)
-      extends EndpointIO[PARAMS]
-      with EndpointTransput.Multiple[PARAMS] {
+  case class Pair[T, U, TU](
+      left: EndpointIO[T],
+      right: EndpointIO[U],
+      private[tapir] val combine: CombineParams,
+      private[tapir] val split: SplitParams
+  ) extends EndpointIO[TU]
+      with EndpointTransput.Pair[TU] {
     override private[tapir] type ThisType[X] = EndpointIO[X]
-    override def show: String = if (ios.isEmpty) "-" else ios.map(_.show).mkString(" ")
-    override def map[U](mapping: Mapping[PARAMS, U]): EndpointIO[U] =
-      MappedMultiple[PARAMS, PARAMS](this, Mapping.id).map(mapping)
-
-    override def and[J, IJ](other: EndpointInput[J])(implicit concat: ParamConcat.Aux[PARAMS, J, IJ]): EndpointInput[IJ] =
-      if (ios.isEmpty)
-        other.asInstanceOf[EndpointInput[IJ]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
-      else
-        other match {
-          case EndpointInput.Multiple(m, _, _) if concat.bothTuples =>
-            combine(EndpointInput.Multiple((ios: Vector[EndpointInput[_]]) ++ m, _, _), concat, this, other)
-          case EndpointInput.Multiple(m, _, _) if concat.rightIsTuple =>
-            combine(EndpointInput.Multiple(this +: m, _, _), concat, this, other)
-          case EndpointIO.Multiple(m, _, _) if concat.bothTuples =>
-            combine(EndpointInput.Multiple((ios: Vector[EndpointInput[_]]) ++ m, _, _), concat, this, other)
-          case EndpointIO.Multiple(m, _, _) if concat.rightIsTuple => combine(EndpointInput.Multiple(this +: m, _, _), concat, this, other)
-          case i if concat.leftIsTuple                             => combine(EndpointInput.Multiple((ios: Vector[EndpointInput[_]]) :+ i, _, _), concat, this, other)
-          case i                                                   => combine(EndpointInput.Multiple(Vector(this, i), _, _), concat, this, other)
-        }
-    override def and[J, IJ](other: EndpointOutput[J])(implicit concat: ParamConcat.Aux[PARAMS, J, IJ]): EndpointOutput[IJ] =
-      if (ios.isEmpty)
-        other.asInstanceOf[EndpointOutput[IJ]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
-      else
-        other match {
-          case EndpointOutput.Multiple(m, _, _) if concat.bothTuples =>
-            combine(EndpointOutput.Multiple((ios: Vector[EndpointOutput[_]]) ++ m, _, _), concat, this, other)
-          case EndpointOutput.Multiple(m, _, _) if concat.rightIsTuple =>
-            combine(EndpointOutput.Multiple(this +: m, _, _), concat, this, other)
-          case EndpointIO.Multiple(m, _, _) if concat.bothTuples =>
-            combine(EndpointOutput.Multiple((ios: Vector[EndpointOutput[_]]) ++ m, _, _), concat, this, other)
-          case EndpointIO.Multiple(m, _, _) if concat.rightIsTuple =>
-            combine(EndpointOutput.Multiple(this +: m, _, _), concat, this, other)
-          case EndpointOutput.Void() => this.asInstanceOf[EndpointOutput.Multiple[IJ]]
-          case io if concat.leftIsTuple =>
-            combine(EndpointOutput.Multiple((ios: Vector[EndpointOutput[_]]) :+ io, _, _), concat, this, other)
-          case io => combine(EndpointOutput.Multiple(Vector(this, io), _, _), concat, this, other)
-        }
-    override def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[PARAMS, J, IJ]): EndpointIO[IJ] =
-      if (ios.isEmpty)
-        other.asInstanceOf[EndpointIO[IJ]] // the other multiple must correspond to Unit, which is a neutral element of concatenation
-      else
-        other match {
-          case Multiple(m, _, _) if concat.bothTuples   => combine(Multiple(ios ++ m, _, _), concat, this, other)
-          case Multiple(m, _, _) if concat.rightIsTuple => combine(Multiple(this +: m, _, _), concat, this, other)
-          case io if concat.leftIsTuple                 => combine(Multiple(ios :+ io, _, _), concat, this, other)
-          case io                                       => combine(Multiple(Vector(this, io), _, _), concat, this, other)
-        }
+    override def map[V](m: Mapping[TU, V]): EndpointIO[V] = MappedPair[T, U, TU, V](this, m)
   }
 
   //

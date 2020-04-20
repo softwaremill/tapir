@@ -27,7 +27,7 @@ object OutputToFinatraResponse {
       output: EndpointOutput[O],
       v: Any
   ): Response = {
-    outputValuesToResponse(encodeOutputs(output, v, OutputValues.empty), defaultStatus)
+    outputValuesToResponse(encodeOutputs(output, ParamsAsAny(v), OutputValues.empty), defaultStatus)
   }
 
   private def outputValuesToResponse(outputValues: OutputValues[(FinatraContent, String)], defaultStatus: Status): Response = {

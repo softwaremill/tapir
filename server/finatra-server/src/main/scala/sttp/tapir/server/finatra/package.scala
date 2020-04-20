@@ -78,7 +78,7 @@ package object finatra {
         decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
           case values: DecodeInputsResult.Values =>
             InputValues(e.input, values) match {
-              case hv: InputValuesResult.HasValue            => valueToResponse(hv.value)
+              case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
               case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))
             }
           case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))

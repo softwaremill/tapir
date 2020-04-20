@@ -263,6 +263,9 @@ object DecodeInputs {
       case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) =>
         (codec.decode(ctx.bodyStream), ctx)
 
+      case EndpointIO.Empty(codec, _) =>
+        (codec.decode(()), ctx)
+
       case input =>
         throw new IllegalStateException(
           s"Unexpected EndpointInput ${input.show} encountered. This is most likely a bug in the library"

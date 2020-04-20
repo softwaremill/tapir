@@ -26,8 +26,8 @@ trait SttpStubServer {
             case DecodeInputsResult.Failure(_, _) => false
             case values: DecodeInputsResult.Values =>
               InputValues(endpoint.input, values) match {
-                case hv: InputValuesResult.HasValue  => inputMatcher(hv.value.asInstanceOf[I])
-                case InputValuesResult.Failure(_, _) => false
+                case InputValuesResult.Value(params, _) => inputMatcher(params.asAny.asInstanceOf[I])
+                case InputValuesResult.Failure(_, _)    => false
               }
           }
         )

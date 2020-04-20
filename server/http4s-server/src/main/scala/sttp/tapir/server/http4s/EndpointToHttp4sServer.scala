@@ -51,7 +51,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       OptionT(decodeBody(internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values =>
           InputValues(se.endpoint.input, values) match {
-            case hv: InputValuesResult.HasValue            => valueToResponse(hv.value).map(_.some)
+            case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny).map(_.some)
             case InputValuesResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
           }
         case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)

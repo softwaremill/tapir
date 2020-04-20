@@ -569,6 +569,15 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       basicRequest.get(uri"$baseUri/p2").send().map(_.code shouldBe StatusCode.Ok)
   }
 
+  testServer(in_header_out_header_unit_extended)(in => pureResult(in.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri")
+      .header("A", "1")
+      .header("X", "3")
+      .send()
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("Y" -> "3", "B" -> "2"))
+  }
+
   testServer(in_4query_out_4header_extended)(in => pureResult(in.asRight[Unit])) { baseUri =>
     basicRequest
       .get(uri"$baseUri?a=1&b=2&x=3&y=4")

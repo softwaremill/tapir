@@ -19,7 +19,7 @@ private[akkahttp] object OutputToAkkaRoute {
   private type EntityFromLength = Option[Long] => ResponseEntity
 
   def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
-    val outputValues = encodeOutputs(output, v, OutputValues.empty)
+    val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
 
     val statusCode = outputValues.statusCode.map(c => AkkaStatusCode.int2StatusCode(c.code)).getOrElse(defaultStatusCode)
     val akkaHeaders = parseHeadersOrThrow(outputValues.headers)

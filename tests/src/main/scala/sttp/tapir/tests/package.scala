@@ -242,6 +242,14 @@ package object tests {
   val not_existing_endpoint: Endpoint[Unit, String, Unit, Nothing] =
     endpoint.in("api" / "not-existing").errorOut(oneOf(statusMapping(StatusCode.BadRequest, stringBody)))
 
+  val in_header_out_header_unit_extended: Endpoint[(Unit, String), Unit, (Unit, String), Nothing] = {
+    def addInputAndOutput[I, E, O](e: Endpoint[I, E, O, Nothing]): Endpoint[(I, String), E, (O, String), Nothing] = {
+      e.in(header[String]("X")).out(header[String]("Y"))
+    }
+
+    addInputAndOutput(endpoint.in(header("A", "1")).out(header("B", "2")))
+  }
+
   val in_4query_out_4header_extended: Endpoint[((String, String), String, String), Unit, ((String, String), String, String), Nothing] = {
     def addInputAndOutput[I, E, O](e: Endpoint[I, E, O, Nothing]): Endpoint[(I, String, String), E, (O, String, String), Nothing] = {
       e.in(query[String]("x").and(query[String]("y"))).out(header[String]("X").and(header[String]("Y")))

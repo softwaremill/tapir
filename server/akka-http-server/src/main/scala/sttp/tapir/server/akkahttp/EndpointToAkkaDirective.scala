@@ -45,7 +45,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
           case values: DecodeInputsResult.Values =>
             InputValues(e.input, values) match {
-              case hv: InputValuesResult.HasValue            => provide(hv.value.asInstanceOf[I])
+              case InputValuesResult.Value(params, _)        => provide(params.asAny.asInstanceOf[I])
               case InputValuesResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
             }
 

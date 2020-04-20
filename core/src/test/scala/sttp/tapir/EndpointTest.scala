@@ -66,21 +66,17 @@ class EndpointTest extends FlatSpec with Matchers {
     exception.getMessage contains "required: tapir.EndpointIO[?]"
   }
 
-  it should "create a single input" in {
-    val i1 = query[String]("q1")
-    endpoint.in(i1) shouldBe endpoint.copy(input = i1)
-  }
-
-  def detuple(input: EndpointInput[_]): Any = input match {
-    case EndpointInput.Multiple(inputs, _, _) => inputs.map(detuple)
-    case EndpointIO.Multiple(inputs, _, _)    => inputs.map(detuple)
-    case i                                    => i
+  def pairToTuple(input: EndpointInput[_]): Any = input match {
+    case EndpointInput.Pair(left, right, _, _) => (pairToTuple(left), pairToTuple(right))
+    case EndpointIO.Pair(left, right, _, _)    => (pairToTuple(left), pairToTuple(right))
+    case EndpointIO.Empty(_, _)                => ()
+    case i                                     => i
   }
 
   it should "combine two inputs" in {
     val i1 = query[String]("q1")
     val i2 = query[String]("q2")
-    detuple(endpoint.in(i1).in(i2).input) shouldBe Vector(i1, i2)
+    pairToTuple(endpoint.in(i1).in(i2).input) shouldBe ((((), i1), i2))
   }
 
   it should "combine four inputs in two groups" in {
@@ -88,7 +84,7 @@ class EndpointTest extends FlatSpec with Matchers {
     val i2 = query[String]("q2")
     val i3 = query[String]("q3")
     val i4 = query[String]("q4")
-    detuple(endpoint.in(i1.and(i2)).in(i3.and(i4)).input) shouldBe Vector(i1, i2, i3, i4)
+    pairToTuple(endpoint.in(i1.and(i2)).in(i3.and(i4)).input) shouldBe ((((), (i1, i2)), (i3, i4)))
   }
 
   it should "combine four inputs in two groups, through an extend method (right)" in {
@@ -102,8 +98,8 @@ class EndpointTest extends FlatSpec with Matchers {
     val extended1: Endpoint[(String, String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1))
     val extended2: Endpoint[((String, String), String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1.and(i2)))
 
-    detuple(extended1.input) shouldBe Vector(i1, i3, i4)
-    detuple(extended2.input) shouldBe Vector(Vector(i1, i2), i3, i4)
+    pairToTuple(extended1.input) shouldBe ((((), i1), (i3, i4)))
+    pairToTuple(extended2.input) shouldBe ((((), (i1, i2)), (i3, i4)))
   }
 
   it should "combine four inputs in two groups, through an extend method (left)" in {
@@ -117,8 +113,8 @@ class EndpointTest extends FlatSpec with Matchers {
     val extended1: Endpoint[(String, String, String), Unit, Unit, Nothing] = extend(endpoint.in(i1))
     val extended2: Endpoint[(String, String, (String, String)), Unit, Unit, Nothing] = extend(endpoint.in(i1.and(i2)))
 
-    detuple(extended1.input) shouldBe Vector(i3, i4, i1)
-    detuple(extended2.input) shouldBe Vector(i3, i4, Vector(i1, i2))
+    pairToTuple(extended1.input) shouldBe (((i3, i4), ((), i1)))
+    pairToTuple(extended2.input) shouldBe (((i3, i4), ((), (i1, i2))))
   }
 
   val showTestData = List(
