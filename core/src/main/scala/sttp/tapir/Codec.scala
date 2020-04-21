@@ -225,8 +225,8 @@ object Codec extends FormCodecDerivation {
       partCodecs: Map[String, PartCodec[_, _]],
       defaultPartCodec: Option[PartCodec[_, _]]
   ): MultipartCodec[Seq[AnyPart]] = MultipartCodec(
-    RawBodyType.MultipartBody(partCodecs.mapValues(_.rawBodyType), defaultPartCodec.map(_.rawBodyType)),
-    rawPartCodec(partCodecs.mapValues(_.codec), defaultPartCodec.map(_.codec))
+    RawBodyType.MultipartBody(partCodecs.map(t => (t._1, t._2.rawBodyType)).toMap, defaultPartCodec.map(_.rawBodyType)),
+    rawPartCodec(partCodecs.map(t => (t._1, t._2.codec)).toMap, defaultPartCodec.map(_.codec))
   )
 
   //
