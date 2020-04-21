@@ -1,7 +1,5 @@
 package sttp.tapir
 
-import java.util.Base64
-
 import sttp.tapir.EndpointInput.Auth
 import sttp.tapir.model.UsernamePassword
 
@@ -11,10 +9,22 @@ object TapirAuth {
   private val BasicAuthType = "Basic"
   private val BearerAuthType = "Bearer"
 
+  /**
+    * Reads authorization data from the given `input`.
+    */
   def apiKey[T](input: EndpointInput.Single[T]): EndpointInput.Auth.ApiKey[T] = EndpointInput.Auth.ApiKey[T](input)
-  val basic: EndpointInput.Auth.Http[UsernamePassword] =
-    httpAuth(BasicAuthType, stringPrefixWithSpace(BasicAuthType).map(usernamePasswordMapping))
-  val bearer: EndpointInput.Auth.Http[String] = httpAuth(BearerAuthType, stringPrefixWithSpace(BearerAuthType))
+
+  /**
+    * Reads authorization data from the `Authorization` header, removing the `Basic ` prefix.
+    * To parse the data as a base64-encoded username/password combination, use: `basic[UsernamePassword]`
+    * @see UsernamePassword
+    */
+  def basic[T: Codec[List[String], *, CodecFormat.TextPlain]]: EndpointInput.Auth.Http[UsernamePassword] = httpAuth(BasicAuthType)
+
+  /**
+    * Reads authorization data from the `Authorization` header, removing the `Bearer ` prefix.
+    */
+  def bearer[T: Codec[List[String], *, CodecFormat.TextPlain]]: EndpointInput.Auth.Http[T] = httpAuth(BearerAuthType)
 
   object oauth2 {
     def authorizationCode(
@@ -32,29 +42,11 @@ object TapirAuth {
       )
   }
 
-  private def httpAuth[T](authType: String, mapping: Mapping[String, T]): EndpointInput.Auth.Http[T] =
-    EndpointInput.Auth.Http(authType, header[String]("Authorization").map(mapping))
+  private def httpAuth[T: Codec[List[String], *, CodecFormat.TextPlain]](authType: String): EndpointInput.Auth.Http[T] = {
+    val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
+    val authCodec = Codec.list(Codec.string.map(stringPrefixWithSpace(authType))).map(codec).schema(codec.schema)
+    EndpointInput.Auth.Http(authType, header[T]("Authorization")(authCodec))
+  }
 
   private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefix(prefix + " ")
-
-  def usernamePasswordMapping: Mapping[String, UsernamePassword] = {
-    def decode(s: String): DecodeResult[UsernamePassword] =
-      try {
-        val s2 = new String(Base64.getDecoder.decode(s))
-        val up = s2.split(":", 2) match {
-          case Array()      => UsernamePassword("", None)
-          case Array(u)     => UsernamePassword(u, None)
-          case Array(u, "") => UsernamePassword(u, None)
-          case Array(u, p)  => UsernamePassword(u, Some(p))
-        }
-        DecodeResult.Value(up)
-      } catch {
-        case e: Exception => DecodeResult.Error(s, e)
-      }
-
-    def encode(up: UsernamePassword): String =
-      Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes("UTF-8"))
-
-    Mapping.fromDecode(decode)(encode)
-  }
 }

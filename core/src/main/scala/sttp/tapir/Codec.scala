@@ -7,13 +7,14 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 import java.time._
 import java.time.format.DateTimeParseException
-import java.util.{Date, UUID}
+import java.util.{Base64, Date, UUID}
 
 import sttp.model._
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
 import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import sttp.tapir.internal._
+import sttp.tapir.model.UsernamePassword
 
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.{Duration => SDuration}
@@ -246,6 +247,29 @@ object Codec extends FormCodecDerivation {
 
   implicit val cookieWithMetaCodec: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
   implicit val cookiesWithMetaCodec: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMetaCodec)
+
+  //
+
+  implicit def usernamePasswordCodec: PlainCodec[UsernamePassword] = {
+    def decode(s: String): DecodeResult[UsernamePassword] =
+      try {
+        val s2 = new String(Base64.getDecoder.decode(s))
+        val up = s2.split(":", 2) match {
+          case Array()      => UsernamePassword("", None)
+          case Array(u)     => UsernamePassword(u, None)
+          case Array(u, "") => UsernamePassword(u, None)
+          case Array(u, p)  => UsernamePassword(u, Some(p))
+        }
+        DecodeResult.Value(up)
+      } catch {
+        case e: Exception => DecodeResult.Error(s, e)
+      }
+
+    def encode(up: UsernamePassword): String =
+      Base64.getEncoder.encodeToString(s"${up.username}:${up.password.getOrElse("")}".getBytes("UTF-8"))
+
+    Codec.string.mapDecode(decode)(encode)
+  }
 
   //
 

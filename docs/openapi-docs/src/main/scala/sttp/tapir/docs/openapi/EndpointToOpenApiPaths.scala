@@ -46,11 +46,6 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
-    val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
-      case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
-      case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
-    }.toListMap
-
     Operation(
       e.info.tags.toList,
       e.info.summary,
@@ -60,9 +55,27 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       body.headOption,
       responses,
       if (e.info.deprecated) Some(true) else None,
-      if (securityRequirement.isEmpty) List.empty else List(securityRequirement),
+      operationSecurity(e),
       List.empty
     )
+  }
+
+  private def operationSecurity(e: Endpoint[_, _, _, _]): List[SecurityRequirement] = {
+    val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
+      case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
+      case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
+    }.toListMap
+
+    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.exists(_.isOptional))
+
+    if (securityRequirement.isEmpty) List.empty
+    else {
+      if (securityOptional) {
+        List(ListMap.empty: SecurityRequirement, securityRequirement)
+      } else {
+        List(securityRequirement)
+      }
+    }
   }
 
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {

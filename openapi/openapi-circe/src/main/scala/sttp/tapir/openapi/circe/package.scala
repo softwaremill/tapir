@@ -48,7 +48,12 @@ trait TapirOpenAPICirceEncoders {
 
       Json.obj(fields.toSeq: _*)
     }
-  implicit val encoderOperation: Encoder[Operation] = deriveEncoder[Operation]
+  implicit val encoderOperation: Encoder[Operation] = {
+    // this is needed to override the encoding of `security: List[SecurityRequirement]`. An empty security requirement
+    // should be represented as an empty object (`{}`), not `null`, which is the default encoding of `ListMap`s.
+    implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = doEncodeListMap(nullWhenEmpty = false)
+    deriveEncoder[Operation]
+  }
   implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem]
   implicit val encoderComponents: Encoder[Components] = deriveEncoder[Components]
   implicit val encoderServerVariable: Encoder[ServerVariable] = deriveEncoder[ServerVariable]
@@ -64,8 +69,10 @@ trait TapirOpenAPICirceEncoders {
     case Nil        => Json.Null
     case l: List[T] => Json.arr(l.map(i => implicitly[Encoder[T]].apply(i)): _*)
   }
-  implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = {
-    case m: ListMap[String, V] if m.isEmpty => Json.Null
+  implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = doEncodeListMap(nullWhenEmpty = true)
+
+  private def doEncodeListMap[V: Encoder](nullWhenEmpty: Boolean): Encoder[ListMap[String, V]] = {
+    case m: ListMap[String, V] if m.isEmpty && nullWhenEmpty => Json.Null
     case m: ListMap[String, V] =>
       val properties = m.mapValues(v => implicitly[Encoder[V]].apply(v)).toList
       Json.obj(properties: _*)
