@@ -15,7 +15,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
     case class Test1(f1: Int)
-    val codec = implicitly[MultipartCodec[Test1]]._2
+    val codec = implicitly[MultipartCodec[Test1]].codec
 
     // when
     toPartData(codec.encode(Test1(10))) shouldBe List(("f1", "10"))
@@ -25,7 +25,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a two-arg case class" in {
     // given
     case class Test2(f1: String, f2: Int)
-    val codec = implicitly[MultipartCodec[Test2]]._2
+    val codec = implicitly[MultipartCodec[Test2]].codec
 
     // when
     toPartData(codec.encode(Test2("v1", 10))) shouldBe List(("f1", "v1"), ("f2", "10"))
@@ -38,7 +38,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a case class with optional parameters" in {
     // given
     case class Test4(f1: Option[String], f2: Int)
-    val codec = implicitly[MultipartCodec[Test4]]._2
+    val codec = implicitly[MultipartCodec[Test4]].codec
 
     // when
     toPartData(codec.encode(Test4(Some("v1"), 10))) shouldBe List(("f1", "v1"), ("f2", "10"))
@@ -62,7 +62,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "use the right schema for a case class with part metadata" in {
     // given
     case class Test6(f1: String, f2: Int)
-    val codec = implicitly[MultipartCodec[Test6]]._2
+    val codec = implicitly[MultipartCodec[Test6]].codec
 
     // when
     codec.schema.map(_.schemaType) shouldBe Some(
@@ -76,7 +76,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "use the right schema for a two-arg case class" in {
     // given
     case class Test1(f1: Part[File], f2: Int)
-    val codec = implicitly[MultipartCodec[Test1]]._2
+    val codec = implicitly[MultipartCodec[Test1]].codec
 
     // when
     codec.schema.map(_.schemaType) shouldBe Some(
@@ -90,7 +90,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class using snake-case naming transformation" in {
     // given
     implicit val configuration: Configuration = Configuration.default.withSnakeCaseMemberNames
-    val codec = implicitly[MultipartCodec[CaseClassWithComplicatedName]]._2
+    val codec = implicitly[MultipartCodec[CaseClassWithComplicatedName]].codec
 
     // when
     toPartData(codec.encode(CaseClassWithComplicatedName(10))) shouldBe List(("complicated_name", "10"))
@@ -100,7 +100,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a one-arg case class with list" in {
     // given
     case class Test1(f1: List[Int])
-    val codec = implicitly[MultipartCodec[Test1]]._2
+    val codec = implicitly[MultipartCodec[Test1]].codec
 
     // when
     toPartData(codec.encode(Test1(Nil))) shouldBe Nil
@@ -115,7 +115,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a case class with part metadata" in {
     // given
     case class Test1(f1: Part[Int], f2: String)
-    val codec = implicitly[MultipartCodec[Test1]]._2
+    val codec = implicitly[MultipartCodec[Test1]].codec
 
     val instance = Test1(Part("?", 10, otherDispositionParams = Map("a1" -> "b1"), headers = List(Header.unsafeApply("X-Y", "a-b"))), "v2")
     val parts = List(
@@ -145,7 +145,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "generate a codec for a case class with file part" in {
     // given
     case class Test1(f1: File)
-    val codec = implicitly[MultipartCodec[Test1]]._2
+    val codec = implicitly[MultipartCodec[Test1]].codec
     val f = File.createTempFile("tapir", "test")
 
     try {
@@ -160,7 +160,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
   it should "use the right schema for an optional file part with metadata 2" in {
     // given
     case class Test1(f1: Part[Option[File]], f2: Int)
-    val codec = implicitly[MultipartCodec[Test1]]._2
+    val codec = implicitly[MultipartCodec[Test1]].codec
     val f = File.createTempFile("tapir", "test")
 
     // when
@@ -185,7 +185,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     // given
     implicit val v: Validator[Int] = Validator.min(5)
     case class Test1(f1: Int)
-    val codec = implicitly[MultipartCodec[Test1]]._2
+    val codec = implicitly[MultipartCodec[Test1]].codec
 
     // when
     toPartData(codec.encode(Test1(10))) shouldBe List(("f1", "10"))

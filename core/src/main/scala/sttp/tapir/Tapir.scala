@@ -77,7 +77,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
 
   val multipartBody: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]] = multipartBody(MultipartCodec.Default)
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
-    EndpointIO.Body(multipartCodec._1, multipartCodec._2, EndpointIO.Info.empty)
+    EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
   /**
     * @param schema Schema of the body. Note that any schema can be passed here, usually this will be a schema for the

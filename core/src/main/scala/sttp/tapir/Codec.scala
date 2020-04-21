@@ -91,7 +91,7 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
   }
 }
 
-object Codec extends MultipartCodecDerivation with FormCodecDerivation {
+object Codec extends FormCodecDerivation {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
 
@@ -162,12 +162,6 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   def formMapCodec(charset: Charset): Codec[String, Map[String, String], XWwwFormUrlencoded] =
     formSeqCodec(charset).map(_.toMap)(_.toSeq)
 
-  /**
-    * @param partCodecs For each supported part, a codec which encodes the part value into a raw value. A single part
-    *                   value might be encoded as multiple (or none) raw values.
-    * @param defaultCodec Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra parts
-    *                     should be discarded.
-    */
   def rawPartCodec(
       partCodecs: Map[String, AnyListCodec],
       defaultCodec: Option[AnyListCodec]
@@ -219,6 +213,21 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
       override def validator: Validator[Seq[RawPart]] = Validator.pass
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
     }
+
+  /**
+    * @param partCodecs For each supported part, a (raw body type, codec) pair which encodes the part value into a
+    *                   raw value of the given type. A single part value might be encoded as multiple (or none) raw
+    *                   values.
+    * @param defaultPartCodec Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra
+    *                         parts should be discarded.
+    */
+  def multipartCodec(
+      partCodecs: Map[String, PartCodec[_, _]],
+      defaultPartCodec: Option[PartCodec[_, _]]
+  ): MultipartCodec[Seq[AnyPart]] = MultipartCodec(
+    RawBodyType.MultipartBody(partCodecs.mapValues(_.rawBodyType), defaultPartCodec.map(_.rawBodyType)),
+    rawPartCodec(partCodecs.mapValues(_.codec), defaultPartCodec.map(_.codec))
+  )
 
   //
 
@@ -361,11 +370,24 @@ object Codec extends MultipartCodecDerivation with FormCodecDerivation {
   }
 }
 
-object MultipartCodec {
-  def Default: MultipartCodec[Seq[AnyPart]] = (
-    RawBodyType.MultipartBody(Map.empty, Some(RawBodyType.ByteArrayBody)),
-    Codec.rawPartCodec(Map.empty, Some(Codec.list(Codec.byteArray)))
-  )
+/**
+  * Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec
+  * which further decodes it.
+  */
+case class PartCodec[R, T](rawBodyType: RawBodyType[R], codec: Codec[List[R], T, _ <: CodecFormat])
+
+case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Codec[Seq[RawPart], T, CodecFormat.MultipartFormData]) {
+  def map[U](mapping: Mapping[T, U]): MultipartCodec[U] = MultipartCodec(rawBodyType, codec.map(mapping))
+  def map[U](f: T => U)(g: U => T): MultipartCodec[U] = map(Mapping.from(f)(g))
+  def mapDecode[U](f: T => DecodeResult[U])(g: U => T): MultipartCodec[U] = map(Mapping.fromDecode(f)(g))
+
+  def schema(s: Schema[T]): MultipartCodec[T] = copy(codec = codec.schema(s))
+  def validate(v: Validator[T]): MultipartCodec[T] = copy(codec = codec.validate(v))
+}
+
+object MultipartCodec extends MultipartCodecDerivation {
+  val Default: MultipartCodec[Seq[AnyPart]] =
+    Codec.multipartCodec(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, Codec.list(Codec.byteArray))))
 }
 
 /**

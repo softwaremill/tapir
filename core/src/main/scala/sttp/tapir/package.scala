@@ -8,6 +8,4 @@ package object tapir extends Tapir {
   type AnyPart = Part[_]
   // used in multipart codecs
   type AnyListCodec = Codec[_ <: List[_], _, _ <: CodecFormat]
-
-  type MultipartCodec[T] = (RawBodyType.MultipartBody, Codec[Seq[RawPart], T, CodecFormat.MultipartFormData])
 }

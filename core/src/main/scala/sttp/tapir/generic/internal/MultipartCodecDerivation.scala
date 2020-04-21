@@ -77,20 +77,12 @@ object MultipartCodecDerivation {
     }
 
     val partCodecPairs = fieldsWithCodecs.map {
-      case (field, (_, codec)) =>
+      case (field, (bodyType, codec)) =>
         val fieldName = field.name.decodedName.toString
-        q"""$conf.toLowLevelName($fieldName) -> $codec"""
+        q"""$conf.toLowLevelName($fieldName) -> sttp.tapir.PartCodec($bodyType, $codec)"""
     }
 
     val partCodecs = q"""Map(..$partCodecPairs)"""
-
-    val partBodyTypesPairs = fieldsWithCodecs.map {
-      case (field, (bodyType, _)) =>
-        val fieldName = field.name.decodedName.toString
-        q"""$conf.toLowLevelName($fieldName) -> $bodyType"""
-    }
-
-    val partBodyTypes = q"""Map(..$partBodyTypesPairs)"""
 
     val encodeParams: Iterable[Tree] = fields.map { field =>
       val fieldName = field.name.asInstanceOf[TermName]
@@ -136,13 +128,10 @@ object MultipartCodecDerivation {
         }
         def encode(o: $t): Seq[sttp.tapir.RawPart] = List(..$encodeParams)
 
-        val bodyType = sttp.tapir.RawBodyType.MultipartBody($partBodyTypes, None)
-        val codec = sttp.tapir.Codec.rawPartCodec($partCodecs, None)
+        sttp.tapir.Codec.multipartCodec($partCodecs, None)
           .map(decode _)(encode _)
           .schema(${util.schema})
           .validate(implicitly[sttp.tapir.Validator[$t]])
-          
-        (bodyType, codec)  
       }
      """
     Debug.logGeneratedCode(c)(t.typeSymbol.fullName, codecTree)
