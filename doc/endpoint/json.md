@@ -164,6 +164,23 @@ import sttp.tapir.json.tethysjson._
 
 Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for each type you want to serialize. 
 
+## Jsoniter Scala
+
+To use [Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala) add the following dependency to your project:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "0.14.0"
+```
+
+Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../mytapir.html) and add `TapirJsonJsoniter` not `TapirCirceJson`):
+
+```scala
+import sttp.tapir.json.jsoniter._
+```
+
+Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type you want to serialize. 
+
+
 
 ## Other JSON libraries
 
