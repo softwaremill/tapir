@@ -520,11 +520,11 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     "two endpoints with a body defined as the first input: should only consume body when the path matches",
     NonEmptyList.of(
       route(
-        endpoint.post.in(rawBinaryBody[Array[Byte]]).in("p1").out(stringBody),
+        endpoint.post.in(byteArrayBody).in("p1").out(stringBody),
         (s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])
       ),
       route(
-        endpoint.post.in(rawBinaryBody[Array[Byte]]).in("p2").out(stringBody),
+        endpoint.post.in(byteArrayBody).in("p2").out(stringBody),
         (s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit])
       )
     )

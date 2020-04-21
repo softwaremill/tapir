@@ -1,6 +1,9 @@
 package sttp.tapir
 
+import java.io.{File, InputStream}
+import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.file.Path
 
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, MultiQueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain}
@@ -51,7 +54,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     EndpointIO.Body(RawBodyType.StringBody(charset), Codec.string, EndpointIO.Info.empty)
 
   val htmlBodyUtf8: EndpointIO.Body[String, String] =
-    EndpointIO.Body(RawBodyType.StringBody(StandardCharsets.UTF_8), Codec.string, EndpointIO.Info.empty)
+    EndpointIO.Body(RawBodyType.StringBody(StandardCharsets.UTF_8), Codec.string.format(CodecFormat.TextHtml()), EndpointIO.Info.empty)
 
   def plainBody[T: Codec[String, *, TextPlain]]: EndpointIO.Body[String, T] = plainBody(StandardCharsets.UTF_8)
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
@@ -69,6 +72,12 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     EndpointIO.Body(implicitly[RawBodyType.Binary[R]], codec, EndpointIO.Info.empty)
   def binaryBody[R: RawBodyType.Binary, T: Codec[R, *, OctetStream]]: EndpointIO.Body[R, T] =
     EndpointIO.Body(implicitly[RawBodyType.Binary[R]], implicitly[Codec[R, T, OctetStream]], EndpointIO.Info.empty)
+
+  def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody[Array[Byte]]
+  def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody[ByteBuffer]
+  def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody[InputStream]
+  def fileBody: EndpointIO.Body[File, File] = rawBinaryBody[File]
+  def pathBody: EndpointIO.Body[File, Path] = binaryBody[File, Path]
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
     anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)

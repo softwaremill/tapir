@@ -73,24 +73,24 @@ package object tests {
     endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
 
   val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte], Nothing] =
-    endpoint.post.in("api" / "echo").in(rawBinaryBody[Array[Byte]]).out(rawBinaryBody[Array[Byte]]).name("echo byte array")
+    endpoint.post.in("api" / "echo").in(byteArrayBody).out(byteArrayBody).name("echo byte array")
 
   val in_byte_buffer_out_byte_buffer: Endpoint[ByteBuffer, Unit, ByteBuffer, Nothing] =
-    endpoint.post.in("api" / "echo").in(rawBinaryBody[ByteBuffer]).out(rawBinaryBody[ByteBuffer]).name("echo byte buffer")
+    endpoint.post.in("api" / "echo").in(byteBufferBody).out(byteBufferBody).name("echo byte buffer")
 
   val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream, Nothing] =
-    endpoint.post.in("api" / "echo").in(rawBinaryBody[InputStream]).out(rawBinaryBody[InputStream]).name("echo input stream")
+    endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("echo input stream")
 
   val in_string_out_stream_with_header: Endpoint[String, Unit, (InputStream, Option[Long]), Nothing] =
     endpoint.post
       .in("api" / "echo")
       .in(stringBody)
-      .out(rawBinaryBody[InputStream])
+      .out(inputStreamBody)
       .out(header[Option[Long]]("Content-Length"))
       .name("input string output stream with header")
 
   val in_file_out_file: Endpoint[File, Unit, File, Nothing] =
-    endpoint.post.in("api" / "echo").in(rawBinaryBody[File]).out(rawBinaryBody[File]).name("echo file")
+    endpoint.post.in("api" / "echo").in(fileBody).out(fileBody).name("echo file")
 
   val in_unit_out_json_unit: Endpoint[Unit, Unit, Unit, Nothing] =
     endpoint.in("api" / "unit").out(jsonBody[Unit])
