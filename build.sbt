@@ -82,7 +82,8 @@ lazy val core: Project = (project in file("core"))
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
-      "com.propensive" %% "magnolia" % "0.14.5",
+      "com.propensive" %% "magnolia" % "0.15.0",
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "com.softwaremill.sttp.model" %% "core" % "1.0.3",
       scalaTest % Test,
       scalaCheck % Test,
