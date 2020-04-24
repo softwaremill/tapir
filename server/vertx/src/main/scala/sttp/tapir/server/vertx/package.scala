@@ -27,7 +27,11 @@ package object vertx {
   }
 
   private val streamPauseHandler: Handler[RoutingContext] = { rc =>
-    rc.request().pause()
+    rc.request.pause()
+    rc.next()
+  }
+  private val multipartHandler: Handler[RoutingContext] = { rc =>
+    rc.request.setExpectMultipart(true)
     rc.next()
   }
 
@@ -59,12 +63,15 @@ package object vertx {
       route.failureHandler(rc => tryEncodeError(rc, rc.failure, ect))
       val inputs = e.input.asVectorOfBasicInputs()
       val handlers = inputs.foldLeft(List[Handler[RoutingContext]]()) { (list, ep) => ep match {
-        case _: EndpointIO.Body[_, _] => BodyHandler.create() :: list
+        case body: EndpointIO.Body[_, _] => (body.bodyType match {
+          case MultipartBody(_, _) =>
+            List(multipartHandler, BodyHandler.create())
+          case _ => List(BodyHandler.create())
+        }) ++ list
         case _: EndpointIO.StreamBodyWrapper[_, _] => streamPauseHandler :: list
         case _ => list
       }}
       handlers.foreach(route.handler)
-      println(s"handlers $handlers")
       route
     }
 
@@ -215,7 +222,7 @@ package object vertx {
     }
 
   private def extractPart(name: String, bodyType: RawBodyType[_], rc: RoutingContext): Any = {
-    val formAttributes = rc.request().formAttributes()
+    val formAttributes = rc.request.formAttributes
     val param = formAttributes.get(name)
     bodyType match {
       case RawBodyType.StringBody(charset) => new String(param.get.getBytes(charset))

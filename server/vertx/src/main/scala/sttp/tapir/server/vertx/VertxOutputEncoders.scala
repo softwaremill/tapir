@@ -75,7 +75,7 @@ object VertxOutputEncoders {
   }
 
   private def handleBodyParts[CF <: CodecFormat, R](multipart: RawBodyType[R] with RawBodyType.MultipartBody, r: R)(rc: RoutingContext): Unit = {
-    val resp = rc.response()
+    val resp = rc.response
     resp.setChunked(true)
     resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, "multipart/form-data")
     r.asInstanceOf[Seq[Part[_]]].foreach { rawPartToBodyPart(multipart, _)(rc) }
@@ -85,7 +85,7 @@ object VertxOutputEncoders {
   }
 
   private def rawPartToBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T])(rc: RoutingContext): Unit = {
-    val resp = rc.response()
+    val resp = rc.response
     m.partType(part.name).foreach { partType =>
       forwardHeaders(part.headers)(resp)
       val partContentType = part.contentType.getOrElse("application/octet-stream")
