@@ -21,7 +21,7 @@ class VertxServerTests extends ServerTests[Future, String, Router => Route] with
     .logWhenHandled(true)
     .logAllDecodeFailures(true)
 
-  override def multipleValueHeaderSupport: Boolean = false // FIXME: implement
+  override def multipleValueHeaderSupport: Boolean = true // FIXME: implement
   override def multipartInlineHeaderSupport: Boolean = false // FIXME: implement
   override def streamingSupport: Boolean = false // FIXME: just one test failing
 

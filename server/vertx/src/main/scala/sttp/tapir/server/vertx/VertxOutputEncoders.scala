@@ -127,28 +127,11 @@ object VertxOutputEncoders {
     ()
   }
 
-  // README: even though Vert.x supports headers as a MultiMap, it doesn't propagates multiple values in a header
-  // Therefore, we have to build "multi-headers" value manually
-  // But not for set-cookie. There's definitely something weird happening in the way Vert.x handles the ` headers` MultiMap
-  private def forwardHeaders(outputValues: OutputValues[RoutingContextHandler])(resp: HttpServerResponse): Unit = {
-    val headersMap = MultiMap.caseInsensitiveMultiMap()
-    outputValues.headers.groupBy(_._1).foreach { case (name, values) =>
-      if (!name.equalsIgnoreCase(HttpHeaders.SET_COOKIE.toString)) {
-        headersMap.add(name, values.map(_._2).mkString(", "))
-      } else {
-        headersMap.add(name, values.map(_._2).asJava)
-      }
-    }
-    if (resp.headers.contains(HttpHeaders.CONTENT_TYPE.toString)) { // already set by CodecFormat
-      headersMap.remove(HttpHeaders.CONTENT_TYPE.toString)
-    }
-    resp.headers.addAll(io.vertx.scala.core.MultiMap(headersMap))
-    ()
-  }
+  private def forwardHeaders(outputValues: OutputValues[RoutingContextHandler])(resp: HttpServerResponse): Unit =
+    outputValues.headers.foreach { case (k,v) => resp.headers.add(k, v) }
 
-  private def forwardHeaders(headers: Seq[Header])(resp: HttpServerResponse): Unit = {
+  private def forwardHeaders(headers: Seq[Header])(resp: HttpServerResponse): Unit =
     headers.foreach { h =>
-      resp.headers().add(h.name, h.value)
+      resp.headers.add(h.name, h.value)
     }
-  }
 }
