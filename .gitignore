@@ -14,3 +14,5 @@ project/plugins/project/
 .metals
 
 .idea*
+
+file-uploads

@@ -69,6 +69,7 @@ lazy val rootProject = (project in file("."))
     finatraServer,
     finatraServerCats,
     playServer,
+    vertxServer,
     sttpClient,
     tests,
     examples,
@@ -389,6 +390,16 @@ lazy val playServer: Project = (project in file("server/play-server"))
       "com.typesafe.play" %% "play-server" % Versions.playServer,
       "com.typesafe.play" %% "play-akka-http-server" % Versions.playServer,
       "com.typesafe.play" %% "play" % Versions.playServer
+    )
+  )
+  .dependsOn(core, serverTests % Test)
+
+lazy val vertxServer: Project = (project in file("server/vertx"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-vertx-server",
+    libraryDependencies ++= Seq(
+      "io.vertx" %% "vertx-web-scala" % Versions.vertx
     )
   )
   .dependsOn(core, serverTests % Test)
