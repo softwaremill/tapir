@@ -8,10 +8,10 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 
 private [vertx] class VertxDecodeInputsContext(rc: RoutingContext, pathConsumed: Int = 0) extends DecodeInputsContext {
-  private lazy val request = rc.request()
-  private lazy val _headers = request.headers()
-  private lazy val params = request.params()
-  override def method: Method = MethodMapping.vertxToSttp(rc.request())
+  private lazy val request = rc.request
+  private lazy val _headers = request.headers
+  private lazy val params = request.params
+  override def method: Method = MethodMapping.vertxToSttp(rc.request)
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
     val path = request.path.get.drop(pathConsumed)
     val nextStart = path.dropWhile(_ == '/')
