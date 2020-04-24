@@ -21,6 +21,10 @@ import scala.util.{Failure, Random, Success, Try}
 
 package object vertx {
 
+  private [vertx] implicit class RichContextHandler(rc: RoutingContext) {
+    implicit val executionContext: VertxExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
+  }
+
   implicit class VertxEndpoint[I, E, O, D](e: Endpoint[I, E, O, D]) {
 
     def asRoute(logic: I => Future[Either[E, O]])
@@ -46,7 +50,7 @@ package object vertx {
 
     private def attachGlobalHandlers(route: Route, ect: Option[ClassTag[E]])
                                (implicit serverOptions: VertxServerOptions): Route = {
-      route.failureHandler(rc => tryEncodeError(rc, rc.failure(), ect))
+      route.failureHandler(rc => tryEncodeError(rc, rc.failure, ect))
       val usesBody = e.input.asVectorOfBasicInputs().exists {
         case _: EndpointIO.Body[_, _] => true
         case _: EndpointIO.StreamBodyWrapper[_, _] => true
@@ -60,7 +64,7 @@ package object vertx {
 
     private def logicAsHandler[A](logicResponseHandler: (Params, RoutingContext) => Unit, ect: Option[ClassTag[E]])
                                  (implicit serverOptions: VertxServerOptions): Handler[RoutingContext] = { rc =>
-      val response = rc.response()
+      val response = rc.response
       decodeBody(DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc) match {
         case values: DecodeInputsResult.Values =>
           InputValues(e.input, values) match {
@@ -85,7 +89,6 @@ package object vertx {
     private def logicAsHandlerNoError(logic: I => Future[O], ect: ClassTag[E])
                                      (implicit serverOptions: VertxServerOptions): Handler[RoutingContext] =
       logicAsHandler({ (params, rc) =>
-        implicit val ec: ExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
         Try(logic(params.asAny.asInstanceOf[I])) match {
           case Success(output) =>
             output.onComplete {
@@ -93,7 +96,7 @@ package object vertx {
                 VertxOutputEncoders.apply[O](e.output, result)(rc)
               case Failure(cause) =>
                 tryEncodeError(rc, cause, Some(ect))
-            }
+            }(rc.executionContext)
           case Failure(cause) =>
             tryEncodeError(rc, cause, Some(ect))
         }
@@ -102,7 +105,6 @@ package object vertx {
     private def logicAsHandlerWithError(logic: I => Future[Either[E, O]])
                                        (implicit serverOptions: VertxServerOptions): Handler[RoutingContext] =
       logicAsHandler({ (params, rc) =>
-        implicit val ec: ExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
         Try(logic(params.asAny.asInstanceOf[I])) match {
           case Success(output) =>
             output.onComplete {
@@ -113,7 +115,7 @@ package object vertx {
                   VertxOutputEncoders.apply[O](e.output, result)(rc)
               }
               case Failure(cause) => tryEncodeError(rc, cause, None)
-            }
+            }(rc.executionContext)
           case Failure(cause) => tryEncodeError(rc, cause, None)
         }
       }, None)

@@ -23,7 +23,7 @@ object VertxOutputEncoders {
   type RoutingContextHandler = RoutingContext => Unit
 
   def apply[O](output: EndpointOutput[O], v: O, isError: Boolean = false): RoutingContextHandler = { rc =>
-    val resp = rc.response()
+    val resp = rc.response
     try {
       val options: OutputValues[RoutingContextHandler] = OutputValues.empty
       var outputValues = encodeOutputs(output, ParamsAsAny(v), options)
@@ -37,15 +37,12 @@ object VertxOutputEncoders {
         case None                   => resp.end()
       }
     } catch {
-      case e: Throwable =>
-        e.printStackTrace()
-        rc.fail(e)
+      case e: Throwable => rc.fail(e)
     }
   }
 
   private def setStatus[O](outputValues: OutputValues[O])(resp: HttpServerResponse): Unit =
     outputValues.statusCode.map(_.code).foreach(resp.setStatusCode)
-
 
   private val encodeOutputs: EncodeOutputs[RoutingContextHandler] = new EncodeOutputs(new EncodeOutputBody[RoutingContextHandler] {
     override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): RoutingContextHandler =
@@ -94,9 +91,9 @@ object VertxOutputEncoders {
       val partContentType = part.contentType.getOrElse("application/octet-stream")
       val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
       val dispositionsHeader = dispositionParams.map { case (k, v) => s"""$k="$v"""" }
-      resp.write(s"${HttpHeaders.CONTENT_DISPOSITION.toString}: form-data; ${dispositionsHeader.mkString(", ")}")
+      resp.write(s"${HttpHeaders.CONTENT_DISPOSITION}: form-data; ${dispositionsHeader.mkString(", ")}")
       resp.write("\n")
-      resp.write(s"${HttpHeaders.CONTENT_TYPE.toString}: $partContentType")
+      resp.write(s"${HttpHeaders.CONTENT_TYPE}: $partContentType")
       resp.write("\n\n")
       handleBodyPart(partType.asInstanceOf[RawBodyType[Any]], partContentType, part.body)(rc)
     }
@@ -158,6 +155,5 @@ object VertxOutputEncoders {
     headers.foreach { h =>
       resp.headers().add(h.name, h.value)
     }
-    ()
   }
 }
