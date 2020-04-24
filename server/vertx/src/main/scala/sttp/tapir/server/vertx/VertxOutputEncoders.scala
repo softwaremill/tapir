@@ -123,7 +123,6 @@ object VertxOutputEncoders {
     val resp = rc.response
     resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, contentType)
     resp.setChunked(true)
-    resp.putHeader(HttpHeaders.CONTENT_LENGTH.toString, stream.)
     stream.pipeTo(resp)
     ()
   }
