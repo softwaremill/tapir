@@ -6,6 +6,7 @@ import java.util.Date
 
 import io.vertx.core.Handler
 import io.vertx.core.http.HttpMethod
+import io.vertx.core.logging.LoggerFactory
 import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.ext.web.handler.BodyHandler
 import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
@@ -75,12 +76,12 @@ package object vertx {
           }
         case DecodeInputsResult.Failure(input, failure) =>
           val decodeFailureCtx = DecodeFailureContext(input, failure)
-          serverOptions.decodeFailureHandler(decodeFailureCtx) match { // TODO: do not use default, but create a VertxServerOptions instead
+          serverOptions.decodeFailureHandler(decodeFailureCtx) match {
             case DecodeFailureHandling.NoMatch =>
-              // serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(ctx.log) // TODO: ServerOptions (logging)
+              serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(serverOptions.logger)
               response.setStatusCode(404).end()
             case DecodeFailureHandling.RespondWithResponse(output, value) =>
-              // serverOptions.logRequestHandling.decodeFailureHandled(e, decodeFailureCtx, value)(ctx.log)  // TODO: ServerOptions (logging)
+              serverOptions.logRequestHandling.decodeFailureHandled(e, decodeFailureCtx, value)(serverOptions.logger)
               VertxOutputEncoders.apply(output, value)(rc)
           }
       }
@@ -94,11 +95,14 @@ package object vertx {
             output.onComplete {
               case Success(result) =>
                 VertxOutputEncoders.apply[O](e.output, result)(rc)
+                serverOptions.logRequestHandling.requestHandled(e, rc.response.getStatusCode)(serverOptions.logger)
               case Failure(cause) =>
                 tryEncodeError(rc, cause, Some(ect))
+                serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger)
             }(serverOptions.executionContextOr(rc.executionContext))
           case Failure(cause) =>
             tryEncodeError(rc, cause, Some(ect))
+            serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger)
         }
       }, Some(ect))
 
@@ -114,7 +118,9 @@ package object vertx {
                 case Right(result) =>
                   VertxOutputEncoders.apply[O](e.output, result)(rc)
               }
-              case Failure(cause) => tryEncodeError(rc, cause, None)
+              case Failure(cause) =>
+                serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger)
+                tryEncodeError(rc, cause, None)
             }(serverOptions.executionContextOr(rc.executionContext))
           case Failure(cause) => tryEncodeError(rc, cause, None)
         }

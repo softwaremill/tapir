@@ -17,8 +17,9 @@ import scala.reflect.ClassTag
 
 class VertxServerTests extends ServerTests[Future, Any, Router => Route] with BeforeAndAfterEach {
 
-  implicit val options: VertxServerOptions =
-    VertxServerOptions(ServerDefaults.decodeFailureHandler, None)
+  implicit val options: VertxServerOptions = VertxServerOptions()
+    .logWhenHandled(true)
+    .logAllDecodeFailures(true)
 
   override def multipleValueHeaderSupport: Boolean = false // FIXME: implement
   override def multipartInlineHeaderSupport: Boolean = false // FIXME: implement
