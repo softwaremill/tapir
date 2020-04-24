@@ -4,19 +4,17 @@ import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-import io.vertx.core.MultiMap
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.scala.core.http.HttpServerResponse
-import io.vertx.scala.core.streams.{Pump, ReadStream}
+import io.vertx.scala.core.streams.ReadStream
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.{Header, Part}
 import sttp.tapir.internal._
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
 import sttp.tapir.server.vertx.utils.inputStreamToBuffer
-import scala.collection.JavaConverters._
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
 
 object VertxOutputEncoders {
 
