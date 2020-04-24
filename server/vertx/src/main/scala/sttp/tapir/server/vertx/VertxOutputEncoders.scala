@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx
 
-import java.io.File
+import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
@@ -15,7 +15,7 @@ import sttp.tapir.internal._
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
-
+import sttp.tapir.server.vertx.utils.inputStreamToBuffer
 import scala.collection.JavaConverters._
 
 object VertxOutputEncoders {
@@ -67,7 +67,7 @@ object VertxOutputEncoders {
       case RawBodyType.StringBody(charset) => resp.end(r.toString, charset.toString)
       case RawBodyType.ByteArrayBody => resp.end(Buffer.buffer(r.asInstanceOf[Array[Byte]]))
       case RawBodyType.ByteBufferBody => resp.end(Buffer.buffer().setBytes(0, r.asInstanceOf[ByteBuffer]))
-      case RawBodyType.InputStreamBody => throw new UnsupportedOperationException("Using InputStreams (i.e. blocking IOs) with Vert.x is not supported")
+      case RawBodyType.InputStreamBody => resp.end(inputStreamToBuffer(r.asInstanceOf[InputStream]))
       case RawBodyType.FileBody => resp.sendFile(r.asInstanceOf[File].getPath)
       case m: RawBodyType.MultipartBody => handleBodyParts(m, r)(rc)
     }
@@ -107,7 +107,7 @@ object VertxOutputEncoders {
       case RawBodyType.StringBody(charset) => resp.write(r.toString, charset.toString)
       case RawBodyType.ByteArrayBody => resp.write(Buffer.buffer(r.asInstanceOf[Array[Byte]]))
       case RawBodyType.ByteBufferBody => resp.write(Buffer.buffer().setBytes(0, r.asInstanceOf[ByteBuffer]))
-      case RawBodyType.InputStreamBody => throw new UnsupportedOperationException("Using InputStreams (i.e. blocking IOs) with Vert.x is not supported")
+      case RawBodyType.InputStreamBody => resp.write(inputStreamToBuffer(r.asInstanceOf[InputStream]))
       case RawBodyType.FileBody =>
         val file = r.asInstanceOf[File]
         resp.write(s"""${HttpHeaders.CONTENT_DISPOSITION.toString}: file; file="${file.getName}"""")
@@ -119,16 +119,12 @@ object VertxOutputEncoders {
     ()
   }
 
-
   private def handleStream(contentType: String, stream: ReadStream[Buffer])(rc: RoutingContext): Unit = {
     val resp = rc.response
     resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, contentType)
     resp.setChunked(true)
-    val pump = Pump.pump(stream, resp)
-    stream.endHandler { _ =>
-      pump.stop()
-      ()
-    }
+    resp.putHeader(HttpHeaders.CONTENT_LENGTH.toString, stream.)
+    stream.pipeTo(resp)
     ()
   }
 

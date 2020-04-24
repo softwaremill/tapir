@@ -15,7 +15,7 @@ import sttp.tapir.tests.{Port, PortCounter}
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class VertxServerTests extends ServerTests[Future, Any, Router => Route] with BeforeAndAfterEach {
+class VertxServerTests extends ServerTests[Future, String, Router => Route] with BeforeAndAfterEach {
 
   implicit val options: VertxServerOptions = VertxServerOptions()
     .logWhenHandled(true)
@@ -23,7 +23,7 @@ class VertxServerTests extends ServerTests[Future, Any, Router => Route] with Be
 
   override def multipleValueHeaderSupport: Boolean = false // FIXME: implement
   override def multipartInlineHeaderSupport: Boolean = false // FIXME: implement
-  override def streamingSupport: Boolean = false // FIXME: implement
+  override def streamingSupport: Boolean = false // FIXME: just one test failing
 
   private var vertx: Vertx = _
 
@@ -40,13 +40,12 @@ class VertxServerTests extends ServerTests[Future, Any, Router => Route] with Be
   override def pureResult[T](t: T): Future[T] = Future.successful(t)
   override def suspendResult[T](t: => T): Future[T] = vertx.executeBlocking(() => t)
 
-  override def route[I, E, O](e: Endpoint[I, E, O, Any], fn: I => Future[Either[E, O]], decodeFailureHandler: Option[DecodeFailureHandler]): Router => Route =
+  override def route[I, E, O](e: Endpoint[I, E, O, String], fn: I => Future[Either[E, O]], decodeFailureHandler: Option[DecodeFailureHandler]): Router => Route =
     e.asRoute(fn)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])
-                                                       (implicit eClassTag: ClassTag[E]): Router => Route = {
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, String], fn: I => Future[O])
+                                                       (implicit eClassTag: ClassTag[E]): Router => Route =
     e.asRouteRecoverErrors(fn)
-  }
 
   override def server(routes: NonEmptyList[Router => Route], port: Port): Resource[IO, Unit] = {
     val router = Router.router(vertx)

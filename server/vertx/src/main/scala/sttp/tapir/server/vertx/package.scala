@@ -1,17 +1,17 @@
 package sttp.tapir.server
 
-import java.io.File
+import java.io.{ByteArrayInputStream, File}
 import java.nio.ByteBuffer
 import java.util.Date
 
 import io.vertx.core.Handler
 import io.vertx.core.http.HttpMethod
-import io.vertx.core.logging.LoggerFactory
 import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.ext.web.handler.BodyHandler
 import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
 import sttp.model.Part
 import sttp.tapir.EndpointInput.PathCapture
+import sttp.tapir.RawBodyType.MultipartBody
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.tapir.server.internal._
@@ -24,6 +24,11 @@ package object vertx {
 
   private [vertx] implicit class RichContextHandler(rc: RoutingContext) {
     implicit val executionContext: ExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
+  }
+
+  private val streamPauseHandler: Handler[RoutingContext] = { rc =>
+    rc.request().pause()
+    rc.next()
   }
 
   implicit class VertxEndpoint[I, E, O, D](e: Endpoint[I, E, O, D]) {
@@ -52,14 +57,14 @@ package object vertx {
     private def attachGlobalHandlers(route: Route, ect: Option[ClassTag[E]])
                                (implicit serverOptions: VertxServerOptions): Route = {
       route.failureHandler(rc => tryEncodeError(rc, rc.failure, ect))
-      val usesBody = e.input.asVectorOfBasicInputs().exists {
-        case _: EndpointIO.Body[_, _] => true
-        case _: EndpointIO.StreamBodyWrapper[_, _] => true
-        case _ => false
-      }
-      if (usesBody) {
-        route.handler(BodyHandler.create(true))
-      }
+      val inputs = e.input.asVectorOfBasicInputs()
+      val handlers = inputs.foldLeft(List[Handler[RoutingContext]]()) { (list, ep) => ep match {
+        case _: EndpointIO.Body[_, _] => BodyHandler.create() :: list
+        case _: EndpointIO.StreamBodyWrapper[_, _] => streamPauseHandler :: list
+        case _ => list
+      }}
+      handlers.foreach(route.handler)
+      println(s"handlers $handlers")
       route
     }
 
@@ -131,7 +136,11 @@ package object vertx {
       (error, ect) match {
         case (exception: Throwable, Some(ct)) if ct.runtimeClass.isInstance(exception) =>
           encodeError(rc, error.asInstanceOf[E])
-        case _ => rc.response.setStatusCode(500).end()
+        case (exception: Throwable, _) =>
+          exception.printStackTrace()
+          rc.response.setStatusCode(500).end()
+        case _ =>
+          rc.response.setStatusCode(500).end()
       }
 
     private def encodeError(rc: RoutingContext, error: E): Unit = {
@@ -180,7 +189,8 @@ package object vertx {
       case RawBodyType.StringBody(defaultCharset) => rc.getBodyAsString(defaultCharset.toString).get
       case RawBodyType.ByteArrayBody => rc.getBodyAsString.get.getBytes()
       case RawBodyType.ByteBufferBody => rc.getBody.get.getByteBuf.nioBuffer()
-      case RawBodyType.InputStreamBody => throw new UnsupportedOperationException("Input streams are blocking, thus incompatible with Vert.x") // TODO: executeBlocking ?
+      case RawBodyType.InputStreamBody =>
+        new ByteArrayInputStream(rc.getBody.get.getBytes) // README: be really careful with that
       case RawBodyType.FileBody =>
         rc.fileUploads().toList match {
           case List(upload) =>
