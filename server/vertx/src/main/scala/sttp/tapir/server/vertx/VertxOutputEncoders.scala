@@ -49,35 +49,32 @@ object VertxOutputEncoders {
 
   private val encodeOutputs: EncodeOutputs[RoutingContextHandler] = new EncodeOutputs(new EncodeOutputBody[RoutingContextHandler] {
     override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): RoutingContextHandler =
-      handleBody(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), v)(_)
+      handleBody(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format/*, charset(bodyType)*/), v)(_)
     override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): RoutingContextHandler =
-      handleStream(formatToContentType(format, charset), v.asInstanceOf[ReadStream[Buffer]])(_)
+      handleStream(formatToContentType(format/*, charset*/), v.asInstanceOf[ReadStream[Buffer]])(_)
   })
 
-  private def formatToContentType(format: CodecFormat, maybeCharset: Option[Charset]): String =
-    (maybeCharset match {
-      case None => format.mediaType
-      case Some(charset) => format.mediaType// .charset(charset.toString)
-    }).toString
+  private def formatToContentType(format: CodecFormat/*, maybeCharset: Option[Charset]*/): String =
+    format.mediaType.toString
 
   private def handleBody[CF <: CodecFormat, R](
     bodyType: RawBodyType[R],
     contentType: String,
-    //contentLength: Option[Long],
     r: R,
   )(rc: RoutingContext): Unit = {
-    val resp = rc.response()
-    if (resp.headers().get(HttpHeaders.CONTENT_TYPE.toString).isEmpty) {
+    val resp = rc.response
+    if (resp.headers.get(HttpHeaders.CONTENT_TYPE.toString).isEmpty) {
       resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, contentType)
     }
     bodyType match {
-      case RawBodyType.StringBody(charset) => resp.end(r.toString, charset.toString) // FIXME: how to handle byte arrays?
+      case RawBodyType.StringBody(charset) => resp.end(r.toString, charset.toString)
       case RawBodyType.ByteArrayBody => resp.end(Buffer.buffer(r.asInstanceOf[Array[Byte]]))
       case RawBodyType.ByteBufferBody => resp.end(Buffer.buffer().setBytes(0, r.asInstanceOf[ByteBuffer]))
       case RawBodyType.InputStreamBody => throw new UnsupportedOperationException("Using InputStreams (i.e. blocking IOs) with Vert.x is not supported")
       case RawBodyType.FileBody => resp.sendFile(r.asInstanceOf[File].getPath)
       case m: RawBodyType.MultipartBody => handleBodyParts(m, r)(rc)
     }
+    ()
   }
 
   private def handleBodyParts[CF <: CodecFormat, R](multipart: RawBodyType[R] with RawBodyType.MultipartBody, r: R)(rc: RoutingContext): Unit = {
@@ -107,9 +104,10 @@ object VertxOutputEncoders {
 
   private def handleBodyPart[CF <: CodecFormat, R](bodyType: RawBodyType[R], contentType: String, r: R)(rc: RoutingContext): Unit = {
     val resp = rc.response()
-    // resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, contentType)
+    resp.write(s"${HttpHeaders.CONTENT_TYPE}: $contentType")
+    resp.write("\n")
     bodyType match {
-      case RawBodyType.StringBody(charset) => resp.write(r.toString, charset.toString) // FIXME: how to handle byte arrays?
+      case RawBodyType.StringBody(charset) => resp.write(r.toString, charset.toString)
       case RawBodyType.ByteArrayBody => resp.write(Buffer.buffer(r.asInstanceOf[Array[Byte]]))
       case RawBodyType.ByteBufferBody => resp.write(Buffer.buffer().setBytes(0, r.asInstanceOf[ByteBuffer]))
       case RawBodyType.InputStreamBody => throw new UnsupportedOperationException("Using InputStreams (i.e. blocking IOs) with Vert.x is not supported")
@@ -117,18 +115,24 @@ object VertxOutputEncoders {
         val file = r.asInstanceOf[File]
         resp.write(s"""${HttpHeaders.CONTENT_DISPOSITION.toString}: file; file="${file.getName}"""")
         resp.write("\n")
-        resp.write(rc.vertx.fileSystem().readFileBlocking(file.getAbsolutePath))
+        resp.write(rc.vertx.fileSystem.readFileBlocking(file.getAbsolutePath))
         resp.write("\n\n")
       case m: RawBodyType.MultipartBody => handleBodyParts(m, r)(rc)
     }
+    ()
   }
 
 
   private def handleStream(contentType: String, stream: ReadStream[Buffer])(rc: RoutingContext): Unit = {
-    val resp = rc.response()
+    val resp = rc.response
     resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, contentType)
     resp.setChunked(true)
-    Pump.pump(stream, resp)
+    val pump = Pump.pump(stream, resp)
+    stream.endHandler { _ =>
+      pump.stop()
+      ()
+    }
+    ()
   }
 
   // README: even though Vert.x supports headers as a MultiMap, it doesn't propagates multiple values in a header
@@ -147,11 +151,13 @@ object VertxOutputEncoders {
       headersMap.remove(HttpHeaders.CONTENT_TYPE.toString)
     }
     resp.headers.addAll(io.vertx.scala.core.MultiMap(headersMap))
+    ()
   }
 
   private def forwardHeaders(headers: Seq[Header])(resp: HttpServerResponse): Unit = {
     headers.foreach { h =>
       resp.headers().add(h.name, h.value)
     }
+    ()
   }
 }

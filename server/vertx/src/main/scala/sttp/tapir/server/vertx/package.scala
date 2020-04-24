@@ -16,69 +16,58 @@ import sttp.tapir.internal._
 import sttp.tapir.server.internal._
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.reflect.ClassTag
 import scala.util.{Failure, Random, Success, Try}
 
 package object vertx {
 
   implicit class VertxEndpoint[I, E, O, D](e: Endpoint[I, E, O, D]) {
 
-    def asRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: VertxServerOptions): Router => Route = { router =>
-      endpointToRoute(e) match {
-        case (method, path) =>
-          println(s"Attaching ${method.getOrElse("route")}($path) to Router")
-          println(s"endpoint is: $e")
-          attach(router, endpointToRoute(e)).handler(logicAsHandlerWithError(logic))
-      }
+    def asRoute(logic: I => Future[Either[E, O]])
+               (implicit serverOptions: VertxServerOptions): Router => Route = { router =>
+        attach(router, endpointToRoute(e), None).handler(logicAsHandlerWithError(logic))
     }
 
-    def asRouteRecoverErrors(logic: I => Future[O])(implicit serverOptions: VertxServerOptions): Router => Route = { router =>
-      endpointToRoute(e) match {
-        case (method, path) =>
-          println(s"Attaching $method $path to Router")
-          println(s"endpoint is: $e")
-          attach(router, endpointToRoute(e)).handler(logicAsHandlerNoError(logic))
-      }
+    def asRouteRecoverErrors(logic: I => Future[O])
+                            (implicit serverOptions: VertxServerOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route = { router =>
+      val ect = implicitly[ClassTag[E]]
+      attach(router, endpointToRoute(e), Some(ect)).handler(logicAsHandlerNoError(logic, ect))
     }
 
-    def attach(router: Router, route: (Option[HttpMethod], String))(implicit serverOptions: VertxServerOptions): Route = {
+    def attach(router: Router, route: (Option[HttpMethod], String), eClassTag: Option[ClassTag[E]])
+              (implicit serverOptions: VertxServerOptions): Route = {
       val attachedRoute =
         route match {
           case (Some(method), path) => router.route(method, path)
           case (None, path) => router.route(path)
         }
-      prepareHandlers(attachedRoute)
-      attachedRoute
+      attachGlobalHandlers(attachedRoute, eClassTag)
     }
 
-    private def prepareHandlers(route: Route): Unit = {
-      route.failureHandler { rc =>
-        rc.failure().printStackTrace()
-        rc.response().setStatusCode(500).end() // FIXME: fail properly
-      }
+    private def attachGlobalHandlers(route: Route, ect: Option[ClassTag[E]])
+                               (implicit serverOptions: VertxServerOptions): Route = {
+      route.failureHandler(rc => tryEncodeError(rc, rc.failure(), ect))
       val usesBody = e.input.asVectorOfBasicInputs().exists {
         case _: EndpointIO.Body[_, _] => true
         case _: EndpointIO.StreamBodyWrapper[_, _] => true
         case _ => false
       }
       if (usesBody) {
-        println(s"!!!Route: ${route.methods()} ${route.getPath} USES BODY")
         route.handler(BodyHandler.create(true))
       }
+      route
     }
 
-    private def logicAsHandler[A](logicResponseHandler: (Params, RoutingContext) => Unit)
+    private def logicAsHandler[A](logicResponseHandler: (Params, RoutingContext) => Unit, ect: Option[ClassTag[E]])
                                  (implicit serverOptions: VertxServerOptions): Handler[RoutingContext] = { rc =>
-      println(s"Handling query ${rc.request.method} ${rc.request.absoluteURI}")
       val response = rc.response()
-      // TODO: decodeBody
-      // TODO: EncodeError
       decodeBody(DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc) match {
         case values: DecodeInputsResult.Values =>
           InputValues(e.input, values) match {
             case InputValuesResult.Value(params, _) =>
               logicResponseHandler(params, rc)
             case InputValuesResult.Failure(_, failure) =>
-              tryEncodeError(rc, failure)
+              tryEncodeError(rc, failure, ect)
           }
         case DecodeInputsResult.Failure(input, failure) =>
           val decodeFailureCtx = DecodeFailureContext(input, failure)
@@ -93,55 +82,59 @@ package object vertx {
       }
     }
 
-    private def logicAsHandlerNoError(logic: I => Future[O])
+    private def logicAsHandlerNoError(logic: I => Future[O], ect: ClassTag[E])
                                      (implicit serverOptions: VertxServerOptions): Handler[RoutingContext] =
-      logicAsHandler { (params, rc) =>
+      logicAsHandler({ (params, rc) =>
         implicit val ec: ExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
         Try(logic(params.asAny.asInstanceOf[I])) match {
           case Success(output) =>
-              output.onComplete {
-                case Success(result) =>
-                  VertxOutputEncoders.apply[O](e.output, result)(rc)
-                case Failure(cause) =>
-                  tryEncodeError(rc, cause)
-              }
+            output.onComplete {
+              case Success(result) =>
+                VertxOutputEncoders.apply[O](e.output, result)(rc)
+              case Failure(cause) =>
+                tryEncodeError(rc, cause, Some(ect))
+            }
           case Failure(cause) =>
-            tryEncodeError(rc, cause)
+            tryEncodeError(rc, cause, Some(ect))
         }
-      }
+      }, Some(ect))
 
     private def logicAsHandlerWithError(logic: I => Future[Either[E, O]])
                                        (implicit serverOptions: VertxServerOptions): Handler[RoutingContext] =
-      logicAsHandler { (params, rc) =>
+      logicAsHandler({ (params, rc) =>
         implicit val ec: ExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
         Try(logic(params.asAny.asInstanceOf[I])) match {
           case Success(output) =>
             output.onComplete {
               case Success(result) => result match {
                 case Left(failure) =>
-                  tryEncodeError(rc, failure)
+                  encodeError(rc, failure)
                 case Right(result) =>
                   VertxOutputEncoders.apply[O](e.output, result)(rc)
               }
-              case Failure(cause) => tryEncodeError(rc, cause)
+              case Failure(cause) => tryEncodeError(rc, cause, None)
             }
-          case Failure(cause) => tryEncodeError(rc, cause)
+          case Failure(cause) => tryEncodeError(rc, cause, None)
         }
+      }, None)
+
+    private def tryEncodeError(rc: RoutingContext, error: Any, ect: Option[ClassTag[E]])
+                              (implicit serverOptions: VertxServerOptions): Unit =
+      (error, ect) match {
+        case (exception: Throwable, Some(ct)) if ct.runtimeClass.isInstance(exception) =>
+          encodeError(rc, error.asInstanceOf[E])
+        case _ => rc.response.setStatusCode(500).end()
       }
 
-    private def tryEncodeError(rc: RoutingContext, error: Any): Unit = error match {
-      case exception: E =>
-        try {
-          VertxOutputEncoders.apply[E](e.errorOutput, exception, isError = true)(rc)
-        } catch {
-          case e: Throwable => rc.fail(e)
-        }
-      case e: Throwable => rc.fail(e)
-      case _ => rc.fail(500)
+    private def encodeError(rc: RoutingContext, error: E): Unit = {
+      try {
+        VertxOutputEncoders.apply[E](e.errorOutput, error, isError = true)(rc)
+      } catch {
+        case _: Throwable => rc.response.setStatusCode(500).end()
+      }
     }
-
-
   }
+
 
   private def endpointToRoute(endpoint: Endpoint[_,_,_,_]): (Option[HttpMethod], String) = {
     var idxUsed = 0
