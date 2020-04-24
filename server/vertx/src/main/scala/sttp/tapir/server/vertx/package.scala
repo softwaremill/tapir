@@ -22,7 +22,7 @@ import scala.util.{Failure, Random, Success, Try}
 package object vertx {
 
   private [vertx] implicit class RichContextHandler(rc: RoutingContext) {
-    implicit val executionContext: VertxExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
+    implicit val executionContext: ExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
   }
 
   implicit class VertxEndpoint[I, E, O, D](e: Endpoint[I, E, O, D]) {
@@ -96,7 +96,7 @@ package object vertx {
                 VertxOutputEncoders.apply[O](e.output, result)(rc)
               case Failure(cause) =>
                 tryEncodeError(rc, cause, Some(ect))
-            }(rc.executionContext)
+            }(serverOptions.executionContextOr(rc.executionContext))
           case Failure(cause) =>
             tryEncodeError(rc, cause, Some(ect))
         }
@@ -115,7 +115,7 @@ package object vertx {
                   VertxOutputEncoders.apply[O](e.output, result)(rc)
               }
               case Failure(cause) => tryEncodeError(rc, cause, None)
-            }(rc.executionContext)
+            }(serverOptions.executionContextOr(rc.executionContext))
           case Failure(cause) => tryEncodeError(rc, cause, None)
         }
       }, None)

@@ -18,7 +18,7 @@ import scala.reflect.ClassTag
 class VertxServerTests extends ServerTests[Future, Any, Router => Route] with BeforeAndAfterEach {
 
   implicit val options: VertxServerOptions =
-    VertxServerOptions(ServerDefaults.decodeFailureHandler)
+    VertxServerOptions(ServerDefaults.decodeFailureHandler, None)
 
   override def multipleValueHeaderSupport: Boolean = false // FIXME: implement
   override def multipartInlineHeaderSupport: Boolean = false // FIXME: implement
@@ -40,7 +40,7 @@ class VertxServerTests extends ServerTests[Future, Any, Router => Route] with Be
   override def suspendResult[T](t: => T): Future[T] = vertx.executeBlocking(() => t)
 
   override def route[I, E, O](e: Endpoint[I, E, O, Any], fn: I => Future[Either[E, O]], decodeFailureHandler: Option[DecodeFailureHandler]): Router => Route =
-    e.asRoute(fn)(VertxServerOptions(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
+    e.asRoute(fn)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])
                                                        (implicit eClassTag: ClassTag[E]): Router => Route = {
