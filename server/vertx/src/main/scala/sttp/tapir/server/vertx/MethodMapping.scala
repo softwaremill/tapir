@@ -22,6 +22,6 @@ private[vertx] object MethodMapping {
     method.flatMap(conversions.get)
 
   def vertxToSttp(request: HttpServerRequest): Method =
-    Method(request.rawMethod().toUpperCase)
+    Method(request.rawMethod.toUpperCase)
 
 }

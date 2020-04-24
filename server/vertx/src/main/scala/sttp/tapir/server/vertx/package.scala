@@ -14,6 +14,7 @@ import sttp.tapir.EndpointInput.PathCapture
 import sttp.tapir.RawBodyType.MultipartBody
 import sttp.tapir._
 import sttp.tapir.internal._
+import sttp.tapir.server.vertx.VertxInputDecoders._
 import sttp.tapir.server.internal._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -22,7 +23,7 @@ import scala.util.{Failure, Random, Success, Try}
 
 package object vertx {
 
-  private [vertx] implicit class RichContextHandler(rc: RoutingContext) {
+  private[vertx] implicit class RichContextHandler(rc: RoutingContext) {
     implicit val executionContext: ExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
   }
 
@@ -39,7 +40,7 @@ package object vertx {
 
     def asRoute(logic: I => Future[Either[E, O]])
                (implicit serverOptions: VertxServerOptions): Router => Route = { router =>
-        attach(router, endpointToRoute(e), None).handler(logicAsHandlerWithError(logic))
+      attach(router, endpointToRoute(e), None).handler(logicAsHandlerWithError(logic))
     }
 
     def asRouteRecoverErrors(logic: I => Future[O])
@@ -59,18 +60,20 @@ package object vertx {
     }
 
     private def attachGlobalHandlers(route: Route, ect: Option[ClassTag[E]])
-                               (implicit serverOptions: VertxServerOptions): Route = {
-      route.failureHandler(rc => tryEncodeError(rc, rc.failure, ect))
+                                    (implicit serverOptions: VertxServerOptions): Route = {
+      route.failureHandler(rc => tryEncodeError(e, rc, rc.failure, ect))
       val inputs = e.input.asVectorOfBasicInputs()
-      val handlers = inputs.foldLeft(List[Handler[RoutingContext]]()) { (list, ep) => ep match {
-        case body: EndpointIO.Body[_, _] => (body.bodyType match {
-          case MultipartBody(_, _) =>
-            List(multipartHandler, BodyHandler.create())
-          case _ => List(BodyHandler.create())
-        }) ++ list
-        case _: EndpointIO.StreamBodyWrapper[_, _] => streamPauseHandler :: list
-        case _ => list
-      }}
+      val handlers = inputs.foldLeft(List[Handler[RoutingContext]]()) { (list, ep) =>
+        ep match {
+          case body: EndpointIO.Body[_, _] => (body.bodyType match {
+            case MultipartBody(_, _) =>
+              List(multipartHandler, BodyHandler.create())
+            case _ => List(BodyHandler.create())
+          }) ++ list
+          case _: EndpointIO.StreamBodyWrapper[_, _] => streamPauseHandler :: list
+          case _ => list
+        }
+      }
       handlers.foreach(route.handler)
       route
     }
@@ -84,7 +87,7 @@ package object vertx {
             case InputValuesResult.Value(params, _) =>
               logicResponseHandler(params, rc)
             case InputValuesResult.Failure(_, failure) =>
-              tryEncodeError(rc, failure, ect)
+              tryEncodeError(e, rc, failure, ect)
           }
         case DecodeInputsResult.Failure(input, failure) =>
           val decodeFailureCtx = DecodeFailureContext(input, failure)
@@ -109,11 +112,11 @@ package object vertx {
                 VertxOutputEncoders.apply[O](e.output, result)(rc)
                 serverOptions.logRequestHandling.requestHandled(e, rc.response.getStatusCode)(serverOptions.logger)
               case Failure(cause) =>
-                tryEncodeError(rc, cause, Some(ect))
+                tryEncodeError(e, rc, cause, Some(ect))
                 serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger)
             }(serverOptions.executionContextOr(rc.executionContext))
           case Failure(cause) =>
-            tryEncodeError(rc, cause, Some(ect))
+            tryEncodeError(e, rc, cause, Some(ect))
             serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger)
         }
       }, Some(ect))
@@ -126,57 +129,38 @@ package object vertx {
             output.onComplete {
               case Success(result) => result match {
                 case Left(failure) =>
-                  encodeError(rc, failure)
+                  encodeError(e, rc, failure)
                 case Right(result) =>
                   VertxOutputEncoders.apply[O](e.output, result)(rc)
               }
               case Failure(cause) =>
                 serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger)
-                tryEncodeError(rc, cause, None)
+                tryEncodeError(e, rc, cause, None)
             }(serverOptions.executionContextOr(rc.executionContext))
-          case Failure(cause) => tryEncodeError(rc, cause, None)
+          case Failure(cause) => tryEncodeError(e, rc, cause, None)
         }
       }, None)
 
-    private def tryEncodeError(rc: RoutingContext, error: Any, ect: Option[ClassTag[E]])
-                              (implicit serverOptions: VertxServerOptions): Unit =
-      (error, ect) match {
-        case (exception: Throwable, Some(ct)) if ct.runtimeClass.isInstance(exception) =>
-          encodeError(rc, error.asInstanceOf[E])
-        case (exception: Throwable, _) =>
-          exception.printStackTrace()
-          rc.response.setStatusCode(500).end()
-        case _ =>
-          rc.response.setStatusCode(500).end()
-      }
-
-    private def encodeError(rc: RoutingContext, error: E): Unit = {
-      try {
-        VertxOutputEncoders.apply[E](e.errorOutput, error, isError = true)(rc)
-      } catch {
-        case _: Throwable => rc.response.setStatusCode(500).end()
-      }
-    }
   }
 
-
-  private def endpointToRoute(endpoint: Endpoint[_,_,_,_]): (Option[HttpMethod], String) = {
+  private def endpointToRoute(endpoint: Endpoint[_, _, _, _]): (Option[HttpMethod], String) = {
     var idxUsed = 0
     val p = endpoint.input
       .asVectorOfBasicInputs()
       .collect {
         case segment: EndpointInput.FixedPath[_] => segment.show
-        case PathCapture(Some(name), _, _)       => s"/:$name"
-        case PathCapture(_, _, _)                =>
+        case PathCapture(Some(name), _, _) => s"/:$name"
+        case PathCapture(_, _, _) =>
           idxUsed += 1
           s"/:param$idxUsed"
-        case EndpointInput.PathsCapture(_, _)    => "/*"
+        case EndpointInput.PathsCapture(_, _) => "/*"
       }
       .mkString
     (MethodMapping.sttpToVertx(endpoint.httpMethod), if (p.isEmpty) "/*" else p)
   }
 
-  def decodeBody(result: DecodeInputsResult, rc: RoutingContext): DecodeInputsResult = {
+  def decodeBody(result: DecodeInputsResult, rc: RoutingContext)
+                (implicit serverOptions: VertxServerOptions): DecodeInputsResult = {
     result match {
       case values: DecodeInputsResult.Values =>
         values.bodyInput match {
@@ -185,13 +169,14 @@ package object vertx {
             codec.decode(extractRawBody(bodyType, rc)) match {
               case DecodeResult.Value(body) => values.setBodyInputValue(body)
               case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+            }
         }
-      }
       case failure: DecodeInputsResult.Failure => failure
     }
   }
 
-  def extractRawBody[B](bodyType: RawBodyType[B], rc: RoutingContext): Any =
+  def extractRawBody[B](bodyType: RawBodyType[B], rc: RoutingContext)
+                       (implicit serverOptions: VertxServerOptions): Any =
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) => rc.getBodyAsString(defaultCharset.toString).get
       case RawBodyType.ByteArrayBody => rc.getBodyAsString.get.getBytes()
@@ -203,8 +188,8 @@ package object vertx {
           case List(upload) =>
             new File(upload.uploadedFileName())
           case List() if rc.getBody.isDefined => // README: really weird, but there's a test that sends the body as String, and expects a File
-            val filePath = s"/tmp/${new Date().getTime}-${Random.nextLong()}"// FIXME: configurable upload directory
-            try  {
+            val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
+            try {
               rc.vertx().fileSystem().createFileBlocking(filePath)
               rc.vertx().fileSystem().writeFileBlocking(filePath, rc.getBody.get)
               new File(filePath)
@@ -238,6 +223,5 @@ package object vertx {
         }
     }
   }
-
 
 }

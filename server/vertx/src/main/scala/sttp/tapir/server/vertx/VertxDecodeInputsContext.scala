@@ -23,14 +23,14 @@ private [vertx] class VertxDecodeInputsContext(rc: RoutingContext, pathConsumed:
     val charactersConsumed = segment.map(_.length).getOrElse(0) + (path.length - nextStart.length)
     (segment, new VertxDecodeInputsContext(rc, pathConsumed + charactersConsumed))
   }
-  override def header(name: String): List[String] = request.headers().getAll(name).toList
-  override def headers: Seq[(String, String)] = _headers.names().map { key =>
+  override def header(name: String): List[String] = request.headers.getAll(name).toList
+  override def headers: Seq[(String, String)] = _headers.names.map { key =>
     (key, _headers.get(key).get)
   }.toSeq
   override def queryParameter(name: String): Seq[String] = params.getAll(name)
-  override def queryParameters: MultiQueryParams = MultiQueryParams.fromMultiMap(params.names.map { key =>
-    (key, params.getAll(key))
-  }.toMap)
+  override def queryParameters: MultiQueryParams = MultiQueryParams.fromMultiMap(
+    params.names.map { key => (key, params.getAll(key)) }.toMap
+  )
   override def bodyStream: Any =
     rc.request.asInstanceOf[ReadStream[Buffer]]
   override def serverRequest: ServerRequest = new VertxServerRequest(rc)

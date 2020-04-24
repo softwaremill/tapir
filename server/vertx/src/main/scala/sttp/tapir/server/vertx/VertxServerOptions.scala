@@ -1,5 +1,7 @@
 package sttp.tapir.server.vertx
 
+import java.io.File
+
 import io.vertx.core.logging.{Logger, LoggerFactory}
 import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaults}
 
@@ -9,6 +11,7 @@ case class VertxServerOptions(
   decodeFailureHandler: DecodeFailureHandler = ServerDefaults.decodeFailureHandler,
   logger: Logger = LoggerFactory.getLogger("tapir-vertx"),
   logRequestHandling: LogRequestHandling[Logger => Unit] = VertxServerOptions.defaultLogRequestHandling,
+  uploadDirectory: File = File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
   private val specificExecutionContext: Option[ExecutionContext] = None
 ) {
 
