@@ -26,7 +26,8 @@ package object vertx {
      * @return A function, that given a router, will attach this endpoint to it
      */
     def route(logic: I => Future[Either[E, O]])
-             (implicit endpointOptions: VertxEndpointOptions): Router => Route = { router =>
+             (implicit endpointOptions: VertxEndpointOptions)
+             : Router => Route = { router =>
       mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, None)
         .handler(endpointHandler(logic, responseHandlerWithError)(endpointOptions, None))
     }
@@ -38,8 +39,9 @@ package object vertx {
      * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
      * @return A function, that given a router, will attach this endpoint to it
      */
-    def blockingRoute(logic: I => Future[Either[E, O]], vertx: Vertx)
-                     (implicit endpointOptions: VertxEndpointOptions): Router => Route = { router =>
+    def blockingRoute(logic: I => Future[Either[E, O]])
+                     (implicit endpointOptions: VertxEndpointOptions)
+                     : Router => Route = { router =>
       mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, None)
         .blockingHandler(endpointHandler(logic, responseHandlerWithError)(endpointOptions, None))
     }
@@ -51,7 +53,8 @@ package object vertx {
      * @return A function, that given a router, will attach this endpoint to it
      */
     def routeRecoverErrors(logic: I => Future[O])
-                          (implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route = { router =>
+                          (implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E])
+                          : Router => Route = { router =>
       val ect = Some(implicitly[ClassTag[E]])
       mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, ect)
         .handler(endpointHandler(logic, responseHandlerNoError)(endpointOptions, ect))
@@ -64,8 +67,9 @@ package object vertx {
      * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
      * @return A function, that given a router, will attach this endpoint to it
      */
-    def blockingRouteRecoverErrors(logic: I => Future[O], vertx: Vertx)
-                                  (implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route = { router =>
+    def blockingRouteRecoverErrors(logic: I => Future[O])
+                                  (implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E])
+                                  : Router => Route = { router =>
       val ect = Some(implicitly[ClassTag[E]])
       mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, ect)
         .blockingHandler(endpointHandler(logic, responseHandlerNoError)(endpointOptions, ect))
