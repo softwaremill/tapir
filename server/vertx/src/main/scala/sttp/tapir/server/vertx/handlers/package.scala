@@ -62,9 +62,10 @@ package object handlers {
         rc.response.setStatusCode(500).end()
     }
 
-  private [vertx] def encodeError[E](endpoint: Endpoint[_, E, _, _], rc: RoutingContext, error: E): Unit = {
+  private [vertx] def encodeError[E](endpoint: Endpoint[_, E, _, _], rc: RoutingContext, error: E)
+                                    (implicit endpointOptions: VertxEndpointOptions): Unit = {
     try {
-      VertxOutputEncoders.apply[E](endpoint.errorOutput, error, isError = true)(rc)
+      VertxOutputEncoders.apply[E](endpoint.errorOutput, error, isError = true)(endpointOptions)(rc)
     } catch {
       case _: Throwable => rc.response.setStatusCode(500).end()
     }

@@ -49,7 +49,7 @@ object VertxInputDecoders {
             rc.response.setStatusCode(404).end()
           case DecodeFailureHandling.RespondWithResponse(output, value) =>
             endpointOptions.logRequestHandling.decodeFailureHandled(endpoint, decodeFailureCtx, value)(endpointOptions.logger)
-            VertxOutputEncoders.apply(output, value)(rc)
+            VertxOutputEncoders.apply(output, value)(endpointOptions)(rc)
         }
 
     }

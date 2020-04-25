@@ -14,7 +14,7 @@ import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.server.vertx.VertxEndpointOptions
-import sttp.tapir.{CodecFormat, Endpoint, RawBodyType}
+import sttp.tapir.{CodecFormat, Endpoint, EndpointOutput, RawBodyType}
 
 /**
  * All the necessary methods to write Endpoint.outputs to Vert.x HttpServerResponse
@@ -30,17 +30,16 @@ object VertxOutputEncoders {
 
   /**
    * Creates a function, that given a RoutingContext will write the result to its response, according to the endpoint definition
-   * @param endpoint the endpoint definition
+   * @param output the endpoint definition
    * @param result the result to encode
    * @param isError boolean indicating if the result is an error or not
    *
    * @tparam O type of the result to encode
    * @return a function, that given a RoutingContext will write the output to its HTTP response
    */
-  private [vertx] def apply[O](endpoint: Endpoint[_, _, O, _], result: O, isError: Boolean = false)
+  private [vertx] def apply[O](output: EndpointOutput[O], result: O, isError: Boolean = false, log: Int => Unit = { _ => })
                               (implicit endpointOptions: VertxEndpointOptions): RoutingContextHandler = { rc =>
     val resp = rc.response
-    val output = endpoint.output
     val options: OutputValues[RoutingContextHandlerWithLength] = OutputValues.empty
     try {
       var outputValues = encodeOutputs(output, ParamsAsAny(result), options)
@@ -53,7 +52,7 @@ object VertxOutputEncoders {
         case Some(responseHandler)  => responseHandler(outputValues.contentLength)(rc)
         case None                   => resp.end()
       }
-      endpointOptions.logRequestHandling.requestHandled(endpoint, resp.getStatusCode)
+      log(resp.getStatusCode)
     } catch {
       case e: Throwable => rc.fail(e)
     }

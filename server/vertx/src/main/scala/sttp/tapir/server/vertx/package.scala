@@ -41,7 +41,7 @@ package object vertx {
     def blockingRoute(logic: I => Future[Either[E, O]], vertx: Vertx)
                      (implicit endpointOptions: VertxEndpointOptions): Router => Route = { router =>
       mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, None)
-        .handler(endpointHandler(logic, responseHandlerWithError)(endpointOptions.blocking(vertx), None))
+        .blockingHandler(endpointHandler(logic, responseHandlerWithError)(endpointOptions, None))
     }
 
     /**
@@ -68,7 +68,7 @@ package object vertx {
                                   (implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route = { router =>
       val ect = Some(implicitly[ClassTag[E]])
       mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, ect)
-        .handler(endpointHandler(logic, responseHandlerNoError)(endpointOptions.blocking(vertx), ect))
+        .blockingHandler(endpointHandler(logic, responseHandlerNoError)(endpointOptions, ect))
     }
 
     private def mountWithDefaultHandlers(router: Router, routeDef: RouteDefinition)
@@ -101,18 +101,21 @@ package object vertx {
         }
       }
 
-    private val responseHandlerWithError: (Either[E, O], RoutingContext) => Unit = { (output, rc) =>
+    private def responseHandlerWithError(implicit endpointOptions: VertxEndpointOptions): (Either[E, O], RoutingContext) => Unit = { (output, rc) =>
       output match {
         case Left(failure) =>
           encodeError(e, rc, failure)
         case Right(result) =>
-          responseHandlerNoError(result, rc)
+          responseHandlerNoError(endpointOptions)(result, rc)
       }
     }
 
-    private val responseHandlerNoError: (O, RoutingContext) => Unit = { (result, rc) =>
-      VertxOutputEncoders.apply[O](e.output, result)(rc)
+    private def responseHandlerNoError(implicit endpointOptions: VertxEndpointOptions): (O, RoutingContext) => Unit = { (result, rc) =>
+      VertxOutputEncoders.apply[O](e.output, result, isError = false, logRequestHandled)(endpointOptions)(rc)
     }
+
+    private def logRequestHandled(implicit endpointOptions: VertxEndpointOptions): Int => Unit = status =>
+      endpointOptions.logRequestHandling.requestHandled(e, status)
 
   }
 
