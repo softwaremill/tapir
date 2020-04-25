@@ -2,7 +2,7 @@ package sttp.tapir
 
 import java.nio.charset.Charset
 
-import sttp.model.{Method, MultiQueryParams}
+import sttp.model.{Method, QueryParams}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.Info
 import sttp.tapir.internal._
@@ -138,11 +138,11 @@ object EndpointInput {
     override def show: String = addValidatorShow(s"?$name", codec.validator)
   }
 
-  case class QueryParams[T](codec: Codec[MultiQueryParams, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class QueryParams[T](codec: Codec[sttp.model.QueryParams, T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = QueryParams[X]
-    override private[tapir] type L = MultiQueryParams
+    override private[tapir] type L = sttp.model.QueryParams
     override private[tapir] type CF = TextPlain
-    override private[tapir] def copyWith[U](c: Codec[MultiQueryParams, U, TextPlain], i: Info[U]): QueryParams[U] =
+    override private[tapir] def copyWith[U](c: Codec[sttp.model.QueryParams, U, TextPlain], i: Info[U]): QueryParams[U] =
       copy(codec = c, info = i)
     override def show: String = s"?..."
   }

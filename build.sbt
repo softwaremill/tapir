@@ -1,5 +1,5 @@
 val scala2_12 = "2.12.11"
-val scala2_13 = "2.13.1"
+val scala2_13 = "2.13.2"
 
 lazy val is2_12 = settingKey[Boolean]("Is the scala version 2.12.")
 
@@ -84,7 +84,7 @@ lazy val core: Project = (project in file("core"))
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.15.0",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.softwaremill.sttp.model" %% "core" % "1.0.3",
+      "com.softwaremill.sttp.model" %% "core" % "1.1.2",
       scalaTest % Test,
       scalaCheck % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.3.5" % Test
@@ -455,4 +455,15 @@ lazy val playground: Project = (project in file("playground"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(
+    akkaHttpServer,
+    http4sServer,
+    sttpClient,
+    openapiCirceYaml,
+    openapiDocs,
+    circeJson,
+    swaggerUiAkka,
+    swaggerUiHttp4s,
+    refined,
+    cats
+  )

@@ -10,7 +10,7 @@ import sttp.tapir.json.circe._
 import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, MultiQueryParams, StatusCode}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, QueryParams, StatusCode}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model._
 
@@ -104,7 +104,7 @@ package object tests {
   val in_form_out_form: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
     endpoint.post.in("api" / "echo").in(formBody[FruitAmount]).out(formBody[FruitAmount])
 
-  val in_query_params_out_string: Endpoint[MultiQueryParams, Unit, String, Nothing] =
+  val in_query_params_out_string: Endpoint[QueryParams, Unit, String, Nothing] =
     endpoint.get.in("api" / "echo" / "params").in(queryParams).out(stringBody)
 
   val in_headers_out_headers: Endpoint[List[Header], Unit, List[Header], Nothing] =

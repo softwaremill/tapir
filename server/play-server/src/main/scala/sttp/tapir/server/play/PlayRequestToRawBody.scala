@@ -57,7 +57,7 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
             request,
             ByteString.apply(java.nio.file.Files.readAllBytes(f.ref.path))
           ).map(body =>
-            Part(f.key, body, Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename), Seq.empty)
+            Part(f.key, body, Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename), Nil)
               .asInstanceOf[RawPart]
           )
         })

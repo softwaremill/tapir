@@ -4,7 +4,7 @@ sealed trait SchemaType {
   def show: String
 }
 
-object SchemaType { 
+object SchemaType {
   case object SString extends SchemaType {
     def show: String = "string"
   }

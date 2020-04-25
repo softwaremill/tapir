@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, MultiQueryParams, StatusCode}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, QueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain}
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
@@ -26,12 +26,12 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
 
   def query[T: Codec[List[String], *, TextPlain]](name: String): EndpointInput.Query[T] =
     EndpointInput.Query(name, implicitly, EndpointIO.Info.empty)
-  def queryParams: EndpointInput.QueryParams[MultiQueryParams] = EndpointInput.QueryParams(Codec.idPlain(), EndpointIO.Info.empty)
+  def queryParams: EndpointInput.QueryParams[QueryParams] = EndpointInput.QueryParams(Codec.idPlain(), EndpointIO.Info.empty)
 
   def header[T: Codec[List[String], *, TextPlain]](name: String): EndpointIO.Header[T] =
     EndpointIO.Header(name, implicitly, EndpointIO.Info.empty)
   def header(h: Header): EndpointIO.FixedHeader[Unit] = EndpointIO.FixedHeader(h, Codec.idPlain(), EndpointIO.Info.empty)
-  def header(name: String, value: String): EndpointIO.FixedHeader[Unit] = header(sttp.model.Header.notValidated(name, value))
+  def header(name: String, value: String): EndpointIO.FixedHeader[Unit] = header(sttp.model.Header(name, value))
   def headers: EndpointIO.Headers[List[sttp.model.Header]] = EndpointIO.Headers(Codec.idPlain(), EndpointIO.Info.empty)
 
   def cookie[T: Codec[Option[String], *, TextPlain]](name: String): EndpointInput.Cookie[T] =

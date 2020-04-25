@@ -18,7 +18,7 @@ import sttp.tapir.{DecodeResult, _}
 import sttp.tapir.tests._
 import TestUtil._
 import org.http4s.multipart
-import sttp.model.{MultiQueryParams, StatusCode}
+import sttp.model.{QueryParams, StatusCode}
 import sttp.tapir.model.UsernamePassword
 
 import scala.concurrent.duration._
@@ -57,7 +57,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_form_out_form, FruitAmount("plum", 10), Right(FruitAmount("plum", 10)))
   testClient(
     in_query_params_out_string,
-    MultiQueryParams.fromMap(Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")),
+    QueryParams.fromMap(Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")),
     Right("kind=very good&name=apple&weight=42")
   )
   testClient(in_paths_out_string, List("fruit", "apple", "amount", "50"), Right("apple 50 None"))
@@ -94,16 +94,15 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     send(
       in_headers_out_headers,
       port,
-      List(sttp.model.Header.notValidated("X-Fruit", "apple"), sttp.model.Header.notValidated("Y-Fruit", "Orange"))
-    ).unsafeRunSync().right.get should contain allOf (sttp.model.Header.notValidated("X-Fruit", "elppa"), sttp.model.Header
-      .notValidated("Y-Fruit", "egnarO"))
+      List(sttp.model.Header("X-Fruit", "apple"), sttp.model.Header("Y-Fruit", "Orange"))
+    ).unsafeRunSync().right.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO"))
   }
 
   test(in_json_out_headers.showDetail) {
     send(in_json_out_headers, port, FruitAmount("apple", 10))
       .unsafeRunSync()
       .right
-      .get should contain(sttp.model.Header.notValidated("Content-Type", "application/json".reverse))
+      .get should contain(sttp.model.Header("Content-Type", "application/json".reverse))
   }
 
   testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))

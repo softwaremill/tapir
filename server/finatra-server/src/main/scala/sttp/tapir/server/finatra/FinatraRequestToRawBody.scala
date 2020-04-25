@@ -9,9 +9,10 @@ import com.twitter.finatra.http.request.RequestUtils
 import com.twitter.io.Buf
 import com.twitter.util.Future
 import org.apache.commons.fileupload.FileItemHeaders
-import sttp.model.{Header, Part}
+import sttp.model.{Part, Header}
 import sttp.tapir.{RawPart, RawBodyType}
 
+import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 
 class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
@@ -68,28 +69,31 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
         .flatMap { name => headers.getHeaders(name).asScala.map(name -> _) }
         .toSeq
         .filter(_._1.toLowerCase != "content-disposition")
-        .map { case (k, v) => Header.notValidated(k, v) }
+        .map { case (k, v) => Header(k, v) }
+        .toList
     }
 
-    Future.collect(
-      RequestUtils
-        .multiParams(request)
-        .flatMap {
-          case (name, multiPartItem) =>
-            val dispositionParams: Map[String, String] =
-              parseDispositionParams(Option(multiPartItem.headers.getHeader("content-disposition")))
-            val charset = getCharset(multiPartItem.contentType)
+    Future
+      .collect(
+        RequestUtils
+          .multiParams(request)
+          .flatMap {
+            case (name, multiPartItem) =>
+              val dispositionParams: Map[String, String] =
+                parseDispositionParams(Option(multiPartItem.headers.getHeader("content-disposition")))
+              val charset = getCharset(multiPartItem.contentType)
 
-            for {
-              partType <- m.partType(name)
-              futureBody = apply(partType, Buf.ByteArray.Owned(multiPartItem.data), charset, request)
-            } yield futureBody
-              .map(body =>
-                Part(name, body, otherDispositionParams = dispositionParams - "name", headers = fileItemHeaders(multiPartItem.headers))
-                  .asInstanceOf[RawPart]
-              )
-        }
-        .toSeq
-    )
+              for {
+                partType <- m.partType(name)
+                futureBody = apply(partType, Buf.ByteArray.Owned(multiPartItem.data), charset, request)
+              } yield futureBody
+                .map(body =>
+                  Part(name, body, otherDispositionParams = dispositionParams - "name", headers = fileItemHeaders(multiPartItem.headers))
+                    .asInstanceOf[RawPart]
+                )
+          }
+          .toSeq
+      )
+      .map(_.toList)
   }
 }
