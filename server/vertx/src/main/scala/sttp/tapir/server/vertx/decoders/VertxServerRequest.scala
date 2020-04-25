@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.decoders
 
 import java.net.{InetSocketAddress, URI}
 

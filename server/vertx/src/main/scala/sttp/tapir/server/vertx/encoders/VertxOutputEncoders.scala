@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.encoders
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
@@ -10,18 +10,32 @@ import io.vertx.scala.core.http.HttpServerResponse
 import io.vertx.scala.core.streams.ReadStream
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.{Header, Part}
-import sttp.tapir.internal._
+import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.server.vertx.utils.inputStreamToBuffer
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
 
+/**
+ * All the necessary methods to write Endpoint.outputs to Vert.x HttpServerResponse
+ * Contains:
+ *   - Headers handling
+ *   - Body handling (string, binaries, files, multipart, ...)
+ *   - Stream handling
+ */
 object VertxOutputEncoders {
 
   type RoutingContextHandler = RoutingContext => Unit
   type RoutingContextHandlerWithLength = Option[Long] => RoutingContext => Unit
 
-  def apply[O](output: EndpointOutput[O], v: O, isError: Boolean = false): RoutingContextHandler = { rc =>
+  /**
+   * Creates a function, that given a RoutingContext will write the result to its response, according to the endpoint definition
+   * @param output the endpoint output definitions
+   * @param v the result to encode
+   * @param isError boolean indicating if the result is an error or not
+   * @tparam O type of the result to encode
+   * @return a function, that given a RoutingContext will write the output to its HTTP response
+   */
+  private [vertx] def apply[O](output: EndpointOutput[O], v: O, isError: Boolean = false): RoutingContextHandler = { rc =>
     val resp = rc.response
     val options: OutputValues[RoutingContextHandlerWithLength] = OutputValues.empty
     try {

@@ -3,6 +3,7 @@ package sttp.tapir.server.vertx
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.implicits._
+import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.core.Vertx
 import io.vertx.scala.core.http.HttpServerOptions
 import io.vertx.scala.ext.web.{Route, Router}
@@ -17,7 +18,7 @@ import scala.reflect.ClassTag
 
 class VertxServerTests extends ServerTests[Future, String, Router => Route] with BeforeAndAfterEach {
 
-  implicit val options: VertxServerOptions = VertxServerOptions()
+  implicit val options: VertxEndpointOptions = VertxEndpointOptions()
     .logWhenHandled(true)
     .logAllDecodeFailures(true)
 
@@ -25,7 +26,7 @@ class VertxServerTests extends ServerTests[Future, String, Router => Route] with
   override def streamingSupport: Boolean = true
   override def multipartInlineHeaderSupport: Boolean = false // README: doesn't seem supported but I may be wrong
 
-  private var vertx: Vertx = _
+  protected var vertx: Vertx = _
 
   override def beforeAll(): Unit = {
     super.beforeAll()
@@ -38,14 +39,14 @@ class VertxServerTests extends ServerTests[Future, String, Router => Route] with
   }
 
   override def pureResult[T](t: T): Future[T] = Future.successful(t)
-  override def suspendResult[T](t: => T): Future[T] = vertx.executeBlocking(() => t)
+  override def suspendResult[T](t: => T): Future[T] = Future(t)(VertxExecutionContext(vertx.getOrCreateContext()))
 
   override def route[I, E, O](e: Endpoint[I, E, O, String], fn: I => Future[Either[E, O]], decodeFailureHandler: Option[DecodeFailureHandler]): Router => Route =
-    e.asRoute(fn)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
+    e.route(fn)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, String], fn: I => Future[O])
                                                        (implicit eClassTag: ClassTag[E]): Router => Route =
-    e.asRouteRecoverErrors(fn)
+    e.routeRecoverErrors(fn)
 
   override def server(routes: NonEmptyList[Router => Route], port: Port): Resource[IO, Unit] = {
     val router = Router.router(vertx)
