@@ -13,7 +13,8 @@ import sttp.model.{Header, Part}
 import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
+import sttp.tapir.server.vertx.VertxEndpointOptions
+import sttp.tapir.{CodecFormat, Endpoint, RawBodyType}
 
 /**
  * All the necessary methods to write Endpoint.outputs to Vert.x HttpServerResponse
@@ -29,17 +30,20 @@ object VertxOutputEncoders {
 
   /**
    * Creates a function, that given a RoutingContext will write the result to its response, according to the endpoint definition
-   * @param output the endpoint output definitions
-   * @param v the result to encode
+   * @param endpoint the endpoint definition
+   * @param result the result to encode
    * @param isError boolean indicating if the result is an error or not
+   *
    * @tparam O type of the result to encode
    * @return a function, that given a RoutingContext will write the output to its HTTP response
    */
-  private [vertx] def apply[O](output: EndpointOutput[O], v: O, isError: Boolean = false): RoutingContextHandler = { rc =>
+  private [vertx] def apply[O](endpoint: Endpoint[_, _, O, _], result: O, isError: Boolean = false)
+                              (implicit endpointOptions: VertxEndpointOptions): RoutingContextHandler = { rc =>
     val resp = rc.response
+    val output = endpoint.output
     val options: OutputValues[RoutingContextHandlerWithLength] = OutputValues.empty
     try {
-      var outputValues = encodeOutputs(output, ParamsAsAny(v), options)
+      var outputValues = encodeOutputs(output, ParamsAsAny(result), options)
       if (isError && outputValues.statusCode.isEmpty) {
         outputValues = outputValues.withStatusCode(ServerDefaults.StatusCodes.error)
       }
@@ -49,13 +53,14 @@ object VertxOutputEncoders {
         case Some(responseHandler)  => responseHandler(outputValues.contentLength)(rc)
         case None                   => resp.end()
       }
+      endpointOptions.logRequestHandling.requestHandled(endpoint, resp.getStatusCode)
     } catch {
       case e: Throwable => rc.fail(e)
     }
   }
 
   private def formatToContentType(format: CodecFormat/*, maybeCharset: Option[Charset]*/): String =
-    format.mediaType.toString
+    format.mediaType.toString // README: Charset doesn't seem to be accepted in tests
 
   private def forwardHeaders(outputValues: OutputValues[RoutingContextHandlerWithLength])
                             (resp: HttpServerResponse): Unit = {
@@ -65,8 +70,7 @@ object VertxOutputEncoders {
     }
   }
 
-  private def forwardHeaders(headers: Seq[Header])
-                            (resp: HttpServerResponse): Unit =
+  private def forwardHeaders(headers: Seq[Header], resp: HttpServerResponse): Unit =
     headers.foreach { h =>
       resp.headers.add(h.name, h.value)
     }
@@ -121,7 +125,7 @@ object VertxOutputEncoders {
     }
 
     private def writePartHeaders(part: Part[_] ): HttpServerResponse => String = { resp =>
-      forwardHeaders(part.headers)(resp)
+      forwardHeaders(part.headers, resp)
       val partContentType = part.contentType.getOrElse("application/octet-stream")
       val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
       val dispositionsHeaderParts = dispositionParams.map { case (k, v) => s"""$k="$v"""" }

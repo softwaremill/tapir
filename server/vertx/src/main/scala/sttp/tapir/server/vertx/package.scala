@@ -86,7 +86,7 @@ package object vertx {
                                (implicit serverOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Params => Unit = { params =>
       implicit val ec: ExecutionContext = serverOptions.executionContextOr(rc.executionContext)
       Try(logic(params.asAny.asInstanceOf[I]))
-        .map { (result: Future[T]) =>
+        .map { result =>
           result.onComplete {
             case Success(result) =>
               responseHandler(result, rc)
