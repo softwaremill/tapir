@@ -13,7 +13,7 @@ trait TapirJsonTethys {
     Codec.json(s =>
       s.jsonAs[T] match {
         case Left(readerError) => Error(s, readerError)
-        case Right(value) => Value(value)
+        case Right(value)      => Value(value)
       }
     )(_.asJson)
 }

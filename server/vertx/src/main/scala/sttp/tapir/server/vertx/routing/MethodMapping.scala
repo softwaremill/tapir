@@ -5,8 +5,8 @@ import io.vertx.scala.core.http.HttpServerRequest
 import sttp.model.Method
 
 /**
- * Utility object to convert HTTP methods between Vert.x and Tapir
- */
+  * Utility object to convert HTTP methods between Vert.x and Tapir
+  */
 private[vertx] object MethodMapping {
 
   private val conversions = Map(
@@ -18,7 +18,7 @@ private[vertx] object MethodMapping {
     Method.PATCH -> HttpMethod.PATCH,
     Method.POST -> HttpMethod.POST,
     Method.PUT -> HttpMethod.PUT,
-    Method.TRACE -> HttpMethod.TRACE,
+    Method.TRACE -> HttpMethod.TRACE
   )
 
   def sttpToVertx(method: Option[Method]): Option[HttpMethod] =

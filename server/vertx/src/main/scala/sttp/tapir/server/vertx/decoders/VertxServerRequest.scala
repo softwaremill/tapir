@@ -21,9 +21,7 @@ private[vertx] class VertxServerRequest(rc: RoutingContext) extends ServerReques
   override def method: Method = Method.notValidated(req.rawMethod())
   override def protocol: String = req.scheme().get
   override def uri: URI = new URI(req.uri())
-  override def headers: Seq[(String, String)] = _headers.names().map { key =>
-      (key, _headers.get(key).get)
-    }.toSeq
+  override def headers: Seq[(String, String)] = _headers.names().map { key => (key, _headers.get(key).get) }.toSeq
   override def header(name: String): Option[String] = _headers.get(name)
 
   private def asInetSocketAddress(address: SocketAddress): InetSocketAddress =

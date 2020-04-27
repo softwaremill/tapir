@@ -8,7 +8,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 import sttp.tapir.server.vertx.routing.MethodMapping
 
-private [vertx] class VertxDecodeInputsContext(rc: RoutingContext, pathConsumed: Int = 0) extends DecodeInputsContext {
+private[vertx] class VertxDecodeInputsContext(rc: RoutingContext, pathConsumed: Int = 0) extends DecodeInputsContext {
   private lazy val request = rc.request
   private lazy val _headers = request.headers
   private lazy val params = request.params
@@ -25,9 +25,7 @@ private [vertx] class VertxDecodeInputsContext(rc: RoutingContext, pathConsumed:
     (segment, new VertxDecodeInputsContext(rc, pathConsumed + charactersConsumed))
   }
   override def header(name: String): List[String] = request.headers.getAll(name).toList
-  override def headers: Seq[(String, String)] = _headers.names.map { key =>
-    (key, _headers.get(key).get)
-  }.toSeq
+  override def headers: Seq[(String, String)] = _headers.names.map { key => (key, _headers.get(key).get) }.toSeq
   override def queryParameter(name: String): Seq[String] = params.getAll(name)
   override def queryParameters: MultiQueryParams = MultiQueryParams.fromMultiMap(
     params.names.map { key => (key, params.getAll(key)) }.toMap
