@@ -53,7 +53,7 @@ object VertxInputDecoders {
             endpointOptions.logRequestHandling.decodeFailureHandled(endpoint, decodeFailureCtx, value)(endpointOptions.logger)
             VertxOutputEncoders.apply(output, value)(endpointOptions)(rc)
         }
-    }(endpointOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext)))
+    }(endpointOptions.executionContextOrCurrentCtx(rc)): Unit
   }
 
   private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)(
@@ -64,7 +64,7 @@ object VertxInputDecoders {
   private def decodeBody(result: DecodeInputsResult, rc: RoutingContext)(
       implicit serverOptions: VertxEndpointOptions
   ): Future[DecodeInputsResult] = {
-    implicit val ec: ExecutionContext = serverOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
+    implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
     result match {
       case values: DecodeInputsResult.Values =>
         values.bodyInput match {
@@ -80,7 +80,7 @@ object VertxInputDecoders {
   }
 
   private def extractRawBody[B](bodyType: RawBodyType[B], rc: RoutingContext)(implicit serverOptions: VertxEndpointOptions): Future[B] = {
-    implicit val ec: ExecutionContext = serverOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
+    implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) => Future.successful(rc.getBodyAsString(defaultCharset.toString).get)
       case RawBodyType.ByteArrayBody              => Future.successful(rc.getBody.get.getBytes)

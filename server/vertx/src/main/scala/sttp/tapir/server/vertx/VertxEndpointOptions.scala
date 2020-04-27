@@ -3,6 +3,8 @@ package sttp.tapir.server.vertx
 import java.io.File
 
 import io.vertx.core.logging.{Logger, LoggerFactory}
+import io.vertx.lang.scala.VertxExecutionContext
+import io.vertx.scala.ext.web.RoutingContext
 import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaults}
 
 import scala.concurrent.ExecutionContext
@@ -17,6 +19,9 @@ case class VertxEndpointOptions(
 
   def executionContextOr(default: ExecutionContext): ExecutionContext =
     specificExecutionContext.getOrElse(default)
+
+  private [vertx] def executionContextOrCurrentCtx(rc: RoutingContext) =
+    executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
 
   def logWhenHandled(shouldLog: Boolean): VertxEndpointOptions =
     copy(logRequestHandling = logRequestHandling.copy(logWhenHandled = shouldLog))

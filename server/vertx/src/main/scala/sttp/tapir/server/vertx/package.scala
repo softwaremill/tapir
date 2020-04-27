@@ -1,7 +1,6 @@
 package sttp.tapir.server
 
 import io.vertx.core.Handler
-import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
 import sttp.tapir._
 import sttp.tapir.internal.Params
@@ -87,7 +86,7 @@ package object vertx {
         implicit serverOptions: VertxEndpointOptions,
         ect: Option[ClassTag[E]]
     ): Params => Unit = { params =>
-      implicit val ec: ExecutionContext = serverOptions.executionContextOr(rc.executionContext)
+      implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
       Try(logic(params.asAny.asInstanceOf[I]))
         .map { result =>
           result.onComplete {
@@ -101,7 +100,7 @@ package object vertx {
         .recover {
           case cause =>
             tryEncodeError(e, rc, cause)
-            serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger)
+            serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger): Unit
         }
     }
 
@@ -120,12 +119,8 @@ package object vertx {
     }
 
     private def logRequestHandled(implicit endpointOptions: VertxEndpointOptions): Int => Unit =
-      status => endpointOptions.logRequestHandling.requestHandled(e, status)
+      status => endpointOptions.logRequestHandling.requestHandled(e, status): Unit
 
-  }
-
-  private[vertx] implicit class RichContextHandler(rc: RoutingContext) {
-    implicit lazy val executionContext: ExecutionContext = VertxExecutionContext(rc.vertx.getOrCreateContext)
   }
 
 }

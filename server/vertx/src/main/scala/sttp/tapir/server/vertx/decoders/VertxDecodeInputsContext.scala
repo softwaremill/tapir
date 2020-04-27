@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx.decoders
 import io.vertx.core.buffer.Buffer
 import io.vertx.scala.core.streams.ReadStream
 import io.vertx.scala.ext.web.RoutingContext
-import sttp.model.{Method, MultiQueryParams}
+import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 import sttp.tapir.server.vertx.routing.MethodMapping
@@ -27,7 +27,7 @@ private[vertx] class VertxDecodeInputsContext(rc: RoutingContext, pathConsumed: 
   override def header(name: String): List[String] = request.headers.getAll(name).toList
   override def headers: Seq[(String, String)] = _headers.names.map { key => (key, _headers.get(key).get) }.toSeq
   override def queryParameter(name: String): Seq[String] = params.getAll(name)
-  override def queryParameters: MultiQueryParams = MultiQueryParams.fromMultiMap(
+  override def queryParameters: QueryParams = QueryParams.fromMultiMap(
     params.names.map { key => (key, params.getAll(key)) }.toMap
   )
   override def bodyStream: Any =
