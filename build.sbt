@@ -402,6 +402,7 @@ lazy val vertxServer: Project = (project in file("server/vertx"))
       "io.vertx" %% "vertx-web-scala" % Versions.vertx
     )
   )
+  .settings(only2_12settings)
   .dependsOn(core, serverTests % Test)
 
 // client

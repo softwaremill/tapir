@@ -12,23 +12,23 @@ object PathMapping {
   type RouteDefinition = (Option[HttpMethod], String)
 
   /**
-   * Given a Router, creates a Vert.x Route matching the route definition
-   * @param router a Vert.x Router
-   * @param route the definition of the route (method, and path)
-   * @return a route, attached to the router
-   */
-  private [vertx] def createRoute(router: Router, route: RouteDefinition): Route =
+    * Given a Router, creates a Vert.x Route matching the route definition
+    * @param router a Vert.x Router
+    * @param route the definition of the route (method, and path)
+    * @return a route, attached to the router
+    */
+  private[vertx] def createRoute(router: Router, route: RouteDefinition): Route =
     route match {
       case (Some(method), path) => router.route(method, path)
       case (None, path)         => router.route(path)
     }
 
   /**
-   * Extracts the route definition from the endpoint inputs
-   * @param endpoint a Tapir endpoint
-   * @return the route definition matching the endpoint input definition
-   */
-  private [vertx] def extractRouteDefinition(endpoint: Endpoint[_, _, _, _]): (Option[HttpMethod], String) =
+    * Extracts the route definition from the endpoint inputs
+    * @param endpoint a Tapir endpoint
+    * @return the route definition matching the endpoint input definition
+    */
+  private[vertx] def extractRouteDefinition(endpoint: Endpoint[_, _, _, _]): (Option[HttpMethod], String) =
     (MethodMapping.sttpToVertx(endpoint.httpMethod), extractVertxPath(endpoint))
 
   private def extractVertxPath(endpoint: Endpoint[_, _, _, _]): String = {
@@ -37,7 +37,7 @@ object PathMapping {
       .asVectorOfBasicInputs()
       .collect {
         case segment: EndpointInput.FixedPath[_] => segment.show
-        case PathCapture(Some(name), _, _) => s"/:$name"
+        case PathCapture(Some(name), _, _)       => s"/:$name"
         case PathCapture(_, _, _) =>
           idxUsed += 1
           s"/:param$idxUsed"

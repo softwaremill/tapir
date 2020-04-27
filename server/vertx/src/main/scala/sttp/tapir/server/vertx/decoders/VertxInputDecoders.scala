@@ -22,18 +22,18 @@ import scala.util.Random
 object VertxInputDecoders {
 
   /**
-   * Decodes the inputs, the body if needed, and if it succeeds invokes the logicHandler
-   * @param endpoint the endpoint definition
-   * @param rc the RoutingContext
-   * @param logicHandler callback to execute if the inputs are decoded properly
-   * @param endpointOptions endpoint options (execution context, etc.)
-   * @param ect the error class to convert to, if the user recovers error
-   * @tparam E Error parameter type, if it should be caught and handled by the user
-   */
-  private [vertx] def decodeBodyAndInputsThen[E](
-    endpoint: Endpoint[_, E, _, _],
-    rc: RoutingContext,
-    logicHandler: Params => Unit,
+    * Decodes the inputs, the body if needed, and if it succeeds invokes the logicHandler
+    * @param endpoint the endpoint definition
+    * @param rc the RoutingContext
+    * @param logicHandler callback to execute if the inputs are decoded properly
+    * @param endpointOptions endpoint options (execution context, etc.)
+    * @param ect the error class to convert to, if the user recovers error
+    * @tparam E Error parameter type, if it should be caught and handled by the user
+    */
+  private[vertx] def decodeBodyAndInputsThen[E](
+      endpoint: Endpoint[_, E, _, _],
+      rc: RoutingContext,
+      logicHandler: Params => Unit
   )(implicit endpointOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Unit = {
     decodeBodyAndInputs(endpoint, rc).map {
       case values: DecodeInputsResult.Values =>
@@ -56,20 +56,22 @@ object VertxInputDecoders {
     }(endpointOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext)))
   }
 
-  private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)
-                                         (implicit serverOptions: VertxEndpointOptions): Future[DecodeInputsResult] =
+  private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)(
+      implicit serverOptions: VertxEndpointOptions
+  ): Future[DecodeInputsResult] =
     decodeBody(DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc)
 
-  private def decodeBody(result: DecodeInputsResult, rc: RoutingContext)
-                        (implicit serverOptions: VertxEndpointOptions): Future[DecodeInputsResult] = {
+  private def decodeBody(result: DecodeInputsResult, rc: RoutingContext)(
+      implicit serverOptions: VertxEndpointOptions
+  ): Future[DecodeInputsResult] = {
     implicit val ec: ExecutionContext = serverOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
     result match {
       case values: DecodeInputsResult.Values =>
         values.bodyInput match {
           case None => Future.successful(values)
-          case Some(bodyInput@EndpointIO.Body(bodyType, codec, _)) =>
+          case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
             extractRawBody(bodyType, rc).map(codec.decode).map {
-              case DecodeResult.Value(body) => values.setBodyInputValue(body)
+              case DecodeResult.Value(body)      => values.setBodyInputValue(body)
               case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
             }
         }
@@ -77,14 +79,13 @@ object VertxInputDecoders {
     }
   }
 
-  private def extractRawBody[B](bodyType: RawBodyType[B], rc: RoutingContext)
-                       (implicit serverOptions: VertxEndpointOptions): Future[Any] = {
+  private def extractRawBody[B](bodyType: RawBodyType[B], rc: RoutingContext)(implicit serverOptions: VertxEndpointOptions): Future[B] = {
     implicit val ec: ExecutionContext = serverOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) => Future.successful(rc.getBodyAsString(defaultCharset.toString).get)
-      case RawBodyType.ByteArrayBody => Future.successful(rc.getBody.get.getBytes)
-      case RawBodyType.ByteBufferBody => Future.successful(rc.getBody.get.getByteBuf.nioBuffer())
-      case RawBodyType.InputStreamBody => Future.successful(new ByteArrayInputStream(rc.getBody.get.getBytes))
+      case RawBodyType.ByteArrayBody              => Future.successful(rc.getBody.get.getBytes)
+      case RawBodyType.ByteBufferBody             => Future.successful(rc.getBody.get.getByteBuf.nioBuffer())
+      case RawBodyType.InputStreamBody            => Future.successful(new ByteArrayInputStream(rc.getBody.get.getBytes))
       case RawBodyType.FileBody =>
         rc.fileUploads().toList match {
           case List(upload) =>
@@ -97,31 +98,33 @@ object VertxInputDecoders {
                 .map(_ => new File(filePath))
             }
         }
-      case RawBodyType.MultipartBody(partTypes, _) => Future.successful(
-        partTypes.map { case (partName, rawBodyType) =>
-          Part(partName, extractPart(partName, rawBodyType, rc))
-        }
-      )
+      case RawBodyType.MultipartBody(partTypes, _) =>
+        Future.successful(
+          partTypes.map {
+            case (partName, rawBodyType) =>
+              Part(partName, extractPart(partName, rawBodyType, rc))
+          }.toSeq
+        )
     }
   }
 
-  private def extractPart(name: String, bodyType: RawBodyType[_], rc: RoutingContext): Any = {
+  private def extractPart[B](name: String, bodyType: RawBodyType[B], rc: RoutingContext): B = {
     val formAttributes = rc.request.formAttributes
     val param = formAttributes.get(name)
     bodyType match {
       case RawBodyType.StringBody(charset) => new String(param.get.getBytes(charset))
-      case RawBodyType.ByteArrayBody => param.get.getBytes
-      case RawBodyType.ByteBufferBody => ByteBuffer.wrap(param.get.getBytes)
-      case RawBodyType.InputStreamBody => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
+      case RawBodyType.ByteArrayBody       => param.get.getBytes
+      case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(param.get.getBytes)
+      case RawBodyType.InputStreamBody     => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
       case RawBodyType.FileBody =>
         val f = rc.fileUploads.find(_.name == name).get
         new File(f.uploadedFileName())
       case RawBodyType.MultipartBody(partTypes, _) =>
-        partTypes.map { case (partName, rawBodyType) =>
-          Part(partName, extractPart(partName, rawBodyType, rc))
-        }
+        partTypes.map {
+          case (partName, rawBodyType) =>
+            Part(partName, extractPart(partName, rawBodyType, rc))
+        }.toSeq
     }
   }
-
 
 }
