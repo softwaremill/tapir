@@ -79,7 +79,7 @@ object VertxInputDecoders {
                        (implicit serverOptions: VertxEndpointOptions): Any =
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) => rc.getBodyAsString(defaultCharset.toString).get
-      case RawBodyType.ByteArrayBody => rc.getBodyAsString.get.getBytes()
+      case RawBodyType.ByteArrayBody => rc.getBody.get.getBytes
       case RawBodyType.ByteBufferBody => rc.getBody.get.getByteBuf.nioBuffer()
       case RawBodyType.InputStreamBody =>
         new ByteArrayInputStream(rc.getBody.get.getBytes) // README: be really careful with that
