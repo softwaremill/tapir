@@ -214,7 +214,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         .map(_.body shouldBe Right("fruit=mulp&amount=11"))
   }
 
-  testServer(in_query_params_out_string)((mqp: MultiQueryParams) =>
+  testServer(in_query_params_out_string)((mqp: QueryParams) =>
     pureResult(mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&").asRight[Unit])
   ) { baseUri =>
     val params = Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")
@@ -224,14 +224,13 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
   }
 
-  testServer(in_headers_out_headers)((hs: List[Header]) =>
-    pureResult(hs.map(h => Header.notValidated(h.name, h.value.reverse)).asRight[Unit])
-  ) { baseUri =>
-    basicRequest
-      .get(uri"$baseUri/api/echo/headers")
-      .headers(Header.unsafeApply("X-Fruit", "apple"), Header.unsafeApply("Y-Fruit", "Orange"))
-      .send()
-      .map(_.headers should contain allOf (Header.unsafeApply("X-Fruit", "elppa"), Header.unsafeApply("Y-Fruit", "egnarO")))
+  testServer(in_headers_out_headers)((hs: List[Header]) => pureResult(hs.map(h => Header(h.name, h.value.reverse)).asRight[Unit])) {
+    baseUri =>
+      basicRequest
+        .get(uri"$baseUri/api/echo/headers")
+        .headers(Header.unsafeApply("X-Fruit", "apple"), Header.unsafeApply("Y-Fruit", "Orange"))
+        .send()
+        .map(_.headers should contain allOf (Header.unsafeApply("X-Fruit", "elppa"), Header.unsafeApply("Y-Fruit", "egnarO")))
   }
 
   testServer(in_paths_out_string)((ps: Seq[String]) => pureResult(ps.mkString(" ").asRight[Unit])) { baseUri =>
@@ -275,7 +274,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
     pureResult(
       FruitData(
-        Part("", writeToFile(readFromFile(fd.data.body).reverse), fd.data.otherDispositionParams, Seq())
+        Part("", writeToFile(readFromFile(fd.data.body).reverse), fd.data.otherDispositionParams, Nil)
           .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
       ).asRight[Unit]
     )

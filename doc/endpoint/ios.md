@@ -16,7 +16,7 @@ For inputs, these are:
   method, and don't map to any values (have type `EndpointInput[Unit]`)
 * `paths`, which maps to the whole remaining path as a `List[String]`
 * `query[T](name)` captures a query parameter with the given name
-* `queryParams` captures all query parameters, represented as `MultiQueryParams`
+* `queryParams` captures all query parameters, represented as `QueryParams`
 * `cookie[T](name)` captures a cookie from the `Cookie` header with the given name
 * `extractFromRequest` extracts a value from the request. This input is only used by server interpreters, ignored
   by documentation interpreters. Client interpreters ignore the provided value.

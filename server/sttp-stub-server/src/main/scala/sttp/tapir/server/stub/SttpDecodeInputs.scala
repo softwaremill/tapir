@@ -1,7 +1,7 @@
 package sttp.tapir.server.stub
 
 import sttp.client.{Request, StreamBody}
-import sttp.model.{Method, MultiQueryParams}
+import sttp.model.{Method, QueryParams}
 import sttp.model.Uri.QuerySegment
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
@@ -23,8 +23,8 @@ class SttpDecodeInputs(r: Request[_, _], segmentIndex: Int = 0) extends DecodeIn
       }
       .map(_.v)
 
-  override def queryParameters: MultiQueryParams =
-    MultiQueryParams.fromMultiMap(
+  override def queryParameters: QueryParams =
+    QueryParams.fromMultiMap(
       r.uri.querySegments
         .collect {
           case qp @ QuerySegment.KeyValue(_, _, _, _) => qp

@@ -1,7 +1,7 @@
 package sttp.tapir.internal.server
 
 import org.scalatest.{FlatSpec, Matchers}
-import sttp.model.{Method, MultiQueryParams}
+import sttp.model.{Method, QueryParams}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsContext, DecodeInputsResult}
@@ -25,7 +25,7 @@ class DecodeInputsTest extends FlatSpec with Matchers {
     override def header(name: String): List[String] = Nil
     override def headers: Seq[(String, String)] = Nil
     override def queryParameter(name: String): Seq[String] = List("v")
-    override def queryParameters: MultiQueryParams = MultiQueryParams.fromMap(Map.empty)
+    override def queryParameters: QueryParams = QueryParams.fromMap(Map.empty)
     override def bodyStream: Any = ()
     override def serverRequest: ServerRequest = ???
   }

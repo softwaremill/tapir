@@ -5,7 +5,7 @@ import java.util.Locale
 import akka.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
 import akka.http.scaladsl.model.{HttpHeader, Uri}
 import akka.http.scaladsl.server.RequestContext
-import sttp.model.{Method, MultiQueryParams}
+import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 
@@ -34,7 +34,7 @@ private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends Dec
   }
   override def headers: Seq[(String, String)] = allHeaders.map(h => (h.name, h.value))
   override def queryParameter(name: String): Seq[String] = req.request.uri.query().getAll(name).reverse
-  override def queryParameters: MultiQueryParams = MultiQueryParams.fromSeq(req.request.uri.query())
+  override def queryParameters: QueryParams = QueryParams.fromSeq(req.request.uri.query())
   override def bodyStream: Any = req.request.entity.dataBytes
   override def serverRequest: ServerRequest = new AkkaServerRequest(req)
 }

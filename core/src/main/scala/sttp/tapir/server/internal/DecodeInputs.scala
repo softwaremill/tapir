@@ -1,6 +1,6 @@
 package sttp.tapir.server.internal
 
-import sttp.model.{Cookie, HeaderNames, Method, MultiQueryParams}
+import sttp.model.{Cookie, HeaderNames, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamingEndpointIO}
@@ -45,7 +45,7 @@ trait DecodeInputsContext {
   def headers: Seq[(String, String)]
 
   def queryParameter(name: String): Seq[String]
-  def queryParameters: MultiQueryParams
+  def queryParameters: QueryParams
 
   def bodyStream: Any
 
@@ -255,7 +255,7 @@ object DecodeInputs {
         (codec.decode(ctx.header(name)), ctx)
 
       case EndpointIO.Headers(codec, _) =>
-        (codec.decode(ctx.headers.map((sttp.model.Header.notValidated _).tupled).toList), ctx)
+        (codec.decode(ctx.headers.map((sttp.model.Header.apply _).tupled).toList), ctx)
 
       case EndpointInput.ExtractFromRequest(codec, _) =>
         (codec.decode(ctx.serverRequest), ctx)
