@@ -24,6 +24,9 @@ case class VertxEndpointOptions(
   def logAllDecodeFailures(shouldLog: Boolean): VertxEndpointOptions =
     copy(logRequestHandling = logRequestHandling.copy(logAllDecodeFailures = shouldLog))
 
+  def logLogicExceptions(shouldLog: Boolean): VertxEndpointOptions =
+    copy(logRequestHandling = logRequestHandling.copy(logLogicExceptions = shouldLog))
+
 }
 
 object VertxEndpointOptions {

@@ -81,13 +81,12 @@ object VertxInputDecoders {
       case RawBodyType.StringBody(defaultCharset) => rc.getBodyAsString(defaultCharset.toString).get
       case RawBodyType.ByteArrayBody => rc.getBody.get.getBytes
       case RawBodyType.ByteBufferBody => rc.getBody.get.getByteBuf.nioBuffer()
-      case RawBodyType.InputStreamBody =>
-        new ByteArrayInputStream(rc.getBody.get.getBytes) // README: be really careful with that
+      case RawBodyType.InputStreamBody => new ByteArrayInputStream(rc.getBody.get.getBytes)
       case RawBodyType.FileBody =>
         rc.fileUploads().toList match {
           case List(upload) =>
             new File(upload.uploadedFileName())
-          case List() if rc.getBody.isDefined => // README: really weird, but there's a test that sends the body as String, and expects a File
+          case List() if rc.getBody.isDefined =>
             val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
             try {
               rc.vertx().fileSystem().createFileBlocking(filePath)
