@@ -14,7 +14,7 @@ import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.server.vertx.VertxEndpointOptions
-import sttp.tapir.{CodecFormat, Endpoint, EndpointOutput, RawBodyType}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
 
 /**
  * All the necessary methods to write Endpoint.outputs to Vert.x HttpServerResponse
@@ -33,11 +33,11 @@ object VertxOutputEncoders {
    * @param output the endpoint definition
    * @param result the result to encode
    * @param isError boolean indicating if the result is an error or not
-   *
+   * @param logWhenHandled an optional function that will be invoked once the response has been successfully written, with the status code returned
    * @tparam O type of the result to encode
    * @return a function, that given a RoutingContext will write the output to its HTTP response
    */
-  private [vertx] def apply[O](output: EndpointOutput[O], result: O, isError: Boolean = false, log: Int => Unit = { _ => })
+  private [vertx] def apply[O](output: EndpointOutput[O], result: O, isError: Boolean = false, logWhenHandled: Int => Unit = { _ => })
                               (implicit endpointOptions: VertxEndpointOptions): RoutingContextHandler = { rc =>
     val resp = rc.response
     val options: OutputValues[RoutingContextHandlerWithLength] = OutputValues.empty
@@ -52,8 +52,7 @@ object VertxOutputEncoders {
         case Some(responseHandler)  => responseHandler(outputValues.contentLength)(rc)
         case None                   => resp.end()
       }
-      log(resp.getStatusCode)
-      log(resp.getStatusCode)
+      logWhenHandled(resp.getStatusCode)
     } catch {
       case e: Throwable => rc.fail(e)
     }
