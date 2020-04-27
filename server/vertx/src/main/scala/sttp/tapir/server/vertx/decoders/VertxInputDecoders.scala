@@ -79,7 +79,7 @@ object VertxInputDecoders {
     }
   }
 
-  private def extractRawBody[B](bodyType: RawBodyType[B], rc: RoutingContext)(implicit serverOptions: VertxEndpointOptions): Future[Any] = {
+  private def extractRawBody[B](bodyType: RawBodyType[B], rc: RoutingContext)(implicit serverOptions: VertxEndpointOptions): Future[B] = {
     implicit val ec: ExecutionContext = serverOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) => Future.successful(rc.getBodyAsString(defaultCharset.toString).get)
@@ -103,12 +103,12 @@ object VertxInputDecoders {
           partTypes.map {
             case (partName, rawBodyType) =>
               Part(partName, extractPart(partName, rawBodyType, rc))
-          }
+          }.toSeq
         )
     }
   }
 
-  private def extractPart(name: String, bodyType: RawBodyType[_], rc: RoutingContext): Any = {
+  private def extractPart[B](name: String, bodyType: RawBodyType[B], rc: RoutingContext): B = {
     val formAttributes = rc.request.formAttributes
     val param = formAttributes.get(name)
     bodyType match {
@@ -123,7 +123,7 @@ object VertxInputDecoders {
         partTypes.map {
           case (partName, rawBodyType) =>
             Part(partName, extractPart(partName, rawBodyType, rc))
-        }
+        }.toSeq
     }
   }
 
