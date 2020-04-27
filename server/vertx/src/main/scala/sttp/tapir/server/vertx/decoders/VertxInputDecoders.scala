@@ -4,6 +4,7 @@ import java.io.{ByteArrayInputStream, File}
 import java.nio.ByteBuffer
 import java.util.Date
 
+import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.Part
 import sttp.tapir.internal.Params
@@ -14,6 +15,7 @@ import sttp.tapir.server.vertx.handlers.tryEncodeError
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, RawBodyType}
 
+import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.Random
 
@@ -33,7 +35,7 @@ object VertxInputDecoders {
     rc: RoutingContext,
     logicHandler: Params => Unit,
   )(implicit endpointOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Unit = {
-    decodeBodyAndInputs(endpoint, rc) match {
+    decodeBodyAndInputs(endpoint, rc).map {
       case values: DecodeInputsResult.Values =>
         InputValues(endpoint.input, values) match {
           case InputValuesResult.Value(params, _) =>
@@ -51,57 +53,57 @@ object VertxInputDecoders {
             endpointOptions.logRequestHandling.decodeFailureHandled(endpoint, decodeFailureCtx, value)(endpointOptions.logger)
             VertxOutputEncoders.apply(output, value)(endpointOptions)(rc)
         }
-
-    }
+    }(endpointOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext)))
   }
 
   private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)
-                                         (implicit serverOptions: VertxEndpointOptions): DecodeInputsResult =
+                                         (implicit serverOptions: VertxEndpointOptions): Future[DecodeInputsResult] =
     decodeBody(DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc)
 
   private def decodeBody(result: DecodeInputsResult, rc: RoutingContext)
-                        (implicit serverOptions: VertxEndpointOptions): DecodeInputsResult = {
+                        (implicit serverOptions: VertxEndpointOptions): Future[DecodeInputsResult] = {
+    implicit val ec: ExecutionContext = serverOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
     result match {
       case values: DecodeInputsResult.Values =>
         values.bodyInput match {
-          case None => values
+          case None => Future.successful(values)
           case Some(bodyInput@EndpointIO.Body(bodyType, codec, _)) =>
-            codec.decode(extractRawBody(bodyType, rc)) match {
+            extractRawBody(bodyType, rc).map(codec.decode).map {
               case DecodeResult.Value(body) => values.setBodyInputValue(body)
               case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
             }
         }
-      case failure: DecodeInputsResult.Failure => failure
+      case failure: DecodeInputsResult.Failure => Future.successful(failure)
     }
   }
 
   private def extractRawBody[B](bodyType: RawBodyType[B], rc: RoutingContext)
-                       (implicit serverOptions: VertxEndpointOptions): Any =
+                       (implicit serverOptions: VertxEndpointOptions): Future[Any] = {
+    implicit val ec: ExecutionContext = serverOptions.executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
     bodyType match {
-      case RawBodyType.StringBody(defaultCharset) => rc.getBodyAsString(defaultCharset.toString).get
-      case RawBodyType.ByteArrayBody => rc.getBody.get.getBytes
-      case RawBodyType.ByteBufferBody => rc.getBody.get.getByteBuf.nioBuffer()
-      case RawBodyType.InputStreamBody => new ByteArrayInputStream(rc.getBody.get.getBytes)
+      case RawBodyType.StringBody(defaultCharset) => Future.successful(rc.getBodyAsString(defaultCharset.toString).get)
+      case RawBodyType.ByteArrayBody => Future.successful(rc.getBody.get.getBytes)
+      case RawBodyType.ByteBufferBody => Future.successful(rc.getBody.get.getByteBuf.nioBuffer())
+      case RawBodyType.InputStreamBody => Future.successful(new ByteArrayInputStream(rc.getBody.get.getBytes))
       case RawBodyType.FileBody =>
         rc.fileUploads().toList match {
           case List(upload) =>
-            new File(upload.uploadedFileName())
+            Future.successful(new File(upload.uploadedFileName()))
           case List() if rc.getBody.isDefined =>
             val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
-            try {
-              rc.vertx().fileSystem().createFileBlocking(filePath)
-              rc.vertx().fileSystem().writeFileBlocking(filePath, rc.getBody.get)
-              new File(filePath)
-            } catch {
-              case e: Throwable => new File("")
+            val fs = rc.vertx.fileSystem
+            fs.createFileFuture(filePath).flatMap { _ =>
+              fs.writeFileFuture(filePath, rc.getBody.get)
+                .map(_ => new File(filePath))
             }
-          case _ => throw new IllegalArgumentException("Cannot expect a file to be returned without sending body or file upload")
         }
-      case RawBodyType.MultipartBody(partTypes, _) =>
+      case RawBodyType.MultipartBody(partTypes, _) => Future.successful(
         partTypes.map { case (partName, rawBodyType) =>
           Part(partName, extractPart(partName, rawBodyType, rc))
         }
+      )
     }
+  }
 
   private def extractPart(name: String, bodyType: RawBodyType[_], rc: RoutingContext): Any = {
     val formAttributes = rc.request.formAttributes

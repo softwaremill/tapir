@@ -53,6 +53,7 @@ object VertxOutputEncoders {
         case None                   => resp.end()
       }
       log(resp.getStatusCode)
+      log(resp.getStatusCode)
     } catch {
       case e: Throwable => rc.fail(e)
     }

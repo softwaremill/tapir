@@ -2,7 +2,6 @@ package sttp.tapir.server
 
 import io.vertx.core.Handler
 import io.vertx.lang.scala.VertxExecutionContext
-import io.vertx.scala.core.Vertx
 import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
 import sttp.tapir._
 import sttp.tapir.internal.Params
