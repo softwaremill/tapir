@@ -15,8 +15,10 @@ package object encoders {
     */
   private[vertx] def inputStreamToBuffer(is: InputStream): Buffer = {
     val buffer = Buffer.buffer()
+    val buf = new Array[Byte](bufferSize)
     while (is.available() > 0) {
-      buffer.appendBytes(is.readNBytes(bufferSize))
+      val read = is.read(buf)
+      buffer.appendBytes(buf, 0, read)
     }
     buffer
   }
