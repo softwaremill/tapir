@@ -94,9 +94,7 @@ object VertxInputDecoders {
               rc.vertx().fileSystem().writeFileBlocking(filePath, rc.getBody.get)
               new File(filePath)
             } catch {
-              case e: Throwable =>
-                e.printStackTrace()
-                new File("")
+              case e: Throwable => new File("")
             }
           case _ => throw new IllegalArgumentException("Cannot expect a file to be returned without sending body or file upload")
         }
