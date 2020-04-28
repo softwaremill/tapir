@@ -16,7 +16,7 @@ import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues
 import sttp.tapir.server.vertx.VertxEndpointOptions
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 /**
   * All the necessary methods to write Endpoint.outputs to Vert.x HttpServerResponse
@@ -97,38 +97,42 @@ object VertxOutputEncoders {
       handleFullBody(bodyType, r)(endpointOptions)(rc)
     }
 
-    private def handleFullBody[R](bodyType: RawBodyType[R], r: R)(implicit endpointOptions: VertxEndpointOptions): RoutingContextHandler = { rc =>
+    private def handleFullBody[R](bodyType: RawBodyType[R], r: R)(implicit endpointOptions: VertxEndpointOptions): RoutingContext => Future[Unit] = { rc =>
+      implicit val ec: ExecutionContext = endpointOptions.executionContextOrCurrentCtx(rc)
       val resp = rc.response
-      (bodyType match {
-        case RawBodyType.StringBody(charset) => resp.end(r.toString, charset.toString)
-        case RawBodyType.ByteArrayBody       => resp.end(Buffer.buffer(r.asInstanceOf[Array[Byte]]))
-        case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, r.asInstanceOf[ByteBuffer]))
+      bodyType match {
+        case RawBodyType.StringBody(charset) => Future.successful(resp.end(r.toString, charset.toString))
+        case RawBodyType.ByteArrayBody       => Future.successful(resp.end(Buffer.buffer(r.asInstanceOf[Array[Byte]])))
+        case RawBodyType.ByteBufferBody      => Future.successful(resp.end(Buffer.buffer().setBytes(0, r.asInstanceOf[ByteBuffer])))
         case RawBodyType.InputStreamBody     =>
           inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx)
-            .map(resp.end)(endpointOptions.executionContextOrCurrentCtx(rc))
-        case RawBodyType.FileBody            => resp.sendFile(r.asInstanceOf[File].getPath): Unit
+            .map(resp.end)
+        case RawBodyType.FileBody            => Future.successful(resp.sendFile(r.asInstanceOf[File].getPath))
         case m: RawBodyType.MultipartBody    => handleMultipleBodyParts(m, r)(endpointOptions)(rc)
-      }): Unit
+      }
     }
 
     private def handleMultipleBodyParts[CF <: CodecFormat, R](
         multipart: RawBodyType[R] with RawBodyType.MultipartBody,
         r: R
-    )(implicit endpointOptions: VertxEndpointOptions): RoutingContextHandler = { rc =>
+    )(implicit endpointOptions: VertxEndpointOptions): RoutingContext => Future[Unit] = { rc =>
+      implicit val ec: ExecutionContext = endpointOptions.executionContextOrCurrentCtx(rc)
       val resp = rc.response
       resp.setChunked(true)
       resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, "multipart/form-data")
-      r.asInstanceOf[Seq[Part[_]]].foreach(handleBodyPart(multipart, _)(endpointOptions)(rc))
-      if (!resp.ended) resp.end()
+      Future.sequence(r.asInstanceOf[Seq[Part[_]]].map(handleBodyPart(multipart, _)(endpointOptions)(rc)))
+        .map { _ =>
+          if (!resp.ended) resp.end()
+        }
     }
 
     private def handleBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T])
-                                 (implicit endpointOptions: VertxEndpointOptions): RoutingContextHandler = { rc =>
+                                 (implicit endpointOptions: VertxEndpointOptions): RoutingContext => Future[Unit] = { rc =>
       val resp = rc.response
-      m.partType(part.name).foreach { partType =>
+      m.partType(part.name).map { partType =>
         val partContentType = writePartHeaders(part)(resp)
         writeBodyPart(partType.asInstanceOf[RawBodyType[Any]], partContentType, part.body)(endpointOptions)(rc)
-      }
+      }.getOrElse(Future.successful(()))
     }
 
     private def writePartHeaders(part: Part[_]): HttpServerResponse => String = { resp =>
@@ -144,26 +148,30 @@ object VertxOutputEncoders {
     }
 
     private def writeBodyPart[CF <: CodecFormat, R](bodyType: RawBodyType[R], contentType: String, r: R)
-                                                   (implicit endpointOptions: VertxEndpointOptions): RoutingContextHandler = { rc =>
+                                                   (implicit endpointOptions: VertxEndpointOptions): RoutingContext => Future[Unit] = { rc =>
       val resp = rc.response
       resp.write(s"${HttpHeaders.CONTENT_TYPE}: $contentType")
       resp.write("\n")
       implicit val ec: ExecutionContext = endpointOptions.executionContextOrCurrentCtx(rc)
-      (bodyType match {
-        case RawBodyType.StringBody(charset) => resp.write(r.toString, charset.toString)
-        case RawBodyType.ByteArrayBody       => resp.write(Buffer.buffer(r.asInstanceOf[Array[Byte]]))
-        case RawBodyType.ByteBufferBody      => resp.write(Buffer.buffer.setBytes(0, r.asInstanceOf[ByteBuffer]))
+      bodyType match {
+        case RawBodyType.StringBody(charset) => Future.successful(resp.write(r.toString, charset.toString))
+        case RawBodyType.ByteArrayBody       => Future.successful(resp.write(Buffer.buffer(r.asInstanceOf[Array[Byte]])))
+        case RawBodyType.ByteBufferBody      => Future.successful(resp.write(Buffer.buffer.setBytes(0, r.asInstanceOf[ByteBuffer])))
         case RawBodyType.InputStreamBody     =>
           inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx)
-            .map(resp.write)
+            .map { buffer => resp.write(buffer) }
         case RawBodyType.FileBody =>
           val file = r.asInstanceOf[File]
-          resp.write(s"""${HttpHeaders.CONTENT_DISPOSITION.toString}: file; file="${file.getName}"""")
-          resp.write("\n")
-          resp.write(rc.vertx.fileSystem.readFileBlocking(file.getAbsolutePath))
-          resp.write("\n\n")
+          rc.vertx.fileSystem.readFileFuture(file.getAbsolutePath)
+              .map { buf =>
+                resp.write(s"""${HttpHeaders.CONTENT_DISPOSITION.toString}: file; file="${file.getName}"""")
+                resp.write("\n")
+                resp.write(buf)
+                resp.write("\n\n")
+              }
+
         case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, r)(endpointOptions)(rc)
-      }): Unit
+      }
     }
 
   }
