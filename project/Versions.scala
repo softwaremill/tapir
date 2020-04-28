@@ -9,7 +9,7 @@ object Versions {
   val swaggerUi = "3.25.1"
   val upickle = "1.1.0"
   val playJson = "2.8.1"
-  val silencer = "1.6.0"
+  val silencer = "1.7.0"
   val finatra = "20.4.1"
   val catbird = "20.3.0"
   val sprayJson = "1.3.5"
