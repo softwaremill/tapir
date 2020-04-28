@@ -1,8 +1,11 @@
 package sttp.tapir.server.vertx
 
-import java.io.InputStream
+import java.io.{ByteArrayInputStream, InputStream}
 
 import io.vertx.core.buffer.Buffer
+import io.vertx.scala.core.Vertx
+
+import scala.concurrent.Future
 
 package object encoders {
 
@@ -10,10 +13,16 @@ package object encoders {
 
   /**
     * README: Tests are using a ByteArrayInputStream, which is totally fine,
-    * but other blocking implementations like FileInputStream etc. should maybe be wrapped in executeBlocking:
-    * it's fine for encoding responses, but will not be suitable for decoding requests (which expect an InputStream...)
+    * but other blocking implementations like FileInputStream etc. must maybe be wrapped in executeBlocking
     */
-  private[vertx] def inputStreamToBuffer(is: InputStream): Buffer = {
+  private[vertx] def inputStreamToBuffer(is: InputStream, vertx: Vertx): Future[Buffer] = {
+    is match {
+      case _: ByteArrayInputStream => Future.successful(inputStreamToBufferUnsafe(is))
+      case _ => vertx.executeBlocking(() => inputStreamToBufferUnsafe(is))
+    }
+  }
+
+  private def inputStreamToBufferUnsafe(is: InputStream): Buffer = {
     val buffer = Buffer.buffer()
     val buf = new Array[Byte](bufferSize)
     while (is.available() > 0) {
@@ -22,5 +31,6 @@ package object encoders {
     }
     buffer
   }
+
 
 }
