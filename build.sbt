@@ -87,7 +87,8 @@ lazy val core: Project = (project in file("core"))
       "com.softwaremill.sttp.model" %% "core" % "1.1.3",
       scalaTest % Test,
       scalaCheck % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.3.5" % Test
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.3.5" % Test,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test,
     ),
     unmanagedSourceDirectories in Compile += {
       val sourceDir = (baseDirectory in Compile).value / "src" / "main"
