@@ -1,17 +1,20 @@
 ---
 name: Bug report
-about: Create a report to help us improve
+about: Create a bug report
 title: "[BUG]"
 labels: ''
 assignees: ''
 
 ---
 
-Affected tapir version: ****
+Tapir version: ***
 
 **Describe the bug**
-A clear and concise description of what the bug is.
 
+What is the problem?
 
-**Additional context**
-Add any other context about the problem here.
+**How to reproduce?**
+
+Maybe you can provide code to reproduce the problem?
+
+**Additional information**
