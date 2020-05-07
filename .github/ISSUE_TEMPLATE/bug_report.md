@@ -8,6 +8,7 @@ assignees: ''
 ---
 
 Tapir version: ***
+
 Scala version: ***
 
 **Describe the bug**
