@@ -16,7 +16,7 @@ object StatusMappingMacro {
 
     val t = implicitly[c.WeakTypeTag[O]].tpe.dealias
 
-    if (!(t =:= t.erasure)) {
+    if (!(t =:= t.erasure) && !(t =:= typeOf[Unit])) {
       c.error(
         c.enclosingPosition,
         s"Constructing statusMapping of type $t is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify " +

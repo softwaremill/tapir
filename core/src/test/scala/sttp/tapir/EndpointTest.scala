@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import org.scalatest.{FlatSpec, Matchers}
-import sttp.model.Method
+import sttp.model.{Method, StatusCode}
 import sttp.tapir.util.CompileUtil
 
 class EndpointTest extends FlatSpec with Matchers {
@@ -50,6 +50,16 @@ class EndpointTest extends FlatSpec with Matchers {
     endpoint.errorOut(stringBody).errorOut(header[Int]("h1")): Endpoint[Unit, (String, Int), Unit, Nothing]
   }
 
+  it should "compile one-of empty output" in {
+    endpoint.post
+      .errorOut(
+        sttp.tapir.oneOf(
+          statusMapping(StatusCode.NotFound, emptyOutput),
+          statusMapping(StatusCode.Unauthorized, emptyOutput)
+        )
+      )
+  }
+
   it should "not compile invalid outputs with queries" in {
     val exception = CompileUtil.interceptEval("""import sttp.tapir._
                                                 |endpoint.out(query[String]("q1"))""".stripMargin)
@@ -66,12 +76,13 @@ class EndpointTest extends FlatSpec with Matchers {
     exception.getMessage contains "required: tapir.EndpointIO[?]"
   }
 
-  def pairToTuple(input: EndpointInput[_]): Any = input match {
-    case EndpointInput.Pair(left, right, _, _) => (pairToTuple(left), pairToTuple(right))
-    case EndpointIO.Pair(left, right, _, _)    => (pairToTuple(left), pairToTuple(right))
-    case EndpointIO.Empty(_, _)                => ()
-    case i                                     => i
-  }
+  def pairToTuple(input: EndpointInput[_]): Any =
+    input match {
+      case EndpointInput.Pair(left, right, _, _) => (pairToTuple(left), pairToTuple(right))
+      case EndpointIO.Pair(left, right, _, _)    => (pairToTuple(left), pairToTuple(right))
+      case EndpointIO.Empty(_, _)                => ()
+      case i                                     => i
+    }
 
   it should "combine two inputs" in {
     val i1 = query[String]("q1")
