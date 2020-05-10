@@ -1,8 +1,10 @@
 package sttp.tapir.typelevel
 
-import org.scalatest.{AppendedClues, FlatSpec, Matchers}
+import org.scalatest.AppendedClues
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class MatchTypeTest extends FlatSpec with Matchers with AppendedClues {
+class MatchTypeTest extends AnyFlatSpec with Matchers with AppendedClues {
   "MatchType" should "provide implicit for basic type" in {
 
     val string: Any = "String"

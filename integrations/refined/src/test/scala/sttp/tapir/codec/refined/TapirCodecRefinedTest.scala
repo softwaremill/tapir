@@ -6,11 +6,12 @@ import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import eu.timepit.refined.string.{IPv4, MatchesRegex}
 import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.{W, refineMV, refineV}
-import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.{DecodeResult, ValidationError, Validator}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class TapirCodecRefinedTest extends FlatSpec with Matchers with TapirCodecRefined {
+class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRefined {
 
   val nonEmptyStringCodec: PlainCodec[NonEmptyString] = implicitly[PlainCodec[NonEmptyString]]
 

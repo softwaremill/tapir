@@ -2,12 +2,13 @@ package sttp.tapir.codec.enumeratum
 
 import enumeratum._
 import enumeratum.values._
-import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.SchemaType.{SInteger, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class TapirCodecEnumeratumTest extends FlatSpec with Matchers {
+class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   import TapirCodecEnumeratumTest._
 
   it should "find schema for enumeratum enum entries" in {

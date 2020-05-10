@@ -1,9 +1,10 @@
 package sttp.tapir
 
-import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.SchemaType._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class SchemaMacroTest extends FlatSpec with Matchers {
+class SchemaMacroTest extends AnyFlatSpec with Matchers {
   behavior of "apply modification"
 
   it should "modify basic schema" in {
