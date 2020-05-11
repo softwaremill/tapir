@@ -10,7 +10,7 @@ import io.vertx.scala.ext.web.{Route, Router}
 import org.scalatest.BeforeAndAfterEach
 import sttp.tapir._
 import sttp.tapir.server.tests.ServerTests
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.Future
@@ -41,11 +41,15 @@ class VertxServerTests extends ServerTests[Future, String, Router => Route] with
   override def pureResult[T](t: T): Future[T] = Future.successful(t)
   override def suspendResult[T](t: => T): Future[T] = Future(t)(VertxExecutionContext(vertx.getOrCreateContext()))
 
-  override def route[I, E, O](e: Endpoint[I, E, O, String], fn: I => Future[Either[E, O]], decodeFailureHandler: Option[DecodeFailureHandler]): Router => Route =
-    e.route(fn)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
+  override def route[I, E, O](
+      e: ServerEndpoint[I, E, O, String, Future],
+      decodeFailureHandler: Option[DecodeFailureHandler]
+  ): Router => Route =
+    e.route(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, String], fn: I => Future[O])
-                                                       (implicit eClassTag: ClassTag[E]): Router => Route =
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, String], fn: I => Future[O])(implicit
+      eClassTag: ClassTag[E]
+  ): Router => Route =
     e.routeRecoverErrors(fn)
 
   override def server(routes: NonEmptyList[Router => Route], port: Port): Resource[IO, Unit] = {
@@ -56,6 +60,6 @@ class VertxServerTests extends ServerTests[Future, String, Router => Route] with
     Resource.make(listenIO)(s => IO(s.closeFuture())).void
   }
 
-  override lazy val portCounter: PortCounter = new PortCounter(2000)
+  override lazy val portCounter: PortCounter = new PortCounter(54000)
 
 }

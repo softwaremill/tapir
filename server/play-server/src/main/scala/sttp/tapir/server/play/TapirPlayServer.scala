@@ -7,9 +7,10 @@ import akka.util.ByteString
 import play.api.http.HttpEntity
 import play.api.mvc._
 import play.api.routing.Router.Routes
+import sttp.tapir.monad.FutureMonad
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.ServerDefaults.StatusCodes
-import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -17,13 +18,32 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 trait TapirPlayServer {
-  implicit class RichPlayServerEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) {
+  implicit class RichPlayEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) {
     def toRoute(
         logic: I => Future[Either[E, O]]
     )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+      e.serverLogic(logic).toRoute
+    }
+
+    def toRouteRecoverErrors(logic: I => Future[O])(implicit
+        eIsThrowable: E <:< Throwable,
+        eClassTag: ClassTag[E],
+        mat: Materializer,
+        serverOptions: PlayServerOptions
+    ): Routes = {
+      e.serverLogic { i: I =>
+        logic(i).map(Right(_)).recover {
+          case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
+        }
+      }.toRoute
+    }
+  }
+
+  implicit class RichPlayServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Nothing, Future]) {
+    def toRoute(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
       def valueToResponse(value: Any): Future[Result] = {
         val i = value.asInstanceOf[I]
-        logic(i)
+        e.logic(new FutureMonad())(i)
           .map {
             case Right(result) => OutputToPlayResponse(ServerDefaults.StatusCodes.success, e.output, result)
             case Left(err)     => OutputToPlayResponse(ServerDefaults.StatusCodes.error, e.errorOutput, err)
@@ -76,7 +96,7 @@ trait TapirPlayServer {
           val handlingResult = decodeInputResult match {
             case DecodeInputsResult.Failure(input, failure) =>
               val decodeFailureCtx = DecodeFailureContext(input, failure)
-              serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(serverOptions.logger)
+              serverOptions.logRequestHandling.decodeFailureNotHandled(e.endpoint, decodeFailureCtx)(serverOptions.logger)
               serverOptions.decodeFailureHandler(decodeFailureCtx) != DecodeFailureHandling.noMatch
             case DecodeInputsResult.Values(_, _) => true
           }
@@ -89,28 +109,15 @@ trait TapirPlayServer {
               case values: DecodeInputsResult.Values =>
                 InputValues(e.input, values) match {
                   case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
-                  case InputValuesResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e, input, failure))
+                  case InputValuesResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e.endpoint, input, failure))
                 }
               case DecodeInputsResult.Failure(input, failure) =>
-                Future.successful(handleDecodeFailure(e, input, failure))
+                Future.successful(handleDecodeFailure(e.endpoint, input, failure))
             }
           }
         }
       }
       res
-    }
-
-    def toRouteRecoverErrors(logic: I => Future[O])(
-        implicit eIsThrowable: E <:< Throwable,
-        eClassTag: ClassTag[E],
-        mat: Materializer,
-        serverOptions: PlayServerOptions
-    ): Routes = {
-      e.toRoute { i: I =>
-        logic(i).map(Right(_)).recover {
-          case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
-        }
-      }
     }
   }
 }

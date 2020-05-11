@@ -4,6 +4,7 @@ import io.vertx.core.Handler
 import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
 import sttp.tapir._
 import sttp.tapir.internal.Params
+import sttp.tapir.monad.FutureMonad
 import sttp.tapir.server.vertx.decoders.VertxInputDecoders._
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers._
@@ -82,8 +83,8 @@ package object vertx {
       decodeBodyAndInputsThen[E](e, rc, { params => logicHandler(logic, responseHandler, rc)(serverOptions, ect)(params) })
     }
 
-    private def logicHandler[T](logic: I => Future[T], responseHandler: (T, RoutingContext) => Unit, rc: RoutingContext)(
-        implicit serverOptions: VertxEndpointOptions,
+    private def logicHandler[T](logic: I => Future[T], responseHandler: (T, RoutingContext) => Unit, rc: RoutingContext)(implicit
+        serverOptions: VertxEndpointOptions,
         ect: Option[ClassTag[E]]
     ): Params => Unit = { params =>
       implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
@@ -123,4 +124,29 @@ package object vertx {
 
   }
 
+  implicit class VertxServerEndpoint[I, E, O, D](e: ServerEndpoint[I, E, O, D, Future]) {
+
+    /**
+      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
+      *
+      * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
+      * @return A function, that given a router, will attach this endpoint to it
+      */
+    def route(implicit endpointOptions: VertxEndpointOptions): Router => Route = {
+      implicit val ec: ExecutionContext = endpointOptions.executionContextOr(ExecutionContext.Implicits.global) // TODO
+      e.endpoint.route(i => e.logic(new FutureMonad())(i))
+    }
+
+    /**
+      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
+      * The logic will be executed in a blocking context
+      *
+      * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
+      * @return A function, that given a router, will attach this endpoint to it
+      */
+    def blockingRoute(implicit endpointOptions: VertxEndpointOptions): Router => Route = {
+      implicit val ec: ExecutionContext = endpointOptions.executionContextOr(ExecutionContext.Implicits.global) // TODO
+      e.endpoint.blockingRoute(i => e.logic(new FutureMonad())(i))
+    }
+  }
 }

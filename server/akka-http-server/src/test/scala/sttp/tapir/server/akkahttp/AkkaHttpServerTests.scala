@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.{Endpoint, endpoint, stringBody}
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir._
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.duration._
@@ -34,18 +34,17 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
   }
 
   override def route[I, E, O](
-      e: Endpoint[I, E, O, AkkaStream],
-      fn: I => Future[Either[E, O]],
+      e: ServerEndpoint[I, E, O, AkkaStream, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): Route = {
     implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
       decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
     )
-    e.toRoute(fn)
+    e.toRoute
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(
-      implicit eClassTag: ClassTag[E]
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(implicit
+      eClassTag: ClassTag[E]
   ): Route = {
     e.toRouteRecoverErrors(fn)
   }

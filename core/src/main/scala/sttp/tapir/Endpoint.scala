@@ -61,6 +61,9 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     *
     * An example use-case is providing authorization logic, followed by server logic (using an authorized user), given
     * a complete endpoint description.
+    *
+    * Note that the type of the `part` function cannot be inferred, it must be explicitly provided (e.g. by providing
+    * a function or method value).
     */
   def serverLogicPart[T, R, U, UR, F[_]](
       part: T => F[Either[E, U]]

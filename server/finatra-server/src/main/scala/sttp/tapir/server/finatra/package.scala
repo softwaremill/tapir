@@ -8,6 +8,7 @@ import com.twitter.util.logging.Logging
 import com.twitter.util.Future
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.internal._
+import sttp.tapir.monad.Monad
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
@@ -16,7 +17,24 @@ import scala.util.control.NonFatal
 
 package object finatra {
   implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
-    def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
+    def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: FinatraServerOptions): FinatraRoute =
+      e.serverLogic(logic).toRoute
+
+    @silent("never used")
+    def toRouteRecoverErrors(logic: I => Future[O])(implicit
+        eIsThrowable: E <:< Throwable,
+        eClassTag: ClassTag[E]
+    ): FinatraRoute =
+      e.serverLogic(i =>
+          logic(i).map(Right(_)).handle {
+            case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
+          }
+        )
+        .toRoute
+  }
+
+  implicit class RichFinatraServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Nothing, Future]) extends Logging {
+    def toRoute(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
       val handler = { request: Request =>
         def decodeBody(result: DecodeInputsResult): Future[DecodeInputsResult] = {
           result match {
@@ -41,18 +59,18 @@ package object finatra {
         def valueToResponse(value: Any): Future[Response] = {
           val i = value.asInstanceOf[I]
 
-          logic(i)
+          e.logic(FutureMonad)(i)
             .map {
               case Right(result) => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.success.code), e.output, result)
               case Left(err)     => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.error.code), e.errorOutput, err)
             }
             .map { result =>
-              serverOptions.logRequestHandling.requestHandled(e, result.statusCode)
+              serverOptions.logRequestHandling.requestHandled(e.endpoint, result.statusCode)
               result
             }
             .onFailure {
               case NonFatal(ex) =>
-                serverOptions.logRequestHandling.logicException(e, ex)
+                serverOptions.logRequestHandling.logicException(e.endpoint, ex)
                 error(ex)
             }
         }
@@ -79,25 +97,13 @@ package object finatra {
           case values: DecodeInputsResult.Values =>
             InputValues(e.input, values) match {
               case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
-              case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))
+              case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
             }
-          case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))
+          case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
         }
       }
 
-      FinatraRoute(handler, httpMethod(e), path(e.input))
-    }
-
-    @silent("never used")
-    def toRouteRecoverErrors(logic: I => Future[O])(
-        implicit eIsThrowable: E <:< Throwable,
-        eClassTag: ClassTag[E]
-    ): FinatraRoute = {
-      e.toRoute { i: I =>
-        logic(i).map(Right(_)).handle {
-          case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
-        }
-      }
+      FinatraRoute(handler, httpMethod(e.endpoint), path(e.input))
     }
   }
 
@@ -121,5 +127,11 @@ package object finatra {
         case FixedMethod(m, _, _) => Method(m.method)
       }
       .getOrElse(Method("ANY"))
+  }
+
+  private object FutureMonad extends Monad[Future] {
+    override def unit[T](t: T): Future[T] = Future(t)
+    override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
+    override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)
   }
 }
