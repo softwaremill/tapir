@@ -3,7 +3,7 @@ package sttp.tapir.server
 import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
 import sttp.tapir.typelevel.{ParamConcat, ParamSubtract}
 import sttp.tapir.internal._
-import sttp.tapir.monad.Monad
+import sttp.tapir.monad.MonadError
 import sttp.tapir.monad.syntax._
 
 /**
@@ -33,7 +33,7 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
     */
   protected type T
   protected def splitInput: I => (T, R)
-  protected def logicFragment: Monad[F] => T => F[Either[E, U]]
+  protected def logicFragment: MonadError[F] => T => F[Either[E, U]]
 
   override type EndpointType[_I, _E, _O, +_S] = ServerEndpointInParts[U, R, _I, _E, _O, _S, F]
   override def input: EndpointInput[I] = endpoint.input
@@ -45,7 +45,7 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
     new ServerEndpointInParts[U, R, I, E, O, S, F](endpoint.info(info)) {
       override type T = outer.T
       override def splitInput: I => (outer.T, R) = outer.splitInput
-      override def logicFragment: Monad[F] => T => F[Either[E, U]] = outer.logicFragment
+      override def logicFragment: MonadError[F] => T => F[Either[E, U]] = outer.logicFragment
     }
 
   override protected def showType: String = "FragmentedServerEndpoint"
@@ -89,7 +89,7 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
           ((t, t2), r2)
         }
 
-      override def logicFragment: Monad[F] => T => F[Either[E, UV]] = { implicit monad =>
+      override def logicFragment: MonadError[F] => T => F[Either[E, UV]] = { implicit monad =>
         {
           case (t, t2) =>
             outer.logicFragment(monad)(t).flatMap {

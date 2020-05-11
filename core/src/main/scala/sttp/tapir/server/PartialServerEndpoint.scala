@@ -3,7 +3,7 @@ package sttp.tapir.server
 import sttp.tapir.typelevel.ParamConcat
 import sttp.tapir._
 import sttp.tapir.internal._
-import sttp.tapir.monad.Monad
+import sttp.tapir.monad.MonadError
 import sttp.tapir.monad.syntax._
 
 /**
@@ -34,7 +34,7 @@ abstract class PartialServerEndpoint[U, I, E, O, +S, F[_]](val endpoint: Endpoin
   // original type of the partial input (transformed into U)
   type T
   protected def tInput: EndpointInput[T]
-  protected def partialLogic: Monad[F] => T => F[Either[E, U]]
+  protected def partialLogic: MonadError[F] => T => F[Either[E, U]]
 
   override type EndpointType[_I, _E, _O, +_S] = PartialServerEndpoint[U, _I, _E, _O, _S, F]
 
@@ -47,7 +47,7 @@ abstract class PartialServerEndpoint[U, I, E, O, +S, F[_]](val endpoint: Endpoin
     new PartialServerEndpoint[U, I2, E, O2, S2, F](e2) {
       override type T = outer.T
       override protected def tInput: EndpointInput[T] = outer.tInput
-      override protected def partialLogic: Monad[F] => T => F[Either[E, U]] = outer.partialLogic
+      override protected def partialLogic: MonadError[F] => T => F[Either[E, U]] = outer.partialLogic
     }
   override private[tapir] def withInput[I2, S2 >: S](input: EndpointInput[I2]): PartialServerEndpoint[U, I2, E, O, S2, F] =
     withEndpoint(endpoint.withInput(input))
@@ -63,7 +63,7 @@ abstract class PartialServerEndpoint[U, I, E, O, +S, F[_]](val endpoint: Endpoin
     new PartialServerEndpoint[UV, Unit, E, O, S, F](endpoint.copy(input = emptyInput)) {
       override type T = (outer.T, I)
       override def tInput: EndpointInput[(outer.T, I)] = outer.tInput.and(outer.endpoint.input)
-      override def partialLogic: Monad[F] => ((outer.T, I)) => F[Either[E, UV]] =
+      override def partialLogic: MonadError[F] => ((outer.T, I)) => F[Either[E, UV]] =
         implicit monad => {
           case (t, i) =>
             outer.partialLogic(monad)(t).flatMap {
@@ -79,9 +79,9 @@ abstract class PartialServerEndpoint[U, I, E, O, +S, F[_]](val endpoint: Endpoin
   def serverLogic(g: ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, S, F] =
     ServerEndpoint[(T, I), E, O, S, F](
       endpoint.prependIn(tInput): Endpoint[(T, I), E, O, S],
-      (m: Monad[F]) => {
+      (m: MonadError[F]) => {
         case (t, i) =>
-          implicit val monad: Monad[F] = m
+          implicit val monad: MonadError[F] = m
           partialLogic(monad)(t).flatMap {
             case Left(e)  => (Left(e): Either[E, O]).unit
             case Right(u) => g((u, i))

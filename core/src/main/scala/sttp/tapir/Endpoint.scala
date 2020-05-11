@@ -3,10 +3,12 @@ package sttp.tapir
 import sttp.model.Method
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
-import sttp.tapir.monad.Monad
-import sttp.tapir.server.{ServerEndpointInParts, PartialServerEndpoint, ServerEndpoint}
+import sttp.tapir.monad.MonadError
+import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint, ServerEndpointInParts}
 import sttp.tapir.typelevel.{FnComponents, ParamConcat, ParamSubtract}
 import sttp.tapir.internal._
+
+import scala.reflect.ClassTag
 
 /**
   * @tparam I Input parameter types.
@@ -44,6 +46,15 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, _ => f)
 
   /**
+    * Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
+    * errors.
+    */
+  def serverLogicRecoverErrors[F[_]](
+      f: I => F[O]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, S, F] =
+    ServerEndpoint(this, MonadError.recoverErrors[I, E, O, F](f))
+
+  /**
     * Combine this endpoint description with a function, which implements a part of the server-side logic. The
     * partial logic returns a result, which is either an error or a success value, wrapped in an effect type `F`.
     *
@@ -66,13 +77,32 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     * a function or method value).
     */
   def serverLogicPart[T, R, U, UR, F[_]](
-      part: T => F[Either[E, U]]
+      f: T => F[Either[E, U]]
   )(implicit iMinusR: ParamSubtract.Aux[I, T, R]): ServerEndpointInParts[U, R, I, E, O, S, F] = {
     type _T = T
     new ServerEndpointInParts[U, R, I, E, O, S, F](this) {
       override type T = _T
       override def splitInput: I => (T, R) = i => split(i)(iMinusR)
-      override def logicFragment: Monad[F] => _T => F[Either[E, U]] = _ => part
+      override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = _ => f
+    }
+  }
+
+  /**
+    * Same as [[serverLogicPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+    * endpoint errors.
+    */
+  def serverLogicPartRecoverErrors[T, R, U, UR, F[_]](
+      f: T => F[U]
+  )(implicit
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E],
+      iMinusR: ParamSubtract.Aux[I, T, R]
+  ): ServerEndpointInParts[U, R, I, E, O, S, F] = {
+    type _T = T
+    new ServerEndpointInParts[U, R, I, E, O, S, F](this) {
+      override type T = _T
+      override def splitInput: I => (T, R) = i => split(i)(iMinusR)
+      override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = MonadError.recoverErrors[_T, E, U, F](f)
     }
   }
 
@@ -96,11 +126,24 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     * An example use-case is defining an endpoint with fully-defined errors, and with authorization logic built-in.
     * Such an endpoint can be then extended by multiple other endpoints.
     */
-  def serverLogicForCurrent[U, F[_]](_f: I => F[Either[E, U]]): PartialServerEndpoint[U, Unit, E, O, S, F] =
+  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[U, Unit, E, O, S, F] =
     new PartialServerEndpoint[U, Unit, E, O, S, F](this.copy(input = emptyInput)) {
       override type T = I
       override def tInput: EndpointInput[T] = outer.input
-      override def partialLogic: Monad[F] => T => F[Either[E, U]] = _ => _f
+      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = _ => f
+    }
+
+  /**
+    * Same as [[serverLogicForCurrent]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+    * endpoint errors.
+    */
+  def serverLogicForCurrentRecoverErrors[U, F[_]](
+      f: I => F[U]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[U, Unit, E, O, S, F] =
+    new PartialServerEndpoint[U, Unit, E, O, S, F](this.copy(input = emptyInput)) {
+      override type T = I
+      override def tInput: EndpointInput[T] = outer.input
+      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = MonadError.recoverErrors(f)
     }
 }
 

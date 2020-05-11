@@ -1,8 +1,7 @@
 package sttp.tapir.server
 
 import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
-import sttp.tapir.monad.Monad
-import sttp.tapir.internal._
+import sttp.tapir.monad.MonadError
 
 /**
   * @tparam I Input parameter types.
@@ -11,7 +10,7 @@ import sttp.tapir.internal._
   * @tparam S The type of streams that are used by this endpoint's inputs/outputs. `Nothing`, if no streams are used.
   * @tparam F The effect type used in the provided server logic.
   */
-case class ServerEndpoint[I, E, O, +S, F[_]](endpoint: Endpoint[I, E, O, S], logic: Monad[F] => I => F[Either[E, O]])
+case class ServerEndpoint[I, E, O, +S, F[_]](endpoint: Endpoint[I, E, O, S], logic: MonadError[F] => I => F[Either[E, O]])
     extends EndpointInfoOps[I, E, O, S]
     with EndpointMetaOps[I, E, O, S] {
 

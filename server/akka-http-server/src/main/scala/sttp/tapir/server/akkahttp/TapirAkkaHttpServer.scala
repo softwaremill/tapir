@@ -19,7 +19,7 @@ trait TapirAkkaHttpServer {
     def toRouteRecoverErrors(
         logic: I => Future[O]
     )(implicit serverOptions: AkkaHttpServerOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route = {
-      new EndpointToAkkaServer(serverOptions).toRouteRecoverErrors(e)(logic)
+      new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogicRecoverErrors(logic))
     }
   }
 

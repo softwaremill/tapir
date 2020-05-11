@@ -8,7 +8,7 @@ import com.twitter.util.logging.Logging
 import com.twitter.util.Future
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.internal._
-import sttp.tapir.monad.Monad
+import sttp.tapir.monad.MonadError
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
@@ -25,12 +25,7 @@ package object finatra {
         eIsThrowable: E <:< Throwable,
         eClassTag: ClassTag[E]
     ): FinatraRoute =
-      e.serverLogic(i =>
-          logic(i).map(Right(_)).handle {
-            case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
-          }
-        )
-        .toRoute
+      e.serverLogicRecoverErrors(logic).toRoute
   }
 
   implicit class RichFinatraServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Nothing, Future]) extends Logging {
@@ -59,7 +54,7 @@ package object finatra {
         def valueToResponse(value: Any): Future[Response] = {
           val i = value.asInstanceOf[I]
 
-          e.logic(FutureMonad)(i)
+          e.logic(FutureMonadError)(i)
             .map {
               case Right(result) => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.success.code), e.output, result)
               case Left(err)     => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.error.code), e.errorOutput, err)
@@ -129,9 +124,11 @@ package object finatra {
       .getOrElse(Method("ANY"))
   }
 
-  private object FutureMonad extends Monad[Future] {
+  private object FutureMonadError extends MonadError[Future] {
     override def unit[T](t: T): Future[T] = Future(t)
     override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
     override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)
+    override def error[T](t: Throwable): Future[T] = Future.exception(t)
+    override protected def handleWrappedError[T](rt: Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.rescue(h)
   }
 }

@@ -19,14 +19,14 @@ trait TapirHttp4sServer {
       new EndpointToHttp4sServer(serverOptions).toRoutes(e.serverLogic(logic))
     }
 
-    def toRouteRecoverErrors(logic: I => F[O])(
-        implicit serverOptions: Http4sServerOptions[F],
+    def toRouteRecoverErrors(logic: I => F[O])(implicit
+        serverOptions: Http4sServerOptions[F],
         fs: Sync[F],
         fcs: ContextShift[F],
         eIsThrowable: E <:< Throwable,
         eClassTag: ClassTag[E]
     ): HttpRoutes[F] = {
-      new EndpointToHttp4sServer(serverOptions).toRoutesRecoverErrors(e)(logic)
+      new EndpointToHttp4sServer(serverOptions).toRoutes(e.serverLogicRecoverErrors(logic))
     }
   }
 
