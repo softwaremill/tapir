@@ -249,9 +249,11 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
 
     testServer(in_stream_out_stream_with_content_length[S])((in: (Long, S)) => pureResult(in.asRight[Unit])) { baseUri =>
-      basicRequest.post(uri"$baseUri/api/echo").contentLength(penPineapple.length).body(penPineapple).send().map { response =>
-        response.body shouldBe Right(penPineapple)
-        response.contentLength shouldBe Some(penPineapple.length)
+      {
+        basicRequest.post(uri"$baseUri/api/echo").contentLength(penPineapple.length).body(penPineapple).send().map { response =>
+          response.body shouldBe Right(penPineapple)
+          response.contentLength shouldBe Some(penPineapple.length)
+        }
       }
     }
   }
