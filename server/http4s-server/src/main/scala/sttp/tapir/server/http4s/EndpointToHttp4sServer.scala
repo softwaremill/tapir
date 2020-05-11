@@ -6,6 +6,7 @@ import cats.implicits._
 import com.github.ghik.silencer.silent
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import org.log4s._
+import sttp.tapir.monad.Monad
 import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
@@ -37,7 +38,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
       def valueToResponse(value: Any): F[Response[F]] = {
         val i = value.asInstanceOf[I]
-        se.logic(i)
+        se.logic(new CatsMonad)(i)
           .map {
             case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
             case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
@@ -62,8 +63,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   }
 
   @silent("never used")
-  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[O])(
-      implicit eIsThrowable: E <:< Throwable,
+  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[O])(implicit
+      eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
   ): HttpRoutes[F] = {
     def reifyFailedF(f: F[O]): F[Either[E, O]] = {
@@ -97,6 +98,12 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           .decodeFailureHandled(e, decodeFailureCtx, value)
           .map(_ => Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value)))
     }
+  }
+
+  private class CatsMonad(implicit F: cats.MonadError[F, Throwable]) extends Monad[F] {
+    override def unit[T](t: T): F[T] = F.pure(t)
+    override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
+    override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
   }
 }
 

@@ -193,7 +193,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     */
   val emptyOutput: EndpointOutput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
-  private val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   def schemaFor[T: Schema]: Schema[T] = implicitly[Schema[T]]
 

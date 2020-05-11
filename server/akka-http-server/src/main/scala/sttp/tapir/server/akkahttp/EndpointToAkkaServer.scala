@@ -7,6 +7,7 @@ import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import com.github.ghik.silencer.silent
 import sttp.tapir._
+import sttp.tapir.monad.FutureMonad
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
 import sttp.tapir.typelevel.ParamsToTuple
 
@@ -38,12 +39,14 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     toDirective1(se.endpoint) { values =>
       extractLog { log =>
         mapResponse(resp => { serverOptions.logRequestHandling.requestHandled(se.endpoint, resp.status.intValue())(log); resp }) {
-          onComplete(se.logic(values)) {
-            case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, se.endpoint.errorOutput, v)
-            case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, se.endpoint.output, v)
-            case Failure(e) =>
-              serverOptions.logRequestHandling.logicException(se.endpoint, e)(log)
-              throw e
+          extractExecutionContext { ec =>
+            onComplete(se.logic(new FutureMonad()(ec))(values)) {
+              case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, se.endpoint.errorOutput, v)
+              case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, se.endpoint.output, v)
+              case Failure(e) =>
+                serverOptions.logRequestHandling.logicException(se.endpoint, e)(log)
+                throw e
+            }
           }
         }
       }

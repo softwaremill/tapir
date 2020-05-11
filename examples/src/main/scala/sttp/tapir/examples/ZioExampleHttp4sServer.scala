@@ -24,7 +24,7 @@ object ZioExampleHttp4sServer extends App {
       e.toRoutes(i => logic(i).either)
     }
 
-    def zioServerLogic(logic: I => IO[E, O]): ServerEndpoint[I, E, O, EntityBody[Task], Task] = ServerEndpoint(e, logic(_).either)
+    def zioServerLogic(logic: I => IO[E, O]): ServerEndpoint[I, E, O, EntityBody[Task], Task] = ServerEndpoint(e, _ => logic(_).either)
   }
   case class Pet(species: String, url: String)
 

@@ -2,7 +2,10 @@ package sttp.tapir
 
 import org.scalatest.{FlatSpec, Matchers}
 import sttp.model.{Method, StatusCode}
+import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 import sttp.tapir.util.CompileUtil
+
+import scala.concurrent.Future
 
 class EndpointTest extends FlatSpec with Matchers {
   "endpoint" should "compile inputs" in {
@@ -197,5 +200,46 @@ class EndpointTest extends FlatSpec with Matchers {
     s"httpMethod for ${testEndpoint.showDetail}" should s"be $expectedMethod" in {
       testEndpoint.httpMethod shouldBe expectedMethod
     }
+  }
+
+  it should "compile endpoint descriptions providing partial server logic using serverLogicForCurrent" in {
+    case class User1(x: String, y: Int)
+    case class User2(z: Double)
+    case class Result(u1: User1, u2: User2, a: String)
+    val base: PartialServerEndpoint[User1, Unit, String, Unit, Nothing, Future] = endpoint
+      .errorOut(stringBody)
+      .in(query[String]("x"))
+      .in(query[Int]("y"))
+      .serverLogicForCurrent { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
+
+    base
+      .in(query[Double]("z"))
+      .serverLogicForCurrent { z => Future.successful(Right(User2(z)): Either[String, User2]) }
+      .in(query[String]("a"))
+      .out(plainBody[Result](null: Codec[String, Result, CodecFormat.TextPlain]))
+      .serverLogic {
+        case ((u1, u2), a) => Future.successful(Right(Result(u1, u2, a)): Either[String, Result])
+      }
+  }
+
+  it should "compile endpoint descriptions providing partial server logic using serverLogicPart" in {
+    case class User1(x: String)
+    case class User2(x: Int)
+    case class Result(u1: User1, u2: User2, d: Double)
+
+    def parse1(t: String): Future[Either[String, User1]] = Future.successful(Right(User1(t)))
+    def parse2(t: Int): Future[Either[String, User2]] = Future.successful(Right(User2(t)))
+
+    val _: ServerEndpoint[(String, Int, Double), String, Result, Nothing, Future] = endpoint
+      .in(query[String]("x"))
+      .in(query[Int]("y"))
+      .in(query[Double]("z"))
+      .errorOut(stringBody)
+      .out(plainBody[Result](null: Codec[String, Result, CodecFormat.TextPlain]))
+      .serverLogicPart(parse1)
+      .andThenPart(parse2)
+      .andThen {
+        case ((user1, user2), d) => Future.successful(Right(Result(user1, user2, d)): Either[String, Result])
+      }
   }
 }
