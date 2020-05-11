@@ -4,7 +4,7 @@ import io.vertx.core.Handler
 import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
 import sttp.tapir._
 import sttp.tapir.internal.Params
-import sttp.tapir.monad.FutureMonadError
+import sttp.tapir.monad.{FutureMonadError, MonadError}
 import sttp.tapir.server.vertx.decoders.VertxInputDecoders._
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers._
@@ -24,10 +24,8 @@ package object vertx {
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
       * @return A function, that given a router, will attach this endpoint to it
       */
-    def route(logic: I => Future[Either[E, O]])(implicit endpointOptions: VertxEndpointOptions): Router => Route = { router =>
-      mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, None)
-        .handler(endpointHandler(logic, responseHandlerWithError)(endpointOptions, None))
-    }
+    def route(logic: I => Future[Either[E, O]])(implicit endpointOptions: VertxEndpointOptions): Router => Route =
+      e.serverLogic(logic).route
 
     /**
       * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
@@ -36,10 +34,8 @@ package object vertx {
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
       * @return A function, that given a router, will attach this endpoint to it
       */
-    def blockingRoute(logic: I => Future[Either[E, O]])(implicit endpointOptions: VertxEndpointOptions): Router => Route = { router =>
-      mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, None)
-        .blockingHandler(endpointHandler(logic, responseHandlerWithError)(endpointOptions, None))
-    }
+    def blockingRoute(logic: I => Future[Either[E, O]])(implicit endpointOptions: VertxEndpointOptions): Router => Route =
+      e.serverLogic(logic).blockingRoute
 
     /**
       * Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
@@ -49,11 +45,8 @@ package object vertx {
       */
     def routeRecoverErrors(
         logic: I => Future[O]
-    )(implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route = { router =>
-      val ect = Some(implicitly[ClassTag[E]])
-      mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, ect)
-        .handler(endpointHandler(logic, responseHandlerNoError)(endpointOptions, ect))
-    }
+    )(implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
+      e.serverLogicRecoverErrors(logic).route
 
     /**
       * Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
@@ -64,23 +57,49 @@ package object vertx {
       */
     def blockingRouteRecoverErrors(
         logic: I => Future[O]
-    )(implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route = { router =>
-      val ect = Some(implicitly[ClassTag[E]])
-      mountWithDefaultHandlers(router, extractRouteDefinition(e))(endpointOptions, ect)
-        .blockingHandler(endpointHandler(logic, responseHandlerNoError)(endpointOptions, ect))
+    )(implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
+      e.serverLogicRecoverErrors(logic).blockingRoute
+  }
+
+  implicit class VertxServerEndpoint[I, E, O, D](e: ServerEndpoint[I, E, O, D, Future]) {
+
+    /**
+      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
+      * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
+      * @return A function, that given a router, will attach this endpoint to it
+      */
+    def route(implicit endpointOptions: VertxEndpointOptions): Router => Route = { router =>
+      mountWithDefaultHandlers(router, extractRouteDefinition(e.endpoint))(endpointOptions, None)
+        .handler(endpointHandler(e.logic, responseHandlerWithError)(endpointOptions, None))
+    }
+
+    /**
+      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
+      * The logic will be executed in a blocking context
+      * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
+      * @return A function, that given a router, will attach this endpoint to it
+      */
+    def blockingRoute(implicit endpointOptions: VertxEndpointOptions): Router => Route = { router =>
+      mountWithDefaultHandlers(router, extractRouteDefinition(e.endpoint))(endpointOptions, None)
+        .blockingHandler(endpointHandler(e.logic, responseHandlerWithError)(endpointOptions, None))
     }
 
     private def mountWithDefaultHandlers(
         router: Router,
         routeDef: RouteDefinition
     )(implicit endpointOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Route =
-      attachDefaultHandlers(e, createRoute(router, routeDef))
+      attachDefaultHandlers(e.endpoint, createRoute(router, routeDef))
 
     private def endpointHandler[A](
-        logic: I => Future[A],
+        logic: MonadError[Future] => I => Future[A],
         responseHandler: (A, RoutingContext) => Unit
     )(implicit serverOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Handler[RoutingContext] = { rc =>
-      decodeBodyAndInputsThen[E](e, rc, { params => logicHandler(logic, responseHandler, rc)(serverOptions, ect)(params) })
+      val monad = new FutureMonadError()(serverOptions.executionContextOrCurrentCtx(rc))
+      decodeBodyAndInputsThen[E](
+        e.endpoint,
+        rc,
+        { params => logicHandler(logic(monad), responseHandler, rc)(serverOptions, ect)(params) }
+      )
     }
 
     private def logicHandler[T](logic: I => Future[T], responseHandler: (T, RoutingContext) => Unit, rc: RoutingContext)(implicit
@@ -94,14 +113,14 @@ package object vertx {
             case Success(result) =>
               responseHandler(result, rc)
             case Failure(cause) =>
-              serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger)
-              tryEncodeError(e, rc, cause)
+              serverOptions.logRequestHandling.logicException(e.endpoint, cause)(serverOptions.logger)
+              tryEncodeError(e.endpoint, rc, cause)
           }
         }
         .recover {
           case cause =>
-            tryEncodeError(e, rc, cause)
-            serverOptions.logRequestHandling.logicException(e, cause)(serverOptions.logger): Unit
+            tryEncodeError(e.endpoint, rc, cause)
+            serverOptions.logRequestHandling.logicException(e.endpoint, cause)(serverOptions.logger): Unit
         }
     }
 
@@ -109,7 +128,7 @@ package object vertx {
       (output, rc) =>
         output match {
           case Left(failure) =>
-            encodeError(e, rc, failure)
+            encodeError(e.endpoint, rc, failure)
           case Right(result) =>
             responseHandlerNoError(endpointOptions)(result, rc)
         }
@@ -120,33 +139,6 @@ package object vertx {
     }
 
     private def logRequestHandled(implicit endpointOptions: VertxEndpointOptions): Int => Unit =
-      status => endpointOptions.logRequestHandling.requestHandled(e, status): Unit
-
-  }
-
-  implicit class VertxServerEndpoint[I, E, O, D](e: ServerEndpoint[I, E, O, D, Future]) {
-
-    /**
-      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
-      *
-      * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
-      * @return A function, that given a router, will attach this endpoint to it
-      */
-    def route(implicit endpointOptions: VertxEndpointOptions): Router => Route = {
-      implicit val ec: ExecutionContext = endpointOptions.executionContextOr(ExecutionContext.Implicits.global) // TODO
-      e.endpoint.route(i => e.logic(new FutureMonadError())(i))
-    }
-
-    /**
-      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
-      * The logic will be executed in a blocking context
-      *
-      * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
-      * @return A function, that given a router, will attach this endpoint to it
-      */
-    def blockingRoute(implicit endpointOptions: VertxEndpointOptions): Router => Route = {
-      implicit val ec: ExecutionContext = endpointOptions.executionContextOr(ExecutionContext.Implicits.global) // TODO
-      e.endpoint.blockingRoute(i => e.logic(new FutureMonadError())(i))
-    }
+      status => endpointOptions.logRequestHandling.requestHandled(e.endpoint, status): Unit
   }
 }
