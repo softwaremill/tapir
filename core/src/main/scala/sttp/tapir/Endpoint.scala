@@ -21,7 +21,8 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     with EndpointErrorOutputsOps[I, E, O, S]
     with EndpointOutputsOps[I, E, O, S]
     with EndpointInfoOps[I, E, O, S]
-    with EndpointMetaOps[I, E, O, S] { outer =>
+    with EndpointMetaOps[I, E, O, S]
+    with EndpointServerLogicOps[I, E, O, S] { outer =>
 
   override type EndpointType[_I, _E, _O, +_S] = Endpoint[_I, _E, _O, _S]
   override private[tapir] def withInput[I2, S2 >: S](input: EndpointInput[I2]): Endpoint[I2, E, O, S2] = this.copy(input = input)
@@ -29,122 +30,7 @@ case class Endpoint[I, E, O, +S](input: EndpointInput[I], errorOutput: EndpointO
     this.copy(errorOutput = errorOutput)
   override private[tapir] def withOutput[O2, S2 >: S](output: EndpointOutput[O2]): Endpoint[I, E, O2, S2] = this.copy(output = output)
   override private[tapir] def withInfo(info: EndpointInfo): Endpoint[I, E, O, S] = this.copy(info = info)
-
   override protected def showType: String = "Endpoint"
-
-  /**
-    * Combine this endpoint description with a function, which implements the server-side logic. The logic returns
-    * a result, which is either an error or a successful output, wrapped in an effect type `F`.
-    *
-    * A server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific
-    * type(s).
-    *
-    * Both the endpoint and logic function are considered complete, and cannot be later extended through the
-    * returned [[ServerEndpoint]] value (except for endpoint meta-data). To provide the logic in parts, see
-    * [[serverLogicPart]] and [[serverLogicForCurrent]].
-    */
-  def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, _ => f)
-
-  /**
-    * Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
-    * errors.
-    */
-  def serverLogicRecoverErrors[F[_]](
-      f: I => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, S, F] =
-    ServerEndpoint(this, MonadError.recoverErrors[I, E, O, F](f))
-
-  /**
-    * Combine this endpoint description with a function, which implements a part of the server-side logic. The
-    * partial logic returns a result, which is either an error or a success value, wrapped in an effect type `F`.
-    *
-    * Subsequent parts of the logic can be provided later using [[ServerEndpointInParts.andThenPart]], consuming
-    * successive input parts. Finally, the logic can be completed, given a function which accepts as arguments the
-    * results of applying on part-functions, and the remaining input. The final result is then a [[ServerEndpoint]].
-    *
-    * A complete server endpoint can be passed to a server interpreter. Each server interpreter supports effects
-    * of a specific type(s).
-    *
-    * When using this method, the endpoint description is considered complete, and cannot be later extended through
-    * the returned [[ServerEndpointInParts]] value. However, each part of the server logic can consume only some
-    * of the input. To provide the logic in parts, while still being able to extend the endpoint description, see
-    * [[serverLogicForCurrent]].
-    *
-    * An example use-case is providing authorization logic, followed by server logic (using an authorized user), given
-    * a complete endpoint description.
-    *
-    * Note that the type of the `part` function cannot be inferred, it must be explicitly provided (e.g. by providing
-    * a function or method value).
-    */
-  def serverLogicPart[T, R, U, UR, F[_]](
-      f: T => F[Either[E, U]]
-  )(implicit iMinusR: ParamSubtract.Aux[I, T, R]): ServerEndpointInParts[U, R, I, E, O, S, F] = {
-    type _T = T
-    new ServerEndpointInParts[U, R, I, E, O, S, F](this) {
-      override type T = _T
-      override def splitInput: I => (T, R) = i => split(i)(iMinusR)
-      override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = _ => f
-    }
-  }
-
-  /**
-    * Same as [[serverLogicPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
-    * endpoint errors.
-    */
-  def serverLogicPartRecoverErrors[T, R, U, UR, F[_]](
-      f: T => F[U]
-  )(implicit
-      eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E],
-      iMinusR: ParamSubtract.Aux[I, T, R]
-  ): ServerEndpointInParts[U, R, I, E, O, S, F] = {
-    type _T = T
-    new ServerEndpointInParts[U, R, I, E, O, S, F](this) {
-      override type T = _T
-      override def splitInput: I => (T, R) = i => split(i)(iMinusR)
-      override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = MonadError.recoverErrors[_T, E, U, F](f)
-    }
-  }
-
-  /**
-    * Combine this endpoint description with a function, which implements a part of the server-side logic, for the
-    * entire input defined so far. The partial logic returns a result, which is either an error or a success value,
-    * wrapped in an effect type `F`.
-    *
-    * Subsequently, the endpoint inputs and outputs can be extended (but not error outputs!). Then, either further
-    * parts of the server logic can be provided (again, consuming the whole input defined so far). Or, the entire
-    * remaining server logic can be provided, given a function which accepts as arguments the results of applying
-    * the part-functions, and the remaining input. The final result is then a [[ServerEndpoint]].
-    *
-    * A complete server endpoint can be passed to a server interpreter. Each server interpreter supports effects
-    * of a specific type(s).
-    *
-    * When using this method, each logic part consumes the whole input defined so far. To provide the server logic
-    * in parts, where only part of the input is consumed (but the endpoint cannot be later extended), see the
-    * [[serverLogicPart]] function.
-    *
-    * An example use-case is defining an endpoint with fully-defined errors, and with authorization logic built-in.
-    * Such an endpoint can be then extended by multiple other endpoints.
-    */
-  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[U, Unit, E, O, S, F] =
-    new PartialServerEndpoint[U, Unit, E, O, S, F](this.copy(input = emptyInput)) {
-      override type T = I
-      override def tInput: EndpointInput[T] = outer.input
-      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = _ => f
-    }
-
-  /**
-    * Same as [[serverLogicForCurrent]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
-    * endpoint errors.
-    */
-  def serverLogicForCurrentRecoverErrors[U, F[_]](
-      f: I => F[U]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[U, Unit, E, O, S, F] =
-    new PartialServerEndpoint[U, Unit, E, O, S, F](this.copy(input = emptyInput)) {
-      override type T = I
-      override def tInput: EndpointInput[T] = outer.input
-      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = MonadError.recoverErrors(f)
-    }
 }
 
 trait EndpointInputsOps[I, E, O, +S] {
@@ -328,6 +214,123 @@ trait EndpointMetaOps[I, E, O, +S] {
       renderQueryParam: Option[RenderQueryParam] = Some(RenderPathTemplate.Defaults.query),
       includeAuth: Boolean = true
   ): String = RenderPathTemplate(this)(renderPathParam, renderQueryParam, includeAuth)
+}
+
+trait EndpointServerLogicOps[I, E, O, +S] { outer: Endpoint[I, E, O, S] =>
+
+  /**
+    * Combine this endpoint description with a function, which implements the server-side logic. The logic returns
+    * a result, which is either an error or a successful output, wrapped in an effect type `F`.
+    *
+    * A server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific
+    * type(s).
+    *
+    * Both the endpoint and logic function are considered complete, and cannot be later extended through the
+    * returned [[ServerEndpoint]] value (except for endpoint meta-data). To provide the logic in parts, see
+    * [[serverLogicPart]] and [[serverLogicForCurrent]].
+    */
+  def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = ServerEndpoint(this, _ => f)
+
+  /**
+    * Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
+    * errors.
+    */
+  def serverLogicRecoverErrors[F[_]](
+      f: I => F[O]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, S, F] =
+    ServerEndpoint(this, MonadError.recoverErrors[I, E, O, F](f))
+
+  /**
+    * Combine this endpoint description with a function, which implements a part of the server-side logic. The
+    * partial logic returns a result, which is either an error or a success value, wrapped in an effect type `F`.
+    *
+    * Subsequent parts of the logic can be provided later using [[ServerEndpointInParts.andThenPart]], consuming
+    * successive input parts. Finally, the logic can be completed, given a function which accepts as arguments the
+    * results of applying on part-functions, and the remaining input. The final result is then a [[ServerEndpoint]].
+    *
+    * A complete server endpoint can be passed to a server interpreter. Each server interpreter supports effects
+    * of a specific type(s).
+    *
+    * When using this method, the endpoint description is considered complete, and cannot be later extended through
+    * the returned [[ServerEndpointInParts]] value. However, each part of the server logic can consume only some
+    * of the input. To provide the logic in parts, while still being able to extend the endpoint description, see
+    * [[serverLogicForCurrent]].
+    *
+    * An example use-case is providing authorization logic, followed by server logic (using an authorized user), given
+    * a complete endpoint description.
+    *
+    * Note that the type of the `part` function cannot be inferred, it must be explicitly provided (e.g. by providing
+    * a function or method value).
+    */
+  def serverLogicPart[T, R, U, UR, F[_]](
+      f: T => F[Either[E, U]]
+  )(implicit iMinusR: ParamSubtract.Aux[I, T, R]): ServerEndpointInParts[U, R, I, E, O, S, F] = {
+    type _T = T
+    new ServerEndpointInParts[U, R, I, E, O, S, F](this) {
+      override type T = _T
+      override def splitInput: I => (T, R) = i => split(i)(iMinusR)
+      override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = _ => f
+    }
+  }
+
+  /**
+    * Same as [[serverLogicPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+    * endpoint errors.
+    */
+  def serverLogicPartRecoverErrors[T, R, U, UR, F[_]](
+      f: T => F[U]
+  )(implicit
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E],
+      iMinusR: ParamSubtract.Aux[I, T, R]
+  ): ServerEndpointInParts[U, R, I, E, O, S, F] = {
+    type _T = T
+    new ServerEndpointInParts[U, R, I, E, O, S, F](this) {
+      override type T = _T
+      override def splitInput: I => (T, R) = i => split(i)(iMinusR)
+      override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = MonadError.recoverErrors[_T, E, U, F](f)
+    }
+  }
+
+  /**
+    * Combine this endpoint description with a function, which implements a part of the server-side logic, for the
+    * entire input defined so far. The partial logic returns a result, which is either an error or a success value,
+    * wrapped in an effect type `F`.
+    *
+    * Subsequently, the endpoint inputs and outputs can be extended (but not error outputs!). Then, either further
+    * parts of the server logic can be provided (again, consuming the whole input defined so far). Or, the entire
+    * remaining server logic can be provided, given a function which accepts as arguments the results of applying
+    * the part-functions, and the remaining input. The final result is then a [[ServerEndpoint]].
+    *
+    * A complete server endpoint can be passed to a server interpreter. Each server interpreter supports effects
+    * of a specific type(s).
+    *
+    * When using this method, each logic part consumes the whole input defined so far. To provide the server logic
+    * in parts, where only part of the input is consumed (but the endpoint cannot be later extended), see the
+    * [[serverLogicPart]] function.
+    *
+    * An example use-case is defining an endpoint with fully-defined errors, and with authorization logic built-in.
+    * Such an endpoint can be then extended by multiple other endpoints.
+    */
+  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[U, Unit, E, O, S, F] =
+    new PartialServerEndpoint[U, Unit, E, O, S, F](this.copy(input = emptyInput)) {
+      override type T = I
+      override def tInput: EndpointInput[T] = outer.input
+      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = _ => f
+    }
+
+  /**
+    * Same as [[serverLogicForCurrent]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+    * endpoint errors.
+    */
+  def serverLogicForCurrentRecoverErrors[U, F[_]](
+      f: I => F[U]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[U, Unit, E, O, S, F] =
+    new PartialServerEndpoint[U, Unit, E, O, S, F](this.copy(input = emptyInput)) {
+      override type T = I
+      override def tInput: EndpointInput[T] = outer.input
+      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = MonadError.recoverErrors(f)
+    }
 }
 
 case class EndpointInfo(
