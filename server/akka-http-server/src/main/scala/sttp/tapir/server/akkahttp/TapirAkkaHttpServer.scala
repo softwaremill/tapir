@@ -38,6 +38,7 @@ trait TapirAkkaHttpServer {
   }
 
   implicit class RichToFutureFunction[T, U](a: T => Future[U])(implicit ec: ExecutionContext) {
+    @deprecated
     def andThenFirst[U_TUPLE, T_TUPLE, O](
         l: U_TUPLE => Future[O]
     )(implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => Future[O] = { tTuple =>
@@ -50,6 +51,7 @@ trait TapirAkkaHttpServer {
   }
 
   implicit class RichToFutureOfEitherFunction[T, U, E](a: T => Future[Either[E, U]])(implicit ec: ExecutionContext) {
+    @deprecated
     def andThenFirstE[U_TUPLE, T_TUPLE, O](
         l: U_TUPLE => Future[Either[E, O]]
     )(implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => Future[Either[E, O]] = { tTuple =>

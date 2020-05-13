@@ -42,6 +42,7 @@ trait TapirHttp4sServer {
   }
 
   implicit class RichToMonadFunction[T, U, F[_]: Monad](a: T => F[U]) {
+    @deprecated
     def andThenFirst[U_TUPLE, T_TUPLE, O](
         l: U_TUPLE => F[O]
     )(implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => F[O] = { tTuple =>
@@ -54,6 +55,7 @@ trait TapirHttp4sServer {
   }
 
   implicit class RichToMonadOfEitherFunction[T, U, E, F[_]: Monad](a: T => F[Either[E, U]]) {
+    @deprecated
     def andThenFirstE[U_TUPLE, T_TUPLE, O](
         l: U_TUPLE => F[Either[E, O]]
     )(implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => F[Either[E, O]] = { tTuple =>
