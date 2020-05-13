@@ -252,15 +252,15 @@ trait EndpointServerLogicOps[I, E, O, +S] { outer: Endpoint[I, E, O, S] =>
     * of a specific type(s).
     *
     * When using this method, the endpoint description is considered complete, and cannot be later extended through
-    * the returned [[ServerEndpointInParts]] value. However, each part of the server logic can consume only some
+    * the returned [[ServerEndpointInParts]] value. However, each part of the server logic can consume only a part
     * of the input. To provide the logic in parts, while still being able to extend the endpoint description, see
     * [[serverLogicForCurrent]].
     *
     * An example use-case is providing authorization logic, followed by server logic (using an authorized user), given
     * a complete endpoint description.
     *
-    * Note that the type of the `part` function cannot be inferred, it must be explicitly provided (e.g. by providing
-    * a function or method value).
+    * Note that the type of the `f` partial server logic function cannot be inferred, it must be explicitly given
+    * (e.g. by providing a function or method value).
     */
   def serverLogicPart[T, R, U, UR, F[_]](
       f: T => F[Either[E, U]]
