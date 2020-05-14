@@ -224,12 +224,13 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Either[Any, Any] = {
-        def doAdjust(v: Any) = v match {
-          case is: InputStream => inputStreamToByteArray(is).toList
-          case a: Array[Byte]  => a.toList
-          case f: File         => readFromFile(f)
-          case _               => v
-        }
+        def doAdjust(v: Any) =
+          v match {
+            case is: InputStream => inputStreamToByteArray(is).toList
+            case a: Array[Byte]  => a.toList
+            case f: File         => readFromFile(f)
+            case _               => v
+          }
 
         r.map(doAdjust).left.map(doAdjust)
       }
@@ -248,7 +249,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
     exitSignal = SignallingRef.apply[IO, Boolean](false).unsafeRunSync()
 
-    serverExitCode = BlazeServerBuilder[IO]
+    serverExitCode = BlazeServerBuilder[IO](ec)
       .bindHttp(port)
       .withHttpApp(app)
       .serveWhile(exitSignal, Ref.unsafe(ExitCode.Success))
