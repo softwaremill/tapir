@@ -14,10 +14,10 @@ import sttp.tapir.server.vertx._
 ```
 
 This adds extension methods to the `Endpoint` type: 
-* `route(logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. Errors will be recovered automatically (but generically)
-* `routeRecoverErrors(logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. You're providing your own way to deal with errors happening in the `logic` function.
-* `blockingRoute(logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an blocking handler. Errors will be recovered automatically (but generically)
-* `blockingRouteRecoverErrors(logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as a blocking handler. You're providing your own way to deal with errors happening in the `logic` function.
+* `route(logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. Errors will be recovered automatically (but generically)
+* `routeRecoverErrors(logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. You're providing your own way to deal with errors happening in the `logic` function.
+* `blockingRoute(logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an blocking handler. Errors will be recovered automatically (but generically)
+* `blockingRouteRecoverErrors(logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as a blocking handler. You're providing your own way to deal with errors happening in the `logic` function.
 
 The methods recovering errors from failed effects, require `E` to be a subclass of `Throwable` (an exception); and expect a function of type `I => Future[O]`. For example:
 
@@ -53,3 +53,7 @@ object Main {
 Every endpoint can be configured by providing an implicit `VertxEndpointOptions`, see [server options](options.html) for details.
 You can also provide your own `ExecutionContext` to execute the logic.
 
+## Defining an endpoint together with the server logic
+
+It's also possible to define an endpoint together with the server logic in a single, more concise step. See
+[server logic](logic.html) for details.
