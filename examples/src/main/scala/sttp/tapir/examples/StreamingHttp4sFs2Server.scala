@@ -48,7 +48,7 @@ object StreamingHttp4sFs2Server extends App {
   }
 
   // starting the server
-  BlazeServerBuilder[IO]
+  BlazeServerBuilder[IO](ec)
     .bindHttp(8080, "localhost")
     .withHttpApp(Router("/" -> streamingRoutes).orNotFound)
     .resource

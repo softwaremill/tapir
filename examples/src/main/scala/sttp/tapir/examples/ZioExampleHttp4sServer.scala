@@ -73,7 +73,7 @@ object ZioExampleHttp4sServer extends App {
   import sttp.tapir.openapi.circe.yaml._
   val yaml = List(petEndpoint).toOpenAPI("Our pets", "1.0").toYaml
 
-  val serve = BlazeServerBuilder[Task]
+  val serve = BlazeServerBuilder[Task]((runtime.platform.executor.asEC))
     .bindHttp(8080, "localhost")
     .withHttpApp(Router("/" -> (service <+> new SwaggerHttp4s(yaml).routes[Task])).orNotFound)
     .serve

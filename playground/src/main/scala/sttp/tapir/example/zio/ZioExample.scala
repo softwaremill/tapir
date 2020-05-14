@@ -50,7 +50,7 @@ object ZioExample extends App {
   {
     implicit val runtime: Runtime[ZEnv] = Runtime.default
 
-    val serve = BlazeServerBuilder[Task]
+    val serve = BlazeServerBuilder[Task](runtime.platform.executor.asEC)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> (service <+> new SwaggerHttp4s(yaml).routes[Task])).orNotFound)
       .serve
