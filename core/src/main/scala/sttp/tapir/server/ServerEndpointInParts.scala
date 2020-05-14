@@ -6,6 +6,8 @@ import sttp.tapir.internal._
 import sttp.tapir.monad.MonadError
 import sttp.tapir.monad.syntax._
 
+import scala.reflect.ClassTag
+
 /**
   * An endpoint description together with partial server logic. See [[Endpoint.serverLogicPart]].
   *
@@ -54,7 +56,18 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
     * Complete the server logic for this endpoint, given the result of applying the partial server logic, and
     * the remaining input.
     */
-  def andThen(remainingLogic: ((U, R)) => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] =
+  def andThen(remainingLogic: ((U, R)) => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = andThenM(_ => remainingLogic)
+
+  /**
+    * Same as [[andThen]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+    * endpoint errors.
+    */
+  def andThenRecoverErrors(
+      remainingLogic: ((U, R)) => F[O]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, S, F] =
+    andThenM(MonadError.recoverErrors(remainingLogic))
+
+  private def andThenM(remainingLogic: MonadError[F] => ((U, R)) => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] =
     ServerEndpoint(
       endpoint,
       { implicit monad => i =>
@@ -62,7 +75,7 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
           val (t, r): (T, R) = splitInput(i)
           logicFragment(monad)(t).flatMap {
             case Left(e)  => (Left(e): Either[E, O]).unit
-            case Right(u) => remainingLogic((u, r))
+            case Right(u) => remainingLogic(monad)((u, r))
           }
         }
       }
@@ -74,7 +87,27 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
     * the input.
     */
   def andThenPart[T2, R2, V, UV](
-      part2: T2 => F[Either[E, V]]
+      nextPart: T2 => F[Either[E, V]]
+  )(implicit
+      rMinusT2: ParamSubtract.Aux[R, T2, R2],
+      uu2Concat: ParamConcat.Aux[U, V, UV]
+  ): ServerEndpointInParts[UV, R2, I, E, O, S, F] = andThenPartM(_ => nextPart)
+
+  /**
+    * Same as [[andThenPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+    * endpoint errors.
+    */
+  def andThenPartRecoverErrors[T2, R2, V, UV](
+      nextPart: T2 => F[V]
+  )(implicit
+      rMinusT2: ParamSubtract.Aux[R, T2, R2],
+      uu2Concat: ParamConcat.Aux[U, V, UV],
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E]
+  ): ServerEndpointInParts[UV, R2, I, E, O, S, F] = andThenPartM(MonadError.recoverErrors(nextPart))
+
+  private def andThenPartM[T2, R2, V, UV](
+      part2: MonadError[F] => T2 => F[Either[E, V]]
   )(implicit
       rMinusT2: ParamSubtract.Aux[R, T2, R2],
       uu2Concat: ParamConcat.Aux[U, V, UV]
@@ -95,7 +128,7 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
             outer.logicFragment(monad)(t).flatMap {
               case Left(e) => (Left(e): Either[E, UV]).unit
               case Right(u) =>
-                part2(t2).map {
+                part2(monad)(t2).map {
                   case Left(e)   => Left(e): Either[E, UV]
                   case Right(u2) => Right(combine(u, u2)(uu2Concat)): Either[E, UV]
                 }

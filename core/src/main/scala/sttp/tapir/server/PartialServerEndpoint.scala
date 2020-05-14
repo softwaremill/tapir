@@ -6,6 +6,8 @@ import sttp.tapir.internal._
 import sttp.tapir.monad.MonadError
 import sttp.tapir.monad.syntax._
 
+import scala.reflect.ClassTag
+
 /**
   * An endpoint, with some of the server logic already provided, and some left unspecified.
   * See [[Endpoint.serverLogicForCurrent]].
@@ -58,7 +60,20 @@ abstract class PartialServerEndpoint[U, I, E, O, +S, F[_]](val endpoint: Endpoin
   override protected def showType: String = "PartialServerEndpoint"
 
   def serverLogicForCurrent[V, UV](
-      _f: I => F[Either[E, V]]
+      f: I => F[Either[E, V]]
+  )(implicit concat: ParamConcat.Aux[U, V, UV]): PartialServerEndpoint[UV, Unit, E, O, S, F] = serverLogicForCurrentM(_ => f)
+
+  def serverLogicForCurrentRecoverErrors[V, UV](
+      f: I => F[V]
+  )(implicit
+      concat: ParamConcat.Aux[U, V, UV],
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E]
+  ): PartialServerEndpoint[UV, Unit, E, O, S, F] =
+    serverLogicForCurrentM(MonadError.recoverErrors(f))
+
+  private def serverLogicForCurrentM[V, UV](
+      _f: MonadError[F] => I => F[Either[E, V]]
   )(implicit concat: ParamConcat.Aux[U, V, UV]): PartialServerEndpoint[UV, Unit, E, O, S, F] =
     new PartialServerEndpoint[UV, Unit, E, O, S, F](endpoint.copy(input = emptyInput)) {
       override type T = (outer.T, I)
@@ -69,14 +84,21 @@ abstract class PartialServerEndpoint[U, I, E, O, +S, F[_]](val endpoint: Endpoin
             outer.partialLogic(monad)(t).flatMap {
               case Left(e) => (Left(e): Either[E, UV]).unit
               case Right(u) =>
-                _f(i).map {
+                _f(monad)(i).map {
                   _.map(v => mkCombine(concat).apply(ParamsAsAny(u), ParamsAsAny(v)).asAny.asInstanceOf[UV])
                 }
             }
         }
     }
 
-  def serverLogic(g: ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, S, F] =
+  def serverLogic(g: ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, S, F] = serverLogicM(_ => g)
+
+  def serverLogicRecoverErrors(
+      g: ((U, I)) => F[O]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[(T, I), E, O, S, F] =
+    serverLogicM(MonadError.recoverErrors(g))
+
+  private def serverLogicM(g: MonadError[F] => ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, S, F] =
     ServerEndpoint[(T, I), E, O, S, F](
       endpoint.prependIn(tInput): Endpoint[(T, I), E, O, S],
       (m: MonadError[F]) => {
@@ -84,7 +106,7 @@ abstract class PartialServerEndpoint[U, I, E, O, +S, F[_]](val endpoint: Endpoin
           implicit val monad: MonadError[F] = m
           partialLogic(monad)(t).flatMap {
             case Left(e)  => (Left(e): Either[E, O]).unit
-            case Right(u) => g((u, i))
+            case Right(u) => g(m)((u, i))
           }
       }
     )
