@@ -72,7 +72,7 @@ case class MyError(msg: String) extends Exception
 val testEndpoint = endpoint
   .in(query[Boolean]("fail"))
   .errorOut(stringBody.map(MyError)(_.msg))
-  .out(plainBody[Int])
+  .out(stringBody)
   .serverLogicRecoverErrors { fail =>
      if (fail) {
        Future.successful("OK") // note: no Right() wrapper

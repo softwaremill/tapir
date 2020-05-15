@@ -116,4 +116,12 @@ trait TapirPlayServer {
       res
     }
   }
+
+  implicit class RichPlayServerEndpoints[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, Nothing, Future]]) {
+    def toRoute(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+      serverEndpoints
+        .map(_.toRoute)
+        .reduce((a: Routes, b: Routes) => a.orElse(b))
+    }
+  }
 }
