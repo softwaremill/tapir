@@ -11,7 +11,7 @@ It's possible to combine an endpoint description with the server logic in a sing
 `ServerEndpoint[I, E, O, S, F]`. Such an endpoint contains not only an endpoint of type `Endpoint[I, E, O, S]`, but
 also a logic function `I => F[Either[E, O]]`, for some effect `F`.
 
-For example, the book example can be more concisely written as follows:
+The book example can be more concisely written as follows:
 
 ```scala
 import sttp.tapir._
@@ -61,7 +61,7 @@ If your error type is an exception (extends `Throwable`), and if errors that occ
 as failed effects, you can use a variant of the methods above, which extract the error from the failed effect, and
 respond with the error output appropriately.
 
-This can be done with the `.serverLogicRecoverErrors(f: I => F[O])` method. Note that the `E` type parameter isn't
+This can be done with the `serverLogicRecoverErrors(f: I => F[O])` method. Note that the `E` type parameter isn't
 directly present here; however, the method also contains a requirement that `E` is an exception, and will only recover
 errors which are subtypes of `E`. Any others will be propagated without changes.
 
@@ -101,8 +101,8 @@ To define partial logic for the inputs defined so far, you should use the `serve
 endpoint. This accepts a method, `f: I => F[Either[E, U]]`, which given the entire (current) input defined so far,
 returns either an error, or a partial result.
 
-For example, we can create a parial server endpoint given an authentication function, and an endpoint describing
-the inputs needed:
+For example, we can create a partial server endpoint given an authentication function, and an endpoint describing
+the authentication inputs:
 
 ```scala
 case class User(name: String)
@@ -139,7 +139,7 @@ The methods mentioned also have variants which recover errors from failed effect
 
 ### Providing server logic in parts, for an already defined endpoint
 
-In another scenario, you might already have the entire endpoint defined upfront (e.g. in a separate module, which
+Secondly, you might already have the entire endpoint defined upfront (e.g. in a separate module, which
 doesn't know anything about the server logic), and would like to provide the server logic in parts.
 
 This can be done using the `serverLogicPart` method, which takes a function of type `f: T => F[Either[E, U]]` as
