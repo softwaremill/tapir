@@ -1,4 +1,4 @@
-# Endpoints as Vert.x routes
+# Running as a Vert.X server
 
 Endpoints can be mounted as Vert.x `Route`s on top of a Vert.x `Router`.
 
