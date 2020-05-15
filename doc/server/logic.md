@@ -1,8 +1,9 @@
 # Server logic
 
 The logic that should be run when an endpoint is invoked can be passed when interpreting the endpoint as a server, and
-converting to an server-implementation-specific route. But there are other options available as well, which might make
-it easier to work with collections of endpoints.
+converting to a server-implementation-specific route. However, there's also the option to define an endpoint
+coupled with the server logic - either given entirely or gradually, in parts. This might make it easier to work with
+endpoints and their collections in a server setting.
 
 ## Defining an endpoint together with the server logic
 
@@ -27,16 +28,16 @@ val countCharactersRoute: Route = countCharactersServerEndpoint.toRoute
 ```
 
 A `ServerEndpoint` can then be converted to a route using `.toRoute`/`.toRoutes` methods (without any additional
-parameters), or to documentation.
+parameters; the exact method name depends on the server interpreter), or to documentation.
 
 Moreover, a list of server endpoints can be converted to routes or documentation as well:
 
 ```scala
 val endpoint1 = endpoint.in("hello").out(stringBody)
-  .serverLogic { _ => Future.successful("world") }
+  .serverLogic { _ => Future.successful(Right("world")) }
 
 val endpoint2 = endpoint.in("ping").out(stringBody)
-  .serverLogic { _ => Future.successful("pong") }
+  .serverLogic { _ => Future.successful(Right("pong")) }
 
 val route: Route = List(endpoint1, endpoint2).toRoute
 ```
@@ -50,7 +51,34 @@ val echoEndpoint = endpoint
   .in(stringBody)
   .out(stringBody)
   .serverLogic { case (count, body) =>
-     Future.successful(body * count)
+     Future.successful(Right(body * count))
+  }
+```
+
+### Recovering errors from failed effects
+
+If your error type is an exception (extends `Throwable`), and if errors that occur in the server logic are represented
+as failed effects, you can use a variant of the methods above, which extract the error from the failed effect, and
+respond with the error output appropriately.
+
+This can be done with the `.serverLogicRecoverErrors(f: I => F[O])` method. Note that the `E` type parameter isn't
+directly present here; however, the method also contains a requirement that `E` is an exception, and will only recover
+errors which are subtypes of `E`. Any others will be propagated without changes.
+
+For example:
+
+```scala                      
+case class MyError(msg: String) extends Exception
+val testEndpoint = endpoint
+  .in(query[Boolean]("fail"))
+  .errorOut(stringBody.map(MyError)(_.msg))
+  .out(plainBody[Int])
+  .serverLogicRecoverErrors { fail =>
+     if (fail) {
+       Future.successful("OK") // note: no Right() wrapper
+     } else {
+       Future.failed(new MyError("Not OK")) // no Left() wrapper, a failed future
+     }
   }
 ```
 
@@ -58,44 +86,102 @@ val echoEndpoint = endpoint
 
 Quite often, especially for [authentication](../endpoint/auth.html), some part of the route logic is shared among 
 multiple endpoints. However, these functions don't compose in a straightforward way, as authentication usually operates
-on a single input, which is only a part of the whole logic's input. Suppose you have the following methods:
+on a single input, which is only a part of the whole logic's input. That's why there are two options for providing
+the server logic in parts.
+
+### Defining an extendable, base endpoint with partial server logic
+ 
+First, you might want to define a base endpoint, with some part of the server logic already defined, and later
+extend it with additional inputs/outputs, and successive logic parts.
+
+When using this method, note that the error type must be fully defined upfront, and cannot be extended later. That's
+because all of the partial logic functions can return either an error (of the given type), or a partial result.
+
+To define partial logic for the inputs defined so far, you should use the `serverLogicForCurrent` method on an
+endpoint. This accepts a method, `f: I => F[Either[E, U]]`, which given the entire (current) input defined so far,
+returns either an error, or a partial result.
+
+For example, we can create a parial server endpoint given an authentication function, and an endpoint describing
+the inputs needed:
 
 ```scala
-type AuthToken = String
+case class User(name: String)
+def auth(token: String): Future[Either[Int, User]] = Future {
+  if (token == "secret") Right(User("Spock"))
+  else Left(1001) // error code
+}
 
-def authFn(token: AuthToken): Future[Either[ErrorInfo, User]]
-def logicFn(user: User, data: String, limit: Int): Future[Either[ErrorInfo, Result]]
+val secureEndpoint: PartialServerEndpoint[User, Unit, Int, Unit, Nothing, Future] = endpoint
+  .in(header[String]("X-AUTH-TOKEN"))
+  .errorOut(plainBody[Int])
+  .serverLogicForCurrent(auth)
 ```
 
-which you'd like to apply to an endpoint with type:
+The result is a value of type `PartialServerEndpoint`, which can be extended with further inputs and outputs, just
+as a normal endpoint (except for error outputs, which are fixed). 
+
+Successive logic parts (again consuming the entire input defined so far, and producing another partial result) can
+be given by calling `serverLogicForCurrent` again. The logic can be completed - given a tuple of partial results,
+and unconsumed inputs - using the `serverLogic` method:
 
 ```scala
-val myEndpoint: Endpoint[(AuthToken, String, Int), ErrorInfo, Result, Nothing] = ...
+val secureHelloWorld1WithLogic = secureEndpoint.get
+  .in("hello1")
+  .in(query[String]("salutation"))
+  .out(stringBody)
+  .serverLogic { case (user, salutation) => Future(Right(s"$salutation, ${user.name}!")) }
+```                    
+
+Once the server logic is complete, a `ServerEndpoint` is returned, which can be then interpreted as a server.
+
+The methods mentioned also have variants which recover errors from failed effects (as described above), using
+`serverLogicForCurrentRecoverErrors` and `serverLogicRecoverErrors`.
+
+### Providing server logic in parts, for an already defined endpoint
+
+In another scenario, you might already have the entire endpoint defined upfront (e.g. in a separate module, which
+doesn't know anything about the server logic), and would like to provide the server logic in parts.
+
+This can be done using the `serverLogicPart` method, which takes a function of type `f: T => F[Either[E, U]]` as
+a parameter. Here `T` is some prefix of the endpoint's input `I`. The function then consumes some part of the input,
+and produces an error, or a partial result.
+
+Unlike previously, here the endpoint is considered complete, and cannot be later extended: no additional inputs
+or outputs can be defined. 
+
+```eval_rst
+.. note::
+
+  Note that the partial logic functions should be fully typed, to help with inference. It might not be possible for the
+  compiler to infer, which part of the input should be consumed.
 ```
 
-To avoid composing these functions by hand, tapir defines helper extension methods, `andThenFirst` and `andThenFirstE`. 
-The first one should be used when errors are represented as failed wrapper types (e.g. failed futures), the second
-is errors are represented as `Either`s. 
-
-This extension method is defined in the same traits as the route interpreters, both for `Future` (in the akka-http
-interpreter) and for an arbitrary monad (in the http4s interpreter), so importing the package is sufficient to use it:
+For example, if we have an endpoint:
 
 ```scala
-import sttp.tapir.server.akkahttp._
-val r: Route = myEndpoint.toRoute((authFn _).andThenFirstE((logicFn _).tupled))
+val secureHelloWorld2: Endpoint[(String, String), Int, String, Nothing] = endpoint
+  .in(header[String]("X-AUTH-TOKEN"))
+  .errorOut(plainBody[Int])
+  .get
+  .in("hello2")
+  .in(query[String]("salutation"))
+  .out(stringBody)
 ```
 
-Writing down the types, here are the generic signatures when using `andThenFirst` and `andThenFirstE`:
+We can provide the server logic in parts (using the same `auth` method as above):
 
 ```scala
-f1: T => Future[U]
-f2: (U, A1, A2, ...) => Future[O]
-(f1 _).andThenFirst(f2): (T, A1, A2, ...) => Future[O]
-
-f1: T => Future[Either[E, U]]
-f2: (U, A1, A2, ...) => Future[Either[E, O]]
-(f1 _).andThenFirstE(f2): (T, A1, A2, ...) => Future[Either[E, O]]
+val secureHelloWorld2WithLogic = secureHelloWorld2
+  .serverLogicPart(auth)
+  .andThen { case (user, salutation) => Future(Right(s"$salutation, ${user.name}!")) }
 ```
+ 
+Here, we first define a single part using `serverLogicPart`, and then complete the logic (consuming the remaining 
+inputs) using `andThen`. The result is, like previously, a `ServerEndpoint`, which can be interpreted as a server.
+
+Multiple parts can be provided using `andThenPart` invocations (consuming successive input parts). There are also
+variants of the methods, which recover errors from failed effects: `serverLogicPartRecoverErrors`, 
+`andThenRecoverErrors` and `andThenPartRecoverErrors`.
 
 ## Status codes
 
