@@ -116,6 +116,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    server/http4s
    server/finatra
    server/play
+   server/vertx
    server/options
    server/logic
    server/errors
