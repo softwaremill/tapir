@@ -28,7 +28,7 @@ object HelloWorldHttp4sServer extends App {
 
   // starting the server
 
-  BlazeServerBuilder[IO]
+  BlazeServerBuilder[IO](ec)
     .bindHttp(8080, "localhost")
     .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
     .resource

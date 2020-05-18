@@ -9,7 +9,7 @@ import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Endpoint
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.tests.{Port, PortCounter}
 
@@ -28,22 +28,22 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
 
   override def pureResult[T](t: T): Future[T] = Future.value(t)
 
-  override def suspendResult[T](t: => T): Future[T] = futurePool {
-    t
-  }
+  override def suspendResult[T](t: => T): Future[T] =
+    futurePool {
+      t
+    }
 
   override def route[I, E, O](
-      e: Endpoint[I, E, O, Nothing],
-      fn: I => Future[Either[E, O]],
+      e: ServerEndpoint[I, E, O, Nothing, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
       FinatraServerOptions.default.copy(decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler))
-    e.toRoute(fn)
+    e.toRoute
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(
-      implicit eClassTag: ClassTag[E]
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(implicit
+      eClassTag: ClassTag[E]
   ): FinatraRoute = {
     e.toRouteRecoverErrors(fn)
   }

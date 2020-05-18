@@ -19,6 +19,6 @@ package object zio {
       URIO.access[R](env => e.toRoutes(i => logic(i).provide(env).either))
     }
 
-    def zioServerLogic(logic: I => IO[E, O]): ServerEndpoint[I, E, O, EntityBody[Task], Task] = ServerEndpoint(e, logic(_).either)
+    def zioServerLogic(logic: I => IO[E, O]): ServerEndpoint[I, E, O, EntityBody[Task], Task] = ServerEndpoint(e, _ => logic(_).either)
   }
 }

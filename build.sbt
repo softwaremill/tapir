@@ -69,6 +69,7 @@ lazy val rootProject = (project in file("."))
     finatraServer,
     finatraServerCats,
     playServer,
+    vertxServer,
     sttpClient,
     tests,
     examples,
@@ -212,7 +213,7 @@ lazy val jsoniterScala: Project = (project in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.2.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.2.4",
       scalaTest % Test
     )
   )
@@ -392,6 +393,17 @@ lazy val playServer: Project = (project in file("server/play-server"))
       "com.typesafe.play" %% "play" % Versions.playServer
     )
   )
+  .dependsOn(core, serverTests % Test)
+
+lazy val vertxServer: Project = (project in file("server/vertx"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-vertx-server",
+    libraryDependencies ++= Seq(
+      "io.vertx" %% "vertx-web-scala" % Versions.vertx
+    )
+  )
+  .settings(only2_12settings)
   .dependsOn(core, serverTests % Test)
 
 // client

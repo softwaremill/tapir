@@ -65,7 +65,7 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
   val openApiYml: String = openApiDocs.toYaml
 
   // starting the server
-  BlazeServerBuilder[IO]
+  BlazeServerBuilder[IO](ec)
     .bindHttp(8080, "localhost")
     .withHttpApp(Router("/" -> (routes <+> new SwaggerHttp4s(openApiYml).routes[IO])).orNotFound)
     .resource

@@ -24,7 +24,7 @@ object ZioExampleHttp4sServer extends App {
       e.toRoutes(i => logic(i).either)
     }
 
-    def zioServerLogic(logic: I => IO[E, O]): ServerEndpoint[I, E, O, EntityBody[Task], Task] = ServerEndpoint(e, logic(_).either)
+    def zioServerLogic(logic: I => IO[E, O]): ServerEndpoint[I, E, O, EntityBody[Task], Task] = ServerEndpoint(e, _ => logic(_).either)
   }
   case class Pet(species: String, url: String)
 
@@ -73,7 +73,7 @@ object ZioExampleHttp4sServer extends App {
   import sttp.tapir.openapi.circe.yaml._
   val yaml = List(petEndpoint).toOpenAPI("Our pets", "1.0").toYaml
 
-  val serve = BlazeServerBuilder[Task]
+  val serve = BlazeServerBuilder[Task]((runtime.platform.executor.asEC))
     .bindHttp(8080, "localhost")
     .withHttpApp(Router("/" -> (service <+> new SwaggerHttp4s(yaml).routes[Task])).orNotFound)
     .serve

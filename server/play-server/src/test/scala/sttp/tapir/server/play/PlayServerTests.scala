@@ -10,7 +10,7 @@ import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.tapir.Endpoint
 import sttp.tapir.server.tests.ServerTests
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.duration._
@@ -35,17 +35,16 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
   override def suspendResult[T](t: => T): Future[T] = Future(t)
 
   override def route[I, E, O](
-      e: Endpoint[I, E, O, Nothing],
-      fn: I => Future[Either[E, O]],
+      e: ServerEndpoint[I, E, O, Nothing, Future],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =
       PlayServerOptions.default.copy(decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler))
-    e.toRoute(fn)
+    e.toRoute
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(
-      implicit eClassTag: ClassTag[E]
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(implicit
+      eClassTag: ClassTag[E]
   ): Routes = {
     e.toRouteRecoverErrors(fn)
   }

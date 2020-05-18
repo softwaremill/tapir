@@ -3,14 +3,12 @@ package sttp.tapir.server.http4s
 import cats.data._
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
-import com.github.ghik.silencer.silent
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
 import org.log4s._
+import sttp.tapir.monad.MonadError
 import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
-
-import scala.reflect.ClassTag
 
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
@@ -37,7 +35,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
       def valueToResponse(value: Any): F[Response[F]] = {
         val i = value.asInstanceOf[I]
-        se.logic(i)
+        se.logic(new CatsMonadError)(i)
           .map {
             case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
             case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
@@ -59,20 +57,6 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
 
     service
-  }
-
-  @silent("never used")
-  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, EntityBody[F]])(logic: I => F[O])(
-      implicit eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E]
-  ): HttpRoutes[F] = {
-    def reifyFailedF(f: F[O]): F[Either[E, O]] = {
-      f.map(Right(_): Either[E, O]).recover {
-        case e: Throwable if eClassTag.runtimeClass.isInstance(e) => Left(e.asInstanceOf[E]): Either[E, O]
-      }
-    }
-
-    toRoutes(e.serverLogic(logic.andThen(reifyFailedF)))
   }
 
   def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] = {
@@ -97,6 +81,14 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           .decodeFailureHandled(e, decodeFailureCtx, value)
           .map(_ => Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value)))
     }
+  }
+
+  private class CatsMonadError(implicit F: cats.MonadError[F, Throwable]) extends MonadError[F] {
+    override def unit[T](t: T): F[T] = F.pure(t)
+    override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
+    override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
+    override def error[T](t: Throwable): F[T] = F.raiseError(t)
+    override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
   }
 }
 

@@ -11,6 +11,7 @@ The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/
 * [Reporting errors in a custom format when a query/path/.. parameter cannot be decoded](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/CustomErrorsOnDecodeFailureAkkaServer.scala)
 * [Using custom types in endpoint descriptions](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/EndpointWithCustomTypes.scala)
 * [Multipart form upload, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipartFormUploadAkkaServer.scala)
+* [Partial server logic (authentication), using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/PartialServerLogicAkka.scala)
 * [Books example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExample.scala)
 * [ZIO example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleHttp4sServer.scala)
 * [Streaming body, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/StreamingAkkaServer.scala)
