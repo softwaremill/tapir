@@ -1,15 +1,16 @@
 package sttp.tapir.server.stub
 
 import io.circe.generic.auto._
-import org.scalatest.{FlatSpec, Matchers}
 import sttp.client._
 import sttp.client.monad._
 import sttp.client.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.json.circe._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class SttpStubServerTest extends FlatSpec with Matchers {
+class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
   behavior of "SttpStubServer"
   implicit val idMonad: MonadError[Identity] = IdMonad

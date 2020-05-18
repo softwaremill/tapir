@@ -1,12 +1,13 @@
 package sttp.tapir.server.akkahttp
 
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{FunSuite, Matchers}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class RichToFutureFunctionTest extends FunSuite with Matchers with ScalaFutures {
+class RichToFutureFunctionTest extends AnyFunSuite with Matchers with ScalaFutures {
   case class User(u: String)
   case class Result(r: String)
 
