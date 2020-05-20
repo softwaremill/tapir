@@ -29,4 +29,12 @@ trait TapirJsonCirce {
         None
       )
     )
+
+  implicit val schemaForCirceJsonObject: Schema[JsonObject] =
+    Schema(
+      SProduct(
+        SObjectInfo("io.circe.JsonObject"),
+        Iterable.empty
+      )
+    )
 }
