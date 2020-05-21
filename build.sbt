@@ -89,7 +89,7 @@ lazy val core: Project = (project in file("core"))
       scalaTest % Test,
       scalaCheck % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.3.5" % Test,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     ),
     unmanagedSourceDirectories in Compile += {
       val sourceDir = (baseDirectory in Compile).value / "src" / "main"
@@ -146,6 +146,18 @@ lazy val refined: Project = (project in file("integrations/refined"))
     name := "tapir-refined",
     libraryDependencies ++= Seq(
       "eu.timepit" %% "refined" % Versions.refined,
+      scalaTest % Test
+    )
+  )
+  .dependsOn(core)
+
+lazy val zio: Project = (project in file("integrations/zio"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-zio",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % Versions.zio,
+      "dev.zio" %% "zio-streams" % Versions.zio,
       scalaTest % Test
     )
   )
@@ -406,6 +418,14 @@ lazy val vertxServer: Project = (project in file("server/vertx"))
   .settings(only2_12settings)
   .dependsOn(core, serverTests % Test)
 
+lazy val zioServer: Project = (project in file("server/zio-http4-server"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-zio-http4s-server",
+    libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats
+  )
+  .dependsOn(zio, http4sServer, serverTests % Test)
+
 // client
 
 lazy val clientTests: Project = (project in file("client/tests"))
@@ -438,7 +458,6 @@ lazy val examples: Project = (project in file("examples"))
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= Seq(
-      "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s
@@ -447,7 +466,7 @@ lazy val examples: Project = (project in file("examples"))
     publishArtifact := false
   )
   .settings(only2_12settings)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s)
+  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s, zioServer)
 
 lazy val playground: Project = (project in file("playground"))
   .settings(commonSettings)
@@ -478,5 +497,6 @@ lazy val playground: Project = (project in file("playground"))
     swaggerUiAkka,
     swaggerUiHttp4s,
     refined,
-    cats
+    cats,
+    zioServer
   )
