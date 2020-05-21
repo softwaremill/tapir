@@ -264,11 +264,11 @@ trait EndpointServerLogicOps[I, E, O, +S] { outer: Endpoint[I, E, O, S] =>
     */
   def serverLogicPart[T, R, U, F[_]](
       f: T => F[Either[E, U]]
-  )(implicit iMinusR: ParamSubtract.Aux[I, T, R]): ServerEndpointInParts[U, R, I, E, O, S, F] = {
+  )(implicit iMinusT: ParamSubtract.Aux[I, T, R]): ServerEndpointInParts[U, R, I, E, O, S, F] = {
     type _T = T
     new ServerEndpointInParts[U, R, I, E, O, S, F](this) {
       override type T = _T
-      override def splitInput: I => (T, R) = i => split(i)(iMinusR)
+      override def splitInput: I => (T, R) = i => split(i)(iMinusT)
       override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = _ => f
     }
   }
