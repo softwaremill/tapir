@@ -107,6 +107,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/forms
    endpoint/auth
    endpoint/integrations
+   endpoint/zio
 
 .. toctree::
    :maxdepth: 2
