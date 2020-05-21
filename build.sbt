@@ -460,7 +460,8 @@ lazy val examples: Project = (project in file("examples"))
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-      "org.http4s" %% "http4s-dsl" % Versions.http4s
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % Versions.sttp
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
@@ -478,9 +479,7 @@ lazy val playground: Project = (project in file("playground"))
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "io.swagger" % "swagger-annotations" % "1.6.1",
-      "io.circe" %% "circe-generic-extras" % "0.13.0"
-    ),
-    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-generic-extras" % "0.13.0",
       "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp
     ),
     libraryDependencies ++= loggerDependencies,

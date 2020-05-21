@@ -4,15 +4,15 @@ import org.http4s._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import cats.implicits._
 import sttp.client._
+import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
 import zio._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
 
-object ZioPartialServerLogicHttp4s extends _root_.scala.App {
+object ZioPartialServerLogicHttp4s extends App {
   // authentication logic
   case class User(name: String)
   val AuthenticationErrorCode = 1001
@@ -53,45 +53,52 @@ object ZioPartialServerLogicHttp4s extends _root_.scala.App {
   // ---
 
   // interpreting as routes
-  val helloWorld1Routes: HttpRoutes[Task] = secureHelloWorld1WithLogic.toRoutes
-  val helloWorld2Routes: HttpRoutes[Task] = secureHelloWorld2WithLogic.toRoutes
+  val helloWorldRoutes: HttpRoutes[Task] = List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic).toRoutes
 
-  // starting the server
-  val check = Task {
-    // testing
-    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
+  // testing
+  val test = AsyncHttpClientZioBackend.managed().use { backend =>
+    def testWith(path: String, salutation: String, token: String): Task[String] =
+      backend
+        .send(
+          basicRequest
+            .response(asStringAlways)
+            .get(uri"http://localhost:8080/$path?salutation=$salutation")
+            .header("X-AUTH-TOKEN", token)
+        )
+        .map(_.body)
+        .tap { result => Task(println(s"For path: $path, salutation: $salutation, token: $token, got result: $result")) }
 
-    def testWith(path: String, salutation: String, token: String): String = {
-      val result: String = basicRequest
-        .response(asStringAlways)
-        .get(uri"http://localhost:8080/$path?salutation=$salutation")
-        .header("X-AUTH-TOKEN", token)
-        .send()
-        .body
+    def assertEquals(at: Task[String], b: String): Task[Unit] =
+      at.flatMap { a =>
+        if (a == b) Task.succeed(()) else Task.fail(new IllegalArgumentException(s"$a was not equal to $b"))
+      }
 
-      println(s"For path: $path, salutation: $salutation, token: $token, got result: $result")
-      result
-    }
-
-    assert(testWith("hello1", "Hello", "secret") == "Hello, Spock!")
-    assert(testWith("hello2", "Hello", "secret") == "Hello, Spock!")
-    assert(testWith("hello1", "Cześć", "secret") == "Cześć, Spock!")
-    assert(testWith("hello2", "Cześć", "secret") == "Cześć, Spock!")
-    assert(testWith("hello1", "Hello", "1234") == AuthenticationErrorCode.toString)
-    assert(testWith("hello2", "Hello", "1234") == AuthenticationErrorCode.toString)
+    assertEquals(testWith("hello1", "Hello", "secret"), "Hello, Spock!") *>
+      assertEquals(testWith("hello2", "Hello", "secret"), "Hello, Spock!") *>
+      assertEquals(testWith("hello1", "Cześć", "secret"), "Cześć, Spock!") *>
+      assertEquals(testWith("hello2", "Cześć", "secret"), "Cześć, Spock!") *>
+      assertEquals(testWith("hello1", "Hello", "1234"), AuthenticationErrorCode.toString) *>
+      assertEquals(testWith("hello2", "Hello", "1234"), AuthenticationErrorCode.toString)
   }
 
   //
 
-  implicit val runtime: Runtime[ZEnv] = Runtime.default
-
-  val program = BlazeServerBuilder[Task](runtime.platform.executor.asEC)
-    .bindHttp(8080, "localhost")
-    .withHttpApp(Router("/" -> (helloWorld1Routes <+> helloWorld2Routes)).orNotFound)
-    .resource
-    .use { _ =>
-      check
+  override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] =
+    ZIO.runtime.flatMap { implicit runtime: Runtime[Any] =>
+      // starting the server
+      BlazeServerBuilder[Task](runtime.platform.executor.asEC)
+        .bindHttp(8080, "localhost")
+        .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
+        .resource
+        .use { _ =>
+          test
+        }
+        .map(_ => 0)
+        .catchAll { t =>
+          UIO {
+            println("Exception when starting server")
+            t.printStackTrace()
+          }.map(_ => 1)
+        }
     }
-
-  runtime.unsafeRun(program)
 }
