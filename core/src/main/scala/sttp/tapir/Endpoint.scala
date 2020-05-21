@@ -262,7 +262,7 @@ trait EndpointServerLogicOps[I, E, O, +S] { outer: Endpoint[I, E, O, S] =>
     * Note that the type of the `f` partial server logic function cannot be inferred, it must be explicitly given
     * (e.g. by providing a function or method value).
     */
-  def serverLogicPart[T, R, U, UR, F[_]](
+  def serverLogicPart[T, R, U, F[_]](
       f: T => F[Either[E, U]]
   )(implicit iMinusR: ParamSubtract.Aux[I, T, R]): ServerEndpointInParts[U, R, I, E, O, S, F] = {
     type _T = T
@@ -277,7 +277,7 @@ trait EndpointServerLogicOps[I, E, O, +S] { outer: Endpoint[I, E, O, S] =>
     * Same as [[serverLogicPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
     * endpoint errors.
     */
-  def serverLogicPartRecoverErrors[T, R, U, UR, F[_]](
+  def serverLogicPartRecoverErrors[T, R, U, F[_]](
       f: T => F[U]
   )(implicit
       eIsThrowable: E <:< Throwable,
