@@ -19,7 +19,7 @@ the json codec that is in scope.
 To use Circe add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "0.15.0"
+"com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "0.15.1"
 ```
 
 Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.html)):
@@ -87,7 +87,7 @@ Now the above JSON object will render as
 To use µPickle add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "0.15.0"
+"com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "0.15.1"
 ```
 
 Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.html) and add `TapirJsonuPickle` not `TapirCirceJson`):
@@ -121,7 +121,7 @@ For more examples, including making a custom encoder/decoder, see [TapirJsonuPic
 To use Play JSON add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-play" % "0.15.0"
+"com.softwaremill.sttp.tapir" %% "tapir-json-play" % "0.15.1"
 ```
 
 Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.html) and add `TapirJsonPlay` not `TapirCirceJson`):
@@ -137,7 +137,7 @@ Play JSON requires `Reads` and `Writes` implicit values in scope for each type y
 To use Spray JSON add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "0.15.0"
+"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "0.15.1"
 ```
 
 Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.html) and add `TapirJsonSpray` not `TapirCirceJson`):
@@ -153,7 +153,7 @@ Spray JSON requires a `JsonFormat` implicit value in scope for each type you wan
 To use Tethys JSON add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "0.15.0"
+"com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "0.15.1"
 ```
 
 Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../mytapir.html) and add `TapirJsonTethys` not `TapirCirceJson`):
@@ -169,7 +169,7 @@ Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for 
 To use [Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala) add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "0.15.0"
+"com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "0.15.1"
 ```
 
 Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../mytapir.html) and add `TapirJsonJsoniter` not `TapirCirceJson`):
