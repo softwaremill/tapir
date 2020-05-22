@@ -45,8 +45,9 @@ lazy val rootProject = (project in file("."))
   .aggregate(
     core,
     cats,
-    refined,
     enumeratum,
+    refined,
+    zio,
     circeJson,
     jsoniterScala,
     playJson,
@@ -70,6 +71,7 @@ lazy val rootProject = (project in file("."))
     finatraServerCats,
     playServer,
     vertxServer,
+    zioServer,
     sttpClient,
     tests,
     examples,
