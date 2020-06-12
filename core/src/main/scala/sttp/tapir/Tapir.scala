@@ -6,7 +6,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, QueryParams, StatusCode}
-import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain}
+import sttp.tapir.CodecFormat.{Json, Xml, OctetStream, TextPlain}
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
@@ -66,7 +66,12 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     *
     * If you have a custom json codec, you should use this method instead.
     */
-  def anyJsonBody[T: Codec[String, *, Json]]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
+  def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
+
+  /**
+    * Implement your own xml codec using `Codec.xml()` before using this method.
+    */
+  def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Xml]])
 
   def rawBinaryBody[R: RawBodyType.Binary](implicit codec: Codec[R, R, OctetStream]): EndpointIO.Body[R, R] =
     EndpointIO.Body(implicitly[RawBodyType.Binary[R]], codec, EndpointIO.Info.empty)

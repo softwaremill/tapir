@@ -15,6 +15,10 @@ object CodecFormat {
     override val mediaType: MediaType = MediaType.ApplicationJson
   }
 
+  case class Xml() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.ApplicationXml
+  }
+
   case class TextPlain() extends CodecFormat {
     override val mediaType: MediaType = MediaType.TextPlain
   }

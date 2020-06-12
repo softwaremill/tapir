@@ -95,6 +95,7 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
 object Codec extends FormCodecDerivation {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
+  type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
 
   def id[L, CF <: CodecFormat](f: CF, s: Option[Schema[L]] = None): Codec[L, L, CF] = new Codec[L, L, CF] {
     override def rawDecode(l: L): DecodeResult[L] = Value(l)
@@ -386,8 +387,16 @@ object Codec extends FormCodecDerivation {
     }
 
   def json[T: Schema: Validator](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
+    anyStringCodec(CodecFormat.Json())(_rawDecode)(_encode)
+  }
+
+  def xml[T: Schema: Validator](_rawDecode: String => DecodeResult[T])(_encode: T => String): XmlCodec[T] = {
+    anyStringCodec(CodecFormat.Xml())(_rawDecode)(_encode)
+  }
+
+  def anyStringCodec[T: Schema: Validator, CF <: CodecFormat](cf: CF)(_rawDecode: String => DecodeResult[T])(_encode: T => String): Codec[String, T, CF] = {
     val isOptional = implicitly[Schema[T]].isOptional
-    fromDecodeAndMeta(CodecFormat.Json())({ (s: String) =>
+    fromDecodeAndMeta(cf)({ (s: String) =>
       val toDecode = if (isOptional && s == "") "null" else s
       _rawDecode(toDecode)
     })(t => if (isOptional && t == None) "" else _encode(t))
