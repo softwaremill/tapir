@@ -9,10 +9,10 @@ import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
-import sttp.model.{Header, Part}
+import sttp.model.{Header, HeaderNames, Part}
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
-import sttp.tapir.{RawBodyType, DecodeResult, Endpoint, EndpointIO, EndpointInput, RawPart}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyType, RawPart}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -116,13 +116,14 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       ec: ExecutionContext
   ): Future[Part[R]] = {
     entityToRawValue(part.entity, bodyType, ctx)
-      .map(r =>
-        Part(
-          part.name,
-          r,
-          otherDispositionParams = part.additionalDispositionParams,
-          headers = part.additionalHeaders.map(h => Header(h.name, h.value))
-        )
+      .map(
+        r =>
+          Part(
+            part.name,
+            r,
+            otherDispositionParams = part.additionalDispositionParams,
+            headers = part.additionalHeaders.map(h => Header(h.name, h.value))
+          ).contentType(part.entity.contentType.toString())
       )
   }
 }
