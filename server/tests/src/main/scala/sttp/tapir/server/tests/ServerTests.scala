@@ -291,6 +291,26 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
+  if (multipartInlineHeaderSupport) {
+    testServer(in_file_multipart_out_multipart, "with part content type header")((fd: FruitData) =>
+      pureResult(
+        FruitData(
+          Part("", fd.data.body, fd.data.otherDispositionParams, fd.data.headers)
+        ).asRight[Unit]
+      )
+    ) { baseUri =>
+      val file = writeToFile("peach mario")
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(multipartFile("data", file).contentType("text/html"))
+        .send()
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body.toLowerCase() should include("content-type: text/html")
+        }
+    }
+  }
+
   testServer(in_query_out_string, "invalid query parameter")((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
     basicRequest.get(uri"$baseUri?fruit2=orange").send().map(_.code shouldBe StatusCode.BadRequest)
   }
