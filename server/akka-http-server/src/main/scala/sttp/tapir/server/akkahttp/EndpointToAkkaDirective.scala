@@ -9,10 +9,10 @@ import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
-import sttp.model.{Header, HeaderNames, Part}
+import sttp.model.{Header, Part}
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
-import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyType, RawPart}
+import sttp.tapir.{RawBodyType, DecodeResult, Endpoint, EndpointIO, EndpointInput, RawPart}
 
 import scala.concurrent.{ExecutionContext, Future}
 
