@@ -116,13 +116,14 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       ec: ExecutionContext
   ): Future[Part[R]] = {
     entityToRawValue(part.entity, bodyType, ctx)
-      .map(r =>
-        Part(
-          part.name,
-          r,
-          otherDispositionParams = part.additionalDispositionParams,
-          headers = part.additionalHeaders.map(h => Header(h.name, h.value))
-        )
+      .map(
+        r =>
+          Part(
+            part.name,
+            r,
+            otherDispositionParams = part.additionalDispositionParams,
+            headers = part.additionalHeaders.map(h => Header(h.name, h.value))
+          ).contentType(part.entity.contentType.toString())
       )
   }
 }
