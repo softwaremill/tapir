@@ -3,13 +3,15 @@ package sttp.tapir.generic
 import java.util.regex.Pattern
 
 final case class Configuration(toLowLevelName: String => String) {
-  def withSnakeCaseMemberNames: Configuration = copy(
-    toLowLevelName = Configuration.snakeCaseTransformation
-  )
+  def withSnakeCaseMemberNames: Configuration =
+    copy(
+      toLowLevelName = Configuration.snakeCaseTransformation
+    )
 
-  def withKebabCaseMemberNames: Configuration = copy(
-    toLowLevelName = Configuration.kebabCaseTransformation
-  )
+  def withKebabCaseMemberNames: Configuration =
+    copy(
+      toLowLevelName = Configuration.kebabCaseTransformation
+    )
 }
 
 object Configuration {

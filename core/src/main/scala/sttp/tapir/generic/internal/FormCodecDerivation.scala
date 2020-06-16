@@ -6,8 +6,8 @@ import sttp.tapir.{Codec, CodecFormat}
 import scala.reflect.macros.blackbox
 
 trait FormCodecDerivation {
-  implicit def formCaseClassCodec[T <: Product with Serializable](
-      implicit conf: Configuration
+  implicit def formCaseClassCodec[T <: Product with Serializable](implicit
+      conf: Configuration
   ): Codec[String, T, CodecFormat.XWwwFormUrlencoded] =
     macro FormCodecMacros.generateForCaseClass[T]
 }

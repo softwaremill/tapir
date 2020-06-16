@@ -15,12 +15,14 @@ class RichToFutureOfEitherFunctionTest extends FunSuite with Matchers with Scala
 
   test("should compose functions when both succeed") {
     // given
-    def f1(p: String): Future[Either[Error, User]] = Future {
-      Right(User(p))
-    }
-    def f2(u: User, i: Int, s: String): Future[Either[Error, Result]] = Future {
-      Right(Result(List(u.toString, i.toString, s).mkString(",")))
-    }
+    def f1(p: String): Future[Either[Error, User]] =
+      Future {
+        Right(User(p))
+      }
+    def f2(u: User, i: Int, s: String): Future[Either[Error, Result]] =
+      Future {
+        Right(Result(List(u.toString, i.toString, s).mkString(",")))
+      }
 
     // when
     val result = (f1 _).andThenFirstE((f2 _).tupled).apply(("john", 10, "x")).futureValue
@@ -31,12 +33,14 @@ class RichToFutureOfEitherFunctionTest extends FunSuite with Matchers with Scala
 
   test("should return error if first fails") {
     // given
-    def f1(p: String): Future[Either[Error, User]] = Future {
-      Left(Error("e1"))
-    }
-    def f2(u: User, i: Int, s: String): Future[Either[Error, Result]] = Future {
-      Right(Result(List(u.toString, i.toString, s).mkString(",")))
-    }
+    def f1(p: String): Future[Either[Error, User]] =
+      Future {
+        Left(Error("e1"))
+      }
+    def f2(u: User, i: Int, s: String): Future[Either[Error, Result]] =
+      Future {
+        Right(Result(List(u.toString, i.toString, s).mkString(",")))
+      }
 
     // when
     val result = (f1 _).andThenFirstE((f2 _).tupled).apply(("john", 10, "x")).futureValue
@@ -47,12 +51,14 @@ class RichToFutureOfEitherFunctionTest extends FunSuite with Matchers with Scala
 
   test("should return error if second fails") {
     // given
-    def f1(p: String): Future[Either[Error, User]] = Future {
-      Right(User(p))
-    }
-    def f2(u: User, i: Int, s: String): Future[Either[Error, Result]] = Future {
-      Left(Error("e2"))
-    }
+    def f1(p: String): Future[Either[Error, User]] =
+      Future {
+        Right(User(p))
+      }
+    def f2(u: User, i: Int, s: String): Future[Either[Error, Result]] =
+      Future {
+        Left(Error("e2"))
+      }
 
     // when
     val result = (f1 _).andThenFirstE((f2 _).tupled).apply(("john", 10, "x")).futureValue
@@ -63,12 +69,14 @@ class RichToFutureOfEitherFunctionTest extends FunSuite with Matchers with Scala
 
   test("should compose two 1-arg functions") {
     // given
-    def f1(p: String): Future[Either[Error, User]] = Future {
-      Right(User(p))
-    }
-    def f2(u: User): Future[Either[Error, Result]] = Future {
-      Right(Result(u.toString))
-    }
+    def f1(p: String): Future[Either[Error, User]] =
+      Future {
+        Right(User(p))
+      }
+    def f2(u: User): Future[Either[Error, Result]] =
+      Future {
+        Right(Result(u.toString))
+      }
 
     // when
     val result = (f1 _).andThenFirstE(f2).apply("john").futureValue

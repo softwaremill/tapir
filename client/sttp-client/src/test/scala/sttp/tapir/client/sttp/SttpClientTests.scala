@@ -27,7 +27,11 @@ class SttpClientTests extends ClientTests[fs2.Stream[IO, ByteBuffer]] {
     e.toSttpRequestUnsafe(uri"http://localhost:$port").apply(args).send().map(_.body)
   }
 
-  override def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, fs2.Stream[IO, ByteBuffer]], port: Port, args: I): IO[DecodeResult[Either[E, O]]] = {
+  override def safeSend[I, E, O, FN[_]](
+      e: Endpoint[I, E, O, fs2.Stream[IO, ByteBuffer]],
+      port: Port,
+      args: I
+  ): IO[DecodeResult[Either[E, O]]] = {
     e.toSttpRequest(uri"http://localhost:$port").apply(args).send().map(_.body)
   }
 

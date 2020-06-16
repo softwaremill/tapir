@@ -70,10 +70,11 @@ object EndpointTransput {
     private[tapir] val split: SplitParams
 
     override def show: String = {
-      def flattenedPairs(et: EndpointTransput[_]): Vector[EndpointTransput[_]] = et match {
-        case p: Pair[_] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
-        case other      => Vector(other)
-      }
+      def flattenedPairs(et: EndpointTransput[_]): Vector[EndpointTransput[_]] =
+        et match {
+          case p: Pair[_] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
+          case other      => Vector(other)
+        }
       showMultiple(flattenedPairs(this))
     }
   }

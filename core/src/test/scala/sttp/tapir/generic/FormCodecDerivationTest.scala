@@ -117,7 +117,6 @@ class FormCodecDerivationTest extends FlatSpec with Matchers {
     codec.decode("f1=10&f1=12") shouldBe DecodeResult.Value(Test1(List(10, 12)))
   }
 
-
   it should "generate a codec for a one-arg case class with set" in {
     // given
     case class Test1(f1: Set[Int])

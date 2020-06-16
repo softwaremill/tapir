@@ -196,8 +196,9 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
 
   private def toPartData(parts: Seq[RawPart]): Seq[(String, Any)] = parts.map(p => (p.name, p.body))
 
-  private def createStringParts(namesWithBodies: List[(String, String)]): List[RawPart] = namesWithBodies.map {
-    case (name, body) =>
-      Part(name, body)
-  }
+  private def createStringParts(namesWithBodies: List[(String, String)]): List[RawPart] =
+    namesWithBodies.map {
+      case (name, body) =>
+        Part(name, body)
+    }
 }

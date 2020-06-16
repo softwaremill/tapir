@@ -7,8 +7,8 @@ import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
 trait MultipartCodecDerivation {
-  implicit def multipartCaseClassCodec[T <: Product with Serializable](
-      implicit conf: Configuration
+  implicit def multipartCaseClassCodec[T <: Product with Serializable](implicit
+      conf: Configuration
   ): MultipartCodec[T] =
     macro MultipartCodecDerivation.generateForCaseClass[T]
 }
@@ -20,13 +20,14 @@ object MultipartCodecDerivation {
     import c.universe._
 
     @tailrec
-    def firstNotEmpty(candidates: List[() => (Tree, Tree)]): (Tree, Tree) = candidates match {
-      case Nil => (EmptyTree, EmptyTree)
-      case h :: t =>
-        val (a, b) = h()
-        val result = c.typecheck(b, silent = true)
-        if (result == EmptyTree) firstNotEmpty(t) else (a, result)
-    }
+    def firstNotEmpty(candidates: List[() => (Tree, Tree)]): (Tree, Tree) =
+      candidates match {
+        case Nil => (EmptyTree, EmptyTree)
+        case h :: t =>
+          val (a, b) = h()
+          val result = c.typecheck(b, silent = true)
+          if (result == EmptyTree) firstNotEmpty(t) else (a, result)
+      }
 
     val t = weakTypeOf[T]
     val util = new CaseClassUtil[c.type, T](c)

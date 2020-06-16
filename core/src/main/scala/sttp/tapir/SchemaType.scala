@@ -34,9 +34,10 @@ object SchemaType {
     def info: SObjectInfo
   }
   case class SProduct(info: SObjectInfo, fields: Iterable[(String, Schema[_])]) extends SObject {
-    def required: Iterable[String] = fields.collect {
-      case (f, s) if !s.isOptional => f
-    }
+    def required: Iterable[String] =
+      fields.collect {
+        case (f, s) if !s.isOptional => f
+      }
     def show: String = s"object(${fields.map(f => s"${f._1}->${f._2.show}").mkString(",")}"
   }
   object SProduct {

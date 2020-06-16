@@ -16,7 +16,9 @@ class ServerDefaultsTest extends FlatSpec with Matchers {
     val validationErrors = personValidator.validate(Person("John", Address("Lane", 0)))
 
     // then
-    ServerDefaults.ValidationMessages.validationErrorsMessage(validationErrors) shouldBe "expected address.number to be greater than or equal to 1, but was 0"
+    ServerDefaults.ValidationMessages.validationErrorsMessage(
+      validationErrors
+    ) shouldBe "expected address.number to be greater than or equal to 1, but was 0"
   }
 
   case class Person(name: String, address: Address)

@@ -24,10 +24,10 @@ class MatchTypeTest extends FlatSpec with Matchers with AppendedClues {
     matchTypeInt(int) shouldBe true
   }
 
-  val t: Byte = 0xF.toByte
+  val t: Byte = 0xf.toByte
   val s: Short = 1
 
-  val matcherAndTypes : Seq[(MatchType[_], Any)] = Seq(
+  val matcherAndTypes: Seq[(MatchType[_], Any)] = Seq(
     implicitly[MatchType[String]] -> "string",
     implicitly[MatchType[Boolean]] -> true,
     implicitly[MatchType[Char]] -> 'c',
@@ -35,20 +35,21 @@ class MatchTypeTest extends FlatSpec with Matchers with AppendedClues {
     implicitly[MatchType[Short]] -> s,
     implicitly[MatchType[Float]] -> 42.2f,
     implicitly[MatchType[Double]] -> 42.2d,
-    implicitly[MatchType[Int]] -> 42,
+    implicitly[MatchType[Int]] -> 42
   )
 
   it should "provide implicit for all primitive class returning true for other primitive type" in {
     matcherAndTypes.foreach({ (matcher: MatchType[_], a: Any) =>
-      (matcher(a) shouldBe true) withClue  (s"Matcher $matcher did not recognize $a")
-      }.tupled)
+      (matcher(a) shouldBe true) withClue (s"Matcher $matcher did not recognize $a")
+    }.tupled)
   }
 
   it should "provide implicit for all primitive class returning false for any other primitive type" in {
-    matcherAndTypes.permutations.foreach({ case (matcher, _)::tl =>
-      tl.map(_._2).foreach{ badValue =>
-        (matcher(badValue) shouldBe false) withClue  (s"Matcher $matcher did not reject $badValue")
-      }
+    matcherAndTypes.permutations.foreach({
+      case (matcher, _) :: tl =>
+        tl.map(_._2).foreach { badValue =>
+          (matcher(badValue) shouldBe false) withClue (s"Matcher $matcher did not reject $badValue")
+        }
     })
   }
 
