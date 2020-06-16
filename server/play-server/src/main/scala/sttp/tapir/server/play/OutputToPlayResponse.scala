@@ -141,6 +141,7 @@ object OutputToPlayResponse {
       case MediaType.ApplicationJson               => ContentTypes.JSON
       case MediaType.TextPlain                     => ContentTypes.TEXT(Codec.javaSupported(format.mediaType.charset.getOrElse("utf-8")))
       case MediaType.TextPlainUtf8                 => ContentTypes.TEXT(Codec.utf_8)
+      case MediaType.TextHtml                      => ContentTypes.HTML(Codec.utf_8)
       case MediaType.ApplicationOctetStream        => ContentTypes.BINARY
       case MediaType.ApplicationXWwwFormUrlencoded => ContentTypes.FORM
       case MediaType.MultipartFormData             => "multipart/form-data"
