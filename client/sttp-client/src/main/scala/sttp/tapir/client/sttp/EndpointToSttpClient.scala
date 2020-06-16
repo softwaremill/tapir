@@ -213,14 +213,15 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     req2.contentType(codec.format.mediaType)
   }
 
-  private def partToSttpPart[R](p: Part[R], bodyType: RawBodyType[R]): Part[BasicRequestBody] = bodyType match {
-    case RawBodyType.StringBody(charset) => multipart(p.name, p.body, charset.toString)
-    case RawBodyType.ByteArrayBody       => multipart(p.name, p.body)
-    case RawBodyType.ByteBufferBody      => multipart(p.name, p.body)
-    case RawBodyType.InputStreamBody     => multipart(p.name, p.body)
-    case RawBodyType.FileBody            => multipartFile(p.name, p.body)
-    case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
-  }
+  private def partToSttpPart[R](p: Part[R], bodyType: RawBodyType[R]): Part[BasicRequestBody] =
+    bodyType match {
+      case RawBodyType.StringBody(charset) => multipart(p.name, p.body, charset.toString)
+      case RawBodyType.ByteArrayBody       => multipart(p.name, p.body)
+      case RawBodyType.ByteBufferBody      => multipart(p.name, p.body)
+      case RawBodyType.InputStreamBody     => multipart(p.name, p.body)
+      case RawBodyType.FileBody            => multipartFile(p.name, p.body)
+      case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
+    }
 
   private def responseAsFromOutputs(meta: ResponseMetadata, out: EndpointOutput[_]): ResponseAs[Any, Any] = {
     if (bodyIsStream(out)) asStreamAlways[Any]
@@ -249,10 +250,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     }
   }
 
-  private def getOrThrow[T](dr: DecodeResult[T]): T = dr match {
-    case DecodeResult.Value(v)    => v
-    case DecodeResult.Error(_, e) => throw e
-    case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
-  }
+  private def getOrThrow[T](dr: DecodeResult[T]): T =
+    dr match {
+      case DecodeResult.Value(v)    => v
+      case DecodeResult.Error(_, e) => throw e
+      case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
+    }
 
 }

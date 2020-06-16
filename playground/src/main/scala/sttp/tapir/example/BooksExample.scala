@@ -67,24 +67,27 @@ object BooksExample extends App with StrictLogging {
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent.Future
 
-    def bookAddLogic(book: Book, token: AuthToken): Future[Either[String, Unit]] = Future {
-      if (token != "secret") {
-        logger.warn(s"Tried to access with token: $token")
-        Left("Unauthorized access!!!11")
-      } else {
-        logger.info(s"Adding book $book")
-        Library.Books.getAndUpdate(books => books :+ book)
-        Right(())
+    def bookAddLogic(book: Book, token: AuthToken): Future[Either[String, Unit]] =
+      Future {
+        if (token != "secret") {
+          logger.warn(s"Tried to access with token: $token")
+          Left("Unauthorized access!!!11")
+        } else {
+          logger.info(s"Adding book $book")
+          Library.Books.getAndUpdate(books => books :+ book)
+          Right(())
+        }
       }
-    }
 
-    def bookListingLogic(limit: Limit): Future[Either[String, Vector[Book]]] = Future {
-      Right[String, Vector[Book]](Library.getBooks(BooksQuery(None, limit)))
-    }
+    def bookListingLogic(limit: Limit): Future[Either[String, Vector[Book]]] =
+      Future {
+        Right[String, Vector[Book]](Library.getBooks(BooksQuery(None, limit)))
+      }
 
-    def bookListingByGenreLogic(query: BooksQuery): Future[Either[String, Vector[Book]]] = Future {
-      Right[String, Vector[Book]](Library.getBooks(query))
-    }
+    def bookListingByGenreLogic(query: BooksQuery): Future[Either[String, Vector[Book]]] =
+      Future {
+        Right[String, Vector[Book]](Library.getBooks(query))
+      }
 
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.

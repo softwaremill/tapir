@@ -18,7 +18,7 @@ package object encoders {
   private[vertx] def inputStreamToBuffer(is: InputStream, vertx: Vertx): Future[Buffer] = {
     is match {
       case _: ByteArrayInputStream => Future.successful(inputStreamToBufferUnsafe(is))
-      case _ => vertx.executeBlocking(() => inputStreamToBufferUnsafe(is))
+      case _                       => vertx.executeBlocking(() => inputStreamToBufferUnsafe(is))
     }
   }
 
@@ -31,6 +31,5 @@ package object encoders {
     }
     buffer
   }
-
 
 }

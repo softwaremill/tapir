@@ -94,11 +94,12 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def subtypeValidator(v: Validator[_], subtype: SObjectInfo): Validator[_] = v match {
-    case v @ Validator.Coproduct(_)                                  => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
-    case Validator.CollectionElements(v @ Validator.Coproduct(_), _) => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
-    case _                                                           => Validator.pass
-  }
+  private def subtypeValidator(v: Validator[_], subtype: SObjectInfo): Validator[_] =
+    v match {
+      case v @ Validator.Coproduct(_)                                  => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
+      case Validator.CollectionElements(v @ Validator.Coproduct(_), _) => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
+      case _                                                           => Validator.pass
+    }
 
   private def forInput(input: EndpointInput[_]): List[ObjectTypeData] = {
     input match {

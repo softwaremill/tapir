@@ -11,8 +11,8 @@ import shapeless.Witness
 import scala.reflect.ClassTag
 
 trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
-  implicit def codecForRefined[R, V, P, CF <: CodecFormat](
-      implicit tm: Codec[R, V, CF],
+  implicit def codecForRefined[R, V, P, CF <: CodecFormat](implicit
+      tm: Codec[R, V, CF],
       refinedValidator: Validate[V, P],
       refinedValidatorTranslation: ValidatorForPredicate[V, P]
   ): Codec[R, V Refined P, CF] = {
@@ -39,24 +39,24 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
   implicit val validatorForNonEmptyString: ValidatorForPredicate[String, NonEmpty] =
     ValidatorForPredicate.fromPrimitiveValidator[String, NonEmpty](Validator.minLength(1))
 
-  implicit def validatorForMatchesRegexp[S <: String](
-      implicit ws: Witness.Aux[S]
+  implicit def validatorForMatchesRegexp[S <: String](implicit
+      ws: Witness.Aux[S]
   ): ValidatorForPredicate[String, MatchesRegex[S]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern(ws.value))
 
   implicit def validatorForLess[N: Numeric, NM <: N](implicit ws: Witness.Aux[NM]): ValidatorForPredicate[N, Less[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.max(ws.value, exclusive = true))
 
-  implicit def validatorForLessEqual[N: Numeric, NM <: N](
-      implicit ws: Witness.Aux[NM]
+  implicit def validatorForLessEqual[N: Numeric, NM <: N](implicit
+      ws: Witness.Aux[NM]
   ): ValidatorForPredicate[N, LessEqual[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.max(ws.value))
 
   implicit def validatorForGreater[N: Numeric, NM <: N](implicit ws: Witness.Aux[NM]): ValidatorForPredicate[N, Greater[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.min(ws.value, exclusive = true))
 
-  implicit def validatorForGreaterEqual[N: Numeric, NM <: N](
-      implicit ws: Witness.Aux[NM]
+  implicit def validatorForGreaterEqual[N: Numeric, NM <: N](implicit
+      ws: Witness.Aux[NM]
   ): ValidatorForPredicate[N, GreaterEqual[NM]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.min(ws.value))
 }
@@ -75,15 +75,16 @@ object ValidatorForPredicate {
 }
 
 trait LowPriorityValidatorForPredicate {
-  implicit def genericValidatorForPredicate[V, P: ClassTag](
-      implicit refinedValidator: Validate[V, P]
-  ): ValidatorForPredicate[V, P] = new ValidatorForPredicate[V, P] {
-    override val validator: Validator.Custom[V] = Validator.Custom(
-      refinedValidator.isValid,
-      implicitly[ClassTag[P]].runtimeClass.toString
-    ) //for the moment there is no way to get a human description of a predicate/validator without having a concrete value to run it
+  implicit def genericValidatorForPredicate[V, P: ClassTag](implicit
+      refinedValidator: Validate[V, P]
+  ): ValidatorForPredicate[V, P] =
+    new ValidatorForPredicate[V, P] {
+      override val validator: Validator.Custom[V] = Validator.Custom(
+        refinedValidator.isValid,
+        implicitly[ClassTag[P]].runtimeClass.toString
+      ) //for the moment there is no way to get a human description of a predicate/validator without having a concrete value to run it
 
-    override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
-      List(ValidationError[V](validator.copy(message = refinedErrorMessage), value))
-  }
+      override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
+        List(ValidationError[V](validator.copy(message = refinedErrorMessage), value))
+    }
 }

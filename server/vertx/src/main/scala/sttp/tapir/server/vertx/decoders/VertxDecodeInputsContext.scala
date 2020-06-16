@@ -27,9 +27,10 @@ private[vertx] class VertxDecodeInputsContext(rc: RoutingContext, pathConsumed: 
   override def header(name: String): List[String] = request.headers.getAll(name).toList
   override def headers: Seq[(String, String)] = _headers.names.map { key => (key, _headers.get(key).get) }.toSeq
   override def queryParameter(name: String): Seq[String] = params.getAll(name)
-  override def queryParameters: QueryParams = QueryParams.fromMultiMap(
-    params.names.map { key => (key, params.getAll(key)) }.toMap
-  )
+  override def queryParameters: QueryParams =
+    QueryParams.fromMultiMap(
+      params.names.map { key => (key, params.getAll(key)) }.toMap
+    )
   override def bodyStream: Any =
     rc.request.asInstanceOf[ReadStream[Buffer]]
   override def serverRequest: ServerRequest = new VertxServerRequest(rc)

@@ -57,8 +57,8 @@ package object handlers {
     * @param ect an eventual ClassTag for user-defined exceptions
     * @tparam E the type of the error
     */
-  private[vertx] def tryEncodeError[E](endpoint: Endpoint[_, E, _, _], rc: RoutingContext, error: Any)(
-      implicit endpointOptions: VertxEndpointOptions,
+  private[vertx] def tryEncodeError[E](endpoint: Endpoint[_, E, _, _], rc: RoutingContext, error: Any)(implicit
+      endpointOptions: VertxEndpointOptions,
       ect: Option[ClassTag[E]]
   ): Unit =
     (error, ect) match {
@@ -68,8 +68,8 @@ package object handlers {
         rc.response.setStatusCode(500).end()
     }
 
-  private[vertx] def encodeError[E](endpoint: Endpoint[_, E, _, _], rc: RoutingContext, error: E)(
-      implicit endpointOptions: VertxEndpointOptions
+  private[vertx] def encodeError[E](endpoint: Endpoint[_, E, _, _], rc: RoutingContext, error: E)(implicit
+      endpointOptions: VertxEndpointOptions
   ): Unit = {
     try {
       VertxOutputEncoders.apply[E](endpoint.errorOutput, error, isError = true)(endpointOptions)(rc)

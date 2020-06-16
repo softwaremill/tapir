@@ -184,7 +184,7 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          statusMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int)   => true },
+          statusMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int) => true },
           statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
@@ -211,7 +211,7 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          statusMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit)     => true },
+          statusMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit) => true },
           statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )

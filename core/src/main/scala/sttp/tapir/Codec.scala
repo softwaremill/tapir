@@ -51,45 +51,50 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
   def schema: Option[Schema[H]]
   def format: CF
 
-  override def map[HH](codec: Mapping[H, HH]): Codec[L, HH, CF] = new Codec[L, HH, CF] {
-    override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(codec.rawDecode)
-    override def encode(hh: HH): L = outer.encode(codec.encode(hh))
-    override def schema: Option[Schema[HH]] = outer.schema.map(_.as[HH])
-    override def validator: Validator[HH] = outer.validator.contramap(codec.encode).and(codec.validator)
-    override def format: CF = outer.format
-  }
+  override def map[HH](codec: Mapping[H, HH]): Codec[L, HH, CF] =
+    new Codec[L, HH, CF] {
+      override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(codec.rawDecode)
+      override def encode(hh: HH): L = outer.encode(codec.encode(hh))
+      override def schema: Option[Schema[HH]] = outer.schema.map(_.as[HH])
+      override def validator: Validator[HH] = outer.validator.contramap(codec.encode).and(codec.validator)
+      override def format: CF = outer.format
+    }
 
   def mapDecode[HH](f: H => DecodeResult[HH])(g: HH => H): Codec[L, HH, CF] = map(Mapping.fromDecode(f)(g))
   def map[HH](f: H => HH)(g: HH => H): Codec[L, HH, CF] = mapDecode(f.andThen(Value(_)))(g)
 
-  def schema(s2: Schema[H]): Codec[L, H, CF] = new Codec[L, H, CF] {
-    override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
-    override def encode(h: H): L = outer.encode(h)
-    override def schema: Option[Schema[H]] = Some(s2)
-    override def validator: Validator[H] = outer.validator
-    override def format: CF = outer.format
-  }
+  def schema(s2: Schema[H]): Codec[L, H, CF] =
+    new Codec[L, H, CF] {
+      override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
+      override def encode(h: H): L = outer.encode(h)
+      override def schema: Option[Schema[H]] = Some(s2)
+      override def validator: Validator[H] = outer.validator
+      override def format: CF = outer.format
+    }
   def schema(s2: Option[Schema[H]]): Codec[L, H, CF] = s2.map(schema).getOrElse(this)
-  def modifySchema(modify: Schema[H] => Schema[H]): Codec[L, H, CF] = schema match {
-    case None    => this
-    case Some(s) => schema(modify(s))
-  }
+  def modifySchema(modify: Schema[H] => Schema[H]): Codec[L, H, CF] =
+    schema match {
+      case None    => this
+      case Some(s) => schema(modify(s))
+    }
 
-  def format[CF2 <: CodecFormat](f: CF2): Codec[L, H, CF2] = new Codec[L, H, CF2] {
-    override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
-    override def encode(h: H): L = outer.encode(h)
-    override def schema: Option[Schema[H]] = outer.schema
-    override def validator: Validator[H] = outer.validator
-    override def format: CF2 = f
-  }
+  def format[CF2 <: CodecFormat](f: CF2): Codec[L, H, CF2] =
+    new Codec[L, H, CF2] {
+      override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
+      override def encode(h: H): L = outer.encode(h)
+      override def schema: Option[Schema[H]] = outer.schema
+      override def validator: Validator[H] = outer.validator
+      override def format: CF2 = f
+    }
 
-  override def validate(v: Validator[H]): Codec[L, H, CF] = new Codec[L, H, CF] {
-    override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
-    override def encode(h: H): L = outer.encode(h)
-    override def schema: Option[Schema[H]] = outer.schema
-    override def validator: Validator[H] = addEncodeToEnumValidator(v).and(outer.validator)
-    override def format: CF = outer.format
-  }
+  override def validate(v: Validator[H]): Codec[L, H, CF] =
+    new Codec[L, H, CF] {
+      override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
+      override def encode(h: H): L = outer.encode(h)
+      override def schema: Option[Schema[H]] = outer.schema
+      override def validator: Validator[H] = addEncodeToEnumValidator(v).and(outer.validator)
+      override def format: CF = outer.format
+    }
 }
 
 object Codec extends FormCodecDerivation {
@@ -97,13 +102,14 @@ object Codec extends FormCodecDerivation {
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
 
-  def id[L, CF <: CodecFormat](f: CF, s: Option[Schema[L]] = None): Codec[L, L, CF] = new Codec[L, L, CF] {
-    override def rawDecode(l: L): DecodeResult[L] = Value(l)
-    override def encode(h: L): L = h
-    override def schema: Option[Schema[L]] = s
-    override def validator: Validator[L] = Validator.pass
-    override def format: CF = f
-  }
+  def id[L, CF <: CodecFormat](f: CF, s: Option[Schema[L]] = None): Codec[L, L, CF] =
+    new Codec[L, L, CF] {
+      override def rawDecode(l: L): DecodeResult[L] = Value(l)
+      override def encode(h: L): L = h
+      override def schema: Option[Schema[L]] = s
+      override def validator: Validator[L] = Validator.pass
+      override def format: CF = f
+    }
   def idPlain[L](s: Option[Schema[L]] = None): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
 
   implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Some(Schema(SchemaType.SString)))
@@ -226,25 +232,28 @@ object Codec extends FormCodecDerivation {
   def multipartCodec(
       partCodecs: Map[String, PartCodec[_, _]],
       defaultPartCodec: Option[PartCodec[_, _]]
-  ): MultipartCodec[Seq[AnyPart]] = MultipartCodec(
-    RawBodyType.MultipartBody(partCodecs.map(t => (t._1, t._2.rawBodyType)).toMap, defaultPartCodec.map(_.rawBodyType)),
-    rawPartCodec(partCodecs.map(t => (t._1, t._2.codec)).toMap, defaultPartCodec.map(_.codec))
-  )
+  ): MultipartCodec[Seq[AnyPart]] =
+    MultipartCodec(
+      RawBodyType.MultipartBody(partCodecs.map(t => (t._1, t._2.rawBodyType)).toMap, defaultPartCodec.map(_.rawBodyType)),
+      rawPartCodec(partCodecs.map(t => (t._1, t._2.codec)).toMap, defaultPartCodec.map(_.codec))
+    )
 
   //
 
-  private[tapir] def decodeCookie(cookie: String): DecodeResult[List[Cookie]] = Cookie.parse(cookie) match {
-    case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
-    case Right(r) => DecodeResult.Value(r)
-  }
+  private[tapir] def decodeCookie(cookie: String): DecodeResult[List[Cookie]] =
+    Cookie.parse(cookie) match {
+      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
+      case Right(r) => DecodeResult.Value(r)
+    }
 
   implicit val cookieCodec: Codec[String, List[Cookie], TextPlain] = Codec.string.mapDecode(decodeCookie)(cs => Cookie.toString(cs))
   implicit val cookiesCodec: Codec[List[String], List[Cookie], TextPlain] = Codec.list(cookieCodec).map(_.flatten)(List(_))
 
-  private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] = CookieWithMeta.parse(cookie) match {
-    case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
-    case Right(r) => DecodeResult.Value(r)
-  }
+  private[tapir] def decodeCookieWithMeta(cookie: String): DecodeResult[CookieWithMeta] =
+    CookieWithMeta.parse(cookie) match {
+      case Left(e)  => DecodeResult.Error(cookie, new RuntimeException(e))
+      case Right(r) => DecodeResult.Value(r)
+    }
 
   implicit val cookieWithMetaCodec: Codec[String, CookieWithMeta, TextPlain] = Codec.string.mapDecode(decodeCookieWithMeta)(_.toString)
   implicit val cookiesWithMetaCodec: Codec[List[String], List[CookieWithMeta], TextPlain] = Codec.list(cookieWithMetaCodec)
@@ -394,7 +403,9 @@ object Codec extends FormCodecDerivation {
     anyStringCodec(CodecFormat.Xml())(_rawDecode)(_encode)
   }
 
-  def anyStringCodec[T: Schema: Validator, CF <: CodecFormat](cf: CF)(_rawDecode: String => DecodeResult[T])(_encode: T => String): Codec[String, T, CF] = {
+  def anyStringCodec[T: Schema: Validator, CF <: CodecFormat](
+      cf: CF
+  )(_rawDecode: String => DecodeResult[T])(_encode: T => String): Codec[String, T, CF] = {
     val isOptional = implicitly[Schema[T]].isOptional
     fromDecodeAndMeta(cf)({ (s: String) =>
       val toDecode = if (isOptional && s == "") "null" else s

@@ -26,10 +26,11 @@ object DecodeInputsResult {
     /**
       * Sets the value of the body input, once it is known, if a body input is defined.
       */
-    def setBodyInputValue(v: Any): Values = bodyInputWithIndex match {
-      case Some((_, i)) => copy(basicInputsValues = basicInputsValues.updated(i, v))
-      case None         => this
-    }
+    def setBodyInputValue(v: Any): Values =
+      bodyInputWithIndex match {
+        case Some((_, i)) => copy(basicInputsValues = basicInputsValues.updated(i, v))
+        case None         => this
+      }
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }

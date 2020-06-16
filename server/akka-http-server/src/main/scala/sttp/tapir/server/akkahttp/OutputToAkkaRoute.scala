@@ -113,10 +113,11 @@ private[akkahttp] object OutputToAkkaRoute {
     kvs.map { case (k, v) => parseHeaderOrThrow(k, v) }
   }
 
-  private def parseHeaderOrThrow(k: String, v: String): HttpHeader = HttpHeader.parse(k, v) match {
-    case ParsingResult.Ok(h, _)     => h
-    case ParsingResult.Error(error) => throw new IllegalArgumentException(s"Cannot parse header ($k, $v): $error")
-  }
+  private def parseHeaderOrThrow(k: String, v: String): HttpHeader =
+    HttpHeader.parse(k, v) match {
+      case ParsingResult.Ok(h, _)     => h
+      case ParsingResult.Error(error) => throw new IllegalArgumentException(s"Cannot parse header ($k, $v): $error")
+    }
 
   private def overrideContentTypeIfDefined[RE <: ResponseEntity](re: RE, headers: Seq[HttpHeader]): RE = {
     import akka.http.scaladsl.model.headers.`Content-Type`

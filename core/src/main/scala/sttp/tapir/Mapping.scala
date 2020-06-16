@@ -51,17 +51,19 @@ trait Mapping[L, H] { outer =>
 
   def validator: Validator[H]
 
-  def map[HH](codec: Mapping[H, HH]): Mapping[L, HH] = new Mapping[L, HH] {
-    override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(codec.rawDecode)
-    override def encode(hh: HH): L = outer.encode(codec.encode(hh))
-    override def validator: Validator[HH] = outer.validator.contramap(codec.encode).and(codec.validator)
-  }
+  def map[HH](codec: Mapping[H, HH]): Mapping[L, HH] =
+    new Mapping[L, HH] {
+      override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(codec.rawDecode)
+      override def encode(hh: HH): L = outer.encode(codec.encode(hh))
+      override def validator: Validator[HH] = outer.validator.contramap(codec.encode).and(codec.validator)
+    }
 
-  def validate(v: Validator[H]): Mapping[L, H] = new Mapping[L, H] {
-    override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
-    override def encode(h: H): L = outer.encode(h)
-    override def validator: Validator[H] = addEncodeToEnumValidator(v).and(outer.validator)
-  }
+  def validate(v: Validator[H]): Mapping[L, H] =
+    new Mapping[L, H] {
+      override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
+      override def encode(h: H): L = outer.encode(h)
+      override def validator: Validator[H] = addEncodeToEnumValidator(v).and(outer.validator)
+    }
 
   private[tapir] def addEncodeToEnumValidator(v: Validator[H]): Validator[H] = {
     v match {
@@ -72,17 +74,19 @@ trait Mapping[L, H] { outer =>
 }
 
 object Mapping {
-  def id[L]: Mapping[L, L] = new Mapping[L, L] {
-    override def rawDecode(l: L): DecodeResult[L] = DecodeResult.Value(l)
-    override def encode(h: L): L = h
-    override def validator: Validator[L] = Validator.pass
-  }
+  def id[L]: Mapping[L, L] =
+    new Mapping[L, L] {
+      override def rawDecode(l: L): DecodeResult[L] = DecodeResult.Value(l)
+      override def encode(h: L): L = h
+      override def validator: Validator[L] = Validator.pass
+    }
   def from[L, H](f: L => H)(g: H => L): Mapping[L, H] = fromDecode(f.andThen(Value(_)))(g)
-  def fromDecode[L, H](f: L => DecodeResult[H])(g: H => L): Mapping[L, H] = new Mapping[L, H] {
-    override def rawDecode(l: L): DecodeResult[H] = f(l)
-    override def encode(h: H): L = g(h)
-    override def validator: Validator[H] = Validator.pass
-  }
+  def fromDecode[L, H](f: L => DecodeResult[H])(g: H => L): Mapping[L, H] =
+    new Mapping[L, H] {
+      override def rawDecode(l: L): DecodeResult[H] = f(l)
+      override def encode(h: H): L = g(h)
+      override def validator: Validator[H] = Validator.pass
+    }
 
   /**
     * A mapping which, during encoding, adds the given `prefix`. When decoding, the prefix is removed (if present),

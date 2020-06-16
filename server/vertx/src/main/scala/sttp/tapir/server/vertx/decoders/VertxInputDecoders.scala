@@ -56,13 +56,13 @@ object VertxInputDecoders {
     }(endpointOptions.executionContextOrCurrentCtx(rc)): Unit
   }
 
-  private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)(
-      implicit serverOptions: VertxEndpointOptions
+  private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)(implicit
+      serverOptions: VertxEndpointOptions
   ): Future[DecodeInputsResult] =
     decodeBody(DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc)
 
-  private def decodeBody(result: DecodeInputsResult, rc: RoutingContext)(
-      implicit serverOptions: VertxEndpointOptions
+  private def decodeBody(result: DecodeInputsResult, rc: RoutingContext)(implicit
+      serverOptions: VertxEndpointOptions
   ): Future[DecodeInputsResult] = {
     implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
     result match {

@@ -57,13 +57,14 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     inputDirectives
   }
 
-  private def rawBodyDirective(bodyType: RawBodyType[_]): Directive1[Any] = extractRequestContext.flatMap { ctx =>
-    extractMaterializer.flatMap { implicit materializer =>
-      extractExecutionContext.flatMap { implicit ec =>
-        onSuccess(entityToRawValue(ctx.request.entity, bodyType, ctx)).asInstanceOf[Directive1[Any]]
+  private def rawBodyDirective(bodyType: RawBodyType[_]): Directive1[Any] =
+    extractRequestContext.flatMap { ctx =>
+      extractMaterializer.flatMap { implicit materializer =>
+        extractExecutionContext.flatMap { implicit ec =>
+          onSuccess(entityToRawValue(ctx.request.entity, bodyType, ctx)).asInstanceOf[Directive1[Any]]
+        }
       }
     }
-  }
 
   private def decodeFailureDirective[I](
       ctx: RequestContext,
@@ -87,8 +88,8 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       entity: HttpEntity,
       bodyType: RawBodyType[R],
       ctx: RequestContext
-  )(
-      implicit mat: Materializer,
+  )(implicit
+      mat: Materializer,
       ec: ExecutionContext
   ): Future[R] = {
     bodyType match {
@@ -111,19 +112,18 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     }
   }
 
-  private def toRawPart[R](part: Multipart.FormData.BodyPart, bodyType: RawBodyType[R], ctx: RequestContext)(
-      implicit mat: Materializer,
+  private def toRawPart[R](part: Multipart.FormData.BodyPart, bodyType: RawBodyType[R], ctx: RequestContext)(implicit
+      mat: Materializer,
       ec: ExecutionContext
   ): Future[Part[R]] = {
     entityToRawValue(part.entity, bodyType, ctx)
-      .map(
-        r =>
-          Part(
-            part.name,
-            r,
-            otherDispositionParams = part.additionalDispositionParams,
-            headers = part.additionalHeaders.map(h => Header(h.name, h.value))
-          ).contentType(part.entity.contentType.toString())
+      .map(r =>
+        Part(
+          part.name,
+          r,
+          otherDispositionParams = part.additionalDispositionParams,
+          headers = part.additionalHeaders.map(h => Header(h.name, h.value))
+        ).contentType(part.entity.contentType.toString())
       )
   }
 }

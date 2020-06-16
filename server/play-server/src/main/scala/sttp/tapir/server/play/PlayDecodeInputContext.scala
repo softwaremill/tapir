@@ -6,8 +6,8 @@ import sttp.model.{Method, QueryParams}
 import sttp.tapir.server.internal.DecodeInputsContext
 import sttp.tapir.model.ServerRequest
 
-private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed: Int = 0, serverOptions: PlayServerOptions)(
-    implicit mat: Materializer
+private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed: Int = 0, serverOptions: PlayServerOptions)(implicit
+    mat: Materializer
 ) extends DecodeInputsContext {
   override def method: Method = Method(request.method.toUpperCase())
 

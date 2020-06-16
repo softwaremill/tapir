@@ -15,8 +15,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
-  def apply[R](bodyType: RawBodyType[R], charset: Option[Charset], request: Request[RawBuffer], body: ByteString)(
-      implicit mat: Materializer
+  def apply[R](bodyType: RawBodyType[R], charset: Option[Charset], request: Request[RawBuffer], body: ByteString)(implicit
+      mat: Materializer
   ): Future[R] = {
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) => Future(new String(body.toArray, charset.getOrElse(defaultCharset)))
@@ -30,8 +30,8 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
     }
   }
 
-  private def multiPartRequestToRawBody[R](request: Request[RawBuffer], m: RawBodyType.MultipartBody, body: ByteString)(
-      implicit mat: Materializer
+  private def multiPartRequestToRawBody[R](request: Request[RawBuffer], m: RawBodyType.MultipartBody, body: ByteString)(implicit
+      mat: Materializer
   ): Future[Seq[RawPart]] = {
     val bodyParser = serverOptions.playBodyParsers.multipartFormData(
       Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)

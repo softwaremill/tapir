@@ -61,8 +61,9 @@ case class LogRequestHandling[T](
     else noLog
   }
 
-  private def exception(ctx: DecodeFailureContext): Option[Throwable] = ctx.failure match {
-    case DecodeResult.Error(_, error) => Some(error)
-    case _                            => None
-  }
+  private def exception(ctx: DecodeFailureContext): Option[Throwable] =
+    ctx.failure match {
+      case DecodeResult.Error(_, error) => Some(error)
+      case _                            => None
+    }
 }

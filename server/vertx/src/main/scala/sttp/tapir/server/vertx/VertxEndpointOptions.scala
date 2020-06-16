@@ -20,7 +20,7 @@ case class VertxEndpointOptions(
   def executionContextOr(default: ExecutionContext): ExecutionContext =
     specificExecutionContext.getOrElse(default)
 
-  private [vertx] def executionContextOrCurrentCtx(rc: RoutingContext) =
+  private[vertx] def executionContextOrCurrentCtx(rc: RoutingContext) =
     executionContextOr(VertxExecutionContext(rc.vertx.getOrCreateContext))
 
   def logWhenHandled(shouldLog: Boolean): VertxEndpointOptions =
@@ -42,14 +42,16 @@ object VertxEndpointOptions {
     noLog = _ => ()
   )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Logger => Unit = exOpt match {
-    case None     => log => log.debug(msg, List(): _*)
-    case Some(ex) => log => log.debug(s"$msg; exception: {}", ex)
-  }
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Logger => Unit =
+    exOpt match {
+      case None     => log => log.debug(msg, List(): _*)
+      case Some(ex) => log => log.debug(s"$msg; exception: {}", ex)
+    }
 
-  private def infoLog(msg: String, exOpt: Option[Throwable]): Logger => Unit = exOpt match {
-    case None     => log => log.info(msg, List(): _*)
-    case Some(ex) => log => log.info(s"$msg; exception: {}", ex)
-  }
+  private def infoLog(msg: String, exOpt: Option[Throwable]): Logger => Unit =
+    exOpt match {
+      case None     => log => log.info(msg, List(): _*)
+      case Some(ex) => log => log.info(s"$msg; exception: {}", ex)
+    }
 
 }

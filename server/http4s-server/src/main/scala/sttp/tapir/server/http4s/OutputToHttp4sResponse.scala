@@ -55,7 +55,11 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case RawBodyType.ByteArrayBody  => fs2.Stream.chunk(Chunk.bytes(r)) -> ct
       case RawBodyType.ByteBufferBody => fs2.Stream.chunk(Chunk.byteBuffer(r)) -> ct
       case RawBodyType.InputStreamBody =>
-        fs2.io.readInputStream(r.pure[F], serverOptions.ioChunkSize, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext)) -> ct
+        fs2.io.readInputStream(
+          r.pure[F],
+          serverOptions.ioChunkSize,
+          Blocker.liftExecutionContext(serverOptions.blockingExecutionContext)
+        ) -> ct
       case RawBodyType.FileBody =>
         fs2.io.file.readAll(r.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext), serverOptions.ioChunkSize) -> ct
       case m: RawBodyType.MultipartBody =>

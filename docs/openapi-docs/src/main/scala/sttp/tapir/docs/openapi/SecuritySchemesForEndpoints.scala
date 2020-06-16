@@ -31,40 +31,42 @@ private[openapi] object SecuritySchemesForEndpoints {
     }
   }
 
-  private def authToSecurityScheme(a: EndpointInput.Auth[_]): SecurityScheme = a match {
-    case EndpointInput.Auth.ApiKey(input) =>
-      val (name, in) = apiKeyInputNameAndIn(input.asVectorOfBasicInputs())
-      SecurityScheme("apiKey", None, Some(name), Some(in), None, None, None, None)
-    case EndpointInput.Auth.Http(scheme, _) =>
-      SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None)
-    case EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _) =>
-      SecurityScheme(
-        "oauth2",
-        None,
-        None,
-        None,
-        None,
-        None,
-        Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
-        None
-      )
-    case EndpointInput.Auth.ScopedOauth2(EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _), _) =>
-      SecurityScheme(
-        "oauth2",
-        None,
-        None,
-        None,
-        None,
-        None,
-        Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
-        None
-      )
-  }
+  private def authToSecurityScheme(a: EndpointInput.Auth[_]): SecurityScheme =
+    a match {
+      case EndpointInput.Auth.ApiKey(input) =>
+        val (name, in) = apiKeyInputNameAndIn(input.asVectorOfBasicInputs())
+        SecurityScheme("apiKey", None, Some(name), Some(in), None, None, None, None)
+      case EndpointInput.Auth.Http(scheme, _) =>
+        SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None)
+      case EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _) =>
+        SecurityScheme(
+          "oauth2",
+          None,
+          None,
+          None,
+          None,
+          None,
+          Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
+          None
+        )
+      case EndpointInput.Auth.ScopedOauth2(EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _), _) =>
+        SecurityScheme(
+          "oauth2",
+          None,
+          None,
+          None,
+          None,
+          None,
+          Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
+          None
+        )
+    }
 
-  private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) = input match {
-    case Vector(EndpointIO.Header(name, _, _))    => (name, "header")
-    case Vector(EndpointInput.Query(name, _, _))  => (name, "query")
-    case Vector(EndpointInput.Cookie(name, _, _)) => (name, "cookie")
-    case _                                        => throw new IllegalArgumentException(s"Api key authentication can only be read from headers, queries or cookies, not: $input")
-  }
+  private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) =
+    input match {
+      case Vector(EndpointIO.Header(name, _, _))    => (name, "header")
+      case Vector(EndpointInput.Query(name, _, _))  => (name, "query")
+      case Vector(EndpointInput.Cookie(name, _, _)) => (name, "cookie")
+      case _                                        => throw new IllegalArgumentException(s"Api key authentication can only be read from headers, queries or cookies, not: $input")
+    }
 }

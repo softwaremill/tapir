@@ -52,16 +52,17 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
       )
       .getOrElse(Map.empty)
 
-  private def getCharset(contentType: Option[String]): Option[Charset] = contentType.flatMap(
-    _.split(";")
-      .map(_.trim)
-      .tail
-      .map(_.split("="))
-      .map(array => array(0) -> array(1))
-      .toMap
-      .get("charset")
-      .map(Charset.forName)
-  )
+  private def getCharset(contentType: Option[String]): Option[Charset] =
+    contentType.flatMap(
+      _.split(";")
+        .map(_.trim)
+        .tail
+        .map(_.split("="))
+        .map(array => array(0) -> array(1))
+        .toMap
+        .get("charset")
+        .map(Charset.forName)
+    )
 
   private def multiPartRequestToRawBody(request: Request, m: RawBodyType.MultipartBody): Future[Seq[RawPart]] = {
     def fileItemHeaders(headers: FileItemHeaders): Seq[Header] = {

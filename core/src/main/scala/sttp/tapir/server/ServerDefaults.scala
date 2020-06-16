@@ -80,29 +80,31 @@ object ServerDefaults {
       * Describes the source of the failure: in which part of the request did the failure occur.
       */
     @tailrec
-    def failureSourceMessage(input: EndpointInput[_]): String = input match {
-      case EndpointInput.FixedMethod(_, _, _)      => s"Invalid value for: method"
-      case EndpointInput.FixedPath(_, _, _)        => s"Invalid value for: path segment"
-      case EndpointInput.PathCapture(name, _, _)   => s"Invalid value for: path parameter ${name.getOrElse("?")}"
-      case EndpointInput.PathsCapture(_, _)        => s"Invalid value for: path"
-      case EndpointInput.Query(name, _, _)         => s"Invalid value for: query parameter $name"
-      case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
-      case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
-      case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
-      case a: EndpointInput.Auth[_]                => failureSourceMessage(a.input)
-      case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
-      case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"
-      case _: EndpointIO.StreamBodyWrapper[_, _]   => s"Invalid value for: body"
-      case EndpointIO.Header(name, _, _)           => s"Invalid value for: header $name"
-      case EndpointIO.FixedHeader(name, _, _)      => s"Invalid value for: header $name"
-      case EndpointIO.Headers(_, _)                => s"Invalid value for: headers"
-      case _                                       => "Invalid value"
-    }
+    def failureSourceMessage(input: EndpointInput[_]): String =
+      input match {
+        case EndpointInput.FixedMethod(_, _, _)      => s"Invalid value for: method"
+        case EndpointInput.FixedPath(_, _, _)        => s"Invalid value for: path segment"
+        case EndpointInput.PathCapture(name, _, _)   => s"Invalid value for: path parameter ${name.getOrElse("?")}"
+        case EndpointInput.PathsCapture(_, _)        => s"Invalid value for: path"
+        case EndpointInput.Query(name, _, _)         => s"Invalid value for: query parameter $name"
+        case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
+        case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
+        case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
+        case a: EndpointInput.Auth[_]                => failureSourceMessage(a.input)
+        case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
+        case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"
+        case _: EndpointIO.StreamBodyWrapper[_, _]   => s"Invalid value for: body"
+        case EndpointIO.Header(name, _, _)           => s"Invalid value for: header $name"
+        case EndpointIO.FixedHeader(name, _, _)      => s"Invalid value for: header $name"
+        case EndpointIO.Headers(_, _)                => s"Invalid value for: headers"
+        case _                                       => "Invalid value"
+      }
 
-    def combineSourceAndDetail(source: String, detail: Option[String]): String = detail match {
-      case None    => source
-      case Some(d) => s"$source ($d)"
-    }
+    def combineSourceAndDetail(source: String, detail: Option[String]): String =
+      detail match {
+        case None    => source
+        case Some(d) => s"$source ($d)"
+      }
 
     /**
       * Default message describing the source of a decode failure, alongside with optional validation details.
@@ -128,29 +130,31 @@ object ServerDefaults {
       * Default message describing why a value is invalid.
       * @param valueName Name of the validated value to be used in error messages
       */
-    def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String = ve.validator match {
-      case Validator.Min(value, exclusive) =>
-        s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
-      case Validator.Max(value, exclusive) =>
-        s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
-      case Validator.Pattern(value)   => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
-      case Validator.MinLength(value) => s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
-      case Validator.MaxLength(value) => s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
-      case Validator.MinSize(value) =>
-        s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
-      case Validator.MaxSize(value)          => s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
-      case Validator.Custom(_, message)      => s"expected $valueName to pass custom validation: $message, but was '${ve.invalidValue}'"
-      case Validator.Enum(possibleValues, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
-    }
+    def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String =
+      ve.validator match {
+        case Validator.Min(value, exclusive) =>
+          s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
+        case Validator.Max(value, exclusive) =>
+          s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
+        case Validator.Pattern(value)   => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
+        case Validator.MinLength(value) => s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
+        case Validator.MaxLength(value) => s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
+        case Validator.MinSize(value) =>
+          s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
+        case Validator.MaxSize(value)          => s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
+        case Validator.Custom(_, message)      => s"expected $valueName to pass custom validation: $message, but was '${ve.invalidValue}'"
+        case Validator.Enum(possibleValues, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
+      }
 
     /**
       * Default message describing the path to an invalid value.
       * This is the path inside the validated object, e.g. `user.address.street.name`.
       */
-    def pathMessage(ve: ValidationError[_]): Option[String] = ve.path match {
-      case Nil => None
-      case l   => Some(l.map(_.lowLevelName).mkString("."))
-    }
+    def pathMessage(ve: ValidationError[_]): Option[String] =
+      ve.path match {
+        case Nil => None
+        case l   => Some(l.map(_.lowLevelName).mkString("."))
+      }
 
     /**
       * Default message describing the validation error: which value is invalid, and why.

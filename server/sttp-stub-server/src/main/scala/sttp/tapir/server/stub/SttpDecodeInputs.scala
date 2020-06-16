@@ -33,10 +33,11 @@ class SttpDecodeInputs(r: Request[_, _], segmentIndex: Int = 0) extends DecodeIn
         .map { case (k, vs) => (k, vs.map(_.v)) }
     )
 
-  override def bodyStream: Any = r.body match {
-    case StreamBody(s) => s
-    case _             => throw new UnsupportedOperationException("Trying to read streaming body from a non-streaming request")
-  }
+  override def bodyStream: Any =
+    r.body match {
+      case StreamBody(s) => s
+      case _             => throw new UnsupportedOperationException("Trying to read streaming body from a non-streaming request")
+    }
 
   override def serverRequest: ServerRequest = new SttpStubServerRequest(r)
 }

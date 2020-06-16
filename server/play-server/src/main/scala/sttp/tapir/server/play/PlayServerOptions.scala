@@ -37,8 +37,9 @@ object PlayServerOptions {
     noLog = _ => ()
   )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Logger => Unit = exOpt match {
-    case None     => log => log.debug(msg)
-    case Some(ex) => log => log.debug(s"$msg; exception: {}", ex)
-  }
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Logger => Unit =
+    exOpt match {
+      case None     => log => log.debug(msg)
+      case Some(ex) => log => log.debug(s"$msg; exception: {}", ex)
+    }
 }
