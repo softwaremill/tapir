@@ -32,7 +32,7 @@ val endpoint = sttp.tapir.endpoint
 
 implicit val backend = SttpBackendStub
   .apply(idMonad)
-  .whenRequestMatches(endpoint)
+  .whenRequestMatchesEndpoint(endpoint)
   .thenSuccess(ResponseWrapper(1.0))
 ```
 

@@ -25,7 +25,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
 
     implicit val backend = SttpBackendStub
       .apply(idMonad)
-      .whenRequestMatches(endpoint)
+      .whenRequestMatchesEndpoint(endpoint)
       .thenSuccess(ResponseWrapper(1.0))
     val response: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
 
@@ -43,7 +43,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
 
     implicit val backend = SttpBackendStub
       .apply(idMonad)
-      .whenRequestMatches(endpoint)
+      .whenRequestMatchesEndpoint(endpoint)
       .thenError(ResponseWrapper(1.0), StatusCode.BadRequest)
     val response: Identity[Response[Either[ResponseWrapper, Unit]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
 
@@ -75,7 +75,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
 
     implicit val backend = SttpBackendStub
       .apply(idMonad)
-      .whenRequestMatches(endpoint)
+      .whenRequestMatchesEndpoint(endpoint)
       .thenSuccess(ResponseWrapper(1.0))
     val response: Identity[Response[Either[Unit, ResponseWrapper]]] =
       endpoint.toSttpRequestUnsafe(uri"http://test.com").apply("id1" -> 11).send()
@@ -91,7 +91,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
 
     implicit val backend = SttpBackendStub
       .apply(idMonad)
-      .whenRequestMatches(endpoint)
+      .whenRequestMatchesEndpoint(endpoint)
       .thenSuccess("x")
     val response: Identity[Response[Either[Unit, String]]] =
       endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(()).send()
@@ -109,7 +109,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .post
       .out(jsonBody[ResponseWrapper])
 
-    implicit val backend: SttpBackendStub[Identity, Nothing] = SttpBackendStub
+    implicit val backend: SttpBackendStub[Identity, Nothing, NothingT] = SttpBackendStub
       .apply(idMonad)
       .whenInputMatches(endpoint) { amount => amount > 0 }
       .thenSuccess(ResponseWrapper(1.0))
@@ -138,7 +138,7 @@ class SttpStubServerTest extends FlatSpec with Matchers {
       .post
       .out(jsonBody[ResponseWrapper])
 
-    implicit val backend: SttpBackendStub[Identity, Nothing] = SttpBackendStub
+    implicit val backend: SttpBackendStub[Identity, Nothing, NothingT] = SttpBackendStub
       .apply(idMonad)
       .whenDecodingInputFailure(endpoint)
       .generic

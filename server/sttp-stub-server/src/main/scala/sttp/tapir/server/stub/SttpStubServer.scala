@@ -18,8 +18,8 @@ import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointOutput, RawBodyT
 
 trait SttpStubServer {
 
-  implicit class RichSttpBackendStub[F[_], S](val stub: SttpBackendStub[F, S]) {
-    def whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[_, E, O] = {
+  implicit class RichSttpBackendStub[F[_], S, WS_HANDLER[_]](val stub: SttpBackendStub[F, S, WS_HANDLER]) {
+    def whenRequestMatchesEndpoint[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[_, E, O] = {
       new TypeAwareWhenRequest(
         endpoint,
         new stub.WhenRequest(req =>
@@ -68,13 +68,17 @@ trait SttpStubServer {
 
     class TypeAwareWhenRequest[I, E, O](endpoint: Endpoint[I, E, O, _], whenRequest: stub.WhenRequest) {
 
-      def thenSuccess(response: O): SttpBackendStub[F, S] =
+      def thenSuccess(response: O): SttpBackendStub[F, S, WS_HANDLER] =
         thenRespondWithOutput(endpoint.output, response, StatusCode.Ok)
 
-      def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S] =
+      def thenError(errorResponse: E, statusCode: StatusCode): SttpBackendStub[F, S, WS_HANDLER] =
         thenRespondWithOutput(endpoint.errorOutput, errorResponse, statusCode)
 
-      private def thenRespondWithOutput(output: EndpointOutput[_], responseValue: Any, statusCode: StatusCode): SttpBackendStub[F, S] = {
+      private def thenRespondWithOutput(
+          output: EndpointOutput[_],
+          responseValue: Any,
+          statusCode: StatusCode
+      ): SttpBackendStub[F, S, WS_HANDLER] = {
         val encodeOutputBody = new EncodeOutputBody[Any] {
           override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): Any = v
           override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): Any = v

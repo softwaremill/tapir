@@ -32,14 +32,14 @@ class SttpClientTestUsingStub extends FunSuite with Matchers {
       verifyResponse: Response[Either[E, O]] => Unit
   ): Unit = {
     test(s"calling $endpoint with $inputValue should result in $outputValue") {
-      implicit val backend: SttpBackendStub[Identity, _] = outputValue match {
+      implicit val backend: SttpBackendStub[Identity, Nothing, NothingT] = outputValue match {
         case Left(e) =>
           SttpBackendStub(idMonad)
-            .whenRequestMatches(endpoint)
+            .whenRequestMatchesEndpoint(endpoint)
             .thenError(e, StatusCode.BadRequest)
         case Right(o) =>
           SttpBackendStub(idMonad)
-            .whenRequestMatches(endpoint)
+            .whenRequestMatchesEndpoint(endpoint)
             .thenSuccess(o)
       }
       val response: Identity[Response[Either[E, O]]] =
