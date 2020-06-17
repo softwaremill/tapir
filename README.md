@@ -59,7 +59,7 @@ val booksListingRoute: Route = booksListing.toRoute((bookListingLogic _).tupled)
 //
 
 import sttp.tapir.client.sttp._
-import com.softwaremill.sttp._
+import sttp.client._
 
 val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksListing
   .toSttpRequest(uri"http://localhost:8080")
