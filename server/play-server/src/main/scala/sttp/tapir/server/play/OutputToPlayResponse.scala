@@ -145,7 +145,7 @@ object OutputToPlayResponse {
       case MediaType.ApplicationOctetStream        => ContentTypes.BINARY
       case MediaType.ApplicationXWwwFormUrlencoded => ContentTypes.FORM
       case MediaType.MultipartFormData             => "multipart/form-data"
-      case _                                       => throw new IllegalArgumentException(s"Cannot parse content type: $format")
+      case m                                       => m.toString()
     }
 
     Option(result)
