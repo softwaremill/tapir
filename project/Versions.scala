@@ -14,7 +14,7 @@ object Versions {
   val catbird = "20.3.0"
   val sprayJson = "1.3.5"
   val scalaCheck = "1.14.3"
-  val scalaTest = "3.0.8"
+  val scalaTest = "3.2.0"
   val refined = "0.9.14"
   val enumeratum = "1.6.1"
   val zio = "1.0.0-RC20"
