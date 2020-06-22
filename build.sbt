@@ -111,7 +111,7 @@ lazy val tests: Project = (project in file("tests"))
       "io.circe" %% "circe-generic" % Versions.circe,
       "com.softwaremill.common" %% "tagging" % "2.2.1",
       scalaTest,
-      "com.softwaremill.macwire" %% "macros" % "2.3.6" % "provided"
+      "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided"
     ),
     libraryDependencies ++= loggerDependencies
   )
