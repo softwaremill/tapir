@@ -92,7 +92,9 @@ For redoc, use `RedocAkkaHttp`.
 
 For http4s, use the `SwaggerHttp4s` or `RedocHttp4s` classes.
 
-Note: `tapir-swagger-ui-*` modules rely on a file in the META-INF directory tree.
+### Using with sbt-assembly
+
+The `tapir-swagger-ui-*` modules rely on a file in the `META-INF` directory tree, to determine the version of the Swagger UI.
 You need to take additional measures if you package your application with [sbt-assembly](https://github.com/sbt/sbt-assembly)
 because the default merge strategy of the `assembly` task discards most artifacts in that directory.
 To avoid a `NullPointerException`, you need to include the following file explicitly:
