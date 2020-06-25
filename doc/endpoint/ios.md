@@ -14,6 +14,7 @@ For inputs, these are:
 * `path[T]`, which captures a path segment as an input parameter of type `T`
 * any string, which will be implicitly converted to a fixed path segment. Path segments can be combined with the `/` 
   method, and don't map to any values (have type `EndpointInput[Unit]`)
+* `pathFromStringBiMap(biMap)` and `pathFromBiMap(biMap, encode)`, for akka like `Map` matching (you can use `import sttp.tapir.bimap.syntax._` and `Map.toBiMap`)
 * `paths`, which maps to the whole remaining path as a `List[String]`
 * `query[T](name)` captures a query parameter with the given name
 * `queryParams` captures all query parameters, represented as `QueryParams`

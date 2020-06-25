@@ -15,14 +15,7 @@ import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
-  implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
-
-  def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
-    EndpointInput.PathCapture(None, implicitly, EndpointIO.Info.empty)
-  def path[T: Codec[String, *, TextPlain]](name: String): EndpointInput.PathCapture[T] =
-    EndpointInput.PathCapture(Some(name), implicitly, EndpointIO.Info.empty)
-  def paths: EndpointInput.PathsCapture[List[String]] = EndpointInput.PathsCapture(Codec.idPlain(), EndpointIO.Info.empty)
+trait Tapir extends TapirDerivedInputs with PathInputs with ModifyMacroSupport {
 
   def query[T: Codec[List[String], *, TextPlain]](name: String): EndpointInput.Query[T] =
     EndpointInput.Query(name, implicitly, EndpointIO.Info.empty)
