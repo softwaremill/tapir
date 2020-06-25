@@ -12,7 +12,7 @@ interpreted as:
 * a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.html).
 * documentation. Currently supported: [OpenAPI](openapi.html).
 
-Tapir is licensed under Apache2, the source code is [available of GitHub](https://github.com/softwaremill/tapir).
+Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 
 Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
 for a more detailed description of how tapir works!
