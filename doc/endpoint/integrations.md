@@ -35,7 +35,7 @@ hesitate to contribute your work!).
 
 ## Enumeratum integration
 
-The `tapir-enumartum` module provides schemas, validators and codecs for [Enumeratum](https://github.com/lloydmeta/enumeratum)
+The `tapir-enumeratum` module provides schemas, validators and codecs for [Enumeratum](https://github.com/lloydmeta/enumeratum)
 enumerations. To use, add the following dependency:
 
 ```scala
