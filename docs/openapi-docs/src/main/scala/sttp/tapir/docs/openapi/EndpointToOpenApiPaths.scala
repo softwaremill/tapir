@@ -56,7 +56,14 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       responses,
       if (e.info.deprecated) Some(true) else None,
       operationSecurity(e),
-      List.empty
+      e.info.servers
+        .map { server =>
+          Server(
+            server.url,
+            server.description,
+            server.variables.map(_.map { case (k, v) => k -> ServerVariable(v.`enum`, v.default, v.description) }.toListMap)
+          )
+        }.toList
     )
   }
 

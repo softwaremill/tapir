@@ -786,6 +786,40 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should match the expected yaml for overridden server") {
+    val expectedYaml = loadYaml("expected_with_overridden_server.yml")
+
+    val api = Info(
+      "Fruits",
+      "1.0"
+    )
+    val commonServers = List(
+      Server("https://{username}.example.com:{port}/{basePath}")
+        .description("The production API server")
+        .variables(
+          "username" -> ServerVariable(None, "demo", Some("Username")),
+          "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> ServerVariable(None, "v2", None)
+        )
+    )
+
+    val overriddenServers = List(
+      EndpointServer("https://secured.example.com:{port}/{basePath}")
+        .description("The super secured production API server")
+        .variables(
+          "port" -> EndpointServer.Variable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> EndpointServer.Variable(None, "v2", None)
+        )
+    )
+
+    val actualYaml = in_query_query_out_string
+      .servers(overriddenServers)
+      .toOpenAPI(api).servers(commonServers).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should match the expected yaml for multiple servers") {
     val expectedYaml = loadYaml("expected_multiple_servers.yml")
 
