@@ -13,7 +13,7 @@ import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
+import sttp.tapir.openapi.{Contact, Info, License, Server => OServer, ServerVariable => OServerVariable}
 import sttp.tapir.tests._
 
 import scala.collection.immutable.ListMap
@@ -771,12 +771,12 @@ class VerifyYamlTest extends FunSuite with Matchers {
       "1.0"
     )
     val servers = List(
-      Server("https://{username}.example.com:{port}/{basePath}")
+      OServer("https://{username}.example.com:{port}/{basePath}")
         .description("The production API server")
         .variables(
-          "username" -> ServerVariable(None, "demo", Some("Username")),
-          "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
-          "basePath" -> ServerVariable(None, "v2", None)
+          "username" -> OServerVariable(None, "demo", Some("Username")),
+          "port" -> OServerVariable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> OServerVariable(None, "v2", None)
         )
     )
 
@@ -794,21 +794,21 @@ class VerifyYamlTest extends FunSuite with Matchers {
       "1.0"
     )
     val commonServers = List(
-      Server("https://{username}.example.com:{port}/{basePath}")
+      OServer("https://{username}.example.com:{port}/{basePath}")
         .description("The production API server")
         .variables(
-          "username" -> ServerVariable(None, "demo", Some("Username")),
-          "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
-          "basePath" -> ServerVariable(None, "v2", None)
+          "username" -> OServerVariable(None, "demo", Some("Username")),
+          "port" -> OServerVariable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> OServerVariable(None, "v2", None)
         )
     )
 
     val overriddenServers = List(
-      EndpointServer("https://secured.example.com:{port}/{basePath}")
+      Server("https://secured.example.com:{port}/{basePath}")
         .description("The super secured production API server")
         .variables(
-          "port" -> EndpointServer.Variable(Some(List("8443", "443")), "8443", None),
-          "basePath" -> EndpointServer.Variable(None, "v2", None)
+          "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> ServerVariable(None, "v2", None)
         )
     )
 
@@ -828,9 +828,9 @@ class VerifyYamlTest extends FunSuite with Matchers {
       "1.0"
     )
     val servers = List(
-      Server("https://development.example.com/v1", Some("Development server"), None),
-      Server("https://staging.example.com/v1", Some("Staging server"), None),
-      Server("https://api.example.com/v1", Some("Production server"), None)
+      OServer("https://development.example.com/v1", Some("Development server"), None),
+      OServer("https://staging.example.com/v1", Some("Staging server"), None),
+      OServer("https://api.example.com/v1", Some("Production server"), None)
     )
 
     val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml

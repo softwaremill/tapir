@@ -5,7 +5,7 @@ import sttp.tapir._
 import sttp.tapir.docs.openapi.schema.ObjectSchemas
 import sttp.tapir.internal._
 import sttp.tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
-import sttp.tapir.openapi.{Schema => OSchema, SchemaType => OSchemaType, _}
+import sttp.tapir.openapi.{Schema => OSchema, SchemaType => OSchemaType, Server => OServer, ServerVariable => OServerVariable, _}
 
 import scala.collection.immutable.ListMap
 
@@ -58,10 +58,12 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       operationSecurity(e),
       e.info.servers
         .map { server =>
-          Server(
+          OServer(
             server.url,
             server.description,
-            server.variables.map(_.map { case (k, v) => k -> ServerVariable(v.`enum`, v.default, v.description) }.toListMap)
+            server.variables.map(_.map {
+              case (k, v) => k -> OServerVariable(v.`enum`, v.default, v.description)
+            }.toListMap)
           )
         }.toList
     )
