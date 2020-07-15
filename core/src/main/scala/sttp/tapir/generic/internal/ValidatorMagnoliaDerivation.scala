@@ -10,7 +10,7 @@ trait ValidatorMagnoliaDerivation {
 
   def combine[T](ctx: ReadOnlyCaseClass[Validator, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
     Validator.Product(ctx.parameters.map { p =>
-      p.label -> new Validator.ProductField[T] {
+      genericDerivationConfig.toLowLevelName(p.label) -> new Validator.ProductField[T] {
         override type FieldType = p.PType
         override def name: Validator.FieldName = Validator.FieldName(p.label, genericDerivationConfig.toLowLevelName(p.label))
         override def get(t: T): FieldType = p.dereference(t)

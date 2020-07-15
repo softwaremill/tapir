@@ -10,7 +10,7 @@ import sttp.tapir._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
-import sttp.tapir.generic.Derived
+import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
@@ -805,6 +805,17 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render field validator when using different naming configuration") {
+    val expectedYaml = loadYaml("expected_validator_with_custom_naming.yml")
+
+    implicit val customConfiguration: Configuration = Configuration.default.withSnakeCaseMemberNames
+    val baseEndpoint = endpoint.post.in(jsonBody[MyClass])
+    val actualYaml = baseEndpoint.toOpenAPI(Info("Entities", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
@@ -832,3 +843,5 @@ case class ObjectWithList(data: List[FruitAmount])
 sealed trait Clause
 case class Expression(v: String) extends Clause
 case class Not(not: Clause) extends Clause
+
+case class MyClass(myAttribute: Int)
