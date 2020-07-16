@@ -332,7 +332,10 @@ class VerifyYamlTest extends FunSuite with Matchers {
     import SchemaType._
     @silent("never used")
     implicit val customFruitAmountSchema: Schema[FruitAmount] = Schema(
-      SProduct(SObjectInfo("tapir.tests.FruitAmount", Nil), List(("fruit", Schema(SString)), ("amount", Schema(SInteger).format("int32"))))
+      SProduct(
+        SObjectInfo("tapir.tests.FruitAmount", Nil),
+        List((FieldName("fruit"), Schema(SString)), (FieldName("amount"), Schema(SInteger).format("int32")))
+      )
     ).description("Amount of fruits")
 
     val actualYaml = endpoint.post
