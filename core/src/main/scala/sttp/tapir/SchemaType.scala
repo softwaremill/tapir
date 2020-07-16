@@ -33,8 +33,8 @@ object SchemaType {
   sealed trait SObject extends SchemaType {
     def info: SObjectInfo
   }
-  case class SProduct(info: SObjectInfo, fields: Iterable[(String, Schema[_])]) extends SObject {
-    def required: Iterable[String] =
+  case class SProduct(info: SObjectInfo, fields: Iterable[(FieldName, Schema[_])]) extends SObject {
+    def required: Iterable[FieldName] =
       fields.collect {
         case (f, s) if !s.isOptional => f
       }

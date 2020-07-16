@@ -66,7 +66,7 @@ case class Schema[T](
           case s @ SProduct(_, fields) =>
             s.copy(fields = fields.toList.map {
               case field @ (fieldName, fieldSchema) =>
-                if (fieldName == f) (fieldName, fieldSchema.modifyAtPath(fs, modify)) else field
+                if (fieldName.name == f) (fieldName, fieldSchema.modifyAtPath(fs, modify)) else field
             })
           case s @ SOpenProduct(_, valueSchema) if f == Schema.ModifyCollectionElements =>
             s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))

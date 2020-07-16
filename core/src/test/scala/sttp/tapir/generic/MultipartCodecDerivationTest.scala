@@ -7,7 +7,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.SchemaType._
 import sttp.tapir.util.CompileUtil
-import sttp.tapir.{DecodeResult, MultipartCodec, RawPart, Schema, Validator}
+import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, Validator}
 
 @silent("discarded")
 @silent("never used")
@@ -68,7 +68,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     codec.schema.map(_.schemaType) shouldBe Some(
       SProduct(
         SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"),
-        List(("f1", implicitly[Schema[String]]), ("f2", implicitly[Schema[Int]]))
+        List((FieldName("f1"), implicitly[Schema[String]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
     )
   }
@@ -82,7 +82,7 @@ class MultipartCodecDerivationTest extends FlatSpec with Matchers {
     codec.schema.map(_.schemaType) shouldBe Some(
       SProduct(
         SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
-        List(("f1", implicitly[Schema[File]]), ("f2", implicitly[Schema[Int]]))
+        List((FieldName("f1"), implicitly[Schema[File]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
     )
   }
