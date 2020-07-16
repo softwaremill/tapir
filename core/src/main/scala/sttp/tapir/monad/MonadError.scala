@@ -11,7 +11,7 @@ trait MonadError[F[_]] {
   def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2]
 
   def error[T](t: Throwable): F[T]
-  def handleError[T](rt: => F[T])(h: PartialFunction[Throwable, F[T]]): F[T]
+  def handleError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T]
 }
 
 object MonadError {
@@ -39,5 +39,5 @@ class FutureMonadError(implicit ec: ExecutionContext) extends MonadError[Future]
   override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
   override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)
   override def error[T](t: Throwable): Future[T] = Future.failed(t)
-  override def handleError[T](rt: => Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.recoverWith(h)
+  override def handleError[T](rt: Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.recoverWith(h)
 }

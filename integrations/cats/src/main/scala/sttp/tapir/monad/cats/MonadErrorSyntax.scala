@@ -14,7 +14,7 @@ trait MonadErrorSyntax {
 
       override def error[T](t: Throwable): G[T] = fk(mef.error(t))
 
-      override def handleError[T](rt: => G[T])(h: PartialFunction[Throwable, G[T]]): G[T] =
+      override def handleError[T](rt: G[T])(h: PartialFunction[Throwable, G[T]]): G[T] =
         fk(mef.handleError(gK(rt)) {
           case t if h.isDefinedAt(t) => gK(h(t))
         })
