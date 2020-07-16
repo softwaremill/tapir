@@ -2,6 +2,7 @@ package sttp.tapir
 
 import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.SchemaType._
+import sttp.tapir.generic.{Configuration, D}
 
 class SchemaMacroTest extends FlatSpec with Matchers {
   behavior of "apply modification"
@@ -111,6 +112,15 @@ class SchemaMacroTest extends FlatSpec with Matchers {
     )
 
     implicitly[Schema[Person]].setDescription(_.age, "test") shouldBe expected
+  }
+
+  it should "work with custom naming configuration" in {
+    implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
+    val actual = implicitly[Schema[D]].setDescription(_.someFieldName, "something")
+    actual.schemaType shouldBe SProduct(
+      SObjectInfo("sttp.tapir.generic.D"),
+      List((FieldName("someFieldName", "some-field-name"), Schema(SString).description("something")))
+    )
   }
 }
 
