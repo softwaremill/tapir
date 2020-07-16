@@ -129,6 +129,6 @@ package object finatra {
     override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
     override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)
     override def error[T](t: Throwable): Future[T] = Future.exception(t)
-    override protected def handleWrappedError[T](rt: Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.rescue(h)
+    override def handleError[T](rt: => Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.rescue(h)
   }
 }

@@ -8,5 +8,5 @@ private[ztapir] class ZIOMonadError[R] extends MonadError[RIO[R, *]] {
   override def map[T, T2](fa: RIO[R, T])(f: T => T2): RIO[R, T2] = fa.map(f)
   override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
   override def error[T](t: Throwable): RIO[R, T] = RIO.fail(t)
-  override protected def handleWrappedError[T](rt: RIO[R, T])(h: PartialFunction[Throwable, RIO[R, T]]): RIO[R, T] = rt.catchSome(h)
+  override def handleError[T](rt: => RIO[R, T])(h: PartialFunction[Throwable, RIO[R, T]]): RIO[R, T] = rt.catchSome(h)
 }
