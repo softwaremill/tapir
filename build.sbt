@@ -109,7 +109,7 @@ lazy val tests: Project = (project in file("tests"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-generic" % Versions.circe,
-      "com.softwaremill.common" %% "tagging" % "2.2.1",
+      "com.softwaremill.common" %% "tagging" % "2.2.2",
       scalaTest,
       "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided"
     ),

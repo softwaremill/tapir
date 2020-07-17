@@ -3,7 +3,7 @@ object Versions {
   val catsEffect = "2.1.4"
   val circe = "0.13.0"
   val circeYaml = "0.13.1"
-  val sttp = "2.2.1"
+  val sttp = "2.2.2"
   val akkaHttp = "10.1.12"
   val akkaStreams = "2.6.8"
   val swaggerUi = "3.28.0"
