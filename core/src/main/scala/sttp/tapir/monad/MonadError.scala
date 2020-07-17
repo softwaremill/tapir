@@ -11,14 +11,7 @@ trait MonadError[F[_]] {
   def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2]
 
   def error[T](t: Throwable): F[T]
-  protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T]
-  def handleError[T](rt: => F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = {
-    Try(rt) match {
-      case Success(v)                     => handleWrappedError(v)(h)
-      case Failure(e) if h.isDefinedAt(e) => h(e)
-      case Failure(e)                     => error(e)
-    }
-  }
+  def handleError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T]
 }
 
 object MonadError {
@@ -26,9 +19,18 @@ object MonadError {
       f: I => F[O]
   )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => I => F[Either[E, O]] = { implicit monad => i =>
     import sttp.tapir.monad.syntax._
-    monad.handleError(f(i).map(Right(_): Either[E, O])) {
-      case e if eClassTag.runtimeClass.isInstance(e) => (Left(e.asInstanceOf[E]): Either[E, O]).unit
+    Try(f(i).map(Right(_): Either[E, O])) match {
+      case Success(value) =>
+        monad.handleError(value) {
+          case e if eClassTag.runtimeClass.isInstance(e) => wrapException(e)
+        }
+      case Failure(exception) if eClassTag.runtimeClass.isInstance(exception) => wrapException(exception)
+      case Failure(exception)                                                 => monad.error(exception)
     }
+  }
+
+  private def wrapException[F[_], O, E, I](exception: Throwable)(implicit me: MonadError[F]): F[Either[E, O]] = {
+    me.unit(Left(exception.asInstanceOf[E]): Either[E, O])
   }
 }
 
@@ -37,5 +39,5 @@ class FutureMonadError(implicit ec: ExecutionContext) extends MonadError[Future]
   override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
   override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)
   override def error[T](t: Throwable): Future[T] = Future.failed(t)
-  override protected def handleWrappedError[T](rt: Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.recoverWith(h)
+  override def handleError[T](rt: Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.recoverWith(h)
 }

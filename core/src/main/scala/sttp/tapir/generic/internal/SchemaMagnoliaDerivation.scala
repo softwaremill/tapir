@@ -4,7 +4,7 @@ import com.github.ghik.silencer.silent
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
-import sttp.tapir.{Schema, SchemaType}
+import sttp.tapir.{FieldName, Schema, SchemaType}
 import SchemaMagnoliaDerivation.deriveInProgress
 
 import scala.collection.mutable
@@ -28,7 +28,7 @@ trait SchemaMagnoliaDerivation {
             Schema[T](
               SProduct(
                 typeNameToObjectInfo(ctx.typeName),
-                ctx.parameters.map(p => (genericDerivationConfig.toLowLevelName(p.label), p.typeclass)).toList
+                ctx.parameters.map(p => (FieldName(p.label, genericDerivationConfig.toLowLevelName(p.label)), p.typeclass)).toList
               )
             )
           }

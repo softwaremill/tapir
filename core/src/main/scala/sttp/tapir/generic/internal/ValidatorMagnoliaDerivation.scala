@@ -2,7 +2,7 @@ package sttp.tapir.generic.internal
 
 import com.github.ghik.silencer.silent
 import magnolia.{Magnolia, ReadOnlyCaseClass, SealedTrait}
-import sttp.tapir.{Validator, generic}
+import sttp.tapir.{FieldName, Validator, generic}
 import sttp.tapir.generic.Configuration
 
 trait ValidatorMagnoliaDerivation {
@@ -12,7 +12,7 @@ trait ValidatorMagnoliaDerivation {
     Validator.Product(ctx.parameters.map { p =>
       p.label -> new Validator.ProductField[T] {
         override type FieldType = p.PType
-        override def name: Validator.FieldName = Validator.FieldName(p.label, genericDerivationConfig.toLowLevelName(p.label))
+        override def name: FieldName = FieldName(p.label, genericDerivationConfig.toLowLevelName(p.label))
         override def get(t: T): FieldType = p.dereference(t)
         override def validator: Typeclass[FieldType] = p.typeclass
       }

@@ -6,7 +6,7 @@ The `tapir-cats` module contains schema, validator and codec instances for some 
 datatypes:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.16.1"
+"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.16.3"
 ```
 
 See the `sttp.tapir.codec.cats.TapirCodecCats` trait or `import sttp.tapir.codec.cats._` to bring the implicit values 
@@ -18,7 +18,7 @@ If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` mo
 validators for `T Refined P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.16.1"
+"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.16.3"
 ```
 
 You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
@@ -35,11 +35,11 @@ hesitate to contribute your work!).
 
 ## Enumeratum integration
 
-The `tapir-enumartum` module provides schemas, validators and codecs for [Enumeratum](https://github.com/lloydmeta/enumeratum)
+The `tapir-enumeratum` module provides schemas, validators and codecs for [Enumeratum](https://github.com/lloydmeta/enumeratum)
 enumerations. To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.16.1"
+"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.16.3"
 ```
 
 Then, `import sttp.tapir.codec.enumeratum`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.

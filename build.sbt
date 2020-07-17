@@ -111,7 +111,7 @@ lazy val tests: Project = (project in file("tests"))
       "io.circe" %% "circe-generic" % Versions.circe,
       "com.softwaremill.common" %% "tagging" % "2.2.1",
       scalaTest,
-      "com.softwaremill.macwire" %% "macros" % "2.3.6" % "provided"
+      "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided"
     ),
     libraryDependencies ++= loggerDependencies
   )
@@ -227,7 +227,7 @@ lazy val jsoniterScala: Project = (project in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.4.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.5.0",
       scalaTest % Test
     )
   )
@@ -480,7 +480,7 @@ lazy val playground: Project = (project in file("playground"))
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-      "io.swagger" % "swagger-annotations" % "1.6.1",
+      "io.swagger" % "swagger-annotations" % "1.6.2",
       "io.circe" %% "circe-generic-extras" % "0.13.0",
       "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp
     ),

@@ -5,9 +5,7 @@ import java.math.{BigDecimal => JBigDecimal}
 import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType.{SObjectInfo, SProduct}
 import sttp.tapir.util.CompileUtil
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema, Validator}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, FieldName, Schema, Validator}
 
 @silent("never used")
 class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
@@ -78,7 +76,7 @@ class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
     codec.schema.map(_.schemaType) shouldBe Some(
       SProduct(
         SObjectInfo("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
-        List(("f1", implicitly[Schema[String]]), ("f2", implicitly[Schema[Int]]))
+        List((FieldName("f1"), implicitly[Schema[String]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
     )
   }

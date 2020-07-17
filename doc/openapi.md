@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.16.1"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.16.1"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.16.3"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.16.3"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -63,17 +63,17 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 [Redoc](https://github.com/Redocly/redoc):
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.16.1"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.16.1"
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.16.1"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.16.1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.16.3"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.16.3"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.16.3"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.16.3"
 ```
 
 Note: `tapir-swagger-ui-akka-http` transitively pulls some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.16.1" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.16.3" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Usage example for akka-http:
@@ -91,3 +91,20 @@ new SwaggerAkka(docsAsYaml).routes
 For redoc, use `RedocAkkaHttp`. 
 
 For http4s, use the `SwaggerHttp4s` or `RedocHttp4s` classes.
+
+### Using with sbt-assembly
+
+The `tapir-swagger-ui-*` modules rely on a file in the `META-INF` directory tree, to determine the version of the Swagger UI.
+You need to take additional measures if you package your application with [sbt-assembly](https://github.com/sbt/sbt-assembly)
+because the default merge strategy of the `assembly` task discards most artifacts in that directory.
+To avoid a `NullPointerException`, you need to include the following file explicitly:
+
+```scala
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", "maven", "org.webjars", "swagger-ui", "pom.properties") =>
+    MergeStrategy.singleOrError
+  case x =>
+    val oldStrategy = (assemblyMergeStrategy in assembly).value
+    oldStrategy(x)
+}
+```
