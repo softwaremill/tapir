@@ -18,12 +18,12 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case p @ TSchemaType.SProduct(_, fields) =>
         Right(
           OSchema(SchemaType.Object).copy(
-            required = p.required.toList,
+            required = p.required.map(_.lowLevelName).toList,
             properties = fields.map {
               case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _)) =>
-                fieldName -> Left(schemaReferenceMapper.map(s.info))
+                fieldName.lowLevelName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName)))
+                fieldName.lowLevelName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name)))
             }.toListMap
           )
         )

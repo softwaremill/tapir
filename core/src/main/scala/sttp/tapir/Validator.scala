@@ -166,7 +166,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     }
   }
 
-  case class FieldName(name: String, lowLevelName: String)
   trait ProductField[T] {
     type FieldType
     def name: FieldName
@@ -282,6 +281,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   implicit def openProduct[T: Validator]: Validator[Map[String, T]] = OpenProduct(implicitly[Validator[T]])
 }
 
-case class ValidationError[T](validator: Validator.Primitive[T], invalidValue: T, path: List[Validator.FieldName] = Nil) {
-  def prependPath(f: Validator.FieldName): ValidationError[T] = copy(path = f :: path)
+case class ValidationError[T](validator: Validator.Primitive[T], invalidValue: T, path: List[FieldName] = Nil) {
+  def prependPath(f: FieldName): ValidationError[T] = copy(path = f :: path)
 }

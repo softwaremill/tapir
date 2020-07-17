@@ -5,7 +5,7 @@ import java.math.{BigDecimal => JBigDecimal}
 import com.github.ghik.silencer.silent
 import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.SchemaType._
-import sttp.tapir.{SchemaType, Schema}
+import sttp.tapir.{FieldName, Schema, SchemaType}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
@@ -61,7 +61,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
     Schema[A](
       SProduct(
         SObjectInfo("sttp.tapir.generic.A"),
-        List(("f1", stringSchema), ("f2", intSchema), ("f3", stringSchema.asOptional))
+        List((FieldName("f1"), stringSchema), (FieldName("f2"), intSchema), (FieldName("f3"), stringSchema.asOptional))
       )
     )
 
@@ -71,23 +71,24 @@ class SchemaGenericTest extends FlatSpec with Matchers {
 
   it should "find schema for a simple case class" in {
     implicitly[Schema[A]] shouldBe expectedASchema
-    implicitly[Schema[A]].schemaType.asInstanceOf[SProduct].required shouldBe List("f1", "f2")
+    implicitly[Schema[A]].schemaType.asInstanceOf[SProduct].required shouldBe List(FieldName("f1"), FieldName("f2"))
   }
 
-  val expectedDSchema: SProduct = SProduct(SObjectInfo("sttp.tapir.generic.D"), List(("someFieldName", stringSchema)))
+  val expectedDSchema: SProduct =
+    SProduct(SObjectInfo("sttp.tapir.generic.D"), List((FieldName("someFieldName"), stringSchema)))
 
   it should "find schema for a simple case class and use identity naming transformation" in {
     implicitly[Schema[D]].schemaType shouldBe expectedDSchema
   }
 
   it should "find schema for a simple case class and use snake case naming transformation" in {
-    val expectedSnakeCaseNaming = expectedDSchema.copy(fields = List(("some_field_name", stringSchema)))
+    val expectedSnakeCaseNaming = expectedDSchema.copy(fields = List((FieldName("someFieldName", "some_field_name"), stringSchema)))
     implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
     implicitly[Schema[D]].schemaType shouldBe expectedSnakeCaseNaming
   }
 
   it should "find schema for a simple case class and use kebab case naming transformation" in {
-    val expectedKebabCaseNaming = expectedDSchema.copy(fields = List(("some-field-name", stringSchema)))
+    val expectedKebabCaseNaming = expectedDSchema.copy(fields = List((FieldName("someFieldName","some-field-name"), stringSchema)))
     implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
     implicitly[Schema[D]].schemaType shouldBe expectedKebabCaseNaming
   }
@@ -95,14 +96,14 @@ class SchemaGenericTest extends FlatSpec with Matchers {
   it should "find schema for a nested case class" in {
     implicitly[Schema[B]].schemaType shouldBe SProduct(
       SObjectInfo("sttp.tapir.generic.B"),
-      List(("g1", stringSchema), ("g2", expectedASchema))
+      List((FieldName("g1"), stringSchema), (FieldName("g2"), expectedASchema))
     )
   }
 
   it should "find schema for case classes with collections" in {
     implicitly[Schema[C]].schemaType shouldBe SProduct(
       SObjectInfo("sttp.tapir.generic.C"),
-      List(("h1", stringSchema.asArrayElement), ("h2", intSchema.asOptional))
+      List((FieldName("h1"), stringSchema.asArrayElement), (FieldName("h2"), intSchema.asOptional))
     )
     implicitly[Schema[C]].schemaType.asInstanceOf[SProduct].required shouldBe Nil
   }
@@ -111,7 +112,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
     val schema = implicitly[Schema[F]].schemaType
     schema shouldBe SProduct(
       SObjectInfo("sttp.tapir.generic.F"),
-      List(("f1", Schema(SRef(SObjectInfo("sttp.tapir.generic.F"))).asArrayElement), ("f2", intSchema))
+      List((FieldName("f1"), Schema(SRef(SObjectInfo("sttp.tapir.generic.F"))).asArrayElement), (FieldName("f2"), intSchema))
     )
   }
 
@@ -119,7 +120,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
     val expected =
       SProduct(
         SObjectInfo("sttp.tapir.generic.F"),
-        List(("f1", Schema(SRef(SObjectInfo("sttp.tapir.generic.F"))).asArrayElement), ("f2", intSchema))
+        List((FieldName("f1"), Schema(SRef(SObjectInfo("sttp.tapir.generic.F"))).asArrayElement), (FieldName("f2"), intSchema))
       )
 
     val count = 100
@@ -138,12 +139,15 @@ class SchemaGenericTest extends FlatSpec with Matchers {
   it should "use custom schema for custom types" in {
     implicit val scustom: Schema[Custom] = Schema[Custom](SchemaType.SString)
     val schema = implicitly[Schema[G]].schemaType
-    schema shouldBe SProduct(SObjectInfo("sttp.tapir.generic.G"), List(("f1", intSchema), ("f2", stringSchema)))
+    schema shouldBe SProduct(
+      SObjectInfo("sttp.tapir.generic.G"),
+      List((FieldName("f1"), intSchema), (FieldName("f2"), stringSchema))
+    )
   }
 
   it should "derive schema for parametrised type classes" in {
     val schema = implicitly[Schema[H[A]]].schemaType
-    schema shouldBe SProduct(SObjectInfo("sttp.tapir.generic.H", List("A")), List(("data", expectedASchema)))
+    schema shouldBe SProduct(SObjectInfo("sttp.tapir.generic.H", List("A")), List((FieldName("data"), expectedASchema)))
   }
 
   it should "find schema for map" in {
@@ -155,7 +159,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
     val schema = implicitly[Schema[Map[String, D]]].schemaType
     schema shouldBe SOpenProduct(
       SObjectInfo("Map", List("D")),
-      Schema(SProduct(SObjectInfo("sttp.tapir.generic.D"), List(("someFieldName", stringSchema))))
+      Schema(SProduct(SObjectInfo("sttp.tapir.generic.D"), List((FieldName("someFieldName"), stringSchema))))
     )
   }
 
@@ -166,7 +170,12 @@ class SchemaGenericTest extends FlatSpec with Matchers {
       Schema(
         SProduct(
           SObjectInfo("sttp.tapir.generic.H", List("D")),
-          List(("data", Schema(SProduct(SObjectInfo("sttp.tapir.generic.D"), List(("someFieldName", stringSchema))))))
+          List(
+            (
+              FieldName("data"),
+              Schema(SProduct(SObjectInfo("sttp.tapir.generic.D"), List((FieldName("someFieldName"), stringSchema))))
+            )
+          )
         )
       )
     )
@@ -186,8 +195,8 @@ class SchemaGenericTest extends FlatSpec with Matchers {
           SProduct(
             SObjectInfo("sttp.tapir.generic.Edge"),
             List(
-              "id" -> longSchema,
-              "source" ->
+              FieldName("id") -> longSchema,
+              FieldName("source") ->
                 Schema(
                   SCoproduct(
                     SObjectInfo("sttp.tapir.generic.Node", List.empty),
@@ -196,7 +205,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
                       Schema(
                         SProduct(
                           SObjectInfo("sttp.tapir.generic.SimpleNode"),
-                          List("id" -> longSchema)
+                          List(FieldName("id") -> longSchema)
                         )
                       )
                     ),
@@ -209,7 +218,7 @@ class SchemaGenericTest extends FlatSpec with Matchers {
         Schema(
           SProduct(
             SObjectInfo("sttp.tapir.generic.SimpleNode"),
-            List("id" -> longSchema)
+            List(FieldName("id") -> longSchema)
           )
         )
       ),
@@ -237,16 +246,16 @@ class SchemaGenericTest extends FlatSpec with Matchers {
     schema.schemaType shouldBe SProduct(
       SObjectInfo("sttp.tapir.generic.SchemaGenericTest.<local SchemaGenericTest>.Test1"),
       List(
-        ("f1", implicitly[Schema[String]]),
-        ("f2", implicitly[Schema[Byte]]),
-        ("f3", implicitly[Schema[Short]]),
-        ("f4", implicitly[Schema[Int]]),
-        ("f5", implicitly[Schema[Long]]),
-        ("f6", implicitly[Schema[Float]]),
-        ("f7", implicitly[Schema[Double]]),
-        ("f8", implicitly[Schema[Boolean]]),
-        ("f9", implicitly[Schema[BigDecimal]]),
-        ("f10", implicitly[Schema[JBigDecimal]])
+        (FieldName("f1"), implicitly[Schema[String]]),
+        (FieldName("f2"), implicitly[Schema[Byte]]),
+        (FieldName("f3"), implicitly[Schema[Short]]),
+        (FieldName("f4"), implicitly[Schema[Int]]),
+        (FieldName("f5"), implicitly[Schema[Long]]),
+        (FieldName("f6"), implicitly[Schema[Float]]),
+        (FieldName("f7"), implicitly[Schema[Double]]),
+        (FieldName("f8"), implicitly[Schema[Boolean]]),
+        (FieldName("f9"), implicitly[Schema[BigDecimal]]),
+        (FieldName("f10"), implicitly[Schema[JBigDecimal]])
       )
     )
   }
@@ -257,10 +266,14 @@ class SchemaGenericTest extends FlatSpec with Matchers {
       Schema(
         SProduct(
           SObjectInfo("sttp.tapir.generic.IOpt", List()),
-          List(("i1", Schema(SRef(SObjectInfo("sttp.tapir.generic.IOpt")), isOptional = true)), ("i2", intSchema))
+          List(
+            (FieldName("i1"), Schema(SRef(SObjectInfo("sttp.tapir.generic.IOpt")), isOptional = true)),
+            (FieldName("i2"), intSchema)
+          )
         )
       )
-    val expectedJSchema: Schema[JOpt] = Schema(SProduct(SObjectInfo("sttp.tapir.generic.JOpt"), List(("data", expectedISchema.asOptional))))
+    val expectedJSchema: Schema[JOpt] =
+      Schema(SProduct(SObjectInfo("sttp.tapir.generic.JOpt"), List((FieldName("data"), expectedISchema.asOptional))))
 
     implicitly[Schema[IOpt]] shouldBe expectedISchema
     implicitly[Schema[JOpt]] shouldBe expectedJSchema
@@ -271,11 +284,14 @@ class SchemaGenericTest extends FlatSpec with Matchers {
       Schema(
         SProduct(
           SObjectInfo("sttp.tapir.generic.IList", List()),
-          List(("i1", Schema(SRef(SObjectInfo("sttp.tapir.generic.IList"))).asArrayElement), ("i2", intSchema))
+          List(
+            (FieldName("i1"), Schema(SRef(SObjectInfo("sttp.tapir.generic.IList"))).asArrayElement),
+            (FieldName("i2"), intSchema)
+          )
         )
       )
     val expectedJSchema =
-      Schema(SProduct(SObjectInfo("sttp.tapir.generic.JList"), List(("data", expectedISchema.asArrayElement))))
+      Schema(SProduct(SObjectInfo("sttp.tapir.generic.JList"), List((FieldName("data"), expectedISchema.asArrayElement))))
 
     implicitly[Schema[IList]] shouldBe expectedISchema
     implicitly[Schema[JList]] shouldBe expectedJSchema
