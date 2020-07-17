@@ -63,6 +63,8 @@ lazy val rootProject = (project in file("."))
     swaggerUiHttp4s,
     redocHttp4s,
     swaggerUiFinatra,
+    swaggerUiPlay,
+    redocPlay,
     serverTests,
     akkaHttpServer,
     http4sServer,
@@ -321,6 +323,24 @@ lazy val swaggerUiFinatra: Project = (project in file("docs/swagger-ui-finatra")
     )
   )
   .settings(only2_12settings)
+
+lazy val swaggerUiPlay: Project = (project in file("docs/swagger-ui-play"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-swagger-ui-play",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play" % Versions.playServer,
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    )
+  )
+
+lazy val redocPlay: Project = (project in file("docs/redoc-play"))
+  .enablePlugins(SbtTwirl)
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-redoc-play",
+    libraryDependencies += "com.typesafe.play" %% "play" % Versions.playServer
+  )
 
 // server
 
