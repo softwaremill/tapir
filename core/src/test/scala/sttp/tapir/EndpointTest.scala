@@ -4,6 +4,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 import sttp.tapir.util.CompileUtil
+import sttp.tapir.internal._
 
 import scala.concurrent.Future
 
@@ -202,7 +203,7 @@ class EndpointTest extends FlatSpec with Matchers {
     }
   }
 
-  it should "compile endpoint descriptions providing partial server logic using serverLogicForCurrent" in {
+  "compile" should "work for endpoint descriptions providing partial server logic using serverLogicForCurrent" in {
     case class User1(x: String, y: Int)
     case class User2(z: Double)
     case class Result(u1: User1, u2: User2, a: String)
@@ -222,7 +223,7 @@ class EndpointTest extends FlatSpec with Matchers {
       }
   }
 
-  it should "compile endpoint descriptions providing partial server logic using serverLogicPart" in {
+  "compile" should "work for endpoint descriptions providing partial server logic using serverLogicPart" in {
     case class User1(x: String)
     case class User2(x: Int)
     case class Result(u1: User1, u2: User2, d: Double)
@@ -241,5 +242,27 @@ class EndpointTest extends FlatSpec with Matchers {
       .andThen {
         case ((user1, user2), d) => Future.successful(Right(Result(user1, user2, d)): Either[String, Result])
       }
+  }
+
+  "PartialServerEndpoint" should "include all inputs when recovering the endpoint" in {
+    val pe: PartialServerEndpoint[String, Unit, Int, Unit, Nothing, Future] =
+      endpoint
+        .in("secure")
+        .in(query[String]("token"))
+        .errorOut(plainBody[Int])
+        .serverLogicForCurrent(_ => Future.successful(Right(""): Either[Int, String]))
+
+    val e = pe.get
+      .in("hello")
+      .in(query[String]("salutation"))
+      .out(stringBody)
+      .endpoint
+
+    val basicInputs = e.input.asVectorOfBasicInputs()
+    basicInputs.filter {
+      case EndpointInput.Query("token", _, _)      => true
+      case EndpointInput.Query("salutation", _, _) => true
+      case _                                       => false
+    } should have size (2)
   }
 }
