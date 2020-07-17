@@ -1,18 +1,18 @@
 openapi: 3.0.1
 info:
-  title: Entities
+  title: Examples
   version: '1.0'
 paths:
   /:
     get:
       operationId: getRoot
       parameters:
-        - name: Location
+        - name: Content-Type
           in: header
           required: true
           schema:
             type: string
-          example: Poland
+          example: application/json
       responses:
         '200':
           description: ''

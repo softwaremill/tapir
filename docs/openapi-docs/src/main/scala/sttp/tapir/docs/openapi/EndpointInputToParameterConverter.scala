@@ -2,7 +2,7 @@ package sttp.tapir.docs.openapi
 
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
 import sttp.tapir.openapi.{Parameter, ParameterIn, Schema}
-import sttp.tapir.{EndpointIO, EndpointInput}
+import sttp.tapir.{Codec, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
 
@@ -66,7 +66,11 @@ private[openapi] object EndpointInputToParameterConverter {
   }
 
   def from[T](header: EndpointIO.FixedHeader[T], schema: ReferenceOr[Schema]): Parameter = {
-    val examples = ExampleConverter.convertExamples(header.codec, header.info.examples)
+    val baseExamples = ExampleConverter.convertExamples(header.codec, header.info.examples)
+    val examples =
+      if (baseExamples.multipleExamples.nonEmpty) baseExamples
+      else
+        ExampleConverter.convertExamples(Codec.string, List(EndpointIO.Example(header.h.value, None, None)))
     Parameter(
       header.h.name,
       ParameterIn.Header,

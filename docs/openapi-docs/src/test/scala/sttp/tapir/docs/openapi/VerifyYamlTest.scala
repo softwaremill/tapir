@@ -819,6 +819,18 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("automatically add example for fixed header") {
+    val expectedYaml = loadYaml("expected_fixed_header_example.yml")
+
+    val e = endpoint.in(header("Content-Type", "application/json"))
+    val actualYaml = e.toOpenAPI(Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    println(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
