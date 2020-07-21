@@ -1,4 +1,4 @@
-package sttp.tapir.cats
+package sttp.tapir.integ.cats
 
 import cats.~>
 import sttp.tapir.server.ServerEndpoint

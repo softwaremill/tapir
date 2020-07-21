@@ -1,4 +1,4 @@
-package sttp.tapir.cats
+package sttp.tapir.integ.cats
 
 object syntax extends ServerEndpointSyntax
 
