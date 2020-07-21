@@ -1,7 +1,6 @@
-package sttp.tapir.codec.cats
+package sttp.tapir.integ.cats
 
 import cats.data.{NonEmptyChain, NonEmptyList, NonEmptySet}
-import sttp.tapir.{Schema, SchemaType}
 import sttp.tapir._
 
 import scala.collection.immutable.SortedSet

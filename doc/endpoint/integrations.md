@@ -2,15 +2,16 @@
 
 ## Cats datatypes integration
 
-The `tapir-cats` module contains schema, validator and codec instances for some [cats](https://typelevel.org/cats/)
-datatypes:
+The `tapir-cats` module contains additional instances for some [cats](https://typelevel.org/cats/)
+datatypes as well as additional syntax:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.16.5"
 ```
 
-See the `sttp.tapir.codec.cats.TapirCodecCats` trait or `import sttp.tapir.codec.cats._` to bring the implicit values 
-into scope.
+- `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
+- `import sttp.tapir.integ.cats.syntax._` - brings additional syntax for `tapir` types
+
 
 ## Refined integration
 

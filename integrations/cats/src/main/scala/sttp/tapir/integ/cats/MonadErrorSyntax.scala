@@ -1,4 +1,4 @@
-package sttp.tapir.monad.cats
+package sttp.tapir.integ.cats
 
 import cats.~>
 import sttp.tapir.monad.MonadError
@@ -21,3 +21,5 @@ trait MonadErrorSyntax {
     }
   }
 }
+
+object MonadErrorSyntax extends MonadErrorSyntax
