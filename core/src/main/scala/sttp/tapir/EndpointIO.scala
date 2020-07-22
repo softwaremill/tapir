@@ -422,7 +422,7 @@ object EndpointIO {
   //
 
   case class Example[+T](value: T, name: Option[String], summary: Option[String]) {
-    def map[B](f: T => B): Example[B] = Example(f(value), name = name, summary = summary)
+    def map[B](f: T => B): Example[B] = copy(value = f(value))
   }
 
   object Example {

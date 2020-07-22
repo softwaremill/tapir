@@ -128,8 +128,7 @@ lazy val cats: Project = (project in file("integrations/cats"))
       scalaTest % Test,
       scalaCheck % Test,
       "org.typelevel" %% "discipline-scalatest" % "1.0.1" % Test,
-      "org.typelevel" %% "cats-laws" % "2.1.1" % Test,
-      "com.github.alexarchambault" %% "scalacheck-shapeless_1.14" % "1.2.5" % Test
+      "org.typelevel" %% "cats-laws" % "2.1.1" % Test
     )
   )
   .dependsOn(core)
