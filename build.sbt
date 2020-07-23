@@ -126,7 +126,9 @@ lazy val cats: Project = (project in file("integrations/cats"))
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.1.1",
       scalaTest % Test,
-      scalaCheck % Test
+      scalaCheck % Test,
+      "org.typelevel" %% "discipline-scalatest" % "1.0.1" % Test,
+      "org.typelevel" %% "cats-laws" % "2.1.1" % Test
     )
   )
   .dependsOn(core)
