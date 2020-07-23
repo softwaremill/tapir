@@ -126,7 +126,9 @@ lazy val cats: Project = (project in file("integrations/cats"))
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % "2.1.1",
       scalaTest % Test,
-      scalaCheck % Test
+      scalaCheck % Test,
+      "org.typelevel" %% "discipline-scalatest" % "1.0.1" % Test,
+      "org.typelevel" %% "cats-laws" % "2.1.1" % Test
     )
   )
   .dependsOn(core)
@@ -227,7 +229,7 @@ lazy val jsoniterScala: Project = (project in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.5.0",
+      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.6.0",
       scalaTest % Test
     )
   )

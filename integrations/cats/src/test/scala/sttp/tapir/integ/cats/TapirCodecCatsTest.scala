@@ -1,12 +1,15 @@
-package sttp.tapir.codec.cats
+package sttp.tapir.integ.cats
 
 import cats.data.{NonEmptyChain, NonEmptyList, NonEmptySet}
 import org.scalacheck.{Arbitrary, Gen}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
 import org.scalacheck.Arbitrary.arbString
 import sttp.tapir.SchemaType.{SArray, SString}
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema, Validator}
 import sttp.tapir.internal._
+import codec._
 
 import scala.collection.immutable.SortedSet
 import org.scalatest.flatspec.AnyFlatSpec

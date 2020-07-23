@@ -108,6 +108,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
     EndpointInputToParameterConverter.from(cookie, objectSchemas(cookie.codec))
   }
+
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
     EndpointInputToParameterConverter.from(p, objectSchemas(p.codec))
   }
