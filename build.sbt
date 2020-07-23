@@ -87,7 +87,7 @@ lazy val core: Project = (project in file("core"))
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.16.0",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.softwaremill.sttp.model" %% "core" % "1.1.3",
+      "com.softwaremill.sttp.model" %% "core" % "1.1.4",
       scalaTest % Test,
       scalaCheck % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.3.5" % Test,
