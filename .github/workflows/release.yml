@@ -2,13 +2,13 @@ name: Publish release
 
 on:
   push:
-    tags:
-      - v*
+    branches:
+      - master
 
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
-    if: "contains(github.event.head_commit.message, 'Setting version to ')"
+    if: "contains(github.event.head_commit.message, 'Setting version to ') && !contains(github.event.head_commit.message, 'SNAPSHOT')"
     steps:
       - name: Extract version from commit message
         run: |
