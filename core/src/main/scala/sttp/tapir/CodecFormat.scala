@@ -38,4 +38,8 @@ object CodecFormat {
   case class MultipartFormData() extends CodecFormat {
     override val mediaType: MediaType = MediaType.MultipartFormData
   }
+
+  case class Zip() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.ApplicationZip
+  }
 }

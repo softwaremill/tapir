@@ -98,6 +98,7 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case CodecFormat.TextPlain() =>
         `Content-Type`(http4s.MediaType.text.plain, Charset.fromNioCharset(charset.getOrElse(StandardCharsets.UTF_8)))
       case CodecFormat.OctetStream()        => `Content-Type`(http4s.MediaType.application.`octet-stream`)
+      case CodecFormat.Zip()                => `Content-Type`(http4s.MediaType.application.`zip`)
       case CodecFormat.XWwwFormUrlencoded() => `Content-Type`(http4s.MediaType.application.`x-www-form-urlencoded`)
       case CodecFormat.MultipartFormData()  => `Content-Type`(http4s.MediaType.multipart.`form-data`)
       case f                                => parseContentType(f.mediaType.toString())
