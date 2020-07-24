@@ -127,7 +127,7 @@ lazy val cats: Project = (project in file("integrations/cats"))
       "org.typelevel" %% "cats-core" % "2.1.1",
       scalaTest % Test,
       scalaCheck % Test,
-      "org.typelevel" %% "discipline-scalatest" % "1.0.1" % Test,
+      "org.typelevel" %% "discipline-scalatest" % "2.0.0" % Test,
       "org.typelevel" %% "cats-laws" % "2.1.1" % Test
     )
   )
