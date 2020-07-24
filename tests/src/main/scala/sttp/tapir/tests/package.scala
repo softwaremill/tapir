@@ -189,14 +189,14 @@ package object tests {
         )
       )
       
-  val in_int_out_error_form_exact_match: Endpoint[Int, TestAppError, Unit, Nothing] =
+  val in_int_out_value_form_exact_match: Endpoint[Int, Unit, String, Nothing] =
     endpoint
-      .in("errors")
+      .in("mapping")
       .in(query[Int]("num"))
-      .errorOut(
+      .out(
         oneOf(
-          statusMappingExactMatcher(StatusCode.BadRequest, jsonBody[TestAppError])(TestAppError.ErrorA),
-          statusMappingExactMatcher(StatusCode.Forbidden, jsonBody[TestAppError])(TestAppError.ErrorB)
+          statusMappingExactMatcher(StatusCode.Accepted, plainBody[String])("A"),
+          statusMappingExactMatcher(StatusCode.Ok, plainBody[String])("B")
         )
       )
 
