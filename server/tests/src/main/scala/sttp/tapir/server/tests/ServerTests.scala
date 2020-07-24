@@ -453,6 +453,12 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         basicRequest.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCode.Accepted)
   }
 
+  testServer(in_int_out_error_form_exact_match)((num: Int) => pureResult((if (num %2 ==0) Left(TestAppError.ErrorA) else Left(TestAppError.ErrorB)))) {
+    baseUri =>
+      basicRequest.get(uri"$baseUri/errors?num=1").send().map(_.code shouldBe StatusCode.Forbidden) >>
+        basicRequest.get(uri"$baseUri/errors?num=2").send().map(_.code shouldBe StatusCode.BadRequest)
+  }
+
   testServer(in_string_out_status_from_string_one_empty)((v: String) =>
     pureResult((if (v == "apple") Right("x") else Left(())).asRight[Unit])
   ) { baseUri =>
