@@ -124,4 +124,7 @@ trait TapirPlayServer {
         .reduce((a: Routes, b: Routes) => a.orElse(b))
     }
   }
+
+  implicit def actionBuilderFromPlayServerOptions(implicit playServerOptions: PlayServerOptions): ActionBuilder[Request, AnyContent] =
+    playServerOptions.defaultActionBuilder
 }
