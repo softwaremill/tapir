@@ -1,9 +1,10 @@
 package sttp.tapir.server.http4s
 
-import cats.Monad
+import cats.{Monad, ~>}
+import cats.data.OptionT
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
-import org.http4s.{EntityBody, HttpRoutes}
+import org.http4s.{EntityBody, HttpRoutes, Http}
 import sttp.tapir.Endpoint
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
@@ -12,6 +13,30 @@ import sttp.tapir.typelevel.ReplaceFirstInTuple
 import scala.reflect.ClassTag
 
 trait TapirHttp4sServer {
+  implicit class RichHttp4sHttpEndpoint0[I, E, O, F[_], G[_]](e: Endpoint[I, E, O, EntityBody[F]]) {
+    def toRoutes(logic: I => G[Either[E, O]])(
+        t: F ~> G
+    )(implicit
+        serverOptions: Http4sServerOptions[F],
+        gs: Sync[G],
+        fs: Sync[F],
+        fcs: ContextShift[F]
+    ): Http[OptionT[G, *], F] = {
+      new EndpointToHttp4sServer(serverOptions).toHttp(e.serverLogic(logic))(t)
+    }
+
+    def toRouteRecoverErrors(logic: I => G[O])(t: F ~> G)(implicit
+        serverOptions: Http4sServerOptions[F],
+        gs: Sync[G],
+        fs: Sync[F],
+        fcs: ContextShift[F],
+        eIsThrowable: E <:< Throwable,
+        eClassTag: ClassTag[E]
+    ): Http[OptionT[G, *], F] = {
+      new EndpointToHttp4sServer(serverOptions).toHttp(e.serverLogicRecoverErrors(logic))(t)
+    }
+  }
+
   implicit class RichHttp4sHttpEndpoint[I, E, O, F[_]](e: Endpoint[I, E, O, EntityBody[F]]) {
     def toRoutes(
         logic: I => F[Either[E, O]]
@@ -30,9 +55,32 @@ trait TapirHttp4sServer {
     }
   }
 
+  implicit class RichHttp4sServerEndpoint0[I, E, O, F[_], G[_]](se: ServerEndpoint[I, E, O, EntityBody[F], G]) {
+    def toHttp(
+        t: F ~> G
+    )(implicit
+        serverOptions: Http4sServerOptions[F],
+        gs: Sync[G],
+        fs: Sync[F],
+        fcs: ContextShift[F]
+    ): Http[OptionT[G, *], F] =
+      new EndpointToHttp4sServer(serverOptions).toHttp(se)(t)
+  }
+
   implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, EntityBody[F], F]) {
     def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] =
       new EndpointToHttp4sServer(serverOptions).toRoutes(se)
+  }
+
+  implicit class RichHttp4sServerEndpoints0[F[_], G[_]](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], G]]) {
+    def toHttp(t: F ~> G)(implicit
+        serverOptions: Http4sServerOptions[F],
+        gs: Sync[G],
+        fs: Sync[F],
+        fcs: ContextShift[F]
+    ): Http[OptionT[G, *], F] = {
+      new EndpointToHttp4sServer[F](serverOptions).toHttp(serverEndpoints)(t)
+    }
   }
 
   implicit class RichHttp4sServerEndpoints[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]) {

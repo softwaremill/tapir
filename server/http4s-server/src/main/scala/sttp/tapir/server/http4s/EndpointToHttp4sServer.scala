@@ -15,24 +15,24 @@ import cats.arrow.FunctionK
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
-  def toHttp[I, E, O, G[_]: Sync: ContextShift](se: ServerEndpoint[I, E, O, EntityBody[F], G])(t: F ~> G): Http[OptionT[G, *], F] = {
+  def toHttp[I, E, O, G[_]: Sync](se: ServerEndpoint[I, E, O, EntityBody[F], G])(t: F ~> G): Http[OptionT[G, *], F] = {
     def decodeBody(req: Request[F], result: DecodeInputsResult): G[DecodeInputsResult] = {
-        result match {
-          case values: DecodeInputsResult.Values =>
-            values.bodyInput match {
-              case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
-                t(new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req)).map { v =>
-                  codec.decode(v) match {
-                    case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                    case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
-                  }
+      result match {
+        case values: DecodeInputsResult.Values =>
+          values.bodyInput match {
+            case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
+              t(new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req)).map { v =>
+                codec.decode(v) match {
+                  case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                  case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                 }
+              }
 
-              case None => (values: DecodeInputsResult).pure[G]
-            }
-          case failure: DecodeInputsResult.Failure => (failure: DecodeInputsResult).pure[G]
-        }
+            case None => (values: DecodeInputsResult).pure[G]
+          }
+        case failure: DecodeInputsResult.Failure => (failure: DecodeInputsResult).pure[G]
       }
+    }
 
     def valueToResponse(value: Any): G[Response[F]] = {
       val i = value.asInstanceOf[I]
@@ -47,26 +47,29 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
         }
     }
 
-    Kleisli((req: Request[F]) => OptionT(decodeBody(req, internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
+    Kleisli((req: Request[F]) =>
+      OptionT(decodeBody(req, internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values =>
           InputValues(se.endpoint.input, values) match {
             case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny).map(_.some)
             case InputValuesResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
           }
         case DecodeInputsResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
-      }))
+      })
+    )
   }
+
+  def toHttp[I, E, O, G[_]: Sync](se: List[ServerEndpoint[_, _, _, EntityBody[F], G]])(t: F ~> G): Http[OptionT[G, *], F] =
+    NonEmptyList.fromList(se.map(se => toHttp(se)(t))) match {
+      case Some(routes) => routes.reduceK
+      case None         => Kleisli(_ => OptionT.none)
+    }
 
   def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] =
     toHttp[I, E, O, F](se)(FunctionK.id[F])
 
-
-  def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] = {
-    NonEmptyList.fromList(serverEndpoints.map(se => toRoutes(se))) match {
-      case Some(routes) => routes.reduceK
-      case None         => HttpRoutes.empty
-    }
-  }
+  def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] =
+    toHttp[I, E, O, F](serverEndpoints)(FunctionK.id[F])
 
   private def handleDecodeFailure[I](
       e: Endpoint[_, _, _, _],
