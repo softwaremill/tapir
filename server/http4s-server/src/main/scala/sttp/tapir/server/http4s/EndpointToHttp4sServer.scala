@@ -1,9 +1,10 @@
 package sttp.tapir.server.http4s
 
+import cats.~>
 import cats.data._
 import cats.effect.{ContextShift, Sync}
 import cats.implicits._
-import org.http4s.{EntityBody, HttpRoutes, Request, Response}
+import org.http4s.{EntityBody, HttpRoutes, Http, Request, Response}
 import org.log4s._
 import sttp.tapir.monad.MonadError
 import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
@@ -13,51 +14,51 @@ import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
-  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] = {
-    val service: HttpRoutes[F] = HttpRoutes[F] { req: Request[F] =>
-      def decodeBody(result: DecodeInputsResult): F[DecodeInputsResult] = {
+  def toHttp[I, E, O, G[_]: Sync: ContextShift](se: ServerEndpoint[I, E, O, EntityBody[F], G])(t: F ~> G): Http[OptionT[G, *], F] = {
+    def decodeBody(req: Request[F], result: DecodeInputsResult): G[DecodeInputsResult] = {
         result match {
           case values: DecodeInputsResult.Values =>
             values.bodyInput match {
               case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
-                new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req).map { v =>
+                t(new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req)).map { v =>
                   codec.decode(v) match {
                     case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
                     case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                   }
                 }
 
-              case None => (values: DecodeInputsResult).pure[F]
+              case None => (values: DecodeInputsResult).pure[G]
             }
-          case failure: DecodeInputsResult.Failure => (failure: DecodeInputsResult).pure[F]
+          case failure: DecodeInputsResult.Failure => (failure: DecodeInputsResult).pure[G]
         }
       }
 
-      def valueToResponse(value: Any): F[Response[F]] = {
-        val i = value.asInstanceOf[I]
-        se.logic(new CatsMonadError)(i)
-          .map {
-            case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
-            case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
-          }
-          .flatTap { response => serverOptions.logRequestHandling.requestHandled(se.endpoint, response.status.code) }
-          .onError {
-            case e: Exception => serverOptions.logRequestHandling.logicException(se.endpoint, e)
-          }
-      }
+    def valueToResponse(value: Any): G[Response[F]] = {
+      val i = value.asInstanceOf[I]
+      se.logic(new CatsMonadError[G])(i)
+        .map {
+          case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
+          case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
+        }
+        .flatTap { response => t(serverOptions.logRequestHandling.requestHandled(se.endpoint, response.status.code)) }
+        .onError {
+          case e: Exception => t(serverOptions.logRequestHandling.logicException(se.endpoint, e))
+        }
+    }
 
-      OptionT(decodeBody(internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
+    Kleisli((req: Request[F]) => OptionT(decodeBody(req, internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values =>
           InputValues(se.endpoint.input, values) match {
             case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny).map(_.some)
-            case InputValuesResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
+            case InputValuesResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
           }
-        case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
-      })
-    }
-
-    service
+        case DecodeInputsResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
+      }))
   }
+
+  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] =
+    toHttp[I, E, O, F](se)( new ~>[F, F] { def apply[A](f: F[A]) = f } )
+
 
   def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] = {
     NonEmptyList.fromList(serverEndpoints.map(se => toRoutes(se))) match {
@@ -83,12 +84,12 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     }
   }
 
-  private class CatsMonadError(implicit F: cats.MonadError[F, Throwable]) extends MonadError[F] {
-    override def unit[T](t: T): F[T] = F.pure(t)
-    override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
-    override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
-    override def error[T](t: Throwable): F[T] = F.raiseError(t)
-    override def handleError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
+  private class CatsMonadError[M[_]](implicit M: cats.MonadError[M, Throwable]) extends MonadError[M] {
+    override def unit[T](t: T): M[T] = M.pure(t)
+    override def map[T, T2](fa: M[T])(f: T => T2): M[T2] = M.map(fa)(f)
+    override def flatMap[T, T2](fa: M[T])(f: T => M[T2]): M[T2] = M.flatMap(fa)(f)
+    override def error[T](t: Throwable): M[T] = M.raiseError(t)
+    override def handleError[T](rt: M[T])(h: PartialFunction[Throwable, M[T]]): M[T] = M.recoverWith(rt)(h)
   }
 }
 
