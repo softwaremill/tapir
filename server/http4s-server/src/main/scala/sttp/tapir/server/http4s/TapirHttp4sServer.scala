@@ -14,7 +14,7 @@ import scala.reflect.ClassTag
 
 trait TapirHttp4sServer {
   implicit class RichHttp4sHttpEndpoint0[I, E, O, F[_], G[_]](e: Endpoint[I, E, O, EntityBody[F]]) {
-    def toRoutes(logic: I => G[Either[E, O]])(
+    def toHttp(logic: I => G[Either[E, O]])(
         t: F ~> G
     )(implicit
         serverOptions: Http4sServerOptions[F],
@@ -25,7 +25,7 @@ trait TapirHttp4sServer {
       new EndpointToHttp4sServer(serverOptions).toHttp(e.serverLogic(logic))(t)
     }
 
-    def toRouteRecoverErrors(logic: I => G[O])(t: F ~> G)(implicit
+    def toHttpRecoverErrors(logic: I => G[O])(t: F ~> G)(implicit
         serverOptions: Http4sServerOptions[F],
         gs: Sync[G],
         fs: Sync[F],
