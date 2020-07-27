@@ -34,15 +34,14 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
       responseAsFromOutputs(meta, output)
     }.mapWithMetadata { (body, meta) =>
-        val output = if (meta.isSuccess) e.output else e.errorOutput
-        val params = getOutputParams(output, body, meta)
-        params.map(_.asAny).map(p => if (meta.isSuccess) Right(p) else Left(p))
-      }
-      .map {
-        case DecodeResult.Error(o, e) =>
-          DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req2.method} ${req2.uri}", e))
-        case other => other
-      }
+      val output = if (meta.isSuccess) e.output else e.errorOutput
+      val params = getOutputParams(output, body, meta)
+      params.map(_.asAny).map(p => if (meta.isSuccess) Right(p) else Left(p))
+    }.map {
+      case DecodeResult.Error(o, e) =>
+        DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req2.method} ${req2.uri}", e))
+      case other => other
+    }
 
     req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], S]]
   }

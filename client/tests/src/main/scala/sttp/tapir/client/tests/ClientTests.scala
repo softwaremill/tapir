@@ -213,8 +213,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       val xApiKey = r.headers.get(CaseInsensitiveString("X-Api-Key")).map(_.value)
       Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; Query=$ak")
 
-      case GET -> Root / "mapping" :? numParam(v) => 
-      if(v %2 == 0) Accepted("A") else Ok("B")
+    case GET -> Root / "mapping" :? numParam(v) =>
+      if (v % 2 == 0) Accepted("A") else Ok("B")
   }
 
   private val app: HttpApp[IO] = Router("/" -> service).orNotFound

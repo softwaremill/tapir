@@ -188,7 +188,7 @@ package object tests {
           statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
-      
+
   val in_int_out_value_form_exact_match: Endpoint[Int, Unit, String, Nothing] =
     endpoint
       .in("mapping")

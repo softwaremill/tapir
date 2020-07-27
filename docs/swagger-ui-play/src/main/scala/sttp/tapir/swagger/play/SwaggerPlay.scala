@@ -19,14 +19,14 @@ import scala.concurrent.ExecutionContext
   * @param contextPath    The context in which the documentation will be served. Defaults to `docs`, so the address
   *                       of the docs will be `/docs`.
   * @param yamlName       The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
-**/
+  */
 class SwaggerPlay(
-  yaml: String,
-  contextPath: String = "docs",
-  yamlName: String = "docs.yaml"
-)(
-  implicit ec: ExecutionContext,
-  actionBuilder: ActionBuilder[Request, AnyContent]
+    yaml: String,
+    contextPath: String = "docs",
+    yamlName: String = "docs.yaml"
+)(implicit
+    ec: ExecutionContext,
+    actionBuilder: ActionBuilder[Request, AnyContent]
 ) {
   private val redirectPath = s"/$contextPath/index.html?url=/$contextPath/$yamlName"
   private val resourcePathPrefix = {
@@ -41,24 +41,30 @@ class SwaggerPlay(
     s"META-INF/resources/webjars/swagger-ui/$swaggerVersion"
   }
 
-  private implicit val swaggerUIFileMimeTypes: FileMimeTypes = new DefaultFileMimeTypes(FileMimeTypesConfiguration(Map(
-    "html" -> MimeTypes.HTML,
-    "css" -> MimeTypes.CSS,
-    "js" -> MimeTypes.JAVASCRIPT,
-    "png" -> "image/png"
-  )))
+  private implicit val swaggerUIFileMimeTypes: FileMimeTypes = new DefaultFileMimeTypes(
+    FileMimeTypesConfiguration(
+      Map(
+        "html" -> MimeTypes.HTML,
+        "css" -> MimeTypes.CSS,
+        "js" -> MimeTypes.JAVASCRIPT,
+        "png" -> "image/png"
+      )
+    )
+  )
 
   def routes: Routes = {
-    case GET(p"/$path") if path == contextPath => actionBuilder {
-      MovedPermanently(redirectPath)
-    }
-    case GET(p"/$path/$file") if path == contextPath => actionBuilder {
-      file match {
-        case `yamlName` =>
-          Ok(yaml).as("text/yaml")
-        case _ =>
-          Ok.sendResource(s"$resourcePathPrefix/$file")
+    case GET(p"/$path") if path == contextPath =>
+      actionBuilder {
+        MovedPermanently(redirectPath)
       }
-    }
+    case GET(p"/$path/$file") if path == contextPath =>
+      actionBuilder {
+        file match {
+          case `yamlName` =>
+            Ok(yaml).as("text/yaml")
+          case _ =>
+            Ok.sendResource(s"$resourcePathPrefix/$file")
+        }
+      }
   }
 }
