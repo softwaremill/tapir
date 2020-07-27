@@ -75,8 +75,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
   testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
   testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
-  testClient(in_int_out_value_form_exact_match.name("first error of 2"), 1, Right("B"))
-  testClient(in_int_out_value_form_exact_match.name("second error of 2"), 2, Right("A"))
+  testClient(in_int_out_value_form_exact_match.name("first exact status of 2"), 1, Right("B"))
+  testClient(in_int_out_value_form_exact_match.name("second exact status of 2"), 2, Right("A"))
   testClient(in_string_out_status, "apple", Right(StatusCode.Ok))
 
   testClient(delete_endpoint, (), Right(()))
