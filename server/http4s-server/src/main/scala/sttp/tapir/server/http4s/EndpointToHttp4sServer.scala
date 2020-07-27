@@ -10,6 +10,7 @@ import sttp.tapir.monad.MonadError
 import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
+import cats.arrow.FunctionK
 
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
@@ -57,7 +58,7 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   }
 
   def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] =
-    toHttp[I, E, O, F](se)( new ~>[F, F] { def apply[A](f: F[A]) = f } )
+    toHttp[I, E, O, F](se)(FunctionK.id[F])
 
 
   def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] = {
@@ -83,14 +84,14 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           .map(_ => Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value)))
     }
   }
+}
 
-  private class CatsMonadError[M[_]](implicit M: cats.MonadError[M, Throwable]) extends MonadError[M] {
-    override def unit[T](t: T): M[T] = M.pure(t)
-    override def map[T, T2](fa: M[T])(f: T => T2): M[T2] = M.map(fa)(f)
-    override def flatMap[T, T2](fa: M[T])(f: T => M[T2]): M[T2] = M.flatMap(fa)(f)
-    override def error[T](t: Throwable): M[T] = M.raiseError(t)
-    override def handleError[T](rt: M[T])(h: PartialFunction[Throwable, M[T]]): M[T] = M.recoverWith(rt)(h)
-  }
+private[http4s] class CatsMonadError[F[_]](implicit F: cats.MonadError[F, Throwable]) extends MonadError[F] {
+  override def unit[T](t: T): F[T] = F.pure(t)
+  override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
+  override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
+  override def error[T](t: Throwable): F[T] = F.raiseError(t)
+  override def handleError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
 }
 
 object EndpointToHttp4sServer {
