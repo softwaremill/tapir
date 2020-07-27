@@ -188,6 +188,17 @@ package object tests {
           statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
+      
+  val in_int_out_value_form_exact_match: Endpoint[Int, Unit, String, Nothing] =
+    endpoint
+      .in("mapping")
+      .in(query[Int]("num"))
+      .out(
+        oneOf(
+          statusMappingExactMatcher(StatusCode.Accepted, plainBody[String])("A"),
+          statusMappingExactMatcher(StatusCode.Ok, plainBody[String])("B")
+        )
+      )
 
   val in_string_out_status_from_type_erasure_using_partial_matcher: Endpoint[String, Unit, Option[Either[Int, String]], Nothing] = {
     import sttp.tapir.typelevel.MatchType

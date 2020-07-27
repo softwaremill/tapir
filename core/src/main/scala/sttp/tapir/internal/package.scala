@@ -6,6 +6,7 @@ import sttp.model.{Method, StatusCode}
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
 import scala.collection.immutable.ListMap
+import scala.reflect.ClassTag
 
 package object internal {
 
@@ -214,5 +215,9 @@ package object internal {
       case RawBodyType.StringBody(charset) => Some(charset)
       case _                               => None
     }
+  }
+
+  def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = {
+    case v: T => exactValues.contains(v)
   }
 }
