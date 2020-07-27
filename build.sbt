@@ -1,3 +1,17 @@
+import sbtrelease.ReleaseStateTransformations.{
+  checkSnapshotDependencies,
+  commitNextVersion,
+  commitReleaseVersion,
+  inquireVersions,
+  publishArtifacts,
+  pushChanges,
+  runClean,
+  runTest,
+  setNextVersion,
+  setReleaseVersion,
+  tagRelease
+}
+
 val scala2_12 = "2.12.11"
 val scala2_13 = "2.13.2"
 
@@ -23,7 +37,25 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
     "com.github.ghik" % "silencer-lib" % Versions.silencer % Provided cross CrossVersion.full
   ),
-  mimaPreviousArtifacts := Set.empty //Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
+  mimaPreviousArtifacts := Set.empty, //Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
+  // similar to Release.steps, but without setting the next version. That way automatic release notes work w/ github
+  // actions, and when we get compiled docs, re-generating them won't cause versions to change to -SNAPSHOT.
+  releaseProcess := Seq(
+    checkSnapshotDependencies,
+    inquireVersions,
+    // publishing locally so that the pgp password prompt is displayed early
+    // in the process
+    releaseStepCommand("publishLocalSigned"),
+    runClean,
+    runTest,
+    setReleaseVersion,
+    Release.updateVersionInDocs(organization.value),
+    commitReleaseVersion,
+    tagRelease,
+    publishArtifacts,
+    releaseStepCommand("sonatypeBundleRelease"),
+    pushChanges
+  )
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
