@@ -13,10 +13,8 @@ import sttp.tapir.typelevel.ReplaceFirstInTuple
 import scala.reflect.ClassTag
 
 trait TapirHttp4sServer {
-  implicit class RichHttp4sHttpEndpoint0[I, E, O, F[_], G[_]](e: Endpoint[I, E, O, EntityBody[F]]) {
-    def toHttp(logic: I => G[Either[E, O]])(
-        t: F ~> G
-    )(implicit
+  implicit class RichHttp4sHttpEndpoint[I, E, O, F[_]](e: Endpoint[I, E, O, EntityBody[F]]) {
+    def toHttp[G[_]](t: F ~> G)(logic: I => G[Either[E, O]])(implicit
         serverOptions: Http4sServerOptions[F],
         gs: Sync[G],
         fs: Sync[F],
@@ -25,7 +23,7 @@ trait TapirHttp4sServer {
       new EndpointToHttp4sServer(serverOptions).toHttp(e.serverLogic(logic))(t)
     }
 
-    def toHttpRecoverErrors(logic: I => G[O])(t: F ~> G)(implicit
+    def toHttpRecoverErrors[G[_]](t: F ~> G)(logic: I => G[O])(implicit
         serverOptions: Http4sServerOptions[F],
         gs: Sync[G],
         fs: Sync[F],
@@ -35,9 +33,7 @@ trait TapirHttp4sServer {
     ): Http[OptionT[G, *], F] = {
       new EndpointToHttp4sServer(serverOptions).toHttp(e.serverLogicRecoverErrors(logic))(t)
     }
-  }
 
-  implicit class RichHttp4sHttpEndpoint[I, E, O, F[_]](e: Endpoint[I, E, O, EntityBody[F]]) {
     def toRoutes(
         logic: I => F[Either[E, O]]
     )(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] = {
