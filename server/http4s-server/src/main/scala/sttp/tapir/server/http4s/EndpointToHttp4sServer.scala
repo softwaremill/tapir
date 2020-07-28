@@ -15,7 +15,7 @@ import cats.arrow.FunctionK
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
-  def toHttp0[I, E, O, G[_]: Sync](t: F ~> G)(se: ServerEndpoint[I, E, O, EntityBody[F], G]): Http[OptionT[G, *], F] = {
+  def toHttp[I, E, O, G[_]: Sync](t: F ~> G, se: ServerEndpoint[I, E, O, EntityBody[F], G]): Http[OptionT[G, *], F] = {
     def decodeBody(req: Request[F], result: DecodeInputsResult): G[DecodeInputsResult] = {
       result match {
         case values: DecodeInputsResult.Values =>
@@ -60,13 +60,13 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   }
 
   def toHttp[G[_]: Sync](t: F ~> G)(se: List[ServerEndpoint[_, _, _, EntityBody[F], G]]): Http[OptionT[G, *], F] =
-    NonEmptyList.fromList(se.map(se => toHttp0(t)(se))) match {
+    NonEmptyList.fromList(se.map(se => toHttp(t, se))) match {
       case Some(routes) => routes.reduceK
       case None         => Kleisli(_ => OptionT.none)
     }
 
   def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] =
-    toHttp0(FunctionK.id[F])(se)
+    toHttp(FunctionK.id[F], se)
 
   def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] =
     toHttp(FunctionK.id[F])(serverEndpoints)
