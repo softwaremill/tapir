@@ -20,7 +20,7 @@ trait TapirHttp4sServer {
         fs: Sync[F],
         fcs: ContextShift[F]
     ): Http[OptionT[G, *], F] = {
-      new EndpointToHttp4sServer(serverOptions).toHttp(e.serverLogic(logic))(t)
+      new EndpointToHttp4sServer(serverOptions).toHttp0(t)(e.serverLogic(logic))
     }
 
     def toHttpRecoverErrors[G[_]](t: F ~> G)(logic: I => G[O])(implicit
@@ -31,7 +31,7 @@ trait TapirHttp4sServer {
         eIsThrowable: E <:< Throwable,
         eClassTag: ClassTag[E]
     ): Http[OptionT[G, *], F] = {
-      new EndpointToHttp4sServer(serverOptions).toHttp(e.serverLogicRecoverErrors(logic))(t)
+      new EndpointToHttp4sServer(serverOptions).toHttp0(t)(e.serverLogicRecoverErrors(logic))
     }
 
     def toRoutes(
@@ -60,7 +60,7 @@ trait TapirHttp4sServer {
         fs: Sync[F],
         fcs: ContextShift[F]
     ): Http[OptionT[G, *], F] =
-      new EndpointToHttp4sServer(serverOptions).toHttp(se)(t)
+      new EndpointToHttp4sServer(serverOptions).toHttp0(t)(se)
   }
 
   implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, EntityBody[F], F]) {
@@ -75,7 +75,7 @@ trait TapirHttp4sServer {
         fs: Sync[F],
         fcs: ContextShift[F]
     ): Http[OptionT[G, *], F] = {
-      new EndpointToHttp4sServer[F](serverOptions).toHttp(serverEndpoints)(t)
+      new EndpointToHttp4sServer[F](serverOptions).toHttp(t)(serverEndpoints)
     }
   }
 
