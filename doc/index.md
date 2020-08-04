@@ -19,7 +19,7 @@ for a more detailed description of how tapir works!
 
 ## Code teaser
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
@@ -28,6 +28,9 @@ type Limit = Int
 type AuthToken = String
 case class BooksFromYear(genre: String, year: Int)
 case class Book(title: String)
+
+
+// Define an endpoint
 
 val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Nothing] = 
   endpoint
@@ -38,7 +41,8 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
     .errorOut(stringBody)
     .out(jsonBody[List[Book]])
 
-//
+
+// Generate OpenAPI documentation
 
 import sttp.tapir.docs.openapi._
 import sttp.tapir.openapi.circe.yaml._
@@ -46,26 +50,30 @@ import sttp.tapir.openapi.circe.yaml._
 val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
 println(docs.toYaml)
 
-//
+
+// Convert to akka-http Route
 
 import sttp.tapir.server.akkahttp._
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
-def bookListingLogic(bfy: BooksFromYear, 
-                     limit: Limit,  
-                     at: AuthToken): Future[Either[String, List[Book]]] =
-  Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-val booksListingRoute: Route = booksListing.toRoute(bookListingLogic _)
+val bookListingLogic: ((BooksFromYear, Limit, AuthToken)) => Future[Either[String, List[Book]]] = {
+   case (bfy, limit, authToken @ _) => {
+      println(s"Listing up to ${limit} books from year ${bfy.year}")
+      Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
+   }
+}
+val booksListingRoute: Route = booksListing.toRoute(bookListingLogic)
 
-//
+
+// Convert to sttp Request
 
 import sttp.tapir.client.sttp._
-import com.softwaremill.sttp._
+import sttp.client._
 
-val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksListing
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Nothing] = booksListing
   .toSttpRequest(uri"http://localhost:8080")
-  .apply(BooksFromYear("SF", 2016), 20, "xyz-abc-123")
+  .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
 
 ## Other sttp projects
