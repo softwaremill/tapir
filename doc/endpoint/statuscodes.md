@@ -18,6 +18,11 @@ For example, below is a specification for an endpoint where the error output is 
 such a specification can then be refined and reused for other endpoints:
 
 ```scala
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.model.StatusCode
+import io.circe.generic.auto._
+
 sealed trait ErrorInfo
 case class NotFound(what: String) extends ErrorInfo
 case class Unauthorized(realm: String) extends ErrorInfo
@@ -51,7 +56,12 @@ Sometime at runtime status mapping resolution can not work properly because of t
 For example this code will fail at compile time; because of type erasure `Right[NotFound]` and `Right[BadRequest]` will 
 become `Right[Any]`, therefore the code would not be able to find the correct mapping for a value:
 
-```scala
+```scala mdoc:fail
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.model.StatusCode
+import io.circe.generic.auto._
+
 case class ServerError(what: String)
 
 sealed trait UserError
@@ -69,7 +79,20 @@ val baseEndpoint = endpoint.errorOut(
 
 The solution is therefore to handwrite a function checking that a `val` (of type `Any`) is of the correct type:
 
-```scala
+```scala mdoc:invisible
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.model.StatusCode
+import io.circe.generic.auto._
+
+case class ServerError(what: String)
+
+sealed trait UserError
+case class BadRequest(what: String) extends UserError
+case class NotFound(what: String) extends UserError
+```
+
+```scala mdoc:silent:nest
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
     statusMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
@@ -90,7 +113,7 @@ Of course you could use `statusMappingValueMatcher` to do runtime filtering for 
 In the case of solving type erasure, writing by hand partial function to match value against composition of case class and sealed trait can be repetitive.
 To make that more easy, we provide an **experimental** typeclass - `MatchType` - so you can automatically derive that partial function:
 
-```scala
+```scala mdoc:silent:nest
 import sttp.tapir.typelevel.MatchType
 
 val baseEndpoint = endpoint.errorOut(
