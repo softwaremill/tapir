@@ -555,3 +555,32 @@ lazy val playground: Project = (project in file("playground"))
     cats,
     zioServer
   )
+
+//TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
+val generateDoc: TaskKey[Unit] = taskKey[Unit]("Compiles doc module throwing away its output")
+generateDoc := {
+  (generatedDoc / mdoc).toTask(" --out target/tapir-doc").value
+}
+
+lazy val generatedDoc: Project = (project in file("generated-doc")) // important: it must not be docs/
+  .enablePlugins(MdocPlugin)
+  .settings(commonSettings)
+  .settings(
+    mdocIn := file("doc"),
+    moduleName := "tapir-doc",
+    mdocVariables := Map(
+      "VERSION" -> version.value
+    ),
+    mdocOut := file("generated-doc/out"),
+    publishArtifact := false,
+    name := "doc",
+    libraryDependencies ++= Seq()
+  )
+  .dependsOn(
+    core % "compile->test",
+    akkaHttpServer,
+    circeJson,
+    openapiCirceYaml,
+    openapiDocs,
+    sttpClient,
+  )
