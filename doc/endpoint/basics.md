@@ -16,15 +16,25 @@ Input/output parameters (`I`, `E` and `O`) can be:
 Hence, an empty, initial endpoint (`tapir.endpoint`), with no inputs and no outputs, from which all other endpoints are 
 derived has the type:
 
-```scala
-val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = ...
+```scala mdoc:compile-only
+import sttp.tapir._
+
+val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = ???
 ```
 
 An endpoint which accepts two parameters of types `UUID` and `Int`, upon error returns a `String`, and on normal 
 completion returns a `User`, would have the type:
+
+```scala mdoc:invisible
+import java.util.UUID
+
+case class User()
+```
  
-```scala
-Endpoint[(UUID, Int), String, User, Nothing]
+```scala mdoc:compile-only
+import sttp.tapir._
+
+val userEndpoint: Endpoint[(UUID, Int), String, User, Nothing] = ???
 ```
 
 You can think of an endpoint as a function, which takes input parameters of type `I` and returns a result of type 
