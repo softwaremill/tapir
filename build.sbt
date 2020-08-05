@@ -581,6 +581,8 @@ lazy val generatedDoc: Project = (project in file("generated-doc")) // important
     akkaHttpServer,
     circeJson,
     enumeratum,
+    finatraServer,
+    finatraServerCats,
     jsoniterScala,
     openapiCirceYaml,
     openapiDocs,
