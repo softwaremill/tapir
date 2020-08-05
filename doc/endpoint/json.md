@@ -191,7 +191,7 @@ for the Circe codec (which is just a couple of lines of code).
 ## Schemas
 
 To derive json codecs automatically, not only implicits from the base library are needed (e.g. a circe 
-`Encoder`/`Decoder`), but also an implicit `SchemaFor[T]` value, which provides a mapping between a type `T` and its 
+`Encoder`/`Decoder`), but also an implicit `Schema[T]` value, which provides a mapping between a type `T` and its
 schema. A schema-for value contains a single `schema: Schema` field.
 
 See [custom types](customtypes.html) for details.
