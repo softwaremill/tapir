@@ -593,6 +593,7 @@ lazy val generatedDoc: Project = (project in file("generated-doc")) // important
     playServer,
     sprayJson,
     sttpClient,
+    swaggerUiAkka,
     tethysJson,
     uPickleJson,
     vertxServer,

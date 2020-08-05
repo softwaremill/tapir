@@ -3,19 +3,22 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.16.10"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "@VERSION@"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
 model is independent from all other tapir modules and can be used stand-alone).
  
-An endpoint can be converted to an instance of the model by importing the `tapir.docs.openapi._` package and calling 
+An endpoint can be converted to an instance of the model by importing the `sttp.tapir.docs.openapi._` package and calling
 the provided extension method:
 
-```scala
+```scala mdoc:silent
+import sttp.tapir._
 import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.docs.openapi._
+
+val booksListing = endpoint.in(path[String]("bookId"))
 
 val docs: OpenAPI = booksListing.toOpenAPI("My Bookshop", "1.0")
 ```
@@ -29,20 +32,27 @@ The documentation is generated in a large part basing on [schemas](endpoint/code
 Quite often, you'll need to define the servers, through which the API can be reached. To do this, you can modify the
 returned `OpenAPI` case class either directly or by using a helper method:
 
-```scala
-val docs: OpenAPI = booksListing.toOpenAPI("My Bookshop", "1.0")
+```scala mdoc:silent
+import sttp.tapir.openapi.Server
+
+val docsWithServers: OpenAPI = booksListing.toOpenAPI("My Bookshop", "1.0")
   .servers(List(Server("https://api.example.com/v1").description("Production server")))
 ```
 
 Multiple endpoints can be converted to an `OpenAPI` instance by calling the extension method on a list of endpoints:
 
-```scala
+```scala mdoc:invisible
+val addBook = endpoint.in(path[String]("bookId"))
+val booksListingByGenre = endpoint.in(path[String]("genre"))
+```
+
+```scala mdoc:silent
 List(addBook, booksListing, booksListingByGenre).toOpenAPI("My Bookshop", "1.0")
 ```
 
 The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
-```scala
+```scala mdoc:silent
 import sttp.tapir.openapi.circe.yaml._
 
 println(docs.toYaml)
@@ -64,35 +74,37 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 
 ```scala
 // Akka HTTP
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.16.10"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "@VERSION@"
 
 // Finatra
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-finatra" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-finatra" % "@VERSION@"
 
 // HTTP4S
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.16.10"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "@VERSION@"
 
 // Play
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "0.16.10"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "@VERSION@"
 ```
 
 Note: `tapir-swagger-ui-akka-http` transitively pulls some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.16.10" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "@VERSION@" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Usage example for akka-http:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
 import sttp.tapir.docs.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
+val myEndpoints: Seq[Endpoint[_, _, _, _]] = ???
 val docsAsYaml: String = myEndpoints.toOpenAPI("My App", "1.0").toYaml
 // add to your akka routes
 new SwaggerAkka(docsAsYaml).routes
