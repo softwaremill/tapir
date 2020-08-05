@@ -589,4 +589,6 @@ lazy val generatedDoc: Project = (project in file("generated-doc")) // important
     sttpClient,
     tethysJson,
     uPickleJson,
+    zio,
+    zioServer
   )
