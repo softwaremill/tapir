@@ -19,12 +19,12 @@ the json codec that is in scope.
 To use Circe add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "@VERSION@"
 ```
 
 Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.html)):
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.json.circe._
 ```
 
@@ -39,7 +39,7 @@ codec.
 
 For example, to automatically generate a JSON codec for a case class:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
@@ -52,7 +52,9 @@ val bookInput: EndpointIO[Book] = jsonBody[Book]
 Circe lets you select an instance of `io.circe.Printer` to configure the way JSON objects are rendered. By default 
 Tapir uses `Printer.nospaces`, which would render:
 
-```scala
+```scala mdoc:compile-only
+import io.circe._
+
 Json.obj(
   "key1" -> Json.fromString("present"),
   "key2" -> Json.Null
@@ -68,7 +70,10 @@ as
 Suppose we would instead want to omit `null`-values from the object and pretty-print it. You can configure this by 
 overriding the `jsonPrinter` in `tapir.circe.json.TapirJsonCirce`:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir.json.circe._
+import io.circe.Printer
+
 object MyTapirJsonCirce extends TapirJsonCirce {
   override def jsonPrinter: Printer = Printer.spaces2.copy(dropNullValues = true)
 }
@@ -87,18 +92,18 @@ Now the above JSON object will render as
 To use µPickle add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "@VERSION@"
 ```
 
 Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.html) and add `TapirJsonuPickle` not `TapirCirceJson`):
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.json.upickle._
 ```
 
 µPickle requires a ReadWriter in scope for each type you want to serialize. In order to provide one use the `macroRW` macro in the companion object as follows:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import upickle.default._
 import sttp.tapir.json.upickle._
@@ -114,19 +119,19 @@ val bookInput: EndpointIO[Book] = jsonBody[Book]
 
 Like Circe, µPickle allows you to control the rendered json output. Please see the [Custom Configuration](http://www.lihaoyi.com/upickle/#CustomConfiguration) of the manual for details.
 
-For more examples, including making a custom encoder/decoder, see [TapirJsonuPickleTests.scala](https://github.com/softwaremill/tapir/blob/master/json/upickle/src/test/scala/tapir/json/upickle/TapirJsonuPickleTests.scala)
+For more examples, including making a custom encoder/decoder, see [TapirJsonuPickleTests.scala](https://github.com/softwaremill/tapir/blob/master/json/upickle/src/test/scala/sttp/tapir/json/upickle/TapirJsonuPickleTests.scala)
 
 ## Play JSON
 
 To use Play JSON add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-play" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-json-play" % "@VERSION@"
 ```
 
 Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.html) and add `TapirJsonPlay` not `TapirCirceJson`):
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.json.play._
 ```
 
@@ -137,12 +142,12 @@ Play JSON requires `Reads` and `Writes` implicit values in scope for each type y
 To use Spray JSON add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "@VERSION@"
 ```
 
 Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.html) and add `TapirJsonSpray` not `TapirCirceJson`):
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.json.spray._
 ```
 
@@ -153,12 +158,12 @@ Spray JSON requires a `JsonFormat` implicit value in scope for each type you wan
 To use Tethys JSON add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "@VERSION@"
 ```
 
 Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../mytapir.html) and add `TapirJsonTethys` not `TapirCirceJson`):
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.json.tethysjson._
 ```
 
@@ -169,12 +174,12 @@ Tethys JSON requires `JsonReader` and `JsonWriter` implicit values in scope for 
 To use [Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala) add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "@VERSION@"
 ```
 
 Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../mytapir.html) and add `TapirJsonJsoniter` not `TapirCirceJson`):
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.json.jsoniter._
 ```
 

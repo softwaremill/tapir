@@ -580,7 +580,12 @@ lazy val generatedDoc: Project = (project in file("generated-doc")) // important
     core % "compile->test",
     akkaHttpServer,
     circeJson,
+    jsoniterScala,
     openapiCirceYaml,
     openapiDocs,
+    playJson,
+    sprayJson,
     sttpClient,
+    tethysJson,
+    uPickleJson,
   )
