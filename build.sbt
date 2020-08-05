@@ -569,12 +569,15 @@ lazy val generatedDoc: Project = (project in file("generated-doc")) // important
     mdocIn := file("doc"),
     moduleName := "tapir-doc",
     mdocVariables := Map(
-      "VERSION" -> version.value
+      "VERSION" -> version.value,
+      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer
     ),
     mdocOut := file("generated-doc/out"),
     publishArtifact := false,
     name := "doc",
-    libraryDependencies ++= Seq()
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-netty-server" % Versions.playServer
+    )
   )
   .dependsOn(
     core % "compile->test",
@@ -587,6 +590,7 @@ lazy val generatedDoc: Project = (project in file("generated-doc")) // important
     openapiCirceYaml,
     openapiDocs,
     playJson,
+    playServer,
     sprayJson,
     sttpClient,
     tethysJson,
