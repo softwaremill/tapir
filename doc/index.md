@@ -57,13 +57,11 @@ import sttp.tapir.server.akkahttp._
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
-val bookListingLogic: ((BooksFromYear, Limit, AuthToken)) => Future[Either[String, List[Book]]] = {
-   case (bfy, limit, authToken @ _) => {
-      println(s"Listing up to ${limit} books from year ${bfy.year}")
-      Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-   }
-}
-val booksListingRoute: Route = booksListing.toRoute(bookListingLogic)
+def bookListingLogic(bfy: BooksFromYear,
+                     limit: Limit,
+                     at: AuthToken): Future[Either[String, List[Book]]] =
+  Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
+val booksListingRoute: Route = booksListing.toRoute((bookListingLogic _).tupled)
 
 
 // Convert to sttp Request
