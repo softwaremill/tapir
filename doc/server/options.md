@@ -10,7 +10,9 @@ Each interpreter accepts an implicit options value, which contains configuration
 To customise the server options, define an implicit value, which will be visible when converting an endpoint or multiple
 endpoints to a route/routes. For example, for `AkkaHttpServerOptions`:
 
-```
+```scala mdoc:compile-only
+import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+
 implicit val customServerOptions: AkkaHttpServerOptions = 
-  AkkaHttpServerOptions.default.copy(...) 
+  AkkaHttpServerOptions.default.copy(decodeFailureHandler = ???)
 ```
