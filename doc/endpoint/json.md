@@ -63,7 +63,7 @@ Json.obj(
 
 as
 
-```
+```json
 {"key1":"present","key2":null}
 ```
 
@@ -83,7 +83,7 @@ import MyTapirJsonCirce._
 
 Now the above JSON object will render as
 
-```
+```json
 {"key1":"present"}
 ```
 
