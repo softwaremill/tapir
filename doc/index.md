@@ -6,11 +6,11 @@ interpreted as:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
-  * [Akka HTTP](server/akkahttp.html) `Route`s/`Directive`s.
-  * [Http4s](server/http4s.html) `HttpRoutes[F]`
-  * [Finatra](server/finatra.html) `http.Controller`
-* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.html).
-* documentation. Currently supported: [OpenAPI](openapi.html).
+  * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s.
+  * [Http4s](server/http4s.md) `HttpRoutes[F]`
+  * [Finatra](server/finatra.md) `http.Controller`
+* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.md).
+* documentation. Currently supported: [OpenAPI](openapi.md).
 
 Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 

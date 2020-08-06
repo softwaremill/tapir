@@ -8,7 +8,7 @@ third-party library to perform the actual json parsing/printing. Currently, [Cir
 All of the integrations, when imported into scope, define a `jsonBody[T]` method. This method depends on 
 library-specific implicits being in scope, and derives from them a json codec. The derivation also requires implicit
 `Schema[T]` and `Validator[T]` instances, which should be automatically derived. For more details see documentation 
-on supporting [custom types](customtypes.html).
+on supporting [custom types](customtypes.md).
 
 If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `anyJsonBody[T]` method instead. 
 This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses 
@@ -22,7 +22,7 @@ To use Circe add the following dependency to your project:
 "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.html)):
+Next, import the package (or extend the `TapirJsonCirce` trait, see [MyTapir](../mytapir.md)):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.circe._
@@ -95,7 +95,7 @@ To use µPickle add the following dependency to your project:
 "com.softwaremill.sttp.tapir" %% "tapir-json-upickle" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.html) and add `TapirJsonuPickle` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonuPickle` trait, see [MyTapir](../mytapir.md) and add `TapirJsonuPickle` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.upickle._
@@ -129,7 +129,7 @@ To use Play JSON add the following dependency to your project:
 "com.softwaremill.sttp.tapir" %% "tapir-json-play" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.html) and add `TapirJsonPlay` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonPlay` trait, see [MyTapir](../mytapir.md) and add `TapirJsonPlay` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.play._
@@ -145,7 +145,7 @@ To use Spray JSON add the following dependency to your project:
 "com.softwaremill.sttp.tapir" %% "tapir-json-spray" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.html) and add `TapirJsonSpray` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonSpray` trait, see [MyTapir](../mytapir.md) and add `TapirJsonSpray` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.spray._
@@ -161,7 +161,7 @@ To use Tethys JSON add the following dependency to your project:
 "com.softwaremill.sttp.tapir" %% "tapir-json-tethys" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../mytapir.html) and add `TapirJsonTethys` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonTethys` trait, see [MyTapir](../mytapir.md) and add `TapirJsonTethys` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.tethysjson._
@@ -177,7 +177,7 @@ To use [Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala) add the f
 "com.softwaremill.sttp.tapir" %% "tapir-jsoniter-scala" % "@VERSION@"
 ```
 
-Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../mytapir.html) and add `TapirJsonJsoniter` not `TapirCirceJson`):
+Next, import the package (or extend the `TapirJsonJsoniter` trait, see [MyTapir](../mytapir.md) and add `TapirJsonJsoniter` not `TapirCirceJson`):
 
 ```scala mdoc:compile-only
 import sttp.tapir.json.jsoniter._
@@ -199,8 +199,8 @@ To derive json codecs automatically, not only implicits from the base library ar
 `Encoder`/`Decoder`), but also an implicit `Schema[T]` value, which provides a mapping between a type `T` and its
 schema. A schema-for value contains a single `schema: Schema` field.
 
-See [custom types](customtypes.html) for details.
+See [custom types](customtypes.md) for details.
 
 ## Next
 
-Read on about [working with forms](forms.html).
+Read on about [working with forms](forms.md).

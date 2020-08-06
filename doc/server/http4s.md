@@ -78,11 +78,11 @@ response bodies and reading request bodies. Usage: `streamBody[Stream[F, Byte]](
 ## Configuration
 
 The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see
-[server options](options.html) for details.
+[server options](options.md) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.
 
 ## Defining an endpoint together with the server logic
 
 It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.html) for details.
+[server logic](logic.md) for details.

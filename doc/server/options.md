@@ -4,7 +4,7 @@ Each interpreter accepts an implicit options value, which contains configuration
 
 * how to create a file (when receiving a response that is mapped to a file, or when reading a file-mapped multipart 
   part)
-* how to handle decode failures (see also [error handling](errors.html))
+* how to handle decode failures (see also [error handling](errors.md))
 * debug-logging of request handling
 
 To customise the server options, define an implicit value, which will be visible when converting an endpoint or multiple

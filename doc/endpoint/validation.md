@@ -1,12 +1,12 @@
 # Validation
 
 Tapir supports validation for primitive/base types. Validation of composite values, whole data structures, business 
-rules enforcement etc. should be done as part of the [server logic](../server/logic.html) of the endpoint, using the 
+rules enforcement etc. should be done as part of the [server logic](../server/logic.md) of the endpoint, using the 
 dedicated error output (the `E` in `Endpoint[I, E, O, S]`) to report errors. 
 
 ## Single type validation
 
-Validation rules are part of the [codec](codecs.html) for a given type. They can be specified when creating the codec
+Validation rules are part of the [codec](codecs.md) for a given type. They can be specified when creating the codec
 (using the `Codec.validate()` method):
  
 ```scala mdoc:compile-only
@@ -31,7 +31,7 @@ val e = endpoint.in(
     .validate(Validator.max(100)))
 ``` 
 
-Validation rules added using the built-in validators are translated to [OpenAPI](../openapi.html) documentation.
+Validation rules added using the built-in validators are translated to [OpenAPI](../openapi.md) documentation.
 
 ### Validation rules and automatic codec derivation
 
@@ -81,7 +81,7 @@ is meant for input/output values which are in an incorrect low-level format, whe
 words, decoding failures should be reported for format failures, not business validation errors.
 
 To customise error messages that are returned upon validation/decode failures by the server, see 
-[error handling](../server/errors.html).
+[error handling](../server/errors.md).
 
 ## Enum validators
 
@@ -125,4 +125,4 @@ validator is automatically derived.
 
 ## Next
 
-Read on about [json support](json.html).
+Read on about [json support](json.md).

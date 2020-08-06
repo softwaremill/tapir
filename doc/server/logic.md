@@ -96,7 +96,7 @@ val testEndpoint = endpoint
 
 ## Extracting common route logic
 
-Quite often, especially for [authentication](../endpoint/auth.html), some part of the route logic is shared among 
+Quite often, especially for [authentication](../endpoint/auth.md), some part of the route logic is shared among
 multiple endpoints. However, these functions don't compose in a straightforward way, as authentication usually operates
 on a single input, which is only a part of the whole logic's input. That's why there are two options for providing
 the server logic in parts.
@@ -216,4 +216,4 @@ variants of the methods, which recover errors from failed effects: `serverLogicP
 ## Status codes
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
-this can be customised by specifying how an [output maps to the status code](../endpoint/statuscodes.html).
+this can be customised by specifying how an [output maps to the status code](../endpoint/statuscodes.md).

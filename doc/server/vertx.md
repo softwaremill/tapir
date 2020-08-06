@@ -64,10 +64,10 @@ object Main {
 
 ## Configuration
 
-Every endpoint can be configured by providing an implicit `VertxEndpointOptions`, see [server options](options.html) for details.
+Every endpoint can be configured by providing an implicit `VertxEndpointOptions`, see [server options](options.md) for details.
 You can also provide your own `ExecutionContext` to execute the logic.
 
 ## Defining an endpoint together with the server logic
 
 It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.html) for details.
+[server logic](logic.md) for details.

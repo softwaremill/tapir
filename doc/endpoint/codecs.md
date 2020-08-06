@@ -62,7 +62,7 @@ The schema is left unchanged when mapping a codec or an input/output, as the und
 doesn't change. However, schemas can be changed for individual inputs/outputs using the `.schema(Schema)` method.
 
 When codecs are derived for complex types, e.g. for json mapping, schemas are looked up through implicit
-`Schema[T]` values. See [custom types](customtypes.html) for more details.
+`Schema[T]` values. See [custom types](customtypes.md) for more details.
  
 ## Codec format
 
@@ -81,4 +81,4 @@ input/output described by `jsonBody[T]` requires a json codec.
 
 ## Next
 
-Read on about [custom types](customtypes.html).
+Read on about [custom types](customtypes.md).

@@ -71,4 +71,4 @@ multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 
 ## Next
 
-Read on about [authentication](auth.html).
+Read on about [authentication](auth.md).

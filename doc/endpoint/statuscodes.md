@@ -128,8 +128,8 @@ val baseEndpoint = endpoint.errorOut(
 ## Server interpreters
 
 Unless specified otherwise, successful responses are returned with the `200 OK` status code, and errors with 
-`400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.html).
+`400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.md).
 
 ## Next
 
-Read on about [codecs](codecs.html).
+Read on about [codecs](codecs.md).

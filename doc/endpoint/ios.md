@@ -6,7 +6,7 @@ trait. Some inputs can be used both as inputs and outputs; then, they additional
 Each input or output can yield/accept a value (but doesn't have to).
 
 For example, `query[Int]("age"): EndpointInput[Int]` describes an input, which is the `age` parameter from the URI's
-query, and which should be coded (using the string-to-integer [codec](codecs.html)) as an `Int`.
+query, and which should be coded (using the string-to-integer [codec](codecs.md)) as an `Int`.
 
 The `tapir` package contains a number of convenience methods to define an input or an output for an endpoint. 
 For inputs, these are:
@@ -114,7 +114,7 @@ Next, you can use `mapDecode[II](f: I => DecodeResult[II])(g: II => I)`, to hand
 low-level value to a higher-value one) can fail. There's a couple of failure reasons, captured by the alternatives
 of the `DecodeResult` trait.
 
-Mappings can also be done given an `Mapping[I, II]` instance. More on that in the secion on [codecs](codecs.html).
+Mappings can also be done given an `Mapping[I, II]` instance. More on that in the secion on [codecs](codecs.md).
 
 Creating a mapping between a tuple and a case class is a common operation, hence there's also a 
 `mapTo(CaseClassCompanion)` method, which automatically provides the functions to construct/deconstruct the case class:
@@ -165,8 +165,8 @@ case class Person(name: String)
 endpoint.out(streamBody[Source[ByteString, Any]](schemaFor[List[Person]], CodecFormat.Json()))
 ```
 
-See also the [runnable streaming example](../examples.html). 
+See also the [runnable streaming example](../examples.md). 
 
 ## Next
 
-Read on about [status codes](statuscodes.html).
+Read on about [status codes](statuscodes.md).

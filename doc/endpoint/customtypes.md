@@ -80,8 +80,8 @@ endpoint.in(path[MyId])
 
 In some cases, codecs can be automatically derived:
 
-* for supported [json](json.html) libraries
-* for urlencoded and multipart [forms](forms.html)
+* for supported [json](json.md) libraries
+* for urlencoded and multipart [forms](forms.md)
 
 Automatic codec derivation usually requires other implicits, such as:
 
@@ -122,7 +122,7 @@ be derived automatically.
 ### Sealed traits / coproducts
 
 Tapir supports schema generation for coproduct types (sealed trait hierarchies) of the box, but they need to be defined
-by hand (as implicit values). To properly reflect the schema in [OpenAPI](../openapi.html) documentation, a 
+by hand (as implicit values). To properly reflect the schema in [OpenAPI](../openapi.md) documentation, a
 discriminator object can be specified. 
 
 For example, given following coproduct:
@@ -180,4 +180,4 @@ Non-standard collections can be unwrapped in the modification path by providing 
 
 ## Next
 
-Read on about [validation](validation.html).
+Read on about [validation](validation.md).
