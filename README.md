@@ -29,15 +29,20 @@ type AuthToken = String
 case class BooksFromYear(genre: String, year: Int)
 case class Book(title: String)
 
-val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Nothing] = endpoint
+
+// Define an endpoint
+
+val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Nothing] =
+  endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
-    .in(query[Int]("limit").description("Maximum number of books to retrieve"))
-    .in(header[String]("X-Auth-Token"))
+    .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
+    .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)
     .out(jsonBody[List[Book]])
 
-//
+
+// Generate OpenAPI documentation
 
 import sttp.tapir.docs.openapi._
 import sttp.tapir.openapi.circe.yaml._
@@ -45,26 +50,28 @@ import sttp.tapir.openapi.circe.yaml._
 val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
 println(docs.toYaml)
 
-//
+
+// Convert to akka-http Route
 
 import sttp.tapir.server.akkahttp._
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
-def bookListingLogic(bfy: BooksFromYear, 
-                     limit: Limit,  
+def bookListingLogic(bfy: BooksFromYear,
+                     limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
 val booksListingRoute: Route = booksListing.toRoute((bookListingLogic _).tupled)
 
-//
+
+// Convert to sttp Request
 
 import sttp.tapir.client.sttp._
 import sttp.client._
 
-val booksListingRequest: Request[Either[String, List[Book]], Nothing] = booksListing
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Nothing] = booksListing
   .toSttpRequest(uri"http://localhost:8080")
-  .apply(BooksFromYear("SF", 2016), 20, "xyz-abc-123")
+  .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
 
 ## Documentation
