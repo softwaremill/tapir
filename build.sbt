@@ -49,6 +49,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     runClean,
     runTest,
     setReleaseVersion,
+    releaseStepInputTask(documentation / mdoc),
+    Release.stageChanges("generated-doc/out"),
     Release.updateVersionInDocs(organization.value),
     commitReleaseVersion,
     tagRelease,
@@ -557,12 +559,12 @@ lazy val playground: Project = (project in file("playground"))
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
-val generateDoc: TaskKey[Unit] = taskKey[Unit]("Compiles doc module throwing away its output")
-generateDoc := {
-  (generatedDoc / mdoc).toTask(" --out target/tapir-doc").value
+val compileDocumentation: TaskKey[Unit] = taskKey[Unit]("Compiles documentation throwing away its output")
+compileDocumentation := {
+  (documentation / mdoc).toTask(" --out target/tapir-doc").value
 }
 
-lazy val generatedDoc: Project = (project in file("generated-doc")) // important: it must not be docs/
+lazy val documentation: Project = (project in file("generated-doc")) // important: it must not be docs/
   .enablePlugins(MdocPlugin)
   .settings(commonSettings)
   .settings(
