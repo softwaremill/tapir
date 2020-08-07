@@ -1,0 +1,103 @@
+# Running as a Play server
+
+To expose endpoint as a [play-server](https://www.playframework.com/) first add the following dependencies:
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "0.16.10"
+```
+and 
+```scala
+"com.typesafe.play" %% "play-akka-http-server" % "2.8.2"
+```
+
+or
+
+```scala
+"com.typesafe.play" %% "play-netty-server" % "2.8.2"
+```
+
+depending on whether you want to use netty or akka based http-server under the hood.
+
+
+Then import the package:
+
+```scala
+import sttp.tapir.server.play._
+```
+
+This adds two extension methods to the `Endpoint` type: `toRoute` and `toRoutesRecoverError`. This first requires the
+logic of the endpoint to be given as a function of type:
+
+```scala
+I => Future[Either[E, O]]
+```
+
+The second recovers errors from failed effects, and hence requires that `E` is 
+a subclass of `Throwable` (an exception); it expects a function of type `I => Future[O]`. For example:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.server.play._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import akka.stream.Materializer
+import play.api.routing.Router.Routes
+
+implicit val materializer: Materializer = ???
+
+def countCharacters(s: String): Future[Either[Unit, Int]] = 
+  Future(Right[Unit, Int](s.length))
+
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] = 
+  endpoint.in(stringBody).out(plainBody[Int])
+val countCharactersRoutes: Routes = 
+  countCharactersEndpoint.toRoute(countCharacters _)
+```
+
+Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
+arguments need to be converted to a function using a single argument using `.tupled`:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.server.play._
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import akka.stream.Materializer
+import play.api.routing.Router.Routes
+
+implicit val materializer: Materializer = ???
+
+def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
+val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ???  
+val aRoute: Routes = anEndpoint.toRoute((logic _).tupled)
+```
+
+An HTTP server can then be started as in the following example:
+
+```scala
+import play.core.server._
+import play.api.routing.Router.Routes
+
+val aRoute: Routes = ???
+
+object Main {
+  // JVM entry point that starts the HTTP server
+  def main(args: Array[String]): Unit = {
+    val playConfig = ServerConfig(port =
+      sys.props.get("http.port").map(_.toInt).orElse(Some(9000))
+    )
+    NettyServer.fromRouterWithComponents(playConfig) { components =>
+      aRoute
+    }
+  }
+}
+```
+
+## Configuration
+
+The interpreter can be configured by providing an implicit `PlayServerOptions` value and status mappers, see
+[server options](options.md) for details.
+
+## Defining an endpoint together with the server logic
+
+It's also possible to define an endpoint together with the server logic in a single, more concise step. See
+[server logic](logic.md) for details.
