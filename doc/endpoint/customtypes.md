@@ -24,12 +24,11 @@ need to provide two mappings:
 
 For example, to support a custom id type:
 
-```scala mdoc:invisible
+```scala mdoc:silent
 import scala.util._
+
 class MyId private (id: String) {
-  override def toString(): String = {
-    id
-  }
+  override def toString(): String = id
 }
 object MyId {
   def parse(id: String): Try[MyId] = {
@@ -105,13 +104,10 @@ implicit val customConfiguration: Configuration =
 Alternatively, `Schema[_]` values can be defined by hand, either for whole case classes, or only for some of its fields.
 For example, here we state that the schema for `MyCustomType` is a `String`:
 
-```scala mdoc:invisible
-class MyCustomType()
-```
-
 ```scala mdoc:silent
 import sttp.tapir._
 
+case class MyCustomType()
 implicit val schemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaType.SString)
 ```
 

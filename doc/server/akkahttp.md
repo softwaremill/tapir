@@ -69,21 +69,16 @@ using tapir endpoint descriptions; or, that the tapir-generated route is wrapped
 "edge-case endpoints", which require some special logic not expressible using tapir, can be always implemented directly 
 using akka-http. For example:
 
-```scala mdoc:invisible
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
 import akka.http.scaladsl.server._
 
-def metricsDirective: Directive0 = Directive { inner => ctx =>
-  inner(())(ctx)
-}
-def securityDirective: Directive1[String] = Directive { inner => ctx =>
-  inner(Tuple1(""))(ctx)
-}
+case class User(email: String)
+def metricsDirective: Directive0 = ???
+def securityDirective: Directive1[User] = ???
 val tapirEndpoint: Endpoint[String, Unit, Unit, Nothing] = endpoint.in(path[String]("input"))
-```
 
-```scala mdoc:compile-only
 val myRoute: Route = metricsDirective {
   securityDirective { user =>
     tapirEndpoint.toRoute(input => ??? /* here we can use both `user` and `input` values */)
