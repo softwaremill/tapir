@@ -119,7 +119,8 @@ lazy val rootProject = (project in file("."))
     sttpClient,
     tests,
     examples,
-    playground
+    playground,
+    documentation
   )
 
 // core
@@ -572,7 +573,7 @@ compileDocumentation := {
   (documentation / mdoc).toTask(" --out target/tapir-doc").value
 }
 
-lazy val documentation: Project = (project in file("generated-doc")) // important: it must not be docs/
+lazy val documentation: Project = (project in file("generated-doc")) // important: it must not be doc/
   .enablePlugins(MdocPlugin)
   .settings(commonSettings)
   .settings(
