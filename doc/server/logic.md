@@ -192,13 +192,12 @@ val secureHelloWorld2: Endpoint[(String, String), Int, String, Nothing] = endpoi
 
 We can provide the server logic in parts (using the same `auth` method as above):
 
-```scala mdoc:invisible
+```scala mdoc:compile-only
 import scala.concurrent.Future
+
 case class User(name: String)
 def auth(token: String): Future[Either[Int, User]] = ???
-```
 
-```scala mdoc:compile-only
 val secureHelloWorld2WithLogic = secureHelloWorld2
   .serverLogicPart(auth)
   .andThen { case (user, salutation) =>

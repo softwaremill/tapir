@@ -31,15 +31,10 @@ providing an implicit `tapir.generic.Configuraton`.
 Similarly as above, multipart form input/outputs can be specified in two ways. To map to all parts of a multipart body,
 use:
 
-```scala mdoc:invisible
-import sttp.tapir._
-implicit val multipartCodec = MultipartCodec.Default
-```
-
 ```scala mdoc:compile-only
 import sttp.tapir._
 
-multipartBody[Seq[AnyPart]]: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]]
+multipartBody: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]]
 ```
 
 where `type AnyPart = Part[_]`. `Part` is a case class containing the `name` of the part, disposition parameters,

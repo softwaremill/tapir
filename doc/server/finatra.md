@@ -92,19 +92,13 @@ val aRoute: FinatraRoute = anEndpoint.toRoute((logic _).tupled)
 Now that you've created the `FinatraRoute`, add `TapirController` as a trait to your `Controller`. You can then
 add the created route with `addTapirRoute`.
 
-```scala mdoc:invisible
-import sttp.tapir._
-import sttp.tapir.server.finatra._
-
-val anEndpoint: Endpoint[(String, Int), Unit, Unit, Nothing] = endpoint.in(path[String]("str")).in(path[Int]("int"))
-```
-
 ```scala mdoc:compile-only
-import sttp.tapir.server.finatra.TapirController
+import sttp.tapir.server.finatra._
 import com.twitter.finatra.http.Controller
 
+val aRoute: FinatraRoute = ???
 class MyController extends Controller with TapirController {
-  addTapirRoute(anEndpoint.toRoute { case (s: String, i: Int) => ??? })
+  addTapirRoute(aRoute)
 }
 ```
 
