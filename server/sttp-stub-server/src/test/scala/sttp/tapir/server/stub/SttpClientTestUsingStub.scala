@@ -1,6 +1,5 @@
 package sttp.tapir.server.stub
 
-import org.scalatest.{FunSuite, Matchers}
 import sttp.client._
 import sttp.client.monad.{IdMonad, MonadError}
 import sttp.client.testing.SttpBackendStub
@@ -8,8 +7,10 @@ import sttp.model.StatusCode
 import sttp.tapir.Endpoint
 import sttp.tapir.client.sttp._
 import sttp.tapir.tests._
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class SttpClientTestUsingStub extends FunSuite with Matchers {
+class SttpClientTestUsingStub extends AnyFunSuite with Matchers {
   implicit val idMonad: MonadError[Identity] = IdMonad
 
   testClient(in_header_out_header_unit_extended, ((), "y"), Right(((), "x"))) { response =>

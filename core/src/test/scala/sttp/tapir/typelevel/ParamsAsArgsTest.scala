@@ -1,8 +1,9 @@
 package sttp.tapir.typelevel
 
-import org.scalatest.{FlatSpec, Matchers}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class ParamsAsArgsTest extends FlatSpec with Matchers {
+class ParamsAsArgsTest extends AnyFlatSpec with Matchers {
   it should "compile" in {
     // without aux
     implicitly[ParamsAsArgs[String]]

@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.StrictLogging
 import sttp.client._
 import sttp.client.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import io.circe.generic.auto._
-import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import org.scalatest.{Assertion, BeforeAndAfterAll}
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.json.circe._
@@ -20,8 +20,10 @@ import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
 import scala.reflect.ClassTag
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
+trait ServerTests[R[_], S, ROUTE] extends AnyFunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
   private val basicStringRequest = basicRequest.response(asStringAlways)
 
   def multipleValueHeaderSupport: Boolean = true
