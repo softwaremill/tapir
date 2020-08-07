@@ -16,15 +16,25 @@ Input/output parameters (`I`, `E` and `O`) can be:
 Hence, an empty, initial endpoint (`tapir.endpoint`), with no inputs and no outputs, from which all other endpoints are 
 derived has the type:
 
-```scala
-val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = ...
+```scala mdoc:compile-only
+import sttp.tapir._
+
+val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = ???
 ```
 
 An endpoint which accepts two parameters of types `UUID` and `Int`, upon error returns a `String`, and on normal 
 completion returns a `User`, would have the type:
+
+```scala mdoc:invisible
+import java.util.UUID
+
+case class User()
+```
  
-```scala
-Endpoint[(UUID, Int), String, User, Nothing]
+```scala mdoc:compile-only
+import sttp.tapir._
+
+val userEndpoint: Endpoint[(UUID, Int), String, User, Nothing] = ???
 ```
 
 You can think of an endpoint as a function, which takes input parameters of type `I` and returns a result of type 
@@ -35,7 +45,7 @@ You can think of an endpoint as a function, which takes input parameters of type
 Note that the empty `endpoint` description maps no values to either error and success outputs, however errors
 are still represented and allowed to occur. If you would prefer to use an endpoint description, where
 errors can not happen, use `infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing]`. This might be useful when
-interpreting endpoints [as a client](../sttp.html).
+interpreting endpoints [as a client](../sttp.md).
 
 ## Defining an endpoint
 
@@ -52,4 +62,4 @@ generate a server or a client, as well as in many cases can be used both for inp
 
 ## Next
 
-Read on about describing [endpoint inputs/outputs](ios.html).
+Read on about describing [endpoint inputs/outputs](ios.md).

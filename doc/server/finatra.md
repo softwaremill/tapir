@@ -4,24 +4,24 @@ To expose an endpoint as an [finatra](https://twitter.github.io/finatra/) server
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "@VERSION@"
 ```
 
 and import the package:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.server.finatra._
 ```
 
 or if you would like to use cats-effect project, you can add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "@VERSION@"
 ```
 
 and import the packate:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.server.finatra.cats._
 ```
 
@@ -45,7 +45,7 @@ it expects a function of type `I => Future[O]` or type `I => F[O]` if `F` suppor
 
 For example:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server.finatra._
 import com.twitter.util.Future
@@ -61,9 +61,10 @@ val countCharactersRoute: FinatraRoute = countCharactersEndpoint.toRoute(countCh
 
 or a cats-effect's example:
 
-```scala
+```scala mdoc:compile-only
 import cats.effect.IO
 import sttp.tapir._
+import sttp.tapir.server.finatra.FinatraRoute
 import sttp.tapir.server.finatra.cats._
 
 def countCharacters(s: String): IO[Either[Unit, Int]] =
@@ -78,7 +79,11 @@ val countCharactersRoute: FinatraRoute = countCharactersEndpoint.toRoute(countCh
 Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
 arguments need to be converted to a function using a single argument using `.tupled`:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.finatra._
+import com.twitter.util.Future
+
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ???
 val aRoute: FinatraRoute = anEndpoint.toRoute((logic _).tupled)
@@ -87,13 +92,17 @@ val aRoute: FinatraRoute = anEndpoint.toRoute((logic _).tupled)
 Now that you've created the `FinatraRoute`, add `TapirController` as a trait to your `Controller`. You can then
 add the created route with `addTapirRoute`.
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir.server.finatra._
+import com.twitter.finatra.http.Controller
+
+val aRoute: FinatraRoute = ???
 class MyController extends Controller with TapirController {
-  addTapirRoute(endpoint.toRoute { (s: String, i: Int) => ??? })
+  addTapirRoute(aRoute)
 }
 ```
 
 ## Defining an endpoint together with the server logic
 
 It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.html) for details.
+[server logic](logic.md) for details.

@@ -27,6 +27,14 @@ val only2_12settings = Seq(
   mimaPreviousArtifacts := (if (is2_12.value) mimaPreviousArtifacts.value else Set.empty)
 )
 
+// FIXME: use Release.stageChanges from sbt-softwaremill after upgrading it to 1.9
+def stageChanges(fileNames: String*): ReleaseStep = { s: State =>
+  val settings = Project.extract(s)
+  val vcs = settings.get(releaseVcs).get
+  fileNames.foreach(f => vcs.add(f) !! s.log)
+  s
+}
+
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   scalaVersion := scala2_12,
@@ -49,6 +57,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     runClean,
     runTest,
     setReleaseVersion,
+    releaseStepInputTask(documentation / mdoc),
+    stageChanges("generated-doc/out"),
     Release.updateVersionInDocs(organization.value),
     commitReleaseVersion,
     tagRelease,
@@ -109,7 +119,8 @@ lazy val rootProject = (project in file("."))
     sttpClient,
     tests,
     examples,
-    playground
+    playground,
+    documentation
   )
 
 // core
@@ -553,5 +564,51 @@ lazy val playground: Project = (project in file("playground"))
     swaggerUiHttp4s,
     refined,
     cats,
+    zioServer
+  )
+
+//TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
+val compileDocumentation: TaskKey[Unit] = taskKey[Unit]("Compiles documentation throwing away its output")
+compileDocumentation := {
+  (documentation / mdoc).toTask(" --out target/tapir-doc").value
+}
+
+lazy val documentation: Project = (project in file("generated-doc")) // important: it must not be doc/
+  .enablePlugins(MdocPlugin)
+  .settings(commonSettings)
+  .settings(
+    mdocIn := file("doc"),
+    moduleName := "tapir-doc",
+    mdocVariables := Map(
+      "VERSION" -> version.value,
+      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer
+    ),
+    mdocOut := file("generated-doc/out"),
+    publishArtifact := false,
+    name := "doc",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-netty-server" % Versions.playServer
+    )
+  )
+  .dependsOn(
+    core % "compile->test",
+    akkaHttpServer,
+    circeJson,
+    enumeratum,
+    finatraServer,
+    finatraServerCats,
+    jsoniterScala,
+    openapiCirceYaml,
+    openapiDocs,
+    playJson,
+    playServer,
+    sprayJson,
+    sttpClient,
+    sttpStubServer,
+    swaggerUiAkka,
+    tethysJson,
+    uPickleJson,
+    vertxServer,
+    zio,
     zioServer
   )

@@ -12,26 +12,39 @@ details on how the stub works).
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.16.10"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "@VERSION@"
 ```
 
-And the following import:
+And the following imports:
 
-```scala
+```scala mdoc:silent
+import sttp.client.testing.SttpBackendStub
 import sttp.tapir.server.stub._
 ``` 
 
-Then, convert any endpoint to `SttpBackendStub`:
+Given the following endpoint:
 
-```scala
+```scala mdoc:silent
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import io.circe.generic.auto._
+
+case class ResponseWrapper(value: Double)
+
 val endpoint = sttp.tapir.endpoint
   .in("api" / "sometest4")
   .in(query[Int]("amount"))
   .post
   .out(jsonBody[ResponseWrapper])
+```
+
+Convert any endpoint to `SttpBackendStub`:
+
+```scala mdoc:silent
+import sttp.client.monad.IdMonad
 
 implicit val backend = SttpBackendStub
-  .apply(idMonad)
+  .apply(IdMonad)
   .whenRequestMatchesEndpoint(endpoint)
   .thenSuccess(ResponseWrapper(1.0))
 ```

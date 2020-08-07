@@ -83,7 +83,7 @@ object ZioPartialServerLogicHttp4s extends App {
 
   //
 
-  override def run(args: List[String]): ZIO[ZEnv, Nothing, ExitCode] =
+  override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZIO.runtime.flatMap { implicit runtime: Runtime[Any] =>
       // starting the server
       BlazeServerBuilder[Task](runtime.platform.executor.asEC)
@@ -93,12 +93,6 @@ object ZioPartialServerLogicHttp4s extends App {
         .use { _ =>
           test
         }
-        .map(_ => ExitCode.success)
-        .catchAll { t =>
-          UIO {
-            println("Exception when starting server")
-            t.printStackTrace()
-          }.map(_ => ExitCode.failure)
-        }
+        .exitCode
     }
 }

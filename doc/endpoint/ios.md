@@ -6,7 +6,7 @@ trait. Some inputs can be used both as inputs and outputs; then, they additional
 Each input or output can yield/accept a value (but doesn't have to).
 
 For example, `query[Int]("age"): EndpointInput[Int]` describes an input, which is the `age` parameter from the URI's
-query, and which should be coded (using the string-to-integer [codec](codecs.html)) as an `Int`.
+query, and which should be coded (using the string-to-integer [codec](codecs.md)) as an `Int`.
 
 The `tapir` package contains a number of convenience methods to define an input or an output for an endpoint. 
 For inputs, these are:
@@ -48,7 +48,14 @@ to a tuple of the given types. This combination can be assigned to a value and r
 other values in tapir, endpoint input/output descriptions are immutable. For example, an input specifying two query 
 parameters, `start` (mandatory) and `limit` (optional) can be written down as:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import io.circe.generic.auto._
+import java.util.UUID
+
+case class User(name: String)
+
 val paging: EndpointInput[(UUID, Option[Int])] = 
   query[UUID]("start").and(query[Option[Int]]("limit"))
 
@@ -62,14 +69,22 @@ such a method is invoked, it extends the list of inputs/outputs. This can be use
 parameters, but also to define template-endpoints, which can then be further specialized. For example, we can define a 
 base endpoint for our API, where all paths always start with `/api/v1.0`, and errors are always returned as a json:
 
-```scala
+```scala mdoc:silent
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import io.circe.generic.auto._
+
+case class ErrorInfo(message: String)
+
 val baseEndpoint: Endpoint[Unit, ErrorInfo, Unit, Nothing] =  
   endpoint.in("api" / "v1.0").errorOut(jsonBody[ErrorInfo])
 ```
 
 Thanks to the fact that inputs/outputs accumulate, we can use the base endpoint to define more inputs, for example:
 
-```scala
+```scala mdoc:silent
+case class Status(uptime: Long)
+
 val statusEndpoint: Endpoint[Unit, ErrorInfo, Status, Nothing] = 
   baseEndpoint.in("status").out(jsonBody[Status])
 ```
@@ -84,26 +99,27 @@ when interpreting an endpoint as a server, and as a client, as well as both in i
 There's a couple of ways to map over an input/output. First, there's the `map[II](f: I => II)(g: II => I)` method, 
 which accepts functions which provide the mapping in both directions. For example:
 
-```scala
+```scala mdoc:silent:reset
+import sttp.tapir._
+import java.util.UUID
+
 case class Paging(from: UUID, limit: Option[Int])
 
 val paging: EndpointInput[Paging] = 
   query[UUID]("start").and(query[Option[Int]]("limit"))
-    .map((from, limit) => Paging(from, limit))(paging => (paging.from, paging.limit))
+    .map(input => Paging(input._1, input._2))(paging => (paging.from, paging.limit))
 ```
 
 Next, you can use `mapDecode[II](f: I => DecodeResult[II])(g: II => I)`, to handle cases where decoding (mapping a 
 low-level value to a higher-value one) can fail. There's a couple of failure reasons, captured by the alternatives
 of the `DecodeResult` trait.
 
-Mappings can also be done given an `Mapping[I, II]` instance. More on that in the secion on [codecs](codecs.html).
+Mappings can also be done given an `Mapping[I, II]` instance. More on that in the secion on [codecs](codecs.md).
 
 Creating a mapping between a tuple and a case class is a common operation, hence there's also a 
 `mapTo(CaseClassCompanion)` method, which automatically provides the functions to construct/deconstruct the case class:
 
-```scala
-case class Paging(from: UUID, limit: Option[Int])
-
+```scala mdoc:silent:nest
 val paging: EndpointInput[Paging] = 
   query[UUID]("start").and(query[Option[Int]]("limit"))
     .mapTo(Paging)
@@ -139,12 +155,18 @@ When using a stream body, the schema (for documentation) and format (media type)
 as they cannot be inferred from the raw stream type. For example, to specify that the output is an akka-stream, which
 is a (presumably large) serialised list of json objects mapping to the `Person` class:  
 
-```scala
+```scala mdoc:silent:reset
+import sttp.tapir._
+import akka.stream.scaladsl._
+import akka.util.ByteString
+
+case class Person(name: String)
+
 endpoint.out(streamBody[Source[ByteString, Any]](schemaFor[List[Person]], CodecFormat.Json()))
 ```
 
-See also the [runnable streaming example](../examples.html). 
+See also the [runnable streaming example](../examples.md). 
 
 ## Next
 
-Read on about [status codes](statuscodes.html).
+Read on about [status codes](statuscodes.md).

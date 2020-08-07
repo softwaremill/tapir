@@ -24,7 +24,23 @@ need to provide two mappings:
 
 For example, to support a custom id type:
 
-```scala
+```scala mdoc:silent
+import scala.util._
+
+class MyId private (id: String) {
+  override def toString(): String = id
+}
+object MyId {
+  def parse(id: String): Try[MyId] = {
+    Success(new MyId(id))
+  }
+}
+```
+
+```scala mdoc:silent
+import sttp.tapir._
+import sttp.tapir.CodecFormat.TextPlain
+
 def decode(s: String): DecodeResult[MyId] = MyId.parse(s) match {
   case Success(v) => DecodeResult.Value(v)
   case Failure(f) => DecodeResult.Error(s, f)
@@ -33,8 +49,13 @@ def encode(id: MyId): String = id.toString
 
 implicit val myIdCodec: Codec[String, MyId, TextPlain] = 
   Codec.string.mapDecode(decode)(encode)
+```
 
-// or, using the type alias for codecs in the TextPlain format and String as the raw value:
+Or, using the type alias for codecs in the TextPlain format and String as the raw value:
+
+```scala mdoc:silent:nest
+import sttp.tapir.Codec.PlainCodec
+
 implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode)
 ```
 
@@ -48,7 +69,7 @@ implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode
 
 Then, you can use the new codec e.g. to obtain an id from a query parameter or a path segment:
 
-```scala
+```scala mdoc:silent
 endpoint.in(query[MyId]("myId"))
 // or
 endpoint.in(path[MyId])
@@ -58,8 +79,8 @@ endpoint.in(path[MyId])
 
 In some cases, codecs can be automatically derived:
 
-* for supported [json](json.html) libraries
-* for urlencoded and multipart [forms](forms.html)
+* for supported [json](json.md) libraries
+* for urlencoded and multipart [forms](forms.md)
 
 Automatic codec derivation usually requires other implicits, such as:
 
@@ -71,9 +92,11 @@ Automatic codec derivation usually requires other implicits, such as:
 
 For case classes types, `Schema[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
 that schemas are defined for all of the case class's fields. It is possible to configure the automatic derivation to use
-snake-case, kebab-case or a custom field naming policy, by providing an implicit `tapir.generic.Configuration` value:
+snake-case, kebab-case or a custom field naming policy, by providing an implicit `sttp.tapir.generic.Configuration` value:
 
-```scala
+```scala mdoc:silent
+import sttp.tapir.generic.Configuration
+
 implicit val customConfiguration: Configuration =
   Configuration.default.withSnakeCaseMemberNames
 ```
@@ -81,7 +104,10 @@ implicit val customConfiguration: Configuration =
 Alternatively, `Schema[_]` values can be defined by hand, either for whole case classes, or only for some of its fields.
 For example, here we state that the schema for `MyCustomType` is a `String`:
 
-```scala
+```scala mdoc:silent
+import sttp.tapir._
+
+case class MyCustomType()
 implicit val schemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaType.SString)
 ```
 
@@ -92,13 +118,13 @@ be derived automatically.
 ### Sealed traits / coproducts
 
 Tapir supports schema generation for coproduct types (sealed trait hierarchies) of the box, but they need to be defined
-by hand (as implicit values). To properly reflect the schema in [OpenAPI](../openapi.html) documentation, a 
+by hand (as implicit values). To properly reflect the schema in [OpenAPI](../openapi.md) documentation, a
 discriminator object can be specified. 
 
 For example, given following coproduct:
 
-```scala
-sealed trait Entity{
+```scala mdoc:silent:reset
+sealed trait Entity {
   def kind: String
 } 
 case class Person(firstName:String, lastName:String) extends Entity { 
@@ -111,7 +137,9 @@ case class Organization(name: String) extends Entity {
 
 The schema may look like this:
 
-```scala
+```scala mdoc:silent
+import sttp.tapir._
+
 val sPerson = implicitly[Schema[Person]]
 val sOrganization = implicitly[Schema[Organization]]
 implicit val sEntity: Schema[Entity] = 
@@ -130,7 +158,10 @@ Schemas for products/coproducts (case classes and case class families) can be tr
 
 For example:
 
-```scala
+```scala mdoc:silent:reset
+import sttp.tapir._
+import sttp.tapir.generic.Derived
+
 case class Basket(fruits: List[FruitAmount])
 case class FruitAmount(fruit: String, amount: Int)
 implicit val customBasketSchema: Schema[Basket] = implicitly[Derived[Schema[Basket]]].value
@@ -145,4 +176,4 @@ Non-standard collections can be unwrapped in the modification path by providing 
 
 ## Next
 
-Read on about [validation](validation.html).
+Read on about [validation](validation.md).
