@@ -10,16 +10,21 @@ a failed `Future` or `IO`/`Task`), this is propagated to the library (akka-http 
 
 However, any exceptions can be recovered from and mapped to an error value. For example:
 
-```scala
-type ErrorInfo = String
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
+import scala.concurrent.Future
+import scala.util._
 
-def logic(s: String): Future[Int] = ...
+implicit val ec = scala.concurrent.ExecutionContext.global
+type ErrorInfo = String
+def logic(s: String): Future[Int] = ???
 
 def handleErrors[T](f: Future[T]): Future[Either[ErrorInfo, T]] =
   f.transform {
     case Success(v) => Success(Right(v))
     case Failure(e) =>
-      logger.error("Exception when running endpoint logic", e)
+      println(s"Exception when running endpoint logic: $e")
       Success(Left(e.getMessage))
   }
 
@@ -52,7 +57,7 @@ conventions, that an endpoint is uniquely identified by the method and served pa
   malformed. A `400 Bad Request` response is returned if a query parameter, header or body causes any decode failure, 
   or if the decoding a path capture causes a validation error.
 
-This can be customised by providing an implicit instance of `tapir.server.DecodeFailureHandler`, which basing on the 
+This can be customised by providing an implicit instance of `sttp.tapir.server.DecodeFailureHandler`, which basing on the
 request, failing input and failure description can decide, whether to return a "no match" or a specific response.
 
 Only the first failure is passed to the `DecodeFailureHandler`. Inputs are decoded in the following order: method, 
@@ -70,11 +75,19 @@ an error or return a "no match", create error messages and create the response.
 To reuse the existing default logic, parts of the default behavior can be swapped, e.g. to return responses in 
 a different format (other than textual):
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server._
+import sttp.tapir.server.akkahttp._
+import sttp.tapir.json.circe._
+import sttp.model.StatusCode
+import io.circe.generic.auto._
+
+implicit val ec = scala.concurrent.ExecutionContext.global
 case class MyFailure(msg: String)
-def myFailureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
+def myFailureResponse(code: StatusCode, message: String): DecodeFailureHandling =
   DecodeFailureHandling.response(statusCode.and(jsonBody[MyFailure]))(
-   (statusCode, MyFailure(message))
+   (code, MyFailure(message))
   )
   
 val myDecodeFailureHandler = ServerDefaults.decodeFailureHandler.copy(

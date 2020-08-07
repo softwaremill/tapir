@@ -13,15 +13,16 @@ also a logic function `I => F[Either[E, O]]`, for some effect `F`.
 
 The book example can be more concisely written as follows:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
+import sttp.tapir.server._
 import sttp.tapir.server.akkahttp._
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
 val countCharactersServerEndpoint: ServerEndpoint[String, Unit, Int, Nothing, Future] =
   endpoint.in(stringBody).out(plainBody[Int]).serverLogic { s =>
-    Future.successful(Right[Unit, Int](s.length))
+    Future.successful[Either[Unit, Int]](Right(s.length))
   }
 
 val countCharactersRoute: Route = countCharactersServerEndpoint.toRoute
@@ -32,12 +33,17 @@ parameters; the exact method name depends on the server interpreter), or to docu
 
 Moreover, a list of server endpoints can be converted to routes or documentation as well:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
+import scala.concurrent.Future
+import akka.http.scaladsl.server.Route
+
 val endpoint1 = endpoint.in("hello").out(stringBody)
-  .serverLogic { _ => Future.successful(Right("world")) }
+  .serverLogic { _ => Future.successful[Either[Unit, String]](Right("world")) }
 
 val endpoint2 = endpoint.in("ping").out(stringBody)
-  .serverLogic { _ => Future.successful(Right("pong")) }
+  .serverLogic { _ => Future.successful[Either[Unit, String]](Right("pong")) }
 
 val route: Route = List(endpoint1, endpoint2).toRoute
 ```
@@ -45,13 +51,16 @@ val route: Route = List(endpoint1, endpoint2).toRoute
 Note that when dealing with endpoints which have multiple input parameters, the server logic function is a function
 of a *single* argument, which is a tuple; hence you'll need to pattern-match using `case` to extract the parameters:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import scala.concurrent.Future
+
 val echoEndpoint = endpoint
   .in(query[Int]("count"))
   .in(stringBody)
   .out(stringBody)
   .serverLogic { case (count, body) =>
-     Future.successful(Right(body * count))
+     Future.successful[Either[Unit, String]](Right(body * count))
   }
 ```
 
@@ -67,7 +76,10 @@ errors which are subtypes of `E`. Any others will be propagated without changes.
 
 For example:
 
-```scala                      
+```scala mdoc:compile-only
+import sttp.tapir._
+import scala.concurrent.Future
+
 case class MyError(msg: String) extends Exception
 val testEndpoint = endpoint
   .in(query[Boolean]("fail"))
@@ -84,7 +96,7 @@ val testEndpoint = endpoint
 
 ## Extracting common route logic
 
-Quite often, especially for [authentication](../endpoint/auth.html), some part of the route logic is shared among 
+Quite often, especially for [authentication](../endpoint/auth.md), some part of the route logic is shared among
 multiple endpoints. However, these functions don't compose in a straightforward way, as authentication usually operates
 on a single input, which is only a part of the whole logic's input. That's why there are two options for providing
 the server logic in parts.
@@ -104,7 +116,13 @@ returns either an error, or a partial result.
 For example, we can create a partial server endpoint given an authentication function, and an endpoint describing
 the authentication inputs:
 
-```scala
+```scala mdoc:silent
+import sttp.tapir._
+import sttp.tapir.server._
+import scala.concurrent.Future
+
+implicit val ec = scala.concurrent.ExecutionContext.global
+
 case class User(name: String)
 def auth(token: String): Future[Either[Int, User]] = Future {
   if (token == "secret") Right(User("Spock"))
@@ -124,12 +142,14 @@ Successive logic parts (again consuming the entire input defined so far, and pro
 be given by calling `serverLogicForCurrent` again. The logic can be completed - given a tuple of partial results,
 and unconsumed inputs - using the `serverLogic` method:
 
-```scala
+```scala mdoc:compile-only
 val secureHelloWorld1WithLogic = secureEndpoint.get
   .in("hello1")
   .in(query[String]("salutation"))
   .out(stringBody)
-  .serverLogic { case (user, salutation) => Future(Right(s"$salutation, ${user.name}!")) }
+  .serverLogic { case (user, salutation) =>
+    Future.successful[Either[Int, String]](Right(s"${salutation}, ${user.name}!"))
+  }
 ```                    
 
 Once the server logic is complete, a `ServerEndpoint` is returned, which can be then interpreted as a server.
@@ -158,7 +178,9 @@ or outputs can be defined.
 
 For example, if we have an endpoint:
 
-```scala
+```scala mdoc:silent:reset
+import sttp.tapir._
+
 val secureHelloWorld2: Endpoint[(String, String), Int, String, Nothing] = endpoint
   .in(header[String]("X-AUTH-TOKEN"))
   .errorOut(plainBody[Int])
@@ -170,10 +192,17 @@ val secureHelloWorld2: Endpoint[(String, String), Int, String, Nothing] = endpoi
 
 We can provide the server logic in parts (using the same `auth` method as above):
 
-```scala
+```scala mdoc:compile-only
+import scala.concurrent.Future
+
+case class User(name: String)
+def auth(token: String): Future[Either[Int, User]] = ???
+
 val secureHelloWorld2WithLogic = secureHelloWorld2
   .serverLogicPart(auth)
-  .andThen { case (user, salutation) => Future(Right(s"$salutation, ${user.name}!")) }
+  .andThen { case (user, salutation) =>
+    Future.successful[Either[Int, String]](Right(s"$salutation, ${user.name}!"))
+  }
 ```
  
 Here, we first define a single part using `serverLogicPart`, and then complete the logic (consuming the remaining 
@@ -186,4 +215,4 @@ variants of the methods, which recover errors from failed effects: `serverLogicP
 ## Status codes
 
 By default, successful responses are returned with the `200 OK` status code, and errors with `400 Bad Request`. However,
-this can be customised by specifying how an [output maps to the status code](../endpoint/statuscodes.html).
+this can be customised by specifying how an [output maps to the status code](../endpoint/statuscodes.md).
