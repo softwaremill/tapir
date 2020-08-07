@@ -7,7 +7,7 @@ import java.util.{Date, UUID}
 
 import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateJdk8, arbLocalDateTimeJdk8, genZonedDateTimeWithZone}
 import org.scalacheck.{Arbitrary, Gen}
-import org.scalatest.{Assertion, FlatSpec, Matchers}
+import org.scalatest.Assertion
 import org.scalatestplus.scalacheck.Checkers
 import sttp.model.Uri
 import sttp.model.Uri._
@@ -16,8 +16,10 @@ import sttp.tapir.DecodeResult.Value
 
 import scala.concurrent.duration.{Duration => SDuration}
 import scala.reflect.ClassTag
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
-class CodecTest extends FlatSpec with Matchers with Checkers {
+class CodecTest extends AnyFlatSpec with Matchers with Checkers {
 
   implicit val arbitraryUri: Arbitrary[Uri] = Arbitrary(for {
     scheme <- Gen.alphaLowerStr if scheme.nonEmpty

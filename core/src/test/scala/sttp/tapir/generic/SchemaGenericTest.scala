@@ -3,16 +3,17 @@ package sttp.tapir.generic
 import java.math.{BigDecimal => JBigDecimal}
 
 import com.github.ghik.silencer.silent
-import org.scalatest.{FlatSpec, Matchers}
 import sttp.tapir.SchemaType._
 import sttp.tapir.{FieldName, Schema, SchemaType}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 @silent("never used")
-class SchemaGenericTest extends FlatSpec with Matchers {
+class SchemaGenericTest extends AnyFlatSpec with Matchers {
   private val stringSchema = implicitly[Schema[String]]
   private val intSchema = implicitly[Schema[Int]]
   private val longSchema = implicitly[Schema[Long]]
