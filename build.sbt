@@ -27,14 +27,6 @@ val only2_12settings = Seq(
   mimaPreviousArtifacts := (if (is2_12.value) mimaPreviousArtifacts.value else Set.empty)
 )
 
-// FIXME: use Release.stageChanges from sbt-softwaremill after upgrading it to 1.9
-def stageChanges(fileNames: String*): ReleaseStep = { s: State =>
-  val settings = Project.extract(s)
-  val vcs = settings.get(releaseVcs).get
-  fileNames.foreach(f => vcs.add(f) !! s.log)
-  s
-}
-
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   scalaVersion := scala2_12,
@@ -58,7 +50,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     runTest,
     setReleaseVersion,
     releaseStepInputTask(documentation / mdoc),
-    stageChanges("generated-doc/out"),
+    Release.stageChanges("generated-doc/out"),
     Release.updateVersionInDocs(organization.value),
     commitReleaseVersion,
     tagRelease,
