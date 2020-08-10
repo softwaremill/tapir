@@ -52,7 +52,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     publishArtifacts,
     releaseStepCommand("sonatypeBundleRelease"),
     pushChanges
-  )
+  ),
+  ideSkipProject := (scalaVersion.value == scala2_13)
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
@@ -73,41 +74,41 @@ lazy val rootProject = (project in file("."))
   .settings(publishArtifact := false, name := "tapir")
   .aggregate(
     core.projectRefs ++
-    cats.projectRefs ++
-    enumeratum.projectRefs ++
-    refined.projectRefs ++
-    zio.projectRefs ++
-    circeJson.projectRefs ++
-    jsoniterScala.projectRefs ++
-    playJson.projectRefs ++
-    sprayJson.projectRefs ++
-    uPickleJson.projectRefs ++
-    tethysJson.projectRefs ++
-    openapiModel.projectRefs ++
-    openapiCirce.projectRefs ++
-    openapiCirceYaml.projectRefs ++
-    openapiDocs.projectRefs ++
-    swaggerUiAkka.projectRefs ++
-    redocAkka.projectRefs ++
-    swaggerUiHttp4s.projectRefs ++
-    redocHttp4s.projectRefs ++
-    swaggerUiFinatra.projectRefs ++
-    swaggerUiPlay.projectRefs ++
-    redocPlay.projectRefs ++
-    serverTests.projectRefs ++
-    akkaHttpServer.projectRefs ++
-    http4sServer.projectRefs ++
-    sttpStubServer.projectRefs ++
-    finatraServer.projectRefs ++
-    finatraServerCats.projectRefs ++
-    playServer.projectRefs ++
-    vertxServer.projectRefs ++
-    zioServer.projectRefs ++
-    sttpClient.projectRefs ++
-    tests.projectRefs ++
-    examples.projectRefs ++
-    playground.projectRefs ++
-    documentation.projectRefs: _*
+      cats.projectRefs ++
+      enumeratum.projectRefs ++
+      refined.projectRefs ++
+      zio.projectRefs ++
+      circeJson.projectRefs ++
+      jsoniterScala.projectRefs ++
+      playJson.projectRefs ++
+      sprayJson.projectRefs ++
+      uPickleJson.projectRefs ++
+      tethysJson.projectRefs ++
+      openapiModel.projectRefs ++
+      openapiCirce.projectRefs ++
+      openapiCirceYaml.projectRefs ++
+      openapiDocs.projectRefs ++
+      swaggerUiAkka.projectRefs ++
+      redocAkka.projectRefs ++
+      swaggerUiHttp4s.projectRefs ++
+      redocHttp4s.projectRefs ++
+      swaggerUiFinatra.projectRefs ++
+      swaggerUiPlay.projectRefs ++
+      redocPlay.projectRefs ++
+      serverTests.projectRefs ++
+      akkaHttpServer.projectRefs ++
+      http4sServer.projectRefs ++
+      sttpStubServer.projectRefs ++
+      finatraServer.projectRefs ++
+      finatraServerCats.projectRefs ++
+      playServer.projectRefs ++
+      vertxServer.projectRefs ++
+      zioServer.projectRefs ++
+      sttpClient.projectRefs ++
+      tests.projectRefs ++
+      examples.projectRefs ++
+      playground.projectRefs ++
+      documentation.projectRefs: _*
   )
 
 // core
