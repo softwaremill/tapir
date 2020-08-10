@@ -20,9 +20,10 @@ val allScalaVersions = List(scala2_12, scala2_13)
 val scala2_12Versions = List(scala2_12)
 val documentationScalaVersion = scala2_12 // Documentation depends on finatraServer, which is 2.12 only
 
+scalaVersion := scala2_12
+
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
-  scalaVersion := scala2_12,
   libraryDependencies ++= Seq(
     compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.5"),
     compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
