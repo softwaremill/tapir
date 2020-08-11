@@ -1,8 +1,7 @@
 package sttp.tapir.util
 
-import matchers.should.Matchers._
+import org.scalatest.matchers.should.Matchers._
 import scala.tools.reflect.{ToolBox, ToolBoxError}
-import org.scalatest.matchers
 
 object CompileUtil {
   def interceptEval(code: String): ToolBoxError = {
