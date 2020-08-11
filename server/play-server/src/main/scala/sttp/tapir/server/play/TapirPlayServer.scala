@@ -41,9 +41,11 @@ trait TapirPlayServer {
         val i = value.asInstanceOf[I]
         e.logic(new FutureMonadError())(i)
           .map {
-            case Right(result) => serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.success.code)
+            case Right(result) =>
+              serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.success.code)(serverOptions.logger)
               OutputToPlayResponse(ServerDefaults.StatusCodes.success, e.output, result)
-            case Left(err)     => serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.error.code)
+            case Left(err) =>#
+              serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.error.code)(serverOptions.logger)
               OutputToPlayResponse(ServerDefaults.StatusCodes.error, e.errorOutput, err)
           }
       }
