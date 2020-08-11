@@ -13,8 +13,8 @@ import sbtrelease.ReleaseStateTransformations.{
 }
 import sbt.internal.ProjectMatrix
 
-val scala2_12 = "2.12.11"
-val scala2_13 = "2.13.2"
+val scala2_12 = "2.12.12"
+val scala2_13 = "2.13.3"
 
 val allScalaVersions = List(scala2_12, scala2_13)
 val scala2_12Versions = List(scala2_12)
