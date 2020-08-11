@@ -147,7 +147,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-generic" % Versions.circe,
       "com.softwaremill.common" %% "tagging" % "2.2.1",
-      scalaTest,
+      "org.scalatest" %% "scalatest" % "3.1.2", // TODO: finatra testing utilities are not compatible with newer scalatest
       "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided"
     ),
     libraryDependencies ++= loggerDependencies
