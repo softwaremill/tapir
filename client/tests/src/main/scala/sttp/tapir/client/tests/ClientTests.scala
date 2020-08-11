@@ -13,7 +13,9 @@ import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import sttp.tapir.{DecodeResult, _}
 import sttp.tapir.tests._
 import TestUtil._
@@ -24,7 +26,7 @@ import sttp.tapir.model.UsernamePassword
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
+trait ClientTests[S] extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   private val logger = org.log4s.getLogger
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global

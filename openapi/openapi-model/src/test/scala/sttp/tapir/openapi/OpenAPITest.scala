@@ -1,8 +1,9 @@
 package sttp.tapir.openapi
 
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class OpenAPITest extends FunSuite with Matchers {
+class OpenAPITest extends AnyFunSuite with Matchers {
   test("'default' in ServerVariable should belong to 'enum'") {
     a[java.lang.IllegalArgumentException] shouldBe thrownBy {
       Server("https://{username}.example.com:{port}/{basePath}")

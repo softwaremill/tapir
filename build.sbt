@@ -61,6 +61,8 @@ def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*):
 
 val scalaTest = "org.scalatest" %% "scalatest" % Versions.scalaTest
 val scalaCheck = "org.scalacheck" %% "scalacheck" % Versions.scalaCheck
+val scalaTestPlusScalaCheck = "org.scalatestplus" %% "scalacheck-1-14" % Versions.scalaTestPlusScalaCheck
+
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -123,6 +125,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       "com.softwaremill.sttp.model" %% "core" % "1.1.4",
       scalaTest % Test,
       scalaCheck % Test,
+      scalaTestPlusScalaCheck % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.3.5" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     ),
@@ -162,6 +165,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       "org.typelevel" %% "cats-core" % "2.1.1",
       scalaTest % Test,
       scalaCheck % Test,
+      scalaTestPlusScalaCheck % Test,
       "org.typelevel" %% "discipline-scalatest" % "2.0.0" % Test,
       "org.typelevel" %% "cats-laws" % "2.1.1" % Test
     )
@@ -457,7 +461,8 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
       "com.twitter" %% "inject-app" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-modules" % Versions.finatra % Test classifier "tests"
-    )
+    ),
+    dependencyOverrides += "org.scalatest" %% "scalatest" % "3.1.2" // TODO: finatra testing utilities are not compatible with newer scalatest
   )
   .jvmPlatform(scalaVersions = scala2_12Versions)
   .dependsOn(core, serverTests % Test)
