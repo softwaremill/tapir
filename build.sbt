@@ -147,7 +147,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-generic" % Versions.circe,
       "com.softwaremill.common" %% "tagging" % "2.2.1",
-      "org.scalatest" %% "scalatest" % "3.1.2", // TODO: finatra testing utilities are not compatible with newer scalatest
+      scalaTest,
       "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided"
     ),
     libraryDependencies ++= loggerDependencies
@@ -461,7 +461,8 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
       "com.twitter" %% "inject-app" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-modules" % Versions.finatra % Test classifier "tests"
-    )
+    ),
+    dependencyOverrides += "org.scalatest" %% "scalatest" % "3.1.2" // TODO: finatra testing utilities are not compatible with newer scalatest
   )
   .jvmPlatform(scalaVersions = scala2_12Versions)
   .dependsOn(core, serverTests % Test)
