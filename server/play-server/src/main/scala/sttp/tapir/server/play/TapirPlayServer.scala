@@ -44,7 +44,7 @@ trait TapirPlayServer {
             case Right(result) =>
               serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.success.code)(serverOptions.logger)
               OutputToPlayResponse(ServerDefaults.StatusCodes.success, e.output, result)
-            case Left(err) =>#
+            case Left(err) =>
               serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.error.code)(serverOptions.logger)
               OutputToPlayResponse(ServerDefaults.StatusCodes.error, e.errorOutput, err)
           }
