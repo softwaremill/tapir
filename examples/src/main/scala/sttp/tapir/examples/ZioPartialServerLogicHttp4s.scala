@@ -6,33 +6,36 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.client._
 import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
+import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
 import zio._
+import zio.console._
 import zio.interop.catz._
 import zio.interop.catz.implicits._
 
 object ZioPartialServerLogicHttp4s extends App {
-  // authentication logic
-  case class User(name: String)
-  val AuthenticationErrorCode = 1001
-  def auth(token: String): IO[Int, User] = {
-    if (token == "secret") IO.succeed(User("Spock"))
-    else IO.fail(AuthenticationErrorCode)
-  }
+
+  def greet(input: (User, String)): ZIO[Console, Nothing, String] =
+    input match {
+      case (user, salutation) =>
+        val greeting = s"$salutation, ${user.name}!"
+
+        putStrLn(greeting).as(greeting)
+    }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
-  val secureEndpoint: ZPartialServerEndpoint[Any, User, Unit, Int, Unit] = endpoint
+  val secureEndpoint: ZPartialServerEndpoint[UserService, User, Unit, Int, Unit] = endpoint
     .in(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
-    .zServerLogicForCurrent(auth)
+    .zServerLogicForCurrent(UserService.auth)
 
   // extend the base endpoint to define (potentially multiple) proper endpoints, define the rest of the server logic
   val secureHelloWorld1WithLogic = secureEndpoint.get
     .in("hello1")
     .in(query[String]("salutation"))
     .out(stringBody)
-    .serverLogic { case (user, salutation) => IO.succeed(s"$salutation, ${user.name}!") }
+    .serverLogic(greet)
 
   // ---
 
@@ -47,13 +50,14 @@ object ZioPartialServerLogicHttp4s extends App {
 
   // then, provide the server logic in parts
   val secureHelloWorld2WithLogic = secureHelloWorld2
-    .zServerLogicPart(auth)
-    .andThen { case (user, salutation) => IO.succeed(s"$salutation, ${user.name}!") }
+    .zServerLogicPart(UserService.auth)
+    .andThen(greet)
 
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: HttpRoutes[Task] = List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic).toRoutes
+  val helloWorldRoutes: URIO[UserService with Console, HttpRoutes[Task]] =
+    List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic).toRoutesR
 
   // testing
   val test = AsyncHttpClientZioBackend.managed().use { backend =>
@@ -84,15 +88,42 @@ object ZioPartialServerLogicHttp4s extends App {
   //
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
-    ZIO.runtime.flatMap { implicit runtime: Runtime[Any] =>
-      // starting the server
-      BlazeServerBuilder[Task](runtime.platform.executor.asEC)
-        .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
-        .resource
-        .use { _ =>
-          test
+    ZIO.runtime
+      .flatMap { implicit runtime: Runtime[Any] =>
+        helloWorldRoutes.flatMap { routes =>
+          BlazeServerBuilder[Task](runtime.platform.executor.asEC)
+            .bindHttp(8080, "localhost")
+            .withHttpApp(Router("/" -> routes).orNotFound)
+            .resource
+            .use { _ =>
+              test
+            }
+            .exitCode
         }
-        .exitCode
+      // starting
+      }
+      .provideCustomLayer(UserService.live)
+}
+
+object UserAuthenticationLayer {
+  type UserService = Has[UserService.Service]
+
+  case class User(name: String)
+  val AuthenticationErrorCode = 1001
+
+  object UserService {
+    trait Service {
+      def auth(token: String): IO[Int, User]
     }
+
+    val live: ZLayer[Any, Nothing, Has[Service]] = ZLayer.succeed(new Service {
+      def auth(token: String): IO[Int, User] = {
+        if (token == "secret") IO.succeed(User("Spock"))
+        else IO.fail(AuthenticationErrorCode)
+      }
+    })
+
+    def auth(token: String): ZIO[UserService, Int, User] = ZIO.accessM(_.get.auth(token))
+  }
+
 }
