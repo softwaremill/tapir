@@ -414,6 +414,14 @@ package object tests {
       endpoint.in(jsonBody[ColorWrapper])
     }
 
+    val in_valid_int_array: Endpoint[List[IntWrapper], Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
+      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val v: Validator[IntWrapper] = Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v)
+      endpoint.in(jsonBody[List[IntWrapper]])
+    }
+
     val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
   }
 

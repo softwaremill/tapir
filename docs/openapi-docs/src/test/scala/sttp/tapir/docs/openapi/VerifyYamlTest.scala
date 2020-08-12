@@ -28,7 +28,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum
     .out(jsonBody[FruitAmount])
     .out(header[Int]("X-Role"))
 
-
   test("should match the expected yaml") {
     val expectedYaml = loadYaml("expected.yml")
 
@@ -569,6 +568,16 @@ class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum
     val expectedYaml = loadYaml("expected_valid_additional_properties.yml")
 
     val actualYaml = Validation.in_valid_map
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("render validator for additional properties of array elements") {
+    val expectedYaml = loadYaml("expected_valid_int_array.yml")
+
+    val actualYaml = Validation.in_valid_int_array
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

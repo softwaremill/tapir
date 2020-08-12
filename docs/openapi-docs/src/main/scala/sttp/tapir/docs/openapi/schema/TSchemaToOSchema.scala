@@ -54,11 +54,18 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
         )
     }
 
+    val primitiveValidators = typeData.schema.schemaType match {
+      case TSchemaType.SArray(_) => asPrimitiveValidators(typeData.validator)
+      case _                     => asPrimitiveValidatorsDeep(typeData.validator)
+    }
+    val wholeNumbers = typeData.schema.schemaType match {
+      case TSchemaType.SInteger => true
+      case _                    => false
+    }
+
     result
       .map(addMetadata(_, typeData.schema))
-      .map(
-        addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schema.schemaType.isInstanceOf[TSchemaType.SInteger.type])
-      )
+      .map(addConstraints(_, primitiveValidators, wholeNumbers))
   }
 
   private def addMetadata(oschema: OSchema, tschema: TSchema[_]): OSchema = {
