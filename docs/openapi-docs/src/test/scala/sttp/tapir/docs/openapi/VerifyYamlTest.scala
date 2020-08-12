@@ -38,18 +38,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  val enum_test = endpoint.in(("enum-test")).out(jsonBody[FruitWithEnum])
-
-  test("should match yaml with enum") {
-    val expectedYaml = loadYaml("expected-enum.yml")
-
-    val actualYaml = List(enum_test).toOpenAPI(Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-
   val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1, Nothing] = endpoint
     .out(jsonBody[F1])
 
@@ -624,6 +612,16 @@ class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use enum validator for array elements") {
+    val out_enum_array = endpoint.in(("enum-test")).out(jsonBody[FruitWithEnum])
+    val expectedYaml = loadYaml("expected_valid_enum_array.yml")
+
+    val actualYaml = List(out_enum_array).toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
     actualYamlNoIndent shouldBe expectedYaml
   }
 
