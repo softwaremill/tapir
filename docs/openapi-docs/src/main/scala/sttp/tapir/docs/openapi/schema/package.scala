@@ -24,14 +24,27 @@ package object schema {
 
   private[schema] def asPrimitiveValidators(v: Validator[_]): Seq[Validator.Primitive[_]] = {
     v match {
-      case Validator.Mapped(wrapped, _)             => asPrimitiveValidators(wrapped)
-      case Validator.All(validators)                => validators.flatMap(asPrimitiveValidators)
-      case Validator.Any(validators)                => validators.flatMap(asPrimitiveValidators)
-      case Validator.CollectionElements(wrapped, _) => asPrimitiveValidators(wrapped)
-      case Validator.Product(_)                     => Nil
-      case Validator.Coproduct(_)                   => Nil
-      case Validator.OpenProduct(_)                 => Nil
-      case bv: Validator.Primitive[_]               => List(bv)
+      case Validator.Mapped(wrapped, _)       => asPrimitiveValidators(wrapped)
+      case Validator.All(validators)          => validators.flatMap(asPrimitiveValidators)
+      case Validator.Any(validators)          => validators.flatMap(asPrimitiveValidators)
+      case Validator.CollectionElements(_, _) => Nil
+      case Validator.Product(_)               => Nil
+      case Validator.Coproduct(_)             => Nil
+      case Validator.OpenProduct(_)           => Nil
+      case bv: Validator.Primitive[_]         => List(bv)
+    }
+  }
+
+  private[schema] def asPrimitiveValidatorsDeep(v: Validator[_]): Seq[Validator.Primitive[_]] = {
+    v match {
+      case Validator.Mapped(wrapped, _)            => asPrimitiveValidatorsDeep(wrapped)
+      case Validator.All(validators)               => validators.flatMap(asPrimitiveValidatorsDeep)
+      case Validator.Any(validators)               => validators.flatMap(asPrimitiveValidatorsDeep)
+      case Validator.CollectionElements(mapped, _) => asPrimitiveValidatorsDeep(mapped)
+      case Validator.Product(_)                    => Nil
+      case Validator.Coproduct(_)                  => Nil
+      case Validator.OpenProduct(_)                => Nil
+      case bv: Validator.Primitive[_]              => List(bv)
     }
   }
 

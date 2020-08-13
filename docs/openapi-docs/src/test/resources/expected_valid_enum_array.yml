@@ -1,0 +1,34 @@
+openapi: 3.0.1
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /enum-test:
+    get:
+      operationId: getEnum-test
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FruitWithEnum'
+components:
+  schemas:
+    FruitWithEnum:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
+        fruitType:
+          type: array
+          items:
+            type: string
+            enum:
+              - APPLE
+              - PEAR
