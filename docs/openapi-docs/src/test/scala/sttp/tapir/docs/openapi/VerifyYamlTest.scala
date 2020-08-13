@@ -3,7 +3,6 @@ package sttp.tapir.docs.openapi
 import com.github.ghik.silencer.silent
 import io.circe.Json
 import io.circe.generic.auto._
-import org.scalatest.{FunSuite, Matchers}
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir._
@@ -19,8 +18,10 @@ import sttp.tapir.tests._
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class VerifyYamlTest extends FunSuite with Matchers with TapirCodecEnumeratum {
+class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Nothing] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))

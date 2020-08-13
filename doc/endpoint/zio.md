@@ -7,13 +7,13 @@ exposing the endpoints using the [http4s](https://http4s.org) server.
 You'll need the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.16.7"
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.16.7"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "@VERSION@"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.ztapir._
 ```
 
@@ -43,7 +43,7 @@ The first defines complete server logic, while the second and third allow defini
 To bring into scope the extension methods used to interpret a `ZServerEndpoint` as a http4s server, add the following
 import:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.server.http4s.ztapir._
 ```
 

@@ -13,7 +13,9 @@ import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 import sttp.tapir.{DecodeResult, _}
 import sttp.tapir.tests._
 import TestUtil._
@@ -24,7 +26,7 @@ import sttp.tapir.model.UsernamePassword
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
+trait ClientTests[S] extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   private val logger = org.log4s.getLogger
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -75,6 +77,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
   testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
   testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
+  testClient(in_int_out_value_form_exact_match.name("first exact status of 2"), 1, Right("B"))
+  testClient(in_int_out_value_form_exact_match.name("second exact status of 2"), 2, Right("A"))
   testClient(in_string_out_status, "apple", Right(StatusCode.Ok))
 
   testClient(delete_endpoint, (), Right(()))
@@ -153,6 +157,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
   //
 
+  private object numParam extends QueryParamDecoderMatcher[Int]("num")
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
   private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
@@ -209,6 +214,9 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       val authHeader = r.headers.get(CaseInsensitiveString("Authorization")).map(_.value)
       val xApiKey = r.headers.get(CaseInsensitiveString("X-Api-Key")).map(_.value)
       Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; Query=$ak")
+
+    case GET -> Root / "mapping" :? numParam(v) =>
+      if (v % 2 == 0) Accepted("A") else Ok("B")
   }
 
   private val app: HttpApp[IO] = Router("/" -> service).orNotFound

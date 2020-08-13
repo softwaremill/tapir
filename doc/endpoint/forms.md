@@ -5,18 +5,22 @@
 An URL-encoded form input/output can be specified in two ways. First, it is possible to map all form fields as a
 `Seq[(String, String)]`, or `Map[String, String]` (which is more convenient if fields can't have multiple values):
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+
 formBody[Seq[(String, String)]]: EndpointIO.Body[String, Seq[(String, String)]]
-formBody[Map[String, String]]: EndpointIO.Body[String, Seq[(String, String)]]
+formBody[Map[String, String]]: EndpointIO.Body[String, Map[String, String]]
 ```
 
 Second, form data can be mapped to a case class. The codec for the case class is automatically derived using a macro at 
 compile-time. The fields of the case class should have types, for which there is a plain text codec. For example:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+
 case class RegistrationForm(name: String, age: Int, news: Boolean, city: Option[String])
 
-formBody[RegistrationForm]
+formBody[RegistrationForm]: EndpointIO.Body[String, RegistrationForm]
 ```
 
 Each form-field is named the same as the case-class-field. The names can be transformed to snake or kebab case by 
@@ -27,8 +31,10 @@ providing an implicit `tapir.generic.Configuraton`.
 Similarly as above, multipart form input/outputs can be specified in two ways. To map to all parts of a multipart body,
 use:
 
-```scala
-multipartBody[Seq[AnyPart]]: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]]
+```scala mdoc:compile-only
+import sttp.tapir._
+
+multipartBody: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]]
 ```
 
 where `type AnyPart = Part[_]`. `Part` is a case class containing the `name` of the part, disposition parameters,
@@ -47,12 +53,17 @@ Additionally, the case class to which the multipart body is mapped can contain b
 
 For example:
 
-```scala
-case class RegistrationForm(userData: User, photo: Part[File], news: Boolean)
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.model.Part
+import java.io.File
 
-multipartBody[RegistrationForm]
+case class RegistrationForm(userData: User, photo: Part[File], news: Boolean)
+case class User(email: String)
+
+multipartBody[RegistrationForm]: EndpointIO.Body[Seq[RawPart], RegistrationForm]
 ```
 
 ## Next
 
-Read on about [authentication](auth.html).
+Read on about [authentication](auth.md).

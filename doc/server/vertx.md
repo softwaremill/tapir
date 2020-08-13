@@ -4,12 +4,12 @@ Endpoints can be mounted as Vert.x `Route`s on top of a Vert.x `Router`.
 
 Use the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.16.7"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "@VERSION@"
 ```
 
 Then import the package:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.server.vertx._
 ```
 
@@ -24,25 +24,39 @@ The methods recovering errors from failed effects, require `E` to be a subclass 
 Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
 arguments need to be converted to a function using a single argument using `.tupled`:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.vertx._
+import io.vertx.scala.ext.web._
+import scala.concurrent.Future
+
+implicit val options: VertxEndpointOptions = ???
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? 
-val aRoute: Router => Route = anEndpoint.route(router, (logic _).tupled)
+val aRoute: Router => Route = anEndpoint.route((logic _).tupled)
 ```
 
 In practice, routes will be mounted on a router, this router can then be used as a request handler for your http server. 
 An HTTP server can then be started as in the following example:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.vertx._
+import io.vertx.scala.core.Vertx
+import io.vertx.scala.ext.web._
+import scala.concurrent.Future
+
 object Main {
   // JVM entry point that starts the HTTP server
   def main(args: Array[String]): Unit = {
+    implicit val options: VertxEndpointOptions = ???
     val vertx = Vertx.vertx()
     val server = vertx.createHttpServer()
     val router = Router.router(vertx)
     val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? // your definition here
     def logic(s: String, i: Int): Future[Either[Unit, String]] = ??? // your logic here 
-    anEndpoint.route(router, (logic _).tupled) // your endpoint is now attached to the router, and the route has been created
+    val attach = anEndpoint.route((logic _).tupled)
+    attach(router) // your endpoint is now attached to the router, and the route has been created
     server.requestHandler(router).listenFuture(9000)
   }
 }
@@ -50,10 +64,10 @@ object Main {
 
 ## Configuration
 
-Every endpoint can be configured by providing an implicit `VertxEndpointOptions`, see [server options](options.html) for details.
+Every endpoint can be configured by providing an implicit `VertxEndpointOptions`, see [server options](options.md) for details.
 You can also provide your own `ExecutionContext` to execute the logic.
 
 ## Defining an endpoint together with the server logic
 
 It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.html) for details.
+[server logic](logic.md) for details.

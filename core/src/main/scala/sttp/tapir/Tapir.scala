@@ -175,6 +175,21 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     StatusMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
 
   /**
+    * Create a status mapping which uses `statusCode` and `output` if the provided value exactly matches one
+    * of the values provided in the second argument list.
+    *
+    * Should be used in [[oneOf]] output descriptions.
+    */
+  def statusMappingExactMatcher[T: ClassTag](
+      statusCode: StatusCode,
+      output: EndpointOutput[T]
+  )(
+      firstExactValue: T,
+      rest: T*
+  ): StatusMapping[T] =
+    statusMappingValueMatcher(statusCode, output)(exactMatch(rest.toSet + firstExactValue))
+
+  /**
     * Experimental!
     *
     * Create a status mapping which uses `statusCode` and `output` if the provided value matches the target type, as

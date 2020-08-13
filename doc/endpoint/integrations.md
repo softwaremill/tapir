@@ -6,7 +6,7 @@ The `tapir-cats` module contains additional instances for some [cats](https://ty
 datatypes as well as additional syntax:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.16.7"
+"com.softwaremill.sttp.tapir" %% "tapir-cats" % "@VERSION@"
 ```
 
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
@@ -19,7 +19,7 @@ If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` mo
 validators for `T Refined P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.16.7"
+"com.softwaremill.sttp.tapir" %% "tapir-refined" % "@VERSION@"
 ```
 
 You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
@@ -40,7 +40,7 @@ The `tapir-enumeratum` module provides schemas, validators and codecs for [Enume
 enumerations. To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.16.7"
+"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "@VERSION@"
 ```
 
 Then, `import sttp.tapir.codec.enumeratum`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
@@ -53,7 +53,11 @@ There is no library for the use of the build in scala `Enumeration`, but it can 
 
 The example code below will generate [enums](https://swagger.io/docs/specification/data-models/enums/) to the open-api documentation.
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.codec.enumeratum._
+import enumeratum._
+
 trait EnumHelper { e: Enumeration =>
     import io.circe._
 

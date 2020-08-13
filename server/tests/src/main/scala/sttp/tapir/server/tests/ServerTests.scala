@@ -10,7 +10,7 @@ import com.typesafe.scalalogging.StrictLogging
 import sttp.client._
 import sttp.client.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import io.circe.generic.auto._
-import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import org.scalatest.{Assertion, BeforeAndAfterAll}
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.json.circe._
@@ -20,8 +20,10 @@ import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
 import scala.reflect.ClassTag
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
+trait ServerTests[R[_], S, ROUTE] extends AnyFunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
   private val basicStringRequest = basicRequest.response(asStringAlways)
 
   def multipleValueHeaderSupport: Boolean = true
@@ -451,6 +453,11 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     baseUri =>
       basicRequest.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCode.Ok) >>
         basicRequest.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCode.Accepted)
+  }
+
+  testServer(in_int_out_value_form_exact_match)((num: Int) => pureResult(if (num % 2 == 0) Right("A") else Right("B"))) { baseUri =>
+    basicRequest.get(uri"$baseUri/mapping?num=1").send().map(_.code shouldBe StatusCode.Ok) >>
+      basicRequest.get(uri"$baseUri/mapping?num=2").send().map(_.code shouldBe StatusCode.Accepted)
   }
 
   testServer(in_string_out_status_from_string_one_empty)((v: String) =>

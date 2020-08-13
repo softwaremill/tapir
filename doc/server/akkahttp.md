@@ -4,14 +4,14 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.16.7"
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "@VERSION@"
 ```
 
 This will transitively pull some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.16.7" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "@VERSION@" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Now import the package:
@@ -32,7 +32,7 @@ it expects a function of type `I => Future[O]`.
 
 For example:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
 import scala.concurrent.Future
@@ -50,7 +50,12 @@ val countCharactersRoute: Route = countCharactersEndpoint.toRoute(countCharacter
 Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
 arguments need to be converted to a function using a single argument using `.tupled`:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
+import scala.concurrent.Future
+import akka.http.scaladsl.server.Route
+
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? 
 val aRoute: Route = anEndpoint.toRoute((logic _).tupled)
@@ -64,10 +69,19 @@ using tapir endpoint descriptions; or, that the tapir-generated route is wrapped
 "edge-case endpoints", which require some special logic not expressible using tapir, can be always implemented directly 
 using akka-http. For example:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
+import akka.http.scaladsl.server._
+
+case class User(email: String)
+def metricsDirective: Directive0 = ???
+def securityDirective: Directive1[User] = ???
+val tapirEndpoint: Endpoint[String, Unit, Unit, Nothing] = endpoint.in(path[String]("input"))
+
 val myRoute: Route = metricsDirective {
   securityDirective { user =>
-    tapirEndpoint.toRoute(input => /* here we can use both `user` and `input` values */)
+    tapirEndpoint.toRoute(input => ??? /* here we can use both `user` and `input` values */)
   }
 }
 ```
@@ -80,9 +94,9 @@ response bodies and reading request bodies. Usage: `streamBody[Source[ByteString
 ## Configuration
 
 The interpreter can be configured by providing an implicit `AkkaHttpServerOptions` value and status mappers, see
-[server options](options.html) for details.
+[server options](options.md) for details.
 
 ## Defining an endpoint together with the server logic
 
 It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.html) for details.
+[server logic](logic.md) for details.

@@ -13,7 +13,7 @@ jobs:
       - name: Extract version from commit message
         run: |
           version=${COMMIT_MSG#"Setting version to "}
-          echo "::set-env name=VERSION::version"
+          echo "::set-env name=VERSION::$version"
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
       - uses: release-drafter/release-drafter@v5
@@ -21,5 +21,7 @@ jobs:
           config-name: release-drafter.yml
           publish: true
           name: "v${{ env.VERSION }}"
+          tag: "v${{ env.VERSION }}"
+          version: "v${{ env.VERSION }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
