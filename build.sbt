@@ -148,12 +148,13 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
       "io.circe" %% "circe-generic" % Versions.circe,
       "com.softwaremill.common" %% "tagging" % "2.2.1",
       scalaTest,
-      "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided"
-    ),
+      "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided",
+      "com.beachape" %% "enumeratum" % Versions.enumeratum,
+      "com.beachape" %% "enumeratum-circe" % Versions.enumeratum),
     libraryDependencies ++= loggerDependencies
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, circeJson)
+  .dependsOn(core, circeJson, enumeratum)
 
 // integrations
 
