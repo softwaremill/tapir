@@ -55,8 +55,8 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
     }
 
     val primitiveValidators = typeData.schema.schemaType match {
-      case TSchemaType.SArray(_) => asPrimitiveValidators(typeData.validator)
-      case _                     => asPrimitiveValidatorsDeep(typeData.validator)
+      case TSchemaType.SArray(_) => asPrimitiveValidators(typeData.validator, unwrapCollections = false)
+      case _                     => asPrimitiveValidators(typeData.validator, unwrapCollections = true)
     }
     val wholeNumbers = typeData.schema.schemaType match {
       case TSchemaType.SInteger => true

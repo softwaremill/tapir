@@ -6,7 +6,6 @@ import io.circe.generic.auto._
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir._
-import sttp.tapir.codec.enumeratum.TapirCodecEnumeratum
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
@@ -15,19 +14,19 @@ import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
 import sttp.tapir.tests._
+import sttp.tapir.codec.enumeratum._
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
-class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum {
+class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Nothing] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))
     .out(jsonBody[FruitAmount])
     .out(header[Int]("X-Role"))
-
 
   test("should match the expected yaml") {
     val expectedYaml = loadYaml("expected.yml")
@@ -37,18 +36,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum
 
     actualYamlNoIndent shouldBe expectedYaml
   }
-
-  val enum_test = endpoint.in(("enum-test")).out(jsonBody[FruitWithEnum])
-
-  test("should match yaml with enum") {
-    val expectedYaml = loadYaml("expected-enum.yml")
-
-    val actualYaml = List(enum_test).toOpenAPI(Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
 
   val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1, Nothing] = endpoint
     .out(jsonBody[F1])
@@ -150,8 +137,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum
 
     val actualYaml = List(e1, e2, e3).toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
-
-    println(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -638,7 +623,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers with TapirCodecEnumeratum
   }
 
   test("use enum validator for array elements") {
-    val out_enum_array = endpoint.in(("enum-test")).out(jsonBody[FruitWithEnum])
+    val out_enum_array = endpoint.in("enum-test").out(jsonBody[FruitWithEnum])
     val expectedYaml = loadYaml("expected_valid_enum_array.yml")
 
     val actualYaml = List(out_enum_array).toOpenAPI(Info("Fruits", "1.0")).toYaml

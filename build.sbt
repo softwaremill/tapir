@@ -63,7 +63,6 @@ val scalaTest = "org.scalatest" %% "scalatest" % Versions.scalaTest
 val scalaCheck = "org.scalacheck" %% "scalacheck" % Versions.scalaCheck
 val scalaTestPlusScalaCheck = "org.scalatestplus" %% "scalacheck-1-14" % Versions.scalaTestPlusScalaCheck
 
-
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
@@ -146,11 +145,11 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-generic" % Versions.circe,
+      "com.beachape" %% "enumeratum-circe" % Versions.enumeratum,
       "com.softwaremill.common" %% "tagging" % "2.2.1",
       scalaTest,
-      "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided",
-      "com.beachape" %% "enumeratum" % Versions.enumeratum,
-      "com.beachape" %% "enumeratum-circe" % Versions.enumeratum),
+      "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided"
+    ),
     libraryDependencies ++= loggerDependencies
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
