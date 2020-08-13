@@ -72,7 +72,7 @@ abstract class ZPartialServerEndpoint[R, U, I, E, O](val endpoint: ZEndpoint[I, 
       }
     }
 
-  def serverLogic(g: ((U, I)) => ZIO[R, E, O]): ZServerEndpoint[R, (T, I), E, O] =
+  def serverLogic[R0](g: ((U, I)) => ZIO[R0, E, O]): ZServerEndpoint[R with R0, (T, I), E, O] =
     ServerEndpoint(
       endpoint.prependIn(tInput): ZEndpoint[(T, I), E, O],
       _ => {
