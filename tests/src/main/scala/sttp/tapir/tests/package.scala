@@ -239,6 +239,9 @@ package object tests {
   val in_content_type_out_string: Endpoint[String, Unit, String, Nothing] =
     endpoint.in("api" / "echo").in(header[String]("Content-Type")).out(stringBody)
 
+  val in_unit_out_html: Endpoint[Unit, Unit, String, Nothing] =
+    endpoint.in("api" / "echo").out(htmlBodyUtf8)
+
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location"))
 

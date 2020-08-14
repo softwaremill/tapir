@@ -362,6 +362,12 @@ trait ServerTests[R[_], S, ROUTE] extends AnyFunSuite with Matchers with BeforeA
     }
   }
 
+  testServer(in_unit_out_html)(_ => pureResult("<html />".asRight[Unit])) { baseUri =>
+    basicRequest.get(uri"$baseUri/api/echo").send().map { r =>
+      r.contentType shouldBe Some("text/html; charset=UTF-8")
+    }
+  }
+
   testServer(in_unit_out_header_redirect)(_ => pureResult("http://new.com".asRight[Unit])) { baseUri =>
     basicRequest.followRedirects(false).get(uri"$baseUri").send().map { r =>
       r.code shouldBe StatusCode.PermanentRedirect
