@@ -430,8 +430,11 @@ case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Code
 }
 
 object MultipartCodec extends MultipartCodecDerivation {
-  val Default: MultipartCodec[Seq[AnyPart]] =
-    Codec.multipartCodec(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, Codec.list(Codec.byteArray))))
+  val Default: MultipartCodec[Seq[Part[Array[Byte]]]] = {
+    Codec
+      .multipartCodec(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, Codec.list(Codec.byteArray))))
+      .asInstanceOf[MultipartCodec[Seq[Part[Array[Byte]]]]] // we know that all parts will end up as byte arrays
+  }
 }
 
 /**
