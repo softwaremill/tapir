@@ -192,11 +192,11 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     }.toList
   }
 
-  case class Mapped[TT, T](wrapped: Validator[T], g: TT => T) extends Single[TT] {
+  //
+
+  case class Mapped[TT, T](wrapped: Validator[T], g: TT => T) extends Validator[TT] {
     override def validate(t: TT): List[ValidationError[_]] = wrapped.validate(g(t))
   }
-
-  //
 
   case class All[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def validate(t: T): List[ValidationError[_]] = validators.flatMap(_.validate(t)).toList
