@@ -16,9 +16,10 @@ package object schema {
 
   private[schema] def asSingleValidators(v: Validator[_]): Seq[Validator.Single[_]] = {
     v match {
-      case Validator.All(validators) => validators.flatMap(asSingleValidators)
-      case Validator.Any(validators) => validators.flatMap(asSingleValidators)
-      case sv: Validator.Single[_]   => List(sv)
+      case Validator.All(validators)    => validators.flatMap(asSingleValidators)
+      case Validator.Any(validators)    => validators.flatMap(asSingleValidators)
+      case Validator.Mapped(wrapped, _) => asSingleValidators(wrapped)
+      case sv: Validator.Single[_]      => List(sv)
     }
   }
 

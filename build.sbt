@@ -153,7 +153,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     libraryDependencies ++= loggerDependencies
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, circeJson, enumeratum)
+  .dependsOn(core, circeJson, enumeratum, cats)
 
 // integrations
 
