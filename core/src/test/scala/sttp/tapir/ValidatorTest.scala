@@ -175,16 +175,21 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
       val innerErrors =
         if (v.field.innerValue <= 0)
           List(
-            ValidationError.Custom(v.field.innerValue, "Inner value should be > 0", List(FieldName("field.innerValue", "field.innerValue")))
+            ValidationError.Custom(
+              v.field.innerValue,
+              "Inner value should be > 0",
+              List(FieldName("field", "field"), FieldName("innerValue", "innerValue"))
+            )
           )
         else List.empty
       nameErrors ++ ageErrors ++ innerErrors
     })
 
-    ValidationMessages.validationErrorsMessage(validator.validate(MyClass("ab", -1, InnerCaseClass(-3)))) shouldBe
-      """expected name to pass custom validation: Name length should be >= 3, but was 'ab',
-        |expected age to pass custom validation: Age should be > 0, but was '-1',
-        |expected field.innerValue to pass custom validation: Inner value should be > 0, but was '-3'""".stripMargin.replaceAll("\n", " ")
+    validator.validate(MyClass("ab", -1, InnerCaseClass(-3))) shouldBe List(
+      ValidationError.Custom("ab", "Name length should be >= 3", List(FieldName("name", "name"))),
+      ValidationError.Custom(-1, "Age should be > 0", List(FieldName("age", "age"))),
+      ValidationError.Custom(-3, "Inner value should be > 0", List(FieldName("field", "field"), FieldName("innerValue", "innerValue")))
+    )
   }
 
   it should "skip collection validation for array if element validator is passing" in {
