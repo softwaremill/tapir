@@ -131,19 +131,26 @@ object ServerDefaults {
       * @param valueName Name of the validated value to be used in error messages
       */
     def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String =
-      ve.validator match {
-        case Validator.Min(value, exclusive) =>
-          s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
-        case Validator.Max(value, exclusive) =>
-          s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
-        case Validator.Pattern(value)   => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
-        case Validator.MinLength(value) => s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
-        case Validator.MaxLength(value) => s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
-        case Validator.MinSize(value) =>
-          s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
-        case Validator.MaxSize(value)          => s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
-        case Validator.Custom(_, message)      => s"expected $valueName to pass custom validation: $message, but was '${ve.invalidValue}'"
-        case Validator.Enum(possibleValues, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
+      ve match {
+        case p: ValidationError.Primitive[T] =>
+          p.validator match {
+            case Validator.Min(value, exclusive) =>
+              s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
+            case Validator.Max(value, exclusive) =>
+              s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
+            case Validator.Pattern(value) => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
+            case Validator.MinLength(value) =>
+              s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
+            case Validator.MaxLength(value) =>
+              s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
+            case Validator.MinSize(value) =>
+              s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
+            case Validator.MaxSize(value) =>
+              s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
+            case Validator.Enum(possibleValues, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
+          }
+        case c: ValidationError.Custom[T] =>
+          s"expected $valueName to pass custom validation: ${c.message}, but was '${ve.invalidValue}'"
       }
 
     /**

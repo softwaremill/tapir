@@ -101,7 +101,6 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case Validator.MaxLength(value) => oschema.copy(maxLength = Some(value))
       case Validator.MinSize(value)   => oschema.copy(minItems = Some(value))
       case Validator.MaxSize(value)   => oschema.copy(maxItems = Some(value))
-      case Validator.Custom(_, _)     => oschema
       case Validator.Enum(_, None)    => oschema
       case Validator.Enum(v, Some(encode)) =>
         val values = v.flatMap(x => encode(x).map(rawToString))

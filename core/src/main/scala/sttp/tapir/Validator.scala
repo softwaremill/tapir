@@ -46,8 +46,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   def maxLength[T <: String](value: Int): Validator.Primitive[T] = MaxLength(value)
   def minSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
   def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
-  def custom[T](doValidate: T => Boolean, message: String): Validator.Primitive[T] = Custom(doValidate, message)
-  def customCaseClass[T](doValidate: T => List[InvalidField[_]]): Validator.Single[T] = CustomCaseClass(doValidate)
+  def custom[T](doValidate: T => List[ValidationError[_]]): Validator[T] = Custom(doValidate)
 
   /**
     * Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s.
@@ -72,7 +71,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       if (implicitly[Numeric[T]].gt(t, value) || (!exclusive && implicitly[Numeric[T]].equiv(t, value))) {
         List.empty
       } else {
-        List(ValidationError(this, t))
+        List(ValidationError.Primitive(this, t))
       }
     }
   }
@@ -81,7 +80,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       if (implicitly[Numeric[T]].lt(t, value) || (!exclusive && implicitly[Numeric[T]].equiv(t, value))) {
         List.empty
       } else {
-        List(ValidationError(this, t))
+        List(ValidationError.Primitive(this, t))
       }
     }
   }
@@ -90,7 +89,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       if (t.matches(value)) {
         List.empty
       } else {
-        List(ValidationError(this, t))
+        List(ValidationError.Primitive(this, t))
       }
     }
   }
@@ -99,7 +98,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       if (t.size >= value) {
         List.empty
       } else {
-        List(ValidationError(this, t))
+        List(ValidationError.Primitive(this, t))
       }
     }
   }
@@ -108,7 +107,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       if (t.size <= value) {
         List.empty
       } else {
-        List(ValidationError(this, t))
+        List(ValidationError.Primitive(this, t))
       }
     }
   }
@@ -117,7 +116,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       if (t.size >= value) {
         List.empty
       } else {
-        List(ValidationError(this, t))
+        List(ValidationError.Primitive(this, t))
       }
     }
   }
@@ -126,25 +125,13 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       if (t.size <= value) {
         List.empty
       } else {
-        List(ValidationError(this, t))
+        List(ValidationError.Primitive(this, t))
       }
     }
   }
-  case class Custom[T](doValidate: T => Boolean, message: String) extends Primitive[T] {
+  case class Custom[T](doValidate: T => List[ValidationError[_]]) extends Validator[T] {
     override def validate(t: T): List[ValidationError[_]] = {
-      if (doValidate(t)) {
-        List.empty
-      } else {
-        List(ValidationError(this, t))
-      }
-    }
-  }
-
-  case class CustomCaseClass[T](doValidate: T => List[InvalidField[_]]) extends Single[T] {
-    override def validate(t: T): List[ValidationError[_]] = {
-      doValidate(t).map(f =>
-        ValidationError(Custom((_: scala.Any) => true, f.message), f.invalidValue.getOrElse("invalid"), f.path)
-      )
+      doValidate(t)
     }
   }
 
@@ -153,7 +140,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       if (possibleValues.contains(t)) {
         List.empty
       } else {
-        List(ValidationError(this, t))
+        List(ValidationError.Primitive(this, t))
       }
     }
 
@@ -245,10 +232,9 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         case MaxLength(value)          => Some(s"length<=$value")
         case MinSize(value)            => Some(s"size>=$value")
         case MaxSize(value)            => Some(s"size<=$value")
-        case Custom(_, message)        => Some(message)
+        case Custom(_)                 => Some("custom message") //TODO?
         case Enum(possibleValues, _)   => Some(s"in(${possibleValues.mkString(",")}")
         case CollectionElements(el, _) => recurse(el).map(se => s"elements($se)")
-        case CustomCaseClass(_)        => None
         case Product(fields) =>
           fields.flatMap {
             case (n, f) =>
@@ -291,8 +277,19 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   implicit def openProduct[T: Validator]: Validator[Map[String, T]] = OpenProduct(implicitly[Validator[T]])
 }
 
-case class ValidationError[T](validator: Validator.Primitive[T], invalidValue: T, path: List[FieldName] = Nil) {
-  def prependPath(f: FieldName): ValidationError[T] = copy(path = f :: path)
+sealed trait ValidationError[T] {
+  def prependPath(f: FieldName): ValidationError[T]
+  def invalidValue: T
+  def path: List[FieldName]
 }
 
-case class InvalidField[T](invalidValue: Option[T], message: String, path: List[Validator.FieldName] = Nil)
+object ValidationError {
+
+  case class Primitive[T](validator: Validator.Primitive[T], invalidValue: T, path: List[FieldName] = Nil) extends ValidationError[T] {
+    override def prependPath(f: FieldName): ValidationError[T] = copy(path = f :: path)
+  }
+
+  case class Custom[T](invalidValue: T, message: String, path: List[FieldName] = Nil) extends ValidationError[T] {
+    override def prependPath(f: FieldName): ValidationError[T] = copy(path = f :: path)
+  }
+}

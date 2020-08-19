@@ -14,7 +14,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val min = 1
     val wrong = 0
     val v = Validator.min(min)
-    v.validate(wrong) shouldBe List(ValidationError(v, wrong))
+    v.validate(wrong) shouldBe List(ValidationError.Primitive(v, wrong))
     v.validate(min) shouldBe empty
   }
 
@@ -22,8 +22,8 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val min = 1
     val wrong = 0
     val v = Validator.min(min, exclusive = true)
-    v.validate(wrong) shouldBe List(ValidationError(v, wrong))
-    v.validate(min) shouldBe List(ValidationError(v, min))
+    v.validate(wrong) shouldBe List(ValidationError.Primitive(v, wrong))
+    v.validate(min) shouldBe List(ValidationError.Primitive(v, min))
     v.validate(min + 1) shouldBe empty
   }
 
@@ -31,7 +31,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val max = 0
     val wrong = 1
     val v = Validator.max(max)
-    v.validate(wrong) shouldBe List(ValidationError(v, wrong))
+    v.validate(wrong) shouldBe List(ValidationError.Primitive(v, wrong))
     v.validate(max) shouldBe empty
   }
 
@@ -39,8 +39,8 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val max = 0
     val wrong = 1
     val v = Validator.max(max, exclusive = true)
-    v.validate(wrong) shouldBe List(ValidationError(v, wrong))
-    v.validate(max) shouldBe List(ValidationError(v, max))
+    v.validate(wrong) shouldBe List(ValidationError.Primitive(v, wrong))
+    v.validate(max) shouldBe List(ValidationError.Primitive(v, max))
     v.validate(max - 1) shouldBe empty
   }
 
@@ -48,35 +48,35 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val expected = 1
     val actual = List(1, 2, 3)
     val v = Validator.maxSize[Int, List](expected)
-    v.validate(actual) shouldBe List(ValidationError(v, actual))
+    v.validate(actual) shouldBe List(ValidationError.Primitive(v, actual))
     v.validate(List(1)) shouldBe empty
   }
 
   it should "validate for minSize of collection" in {
     val expected = 3
     val v = Validator.minSize[Int, List](expected)
-    v.validate(List(1, 2)) shouldBe List(ValidationError(v, List(1, 2)))
+    v.validate(List(1, 2)) shouldBe List(ValidationError.Primitive(v, List(1, 2)))
     v.validate(List(1, 2, 3)) shouldBe empty
   }
 
   it should "validate for matching regex pattern" in {
     val expected = "^apple$|^banana$"
     val wrong = "orange"
-    Validator.pattern(expected).validate(wrong) shouldBe List(ValidationError(Validator.pattern(expected), wrong))
+    Validator.pattern(expected).validate(wrong) shouldBe List(ValidationError.Primitive(Validator.pattern(expected), wrong))
     Validator.pattern(expected).validate("banana") shouldBe empty
   }
 
   it should "validate for minLength of string" in {
     val expected = 3
     val v = Validator.minLength[String](expected)
-    v.validate("ab") shouldBe List(ValidationError(v, "ab"))
+    v.validate("ab") shouldBe List(ValidationError.Primitive(v, "ab"))
     v.validate("abc") shouldBe empty
   }
 
   it should "validate for maxLength of string" in {
     val expected = 1
     val v = Validator.maxLength[String](expected)
-    v.validate("ab") shouldBe List(ValidationError(v, "ab"))
+    v.validate("ab") shouldBe List(ValidationError.Primitive(v, "ab"))
     v.validate("a") shouldBe empty
   }
 
@@ -85,31 +85,34 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     validator.validate(4) shouldBe empty
     validator.validate(7) shouldBe empty
     validator.validate(11) shouldBe List(
-      ValidationError(Validator.max(5), 11),
-      ValidationError(Validator.max(10), 11)
+      ValidationError.Primitive(Validator.max(5), 11),
+      ValidationError.Primitive(Validator.max(10), 11)
     )
   }
 
   it should "validate with all of validators" in {
     val validator = Validator.all(Validator.min(3), Validator.max(10))
     validator.validate(4) shouldBe empty
-    validator.validate(2) shouldBe List(ValidationError(Validator.min(3), 2))
-    validator.validate(11) shouldBe List(ValidationError(Validator.max(10), 11))
+    validator.validate(2) shouldBe List(ValidationError.Primitive(Validator.min(3), 2))
+    validator.validate(11) shouldBe List(ValidationError.Primitive(Validator.max(10), 11))
   }
 
   it should "validate with custom validator" in {
     val v = Validator.custom(
       { x: Int =>
-        x > 5
-      },
-      "X has to be greater than 5!"
+        if (x > 5) {
+          List.empty
+        } else {
+          List(ValidationError.Custom(x, "X has to be greater than 5!"))
+        }
+      }
     )
-    v.validate(0) shouldBe List(ValidationError(v, 0))
+    v.validate(0) shouldBe List(ValidationError.Custom(0, "X has to be greater than 5!"))
   }
 
   it should "validate openProduct" in {
     val validator = Validator.openProduct(Validator.min(10))
-    validator.validate(Map("key" -> 0)).map(noPath(_)) shouldBe List(ValidationError(Validator.min(10), 0))
+    validator.validate(Map("key" -> 0)).map(noPath(_)) shouldBe List(ValidationError.Primitive(Validator.min(10), 0))
     validator.validate(Map("key" -> 12)) shouldBe empty
   }
 
@@ -117,21 +120,21 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     val validator = Validator.optionElement(Validator.min(10))
     validator.validate(None) shouldBe empty
     validator.validate(Some(12)) shouldBe empty
-    validator.validate(Some(5)) shouldBe List(ValidationError(Validator.min(10), 5))
+    validator.validate(Some(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
   }
 
   it should "validate iterable" in {
     val validator = Validator.iterableElements[Int, List](Validator.min(10))
     validator.validate(List.empty[Int]) shouldBe empty
     validator.validate(List(11)) shouldBe empty
-    validator.validate(List(5)) shouldBe List(ValidationError(Validator.min(10), 5))
+    validator.validate(List(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
   }
 
   it should "validate array" in {
     val validator = Validator.arrayElements[Int](Validator.min(10))
     validator.validate(Array.empty[Int]) shouldBe empty
     validator.validate(Array(11)) shouldBe empty
-    validator.validate(Array(5)) shouldBe List(ValidationError(Validator.min(10), 5))
+    validator.validate(Array(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
   }
 
   it should "validate product" in {
@@ -140,13 +143,13 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     implicit val ageValidator: Validator[Int] = Validator.min(18)
     val validator = Validator.validatorForCaseClass[Person]
     validator.validate(Person("notImportantButOld", 21)).map(noPath(_)) shouldBe List(
-      ValidationError(Validator.pattern("^[A-Z].*"), "notImportantButOld")
+      ValidationError.Primitive(Validator.pattern("^[A-Z].*"), "notImportantButOld")
     )
     validator.validate(Person("notImportantAndYoung", 15)).map(noPath(_)) shouldBe List(
-      ValidationError(Validator.pattern("^[A-Z].*"), "notImportantAndYoung"),
-      ValidationError(Validator.min(18), 15)
+      ValidationError.Primitive(Validator.pattern("^[A-Z].*"), "notImportantAndYoung"),
+      ValidationError.Primitive(Validator.min(18), 15)
     )
-    validator.validate(Person("ImportantButYoung", 15)).map(noPath(_)) shouldBe List(ValidationError(Validator.min(18), 15))
+    validator.validate(Person("ImportantButYoung", 15)).map(noPath(_)) shouldBe List(ValidationError.Primitive(Validator.min(18), 15))
     validator.validate(Person("ImportantAndOld", 21)) shouldBe empty
   }
 
@@ -157,27 +160,30 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
   it should "validate closed set of ints" in {
     val v = Validator.enum(List(1, 2, 3, 4))
     v.validate(1) shouldBe empty
-    v.validate(0) shouldBe List(ValidationError(v, 0))
+    v.validate(0) shouldBe List(ValidationError.Primitive(v, 0))
   }
 
   it should "validate a custom case class" in {
     case class InnerCaseClass(innerValue: Long)
     case class MyClass(name: String, age: Int, field: InnerCaseClass)
-    val validator = Validator.customCaseClass[MyClass](doValidate = { v =>
+    val validator = Validator.custom[MyClass](doValidate = { v =>
       val nameErrors =
-        if (v.name.length < 3) List(InvalidField(Some(v.name), "Name length should be >= 3", List(FieldName("name", "name"))))
+        if (v.name.length < 3) List(ValidationError.Custom(v.name, "Name length should be >= 3", List(FieldName("name", "name"))))
         else List.empty
-      val ageErrors = if (v.age <= 0) List(InvalidField(None, "Age should be > 0", List(FieldName("age", "age")))) else List.empty
+      val ageErrors =
+        if (v.age <= 0) List(ValidationError.Custom(v.age, "Age should be > 0", List(FieldName("age", "age")))) else List.empty
       val innerErrors =
         if (v.field.innerValue <= 0)
-          List(InvalidField(Some(v.field.innerValue), "Inner value should be > 0", List(FieldName("field.innerValue", "field.innerValue"))))
+          List(
+            ValidationError.Custom(v.field.innerValue, "Inner value should be > 0", List(FieldName("field.innerValue", "field.innerValue")))
+          )
         else List.empty
       nameErrors ++ ageErrors ++ innerErrors
     })
 
     ValidationMessages.validationErrorsMessage(validator.validate(MyClass("ab", -1, InnerCaseClass(-3)))) shouldBe
       """expected name to pass custom validation: Name length should be >= 3, but was 'ab',
-        |expected age to pass custom validation: Age should be > 0, but was 'invalid',
+        |expected age to pass custom validation: Age should be > 0, but was '-1',
         |expected field.innerValue to pass custom validation: Inner value should be > 0, but was '-3'""".stripMargin.replaceAll("\n", " ")
   }
 
@@ -225,7 +231,11 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v.show shouldBe Some("subNames->(elements(elements(recursive)))")
   }
 
-  private def noPath[T](v: ValidationError[T]): ValidationError[T] = v.copy(path = Nil)
+  private def noPath[T](v: ValidationError[T]): ValidationError[T] =
+    v match {
+      case p: ValidationError.Primitive[T] => p.copy(path = Nil)
+      case c: ValidationError.Custom[T]    => c.copy(path = Nil)
+    }
 }
 
 sealed trait Color

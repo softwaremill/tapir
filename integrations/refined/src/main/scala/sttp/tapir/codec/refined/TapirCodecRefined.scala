@@ -70,7 +70,8 @@ object ValidatorForPredicate {
   def fromPrimitiveValidator[V, P](v: Validator.Primitive[V]): ValidatorForPredicate[V, P] =
     new ValidatorForPredicate[V, P] {
       override def validator: Validator[V] = v
-      override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] = List(ValidationError[V](v, value))
+      override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
+        List(ValidationError.Primitive[V](v, value))
     }
 }
 
@@ -80,11 +81,16 @@ trait LowPriorityValidatorForPredicate {
   ): ValidatorForPredicate[V, P] =
     new ValidatorForPredicate[V, P] {
       override val validator: Validator.Custom[V] = Validator.Custom(
-        refinedValidator.isValid,
-        implicitly[ClassTag[P]].runtimeClass.toString
+        { v =>
+          if (refinedValidator.isValid(v)) {
+            List.empty
+          } else {
+            List(ValidationError.Custom(v, implicitly[ClassTag[P]].runtimeClass.toString))
+          }
+        }
       ) //for the moment there is no way to get a human description of a predicate/validator without having a concrete value to run it
 
       override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
-        List(ValidationError[V](validator.copy(message = refinedErrorMessage), value))
+        List(ValidationError.Custom[V](value, refinedErrorMessage))
     }
 }

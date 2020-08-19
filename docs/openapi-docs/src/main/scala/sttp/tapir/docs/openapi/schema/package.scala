@@ -19,6 +19,7 @@ package object schema {
       case Validator.All(validators)    => validators.flatMap(asSingleValidators)
       case Validator.Any(validators)    => validators.flatMap(asSingleValidators)
       case Validator.Mapped(wrapped, _) => asSingleValidators(wrapped)
+      case cv: Validator.Custom[_]      => List.empty
       case sv: Validator.Single[_]      => List(sv)
     }
   }
@@ -32,7 +33,7 @@ package object schema {
       case Validator.Product(_)                    => Nil
       case Validator.Coproduct(_)                  => Nil
       case Validator.OpenProduct(_)                => Nil
-      case Validator.CustomCaseClass(_)            => Nil
+      case Validator.Custom(_)                     => Nil
       case bv: Validator.Primitive[_]              => List(bv)
     }
   }
