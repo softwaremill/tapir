@@ -129,7 +129,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       }
     }
   }
-  case class Custom[T](doValidate: T => List[ValidationError[_]]) extends Validator[T] {
+  case class Custom[T](doValidate: T => List[ValidationError[_]]) extends Validator.Single[T] {
     override def validate(t: T): List[ValidationError[_]] = {
       doValidate(t)
     }

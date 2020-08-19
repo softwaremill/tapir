@@ -19,7 +19,6 @@ package object schema {
       case Validator.All(validators)    => validators.flatMap(asSingleValidators)
       case Validator.Any(validators)    => validators.flatMap(asSingleValidators)
       case Validator.Mapped(wrapped, _) => asSingleValidators(wrapped)
-      case cv: Validator.Custom[_]      => List.empty
       case sv: Validator.Single[_]      => List(sv)
     }
   }
