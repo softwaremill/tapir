@@ -5,8 +5,8 @@ import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, QueryParams, StatusCode}
-import sttp.tapir.CodecFormat.{Json, Xml, OctetStream, TextPlain}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, Part, QueryParams, StatusCode}
+import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
@@ -89,7 +89,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]](charset: Charset): EndpointIO.Body[String, T] =
     anyFromStringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly, charset)
 
-  val multipartBody: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]] = multipartBody(MultipartCodec.Default)
+  val multipartBody: EndpointIO.Body[Seq[RawPart], Seq[Part[Array[Byte]]]] = multipartBody(MultipartCodec.Default)
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 

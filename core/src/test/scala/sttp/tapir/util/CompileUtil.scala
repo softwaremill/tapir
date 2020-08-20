@@ -1,6 +1,6 @@
 package sttp.tapir.util
 
-import org.scalatest.Matchers._
+import org.scalatest.matchers.should.Matchers._
 import scala.tools.reflect.{ToolBox, ToolBoxError}
 
 object CompileUtil {

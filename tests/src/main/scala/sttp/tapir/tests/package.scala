@@ -239,6 +239,9 @@ package object tests {
   val in_content_type_out_string: Endpoint[String, Unit, String, Nothing] =
     endpoint.in("api" / "echo").in(header[String]("Content-Type")).out(stringBody)
 
+  val in_unit_out_html: Endpoint[Unit, Unit, String, Nothing] =
+    endpoint.in("api" / "echo").out(htmlBodyUtf8)
+
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location"))
 
@@ -412,6 +415,14 @@ package object tests {
       implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def colorValidator: Validator[Color] = Validator.enum.encode(_.toString.toLowerCase)
       endpoint.in(jsonBody[ColorWrapper])
+    }
+
+    val in_valid_int_array: Endpoint[List[IntWrapper], Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
+      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val v: Validator[IntWrapper] = Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v)
+      endpoint.in(jsonBody[List[IntWrapper]])
     }
 
     val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]

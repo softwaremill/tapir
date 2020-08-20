@@ -96,12 +96,12 @@ private[akkahttp] object OutputToAkkaRoute {
     format match {
       case CodecFormat.Json()               => ContentTypes.`application/json`
       case CodecFormat.TextPlain()          => MediaTypes.`text/plain`.withCharset(charsetToHttpCharset(charset.getOrElse(StandardCharsets.UTF_8)))
+      case CodecFormat.TextHtml()           => MediaTypes.`text/html`.withCharset(charsetToHttpCharset(charset.getOrElse(StandardCharsets.UTF_8)))
       case CodecFormat.OctetStream()        => MediaTypes.`application/octet-stream`
       case CodecFormat.Zip()                => MediaTypes.`application/zip`
       case CodecFormat.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`
       case CodecFormat.MultipartFormData()  => MediaTypes.`multipart/form-data`
       case f                                => parseContentType(f.mediaType.toString())
-
     }
   }
 

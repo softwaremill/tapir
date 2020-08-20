@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx.encoders
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
@@ -10,7 +10,7 @@ import io.vertx.scala.core.http.HttpServerResponse
 import io.vertx.scala.core.streams.ReadStream
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.{Header, Part}
-import sttp.tapir.internal.ParamsAsAny
+import sttp.tapir.internal.{ParamsAsAny, charset}
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.server.vertx.VertxEndpointOptions
@@ -61,8 +61,14 @@ object VertxOutputEncoders {
     }
   }
 
-  private def formatToContentType(format: CodecFormat /*, maybeCharset: Option[Charset]*/ ): String =
-    format.mediaType.toString // README: Charset doesn't seem to be accepted in tests
+  private def formatToContentType(format: CodecFormat, maybeCharset: Option[Charset]): String = {
+    val charset = format match {
+      case CodecFormat.TextPlain() => maybeCharset.orElse(Some(StandardCharsets.UTF_8))
+      case CodecFormat.TextHtml()  => maybeCharset.orElse(Some(StandardCharsets.UTF_8))
+      case _                       => None
+    }
+    charset.fold(format.mediaType)(format.mediaType.charset(_)).toString // README: Charset doesn't seem to be accepted in tests
+  }
 
   private def forwardHeaders(outputValues: OutputValues[RoutingContextHandlerWithLength])(resp: HttpServerResponse): Unit = {
     outputValues.headers.foreach { case (k, v) => resp.headers.add(k, v) }
@@ -82,11 +88,11 @@ object VertxOutputEncoders {
       new EncodeOutputBody[RoutingContextHandlerWithLength] {
         override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): RoutingContextHandlerWithLength =
           _ =>
-            BodyEncoders(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format /*, charset(bodyType)*/ ), v)(endpointOptions)(
+            BodyEncoders(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), v)(endpointOptions)(
               _
             )
         override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength =
-          contentLength => StreamEncoders(formatToContentType(format /*, charset*/ ), v.asInstanceOf[ReadStream[Buffer]], contentLength)(_)
+          contentLength => StreamEncoders(formatToContentType(format, charset), v.asInstanceOf[ReadStream[Buffer]], contentLength)(_)
       }
     )
 

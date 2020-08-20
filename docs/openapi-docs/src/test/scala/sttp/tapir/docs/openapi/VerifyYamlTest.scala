@@ -3,7 +3,6 @@ package sttp.tapir.docs.openapi
 import com.github.ghik.silencer.silent
 import io.circe.Json
 import io.circe.generic.auto._
-import org.scalatest.{FunSuite, Matchers}
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir._
@@ -18,8 +17,10 @@ import sttp.tapir.tests._
 
 import scala.collection.immutable.ListMap
 import scala.io.Source
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class VerifyYamlTest extends FunSuite with Matchers {
+class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Nothing] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))
@@ -135,8 +136,6 @@ class VerifyYamlTest extends FunSuite with Matchers {
 
     val actualYaml = List(e1, e2, e3).toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
-
-    println(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -572,6 +571,16 @@ class VerifyYamlTest extends FunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("render validator for additional properties of array elements") {
+    val expectedYaml = loadYaml("expected_valid_int_array.yml")
+
+    val actualYaml = Validation.in_valid_int_array
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("render enum validator for classes") {
     val expectedYaml = loadYaml("expected_valid_enum_class.yml")
 
@@ -606,6 +615,34 @@ class VerifyYamlTest extends FunSuite with Matchers {
     val expectedYaml = loadYaml("expected_valid_enum_object.yml")
 
     val actualYaml = Validation.out_enum_object
+      .toOpenAPI(Info("Entities", "1.0"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use enumeratum validator for array elements") {
+    import sttp.tapir.codec.enumeratum._
+
+    val expectedYaml = loadYaml("expected_valid_enumeratum.yml")
+
+    val actualYaml = List(endpoint.in("enum-test").out(jsonBody[Enumeratum.FruitWithEnum])).toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("use enum validator for a cats non-empty-list of enums") {
+    import sttp.tapir.integ.cats.codec._
+    import cats.data.NonEmptyList
+    implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
+    implicit def validatorForColor: Validator[Color] =
+      Validator.enum(List(Blue, Red), { c => Some(c.toString.toLowerCase()) })
+
+    val expectedYaml = loadYaml("expected_valid_enum_cats_nel.yml")
+
+    val actualYaml = endpoint
+      .in(jsonBody[NonEmptyList[Color]])
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

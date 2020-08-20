@@ -33,13 +33,14 @@ use:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
+import sttp.model.Part
 
-multipartBody: EndpointIO.Body[Seq[RawPart], Seq[AnyPart]]
+multipartBody: EndpointIO.Body[Seq[RawPart], Seq[Part[Array[Byte]]]]
 ```
 
-where `type AnyPart = Part[_]`. `Part` is a case class containing the `name` of the part, disposition parameters,
-headers, and the body. The bodies will be mapped as byte arrays (`Array[Byte]`), unless a custom multipart codec 
-is defined using the `Codec.multipartCodec` method.
+`Part` is a case class containing the `name` of the part, disposition parameters, headers, and the body. The bodies 
+will be mapped as byte arrays (`Array[Byte]`). Custom multipart codecs can be defined with the `Codec.multipartCodec`
+method, and then used with `multipartBody[T]`.
 
 As with URL-encoded forms, multipart bodies can be mapped directly to case classes, however without the restriction
 on codecs for individual fields. Given a field of type `T`, first a plain text codec is looked up, and if one isn't
