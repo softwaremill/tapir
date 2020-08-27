@@ -45,7 +45,7 @@ object FormCodecMacros {
     val codecTree = q"""
       {
         def decode(params: Seq[(String, String)]): sttp.tapir.DecodeResult[$t] = {
-          val paramsMap: Map[String, Seq[String]] = params.groupBy(_._1).mapValues(_.map(_._2)).toMap
+          val paramsMap: Map[String, Seq[String]] = params.groupBy(_._1).transform((_, v) => v.map(_._2))
           val decodeResults = List(..$decodeParams)
           sttp.tapir.DecodeResult.sequence(decodeResults).map { values =>
             ${util.instanceFromValues}
