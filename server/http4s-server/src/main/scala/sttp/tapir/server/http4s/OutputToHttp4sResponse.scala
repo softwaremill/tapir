@@ -3,7 +3,7 @@ package sttp.tapir.server.http4s
 import java.nio.charset.StandardCharsets
 
 import cats.effect.{Blocker, ContextShift, Sync}
-import cats.implicits._
+import cats.syntax.all._
 import fs2.Chunk
 import org.http4s
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}

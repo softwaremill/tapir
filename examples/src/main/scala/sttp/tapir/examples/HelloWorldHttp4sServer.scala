@@ -8,7 +8,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.tapir._
 import sttp.tapir.server.http4s._
-import cats.implicits._
+import cats.syntax.all._
 
 import scala.concurrent.ExecutionContext
 

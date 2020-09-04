@@ -3,7 +3,7 @@ package sttp.tapir.examples
 import java.util.concurrent.atomic.AtomicReference
 
 import cats.effect._
-import cats.implicits._
+import cats.syntax.all._
 import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import org.http4s.HttpRoutes

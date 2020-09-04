@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import cats.implicits._
+import cats.syntax.all._
 import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.core.Vertx
 import io.vertx.scala.core.http.HttpServerOptions
