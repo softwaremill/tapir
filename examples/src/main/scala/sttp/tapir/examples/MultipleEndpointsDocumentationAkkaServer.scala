@@ -62,7 +62,7 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
 
   val routes = {
     import akka.http.scaladsl.server.Directives._
-    booksListingRoute ~ addBookRoute ~ new SwaggerAkka(openApiYml).routes
+    concat(booksListingRoute, addBookRoute, new SwaggerAkka(openApiYml).routes)
   }
 
   val bindAndCheck = Http().bindAndHandle(routes, "localhost", 8080).map { _ =>
