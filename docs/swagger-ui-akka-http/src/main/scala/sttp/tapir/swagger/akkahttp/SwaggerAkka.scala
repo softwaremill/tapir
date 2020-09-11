@@ -31,15 +31,17 @@ class SwaggerAkka(yaml: String, contextPath: String = "docs", yamlName: String =
   }
 
   val routes: Route =
-    pathPrefix(contextPath) {
-      pathEndOrSingleSlash {
-        redirectToIndex
-      } ~ path(yamlName) {
-        complete(yaml)
-      } ~ getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
-    } ~
+    concat(
+      pathPrefix(contextPath) {
+        concat(
+          pathEndOrSingleSlash { redirectToIndex },
+          path(yamlName) { complete(yaml) },
+          getFromResourceDirectory(s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/")
+        )
+      },
       // needed only if you use oauth2 authorization
       path("oauth2-redirect.html") { request =>
         redirectToOath2(request.request.uri.rawQueryString.map(s => "?" + s).getOrElse(""))(request)
       }
+    )
 }

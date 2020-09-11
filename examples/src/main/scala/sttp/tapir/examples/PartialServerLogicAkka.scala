@@ -61,7 +61,7 @@ object PartialServerLogicAkka extends App {
   val helloWorld2Route: Route = secureHelloWorld2WithLogic.toRoute
 
   // starting the server
-  val bindAndCheck = Http().newServerAt("localhost", 8080).bind(helloWorld1Route ~ helloWorld2Route).map { _ =>
+  val bindAndCheck = Http().bindAndHandle(concat(helloWorld1Route, helloWorld2Route), "localhost", 8080).map { _ =>
     // testing
     implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
