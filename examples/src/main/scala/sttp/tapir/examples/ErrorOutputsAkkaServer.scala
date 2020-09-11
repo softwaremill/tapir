@@ -32,7 +32,7 @@ object ErrorOutputsAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  val bindAndCheck = Http().bindAndHandle(errorOrJsonRoute, "localhost", 8080).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(errorOrJsonRoute).map { _ =>
     // testing
     implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 

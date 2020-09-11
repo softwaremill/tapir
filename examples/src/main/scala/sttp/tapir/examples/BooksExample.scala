@@ -143,7 +143,7 @@ object BooksExample extends App with StrictLogging {
     import scala.concurrent.duration._
     val routes = concat(route, new SwaggerAkka(yaml).routes)
     implicit val actorSystem: ActorSystem = ActorSystem()
-    Await.result(Http().bindAndHandle(routes, "localhost", 8080), 1.minute)
+    Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
     logger.info("Server started")
   }

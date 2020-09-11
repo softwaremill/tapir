@@ -27,7 +27,7 @@ object StreamingAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  val bindAndCheck = Http().bindAndHandle(streamingRoute, "localhost", 8080).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(streamingRoute).map { _ =>
     // testing
     implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
     val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send().body
