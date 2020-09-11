@@ -1,13 +1,11 @@
 import sbtrelease.ReleaseStateTransformations.{
   checkSnapshotDependencies,
-  commitNextVersion,
   commitReleaseVersion,
   inquireVersions,
   publishArtifacts,
   pushChanges,
   runClean,
   runTest,
-  setNextVersion,
   setReleaseVersion,
   tagRelease
 }
