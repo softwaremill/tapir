@@ -119,7 +119,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
-      "com.propensive" %% "magnolia" % "0.16.0",
+      "com.propensive" %% "magnolia" % "0.17.0",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "com.softwaremill.sttp.model" %% "core" % "1.1.4",
       scalaTest % Test,
