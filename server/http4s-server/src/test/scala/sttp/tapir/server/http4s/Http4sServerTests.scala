@@ -2,7 +2,7 @@ package sttp.tapir.server.http4s
 
 import cats.data.{Kleisli, NonEmptyList}
 import cats.effect._
-import cats.implicits._
+import cats.syntax.all._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._

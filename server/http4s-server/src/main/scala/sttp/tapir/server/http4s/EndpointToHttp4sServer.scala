@@ -3,7 +3,7 @@ package sttp.tapir.server.http4s
 import cats.~>
 import cats.data._
 import cats.effect.{ContextShift, Sync}
-import cats.implicits._
+import cats.syntax.all._
 import org.http4s.{EntityBody, HttpRoutes, Http, Request, Response}
 import org.log4s._
 import sttp.tapir.monad.MonadError

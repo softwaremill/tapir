@@ -3,7 +3,7 @@ package sttp.tapir.examples
 import java.nio.charset.StandardCharsets
 
 import cats.effect._
-import cats.implicits._
+import cats.syntax.all._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder

@@ -1,7 +1,6 @@
 package sttp.tapir.client.sttp
 
 import cats.effect.{ContextShift, IO}
-import cats.implicits._
 import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
 import sttp.client._

@@ -1,6 +1,6 @@
 package sttp.tapir.server.akkahttp
 
-import cats.implicits._
+import cats.syntax.all._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route

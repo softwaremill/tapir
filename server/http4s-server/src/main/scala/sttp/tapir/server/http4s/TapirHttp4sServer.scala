@@ -3,7 +3,7 @@ package sttp.tapir.server.http4s
 import cats.{Monad, ~>}
 import cats.data.OptionT
 import cats.effect.{ContextShift, Sync}
-import cats.implicits._
+import cats.syntax.all._
 import org.http4s.{EntityBody, HttpRoutes, Http}
 import sttp.tapir.Endpoint
 import sttp.tapir.Endpoint

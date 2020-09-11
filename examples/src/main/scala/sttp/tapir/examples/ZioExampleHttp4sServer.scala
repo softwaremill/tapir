@@ -10,7 +10,7 @@ import zio.{Has, IO, Runtime, Task, UIO, ZIO, ZLayer, ZEnv}
 import sttp.tapir.ztapir._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.swagger.http4s.SwaggerHttp4s
-import cats.implicits._
+import cats.syntax.all._
 import UserLayer.UserService
 import sttp.tapir.examples.ZioExampleHttp4sServer.Pet
 import zio.console.Console
