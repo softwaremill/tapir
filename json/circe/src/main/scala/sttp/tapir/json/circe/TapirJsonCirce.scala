@@ -37,4 +37,7 @@ trait TapirJsonCirce {
         Iterable.empty
       )
     )
+
+  implicit val validatorForCirceJson: Validator[Json] = Validator.pass
+  implicit val validatorForCirceJsonObject: Validator[JsonObject] = Validator.pass
 }

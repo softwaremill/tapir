@@ -23,4 +23,6 @@ trait TapirJsonPlay {
       List.empty
     )
   )
+
+  implicit val validatorForPlayJsValue: Validator[JsValue] = Validator.pass
 }

@@ -25,4 +25,6 @@ trait TapirJsonSpray {
       List.empty
     )
   )
+
+  implicit val validatorForSprayJsValue: Validator[JsValue] = Validator.pass
 }
