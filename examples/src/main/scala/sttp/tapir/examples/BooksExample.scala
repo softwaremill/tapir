@@ -127,9 +127,11 @@ object BooksExample extends App with StrictLogging {
 
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.
-    addBook.toRoute((bookAddLogic _).tupled) ~
-      booksListing.toRoute(bookListingLogic) ~
+    concat(
+      addBook.toRoute((bookAddLogic _).tupled),
+      booksListing.toRoute(bookListingLogic),
       booksListingByGenre.toRoute(bookListingByGenreLogic)
+    )
   }
 
   def startServer(route: Route, yaml: String): Unit = {
@@ -139,7 +141,7 @@ object BooksExample extends App with StrictLogging {
 
     import scala.concurrent.Await
     import scala.concurrent.duration._
-    val routes = route ~ new SwaggerAkka(yaml).routes
+    val routes = concat(route, new SwaggerAkka(yaml).routes)
     implicit val actorSystem: ActorSystem = ActorSystem()
     Await.result(Http().bindAndHandle(routes, "localhost", 8080), 1.minute)
 

@@ -35,15 +35,17 @@ class RedocAkkaHttp(title: String, yaml: String, yamlName: String = "docs.yaml",
 
   def routes: Route = {
     get {
-      pathEnd {
-        redirectToTrailingSlashIfMissing(StatusCodes.MovedPermanently) {
-          complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, html))
+      concat(
+        pathEnd {
+          redirectToTrailingSlashIfMissing(StatusCodes.MovedPermanently) {
+            complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, html))
+          }
+        },
+        pathSingleSlash { complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, html)) },
+        path(yamlName) {
+          complete(HttpEntity(MediaType.textWithFixedCharset("yaml", HttpCharsets.`UTF-8`), yaml))
         }
-      } ~ pathSingleSlash {
-        complete(HttpEntity(ContentTypes.`text/html(UTF-8)`, html))
-      } ~ path(yamlName) {
-        complete(HttpEntity(MediaType.textWithFixedCharset("yaml", HttpCharsets.`UTF-8`), yaml))
-      }
+      )
     }
   }
 
