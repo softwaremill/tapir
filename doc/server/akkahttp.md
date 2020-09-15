@@ -66,8 +66,8 @@ val aRoute: Route = anEndpoint.toRoute((logic _).tupled)
 
 ## using `toDirective`
 
-Method `toDirective` splits parsing the input and encoding the output in 2. The directive provides the
-input parameters, type `I`, and a function that can be used to complete the request.
+Method `toDirective` splits parsing the input and encoding the output. The directive provides the
+input parameters, type `I`, and a function that can be used to encode the output.
 
 For example:
 
