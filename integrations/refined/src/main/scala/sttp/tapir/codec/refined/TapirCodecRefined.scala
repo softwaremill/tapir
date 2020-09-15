@@ -11,6 +11,11 @@ import shapeless.Witness
 import scala.reflect.ClassTag
 
 trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
+
+  implicit def refinedTapirStringSchema[P]: Schema[String Refined P] = Schema(SString)
+  implicit def refinedTapirIntSchema[P]: Schema[Int Refined P] = Schema(SInteger)
+  implicit def refinedTapirLongSchema[P]: Schema[Long Refined P] = Schema(SInteger)
+
   implicit def codecForRefined[V, P, CF <: CodecFormat, R](
       implicit tm: Codec[V, CF, R],
       refinedValidator: Validate[V, P],
