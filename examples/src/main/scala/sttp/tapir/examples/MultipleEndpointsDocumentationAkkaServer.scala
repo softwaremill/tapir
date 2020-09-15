@@ -62,10 +62,10 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
 
   val routes = {
     import akka.http.scaladsl.server.Directives._
-    booksListingRoute ~ addBookRoute ~ new SwaggerAkka(openApiYml).routes
+    concat(booksListingRoute, addBookRoute, new SwaggerAkka(openApiYml).routes)
   }
 
-  val bindAndCheck = Http().bindAndHandle(routes, "localhost", 8080).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(routes).map { _ =>
     // testing
     println("Go to: http://localhost:8080/docs")
     println("Press any key to exit ...")
@@ -73,7 +73,5 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
   }
 
   // cleanup
-  Await.result(bindAndCheck.transformWith { r =>
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }

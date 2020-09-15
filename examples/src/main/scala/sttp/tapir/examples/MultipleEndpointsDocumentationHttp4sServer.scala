@@ -3,7 +3,7 @@ package sttp.tapir.examples
 import java.util.concurrent.atomic.AtomicReference
 
 import cats.effect._
-import cats.implicits._
+import cats.syntax.all._
 import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import org.http4s.HttpRoutes
@@ -65,7 +65,7 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
   val openApiYml: String = openApiDocs.toYaml
 
   // starting the server
-  BlazeServerBuilder[IO]
+  BlazeServerBuilder[IO](ec)
     .bindHttp(8080, "localhost")
     .withHttpApp(Router("/" -> (routes <+> new SwaggerHttp4s(openApiYml).routes[IO])).orNotFound)
     .resource

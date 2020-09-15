@@ -1,7 +1,7 @@
 # Status codes
 
 To provide a (varying) status code of a server response, use the `statusCode` output, which maps to a value of type
-`type tapir.model.StatusCode` (which is an alias for `Int`). The `tapir.model.StatusCodes` object contains known status 
+`sttp.model.StatusCode`. The companion object contains known status 
 codes as constants. This type of output is used only when interpreting the endpoint as a server. If your endpoint returns varying status codes
 which you would like to have listed in documentation use `statusCode.description(code1, "code1 description").description(code2, "code2 description")` output.
 
@@ -18,14 +18,20 @@ For example, below is a specification for an endpoint where the error output is 
 such a specification can then be refined and reused for other endpoints:
 
 ```scala
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.model.StatusCode
+import io.circe.generic.auto._
+
 sealed trait ErrorInfo
 case class NotFound(what: String) extends ErrorInfo
 case class Unauthorized(realm: String) extends ErrorInfo
 case class Unknown(code: Int, msg: String) extends ErrorInfo
 case object NoContent extends ErrorInfo
 
+// here we are defining an error output, but the same can be done for regular outputs
 val baseEndpoint = endpoint.errorOut(
-  oneOf(
+  oneOf[ErrorInfo](
     statusMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
     statusMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
     statusMapping(StatusCode.NoContent, emptyOutput.map(_ => NoContent)(_ => ())),
@@ -50,7 +56,12 @@ Sometime at runtime status mapping resolution can not work properly because of t
 For example this code will fail at compile time; because of type erasure `Right[NotFound]` and `Right[BadRequest]` will 
 become `Right[Any]`, therefore the code would not be able to find the correct mapping for a value:
 
-```scala
+```scala mdoc:fail
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.model.StatusCode
+import io.circe.generic.auto._
+
 case class ServerError(what: String)
 
 sealed trait UserError
@@ -68,7 +79,20 @@ val baseEndpoint = endpoint.errorOut(
 
 The solution is therefore to handwrite a function checking that a `val` (of type `Any`) is of the correct type:
 
+```scala mdoc:invisible
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.model.StatusCode
+import io.circe.generic.auto._
+
+case class ServerError(what: String)
+
+sealed trait UserError
+case class BadRequest(what: String) extends UserError
+case class NotFound(what: String) extends UserError
 ```
+
+```scala mdoc:silent:nest
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
     statusMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
@@ -88,7 +112,8 @@ Of course you could use `statusMappingValueMatcher` to do runtime filtering for 
 
 In the case of solving type erasure, writing by hand partial function to match value against composition of case class and sealed trait can be repetitive.
 To make that more easy, we provide an **experimental** typeclass - `MatchType` - so you can automatically derive that partial function:
-```
+
+```scala mdoc:silent:nest
 import sttp.tapir.typelevel.MatchType
 
 val baseEndpoint = endpoint.errorOut(
@@ -103,8 +128,8 @@ val baseEndpoint = endpoint.errorOut(
 ## Server interpreters
 
 Unless specified otherwise, successful responses are returned with the `200 OK` status code, and errors with 
-`400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.html).
+`400 Bad Request`. For exception and decode failure handling, see [error handling](../server/errors.md).
 
 ## Next
 
-Read on about [codecs](codecs.html).
+Read on about [codecs](codecs.md).

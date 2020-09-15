@@ -1,0 +1,26 @@
+openapi: 3.0.1
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MyClass'
+        required: true
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    MyClass:
+      required:
+        - my_attribute
+      type: object
+      properties:
+        my_attribute:
+          type: integer

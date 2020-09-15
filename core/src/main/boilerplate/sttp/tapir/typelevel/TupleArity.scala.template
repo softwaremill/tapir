@@ -1,0 +1,22 @@
+package sttp.tapir.typelevel
+
+/**
+  * The arity of type `T` (if its a tuple), as viewed at compile-time (at run-time, a value that is determined to be
+  * a "singular" type, might in fact be a tuple).
+  */
+trait TupleArity[T] {
+  def arity: Int
+}
+
+object TupleArity extends LowPriorityTupleArity {
+  [2..21#implicit def tupleArity1[[#A1#]]: TupleArity[([#A1#])] = new TupleArity[([#A1#])] {
+    def arity: Int = 1
+  }#
+  ]
+}
+
+trait LowPriorityTupleArity {
+  implicit def tupleArity1[A]: TupleArity[A] = new TupleArity[A] {
+    def arity: Int = 1
+  }
+}

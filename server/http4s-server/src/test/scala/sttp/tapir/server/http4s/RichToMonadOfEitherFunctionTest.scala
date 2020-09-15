@@ -2,22 +2,25 @@ package sttp.tapir.server.http4s
 
 import cats.effect.IO
 import com.github.ghik.silencer.silent
-import org.scalatest.{FunSuite, Matchers}
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
 @silent("never used")
-class RichToMonadOfEitherFunctionTest extends FunSuite with Matchers {
+class RichToMonadOfEitherFunctionTest extends AnyFunSuite with Matchers {
   case class Error(r: String)
   case class User(u: String)
   case class Result(r: String)
 
   test("should compose functions when both succeed") {
     // given
-    def f1(p: String): IO[Either[Error, User]] = IO {
-      Right(User(p))
-    }
-    def f2(u: User, i: Int, s: String): IO[Either[Error, Result]] = IO {
-      Right(Result(List(u.toString, i.toString, s).mkString(",")))
-    }
+    def f1(p: String): IO[Either[Error, User]] =
+      IO {
+        Right(User(p))
+      }
+    def f2(u: User, i: Int, s: String): IO[Either[Error, Result]] =
+      IO {
+        Right(Result(List(u.toString, i.toString, s).mkString(",")))
+      }
 
     // when
     val result = (f1 _).andThenFirstE((f2 _).tupled).apply(("john", 10, "x")).unsafeRunSync()
@@ -28,12 +31,14 @@ class RichToMonadOfEitherFunctionTest extends FunSuite with Matchers {
 
   test("should return error if first fails") {
     // given
-    def f1(p: String): IO[Either[Error, User]] = IO {
-      Left(Error("e1"))
-    }
-    def f2(u: User, i: Int, s: String): IO[Either[Error, Result]] = IO {
-      Right(Result(List(u.toString, i.toString, s).mkString(",")))
-    }
+    def f1(p: String): IO[Either[Error, User]] =
+      IO {
+        Left(Error("e1"))
+      }
+    def f2(u: User, i: Int, s: String): IO[Either[Error, Result]] =
+      IO {
+        Right(Result(List(u.toString, i.toString, s).mkString(",")))
+      }
 
     // when
     val result = (f1 _).andThenFirstE((f2 _).tupled).apply(("john", 10, "x")).unsafeRunSync()
@@ -44,12 +49,14 @@ class RichToMonadOfEitherFunctionTest extends FunSuite with Matchers {
 
   test("should return error if second fails") {
     // given
-    def f1(p: String): IO[Either[Error, User]] = IO {
-      Right(User(p))
-    }
-    def f2(u: User, i: Int, s: String): IO[Either[Error, Result]] = IO {
-      Left(Error("e2"))
-    }
+    def f1(p: String): IO[Either[Error, User]] =
+      IO {
+        Right(User(p))
+      }
+    def f2(u: User, i: Int, s: String): IO[Either[Error, Result]] =
+      IO {
+        Left(Error("e2"))
+      }
 
     // when
     val result = (f1 _).andThenFirstE((f2 _).tupled).apply(("john", 10, "x")).unsafeRunSync()

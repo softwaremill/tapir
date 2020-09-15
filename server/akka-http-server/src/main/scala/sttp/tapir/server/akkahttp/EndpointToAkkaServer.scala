@@ -4,15 +4,16 @@ import akka.http.scaladsl.model.{MediaType => _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
-import com.github.ghik.silencer.silent
+import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import sttp.tapir._
+import sttp.tapir.monad.FutureMonadError
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.reflect.ClassTag
+import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
+
   /**
    * Converts the endpoint to a directive that -for matching requests- decodes the input parameters
    * and provides those input parameters and a function. The function can be called to complete the request.
@@ -45,30 +46,18 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     }
   }
 
-  @silent("never used")
-  def toRouteRecoverErrors[I, E, O](
-      e: Endpoint[I, E, O, AkkaStream]
-  )(logic: I => Future[O])(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route = {
-    def reifyFailedFuture(f: Future[O]): Future[Either[E, O]] = {
-      import ExecutionContext.Implicits.global
-      f.map(Right(_): Either[E, O]).recover {
-        case e: Throwable if implicitly[ClassTag[E]].runtimeClass.isInstance(e) => Left(e.asInstanceOf[E]): Either[E, O]
-      }
-    }
-
-    toRoute(e.serverLogic(logic.andThen(reifyFailedFuture)))
-  }
-
   def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStream, Future]): Route = {
     toDirective1(se.endpoint) { values =>
       extractLog { log =>
         mapResponse(resp => { serverOptions.logRequestHandling.requestHandled(se.endpoint, resp.status.intValue())(log); resp }) {
-          onComplete(se.logic(values)) {
-            case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, se.endpoint.errorOutput, v)
-            case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, se.endpoint.output, v)
-            case Failure(e) =>
-              serverOptions.logRequestHandling.logicException(se.endpoint, e)(log)
-              throw e
+          extractExecutionContext { ec =>
+            onComplete(se.logic(new FutureMonadError()(ec))(values)) {
+              case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, se.endpoint.errorOutput, v)
+              case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, se.endpoint.output, v)
+              case Failure(e) =>
+                serverOptions.logRequestHandling.logicException(se.endpoint, e)(log)
+                throw e
+            }
           }
         }
       }

@@ -43,7 +43,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
         name -> Right(
           Header(
             info.description,
-            Some(!codec.meta.schema.isOptional),
+            Some(!codec.schema.exists(_.isOptional)),
             None,
             None,
             None,
@@ -55,8 +55,8 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             ListMap.empty
           )
         )
-      case EndpointIO.FixedHeader(name, _, info) =>
-        name -> Right(
+      case EndpointIO.FixedHeader(h, _, info) =>
+        h.name -> Right(
           Header(
             info.description,
             Some(true),
@@ -74,16 +74,16 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
     }
 
     val bodies = outputs.collect {
-      case EndpointIO.Body(m, i) => (i.description, codecToMediaType(m, i.example))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
-        (i.description, codecToMediaType(s, mt, i.example))
+      case EndpointIO.Body(_, codec, info) => (info.description, codecToMediaType(codec, info.examples))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, info, _)) =>
+        (info.description, codecToMediaType(codec, info.examples))
     }
     val body = bodies.headOption
 
     val statusCodeDescriptions = outputs.flatMap {
-      case EndpointOutput.StatusCode(possibleCodes)                             => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
-      case EndpointOutput.FixedStatusCode(_, EndpointIO.Info(Some(desc), _, _)) => Vector(desc)
-      case _                                                                    => Vector()
+      case EndpointOutput.StatusCode(possibleCodes, _, _)                          => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
+      case EndpointOutput.FixedStatusCode(_, _, EndpointIO.Info(Some(desc), _, _)) => Vector(desc)
+      case _                                                                       => Vector()
     }
 
     val description = body.flatMap(_._1).getOrElse(statusCodeDescriptions.headOption.getOrElse(""))

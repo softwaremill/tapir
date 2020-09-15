@@ -1,57 +1,68 @@
 package sttp.tapir.server.internal
 
-import sttp.tapir.internal.SeqToParams
-import sttp.tapir.{EndpointIO, EndpointInput}
-import sttp.tapir.internal._
+import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, Mapping}
+
+sealed trait InputValuesResult
+object InputValuesResult {
+  case class Value(params: Params, remainingBasicValues: Vector[Any]) extends InputValuesResult
+  case class Failure(input: EndpointInput[_], failure: DecodeResult.Failure) extends InputValuesResult
+}
 
 object InputValues {
 
   /**
-    * Returns the values of the inputs in the order specified by `input`, and mapped if necessary using defined mapping
-    * functions.
+    * Returns the value of the input, tupled and mapped as described by the data structure. Values of basic inputs
+    * are taken as consecutive values from `values.basicInputsValues`. Hence, these should match (in order).
     */
-  def apply(input: EndpointInput[_], values: DecodeInputsResult.Values): List[Any] =
-    apply(input.asVectorOfSingleInputs, values.basicInputsValues)._1
+  def apply(input: EndpointInput[_], values: DecodeInputsResult.Values): InputValuesResult =
+    apply(input, values.basicInputsValues)
 
-  private type BasicInputValues = Vector[Any]
-
-  /**
-    * The given `basicInputValues` should match (in order) values for the basic inputs in `inputs`.
-    * @return The list of input values + unused basic input values (to be used for subsequent inputs)
-    */
-  private def apply(inputs: Vector[EndpointInput.Single[_]], basicInputValues: BasicInputValues): (List[Any], BasicInputValues) = {
-    inputs match {
-      case Vector() => (Nil, basicInputValues)
-      case (_: EndpointInput.FixedMethod) +: inputsTail =>
-        apply(inputsTail, basicInputValues)
-      case (_: EndpointInput.FixedPath) +: inputsTail =>
-        apply(inputsTail, basicInputValues)
-      case (_: EndpointIO.FixedHeader) +: inputsTail =>
-        apply(inputsTail, basicInputValues)
-      case EndpointInput.Mapped(wrapped, f, _) +: inputsTail =>
-        handleMapped(wrapped, f, inputsTail, basicInputValues)
-      case EndpointIO.Mapped(wrapped, f, _) +: inputsTail =>
-        handleMapped(wrapped, f, inputsTail, basicInputValues)
-      case (auth: EndpointInput.Auth[_]) +: inputsTail =>
-        apply(auth.input +: inputsTail, basicInputValues)
-      case (_: EndpointInput.Basic[_]) +: inputsTail =>
-        basicInputValues match {
-          case v +: valuesTail =>
-            val (vs, basicInputValues2) = apply(inputsTail, valuesTail)
-            (v :: vs, basicInputValues2)
-          case Vector() => throw new IllegalStateException(s"Mismatch between basic input values and basic inputs in $inputs")
+  private def apply(input: EndpointInput[_], remainingBasicValues: Vector[Any]): InputValuesResult = {
+    input match {
+      case EndpointInput.Pair(left, right, combine, _) => handlePair(left, right, combine, remainingBasicValues)
+      case EndpointIO.Pair(left, right, combine, _)    => handlePair(left, right, combine, remainingBasicValues)
+      case EndpointInput.MappedPair(wrapped, codec)    => handleMappedPair(wrapped, codec, remainingBasicValues)
+      case EndpointIO.MappedPair(wrapped, codec)       => handleMappedPair(wrapped, codec, remainingBasicValues)
+      case auth: EndpointInput.Auth[_]                 => apply(auth.input, remainingBasicValues)
+      case _: EndpointInput.Basic[_] =>
+        remainingBasicValues match {
+          case v +: valuesTail => InputValuesResult.Value(ParamsAsAny(v), valuesTail)
+          case Vector() =>
+            throw new IllegalStateException(s"Mismatch between basic input values: $remainingBasicValues, and basic inputs in: $input")
         }
     }
   }
 
-  private def handleMapped[II, T](
+  private def handlePair(
+      left: EndpointInput[_],
+      right: EndpointInput[_],
+      combine: CombineParams,
+      remainingBasicValues: Vector[Any]
+  ): InputValuesResult = {
+    apply(left, remainingBasicValues) match {
+      case InputValuesResult.Value(leftParams, remainingBasicValues2) =>
+        apply(right, remainingBasicValues2) match {
+          case InputValuesResult.Value(rightParams, remainingBasicValues3) =>
+            InputValuesResult.Value(combine(leftParams, rightParams), remainingBasicValues3)
+          case f2: InputValuesResult.Failure => f2
+        }
+      case f: InputValuesResult.Failure => f
+    }
+  }
+
+  private def handleMappedPair[II, T](
       wrapped: EndpointInput[II],
-      f: II => T,
-      inputsTail: Vector[EndpointInput.Single[_]],
-      basicInputValues: BasicInputValues
-  ): (List[Any], BasicInputValues) = {
-    val (wrappedValue, basicInputValues2) = apply(wrapped.asVectorOfSingleInputs, basicInputValues)
-    val (vs, basicInputValues3) = apply(inputsTail, basicInputValues2)
-    (f.asInstanceOf[Any => Any].apply(SeqToParams(wrappedValue)) :: vs, basicInputValues3)
+      codec: Mapping[II, T],
+      remainingBasicValues: Vector[Any]
+  ): InputValuesResult = {
+    apply(wrapped, remainingBasicValues) match {
+      case InputValuesResult.Value(pairValue, remainingBasicValues2) =>
+        codec.decode(pairValue.asAny.asInstanceOf[II]) match {
+          case DecodeResult.Value(v)   => InputValuesResult.Value(ParamsAsAny(v), remainingBasicValues2)
+          case f: DecodeResult.Failure => InputValuesResult.Failure(wrapped, f)
+        }
+      case f: InputValuesResult.Failure => f
+    }
   }
 }

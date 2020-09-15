@@ -32,7 +32,7 @@ object ErrorOutputsAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  val bindAndCheck = Http().bindAndHandle(errorOrJsonRoute, "localhost", 8080).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(errorOrJsonRoute).map { _ =>
     // testing
     implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
 
@@ -45,7 +45,5 @@ object ErrorOutputsAkkaServer extends App {
     assert(result2 == Right("""{"result":42}"""))
   }
 
-  Await.result(bindAndCheck.transformWith { r =>
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }

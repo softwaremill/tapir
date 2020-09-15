@@ -103,30 +103,35 @@ object BooksExample extends App with StrictLogging {
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent.Future
 
-    def bookAddLogic(book: Book, token: AuthToken): Future[Either[String, Unit]] = Future {
-      if (token != "secret") {
-        logger.warn(s"Tried to access with token: $token")
-        Left("Unauthorized access!!!11")
-      } else {
-        logger.info(s"Adding book $book")
-        Library.Books.getAndUpdate(books => books :+ book)
-        Right(())
+    def bookAddLogic(book: Book, token: AuthToken): Future[Either[String, Unit]] =
+      Future {
+        if (token != "secret") {
+          logger.warn(s"Tried to access with token: $token")
+          Left("Unauthorized access!!!11")
+        } else {
+          logger.info(s"Adding book $book")
+          Library.Books.getAndUpdate(books => books :+ book)
+          Right(())
+        }
       }
-    }
 
-    def bookListingLogic(limit: Limit): Future[Either[String, Vector[Book]]] = Future {
-      Right[String, Vector[Book]](Library.getBooks(BooksQuery(None, limit)))
-    }
+    def bookListingLogic(limit: Limit): Future[Either[String, Vector[Book]]] =
+      Future {
+        Right[String, Vector[Book]](Library.getBooks(BooksQuery(None, limit)))
+      }
 
-    def bookListingByGenreLogic(query: BooksQuery): Future[Either[String, Vector[Book]]] = Future {
-      Right[String, Vector[Book]](Library.getBooks(query))
-    }
+    def bookListingByGenreLogic(query: BooksQuery): Future[Either[String, Vector[Book]]] =
+      Future {
+        Right[String, Vector[Book]](Library.getBooks(query))
+      }
 
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.
-    addBook.toRoute((bookAddLogic _).tupled) ~
-      booksListing.toRoute(bookListingLogic) ~
+    concat(
+      addBook.toRoute((bookAddLogic _).tupled),
+      booksListing.toRoute(bookListingLogic),
       booksListingByGenre.toRoute(bookListingByGenreLogic)
+    )
   }
 
   def startServer(route: Route, yaml: String): Unit = {
@@ -136,9 +141,9 @@ object BooksExample extends App with StrictLogging {
 
     import scala.concurrent.Await
     import scala.concurrent.duration._
-    val routes = route ~ new SwaggerAkka(yaml).routes
+    val routes = concat(route, new SwaggerAkka(yaml).routes)
     implicit val actorSystem: ActorSystem = ActorSystem()
-    Await.result(Http().bindAndHandle(routes, "localhost", 8080), 1.minute)
+    Await.result(Http().newServerAt("localhost", 8080).bindFlow(routes), 1.minute)
 
     logger.info("Server started")
   }

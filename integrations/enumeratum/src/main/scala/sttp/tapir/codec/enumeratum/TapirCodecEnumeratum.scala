@@ -14,7 +14,7 @@ trait TapirCodecEnumeratum {
     Schema(SchemaType.SString)
 
   implicit def plainCodecEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Codec.PlainCodec[E] =
-    Codec.stringPlainCodecUtf8
+    Codec.string
       .mapDecode { s =>
         enum
           .withNameOption(s)
@@ -64,8 +64,8 @@ trait TapirCodecEnumeratum {
   implicit def schemaForCharEnumEntry[E <: CharEnumEntry]: Schema[E] =
     Schema(SchemaType.SString)
 
-  def plainCodecValueEnumEntry[T, E <: ValueEnumEntry[T]](
-      implicit enum: ValueEnum[T, E],
+  def plainCodecValueEnumEntry[T, E <: ValueEnumEntry[T]](implicit
+      enum: ValueEnum[T, E],
       baseCodec: Codec.PlainCodec[T],
       validator: Validator[E]
   ): Codec.PlainCodec[E] =

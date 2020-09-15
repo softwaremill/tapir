@@ -1,7 +1,5 @@
 package sttp.tapir
 
-import java.nio.charset.{Charset, StandardCharsets}
-
 import sttp.model.MediaType
 
 /**
@@ -17,12 +15,16 @@ object CodecFormat {
     override val mediaType: MediaType = MediaType.ApplicationJson
   }
 
-  case class TextPlain(charset: Charset = StandardCharsets.UTF_8) extends CodecFormat {
-    override val mediaType: MediaType = MediaType.TextPlain.charset(charset.displayName())
+  case class Xml() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.ApplicationXml
   }
 
-  case class TextHtml(charset: Charset = StandardCharsets.UTF_8) extends CodecFormat {
-    override val mediaType: MediaType = MediaType.TextHtml.charset(charset.displayName())
+  case class TextPlain() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.TextPlain
+  }
+
+  case class TextHtml() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.TextHtml
   }
 
   case class OctetStream() extends CodecFormat {
@@ -35,5 +37,9 @@ object CodecFormat {
 
   case class MultipartFormData() extends CodecFormat {
     override val mediaType: MediaType = MediaType.MultipartFormData
+  }
+
+  case class Zip() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.ApplicationZip
   }
 }

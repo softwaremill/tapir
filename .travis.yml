@@ -1,9 +1,6 @@
 language: scala
 jdk:
   - openjdk8
-scala:
-  - 2.12.10
-  - 2.13.1
 before_cache:
   - du -h -d 1 $HOME/.ivy2/
   - du -h -d 2 $HOME/.sbt/
@@ -20,4 +17,4 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.coursier
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION mimaReportBinaryIssues test
+  - sbt mimaReportBinaryIssues test compileDocumentation

@@ -1,5 +1,5 @@
 package sttp.tapir.server
 
-import sttp.tapir.{DecodeFailure, EndpointInput}
+import sttp.tapir.{DecodeResult, EndpointInput}
 
-case class DecodeFailureContext(input: EndpointInput.Single[_], failure: DecodeFailure)
+case class DecodeFailureContext(input: EndpointInput[_], failure: DecodeResult.Failure)

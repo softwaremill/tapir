@@ -1,14 +1,16 @@
 package sttp.tapir.json.spray
 
-import org.scalatest.{Assertion, FlatSpec, Matchers}
+import org.scalatest.Assertion
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
 import spray.json._
 import sttp.tapir.Codec.JsonCodec
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 object TapirJsonSprayCodec extends TapirJsonSpray
 
-class TapirJsonSprayTests extends FlatSpec with Matchers with DefaultJsonProtocol {
+class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProtocol {
   case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
 
   object Customer {
@@ -18,14 +20,14 @@ class TapirJsonSprayTests extends FlatSpec with Matchers with DefaultJsonProtoco
   val customerDecoder: JsonCodec[Customer] = TapirJsonSprayCodec.jsonFormatCodec[Customer]
 
   // Helper to test encoding then decoding an object is the same as the original
-  def testEncodeDecode[T: JsonFormat: Schema](original: T): Assertion = {
+  def testEncodeDecode[T: JsonFormat: Schema: Validator](original: T): Assertion = {
     val codec = TapirJsonSprayCodec.jsonFormatCodec[T]
 
     val encoded = codec.encode(original)
     codec.decode(encoded) match {
       case Value(d) =>
         d shouldBe original
-      case f: DecodeFailure =>
+      case f: DecodeResult.Failure =>
         fail(f.toString)
     }
   }

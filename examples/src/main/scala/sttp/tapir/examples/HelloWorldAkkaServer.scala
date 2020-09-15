@@ -23,7 +23,7 @@ object HelloWorldAkkaServer extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
-  val bindAndCheck = Http().bindAndHandle(helloWorldRoute, "localhost", 8080).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(helloWorldRoute).map { _ =>
     // testing
     implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
     val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send().body
@@ -32,7 +32,5 @@ object HelloWorldAkkaServer extends App {
     assert(result == "Hello, Frodo!")
   }
 
-  Await.result(bindAndCheck.transformWith { r =>
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }

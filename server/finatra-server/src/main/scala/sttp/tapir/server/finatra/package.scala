@@ -7,29 +7,42 @@ import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.util.logging.Logging
 import com.twitter.util.Future
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
-import sttp.tapir.internal.{SeqToParams, _}
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues}
-import sttp.tapir.{DecodeFailure, DecodeResult, Endpoint, EndpointIO, EndpointInput}
+import sttp.tapir.internal._
+import sttp.tapir.monad.MonadError
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
 package object finatra {
   implicit class RichFinatraEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) extends Logging {
-    def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
+    def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: FinatraServerOptions): FinatraRoute =
+      e.serverLogic(logic).toRoute
+
+    @silent("never used")
+    def toRouteRecoverErrors(logic: I => Future[O])(implicit
+        eIsThrowable: E <:< Throwable,
+        eClassTag: ClassTag[E]
+    ): FinatraRoute =
+      e.serverLogicRecoverErrors(logic).toRoute
+  }
+
+  implicit class RichFinatraServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Nothing, Future]) extends Logging {
+    def toRoute(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
       val handler = { request: Request =>
         def decodeBody(result: DecodeInputsResult): Future[DecodeInputsResult] = {
           result match {
             case values: DecodeInputsResult.Values =>
               values.bodyInput match {
-                case Some(bodyInput @ EndpointIO.Body(codec, _)) =>
+                case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
                   new FinatraRequestToRawBody(serverOptions)
-                    .apply(codec.meta.rawValueType, request.content, request.charset.map(Charset.forName), request)
+                    .apply(bodyType, request.content, request.charset.map(Charset.forName), request)
                     .map { rawBody =>
-                      val decodeResult = codec.decode(DecodeInputs.rawBodyValueToOption(rawBody, codec.meta.schema.isOptional))
+                      val decodeResult = codec.decode(rawBody)
                       decodeResult match {
-                        case DecodeResult.Value(bodyV) => values.setBodyInputValue(bodyV)
-                        case failure: DecodeFailure    => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                        case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                        case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                       }
                     }
                 case None => Future.value(values)
@@ -38,29 +51,29 @@ package object finatra {
           }
         }
 
-        def valuesToResponse(values: DecodeInputsResult.Values): Future[Response] = {
-          val i = SeqToParams(InputValues(e.input, values)).asInstanceOf[I]
+        def valueToResponse(value: Any): Future[Response] = {
+          val i = value.asInstanceOf[I]
 
-          logic(i)
+          e.logic(FutureMonadError)(i)
             .map {
               case Right(result) => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.success.code), e.output, result)
               case Left(err)     => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.error.code), e.errorOutput, err)
             }
             .map { result =>
-              serverOptions.logRequestHandling.requestHandled(e, result.statusCode)
+              serverOptions.logRequestHandling.requestHandled(e.endpoint, result.statusCode)
               result
             }
             .onFailure {
               case NonFatal(ex) =>
-                serverOptions.logRequestHandling.logicException(e, ex)
+                serverOptions.logRequestHandling.logicException(e.endpoint, ex)
                 error(ex)
             }
         }
 
         def handleDecodeFailure(
             e: Endpoint[_, _, _, _],
-            input: EndpointInput.Single[_],
-            failure: DecodeFailure
+            input: EndpointInput[_],
+            failure: DecodeResult.Failure
         ): Response = {
           val decodeFailureCtx = DecodeFailureContext(input, failure)
           val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
@@ -76,24 +89,16 @@ package object finatra {
         }
 
         decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
-          case values: DecodeInputsResult.Values          => valuesToResponse(values)
-          case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e, input, failure))
+          case values: DecodeInputsResult.Values =>
+            InputValues(e.input, values) match {
+              case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
+              case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
+            }
+          case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
         }
       }
 
-      FinatraRoute(handler, httpMethod(e), path(e.input))
-    }
-
-    @silent("never used")
-    def toRouteRecoverErrors(logic: I => Future[O])(
-        implicit eIsThrowable: E <:< Throwable,
-        eClassTag: ClassTag[E]
-    ): FinatraRoute = {
-      e.toRoute { i: I =>
-        logic(i).map(Right(_)).handle {
-          case ex if eClassTag.runtimeClass.isInstance(ex) => Left(ex.asInstanceOf[E])
-        }
-      }
+      FinatraRoute(handler, httpMethod(e.endpoint), path(e.input))
     }
   }
 
@@ -101,10 +106,10 @@ package object finatra {
     val p = input
       .asVectorOfBasicInputs()
       .collect {
-        case segment: EndpointInput.FixedPath => segment.show
-        case PathCapture(_, Some(name), _)    => s"/:$name"
-        case PathCapture(_, _, _)             => "/:param"
-        case EndpointInput.PathsCapture(_)    => "/:*"
+        case segment: EndpointInput.FixedPath[_] => segment.show
+        case PathCapture(Some(name), _, _)       => s"/:$name"
+        case PathCapture(_, _, _)                => "/:param"
+        case EndpointInput.PathsCapture(_, _)    => "/:*"
       }
       .mkString
     if (p.isEmpty) "/:*" else p
@@ -114,8 +119,16 @@ package object finatra {
     endpoint.input
       .asVectorOfBasicInputs()
       .collectFirst {
-        case FixedMethod(m) => Method(m.method)
+        case FixedMethod(m, _, _) => Method(m.method)
       }
       .getOrElse(Method("ANY"))
+  }
+
+  private object FutureMonadError extends MonadError[Future] {
+    override def unit[T](t: T): Future[T] = Future(t)
+    override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
+    override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)
+    override def error[T](t: Throwable): Future[T] = Future.exception(t)
+    override def handleError[T](rt: Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.rescue(h)
   }
 }

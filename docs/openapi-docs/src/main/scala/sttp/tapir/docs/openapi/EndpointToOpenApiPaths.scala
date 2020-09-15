@@ -4,7 +4,7 @@ import sttp.model.Method
 import sttp.tapir._
 import sttp.tapir.docs.openapi.schema.ObjectSchemas
 import sttp.tapir.internal._
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
+import sttp.tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
 import sttp.tapir.openapi.{Schema => OSchema, SchemaType => OSchemaType, _}
 
 import scala.collection.immutable.ListMap
@@ -46,10 +46,6 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
 
-    val authNames = e.input.auths.flatMap(auth => securitySchemes.get(auth).map(_._1))
-    // for now, all auths have empty scope
-    val securityRequirement = authNames.map(_ -> Vector.empty).toListMap
-
     Operation(
       e.info.tags.toList,
       e.info.summary,
@@ -59,17 +55,35 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       body.headOption,
       responses,
       if (e.info.deprecated) Some(true) else None,
-      if (securityRequirement.isEmpty) List.empty else List(securityRequirement),
+      operationSecurity(e),
       List.empty
     )
   }
 
+  private def operationSecurity(e: Endpoint[_, _, _, _]): List[SecurityRequirement] = {
+    val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
+      case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
+      case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
+    }.toListMap
+
+    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.exists(_.isOptional))
+
+    if (securityRequirement.isEmpty) List.empty
+    else {
+      if (securityOptional) {
+        List(ListMap.empty: SecurityRequirement, securityRequirement)
+      } else {
+        List(securityRequirement)
+      }
+    }
+  }
+
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
-      case EndpointIO.Body(codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.example), Some(!codec.meta.schema.isOptional)))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(s, mt, i)) =>
-        Right(RequestBody(i.description, codecToMediaType(s, mt, i.example), Some(true)))
+      case EndpointIO.Body(_, codec, info) =>
+        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.exists(_.isOptional))))
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, info, _)) =>
+        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true)))
     }
   }
 
@@ -79,54 +93,35 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
       case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)
       case h: EndpointIO.Header[_]         => headerToParameter(h)
       case c: EndpointInput.Cookie[_]      => cookieToParameter(c)
-      case f: EndpointIO.FixedHeader       => fixedHeaderToParameter(f)
+      case f: EndpointIO.FixedHeader[_]    => fixedHeaderToParameter(f)
     }
   }
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
-    EndpointInputToParameterConverter.from(
-      header,
-      objectSchemas(header.codec),
-      header.info.example.flatMap(exampleValue(header.codec, _))
-    )
+    EndpointInputToParameterConverter.from(header, objectSchemas(header.codec))
   }
 
-  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader) = {
-    EndpointInputToParameterConverter.from(
-      header,
-      Right(OSchema(OSchemaType.String)),
-      header.info.example.map(_ => exampleValue(header.value))
-    )
+  private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) = {
+    EndpointInputToParameterConverter.from(header, Right(OSchema(OSchemaType.String)))
   }
 
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
-    EndpointInputToParameterConverter.from(
-      cookie,
-      objectSchemas(cookie.codec),
-      cookie.info.example.flatMap(exampleValue(cookie.codec, _))
-    )
+    EndpointInputToParameterConverter.from(cookie, objectSchemas(cookie.codec))
   }
+
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    EndpointInputToParameterConverter.from(
-      p,
-      objectSchemas(p.codec),
-      p.info.example.flatMap(exampleValue(p.codec, _))
-    )
+    EndpointInputToParameterConverter.from(p, objectSchemas(p.codec))
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
-    EndpointInputToParameterConverter.from(
-      query,
-      objectSchemas(query.codec),
-      query.info.example.flatMap(exampleValue(query.codec, _))
-    )
+    EndpointInputToParameterConverter.from(query, objectSchemas(query.codec))
   }
 
   private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
     inputs
       .collect {
-        case EndpointInput.PathCapture(_, name, _) => Left(name)
-        case EndpointInput.FixedPath(s)            => Right(s)
+        case EndpointInput.PathCapture(name, _, _) => Left(name)
+        case EndpointInput.FixedPath(s, _, _)      => Right(s)
       }
       .foldLeft((Vector.empty[String], 1)) {
         case ((acc, i), component) =>

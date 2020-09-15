@@ -35,8 +35,9 @@ object AkkaHttpServerOptions {
     noLog = _ => ()
   )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): LoggingAdapter => Unit = exOpt match {
-    case None     => log => log.debug(msg)
-    case Some(ex) => log => log.debug(s"$msg; exception: {}", ex)
-  }
+  private def debugLog(msg: String, exOpt: Option[Throwable]): LoggingAdapter => Unit =
+    exOpt match {
+      case None     => log => log.debug(msg)
+      case Some(ex) => log => log.debug(s"$msg; exception: {}", ex)
+    }
 }
