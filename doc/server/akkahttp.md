@@ -20,10 +20,9 @@ Now import the package:
 import sttp.tapir.server.akkahttp._
 ```
 
-This adds extension methods to the `Endpoint` type: `toDirective`, `toRoute` and `toRouteRecoverErrors`.
-`toDirective` gives most flexibility and is discussed further below.
+This adds extension methods to the `Endpoint` type: `toRoute`, `toRouteRecoverErrors` and `toDirective`.
 
-## using `toRoute`
+## using `toRoute` and `toRouteRecoverErrors`
 
 Method `toRoute` requires the logic of the endpoint to be given as a function of type:
 
