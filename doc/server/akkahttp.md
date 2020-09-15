@@ -116,7 +116,8 @@ val myRoute: Route = metricsDirective {
 }
 ```
 
-`Route`s can only be nested within other routes, `Directive`s can also contain nested directives. For example:
+Note that `Route`s can only be nested within other directives. `Directive`s can nest in other directives
+and can also contain nested directives. For example:
 
 ```scala
 val countCharactersRoute: Route = countCharactersEndpoint.toDirective { (input, completion) =>
