@@ -1,6 +1,7 @@
 package sttp.tapir.codec.refined
 
 import sttp.tapir._
+import sttp.tapir.SchemaType.{SInteger, SString}
 import eu.timepit.refined.api.{Refined, Validate}
 import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.refineV
