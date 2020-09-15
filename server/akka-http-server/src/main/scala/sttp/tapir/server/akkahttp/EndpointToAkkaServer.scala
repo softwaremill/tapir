@@ -4,7 +4,6 @@ import akka.http.scaladsl.model.{MediaType => _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
-import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import sttp.tapir._
 import sttp.tapir.monad.FutureMonadError
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
@@ -35,8 +34,8 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     toDirective1(e).flatMap { (values: I) =>
       extractLog.flatMap { log =>
         val completion: Future[Either[E, O]] => Route = result => onComplete(result) {
-          case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, endpoint.errorOutput, v)
-          case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, endpoint.output, v)
+          case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, e.errorOutput, v)
+          case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, e.output, v)
           case Failure(t) =>
             serverOptions.logRequestHandling.logicException(e, t)(log)
             throw t
