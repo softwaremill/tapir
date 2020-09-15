@@ -120,13 +120,14 @@ Note that `Route`s can only be nested within other directives. `Directive`s can 
 and can also contain nested directives. For example:
 
 ```scala
-val countCharactersRoute: Route = countCharactersEndpoint.toDirective { (input, completion) =>
+val countCharactersRoute: Route =
   authenticateBasic("realm", authenticator) {
-    authorizeUserFor(input) {
-      completion(countCharacters(input))
+    countCharactersEndpoint.toDirective { (input, completion) =>
+      authorizeUserFor(input) {
+        completion(countCharacters(input))
+      }
     }
   }
-}
 ```
 
 ## Streaming
