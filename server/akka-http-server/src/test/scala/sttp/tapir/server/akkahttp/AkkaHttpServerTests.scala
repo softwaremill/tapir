@@ -1,6 +1,6 @@
 package sttp.tapir.server.akkahttp
 
-import cats.implicits._
+import cats.syntax.all._
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
@@ -13,7 +13,7 @@ import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.{Endpoint, endpoint, stringBody}
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir._
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.duration._
@@ -34,24 +34,23 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
   }
 
   override def route[I, E, O](
-      e: Endpoint[I, E, O, AkkaStream],
-      fn: I => Future[Either[E, O]],
+      e: ServerEndpoint[I, E, O, AkkaStream, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): Route = {
     implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
       decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
     )
-    e.toRoute(fn)
+    e.toRoute
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(
-      implicit eClassTag: ClassTag[E]
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(implicit
+      eClassTag: ClassTag[E]
   ): Route = {
     e.toRouteRecoverErrors(fn)
   }
 
   override def server(routes: NonEmptyList[Route], port: Port): Resource[IO, Unit] = {
-    val bind = IO.fromFuture(IO(Http().bindAndHandle(routes.toList.reduce(_ ~ _), "localhost", port)))
+    val bind = IO.fromFuture(IO(Http().newServerAt("localhost", port).bind(concat(routes.toList :_*))))
     Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).void
   }
 

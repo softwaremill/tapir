@@ -31,15 +31,17 @@ object Http4sServerOptions {
   def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): (ExecutionContext, Request[F]) => F[File] =
     (ec, _) => cs.evalOn(ec)(sync.delay(Defaults.createTempFile()))
 
-  def defaultLogRequestHandling[F[_]: Sync]: LogRequestHandling[F[Unit]] = LogRequestHandling[F[Unit]](
-    doLogWhenHandled = debugLog[F],
-    doLogAllDecodeFailures = debugLog[F],
-    doLogLogicExceptions = (msg: String, ex: Throwable) => Sync[F].delay(EndpointToHttp4sServer.log.error(ex)(msg)),
-    noLog = Applicative[F].unit
-  )
+  def defaultLogRequestHandling[F[_]: Sync]: LogRequestHandling[F[Unit]] =
+    LogRequestHandling[F[Unit]](
+      doLogWhenHandled = debugLog[F],
+      doLogAllDecodeFailures = debugLog[F],
+      doLogLogicExceptions = (msg: String, ex: Throwable) => Sync[F].delay(EndpointToHttp4sServer.log.error(ex)(msg)),
+      noLog = Applicative[F].unit
+    )
 
-  private def debugLog[F[_]: Sync](msg: String, exOpt: Option[Throwable]): F[Unit] = exOpt match {
-    case None     => Sync[F].delay(EndpointToHttp4sServer.log.debug(msg))
-    case Some(ex) => Sync[F].delay(EndpointToHttp4sServer.log.debug(ex)(msg))
-  }
+  private def debugLog[F[_]: Sync](msg: String, exOpt: Option[Throwable]): F[Unit] =
+    exOpt match {
+      case None     => Sync[F].delay(EndpointToHttp4sServer.log.debug(msg))
+      case Some(ex) => Sync[F].delay(EndpointToHttp4sServer.log.debug(ex)(msg))
+    }
 }

@@ -40,7 +40,7 @@ object MultipartFormUploadAkkaServer extends App {
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
-  val bindAndCheck = Http().bindAndHandle(setProfileRoute, "localhost", 8080).map { _ =>
+  val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(setProfileRoute).map { _ =>
     val testFile = File.createTempFile("user-123", ".jpg")
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()
 
@@ -57,7 +57,5 @@ object MultipartFormUploadAkkaServer extends App {
     assert(result == s"Received: Frodo / Some(hiking) / 33 / Some(${testFile.getName}) (19)")
   }
 
-  Await.result(bindAndCheck.transformWith { r =>
-    actorSystem.terminate().transform(_ => r)
-  }, 1.minute)
+  Await.result(bindAndCheck.transformWith { r => actorSystem.terminate().transform(_ => r) }, 1.minute)
 }

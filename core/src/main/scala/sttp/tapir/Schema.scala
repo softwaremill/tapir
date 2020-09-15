@@ -32,6 +32,11 @@ case class Schema[T](
   def asOptional[U]: Schema[U] = copy(isOptional = true)
 
   /**
+    * Returns a required version of this schema, with `isOptional` set to false.
+    */
+  def asRequired[U]: Schema[U] = copy(isOptional = false)
+
+  /**
     * Returns a collection version of this schema, with the schema type wrapped in [[SArray]].
     * Also, sets `isOptional` to true as the collection might be empty.
     * Also, sets 'format' to None. Formats are only applicable to the array elements, not to the array as a whole.
@@ -46,27 +51,30 @@ case class Schema[T](
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 
+  def setDescription[U](path: T => U, description: String): Schema[T] = macro ModifySchemaMacro.setDescriptionMacro[T, U]
+
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
   def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.modifyMacro[T, U]
 
-  private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] = fieldPath match {
-    case Nil => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
-    case f :: fs =>
-      val schemaType2 = schemaType match {
-        case SArray(element) if f == Schema.ModifyCollectionElements => SArray(element.modifyAtPath(fs, modify))
-        case s @ SProduct(_, fields) =>
-          s.copy(fields = fields.toList.map {
-            case field @ (fieldName, fieldSchema) =>
-              if (fieldName == f) (fieldName, fieldSchema.modifyAtPath(fs, modify)) else field
-          })
-        case s @ SOpenProduct(_, valueSchema) if f == Schema.ModifyCollectionElements =>
-          s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))
-        case s @ SCoproduct(_, schemas, _) => s.copy(schemas = schemas.map(_.modifyAtPath(fieldPath, modify)))
-        case _                             => schemaType
-      }
-      copy(schemaType = schemaType2)
-  }
+  private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] =
+    fieldPath match {
+      case Nil => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
+      case f :: fs =>
+        val schemaType2 = schemaType match {
+          case SArray(element) if f == Schema.ModifyCollectionElements => SArray(element.modifyAtPath(fs, modify))
+          case s @ SProduct(_, fields) =>
+            s.copy(fields = fields.toList.map {
+              case field @ (fieldName, fieldSchema) =>
+                if (fieldName.name == f) (fieldName, fieldSchema.modifyAtPath(fs, modify)) else field
+            })
+          case s @ SOpenProduct(_, valueSchema) if f == Schema.ModifyCollectionElements =>
+            s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))
+          case s @ SCoproduct(_, schemas, _) => s.copy(schemas = schemas.map(_.modifyAtPath(fieldPath, modify)))
+          case _                             => schemaType
+        }
+        copy(schemaType = schemaType2)
+    }
 }
 
 object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
@@ -80,6 +88,7 @@ object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
   implicit val schemaForFloat: Schema[Float] = Schema(SNumber).format("float")
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber).format("double")
   implicit val schemaForBoolean: Schema[Boolean] = Schema(SBoolean)
+  implicit val schemaForUnit: Schema[Unit] = Schema(SProduct.Empty)
   implicit val schemaForFile: Schema[File] = Schema(SBinary)
   implicit val schemaForPath: Schema[Path] = Schema(SBinary)
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary)

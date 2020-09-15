@@ -10,19 +10,25 @@ import com.typesafe.scalalogging.StrictLogging
 import sttp.client._
 import sttp.client.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import io.circe.generic.auto._
-import org.scalatest.{Assertion, BeforeAndAfterAll, FunSuite, Matchers}
+import org.scalatest.{Assertion, BeforeAndAfterAll}
 import sttp.model._
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
 import scala.reflect.ClassTag
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
+trait ServerTests[R[_], S, ROUTE] extends AnyFunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
   private val basicStringRequest = basicRequest.response(asStringAlways)
+
+  def multipleValueHeaderSupport: Boolean = true
+  def multipartInlineHeaderSupport: Boolean = true
+  def streamingSupport: Boolean = true
 
   testServer(in_string_out_status_from_type_erasure_using_partial_matcher)((v: String) =>
     pureResult((if (v == "right") Some(Right("right")) else if (v == "left") Some(Left(42)) else None).asRight[Unit])
@@ -56,8 +62,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer[String, Nothing, String](in_query_out_infallible_string)((fruit: String) => pureResult(s"fruit: $fruit".asRight[Nothing])) {
-    baseUri =>
-      basicRequest.get(uri"$baseUri?fruit=kiwi").send().map(_.body shouldBe Right("fruit: kiwi"))
+    baseUri => basicRequest.get(uri"$baseUri?fruit=kiwi").send().map(_.body shouldBe Right("fruit: kiwi"))
   }
 
   testServer(in_query_query_out_string) { case (fruit: String, amount: Option[Int]) => pureResult(s"$fruit $amount".asRight[Unit]) } {
@@ -74,9 +79,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     basicRequest.get(uri"$baseUri/fruit/orange/amount/20").send().map(_.body shouldBe Right("orange 20"))
   }
 
-  testServer(in_path, "Empty path should not be passed to path capture decoding") { _ =>
-    pureResult(Right(()))
-  } { baseUri =>
+  testServer(in_path, "Empty path should not be passed to path capture decoding") { _ => pureResult(Right(())) } { baseUri =>
     basicRequest.get(uri"$baseUri/api/").send().map(_.code shouldBe StatusCode.NotFound)
   }
 
@@ -150,7 +153,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     basicRequest
       .post(uri"$baseUri/api/echo")
       .body("""{"fruit":"banana","amount":12}""")
-      .header(HeaderNames.Accept, sttp.model.MediaType.ApplicationJson.toString) //TODO
+      .header(HeaderNames.Accept, sttp.model.MediaType.ApplicationJson.toString)
       .send()
       .map(_.body shouldBe Right("""{"fruit":"banana","amount":12}"""))
   }
@@ -160,7 +163,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .post(uri"$baseUri/api/echo")
       .body("""{"fruit":"banana","amount":12}""")
       .send()
-      .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString)) //TODO
+      .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString))
   }
 
   testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { baseUri =>
@@ -171,10 +174,25 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     basicRequest.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
   }
 
-  testServer(in_input_stream_out_input_stream)((is: InputStream) =>
-    pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
-  ) { baseUri =>
-    basicRequest.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango"))
+  if (streamingSupport) {
+    testServer(in_input_stream_out_input_stream)((is: InputStream) =>
+      pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
+    ) { baseUri => basicRequest.post(uri"$baseUri/api/echo").body("mango").send().map(_.body shouldBe Right("mango")) }
+
+    testServer(in_string_out_stream_with_header)((input: String) =>
+      pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))
+    ) { baseUri =>
+      basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send().map { r =>
+        r.body.map(_.length) shouldBe Right(128)
+        r.body.map(_.foreach(b => b shouldBe 0))
+        r.headers.map(_.name) should contain(HeaderNames.ContentLength)
+        r.header(HeaderNames.ContentLength) shouldBe Some("128")
+      }
+    }
+  }
+
+  testServer(in_unit_out_json_unit, "unit json mapper")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
+    basicRequest.get(uri"$baseUri/api/unit").send().map(_.body shouldBe Right("{}"))
   }
 
   testServer(in_unit_out_string, "default status mapper")((_: Unit) => pureResult("".asRight[Unit])) { baseUri =>
@@ -198,7 +216,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         .map(_.body shouldBe Right("fruit=mulp&amount=11"))
   }
 
-  testServer(in_query_params_out_string)((mqp: MultiQueryParams) =>
+  testServer(in_query_params_out_string)((mqp: QueryParams) =>
     pureResult(mqp.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&").asRight[Unit])
   ) { baseUri =>
     val params = Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")
@@ -208,7 +226,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
   }
 
-  testServer(in_headers_out_headers)((hs: Seq[(String, String)]) => pureResult(hs.map(h => h.copy(_2 = h._2.reverse)).asRight[Unit])) {
+  testServer(in_headers_out_headers)((hs: List[Header]) => pureResult(hs.map(h => Header(h.name, h.value.reverse)).asRight[Unit])) {
     baseUri =>
       basicRequest
         .get(uri"$baseUri/api/echo/headers")
@@ -222,21 +240,24 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(in_paths_out_string, "paths should match empty path")((ps: Seq[String]) => pureResult(ps.mkString(" ").asRight[Unit])) {
-    baseUri =>
-      basicRequest.get(uri"$baseUri").send().map(_.body shouldBe Right(""))
+    baseUri => basicRequest.get(uri"$baseUri").send().map(_.body shouldBe Right(""))
   }
 
-  testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
-    basicRequest.post(uri"$baseUri/api/echo").body("pen pineapple apple pen").send().map(_.body shouldBe Right("pen pineapple apple pen"))
-  }
+  if (streamingSupport) {
+    val penPineapple = "pen pineapple apple pen"
 
-  testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
-    basicRequest
-      .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
-      .send()
-      .map { r =>
-        r.headers.filter(_.is("hh")).map(_.value).toList shouldBe List("v3", "v2", "v1", "v0")
+    testServer(in_stream_out_stream[S])((s: S) => pureResult(s.asRight[Unit])) { baseUri =>
+      basicRequest.post(uri"$baseUri/api/echo").body(penPineapple).send().map(_.body shouldBe Right(penPineapple))
+    }
+
+    testServer(in_stream_out_stream_with_content_length[S])((in: (Long, S)) => pureResult(in.asRight[Unit])) { baseUri =>
+      {
+        basicRequest.post(uri"$baseUri/api/echo").contentLength(penPineapple.length).body(penPineapple).send().map { response =>
+          response.body shouldBe Right(penPineapple)
+          response.contentLength shouldBe Some(penPineapple.length)
+        }
       }
+    }
   }
 
   testServer(in_simple_multipart_out_multipart)((fa: FruitAmount) =>
@@ -255,7 +276,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
     pureResult(
       FruitData(
-        Part("", writeToFile(readFromFile(fd.data.body).reverse))
+        Part("", writeToFile(readFromFile(fd.data.body).reverse), fd.data.otherDispositionParams, Nil)
           .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
       ).asRight[Unit]
     )
@@ -267,19 +288,45 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .send()
       .map { r =>
         r.code shouldBe StatusCode.Ok
+        if (multipartInlineHeaderSupport) r.body should include regex "X-Auth: Some\\(12Aa\\)"
         r.body should include regex "name=\"data\"[\\s\\S]*oiram hcaep"
-        r.body should include regex "X-Auth: Some\\(12Aa\\)"
       }
+  }
+
+  if (multipartInlineHeaderSupport) {
+    testServer(in_file_multipart_out_multipart, "with part content type header")((fd: FruitData) =>
+      pureResult(
+        FruitData(
+          Part("", fd.data.body, fd.data.otherDispositionParams, fd.data.headers)
+        ).asRight[Unit]
+      )
+    ) { baseUri =>
+      val file = writeToFile("peach mario")
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(multipartFile("data", file).contentType("text/html"))
+        .send()
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body.toLowerCase() should include("content-type: text/html")
+        }
+    }
   }
 
   testServer(in_query_out_string, "invalid query parameter")((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
     basicRequest.get(uri"$baseUri?fruit2=orange").send().map(_.code shouldBe StatusCode.BadRequest)
   }
 
-  testServer(in_cookie_cookie_out_header)((p: (Int, String)) => pureResult(List(p._1.toString.reverse, p._2.reverse).asRight[Unit])) {
-    baseUri =>
-      basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "23"), ("c2", "pomegranate")).send().map { r =>
-        r.headers("Cookie") shouldBe Seq("32", "etanargemop")
+  testServer(in_query_list_out_header_list)((l: List[String]) => pureResult(("v0" :: l).reverse.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri/api/echo/param-to-header?qq=${List("v1", "v2", "v3")}")
+      .send()
+      .map { r =>
+        if (multipleValueHeaderSupport) {
+          r.headers.filter(_.is("hh")).map(_.value).toList shouldBe List("v3", "v2", "v1", "v0")
+        } else {
+          r.headers.filter(_.is("hh")).map(_.value).headOption should contain("v3, v2, v1, v0")
+        }
       }
   }
 
@@ -291,7 +338,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
     }
   }
 
-  testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) => pureResult(c.copy(value = c.value.reverse).asRight[Unit])
+  testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) =>
+    pureResult(c.copy(value = c.value.reverse).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send().map { r =>
       r.cookies.toList shouldBe List(
@@ -308,6 +356,18 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       }
   }
 
+  testServer(in_content_type_out_string)((ct: String) => pureResult(ct.asRight[Unit])) { baseUri =>
+    basicRequest.get(uri"$baseUri/api/echo").contentType("application/dicom+json").send().map { r =>
+      r.body shouldBe Right("application/dicom+json")
+    }
+  }
+
+  testServer(in_unit_out_html)(_ => pureResult("<html />".asRight[Unit])) { baseUri =>
+    basicRequest.get(uri"$baseUri/api/echo").send().map { r =>
+      r.contentType shouldBe Some("text/html; charset=UTF-8")
+    }
+  }
+
   testServer(in_unit_out_header_redirect)(_ => pureResult("http://new.com".asRight[Unit])) { baseUri =>
     basicRequest.followRedirects(false).get(uri"$baseUri").send().map { r =>
       r.code shouldBe StatusCode.PermanentRedirect
@@ -316,9 +376,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(in_unit_out_fixed_header)(_ => pureResult(().asRight[Unit])) { baseUri =>
-    basicRequest.get(uri"$baseUri").send().map { r =>
-      r.header("Location") shouldBe Some("Poland")
-    }
+    basicRequest.get(uri"$baseUri").send().map { r => r.header("Location") shouldBe Some("Poland") }
   }
 
   testServer(in_optional_json_out_optional_json)((fa: Option[FruitAmount]) => pureResult(fa.asRight[Unit])) { baseUri =>
@@ -403,6 +461,11 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
         basicRequest.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCode.Accepted)
   }
 
+  testServer(in_int_out_value_form_exact_match)((num: Int) => pureResult(if (num % 2 == 0) Right("A") else Right("B"))) { baseUri =>
+    basicRequest.get(uri"$baseUri/mapping?num=1").send().map(_.code shouldBe StatusCode.Ok) >>
+      basicRequest.get(uri"$baseUri/mapping?num=2").send().map(_.code shouldBe StatusCode.Accepted)
+  }
+
   testServer(in_string_out_status_from_string_one_empty)((v: String) =>
     pureResult((if (v == "apple") Right("x") else Left(())).asRight[Unit])
   ) { baseUri =>
@@ -415,7 +478,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       basicStringRequest.post(uri"$baseUri").send().map(_.body shouldBe "POST")
   }
 
-  testServer(in_string_out_status)((v: String) => pureResult((if (v == "apple") StatusCode.Accepted else StatusCode.NotFound).asRight[Unit])
+  testServer(in_string_out_status)((v: String) =>
+    pureResult((if (v == "apple") StatusCode.Accepted else StatusCode.NotFound).asRight[Unit])
   ) { baseUri =>
     basicRequest.get(uri"$baseUri?fruit=apple").send().map(_.code shouldBe StatusCode.Accepted) >>
       basicRequest.get(uri"$baseUri?fruit=orange").send().map(_.code shouldBe StatusCode.NotFound)
@@ -478,8 +542,8 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   testServer(
     "two endpoints with increasingly specific path inputs: should match path exactly",
     NonEmptyList.of(
-      route(endpoint.get.in("p1").out(stringBody), (_: Unit) => pureResult("e1".asRight[Unit])),
-      route(endpoint.get.in("p1" / "p2").out(stringBody), (_: Unit) => pureResult("e2".asRight[Unit]))
+      route(endpoint.get.in("p1").out(stringBody).serverLogic((_: Unit) => pureResult("e1".asRight[Unit]))),
+      route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit])))
     )
   ) { baseUri =>
     basicStringRequest.get(uri"$baseUri/p1").send().map(_.body shouldBe "e1") >>
@@ -487,15 +551,21 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   }
 
   testServer(
-    "two endpoints with a body defined as the first input: should only consume body when then path matches",
+    "two endpoints with a body defined as the first input: should only consume body when the path matches",
     NonEmptyList.of(
       route(
-        endpoint.post.in(binaryBody[Array[Byte]]).in("p1").out(stringBody),
-        (s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit])
+        endpoint.post
+          .in(byteArrayBody)
+          .in("p1")
+          .out(stringBody)
+          .serverLogic((s: Array[Byte]) => pureResult(s"p1 ${s.length}".asRight[Unit]))
       ),
       route(
-        endpoint.post.in(binaryBody[Array[Byte]]).in("p2").out(stringBody),
-        (s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit])
+        endpoint.post
+          .in(byteArrayBody)
+          .in("p2")
+          .out(stringBody)
+          .serverLogic((s: Array[Byte]) => pureResult(s"p2 ${s.length}".asRight[Unit]))
       )
     )
   ) { baseUri =>
@@ -503,16 +573,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       .post(uri"$baseUri/p2")
       .body("a" * 1000000)
       .send()
-      .map { r =>
-        r.body shouldBe "p2 1000000"
-      }
+      .map { r => r.body shouldBe "p2 1000000" }
   }
 
   testServer(
     "two endpoints with query defined as the first input, path segments as second input: should try the second endpoint if the path doesn't match",
     NonEmptyList.of(
-      route(endpoint.get.in(query[String]("q1")).in("p1"), (_: String) => pureResult(().asRight[Unit])),
-      route(endpoint.get.in(query[String]("q2")).in("p2"), (_: String) => pureResult(().asRight[Unit]))
+      route(endpoint.get.in(query[String]("q1")).in("p1").serverLogic((_: String) => pureResult(().asRight[Unit]))),
+      route(endpoint.get.in(query[String]("q2")).in("p2").serverLogic((_: String) => pureResult(().asRight[Unit])))
     )
   ) { baseUri =>
     basicRequest.get(uri"$baseUri/p1?q1=10").send().map(_.code shouldBe StatusCode.Ok) >>
@@ -524,18 +592,16 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   testServer(
     "two endpoints with increasingly specific path inputs, first with a required query parameter: should match path exactly",
     NonEmptyList.of(
-      route(endpoint.get.in("p1").in(query[String]("q1")).out(stringBody), (_: String) => pureResult("e1".asRight[Unit])),
-      route(endpoint.get.in("p1" / "p2").out(stringBody), (_: Unit) => pureResult("e2".asRight[Unit]))
+      route(endpoint.get.in("p1").in(query[String]("q1")).out(stringBody).serverLogic((_: String) => pureResult("e1".asRight[Unit]))),
+      route(endpoint.get.in("p1" / "p2").out(stringBody).serverLogic((_: Unit) => pureResult("e2".asRight[Unit])))
     )
-  ) { baseUri =>
-    basicStringRequest.get(uri"$baseUri/p1/p2").send().map(_.body shouldBe "e2")
-  }
+  ) { baseUri => basicStringRequest.get(uri"$baseUri/p1/p2").send().map(_.body shouldBe "e2") }
 
   testServer(
     "two endpoints with validation: should not try the second one if validation fails",
     NonEmptyList.of(
-      route(endpoint.get.in("p1" / path[String].validate(Validator.minLength(5))), (_: String) => pureResult(().asRight[Unit])),
-      route(endpoint.get.in("p2"), (_: Unit) => pureResult(().asRight[Unit]))
+      route(endpoint.get.in("p1" / path[String].validate(Validator.minLength(5))).serverLogic((_: String) => pureResult(().asRight[Unit]))),
+      route(endpoint.get.in("p2").serverLogic((_: Unit) => pureResult(().asRight[Unit])))
     )
   ) { baseUri =>
     basicRequest.get(uri"$baseUri/p1/abcde").send().map(_.code shouldBe StatusCode.Ok) >>
@@ -543,13 +609,44 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
       basicRequest.get(uri"$baseUri/p2").send().map(_.code shouldBe StatusCode.Ok)
   }
 
+  testServer(in_header_out_header_unit_extended)(in => pureResult(in.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri")
+      .header("A", "1")
+      .header("X", "3")
+      .send()
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("Y" -> "3", "B" -> "2"))
+  }
+
+  testServer(in_4query_out_4header_extended)(in => pureResult(in.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri?a=1&b=2&x=3&y=4")
+      .send()
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("A" -> "1", "B" -> "2", "X" -> "3", "Y" -> "4"))
+  }
+
+  testServer(in_3query_out_3header_mapped_to_tuple)(in => pureResult(in.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri?p1=1&p2=2&p3=3")
+      .send()
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("P1" -> "1", "P2" -> "2", "P3" -> "3"))
+  }
+
+  testServer(in_2query_out_2query_mapped_to_unit)(in => pureResult(in.asRight[Unit])) { baseUri =>
+    basicRequest
+      .get(uri"$baseUri?p1=1&p2=2")
+      .send()
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("P1" -> "DEFAULT_HEADER", "P2" -> "2"))
+  }
+
   //
 
-  def throwFruits(name: String): R[String] = name match {
-    case "apple"  => pureResult("ok")
-    case "banana" => suspendResult(throw FruitError("no bananas", 102))
-    case n        => suspendResult(throw new IllegalArgumentException(n))
-  }
+  def throwFruits(name: String): R[String] =
+    name match {
+      case "apple"  => pureResult("ok")
+      case "banana" => suspendResult(throw FruitError("no bananas", 102))
+      case n        => suspendResult(throw new IllegalArgumentException(n))
+    }
 
   testServer(
     "recover errors from exceptions",
@@ -609,6 +706,88 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
 
   //
 
+  testServerLogic(
+    endpoint
+      .in(query[String]("x"))
+      .serverLogicForCurrent(v => pureResult(v.toInt.asRight[Unit]))
+      .in(query[String]("y"))
+      .out(plainBody[Int])
+      .serverLogic { case (x, y) => pureResult((x * y.toInt).asRight[Unit]) },
+    "partial server logic - current, one part"
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri?x=2&y=3").send().map(_.body shouldBe Right("6"))
+  }
+
+  testServerLogic(
+    endpoint
+      .in(query[String]("x"))
+      .serverLogicForCurrent(v => pureResult(v.toInt.asRight[Unit]))
+      .in(query[String]("y"))
+      .serverLogicForCurrent(v => pureResult(v.toLong.asRight[Unit]))
+      .in(query[String]("z"))
+      .out(plainBody[Long])
+      .serverLogic { case ((x, y), z) => pureResult((x * y * z.toLong).asRight[Unit]) },
+    "partial server logic - current, two parts"
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri?x=2&y=3&z=5").send().map(_.body shouldBe Right("30"))
+  }
+
+  testServerLogic(
+    endpoint
+      .in(query[String]("x"))
+      .in(query[String]("y"))
+      .serverLogicForCurrent { case (x, y) => pureResult((x.toInt + y.toInt).asRight[Unit]) }
+      .in(query[String]("z"))
+      .in(query[String]("u"))
+      .out(plainBody[Int])
+      .serverLogic { case (xy, (z, u)) => pureResult((xy * z.toInt * u.toInt).asRight[Unit]) },
+    "partial server logic - current, one part, multiple values"
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri?x=2&y=3&z=5&u=7").send().map(_.body shouldBe Right("175"))
+  }
+
+  testServerLogic(
+    endpoint
+      .in(query[String]("x"))
+      .in(query[String]("y"))
+      .out(plainBody[Int])
+      .serverLogicPart((x: String) => pureResult(x.toInt.asRight[Unit]))
+      .andThen { case (x, y) => pureResult((x * y.toInt).asRight[Unit]) },
+    "partial server logic - parts, one part"
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri?x=2&y=3").send().map(_.body shouldBe Right("6"))
+  }
+
+  testServerLogic(
+    endpoint
+      .in(query[String]("x"))
+      .in(query[String]("y"))
+      .in(query[String]("z"))
+      .out(plainBody[Long])
+      .serverLogicPart((x: String) => pureResult(x.toInt.asRight[Unit]))
+      .andThenPart((y: String) => pureResult(y.toLong.asRight[Unit]))
+      .andThen { case ((x, y), z) => pureResult((x * y * z.toLong).asRight[Unit]) },
+    "partial server logic - parts, two parts"
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri?x=2&y=3&z=5").send().map(_.body shouldBe Right("30"))
+  }
+
+  testServerLogic(
+    endpoint
+      .in(query[String]("x"))
+      .in(query[String]("y"))
+      .in(query[String]("z"))
+      .in(query[String]("u"))
+      .out(plainBody[Int])
+      .serverLogicPart { t: (String, String) => pureResult((t._1.toInt + t._2.toInt).asRight[Unit]) }
+      .andThen { case (xy, (z, u)) => pureResult((xy * z.toInt * u.toInt).asRight[Unit]) },
+    "partial server logic - parts, one part, multiple values"
+  ) { baseUri =>
+    basicRequest.get(uri"$baseUri?x=2&y=3&z=5&u=7").send().map(_.body shouldBe Right("175"))
+  }
+
+  //
+
   implicit lazy val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
   implicit val backend: SttpBackend[IO, Nothing, NothingT] = AsyncHttpClientCatsBackend[IO]().unsafeRunSync()
 
@@ -622,11 +801,7 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   def pureResult[T](t: T): R[T]
   def suspendResult[T](t: => T): R[T]
 
-  def route[I, E, O](
-      e: Endpoint[I, E, O, S],
-      fn: I => R[Either[E, O]],
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
-  ): ROUTE
+  def route[I, E, O](e: ServerEndpoint[I, E, O, S, R], decodeFailureHandler: Option[DecodeFailureHandler] = None): ROUTE
 
   def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, S], fn: I => R[O])(implicit eClassTag: ClassTag[E]): ROUTE
 
@@ -643,7 +818,14 @@ trait ServerTests[R[_], S, ROUTE] extends FunSuite with Matchers with BeforeAndA
   )(runTest: Uri => IO[Assertion]): Unit = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(route(e, fn, decodeFailureHandler))
+      NonEmptyList.of(route(e.serverLogic(fn), decodeFailureHandler))
+    )(runTest)
+  }
+
+  def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, S, R], testNameSuffix: String = "")(runTest: Uri => IO[Assertion]): Unit = {
+    testServer(
+      e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
+      NonEmptyList.of(route(e))
     )(runTest)
   }
 

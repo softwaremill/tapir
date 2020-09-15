@@ -3,12 +3,13 @@ package sttp.tapir
 import java.util.concurrent.TimeUnit
 
 import com.github.ghik.silencer.silent
-import org.scalatest.{FlatSpec, Matchers}
 
 import scala.concurrent.duration.Duration
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 
 @silent("never used")
-class ValidatorTest extends FlatSpec with Matchers {
+class ValidatorTest extends AnyFlatSpec with Matchers {
   it should "validate for min value" in {
     val min = 1
     val wrong = 0
@@ -97,9 +98,12 @@ class ValidatorTest extends FlatSpec with Matchers {
   }
 
   it should "validate with custom validator" in {
-    val v = Validator.custom({ x: Int =>
-      x > 5
-    }, "X has to be greater than 5!")
+    val v = Validator.custom(
+      { x: Int =>
+        x > 5
+      },
+      "X has to be greater than 5!"
+    )
     v.validate(0) shouldBe List(ValidationError(v, 0))
   }
 

@@ -18,12 +18,12 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
       case p @ TSchemaType.SProduct(_, fields) =>
         Right(
           OSchema(SchemaType.Object).copy(
-            required = p.required.toList,
+            required = p.required.map(_.lowLevelName).toList,
             properties = fields.map {
               case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _)) =>
-                fieldName -> Left(schemaReferenceMapper.map(s.info))
+                fieldName.lowLevelName -> Left(schemaReferenceMapper.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName)))
+                fieldName.lowLevelName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name)))
             }.toListMap
           )
         )
@@ -54,11 +54,18 @@ private[schema] class TSchemaToOSchema(schemaReferenceMapper: SchemaReferenceMap
         )
     }
 
+    val primitiveValidators = typeData.schema.schemaType match {
+      case TSchemaType.SArray(_) => asPrimitiveValidators(typeData.validator, unwrapCollections = false)
+      case _                     => asPrimitiveValidators(typeData.validator, unwrapCollections = true)
+    }
+    val wholeNumbers = typeData.schema.schemaType match {
+      case TSchemaType.SInteger => true
+      case _                    => false
+    }
+
     result
       .map(addMetadata(_, typeData.schema))
-      .map(
-        addConstraints(_, asPrimitiveValidators(typeData.validator), typeData.schema.schemaType.isInstanceOf[TSchemaType.SInteger.type])
-      )
+      .map(addConstraints(_, primitiveValidators, wholeNumbers))
   }
 
   private def addMetadata(oschema: OSchema, tschema: TSchema[_]): OSchema = {

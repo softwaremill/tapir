@@ -4,11 +4,12 @@ import java.io.File
 
 import sttp.tapir._
 import sttp.client._
-import org.scalatest.{FunSuite, Matchers}
 import sttp.model.{Header, HeaderNames, MediaType, Part}
 import sttp.tapir.tests.FruitData
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
 
-class SttpClientRequestTests extends FunSuite with Matchers {
+class SttpClientRequestTests extends AnyFunSuite with Matchers {
   test("content-type header shouldn't be duplicated when converting to a part") {
     // given
     val testEndpoint = endpoint.post.in(multipartBody[FruitData])

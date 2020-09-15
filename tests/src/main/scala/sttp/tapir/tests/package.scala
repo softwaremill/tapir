@@ -2,6 +2,7 @@ package sttp.tapir
 
 import java.io.{File, InputStream, PrintWriter}
 import java.nio.ByteBuffer
+import java.nio.charset.StandardCharsets
 
 import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
@@ -9,7 +10,7 @@ import sttp.tapir.json.circe._
 import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, MultiQueryParams, StatusCode}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, QueryParams, StatusCode}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model._
 
@@ -41,25 +42,27 @@ package object tests {
     endpoint.in("secret").in(header("location", "secret")).out(stringBody)
 
   val in_mapped_query_out_string: Endpoint[List[Char], Unit, String, Nothing] =
-    endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody)
+    endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody).name("mapped query")
 
   val in_mapped_path_out_string: Endpoint[Fruit, Unit, String, Nothing] =
-    endpoint.in(("fruit" / path[String]).mapTo(Fruit)).out(stringBody)
+    endpoint.in(("fruit" / path[String]).mapTo(Fruit)).out(stringBody).name("mapped path")
 
   val in_mapped_path_path_out_string: Endpoint[FruitAmount, Unit, String, Nothing] =
-    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount)).out(stringBody)
+    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount)).out(stringBody).name("mapped path path")
 
   val in_query_mapped_path_path_out_string: Endpoint[(FruitAmount, String), Unit, String, Nothing] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))
     .out(stringBody)
+    .name("query and mapped path path")
 
   val in_query_out_mapped_string: Endpoint[String, Unit, List[Char], Nothing] =
-    endpoint.in(query[String]("fruit")).out(stringBody.map(_.toList)(_.mkString("")))
+    endpoint.in(query[String]("fruit")).out(stringBody.map(_.toList)(_.mkString(""))).name("out mapped")
 
   val in_query_out_mapped_string_header: Endpoint[String, Unit, FruitAmount, Nothing] = endpoint
     .in(query[String]("fruit"))
     .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
+    .name("out mapped")
 
   val in_header_before_path: Endpoint[(String, Int), Unit, (Int, String), Nothing] = endpoint
     .in(header[String]("SomeHeader"))
@@ -70,16 +73,27 @@ package object tests {
     endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
 
   val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte], Nothing] =
-    endpoint.post.in("api" / "echo").in(binaryBody[Array[Byte]]).out(binaryBody[Array[Byte]]).name("echo byte array")
+    endpoint.post.in("api" / "echo").in(byteArrayBody).out(byteArrayBody).name("echo byte array")
 
   val in_byte_buffer_out_byte_buffer: Endpoint[ByteBuffer, Unit, ByteBuffer, Nothing] =
-    endpoint.post.in("api" / "echo").in(binaryBody[ByteBuffer]).out(binaryBody[ByteBuffer]).name("echo byte buffer")
+    endpoint.post.in("api" / "echo").in(byteBufferBody).out(byteBufferBody).name("echo byte buffer")
 
   val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream, Nothing] =
-    endpoint.post.in("api" / "echo").in(binaryBody[InputStream]).out(binaryBody[InputStream]).name("echo input stream")
+    endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("echo input stream")
+
+  val in_string_out_stream_with_header: Endpoint[String, Unit, (InputStream, Option[Long]), Nothing] =
+    endpoint.post
+      .in("api" / "echo")
+      .in(stringBody)
+      .out(inputStreamBody)
+      .out(header[Option[Long]]("Content-Length"))
+      .name("input string output stream with header")
 
   val in_file_out_file: Endpoint[File, Unit, File, Nothing] =
-    endpoint.post.in("api" / "echo").in(binaryBody[File]).out(binaryBody[File]).name("echo file")
+    endpoint.post.in("api" / "echo").in(fileBody).out(fileBody).name("echo file")
+
+  val in_unit_out_json_unit: Endpoint[Unit, Unit, Unit, Nothing] =
+    endpoint.in("api" / "unit").out(jsonBody[Unit])
 
   val in_unit_out_string: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.in("api").out(stringBody)
@@ -90,19 +104,19 @@ package object tests {
   val in_form_out_form: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
     endpoint.post.in("api" / "echo").in(formBody[FruitAmount]).out(formBody[FruitAmount])
 
-  val in_query_params_out_string: Endpoint[MultiQueryParams, Unit, String, Nothing] =
+  val in_query_params_out_string: Endpoint[QueryParams, Unit, String, Nothing] =
     endpoint.get.in("api" / "echo" / "params").in(queryParams).out(stringBody)
 
-  val in_headers_out_headers: Endpoint[Seq[(String, String)], Unit, Seq[(String, String)], Nothing] =
+  val in_headers_out_headers: Endpoint[List[Header], Unit, List[Header], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(headers).out(headers)
 
-  val in_json_out_headers: Endpoint[FruitAmount, Unit, Seq[(String, String)], Nothing] =
+  val in_json_out_headers: Endpoint[FruitAmount, Unit, List[Header], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(jsonBody[FruitAmount]).out(headers)
 
-  val in_paths_out_string: Endpoint[Seq[String], Unit, String, Nothing] =
+  val in_paths_out_string: Endpoint[List[String], Unit, String, Nothing] =
     endpoint.get.in(paths).out(stringBody)
 
-  val in_path_paths_out_header_body: Endpoint[(Int, Seq[String]), Unit, (Int, String), Nothing] =
+  val in_path_paths_out_header_body: Endpoint[(Int, List[String]), Unit, (Int, String), Nothing] =
     endpoint.get.in("api").in(path[Int]).in("and").in(paths).out(header[Int]("IntPath") and stringBody)
 
   val in_path_fixed_capture_fixed_capture: Endpoint[(Int, Int), Unit, Unit, Nothing] =
@@ -112,8 +126,13 @@ package object tests {
     endpoint.get.in("api" / "echo" / "param-to-header").in(query[List[String]]("qq")).out(header[List[String]]("hh"))
 
   def in_stream_out_stream[S]: Endpoint[S, Unit, S, S] = {
-    val sb = streamBody[S](schemaFor[String], CodecFormat.TextPlain())
+    val sb = streamBody[S](schemaFor[String], CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
     endpoint.post.in("api" / "echo").in(sb).out(sb)
+  }
+
+  def in_stream_out_stream_with_content_length[S]: Endpoint[(Long, S), Unit, (Long, S), S] = {
+    val sb = streamBody[S](schemaFor[String], CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+    endpoint.post.in("api" / "echo").in(header[Long](HeaderNames.ContentLength)).in(sb).out(header[Long](HeaderNames.ContentLength)).out(sb)
   }
 
   val in_simple_multipart_out_multipart: Endpoint[FruitAmount, Unit, FruitAmount, Nothing] =
@@ -134,7 +153,7 @@ package object tests {
       .in("api" / "echo" / "headers")
       .in(cookie[Int]("c1"))
       .in(cookie[String]("c2"))
-      .out(header[List[String]]("Cookie"))
+      .out(header[List[String]]("Set-Cookie"))
 
   val in_cookies_out_cookies: Endpoint[List[Cookie], Unit, List[CookieWithMeta], Nothing] =
     endpoint.get.in("api" / "echo" / "headers").in(cookies).out(setCookies)
@@ -155,17 +174,29 @@ package object tests {
   val in_auth_apikey_query_out_string: Endpoint[String, Unit, String, Nothing] =
     endpoint.in("auth").in(auth.apiKey(query[String]("api-key"))).out(stringBody)
 
-  val in_auth_basic_out_string: Endpoint[UsernamePassword, Unit, String, Nothing] = endpoint.in("auth").in(auth.basic).out(stringBody)
+  val in_auth_basic_out_string: Endpoint[UsernamePassword, Unit, String, Nothing] =
+    endpoint.in("auth").in(auth.basic[UsernamePassword]).out(stringBody)
 
-  val in_auth_bearer_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in("auth").in(auth.bearer).out(stringBody)
+  val in_auth_bearer_out_string: Endpoint[String, Unit, String, Nothing] = endpoint.in("auth").in(auth.bearer[String]).out(stringBody)
 
   val in_string_out_status_from_string: Endpoint[String, Unit, Either[Int, String], Nothing] =
     endpoint
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          statusMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int)   => true },
+          statusMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int) => true },
           statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
+        )
+      )
+
+  val in_int_out_value_form_exact_match: Endpoint[Int, Unit, String, Nothing] =
+    endpoint
+      .in("mapping")
+      .in(query[Int]("num"))
+      .out(
+        oneOf(
+          statusMappingExactMatcher(StatusCode.Accepted, plainBody[String])("A"),
+          statusMappingExactMatcher(StatusCode.Ok, plainBody[String])("B")
         )
       )
 
@@ -176,7 +207,7 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Option[Either[Int, String]]](
-          statusMapping(StatusCode.NoContent, emptyOutput.map[None.type](_ => None)(_ => ())),
+          statusMapping(StatusCode.NoContent, emptyOutput.map[None.type]((_: Unit) => None)(_ => ())),
           statusMappingValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(
             implicitly[MatchType[Some[Left[Int, String]]]].partial
           ),
@@ -191,7 +222,7 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          statusMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit)     => true },
+          statusMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit) => true },
           statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
@@ -205,6 +236,12 @@ package object tests {
   val in_string_out_content_type_string: Endpoint[String, Unit, (String, String), Nothing] =
     endpoint.in("api" / "echo").in(stringBody).out(stringBody).out(header[String]("Content-Type"))
 
+  val in_content_type_out_string: Endpoint[String, Unit, String, Nothing] =
+    endpoint.in("api" / "echo").in(header[String]("Content-Type")).out(stringBody)
+
+  val in_unit_out_html: Endpoint[Unit, Unit, String, Nothing] =
+    endpoint.in("api" / "echo").out(htmlBodyUtf8)
+
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Nothing] =
     endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location"))
 
@@ -217,6 +254,42 @@ package object tests {
   val in_optional_coproduct_json_out_optional_coproduct_json: Endpoint[Option[Entity], Unit, Option[Entity], Nothing] =
     endpoint.post.in("api" / "echo" / "coproduct").in(jsonBody[Option[Entity]]).out(jsonBody[Option[Entity]])
 
+  val not_existing_endpoint: Endpoint[Unit, String, Unit, Nothing] =
+    endpoint.in("api" / "not-existing").errorOut(oneOf(statusMapping(StatusCode.BadRequest, stringBody)))
+
+  val in_header_out_header_unit_extended: Endpoint[(Unit, String), Unit, (Unit, String), Nothing] = {
+    def addInputAndOutput[I, E, O](e: Endpoint[I, E, O, Nothing]): Endpoint[(I, String), E, (O, String), Nothing] = {
+      e.in(header[String]("X")).out(header[String]("Y"))
+    }
+
+    addInputAndOutput(endpoint.in(header("A", "1")).out(header("B", "2")))
+  }
+
+  val in_4query_out_4header_extended: Endpoint[((String, String), String, String), Unit, ((String, String), String, String), Nothing] = {
+    def addInputAndOutput[I, E, O](e: Endpoint[I, E, O, Nothing]): Endpoint[(I, String, String), E, (O, String, String), Nothing] = {
+      e.in(query[String]("x").and(query[String]("y"))).out(header[String]("X").and(header[String]("Y")))
+    }
+
+    addInputAndOutput(endpoint.in(query[String]("a").and(query[String]("b"))).out(header[String]("A").and(header[String]("B"))))
+  }
+
+  val in_3query_out_3header_mapped_to_tuple: Endpoint[(String, String, String, String), Unit, (String, String, String, String), Nothing] =
+    endpoint
+      .in(query[String]("p1"))
+      .in(query[String]("p2").map(x => (x, x))(_._1))
+      .in(query[String]("p3"))
+      .out(header[String]("P1"))
+      .out(header[String]("P2").map(x => (x, x))(_._1))
+      .out(header[String]("P3"))
+
+  val in_2query_out_2query_mapped_to_unit: Endpoint[String, Unit, String, Nothing] =
+    endpoint
+      .in(query[String]("p1").map(_ => ())(_ => "DEFAULT_PARAM"))
+      .in(query[String]("p2"))
+      .out(header[String]("P1").map(_ => ())(_ => "DEFAULT_HEADER"))
+      .out(header[String]("P2"))
+      .name("mapped to unit")
+
   //
 
   @silent("never used")
@@ -224,8 +297,8 @@ package object tests {
     type MyTaggedString = String @@ Tapir
 
     val in_query_tagged: Endpoint[String @@ Tapir, Unit, Unit, Nothing] = {
-      implicit def plainCodecForMyTaggedString(implicit uc: PlainCodec[String]): PlainCodec[MyTaggedString] =
-        uc.map(_.taggedWith[Tapir])(identity).validate(Validator.pattern("apple|banana"))
+      implicit def plainCodecForMyTaggedString: PlainCodec[MyTaggedString] =
+        Codec.string.map(_.taggedWith[Tapir])(identity).validate(Validator.pattern("apple|banana"))
 
       endpoint.in(query[String @@ Tapir]("fruit"))
     }
@@ -258,8 +331,8 @@ package object tests {
 
     val in_valid_query: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
-      implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
-        uc.map(IntWrapper.apply)(_.v).validate(Validator.min(1).contramap(_.v))
+      implicit def plainCodecForWrapper: PlainCodec[IntWrapper] =
+        Codec.int.map(IntWrapper.apply(_))(_.v).validate(Validator.min(1).contramap(_.v))
       endpoint.in(query[IntWrapper]("amount"))
     }
 
@@ -279,7 +352,7 @@ package object tests {
         implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
       implicit def schemaForValidatedList[T: Schema]: Schema[ValidatedList[T]] = implicitly[Schema[T]].asArrayElement
       implicit def validatorForValidatedList[T: Validator]: Validator[ValidatedList[T]] =
-        implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minSize(1).contramap(identity))
+        implicitly[Validator[T]].asIterableElements[ValidatedList].and(Validator.minSize(1).contramap(identity(_)))
       endpoint.in(jsonBody[BasketOfFruits])
     }
 
@@ -294,8 +367,8 @@ package object tests {
     val in_enum_class: Endpoint[Color, Unit, Unit, Nothing] = {
       implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def plainCodecForColor: PlainCodec[Color] = {
-        Codec.stringPlainCodecUtf8
-          .map[Color]({
+        Codec.string
+          .map[Color]((_: String) match {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
@@ -307,8 +380,8 @@ package object tests {
     val in_optional_enum_class: Endpoint[Option[Color], Unit, Unit, Nothing] = {
       implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def plainCodecForColor: PlainCodec[Color] = {
-        Codec.stringPlainCodecUtf8
-          .map[Color]({
+        Codec.string
+          .map[Color]((_: String) match {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
@@ -320,23 +393,21 @@ package object tests {
     val out_enum_object: Endpoint[Unit, Unit, ColorValue, Nothing] = {
       implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def plainCodecForColor: PlainCodec[Color] = {
-        Codec.stringPlainCodecUtf8
-          .map[Color]({
+        Codec.string
+          .map[Color]((_: String) match {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
       }
       implicit def validatorForColor: Validator[Color] =
-        Validator.enum(List(Blue, Red), { c =>
-          Some(plainCodecForColor.encode(c))
-        })
+        Validator.enum(List(Blue, Red), { c => Some(plainCodecForColor.encode(c)) })
       endpoint.out(jsonBody[ColorValue])
     }
 
     val in_enum_values: Endpoint[IntWrapper, Unit, Unit, Nothing] = {
       implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
-      implicit def plainCodecForWrapper(implicit uc: PlainCodec[Int]): PlainCodec[IntWrapper] =
-        uc.map(IntWrapper.apply)(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
+      implicit def plainCodecForWrapper: PlainCodec[IntWrapper] =
+        Codec.int.map(IntWrapper.apply(_))(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
       endpoint.in(query[IntWrapper]("amount"))
     }
 
@@ -344,6 +415,14 @@ package object tests {
       implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
       implicit def colorValidator: Validator[Color] = Validator.enum.encode(_.toString.toLowerCase)
       endpoint.in(jsonBody[ColorWrapper])
+    }
+
+    val in_valid_int_array: Endpoint[List[IntWrapper], Unit, Unit, Nothing] = {
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
+      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val v: Validator[IntWrapper] = Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v)
+      endpoint.in(jsonBody[List[IntWrapper]])
     }
 
     val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]

@@ -13,18 +13,20 @@ import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
-import org.scalatest.{BeforeAndAfterAll, FunSuite, Matchers}
-import sttp.tapir._
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.matchers.should.Matchers
+import sttp.tapir.{DecodeResult, _}
 import sttp.tapir.tests._
 import TestUtil._
 import org.http4s.multipart
-import sttp.model.{MultiQueryParams, StatusCode}
+import sttp.model.{QueryParams, StatusCode}
 import sttp.tapir.model.UsernamePassword
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
+trait ClientTests[S] extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   private val logger = org.log4s.getLogger
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -57,10 +59,10 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_form_out_form, FruitAmount("plum", 10), Right(FruitAmount("plum", 10)))
   testClient(
     in_query_params_out_string,
-    MultiQueryParams.fromMap(Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")),
+    QueryParams.fromMap(Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")),
     Right("kind=very good&name=apple&weight=42")
   )
-  testClient(in_paths_out_string, Seq("fruit", "apple", "amount", "50"), Right("apple 50 None"))
+  testClient(in_paths_out_string, List("fruit", "apple", "amount", "50"), Right("apple 50 None"))
   testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
   testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
   testClient(in_cookie_cookie_out_header, (23, "pomegranate"), Right(List("etanargemop=2c ;32=1c")))
@@ -75,6 +77,8 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
   testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
   testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
+  testClient(in_int_out_value_form_exact_match.name("first exact status of 2"), 1, Right("B"))
+  testClient(in_int_out_value_form_exact_match.name("second exact status of 2"), 2, Right("A"))
   testClient(in_string_out_status, "apple", Right(StatusCode.Ok))
 
   testClient(delete_endpoint, (), Right(()))
@@ -82,21 +86,30 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   testClient(in_optional_json_out_optional_json.name("defined"), Some(FruitAmount("orange", 11)), Right(Some(FruitAmount("orange", 11))))
   testClient(in_optional_json_out_optional_json.name("empty"), None, Right(None))
 
+  testClient(
+    in_4query_out_4header_extended.in("api" / "echo" / "param-to-upper-header"),
+    (("1", "2"), "3", "4"),
+    Right((("1", "2"), "3", "4"))
+  )
+
   //
 
   test(in_headers_out_headers.showDetail) {
-    send(in_headers_out_headers, port, List(("X-Fruit", "apple"), ("Y-Fruit", "Orange")))
-      .unsafeRunSync()
-      .right
-      .get should contain allOf (("X-Fruit", "elppa"), ("Y-Fruit", "egnarO"))
+    send(
+      in_headers_out_headers,
+      port,
+      List(sttp.model.Header("X-Fruit", "apple"), sttp.model.Header("Y-Fruit", "Orange"))
+    ).unsafeRunSync().right.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO"))
   }
 
   test(in_json_out_headers.showDetail) {
     send(in_json_out_headers, port, FruitAmount("apple", 10))
       .unsafeRunSync()
       .right
-      .get should contain(("Content-Type", "application/json".reverse))
+      .get should contain(sttp.model.Header("Content-Type", "application/json".reverse))
   }
+
+  testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
 
   test(in_simple_multipart_out_raw_string.showDetail) {
     val result = send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
@@ -136,8 +149,15 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
     ) shouldBe "mango cranberry"
   }
 
+  test("not existing endpoint, with error output not matching 404") {
+    safeSend(not_existing_endpoint, port, ()).unsafeRunSync() should matchPattern {
+      case DecodeResult.Error(_, _: IllegalArgumentException) =>
+    }
+  }
+
   //
 
+  private object numParam extends QueryParamDecoderMatcher[Int]("num")
   private object fruitParam extends QueryParamDecoderMatcher[String]("fruit")
   private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
@@ -152,10 +172,19 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       }
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
+    case r @ GET -> Root / "api" / "unit"                                  => Ok("{}")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
-    case r @ GET -> Root / "api" / "echo" / "headers"                      => Ok(headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse)): _*)
+    case r @ GET -> Root / "api" / "echo" / "headers" =>
+      val headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse))
+      val filteredHeaders = r.headers.find(_.name.value == "Cookie") match {
+        case Some(c) => headers.filter(_.name.value == "Cookie") :+ Header("Set-Cookie", c.value.reverse)
+        case None    => headers
+      }
+      Ok(headers = filteredHeaders: _*)
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
       Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
+    case r @ GET -> Root / "api" / "echo" / "param-to-upper-header" =>
+      Ok(headers = r.uri.multiParams.map { case (k, v) => Header(k.toUpperCase(), v.headOption.getOrElse("?")) }.toSeq: _*)
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
         val parts: Vector[multipart.Part[IO]] = mp.parts
@@ -185,6 +214,9 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
       val authHeader = r.headers.get(CaseInsensitiveString("Authorization")).map(_.value)
       val xApiKey = r.headers.get(CaseInsensitiveString("X-Api-Key")).map(_.value)
       Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; Query=$ak")
+
+    case GET -> Root / "mapping" :? numParam(v) =>
+      if (v % 2 == 0) Accepted("A") else Ok("B")
   }
 
   private val app: HttpApp[IO] = Router("/" -> service).orNotFound
@@ -194,17 +226,19 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
   type Port = Int
 
   def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[Either[E, O]]
+  def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
 
   def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Either[Any, Any] = {
-        def doAdjust(v: Any) = v match {
-          case is: InputStream => inputStreamToByteArray(is).toList
-          case a: Array[Byte]  => a.toList
-          case f: File         => readFromFile(f)
-          case _               => v
-        }
+        def doAdjust(v: Any) =
+          v match {
+            case is: InputStream => inputStreamToByteArray(is).toList
+            case a: Array[Byte]  => a.toList
+            case f: File         => readFromFile(f)
+            case _               => v
+          }
 
         r.map(doAdjust).left.map(doAdjust)
       }
@@ -223,7 +257,7 @@ trait ClientTests[S] extends FunSuite with Matchers with BeforeAndAfterAll {
 
     exitSignal = SignallingRef.apply[IO, Boolean](false).unsafeRunSync()
 
-    serverExitCode = BlazeServerBuilder[IO]
+    serverExitCode = BlazeServerBuilder[IO](ec)
       .bindHttp(port)
       .withHttpApp(app)
       .serveWhile(exitSignal, Ref.unsafe(ExitCode.Success))

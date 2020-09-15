@@ -1,9 +1,7 @@
 package sttp.tapir.docs.openapi.schema
 
-import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.CodecForMany.PlainCodecForMany
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.docs.openapi.{OpenAPIDocsOptions, uniqueName}
+import sttp.tapir.docs.openapi.uniqueName
 import sttp.tapir.openapi.OpenAPI.ReferenceOr
 import sttp.tapir.openapi.{Schema => OSchema}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
@@ -14,7 +12,7 @@ import scala.collection.mutable.ListBuffer
 object ObjectSchemasForEndpoints {
   private type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
 
-  def apply(es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
+  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
     val sObjects = uniqueObjects(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
@@ -87,9 +85,7 @@ object ObjectSchemasForEndpoints {
   }
 
   private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator[_]): Seq[TypeData[_]] = {
-    p.fields.map { f =>
-      TypeData(f._2, fieldValidator(v, f._1))
-    }.toList
+    p.fields.map { f => TypeData(f._2, fieldValidator(v, f._1.name)) }.toList
   }
 
   private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator[_]): Seq[TypeData[_]] = {
@@ -98,56 +94,56 @@ object ObjectSchemasForEndpoints {
     }
   }
 
-  private def subtypeValidator(v: Validator[_], subtype: SObjectInfo): Validator[_] = v match {
-    case v @ Validator.Coproduct(_)                                  => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
-    case Validator.CollectionElements(v @ Validator.Coproduct(_), _) => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
-    case _                                                           => Validator.pass
-  }
+  private def subtypeValidator(v: Validator[_], subtype: SObjectInfo): Validator[_] =
+    v match {
+      case v @ Validator.Coproduct(_)                                  => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
+      case Validator.CollectionElements(v @ Validator.Coproduct(_), _) => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
+      case _                                                           => Validator.pass
+    }
 
   private def forInput(input: EndpointInput[_]): List[ObjectTypeData] = {
     input match {
-      case EndpointInput.FixedMethod(_)           => List.empty
-      case EndpointInput.FixedPath(_)             => List.empty
-      case EndpointInput.PathCapture(codec, _, _) => forCodec(codec)
-      case EndpointInput.PathsCapture(_)          => List.empty
+      case EndpointInput.FixedMethod(_, _, _)     => List.empty
+      case EndpointInput.FixedPath(_, _, _)       => List.empty
+      case EndpointInput.PathCapture(_, codec, _) => forCodec(codec)
+      case EndpointInput.PathsCapture(_, _)       => List.empty
       case EndpointInput.Query(_, codec, _)       => forCodec(codec)
       case EndpointInput.Cookie(_, codec, _)      => forCodec(codec)
-      case EndpointInput.QueryParams(_)           => List.empty
+      case EndpointInput.QueryParams(_, _)        => List.empty
       case _: EndpointInput.Auth[_]               => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
-      case EndpointInput.Mapped(wrapped, _, _)    => forInput(wrapped)
-      case EndpointInput.Multiple(inputs)         => inputs.toList.flatMap(forInput)
+      case EndpointInput.MappedPair(wrapped, _)   => forInput(wrapped)
+      case EndpointInput.Pair(left, right, _, _)  => forInput(left) ++ forInput(right)
       case op: EndpointIO[_]                      => forIO(op)
     }
   }
   private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData] = {
     output match {
-      case EndpointOutput.OneOf(mappings)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
-      case EndpointOutput.StatusCode(_)         => List.empty
-      case EndpointOutput.FixedStatusCode(_, _) => List.empty
-      case EndpointOutput.Mapped(wrapped, _, _) => forOutput(wrapped)
-      case EndpointOutput.Void()                => List.empty
-      case EndpointOutput.Multiple(outputs)     => outputs.toList.flatMap(forOutput)
-      case op: EndpointIO[_]                    => forIO(op)
+      case EndpointOutput.OneOf(mappings, _)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
+      case EndpointOutput.StatusCode(_, _, _)      => List.empty
+      case EndpointOutput.FixedStatusCode(_, _, _) => List.empty
+      case EndpointOutput.MappedPair(wrapped, _)   => forOutput(wrapped)
+      case EndpointOutput.Void()                   => List.empty
+      case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
+      case op: EndpointIO[_]                       => forIO(op)
     }
   }
 
   private def forIO(io: EndpointIO[_]): List[ObjectTypeData] = {
     io match {
-      case EndpointIO.Multiple(ios)       => ios.toList.flatMap(ios2 => forInput(ios2) ++ forOutput(ios2))
-      case EndpointIO.Header(_, codec, _) => forCodec(codec)
-      case EndpointIO.Headers(_)          => List.empty
-      case EndpointIO.Body(codec, _)      => forCodec(codec)
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(schema, _, _)) =>
-        objectSchemas(TypeData(schema, Validator.pass))
-      case EndpointIO.Mapped(wrapped, _, _) => forInput(wrapped) ++ forOutput(wrapped)
-      case EndpointIO.FixedHeader(_, _, _)  => List.empty
+      case EndpointIO.Pair(left, right, _, _) => forIO(left) ++ forIO(right)
+      case EndpointIO.Header(_, codec, _)     => forCodec(codec)
+      case EndpointIO.Headers(_, _)           => List.empty
+      case EndpointIO.Body(_, codec, _)       => forCodec(codec)
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) =>
+        objectSchemas(TypeData(codec.schema.getOrElse(TSchema(TSchemaType.SBinary)), Validator.pass))
+      case EndpointIO.MappedPair(wrapped, _) => forIO(wrapped)
+      case EndpointIO.FixedHeader(_, _, _)   => List.empty
+      case EndpointIO.Empty(_, _)            => List.empty
     }
   }
 
-  private def forCodec[T](codec: CodecForOptional[T, _, _]): List[ObjectTypeData] = objectSchemas(TypeData(codec))
-  private def forCodec[T](codec: PlainCodec[T]): List[ObjectTypeData] = objectSchemas(TypeData(codec))
-  private def forCodec[T](codec: PlainCodecForMany[T]): List[ObjectTypeData] = objectSchemas(TypeData(codec))
+  private def forCodec[T](codec: Codec[_, T, _]): List[ObjectTypeData] = objectSchemas(TypeData(codec))
 
   private def objectInfoToName(info: TSchemaType.SObjectInfo): String = {
     val shortName = info.fullName.split('.').last

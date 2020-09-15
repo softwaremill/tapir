@@ -1,6 +1,5 @@
 package sttp.tapir.json.upickle
 
-import java.nio.charset.StandardCharsets
 import scala.util.{Try, Success, Failure}
 import sttp.tapir._
 import sttp.tapir.Codec.JsonCodec
@@ -8,18 +7,14 @@ import sttp.tapir.DecodeResult.{Error, Value}
 import upickle.default.{ReadWriter, read, write}
 
 trait TapirJsonuPickle {
-  implicit def encoderDecoderCodec[T: ReadWriter: Schema]: JsonCodec[T] = new JsonCodec[T] {
-    def encode(t: T): String = write(t)
 
-    def rawDecode(s: String): DecodeResult[T] = {
+  def jsonBody[T: ReadWriter: Schema: Validator]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(readWriterCodec[T])
+
+  implicit def readWriterCodec[T: ReadWriter: Schema: Validator]: JsonCodec[T] =
+    Codec.json[T] { s =>
       Try(read[T](s)) match {
         case Success(v) => Value(v)
         case Failure(e) => Error("upickle decoder failed", e)
       }
-    }
-
-    def meta: CodecMeta[T, CodecFormat.Json, String] = {
-      CodecMeta(implicitly[Schema[T]], CodecFormat.Json(), StringValueType(StandardCharsets.UTF_8))
-    }
-  }
+    } { t => write(t) }
 }

@@ -23,11 +23,21 @@ sealed trait Validator[T] {
 object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   type EncodeToRaw[T] = T => Option[scala.Any]
 
+  private val _pass: Validator[Nothing] = all()
+  private val _reject: Validator[Nothing] = any()
+
   def all[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else All[T](v.toList)
   def any[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else Any[T](v.toList)
 
-  def pass[T]: Validator[T] = all()
-  def reject[T]: Validator[T] = any()
+  /**
+    * A validator instance that always pass.
+    */
+  def pass[T]: Validator[T] = _pass.asInstanceOf[Validator[T]]
+
+  /**
+    * A validator instance that always reject.
+    */
+  def reject[T]: Validator[T] = _reject.asInstanceOf[Validator[T]]
 
   def min[T: Numeric](value: T, exclusive: Boolean = false): Validator.Primitive[T] = Min(value, exclusive)
   def max[T: Numeric](value: T, exclusive: Boolean = false): Validator.Primitive[T] = Max(value, exclusive)
@@ -156,7 +166,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     }
   }
 
-  case class FieldName(name: String, lowLevelName: String)
   trait ProductField[T] {
     type FieldType
     def name: FieldName
@@ -165,9 +174,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   }
   case class Product[T](fields: Map[String, ProductField[T]]) extends Single[T] {
     override def validate(t: T): List[ValidationError[_]] = {
-      fields.values.flatMap { f =>
-        f.validator.validate(f.get(t)).map(_.prependPath(f.name))
-      }
+      fields.values.flatMap { f => f.validator.validate(f.get(t)).map(_.prependPath(f.name)) }
     }.toList
   }
 
@@ -185,11 +192,11 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     }.toList
   }
 
-  case class Mapped[TT, T](wrapped: Validator[T], g: TT => T) extends Single[TT] {
+  //
+
+  case class Mapped[TT, T](wrapped: Validator[T], g: TT => T) extends Validator[TT] {
     override def validate(t: TT): List[ValidationError[_]] = wrapped.validate(g(t))
   }
-
-  //
 
   case class All[T](validators: immutable.Seq[Validator[T]]) extends Validator[T] {
     override def validate(t: T): List[ValidationError[_]] = validators.flatMap(_.validate(t)).toList
@@ -274,6 +281,6 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   implicit def openProduct[T: Validator]: Validator[Map[String, T]] = OpenProduct(implicitly[Validator[T]])
 }
 
-case class ValidationError[T](validator: Validator.Primitive[T], invalidValue: T, path: List[Validator.FieldName] = Nil) {
-  def prependPath(f: Validator.FieldName): ValidationError[T] = copy(path = f :: path)
+case class ValidationError[T](validator: Validator.Primitive[T], invalidValue: T, path: List[FieldName] = Nil) {
+  def prependPath(f: FieldName): ValidationError[T] = copy(path = f :: path)
 }

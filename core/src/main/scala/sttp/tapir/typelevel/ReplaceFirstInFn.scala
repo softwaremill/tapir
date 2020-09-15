@@ -16,8 +16,7 @@ trait ReplaceFirstInFn[I, FN_IK[_], J, FN_JK[_]] {
 
 object ReplaceFirstInFn {
   @silent("never used")
-  implicit def replaceFirst[FN_IK[_], I, IK, J, JK, FN_JK[_]](
-      implicit
+  implicit def replaceFirst[FN_IK[_], I, IK, J, JK, FN_JK[_]](implicit
       p1: ParamsAsArgs.Aux[IK, FN_IK],
       r: ReplaceFirstInTuple[I, J, IK, JK],
       p2: ParamsAsArgs.Aux[JK, FN_JK]

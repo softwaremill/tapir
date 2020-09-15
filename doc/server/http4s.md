@@ -4,12 +4,12 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.12.21"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "@VERSION@"
 ```
 
 and import the package:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir.server.http4s._
 ```
 
@@ -23,7 +23,7 @@ I => F[Either[E, O]]
 where `F[_]` is the chosen effect type. The second recovers errors from failed effects, and hence requires that `E` is 
 a subclass of `Throwable` (an exception); it expects a function of type `I => F[O]`. For example:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server.http4s._
 import cats.effect.IO
@@ -31,7 +31,7 @@ import org.http4s.HttpRoutes
 import cats.effect.ContextShift
 
 // will probably come from somewhere else
-implicit val cs: ContextShift[IO] = 
+implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
 
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
@@ -46,10 +46,20 @@ val countCharactersRoutes: HttpRoutes[IO] =
 Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
 arguments need to be converted to a function using a single argument using `.tupled`:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.http4s._
+import cats.effect.IO
+import org.http4s.HttpRoutes
+import cats.effect.ContextShift
+
+// will probably come from somewhere else
+implicit val cs: ContextShift[IO] =
+  IO.contextShift(scala.concurrent.ExecutionContext.global)
+
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? 
-val aRoute: Route = anEndpoint.toRoute((logic _).tupled)
+val routes: HttpRoutes[IO] = anEndpoint.toRoutes((logic _).tupled)
 ```
 
 The created `HttpRoutes` are the usual http4s `Kleisli`-based transformation of a `Request` to a `Response`, and can 
@@ -68,11 +78,11 @@ response bodies and reading request bodies. Usage: `streamBody[Stream[F, Byte]](
 ## Configuration
 
 The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see
-[server options](options.html) for details.
+[server options](options.md) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.
 
 ## Defining an endpoint together with the server logic
 
 It's also possible to define an endpoint together with the server logic in a single, more concise step. See
-[server logic](logic.html) for details.
+[server logic](logic.md) for details.

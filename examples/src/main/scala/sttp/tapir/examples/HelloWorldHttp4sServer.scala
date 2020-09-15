@@ -8,7 +8,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.tapir._
 import sttp.tapir.server.http4s._
-import cats.implicits._
+import cats.syntax.all._
 
 import scala.concurrent.ExecutionContext
 
@@ -28,7 +28,7 @@ object HelloWorldHttp4sServer extends App {
 
   // starting the server
 
-  BlazeServerBuilder[IO]
+  BlazeServerBuilder[IO](ec)
     .bindHttp(8080, "localhost")
     .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
     .resource

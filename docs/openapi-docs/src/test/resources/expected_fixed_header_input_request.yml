@@ -7,11 +7,12 @@ paths:
     get:
       operationId: getRoot
       parameters:
-      - name: Location
-        in: header
-        required: true
-        schema:
-          type: string
+        - name: Location
+          in: header
+          required: true
+          schema:
+            type: string
+          example: Poland
       responses:
         '200':
           description: ''

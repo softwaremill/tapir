@@ -40,8 +40,9 @@ object FinatraServerOptions extends Logging {
     noLog = ()
   )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit = exOpt match {
-    case None     => debug(msg)
-    case Some(ex) => debug(msg, ex)
-  }
+  private def debugLog(msg: String, exOpt: Option[Throwable]): Unit =
+    exOpt match {
+      case None     => debug(msg)
+      case Some(ex) => debug(msg, ex)
+    }
 }
