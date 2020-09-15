@@ -10,8 +10,11 @@ import scala.reflect.ClassTag
 
 trait TapirAkkaHttpServer {
   implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStream]) {
-    def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
-      new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)
+    def toDirective(implicit serverOptions: AkkaHttpServerOptions): Directive[(I, Future[Either[E, O]] => Route)] =
+      new EndpointToAkkaServer(serverOptions).toDirective(e)
+
+//    def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
+//      new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)
 
     def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: AkkaHttpServerOptions): Route =
       new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogic(logic))

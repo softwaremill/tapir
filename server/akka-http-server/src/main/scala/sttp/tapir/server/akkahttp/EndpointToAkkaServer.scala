@@ -15,12 +15,27 @@ import scala.reflect.ClassTag
 import scala.util.{Failure, Success}
 
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
-  def toDirective[I, E, O, T](e: Endpoint[I, E, O, AkkaStream])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
-    implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
-    toDirective1(e).flatMap { values =>
-      tprovide(paramsToTuple.toTuple(values))
+  def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive[(I, Future[Either[E, O]] => Route)] = {
+    toDirective1(e).flatMap { (values: I) =>
+      extractLog { log =>
+        val completion: Future[Either[E, O]] => Route = result => onComplete(result) {
+          case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, endpoint.errorOutput, v)
+          case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, endpoint.output, v)
+          case Failure(t) =>
+            serverOptions.logRequestHandling.logicException(e, t)(log)
+            throw t
+        }
+        tprovide((values, completion))
+      }
     }
   }
+
+//  def toDirective[I, E, O, T](e: Endpoint[I, E, O, AkkaStream])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
+//    implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
+//    toDirective1(e).flatMap { values =>
+//      tprovide(paramsToTuple.toTuple(values))
+//    }
+//  }
 
   @silent("never used")
   def toRouteRecoverErrors[I, E, O](
