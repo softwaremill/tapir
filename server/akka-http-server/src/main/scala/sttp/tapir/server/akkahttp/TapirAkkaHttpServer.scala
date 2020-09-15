@@ -13,9 +13,6 @@ trait TapirAkkaHttpServer {
     def toDirective(implicit serverOptions: AkkaHttpServerOptions): Directive[(I, Future[Either[E, O]] => Route)] =
       new EndpointToAkkaServer(serverOptions).toDirective(e)
 
-//    def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
-//      new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)
-
     def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: AkkaHttpServerOptions): Route =
       new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogic(logic))
 
@@ -27,7 +24,7 @@ trait TapirAkkaHttpServer {
   }
 
   implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStream, Future]) {
-    def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
+    def toDirective(implicit akkaHttpOptions: AkkaHttpServerOptions): Directive[(I, Future[Either[E, O]] => Route)] =
       new EndpointToAkkaServer(akkaHttpOptions).toDirective(serverEndpoint.endpoint)
 
     def toRoute(implicit serverOptions: AkkaHttpServerOptions): Route =
