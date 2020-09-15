@@ -15,7 +15,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
 
   val nonEmptyStringCodec: PlainCodec[NonEmptyString] = implicitly[PlainCodec[NonEmptyString]]
 
-  "Generated codec" should "return DecodResult.Invalid if subtype can't be refined with correct tapir validator if available" in {
+  "Generated codec" should "return DecodeResult.Invalid if subtype can't be refined with correct tapir validator if available" in {
     val expectedValidator: Validator[String] = Validator.minLength(1)
     nonEmptyStringCodec.decode("") should matchPattern {
       case DecodeResult.InvalidValue(List(ValidationError(validator, "", _))) if validator == expectedValidator =>
@@ -26,7 +26,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     nonEmptyStringCodec.decode("vive le fromage") shouldBe DecodeResult.Value(refineMV[NonEmpty]("vive le fromage"))
   }
 
-  it should "return DecodResult.Invalid if subtype can't be refined with derived tapir validator if non tapir validator available" in {
+  it should "return DecodeResult.Invalid if subtype can't be refined with derived tapir validator if non tapir validator available" in {
     type IPString = String Refined IPv4
     val IPStringCodec = implicitly[PlainCodec[IPString]]
 
@@ -98,5 +98,27 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     implicitly[Validator[LimitedInt]] should matchPattern {
       case Validator.Mapped(Validator.Min(3, true), _) =>
     }
+  }
+
+  "TapirCodecRefined" should "provide implicit schema so that endpoints can use refined types" in {
+    """
+      |import io.circe.refined._
+      |import sttp.tapir
+      |import sttp.tapir._
+      |import sttp.tapir.json.circe._
+      |
+      |object TapirCodecRefinedDeepImplicitSearch extends TapirCodecRefined with TapirJsonCirce {
+      |  type StringConstraint = MatchesRegex[W.`"[^\u0000-\u001f]{1,29}"`.T]
+      |  type LimitedString    = String Refined StringConstraint
+      |
+      |  val refinedEndpoint:
+      |   Endpoint[(LimitedString, List[LimitedString]), Unit, List[Option[LimitedString]], Nothing] =
+      |    tapir
+      |      .endpoint
+      |      .post
+      |      .in(path[LimitedString]("ls") / jsonBody[List[LimitedString]])
+      |      .out(jsonBody[List[Option[LimitedString]]])
+      |}
+      |""".stripMargin should compile
   }
 }
