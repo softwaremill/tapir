@@ -2,9 +2,9 @@ package sttp.tapir.server
 
 import io.vertx.core.Handler
 import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir._
 import sttp.tapir.internal.Params
-import sttp.tapir.monad.{FutureMonadError, MonadError}
 import sttp.tapir.server.vertx.decoders.VertxInputDecoders._
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers._
@@ -94,7 +94,7 @@ package object vertx {
         logic: MonadError[Future] => I => Future[A],
         responseHandler: (A, RoutingContext) => Unit
     )(implicit serverOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Handler[RoutingContext] = { rc =>
-      val monad = new FutureMonadError()(serverOptions.executionContextOrCurrentCtx(rc))
+      val monad = new FutureMonad()(serverOptions.executionContextOrCurrentCtx(rc))
       decodeBodyAndInputsThen[E](
         e.endpoint,
         rc,

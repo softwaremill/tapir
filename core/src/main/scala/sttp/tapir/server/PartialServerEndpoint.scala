@@ -1,10 +1,10 @@
 package sttp.tapir.server
 
+import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.typelevel.ParamConcat
 import sttp.tapir._
 import sttp.tapir.internal._
-import sttp.tapir.monad.MonadError
-import sttp.tapir.monad.syntax._
 
 import scala.reflect.ClassTag
 
@@ -72,7 +72,7 @@ abstract class PartialServerEndpoint[U, I, E, O, -R, F[_]](partialEndpoint: Endp
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
   ): PartialServerEndpoint[UV, Unit, E, O, R, F] =
-    serverLogicForCurrentM(MonadError.recoverErrors(f))
+    serverLogicForCurrentM(recoverErrors(f))
 
   private def serverLogicForCurrentM[V, UV](
       _f: MonadError[F] => I => F[Either[E, V]]
@@ -97,7 +97,7 @@ abstract class PartialServerEndpoint[U, I, E, O, -R, F[_]](partialEndpoint: Endp
   def serverLogicRecoverErrors(
       g: ((U, I)) => F[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[(T, I), E, O, R, F] =
-    serverLogicM(MonadError.recoverErrors(g))
+    serverLogicM(recoverErrors(g))
 
   private def serverLogicM(g: MonadError[F] => ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, R, F] =
     ServerEndpoint[(T, I), E, O, R, F](

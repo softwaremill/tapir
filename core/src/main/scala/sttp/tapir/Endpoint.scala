@@ -1,9 +1,9 @@
 package sttp.tapir
 
 import sttp.model.Method
+import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
-import sttp.tapir.monad.MonadError
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint, ServerEndpointInParts}
 import sttp.tapir.typelevel.{FnComponents, ParamConcat, ParamSubtract}
 import sttp.tapir.internal._
@@ -241,7 +241,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
   def serverLogicRecoverErrors[F[_]](
       f: I => F[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, R, F] =
-    ServerEndpoint(this, MonadError.recoverErrors[I, E, O, F](f))
+    ServerEndpoint(this, recoverErrors[I, E, O, F](f))
 
   /**
     * Combine this endpoint description with a function, which implements a part of the server-side logic. The
@@ -291,7 +291,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     new ServerEndpointInParts[U, IR, I, E, O, R, F](this) {
       override type T = _T
       override def splitInput: I => (T, IR) = i => split(i)(iMinusR)
-      override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = MonadError.recoverErrors[_T, E, U, F](f)
+      override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = recoverErrors[_T, E, U, F](f)
     }
   }
 
@@ -332,7 +332,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
       override type T = I
       override def tInput: EndpointInput[T] = outer.input
-      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = MonadError.recoverErrors(f)
+      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = recoverErrors(f)
     }
 }
 

@@ -7,7 +7,7 @@ import akka.util.ByteString
 import play.api.http.HttpEntity
 import play.api.mvc._
 import play.api.routing.Router.Routes
-import sttp.tapir.monad.FutureMonadError
+import sttp.monad.FutureMonad
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.ServerDefaults.StatusCodes
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
@@ -39,7 +39,7 @@ trait TapirPlayServer {
     def toRoute(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
       def valueToResponse(value: Any): Future[Result] = {
         val i = value.asInstanceOf[I]
-        e.logic(new FutureMonadError())(i)
+        e.logic(new FutureMonad())(i)
           .map {
             case Right(result) =>
               serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.success.code)(serverOptions.logger)

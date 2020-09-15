@@ -3,10 +3,12 @@ package sttp.tapir
 import java.nio.charset.Charset
 
 import sttp.model.{Method, StatusCode}
+import sttp.monad.MonadError
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
 import scala.collection.immutable.ListMap
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
 
 package object internal {
 
@@ -219,5 +221,23 @@ package object internal {
 
   def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = { case v: T =>
     exactValues.contains(v)
+  }
+
+  def recoverErrors[I, E, O, F[_]](
+      f: I => F[O]
+  )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => I => F[Either[E, O]] = { implicit monad => i =>
+    import sttp.monad.syntax._
+    Try(f(i).map(Right(_): Either[E, O])) match {
+      case Success(value) =>
+        monad.handleError(value) {
+          case e if eClassTag.runtimeClass.isInstance(e) => wrapException(e)
+        }
+      case Failure(exception) if eClassTag.runtimeClass.isInstance(exception) => wrapException(exception)
+      case Failure(exception)                                                 => monad.error(exception)
+    }
+  }
+
+  private def wrapException[F[_], O, E, I](exception: Throwable)(implicit me: MonadError[F]): F[Either[E, O]] = {
+    me.unit(Left(exception.asInstanceOf[E]): Either[E, O])
   }
 }

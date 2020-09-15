@@ -6,8 +6,8 @@ import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import sttp.capabilities.akka.AkkaStreams
+import sttp.monad.FutureMonad
 import sttp.tapir._
-import sttp.tapir.monad.FutureMonadError
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
 import sttp.tapir.typelevel.ParamsToTuple
 
@@ -25,7 +25,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
       extractLog { log =>
         mapResponse(resp => { serverOptions.logRequestHandling.requestHandled(se.endpoint, resp.status.intValue())(log); resp }) {
           extractExecutionContext { ec =>
-            onComplete(se.logic(new FutureMonadError()(ec))(values)) {
+            onComplete(se.logic(new FutureMonad()(ec))(values)) {
               case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, se.endpoint.errorOutput, v)
               case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, se.endpoint.output, v)
               case Failure(e) =>

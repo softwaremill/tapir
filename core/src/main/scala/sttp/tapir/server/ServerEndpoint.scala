@@ -1,7 +1,7 @@
 package sttp.tapir.server
 
+import sttp.monad.MonadError
 import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
-import sttp.tapir.monad.MonadError
 
 /**
   * @tparam I Input parameter types.

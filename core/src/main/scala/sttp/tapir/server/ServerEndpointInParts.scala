@@ -1,10 +1,10 @@
 package sttp.tapir.server
 
+import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
 import sttp.tapir.typelevel.{ParamConcat, ParamSubtract}
 import sttp.tapir.internal._
-import sttp.tapir.monad.MonadError
-import sttp.tapir.monad.syntax._
 
 import scala.reflect.ClassTag
 
@@ -65,7 +65,7 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
   def andThenRecoverErrors(
       remainingLogic: ((U, IR)) => F[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, R, F] =
-    andThenM(MonadError.recoverErrors(remainingLogic))
+    andThenM(recoverErrors(remainingLogic))
 
   private def andThenM(remainingLogic: MonadError[F] => ((U, IR)) => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] =
     ServerEndpoint(
@@ -104,7 +104,7 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
       uu2Concat: ParamConcat.Aux[U, V, UV],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
-  ): ServerEndpointInParts[UV, R2, I, E, O, R, F] = andThenPartM(MonadError.recoverErrors(nextPart))
+  ): ServerEndpointInParts[UV, R2, I, E, O, R, F] = andThenPartM(recoverErrors(nextPart))
 
   private def andThenPartM[T2, R2, V, UV](
       part2: MonadError[F] => T2 => F[Either[E, V]]

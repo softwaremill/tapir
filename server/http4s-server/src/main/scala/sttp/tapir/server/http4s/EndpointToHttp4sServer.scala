@@ -2,16 +2,16 @@ package sttp.tapir.server.http4s
 
 import cats.~>
 import cats.data._
-import cats.effect.{ContextShift, Sync}
+import cats.effect.{Concurrent, ContextShift, Sync}
 import cats.syntax.all._
 import org.http4s.{Http, HttpRoutes, Request, Response}
 import org.log4s._
-import sttp.tapir.monad.MonadError
 import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import cats.arrow.FunctionK
 import sttp.capabilities.fs2.Fs2Streams
+import sttp.monad.MonadError
 
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
@@ -90,12 +90,16 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   }
 }
 
-private[http4s] class CatsMonadError[F[_]](implicit F: cats.MonadError[F, Throwable]) extends MonadError[F] {
+private[http4s] class CatsMonadError[F[_]](implicit F: Sync[F]) extends MonadError[F] {
   override def unit[T](t: T): F[T] = F.pure(t)
   override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
   override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
   override def error[T](t: Throwable): F[T] = F.raiseError(t)
-  override def handleError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
+  override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
+  override def eval[T](t: => T): F[T] = F.delay(t)
+  override def suspend[T](t: => F[T]): F[T] = F.suspend(t)
+  override def flatten[T](ffa: F[F[T]]): F[T] = F.flatten(ffa)
+  override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guarantee(f)(e)
 }
 
 object EndpointToHttp4sServer {
