@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
 
 package object vertx {
 
-  implicit class VertxEndpoint[I, E, O, D](e: Endpoint[I, E, O, D]) {
+  implicit class VertxEndpoint[I, E, O](e: Endpoint[I, E, O, Any]) {
 
     /**
       * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
@@ -61,7 +61,7 @@ package object vertx {
       e.serverLogicRecoverErrors(logic).blockingRoute
   }
 
-  implicit class VertxServerEndpoint[I, E, O, D](e: ServerEndpoint[I, E, O, D, Future]) {
+  implicit class VertxServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]) {
 
     /**
       * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
@@ -117,10 +117,9 @@ package object vertx {
               tryEncodeError(e.endpoint, rc, cause)
           }
         }
-        .recover {
-          case cause =>
-            tryEncodeError(e.endpoint, rc, cause)
-            serverOptions.logRequestHandling.logicException(e.endpoint, cause)(serverOptions.logger): Unit
+        .recover { case cause =>
+          tryEncodeError(e.endpoint, rc, cause)
+          serverOptions.logRequestHandling.logicException(e.endpoint, cause)(serverOptions.logger): Unit
         }
     }
 

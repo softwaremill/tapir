@@ -5,7 +5,7 @@ import sttp.model.Uri
 import sttp.tapir.{DecodeResult, Endpoint}
 
 trait TapirSttpClient {
-  implicit class RichEndpoint[I, E, O, S](e: Endpoint[I, E, O, S]) {
+  implicit class RichEndpoint[I, E, O, R](e: Endpoint[I, E, O, R]) {
 
     /**
       * Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
@@ -18,7 +18,7 @@ trait TapirSttpClient {
       *
       * @throws IllegalArgumentException when response parsing fails
       */
-    def toSttpRequestUnsafe(baseUri: Uri)(implicit clientOptions: SttpClientOptions): I => Request[Either[E, O], S] =
+    def toSttpRequestUnsafe(baseUri: Uri)(implicit clientOptions: SttpClientOptions): I => Request[Either[E, O], R] =
       new EndpointToSttpClient(clientOptions).toSttpRequestUnsafe(e, baseUri)
 
     /**
@@ -30,7 +30,7 @@ trait TapirSttpClient {
       * which can be sent using any sttp backend. The response will then contain the decoded error or success values
       * (note that this can be the body enriched with data from headers/status code).
       */
-    def toSttpRequest(baseUri: Uri)(implicit clientOptions: SttpClientOptions): I => Request[DecodeResult[Either[E, O]], S] =
+    def toSttpRequest(baseUri: Uri)(implicit clientOptions: SttpClientOptions): I => Request[DecodeResult[Either[E, O]], R] =
       new EndpointToSttpClient(clientOptions).toSttpRequest(e, baseUri)
   }
 }

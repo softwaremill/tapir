@@ -82,7 +82,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
     inputs.collect {
       case EndpointIO.Body(_, codec, info) =>
         Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.exists(_.isOptional))))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, info, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, info, _)) =>
         Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true)))
     }
   }
@@ -123,13 +123,12 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
         case EndpointInput.PathCapture(name, _, _) => Left(name)
         case EndpointInput.FixedPath(s, _, _)      => Right(s)
       }
-      .foldLeft((Vector.empty[String], 1)) {
-        case ((acc, i), component) =>
-          component match {
-            case Left(None)    => (acc :+ s"param$i", i + 1)
-            case Left(Some(p)) => (acc :+ p, i)
-            case Right(p)      => (acc :+ p, i)
-          }
+      .foldLeft((Vector.empty[String], 1)) { case ((acc, i), component) =>
+        component match {
+          case Left(None)    => (acc :+ s"param$i", i + 1)
+          case Left(Some(p)) => (acc :+ p, i)
+          case Right(p)      => (acc :+ p, i)
+        }
       }
       ._1
   }

@@ -19,9 +19,10 @@ import scala.collection.immutable.ListMap
 import scala.io.Source
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.capabilities.Streams
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
-  val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Nothing] = endpoint
+  val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
     .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
     .in(query[String]("color"))
     .out(jsonBody[FruitAmount])
@@ -36,7 +37,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1, Nothing] = endpoint
+  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1, Any] = endpoint
     .out(jsonBody[F1])
 
   test("should match the expected yaml when schema is recursive") {
@@ -61,9 +62,15 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
-  val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], Vector[Byte]] = endpoint
-    .in(streamBody[Vector[Byte]](schemaFor[String], CodecFormat.TextPlain()))
-    .out(streamBody[Vector[Byte]](schemaFor[Array[Byte]], CodecFormat.OctetStream()))
+  trait TestStreams extends Streams[TestStreams] {
+    override type BinaryStream = Vector[Byte]
+    override type Pipe[X, Y] = Nothing
+  }
+  object TestStreams extends TestStreams
+
+  val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], TestStreams] = endpoint
+    .in(streamBody(TestStreams, schemaFor[String], CodecFormat.TextPlain()))
+    .out(streamBody(TestStreams, schemaFor[Array[Byte]], CodecFormat.OctetStream()))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")
@@ -218,7 +225,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml when using coproduct types") {
     val expectedYaml = loadYaml("expected_coproduct.yml")
 
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
       .out(jsonBody[Entity])
 
     val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -233,7 +240,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     implicit val sEntity: Schema[Entity] = Schema.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator.yml")
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Nothing] = endpoint
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
       .out(jsonBody[Entity])
     val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -244,7 +251,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml when using nested coproduct types") {
     val expectedYaml = loadYaml("expected_coproduct_nested.yml")
 
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Nothing] = endpoint
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
       .out(jsonBody[NestedEntity])
 
     val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -260,7 +267,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     implicit val sEntity: Schema[Entity] = Schema.oneOf[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
 
     val expectedYaml = loadYaml("expected_coproduct_discriminator_nested.yml")
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Nothing] = endpoint
+    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
       .out(jsonBody[NestedEntity])
     val actualYaml = endpoint_wit_sealed_trait.toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -269,7 +276,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should handle classes with same name") {
-    val e: Endpoint[APet, Unit, BPet, Nothing] = endpoint
+    val e: Endpoint[APet, Unit, BPet, Any] = endpoint
       .in(jsonBody[APet])
       .out(jsonBody[BPet])
     val expectedYaml = loadYaml("expected_same_fullnames.yml")
@@ -281,7 +288,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should unfold nested hierarchy") {
-    val e: Endpoint[Book, Unit, String, Nothing] = endpoint
+    val e: Endpoint[Book, Unit, String, Any] = endpoint
       .in(jsonBody[Book])
       .out(stringBody)
     val expectedYaml = loadYaml("expected_unfolded_hierarchy.yml")

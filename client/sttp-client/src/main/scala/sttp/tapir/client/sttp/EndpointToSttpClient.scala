@@ -3,6 +3,7 @@ package sttp.tapir.client.sttp
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
+import sttp.capabilities.Streams
 import sttp.client._
 import sttp.model.Uri.PathSegment
 import sttp.model.{HeaderNames, Method, Part, Uri}
@@ -11,11 +12,11 @@ import sttp.tapir._
 import sttp.tapir.internal._
 
 class EndpointToSttpClient(clientOptions: SttpClientOptions) {
-  def toSttpRequestUnsafe[I, E, O, S](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[Either[E, O], S] = { params =>
+  def toSttpRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[Either[E, O], R] = { params =>
     toSttpRequest(e, baseUri)(params).mapResponse(getOrThrow)
   }
 
-  def toSttpRequest[S, O, E, I](e: Endpoint[I, E, O, S], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], S] = { params =>
+  def toSttpRequest[R, O, E, I](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], R] = { params =>
     val (uri, req1) =
       setInputParams(
         e.input,
@@ -26,14 +27,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
     val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
 
-    val responseAs = fromMetadata { meta =>
-      val output = if (meta.isSuccess) e.output else e.errorOutput
-      if (output == EndpointOutput.Void()) {
-        throw new IllegalStateException(s"Got response: $meta, cannot map to a void output of: $e.")
-      }
-
-      responseAsFromOutputs(meta, output)
-    }.mapWithMetadata { (body, meta) =>
+    val responseAs = fromMetadata(
+      responseAsFromOutputs(e.errorOutput),
+      ConditionalResponseAs(_.isSuccess, responseAsFromOutputs(e.output))
+    ).mapWithMetadata { (body, meta) =>
       val output = if (meta.isSuccess) e.output else e.errorOutput
       val params = getOutputParams(output, body, meta)
       params.map(_.asAny).map(p => if (meta.isSuccess) Right(p) else Left(p))
@@ -43,21 +40,21 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case other => other
     }
 
-    req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], S]]
+    req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], R]]
   }
 
   private def getOutputParams(output: EndpointOutput[_], body: Any, meta: ResponseMetadata): DecodeResult[Params] = {
     output match {
       case s: EndpointOutput.Single[_] =>
         (s match {
-          case EndpointIO.Body(_, codec, _)                                        => codec.decode(body)
-          case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) => codec.decode(body)
-          case EndpointIO.Header(name, codec, _)                                   => codec.decode(meta.headers(name).toList)
-          case EndpointIO.Headers(codec, _)                                        => codec.decode(meta.headers.toList)
-          case EndpointOutput.StatusCode(_, codec, _)                              => codec.decode(meta.code)
-          case EndpointOutput.FixedStatusCode(_, codec, _)                         => codec.decode(())
-          case EndpointIO.FixedHeader(_, codec, _)                                 => codec.decode(())
-          case EndpointIO.Empty(codec, _)                                          => codec.decode(())
+          case EndpointIO.Body(_, codec, _)                                           => codec.decode(body)
+          case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, _, _)) => codec.decode(body)
+          case EndpointIO.Header(name, codec, _)                                      => codec.decode(meta.headers(name).toList)
+          case EndpointIO.Headers(codec, _)                                           => codec.decode(meta.headers.toList)
+          case EndpointOutput.StatusCode(_, codec, _)                                 => codec.decode(meta.code)
+          case EndpointOutput.FixedStatusCode(_, codec, _)                            => codec.decode(())
+          case EndpointIO.FixedHeader(_, codec, _)                                    => codec.decode(())
+          case EndpointIO.Empty(codec, _)                                             => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
             mappings
               .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
@@ -126,8 +123,8 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2)
-      case EndpointIO.StreamBodyWrapper(_) =>
-        val req2 = req.streamBody(value)
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(streams, _, _, _)) =>
+        val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
         (uri, req2)
       case EndpointIO.Header(name, codec, _) =>
         val req2 = codec
@@ -136,10 +133,9 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         (uri, req2)
       case EndpointIO.Headers(codec, _) =>
         val headers = codec.encode(value)
-        val req2 = headers.foldLeft(req) {
-          case (r, h) =>
-            val replaceExisting = HeaderNames.ContentType.equalsIgnoreCase(h.name) || HeaderNames.ContentLength.equalsIgnoreCase(h.name)
-            r.header(h, replaceExisting)
+        val req2 = headers.foldLeft(req) { case (r, h) =>
+          val replaceExisting = HeaderNames.ContentType.equalsIgnoreCase(h.name) || HeaderNames.ContentLength.equalsIgnoreCase(h.name)
+          r.header(h, replaceExisting)
         }
         (uri, req2)
       case EndpointIO.FixedHeader(h, _, _) =>
@@ -193,7 +189,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case RawBodyType.InputStreamBody     => req.body(encoded)
       case RawBodyType.FileBody            => req.body(encoded)
       case m: RawBodyType.MultipartBody =>
-        val parts: Seq[Part[BasicRequestBody]] = (encoded: Seq[RawPart]).flatMap { p =>
+        val parts: Seq[Part[RequestBody[Any]]] = (encoded: Seq[RawPart]).flatMap { p =>
           m.partType(p.name).map { partType =>
             // copying the name & body
             val sttpPart1 = partToSttpPart(p.asInstanceOf[Part[Any]], partType.asInstanceOf[RawBodyType[Any]])
@@ -212,7 +208,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     req2.contentType(codec.format.mediaType)
   }
 
-  private def partToSttpPart[R](p: Part[R], bodyType: RawBodyType[R]): Part[BasicRequestBody] =
+  private def partToSttpPart[R](p: Part[R], bodyType: RawBodyType[R]): Part[RequestBody[Any]] =
     bodyType match {
       case RawBodyType.StringBody(charset) => multipart(p.name, p.body, charset.toString)
       case RawBodyType.ByteArrayBody       => multipart(p.name, p.body)
@@ -222,30 +218,32 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
     }
 
-  private def responseAsFromOutputs(meta: ResponseMetadata, out: EndpointOutput[_]): ResponseAs[Any, Any] = {
-    if (bodyIsStream(out)) asStreamAlways[Any]
-    else {
-      out.bodyType
-        .map {
-          case RawBodyType.StringBody(charset) => asStringAlways(charset.name())
-          case RawBodyType.ByteArrayBody       => asByteArrayAlways
-          case RawBodyType.ByteBufferBody      => asByteArrayAlways.map(ByteBuffer.wrap)
-          case RawBodyType.InputStreamBody     => asByteArrayAlways.map(new ByteArrayInputStream(_))
-          case RawBodyType.FileBody            => asFileAlways(clientOptions.createFile(meta))
-          case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
-        }
-        .getOrElse(ignore)
-    }.asInstanceOf[ResponseAs[Any, Any]]
+  private def responseAsFromOutputs(out: EndpointOutput[_]): ResponseAs[Any, Any] = {
+    (bodyIsStream(out) match {
+      case Some(streams) => asStreamAlwaysUnsafe(streams)
+      case None => {
+        out.bodyType
+          .map {
+            case RawBodyType.StringBody(charset) => asStringAlways(charset.name())
+            case RawBodyType.ByteArrayBody       => asByteArrayAlways
+            case RawBodyType.ByteBufferBody      => asByteArrayAlways.map(ByteBuffer.wrap)
+            case RawBodyType.InputStreamBody     => asByteArrayAlways.map(new ByteArrayInputStream(_))
+            case RawBodyType.FileBody            => asFileAlways(clientOptions.createFile())
+            case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
+          }
+          .getOrElse(ignore)
+      }
+    }).asInstanceOf[ResponseAs[Any, Any]]
   }
 
-  private def bodyIsStream[I](out: EndpointOutput[I]): Boolean = {
+  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
     out match {
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => true
-      case EndpointIO.Pair(left, right, _, _)     => List(left, right).exists(i => bodyIsStream(i))
-      case EndpointOutput.Pair(left, right, _, _) => List(left, right).exists(i => bodyIsStream(i))
-      case EndpointIO.MappedPair(wrapped, _)      => bodyIsStream(wrapped)
-      case EndpointOutput.MappedPair(wrapped, _)  => bodyIsStream(wrapped)
-      case _                                      => false
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(streams, _, _, _)) => Some(streams)
+      case EndpointIO.Pair(left, right, _, _)                                       => bodyIsStream(left).orElse(bodyIsStream(right))
+      case EndpointOutput.Pair(left, right, _, _)                                   => bodyIsStream(left).orElse(bodyIsStream(right))
+      case EndpointIO.MappedPair(wrapped, _)                                        => bodyIsStream(wrapped)
+      case EndpointOutput.MappedPair(wrapped, _)                                    => bodyIsStream(wrapped)
+      case _                                                                        => None
     }
   }
 

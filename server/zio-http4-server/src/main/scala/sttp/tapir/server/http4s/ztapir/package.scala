@@ -37,7 +37,7 @@ package object ztapir {
       }
   }
 
-  private def toTaskEndpointR[R, I, E, O](env: R, se: ZServerEndpoint[R, I, E, O]): ServerEndpoint[I, E, O, Nothing, Task] = {
+  private def toTaskEndpointR[R, I, E, O](env: R, se: ZServerEndpoint[R, I, E, O]): ServerEndpoint[I, E, O, Any, Task] = {
     ServerEndpoint(
       se.endpoint,
       _ => (i: I) => se.logic(new ZIOMonadError[R])(i).provide(env)

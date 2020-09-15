@@ -18,7 +18,7 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 trait TapirPlayServer {
-  implicit class RichPlayEndpoint[I, E, O](e: Endpoint[I, E, O, Nothing]) {
+  implicit class RichPlayEndpoint[I, E, O](e: Endpoint[I, E, O, Any]) {
     def toRoute(
         logic: I => Future[Either[E, O]]
     )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
@@ -35,7 +35,7 @@ trait TapirPlayServer {
     }
   }
 
-  implicit class RichPlayServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Nothing, Future]) {
+  implicit class RichPlayServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]) {
     def toRoute(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
       def valueToResponse(value: Any): Future[Result] = {
         val i = value.asInstanceOf[I]
@@ -121,7 +121,7 @@ trait TapirPlayServer {
     }
   }
 
-  implicit class RichPlayServerEndpoints[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, Nothing, Future]]) {
+  implicit class RichPlayServerEndpoints[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, Any, Future]]) {
     def toRoute(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
       serverEndpoints
         .map(_.toRoute)

@@ -1,6 +1,7 @@
 package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.server._
+import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.{ParamsToTuple, ReplaceFirstInTuple}
@@ -9,7 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 trait TapirAkkaHttpServer {
-  implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStream]) {
+  implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStreams]) {
     def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
       new EndpointToAkkaServer(akkaHttpOptions).toDirective(e)
 
@@ -23,7 +24,7 @@ trait TapirAkkaHttpServer {
     }
   }
 
-  implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStream, Future]) {
+  implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStreams, Future]) {
     def toDirective[T](implicit paramsToTuple: ParamsToTuple.Aux[I, T], akkaHttpOptions: AkkaHttpServerOptions): Directive[T] =
       new EndpointToAkkaServer(akkaHttpOptions).toDirective(serverEndpoint.endpoint)
 
@@ -31,7 +32,7 @@ trait TapirAkkaHttpServer {
       new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoint)
   }
 
-  implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStream, Future]]) {
+  implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams, Future]]) {
     def toRoute(implicit serverOptions: AkkaHttpServerOptions): Route = {
       new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoints)
     }

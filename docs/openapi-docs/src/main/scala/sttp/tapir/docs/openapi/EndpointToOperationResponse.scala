@@ -20,15 +20,14 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
-    val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = output.asBasicOutputsMap.flatMap {
-      case (sc, outputs) =>
-        // there might be no output defined at all
-        outputsToResponse(sc, outputs)
-          .map { response =>
-            // using the "default" response key, if no status code is provided
-            val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
-            responseKey -> Right(response)
-          }
+    val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = output.asBasicOutputsMap.flatMap { case (sc, outputs) =>
+      // there might be no output defined at all
+      outputsToResponse(sc, outputs)
+        .map { response =>
+          // using the "default" response key, if no status code is provided
+          val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
+          responseKey -> Right(response)
+        }
     }
 
     if (responses.isEmpty) {
@@ -75,7 +74,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
 
     val bodies = outputs.collect {
       case EndpointIO.Body(_, codec, info) => (info.description, codecToMediaType(codec, info.examples))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, info, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, info, _)) =>
         (info.description, codecToMediaType(codec, info.examples))
     }
     val body = bodies.headOption

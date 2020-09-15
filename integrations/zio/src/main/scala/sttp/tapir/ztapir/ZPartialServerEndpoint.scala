@@ -35,7 +35,7 @@ abstract class ZPartialServerEndpoint[R, U, I, E, O](val endpoint: ZEndpoint[I, 
   protected def tInput: EndpointInput[T]
   protected def partialLogic: T => ZIO[R, E, U]
 
-  override type EndpointType[_I, _E, _O, +_S] = ZPartialServerEndpoint[R, U, _I, _E, _O]
+  override type EndpointType[_I, _E, _O, -_R] = ZPartialServerEndpoint[R, U, _I, _E, _O]
 
   override def input: EndpointInput[I] = endpoint.input
   def errorOutput: EndpointOutput[E] = endpoint.errorOutput
@@ -62,22 +62,20 @@ abstract class ZPartialServerEndpoint[R, U, I, E, O](val endpoint: ZEndpoint[I, 
     new ZPartialServerEndpoint[R, UV, Unit, E, O](endpoint.copy(input = emptyInput)) {
       override type T = (outer.T, I)
       override def tInput: EndpointInput[(outer.T, I)] = outer.tInput.and(outer.endpoint.input)
-      override def partialLogic: ((outer.T, I)) => ZIO[R, E, UV] = {
-        case (t, i) =>
-          outer.partialLogic(t).flatMap { u =>
-            f(i).map { v =>
-              mkCombine(concat).apply(ParamsAsAny(u), ParamsAsAny(v)).asAny.asInstanceOf[UV]
-            }
+      override def partialLogic: ((outer.T, I)) => ZIO[R, E, UV] = { case (t, i) =>
+        outer.partialLogic(t).flatMap { u =>
+          f(i).map { v =>
+            mkCombine(concat).apply(ParamsAsAny(u), ParamsAsAny(v)).asAny.asInstanceOf[UV]
           }
+        }
       }
     }
 
   def serverLogic[R0](g: ((U, I)) => ZIO[R0, E, O]): ZServerEndpoint[R with R0, (T, I), E, O] =
     ServerEndpoint(
       endpoint.prependIn(tInput): ZEndpoint[(T, I), E, O],
-      _ => {
-        case (t, i) =>
-          partialLogic(t).flatMap(u => g((u, i))).either
+      _ => { case (t, i) =>
+        partialLogic(t).flatMap(u => g((u, i))).either
       }
     )
 }

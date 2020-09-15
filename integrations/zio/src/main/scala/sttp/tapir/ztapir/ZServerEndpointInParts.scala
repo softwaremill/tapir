@@ -34,7 +34,7 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
   protected def splitInput: I => (T, J)
   protected def logicFragment: T => ZIO[R, E, U]
 
-  override type EndpointType[_I, _E, _O, +_S] = ZServerEndpointInParts[R, U, J, _I, _E, _O]
+  override type EndpointType[_I, _E, _O, -_R] = ZServerEndpointInParts[R, U, J, _I, _E, _O]
   override def input: EndpointInput[I] = endpoint.input
   override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
   override def output: EndpointOutput[O] = endpoint.output
@@ -85,13 +85,12 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
           ((t, t2), r2)
         }
 
-      override def logicFragment: T => ZIO[R2, E, UV] = {
-        case (t, t2) =>
-          outer.logicFragment(t).flatMap { u =>
-            nextPart(t2).map { u2 =>
-              combine(u, u2)(uu2Concat)
-            }
+      override def logicFragment: T => ZIO[R2, E, UV] = { case (t, t2) =>
+        outer.logicFragment(t).flatMap { u =>
+          nextPart(t2).map { u2 =>
+            combine(u, u2)(uu2Concat)
           }
+        }
       }
     }
 }

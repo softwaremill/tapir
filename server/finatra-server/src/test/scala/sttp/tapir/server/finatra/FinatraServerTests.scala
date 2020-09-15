@@ -9,6 +9,7 @@ import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Endpoint
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.tests.{Port, PortCounter}
@@ -17,9 +18,7 @@ import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 import scala.concurrent.duration._
 
-class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
-  override def streamingSupport: Boolean = false
-
+class FinatraServerTests extends ServerTests[Future, Nothing, Any, FinatraRoute](NoStreams) {
   private val futurePool = FuturePool.unboundedPool
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -34,7 +33,7 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
     }
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Nothing, Future],
+      e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
@@ -42,7 +41,7 @@ class FinatraServerTests extends ServerTests[Future, Nothing, FinatraRoute] {
     e.toRoute
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): FinatraRoute = {
     e.toRouteRecoverErrors(fn)

@@ -21,7 +21,7 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
       .apply(FruitData(Part("image", testFile, contentType = Some(MediaType.ImageJpeg))))
 
     // then
-    val part = sttpClientRequest.body.asInstanceOf[MultipartBody].parts.head
+    val part = sttpClientRequest.body.asInstanceOf[MultipartBody[Any]].parts.head
     part.headers.filter(_.is(HeaderNames.ContentType)) shouldBe List(Header.contentType(MediaType.ImageJpeg))
   }
 }

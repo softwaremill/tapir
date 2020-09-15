@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 object HelloWorldHttp4sServer extends App {
   // the endpoint: single fixed path input ("hello"), single query parameter
   // corresponds to: GET /hello?name=...
-  val helloWorld: Endpoint[String, Unit, String, Nothing] =
+  val helloWorld: Endpoint[String, Unit, String, Any] =
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   // mandatory implicits
@@ -34,8 +34,8 @@ object HelloWorldHttp4sServer extends App {
     .resource
     .use { _ =>
       IO {
-        implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
-        val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send().body
+        val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+        val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/hello?name=Frodo").send(backend).body
         println("Got result: " + result)
 
         assert(result == "Hello, Frodo!")

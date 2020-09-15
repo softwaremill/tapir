@@ -9,6 +9,7 @@ import sttp.tapir._
 import sttp.tapir.json.circe._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.monad.MonadError
 
 class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
@@ -24,11 +25,12 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .post
       .out(jsonBody[ResponseWrapper])
 
-    implicit val backend = SttpBackendStub
+    val backend = SttpBackendStub
       .apply(idMonad)
       .whenRequestMatchesEndpoint(endpoint)
       .thenSuccess(ResponseWrapper(1.0))
-    val response: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
+    val response: Identity[Response[Either[Unit, ResponseWrapper]]] =
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send(backend)
 
     response.body shouldBe Right(ResponseWrapper(1.0))
   }
@@ -42,11 +44,12 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .post
       .errorOut(jsonBody[ResponseWrapper])
 
-    implicit val backend = SttpBackendStub
+    val backend = SttpBackendStub
       .apply(idMonad)
       .whenRequestMatchesEndpoint(endpoint)
       .thenError(ResponseWrapper(1.0), StatusCode.BadRequest)
-    val response: Identity[Response[Either[ResponseWrapper, Unit]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
+    val response: Identity[Response[Either[ResponseWrapper, Unit]]] =
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send(backend)
 
     response shouldBe Response(Left(ResponseWrapper(1.0)), StatusCode.BadRequest)
   }
@@ -74,12 +77,12 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .post
       .out(jsonBody[ResponseWrapper])
 
-    implicit val backend = SttpBackendStub
+    val backend = SttpBackendStub
       .apply(idMonad)
       .whenRequestMatchesEndpoint(endpoint)
       .thenSuccess(ResponseWrapper(1.0))
     val response: Identity[Response[Either[Unit, ResponseWrapper]]] =
-      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply("id1" -> 11).send()
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply("id1" -> 11).send(backend)
 
     response.body shouldBe Right(ResponseWrapper(1.0))
   }
@@ -90,12 +93,12 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     val endpoint = sttp.tapir.endpoint.post
       .out(header[String]("X"))
 
-    implicit val backend = SttpBackendStub
+    val backend = SttpBackendStub
       .apply(idMonad)
       .whenRequestMatchesEndpoint(endpoint)
       .thenSuccess("x")
     val response: Identity[Response[Either[Unit, String]]] =
-      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(()).send()
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(()).send(backend)
 
     response.body shouldBe Right("x")
     response.header("X") shouldBe Some("x")
@@ -110,7 +113,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .post
       .out(jsonBody[ResponseWrapper])
 
-    implicit val backend: SttpBackendStub[Identity, Nothing, NothingT] = SttpBackendStub
+    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
       .apply(idMonad)
       .whenInputMatches(endpoint) { amount => amount > 0 }
       .thenSuccess(ResponseWrapper(1.0))
@@ -118,8 +121,10 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .generic
       .thenRespondServerError()
 
-    val response1: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send()
-    val response2: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
+    val response1: Identity[Response[Either[Unit, ResponseWrapper]]] =
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(11).send(backend)
+    val response2: Identity[Response[Either[Unit, ResponseWrapper]]] =
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send(backend)
 
     response1.body shouldBe Right(ResponseWrapper(1.0))
     response2.body shouldBe Left(())
@@ -139,12 +144,13 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       .post
       .out(jsonBody[ResponseWrapper])
 
-    implicit val backend: SttpBackendStub[Identity, Nothing, NothingT] = SttpBackendStub
+    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
       .apply(idMonad)
       .whenDecodingInputFailure(endpoint)
       .generic
       .thenRespondWithCode(StatusCode.BadRequest)
-    val response: Identity[Response[Either[Unit, ResponseWrapper]]] = endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send()
+    val response: Identity[Response[Either[Unit, ResponseWrapper]]] =
+      endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(-1).send(backend)
 
     response shouldBe Response(Left(()), StatusCode.BadRequest)
   }

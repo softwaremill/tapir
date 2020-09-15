@@ -26,7 +26,7 @@ object PartialServerLogicAkka extends App {
     }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
-  val secureEndpoint: PartialServerEndpoint[User, Unit, Int, Unit, Nothing, Future] = endpoint
+  val secureEndpoint: PartialServerEndpoint[User, Unit, Int, Unit, Any, Future] = endpoint
     .in(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
     .serverLogicForCurrent(auth)
@@ -41,7 +41,7 @@ object PartialServerLogicAkka extends App {
   // ---
 
   // 2nd approach: define the endpoint entirely first
-  val secureHelloWorld2: Endpoint[(String, String), Int, String, Nothing] = endpoint
+  val secureHelloWorld2: Endpoint[(String, String), Int, String, Any] = endpoint
     .in(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
     .get
@@ -63,14 +63,14 @@ object PartialServerLogicAkka extends App {
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route, helloWorld2Route)).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
+    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
     def testWith(path: String, salutation: String, token: String): String = {
       val result: String = basicRequest
         .response(asStringAlways)
         .get(uri"http://localhost:8080/$path?salutation=$salutation")
         .header("X-AUTH-TOKEN", token)
-        .send()
+        .send(backend)
         .body
 
       println(s"For path: $path, salutation: $salutation, token: $token, got result: $result")

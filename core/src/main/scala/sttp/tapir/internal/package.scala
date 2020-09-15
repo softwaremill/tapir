@@ -80,13 +80,13 @@ package object internal {
       }
 
     def auths: Vector[EndpointInput.Auth[_]] =
-      traverseInputs {
-        case a: EndpointInput.Auth[_] => Vector(a)
+      traverseInputs { case a: EndpointInput.Auth[_] =>
+        Vector(a)
       }
 
     def method: Option[Method] =
-      traverseInputs {
-        case i: EndpointInput.FixedMethod[_] => Vector(i.m)
+      traverseInputs { case i: EndpointInput.FixedMethod[_] =>
+        Vector(i.m)
       }.headOption
   }
 
@@ -152,7 +152,7 @@ package object internal {
         case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
           val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toSeq
           Right(ListMap(entries: _*))
-        case b: EndpointIO.Empty[_]     => Left(Vector.empty)
+        case _: EndpointIO.Empty[_]     => Left(Vector.empty)
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
       }
     }
@@ -169,8 +169,8 @@ package object internal {
       }
 
     def bodyType: Option[RawBodyType[_]] = {
-      traverseOutputs[RawBodyType[_]] {
-        case b: EndpointIO.Body[_, _] => Vector(b.bodyType)
+      traverseOutputs[RawBodyType[_]] { case b: EndpointIO.Body[_, _] =>
+        Vector(b.bodyType)
       }.headOption
     }
   }
@@ -217,7 +217,7 @@ package object internal {
     }
   }
 
-  def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = {
-    case v: T => exactValues.contains(v)
+  def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = { case v: T =>
+    exactValues.contains(v)
   }
 }

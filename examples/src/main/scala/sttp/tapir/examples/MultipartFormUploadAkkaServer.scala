@@ -25,7 +25,7 @@ object MultipartFormUploadAkkaServer extends App {
   case class UserProfile(name: String, hobby: Option[String], age: Int, photo: Part[File])
 
   // corresponds to: POST /user/profile [multipart form data with fields name, hobby, age, photo]
-  val setProfile: Endpoint[UserProfile, Unit, String, Nothing] =
+  val setProfile: Endpoint[UserProfile, Unit, String, Any] =
     endpoint.post.in("user" / "profile").in(multipartBody[UserProfile]).out(stringBody)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
@@ -45,7 +45,7 @@ object MultipartFormUploadAkkaServer extends App {
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()
 
     // testing
-    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
+    implicit val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val result: String = basicRequest
       .response(asStringAlways)
       .get(uri"http://localhost:8080/user/profile")

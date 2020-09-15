@@ -5,6 +5,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
 import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
+import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir._
 import sttp.tapir.monad.FutureMonadError
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
@@ -14,12 +15,12 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
-  def toDirective[I, E, O, T](e: Endpoint[I, E, O, AkkaStream])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
+  def toDirective[I, E, O, T](e: Endpoint[I, E, O, AkkaStreams])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
     implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
     toDirective1(e).flatMap { values => tprovide(paramsToTuple.toTuple(values)) }
   }
 
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStream, Future]): Route = {
+  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStreams, Future]): Route = {
     toDirective1(se.endpoint) { values =>
       extractLog { log =>
         mapResponse(resp => { serverOptions.logRequestHandling.requestHandled(se.endpoint, resp.status.intValue())(log); resp }) {
@@ -37,9 +38,9 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     }
   }
 
-  def toRoute(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStream, Future]]): Route = {
+  def toRoute(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams, Future]]): Route = {
     serverEndpoints.map(se => toRoute(se)).foldLeft(RouteDirectives.reject: Route)(_ ~ _)
   }
 
-  private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive1[I] = new EndpointToAkkaDirective(serverOptions)(e)
+  private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaStreams]): Directive1[I] = new EndpointToAkkaDirective(serverOptions)(e)
 }

@@ -18,35 +18,35 @@ import scala.reflect.ClassTag
   * or a value of type `O`.
   *
   * @tparam U The type of the value returned by the partial server logic.
-  * @tparam R Remaining input parameter types, for which logic has yet to be provided.
+  * @tparam IR Remaining input parameter types, for which logic has yet to be provided.
   * @tparam I Entire input parameter types. `I = T + R`, where `T` is the part of the input consumed by the partial
   *           logic, and converted to `U`.
   * @tparam E Error output parameter types.
   * @tparam O Output parameter types.
-  * @tparam S The type of streams that are used by this endpoint's inputs/outputs. `Nothing`, if no streams are used.
+  * @tparam R The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
   * @tparam F The effect type used in the provided server logic.
   */
-abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endpoint[I, E, O, S])
-    extends EndpointInfoOps[I, E, O, S]
-    with EndpointMetaOps[I, E, O, S] { outer =>
+abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: Endpoint[I, E, O, R])
+    extends EndpointInfoOps[I, E, O, R]
+    with EndpointMetaOps[I, E, O, R] { outer =>
 
   /**
     * Part of the input, consumed by `logicFragment`.
     */
   protected type T
-  protected def splitInput: I => (T, R)
+  protected def splitInput: I => (T, IR)
   protected def logicFragment: MonadError[F] => T => F[Either[E, U]]
 
-  override type EndpointType[_I, _E, _O, +_S] = ServerEndpointInParts[U, R, _I, _E, _O, _S, F]
+  override type EndpointType[_I, _E, _O, -_R] = ServerEndpointInParts[U, IR, _I, _E, _O, _R, F]
   override def input: EndpointInput[I] = endpoint.input
   override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
   override def output: EndpointOutput[O] = endpoint.output
   override def info: EndpointInfo = endpoint.info
 
-  override private[tapir] def withInfo(info: EndpointInfo): ServerEndpointInParts[U, R, I, E, O, S, F] =
-    new ServerEndpointInParts[U, R, I, E, O, S, F](endpoint.info(info)) {
+  override private[tapir] def withInfo(info: EndpointInfo): ServerEndpointInParts[U, IR, I, E, O, R, F] =
+    new ServerEndpointInParts[U, IR, I, E, O, R, F](endpoint.info(info)) {
       override type T = outer.T
-      override def splitInput: I => (outer.T, R) = outer.splitInput
+      override def splitInput: I => (outer.T, IR) = outer.splitInput
       override def logicFragment: MonadError[F] => T => F[Either[E, U]] = outer.logicFragment
     }
 
@@ -56,23 +56,23 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
     * Complete the server logic for this endpoint, given the result of applying the partial server logic, and
     * the remaining input.
     */
-  def andThen(remainingLogic: ((U, R)) => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] = andThenM(_ => remainingLogic)
+  def andThen(remainingLogic: ((U, IR)) => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] = andThenM(_ => remainingLogic)
 
   /**
     * Same as [[andThen]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
     * endpoint errors.
     */
   def andThenRecoverErrors(
-      remainingLogic: ((U, R)) => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, S, F] =
+      remainingLogic: ((U, IR)) => F[O]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, R, F] =
     andThenM(MonadError.recoverErrors(remainingLogic))
 
-  private def andThenM(remainingLogic: MonadError[F] => ((U, R)) => F[Either[E, O]]): ServerEndpoint[I, E, O, S, F] =
+  private def andThenM(remainingLogic: MonadError[F] => ((U, IR)) => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] =
     ServerEndpoint(
       endpoint,
       { implicit monad => i =>
         {
-          val (t, r): (T, R) = splitInput(i)
+          val (t, r): (T, IR) = splitInput(i)
           logicFragment(monad)(t).flatMap {
             case Left(e)  => (Left(e): Either[E, O]).unit
             case Right(u) => remainingLogic(monad)((u, r))
@@ -89,9 +89,9 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
   def andThenPart[T2, R2, V, UV](
       nextPart: T2 => F[Either[E, V]]
   )(implicit
-      rMinusT2: ParamSubtract.Aux[R, T2, R2],
+      rMinusT2: ParamSubtract.Aux[IR, T2, R2],
       uu2Concat: ParamConcat.Aux[U, V, UV]
-  ): ServerEndpointInParts[UV, R2, I, E, O, S, F] = andThenPartM(_ => nextPart)
+  ): ServerEndpointInParts[UV, R2, I, E, O, R, F] = andThenPartM(_ => nextPart)
 
   /**
     * Same as [[andThenPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
@@ -100,19 +100,19 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
   def andThenPartRecoverErrors[T2, R2, V, UV](
       nextPart: T2 => F[V]
   )(implicit
-      rMinusT2: ParamSubtract.Aux[R, T2, R2],
+      rMinusT2: ParamSubtract.Aux[IR, T2, R2],
       uu2Concat: ParamConcat.Aux[U, V, UV],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
-  ): ServerEndpointInParts[UV, R2, I, E, O, S, F] = andThenPartM(MonadError.recoverErrors(nextPart))
+  ): ServerEndpointInParts[UV, R2, I, E, O, R, F] = andThenPartM(MonadError.recoverErrors(nextPart))
 
   private def andThenPartM[T2, R2, V, UV](
       part2: MonadError[F] => T2 => F[Either[E, V]]
   )(implicit
-      rMinusT2: ParamSubtract.Aux[R, T2, R2],
+      rMinusT2: ParamSubtract.Aux[IR, T2, R2],
       uu2Concat: ParamConcat.Aux[U, V, UV]
-  ): ServerEndpointInParts[UV, R2, I, E, O, S, F] =
-    new ServerEndpointInParts[UV, R2, I, E, O, S, F](endpoint) {
+  ): ServerEndpointInParts[UV, R2, I, E, O, R, F] =
+    new ServerEndpointInParts[UV, R2, I, E, O, R, F](endpoint) {
       override type T = (outer.T, T2)
 
       override def splitInput: I => ((outer.T, T2), R2) =
@@ -123,16 +123,15 @@ abstract class ServerEndpointInParts[U, R, I, E, O, +S, F[_]](val endpoint: Endp
         }
 
       override def logicFragment: MonadError[F] => T => F[Either[E, UV]] = { implicit monad =>
-        {
-          case (t, t2) =>
-            outer.logicFragment(monad)(t).flatMap {
-              case Left(e) => (Left(e): Either[E, UV]).unit
-              case Right(u) =>
-                part2(monad)(t2).map {
-                  case Left(e)   => Left(e): Either[E, UV]
-                  case Right(u2) => Right(combine(u, u2)(uu2Concat)): Either[E, UV]
-                }
-            }
+        { case (t, t2) =>
+          outer.logicFragment(monad)(t).flatMap {
+            case Left(e) => (Left(e): Either[E, UV]).unit
+            case Right(u) =>
+              part2(monad)(t2).map {
+                case Left(e)   => Left(e): Either[E, UV]
+                case Right(u2) => Right(combine(u, u2)(uu2Concat)): Either[E, UV]
+              }
+          }
         }
       }
     }

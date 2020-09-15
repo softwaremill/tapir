@@ -10,6 +10,7 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import sttp.client._
 import com.typesafe.scalalogging.StrictLogging
+import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.{Endpoint, endpoint, stringBody}
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir._
@@ -20,7 +21,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
 
-class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with StrictLogging {
+class AkkaHttpServerTests extends ServerTests[Future, AkkaStreams, AkkaStreams, Route](AkkaStreams) with StrictLogging {
   private implicit var actorSystem: ActorSystem = _
 
   override protected def beforeAll(): Unit = {
@@ -34,7 +35,7 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
   }
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, AkkaStream, Future],
+      e: ServerEndpoint[I, E, O, AkkaStreams, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): Route = {
     implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
@@ -43,14 +44,14 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
     e.toRoute
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStream], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStreams], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Route = {
     e.toRouteRecoverErrors(fn)
   }
 
   override def server(routes: NonEmptyList[Route], port: Port): Resource[IO, Unit] = {
-    val bind = IO.fromFuture(IO(Http().newServerAt("localhost", port).bind(concat(routes.toList :_*))))
+    val bind = IO.fromFuture(IO(Http().newServerAt("localhost", port).bind(concat(routes.toList: _*))))
     Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).void
   }
 
@@ -68,7 +69,7 @@ class AkkaHttpServerTests extends ServerTests[Future, AkkaStream, Route] with St
       val port = portCounter.next()
       val route = Directives.pathPrefix("api")(e.toRoute)
       server(NonEmptyList.of(route), port).use { _ =>
-        basicRequest.get(uri"http://localhost:$port/api/test/directive").send().map(_.body shouldBe Right("ok"))
+        basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
       }.unsafeRunSync
     }
   }

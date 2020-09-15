@@ -22,12 +22,12 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
   case class Author(name: String)
   case class Book(title: String, year: Int, author: Author)
 
-  val booksListing: Endpoint[Unit, Unit, Vector[Book], Nothing] = endpoint.get
+  val booksListing: Endpoint[Unit, Unit, Vector[Book], Any] = endpoint.get
     .in("books")
     .in("list" / "all")
     .out(jsonBody[Vector[Book]])
 
-  val addBook: Endpoint[Book, Unit, Unit, Nothing] = endpoint.post
+  val addBook: Endpoint[Book, Unit, Unit, Any] = endpoint.post
     .in("books")
     .in("add")
     .in(
