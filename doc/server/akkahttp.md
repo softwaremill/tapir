@@ -20,15 +20,18 @@ Now import the package:
 import sttp.tapir.server.akkahttp._
 ```
 
-This adds extension methods to the `Endpoint` type: `toDirective`, `toRoute` and `toRouteRecoverErrors`. The first two
-require the logic of the endpoint to be given as a function of type:
+This adds extension methods to the `Endpoint` type: `toRoute`, `toRouteRecoverErrors` and `toDirective`.
+
+## using `toRoute` and `toRouteRecoverErrors`
+
+Method `toRoute` requires the logic of the endpoint to be given as a function of type:
 
 ```scala
 I => Future[Either[E, O]]
 ```
 
-The third recovers errors from failed futures, and hence requires that `E` is a subclass of `Throwable` (an exception);
-it expects a function of type `I => Future[O]`.
+Method `toRouteRecoverErrors` recovers errors from failed futures, and hence requires that `E` is a subclass of
+`Throwable` (an exception); it expects a function of type `I => Future[O]`.
 
 For example:
 
@@ -61,12 +64,39 @@ val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ???
 val aRoute: Route = anEndpoint.toRoute((logic _).tupled)
 ```
 
-The created `Route`/`Directive` can then be further combined with other akka-http directives, for example nested within
-other routes. The tapir-generated `Route`/`Directive` captures from the request only what is described by the endpoint.
+## using `toDirective`
 
-It's completely feasible that some part of the input is read using akka-http directives, and the rest 
-using tapir endpoint descriptions; or, that the tapir-generated route is wrapped in e.g. a metrics route. Moreover, 
-"edge-case endpoints", which require some special logic not expressible using tapir, can be always implemented directly 
+Method `toDirective` splits parsing the input and encoding the output. The directive provides the
+input parameters, type `I`, and a function that can be used to encode the output.
+
+For example:
+
+```scala
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
+import scala.concurrent.Future
+import akka.http.scaladsl.server.Route
+
+def countCharacters(s: String): Future[Either[Unit, Int]] = 
+  Future.successful(Right[Unit, Int](s.length))
+
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] = 
+  endpoint.in(stringBody).out(plainBody[Int])
+  
+val countCharactersRoute: Route = countCharactersEndpoint.toDirective { (input, completion) =>
+  completion(countCharacters(input))
+}
+```
+
+## Combining directives
+
+The tapir-generated `Route`/`Directive` captures from the request only what is described by the endpoint. Combine
+with other akka-http directives to add additional behavior, or get more information from the request.
+
+For example, wrap the tapir-generated route in a metrics route, or nest a security directive in the
+tapir-generated directive.
+
+Edge-case endpoints, which require special logic not expressible using tapir, can be implemented directly
 using akka-http. For example:
 
 ```scala mdoc:compile-only
@@ -84,6 +114,20 @@ val myRoute: Route = metricsDirective {
     tapirEndpoint.toRoute(input => ??? /* here we can use both `user` and `input` values */)
   }
 }
+```
+
+Note that `Route`s can only be nested within other directives. `Directive`s can nest in other directives
+and can also contain nested directives. For example:
+
+```scala
+val countCharactersRoute: Route =
+  authenticateBasic("realm", authenticator) {
+    countCharactersEndpoint.toDirective { (input, completion) =>
+      authorizeUserFor(input) {
+        completion(countCharacters(input))
+      }
+    }
+  }
 ```
 
 ## Streaming

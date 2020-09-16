@@ -4,19 +4,45 @@ import akka.http.scaladsl.model.{MediaType => _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
-import akka.http.scaladsl.server.util.{Tuple => AkkaTuple}
 import sttp.tapir._
 import sttp.tapir.monad.FutureMonadError
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
-import sttp.tapir.typelevel.ParamsToTuple
 
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
-  def toDirective[I, E, O, T](e: Endpoint[I, E, O, AkkaStream])(implicit paramsToTuple: ParamsToTuple.Aux[I, T]): Directive[T] = {
-    implicit val tIsAkkaTuple: AkkaTuple[T] = AkkaTuple.yes
-    toDirective1(e).flatMap { values => tprovide(paramsToTuple.toTuple(values)) }
+
+  /**
+   * Converts the endpoint to a directive that -for matching requests- decodes the input parameters
+   * and provides those input parameters and a function. The function can be called to complete the request.
+   *
+   * Example usage:
+   * {{{
+   * def logic(input: I): Future[Either[E, O] = ???
+   *
+   * endpoint.toDirectiveIC { (input, completion) =>
+   *   securityDirective {
+   *     completion(logic(input))
+   *   }
+   * }
+   * }}}
+   *
+   * If type `I` is a tuple, and `logic` has 1 parameter per tuple member, use {{{completion((logic _).tupled(input))}}}
+   */
+  def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive[(I, Future[Either[E, O]] => Route)] = {
+    toDirective1(e).flatMap { (values: I) =>
+      extractLog.flatMap { log =>
+        val completion: Future[Either[E, O]] => Route = result => onComplete(result) {
+          case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, e.errorOutput, v)
+          case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, e.output, v)
+          case Failure(t) =>
+            serverOptions.logRequestHandling.logicException(e, t)(log)
+            throw t
+        }
+        tprovide((values, completion))
+      }
+    }
   }
 
   def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStream, Future]): Route = {
