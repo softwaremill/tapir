@@ -49,7 +49,7 @@ implicit val materializer: Materializer = ???
 def countCharacters(s: String): Future[Either[Unit, Int]] = 
   Future(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] = 
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: Routes = 
   countCharactersEndpoint.toRoute(countCharacters _)
@@ -69,7 +69,7 @@ import play.api.routing.Router.Routes
 implicit val materializer: Materializer = ???
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ???  
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
 val aRoute: Routes = anEndpoint.toRoute((logic _).tupled)
 ```
 

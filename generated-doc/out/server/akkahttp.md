@@ -41,7 +41,7 @@ import akka.http.scaladsl.server.Route
 def countCharacters(s: String): Future[Either[Unit, Int]] = 
   Future.successful(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] = 
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
   
 val countCharactersRoute: Route = countCharactersEndpoint.toRoute(countCharacters)
@@ -57,7 +57,7 @@ import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ???  
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
 val aRoute: Route = anEndpoint.toRoute((logic _).tupled)
 ```
 
@@ -77,7 +77,7 @@ import akka.http.scaladsl.server._
 case class User(email: String)
 def metricsDirective: Directive0 = ???
 def securityDirective: Directive1[User] = ???
-val tapirEndpoint: Endpoint[String, Unit, Unit, Nothing] = endpoint.in(path[String]("input"))
+val tapirEndpoint: Endpoint[String, Unit, Unit, Any] = endpoint.in(path[String]("input"))
 
 val myRoute: Route = metricsDirective {
   securityDirective { user =>
@@ -88,8 +88,11 @@ val myRoute: Route = metricsDirective {
 
 ## Streaming
 
-The akka-http interpreter accepts streaming bodies of type `Source[ByteString, Any]`, which can be used both for sending
-response bodies and reading request bodies. Usage: `streamBody[Source[ByteString, Any]](schema, mediaType)`.
+The akka-http interpreter accepts streaming bodies of type `Source[ByteString, Any]`, as described by the `AkkaStreams`
+capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(AkkaStreams, schema, format)`.
+
+The capability can be added to the classpath independently of the interpreter through the 
+`"com.softwaremill.sttp.shared" %% "akka"` dependency.
 
 ## Configuration
 

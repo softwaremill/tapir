@@ -20,7 +20,7 @@ import sttp.tapir.server.akkahttp._
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
-val countCharactersServerEndpoint: ServerEndpoint[String, Unit, Int, Nothing, Future] =
+val countCharactersServerEndpoint: ServerEndpoint[String, Unit, Int, Any, Future] =
   endpoint.in(stringBody).out(plainBody[Int]).serverLogic { s =>
     Future.successful[Either[Unit, Int]](Right(s.length))
   }
@@ -129,7 +129,7 @@ def auth(token: String): Future[Either[Int, User]] = Future {
   else Left(1001) // error code
 }
 
-val secureEndpoint: PartialServerEndpoint[User, Unit, Int, Unit, Nothing, Future] = endpoint
+val secureEndpoint: PartialServerEndpoint[User, Unit, Int, Unit, Any, Future] = endpoint
   .in(header[String]("X-AUTH-TOKEN"))
   .errorOut(plainBody[Int])
   .serverLogicForCurrent(auth)
@@ -181,7 +181,7 @@ For example, if we have an endpoint:
 ```scala mdoc:silent:reset
 import sttp.tapir._
 
-val secureHelloWorld2: Endpoint[(String, String), Int, String, Nothing] = endpoint
+val secureHelloWorld2: Endpoint[(String, String), Int, String, Any] = endpoint
   .in(header[String]("X-AUTH-TOKEN"))
   .errorOut(plainBody[Int])
   .get

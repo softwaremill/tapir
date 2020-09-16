@@ -32,7 +32,7 @@ case class Book(title: String)
 
 // Define an endpoint
 
-val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Nothing] = 
+val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
@@ -69,7 +69,7 @@ val booksListingRoute: Route = booksListing.toRoute((bookListingLogic _).tupled)
 import sttp.tapir.client.sttp._
 import sttp.client._
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Nothing] = booksListing
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = booksListing
   .toSttpRequest(uri"http://localhost:8080")
   .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```

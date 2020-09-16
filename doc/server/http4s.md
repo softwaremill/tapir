@@ -37,7 +37,7 @@ implicit val cs: ContextShift[IO] =
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
   IO.pure(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] = 
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: HttpRoutes[IO] = 
   countCharactersEndpoint.toRoutes(countCharacters _)
@@ -58,7 +58,7 @@ implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? 
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
 val routes: HttpRoutes[IO] = anEndpoint.toRoutes((logic _).tupled)
 ```
 
@@ -72,8 +72,11 @@ using tapir, can be always implemented directly using http4s.
 
 ## Streaming
 
-The http4s interpreter accepts streaming bodies of type `Stream[F, Byte]`, which can be used both for sending
-response bodies and reading request bodies. Usage: `streamBody[Stream[F, Byte]](schema, mediaType)`.
+The http4s interpreter accepts streaming bodies of type `Stream[F, Byte]`, as described by the `Fs2Streams`
+capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(Fs2Streams[F], schema, format)`.
+
+The capability can be added to the classpath independently of the interpreter through the 
+`"com.softwaremill.sttp.shared" %% "http4s"` dependency.
 
 ## Configuration
 
