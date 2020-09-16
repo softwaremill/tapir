@@ -60,7 +60,7 @@ val paging: EndpointInput[(UUID, Option[Int])] =
   query[UUID]("start").and(query[Option[Int]]("limit"))
 
 // we can now use the value in multiple endpoints, e.g.:
-val listUsersEndpoint: Endpoint[(UUID, Option[Int]), Unit, List[User], Nothing] = 
+val listUsersEndpoint: Endpoint[(UUID, Option[Int]), Unit, List[User], Any] = 
   endpoint.in("user" / "list").in(paging).out(jsonBody[List[User]])
 ```
 
@@ -76,7 +76,7 @@ import io.circe.generic.auto._
 
 case class ErrorInfo(message: String)
 
-val baseEndpoint: Endpoint[Unit, ErrorInfo, Unit, Nothing] =  
+val baseEndpoint: Endpoint[Unit, ErrorInfo, Unit, Any] =  
   endpoint.in("api" / "v1.0").errorOut(jsonBody[ErrorInfo])
 ```
 
@@ -85,7 +85,7 @@ Thanks to the fact that inputs/outputs accumulate, we can use the base endpoint 
 ```scala
 case class Status(uptime: Long)
 
-val statusEndpoint: Endpoint[Unit, ErrorInfo, Status, Nothing] = 
+val statusEndpoint: Endpoint[Unit, ErrorInfo, Status, Any] = 
   baseEndpoint.in("status").out(jsonBody[Status])
 ```
 
@@ -144,9 +144,10 @@ To match a path prefix, first define inputs which match the path prefix, and the
 
 ## Streaming support
 
-Both input and output bodies can be mapped to a stream, by using `streamBody[S]`. The type `S` must match the type of
-streams that are supported by the interpreter: refer to the documentation of server/client interpreters for the
-precise type.
+Both input and output bodies can be mapped to a stream, by using `streamBody(streams)`. The parameter `streams` must 
+implement the `Streams[S]` capability, and determines the precise type of the binary stream supported by the given
+non-blocking streams implementation. The interpreter must then support the given capability. Refer to the documentation 
+of server/client interpreters for more information.
 
 Adding a stream body input/output influences both the type of the input/output, as well as the 4th type parameter
 of `Endpoint`, which specifies the requirements regarding supported stream types for interpreters.
@@ -157,12 +158,13 @@ is a (presumably large) serialised list of json objects mapping to the `Person` 
 
 ```scala
 import sttp.tapir._
+import sttp.capabilities.akka.AkkaStreams
 import akka.stream.scaladsl._
 import akka.util.ByteString
 
 case class Person(name: String)
 
-endpoint.out(streamBody[Source[ByteString, Any]](schemaFor[List[Person]], CodecFormat.Json()))
+endpoint.out(streamBody(AkkaStreams, schemaFor[List[Person]], CodecFormat.Json()))
 ```
 
 See also the [runnable streaming example](../examples.md). 
