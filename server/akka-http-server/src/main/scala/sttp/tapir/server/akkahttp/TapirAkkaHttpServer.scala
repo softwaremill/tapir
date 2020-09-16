@@ -3,36 +3,39 @@ package sttp.tapir.server.akkahttp
 import akka.http.scaladsl.server._
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.typelevel.{ParamsToTuple, ReplaceFirstInTuple}
+import sttp.tapir.typelevel.ReplaceFirstInTuple
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 trait TapirAkkaHttpServer {
-  implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStream]) {
-    def toDirective(implicit serverOptions: AkkaHttpServerOptions): Directive[(I, Future[Either[E, O]] => Route)] =
+  implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStream])(implicit serverOptions: AkkaHttpServerOptions) {
+    def toDirective: Directive[(I, Future[Either[E, O]] => Route)] =
       new EndpointToAkkaServer(serverOptions).toDirective(e)
 
-    def toRoute(logic: I => Future[Either[E, O]])(implicit serverOptions: AkkaHttpServerOptions): Route =
+    def toRoute(logic: I => Future[Either[E, O]]): Route =
       new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogic(logic))
 
     def toRouteRecoverErrors(
         logic: I => Future[O]
-    )(implicit serverOptions: AkkaHttpServerOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route = {
+    )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route = {
       new EndpointToAkkaServer(serverOptions).toRoute(e.serverLogicRecoverErrors(logic))
     }
   }
 
-  implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStream, Future]) {
-    def toDirective(implicit akkaHttpOptions: AkkaHttpServerOptions): Directive[(I, Future[Either[E, O]] => Route)] =
-      new EndpointToAkkaServer(akkaHttpOptions).toDirective(serverEndpoint.endpoint)
+  implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStream, Future])(implicit
+      serverOptions: AkkaHttpServerOptions
+  ) {
+    def toDirective: Directive[(I, Future[Either[E, O]] => Route)] =
+      new EndpointToAkkaServer(serverOptions).toDirective(serverEndpoint.endpoint)
 
-    def toRoute(implicit serverOptions: AkkaHttpServerOptions): Route =
-      new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoint)
+    def toRoute: Route = new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoint)
   }
 
-  implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStream, Future]]) {
-    def toRoute(implicit serverOptions: AkkaHttpServerOptions): Route = {
+  implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStream, Future]])(implicit
+      serverOptions: AkkaHttpServerOptions
+  ) {
+    def toRoute: Route = {
       new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoints)
     }
   }

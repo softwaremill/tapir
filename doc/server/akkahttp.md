@@ -22,7 +22,7 @@ import sttp.tapir.server.akkahttp._
 
 This adds extension methods to the `Endpoint` type: `toRoute`, `toRouteRecoverErrors` and `toDirective`.
 
-## using `toRoute` and `toRouteRecoverErrors`
+## Using `toRoute` and `toRouteRecoverErrors`
 
 Method `toRoute` requires the logic of the endpoint to be given as a function of type:
 
@@ -64,14 +64,14 @@ val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ???
 val aRoute: Route = anEndpoint.toRoute((logic _).tupled)
 ```
 
-## using `toDirective`
+## Using `toDirective`
 
 Method `toDirective` splits parsing the input and encoding the output. The directive provides the
 input parameters, type `I`, and a function that can be used to encode the output.
 
 For example:
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
 import scala.concurrent.Future
@@ -119,11 +119,30 @@ val myRoute: Route = metricsDirective {
 Note that `Route`s can only be nested within other directives. `Directive`s can nest in other directives
 and can also contain nested directives. For example:
 
-```scala
+```scala mdoc:compile-only
+import akka.http.scaladsl.server.Directive0
+import akka.http.scaladsl.server.Directives.Authenticator
+import akka.http.scaladsl.server.Directives.authenticateBasic
+import akka.http.scaladsl.server.Route
+import sttp.tapir._
+import sttp.tapir.server.akkahttp._
+
+import scala.concurrent.Future
+
+def countCharacters(s: String): Future[Either[Unit, Int]] =
+  Future.successful(Right[Unit, Int](s.length))
+
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] =
+  endpoint.in(stringBody).out(plainBody[Int])
+
+case class User(email: String)
+val authenticator: Authenticator[User] = ???
+def authorizationDirective(user: User, input: String): Directive0 = ???
+
 val countCharactersRoute: Route =
-  authenticateBasic("realm", authenticator) {
+  authenticateBasic("realm", authenticator) { user =>
     countCharactersEndpoint.toDirective { (input, completion) =>
-      authorizeUserFor(input) {
+      authorizationDirective(user, input) {
         completion(countCharacters(input))
       }
     }

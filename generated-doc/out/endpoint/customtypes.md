@@ -117,8 +117,8 @@ be derived automatically.
 
 ### Sealed traits / coproducts
 
-Tapir supports schema generation for coproduct types (sealed trait hierarchies) of the box, but they need to be defined
-by hand (as implicit values). To properly reflect the schema in [OpenAPI](../openapi.md) documentation, a
+Tapir supports schema generation for coproduct types (sealed trait hierarchies) out of the box, but they need to be defined
+by hand as `implicit` values. To properly reflect the schema in [OpenAPI](../openapi.md) documentation, a
 discriminator object can be specified. 
 
 For example, given following coproduct:

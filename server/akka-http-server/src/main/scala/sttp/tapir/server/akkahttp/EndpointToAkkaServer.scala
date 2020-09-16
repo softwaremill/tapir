@@ -14,32 +14,33 @@ import scala.util.{Failure, Success}
 class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
 
   /**
-   * Converts the endpoint to a directive that -for matching requests- decodes the input parameters
-   * and provides those input parameters and a function. The function can be called to complete the request.
-   *
-   * Example usage:
-   * {{{
-   * def logic(input: I): Future[Either[E, O] = ???
-   *
-   * endpoint.toDirectiveIC { (input, completion) =>
-   *   securityDirective {
-   *     completion(logic(input))
-   *   }
-   * }
-   * }}}
-   *
-   * If type `I` is a tuple, and `logic` has 1 parameter per tuple member, use {{{completion((logic _).tupled(input))}}}
-   */
+    * Converts the endpoint to a directive that -for matching requests- decodes the input parameters
+    * and provides those input parameters and a function. The function can be called to complete the request.
+    *
+    * Example usage:
+    * {{{
+    * def logic(input: I): Future[Either[E, O] = ???
+    *
+    * endpoint.toDirective { (input, completion) =>
+    *   securityDirective {
+    *     completion(logic(input))
+    *   }
+    * }
+    * }}}
+    *
+    * If type `I` is a tuple, and `logic` has 1 parameter per tuple member, use {{{completion((logic _).tupled(input))}}}
+    */
   def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive[(I, Future[Either[E, O]] => Route)] = {
     toDirective1(e).flatMap { (values: I) =>
       extractLog.flatMap { log =>
-        val completion: Future[Either[E, O]] => Route = result => onComplete(result) {
-          case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, e.errorOutput, v)
-          case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, e.output, v)
-          case Failure(t) =>
-            serverOptions.logRequestHandling.logicException(e, t)(log)
-            throw t
-        }
+        val completion: Future[Either[E, O]] => Route = result =>
+          onComplete(result) {
+            case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, e.errorOutput, v)
+            case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, e.output, v)
+            case Failure(t) =>
+              serverOptions.logRequestHandling.logicException(e, t)(log)
+              throw t
+          }
         tprovide((values, completion))
       }
     }
