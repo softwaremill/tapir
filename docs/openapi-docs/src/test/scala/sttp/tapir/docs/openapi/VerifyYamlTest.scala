@@ -12,7 +12,7 @@ import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
+import sttp.tapir.openapi.{Contact, Info, License, Server => OServer, ServerVariable => OServerVariable}
 import sttp.tapir.tests._
 
 import scala.collection.immutable.ListMap
@@ -811,16 +811,50 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       "1.0"
     )
     val servers = List(
-      Server("https://{username}.example.com:{port}/{basePath}")
+      OServer("https://{username}.example.com:{port}/{basePath}")
         .description("The production API server")
         .variables(
-          "username" -> ServerVariable(None, "demo", Some("Username")),
+          "username" -> OServerVariable(None, "demo", Some("Username")),
+          "port" -> OServerVariable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> OServerVariable(None, "v2", None)
+        )
+    )
+
+    val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml for overridden server") {
+    val expectedYaml = loadYaml("expected_with_overridden_server.yml")
+
+    val api = Info(
+      "Fruits",
+      "1.0"
+    )
+    val commonServers = List(
+      OServer("https://{username}.example.com:{port}/{basePath}")
+        .description("The production API server")
+        .variables(
+          "username" -> OServerVariable(None, "demo", Some("Username")),
+          "port" -> OServerVariable(Some(List("8443", "443")), "8443", None),
+          "basePath" -> OServerVariable(None, "v2", None)
+        )
+    )
+
+    val overriddenServers = List(
+      Server("https://secured.example.com:{port}/{basePath}")
+        .description("The super secured production API server")
+        .variables(
           "port" -> ServerVariable(Some(List("8443", "443")), "8443", None),
           "basePath" -> ServerVariable(None, "v2", None)
         )
     )
 
-    val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml
+    val actualYaml = in_query_query_out_string
+      .servers(overriddenServers)
+      .toOpenAPI(api).servers(commonServers).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -834,9 +868,9 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       "1.0"
     )
     val servers = List(
-      Server("https://development.example.com/v1", Some("Development server"), None),
-      Server("https://staging.example.com/v1", Some("Staging server"), None),
-      Server("https://api.example.com/v1", Some("Production server"), None)
+      OServer("https://development.example.com/v1", Some("Development server"), None),
+      OServer("https://staging.example.com/v1", Some("Staging server"), None),
+      OServer("https://api.example.com/v1", Some("Production server"), None)
     )
 
     val actualYaml = in_query_query_out_string.toOpenAPI(api).servers(servers).toYaml

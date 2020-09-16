@@ -10,6 +10,8 @@ import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
+import scala.collection.immutable.ListMap
+
 /**
   * @tparam I Input parameter types.
   * @tparam E Error output parameter types.
@@ -147,6 +149,9 @@ trait EndpointInfoOps[I, E, O, +S] {
   def tags(ts: List[String]): EndpointType[I, E, O, S] = withInfo(info.tags(ts))
   def tag(t: String): EndpointType[I, E, O, S] = withInfo(info.tag(t))
   def deprecated(): EndpointType[I, E, O, S] = withInfo(info.deprecated(true))
+  def server(s: Server): EndpointType[I, E, O, S] = withInfo(info.servers(List(s)))
+  def servers(s: List[Server]): EndpointType[I, E, O, S] =
+    withInfo(info = info.servers(s))
 
   def info(i: EndpointInfo): EndpointType[I, E, O, S] = withInfo(i)
 }
@@ -338,7 +343,8 @@ case class EndpointInfo(
     summary: Option[String],
     description: Option[String],
     tags: Vector[String],
-    deprecated: Boolean
+    deprecated: Boolean,
+    servers: Vector[Server]
 ) {
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
@@ -346,4 +352,19 @@ case class EndpointInfo(
   def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
   def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
   def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
+  def servers(s: List[Server]): EndpointInfo = copy(servers = servers ++ s)
+  def server(s: Server): EndpointInfo = copy(servers = servers :+ s)
+}
+
+
+case class Server(url: String,
+                  description: Option[String] = None,
+                  variables: Option[ListMap[String, ServerVariable]] = None) {
+
+  def description(d: String): Server = copy(description = Some(d))
+  def variables(vars: (String, ServerVariable)*): Server = copy(variables = Some(ListMap(vars: _*)))
+}
+
+case class ServerVariable(enum: Option[List[String]], default: String, description: Option[String]) {
+  require(`enum`.fold(true)(_.contains(default)), "ServerVariable#default must be one of the values in enum if enum is defined")
 }
