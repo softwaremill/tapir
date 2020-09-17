@@ -46,7 +46,8 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   def maxLength[T <: String](value: Int): Validator.Primitive[T] = MaxLength(value)
   def minSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MinSize(value)
   def maxSize[T, C[_] <: Iterable[_]](value: Int): Validator.Primitive[C[T]] = MaxSize(value)
-  def custom[T](doValidate: T => List[ValidationError[_]]): Validator[T] = Custom(doValidate)
+  def custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String] = None): Validator[T] =
+    Custom(doValidate, showMessage)
 
   /**
     * Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s.
@@ -129,7 +130,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       }
     }
   }
-  case class Custom[T](doValidate: T => List[ValidationError[_]]) extends Validator.Single[T] {
+  case class Custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String]) extends Validator.Single[T] {
     override def validate(t: T): List[ValidationError[_]] = {
       doValidate(t)
     }
@@ -232,7 +233,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         case MaxLength(value)          => Some(s"length<=$value")
         case MinSize(value)            => Some(s"size>=$value")
         case MaxSize(value)            => Some(s"size<=$value")
-        case Custom(_)                 => Some("custom message") //TODO?
+        case Custom(_, showMessage)    => showMessage.orElse(Some("custom"))
         case Enum(possibleValues, _)   => Some(s"in(${possibleValues.mkString(",")}")
         case CollectionElements(el, _) => recurse(el).map(se => s"elements($se)")
         case Product(fields) =>
