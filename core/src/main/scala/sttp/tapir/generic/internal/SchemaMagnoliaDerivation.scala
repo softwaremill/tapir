@@ -8,7 +8,6 @@ import sttp.tapir.{FieldName, Schema, SchemaType}
 import SchemaMagnoliaDerivation.deriveInProgress
 
 import scala.collection.mutable
-import scala.language.experimental.macros
 
 trait SchemaMagnoliaDerivation {
   type Typeclass[T] = Schema[T]
