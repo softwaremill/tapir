@@ -261,7 +261,7 @@ object DecodeInputs {
       case EndpointInput.ExtractFromRequest(codec, _) =>
         (codec.decode(ctx.serverRequest), ctx)
 
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, _, _)) =>
         (codec.decode(ctx.bodyStream), ctx)
 
       case EndpointIO.Empty(codec, _) =>

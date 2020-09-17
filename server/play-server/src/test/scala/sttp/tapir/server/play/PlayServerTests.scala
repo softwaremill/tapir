@@ -9,6 +9,7 @@ import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.tapir.Endpoint
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.{Port, PortCounter}
@@ -18,10 +19,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
 
-class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
+class PlayServerTests extends ServerTests[Future, Nothing, Any, Router.Routes](NoStreams) {
   override def multipleValueHeaderSupport: Boolean = false
   override def multipartInlineHeaderSupport: Boolean = false
-  override def streamingSupport: Boolean = false
+  override def inputStreamSupport: Boolean = false
 
   private implicit val actorSystem: ActorSystem = ActorSystem()
 
@@ -35,7 +36,7 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
   override def suspendResult[T](t: => T): Future[T] = Future(t)
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Nothing, Future],
+      e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =
@@ -43,7 +44,7 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
     e.toRoute
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Nothing], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Routes = {
     e.toRouteRecoverErrors(fn)
@@ -55,8 +56,8 @@ class PlayServerTests extends ServerTests[Future, Nothing, Router.Routes] {
       override def router: Router =
         Router.from(
           routes.reduce((a: Routes, b: Routes) => {
-            val handler: PartialFunction[RequestHeader, Handler] = {
-              case request => a.applyOrElse(request, b)
+            val handler: PartialFunction[RequestHeader, Handler] = { case request =>
+              a.applyOrElse(request, b)
             }
 
             handler

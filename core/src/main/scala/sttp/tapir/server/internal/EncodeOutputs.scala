@@ -37,7 +37,7 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value)
       case EndpointIO.Body(rawValueType, codec, _)  => ov.withBody(encodeOutputBody.rawValueToBody(encoded, codec.format, rawValueType))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, charset)) =>
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, _, charset)) =>
         ov.withBody(encodeOutputBody.streamValueToBody(encoded, codec.format, charset))
       case EndpointIO.Header(name, _, _) =>
         encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }

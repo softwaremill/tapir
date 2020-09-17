@@ -119,7 +119,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= Seq(
       "com.propensive" %% "magnolia" % "0.17.0",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.softwaremill.sttp.model" %% "core" % "1.1.4",
+      "com.softwaremill.sttp.model" %% "core" % Versions.sttpModel,
+      "com.softwaremill.sttp.shared" %% "core" % Versions.sttpShared,
       scalaTest % Test,
       scalaCheck % Test,
       scalaTestPlusScalaCheck % Test,
@@ -202,7 +203,8 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-streams" % Versions.zio,
-      scalaTest % Test
+      scalaTest % Test,
+      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -404,7 +406,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client" %% "async-http-client-backend-cats" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp
     )
   )
   .dependsOn(tests)
@@ -416,7 +418,8 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -427,7 +430,8 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   .settings(
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -532,8 +536,8 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   .settings(
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client" %% "core" % Versions.sttp,
-      "com.softwaremill.sttp.client" %% "async-http-client-backend-fs2" % Versions.sttp % Test
+      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -549,7 +553,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "com.softwaremill.sttp.client" %% "async-http-client-backend-zio" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
@@ -562,13 +566,13 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
   .settings(
     name := "tapir-playground",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "io.swagger" % "swagger-annotations" % "1.6.2",
       "io.circe" %% "circe-generic-extras" % "0.13.0",
-      "com.softwaremill.sttp.client" %% "akka-http-backend" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false

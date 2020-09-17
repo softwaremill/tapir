@@ -3,10 +3,12 @@ package sttp.tapir
 import java.nio.charset.Charset
 
 import sttp.model.{Method, StatusCode}
+import sttp.monad.MonadError
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
 import scala.collection.immutable.ListMap
 import scala.reflect.ClassTag
+import scala.util.{Failure, Success, Try}
 
 package object internal {
 
@@ -80,13 +82,13 @@ package object internal {
       }
 
     def auths: Vector[EndpointInput.Auth[_]] =
-      traverseInputs {
-        case a: EndpointInput.Auth[_] => Vector(a)
+      traverseInputs { case a: EndpointInput.Auth[_] =>
+        Vector(a)
       }
 
     def method: Option[Method] =
-      traverseInputs {
-        case i: EndpointInput.FixedMethod[_] => Vector(i.m)
+      traverseInputs { case i: EndpointInput.FixedMethod[_] =>
+        Vector(i.m)
       }.headOption
   }
 
@@ -152,7 +154,7 @@ package object internal {
         case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
           val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toSeq
           Right(ListMap(entries: _*))
-        case b: EndpointIO.Empty[_]     => Left(Vector.empty)
+        case _: EndpointIO.Empty[_]     => Left(Vector.empty)
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
       }
     }
@@ -169,8 +171,8 @@ package object internal {
       }
 
     def bodyType: Option[RawBodyType[_]] = {
-      traverseOutputs[RawBodyType[_]] {
-        case b: EndpointIO.Body[_, _] => Vector(b.bodyType)
+      traverseOutputs[RawBodyType[_]] { case b: EndpointIO.Body[_, _] =>
+        Vector(b.bodyType)
       }.headOption
     }
   }
@@ -217,7 +219,25 @@ package object internal {
     }
   }
 
-  def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = {
-    case v: T => exactValues.contains(v)
+  def exactMatch[T: ClassTag](exactValues: Set[T]): PartialFunction[Any, Boolean] = { case v: T =>
+    exactValues.contains(v)
+  }
+
+  def recoverErrors[I, E, O, F[_]](
+      f: I => F[O]
+  )(implicit eClassTag: ClassTag[E], eIsThrowable: E <:< Throwable): MonadError[F] => I => F[Either[E, O]] = { implicit monad => i =>
+    import sttp.monad.syntax._
+    Try(f(i).map(Right(_): Either[E, O])) match {
+      case Success(value) =>
+        monad.handleError(value) {
+          case e if eClassTag.runtimeClass.isInstance(e) => wrapException(e)
+        }
+      case Failure(exception) if eClassTag.runtimeClass.isInstance(exception) => wrapException(exception)
+      case Failure(exception)                                                 => monad.error(exception)
+    }
+  }
+
+  private def wrapException[F[_], O, E, I](exception: Throwable)(implicit me: MonadError[F]): F[Either[E, O]] = {
+    me.unit(Left(exception.asInstanceOf[E]): Either[E, O])
   }
 }

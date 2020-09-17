@@ -5,7 +5,6 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
 import sttp.tapir._
-import sttp.tapir.monad.FutureMonadError
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
 
 import scala.concurrent.Future
@@ -46,12 +45,12 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     }
   }
 
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStream, Future]): Route = {
+  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStreams, Future]): Route = {
     toDirective1(se.endpoint) { values =>
       extractLog { log =>
         mapResponse(resp => { serverOptions.logRequestHandling.requestHandled(se.endpoint, resp.status.intValue())(log); resp }) {
           extractExecutionContext { ec =>
-            onComplete(se.logic(new FutureMonadError()(ec))(values)) {
+            onComplete(se.logic(new FutureMonad()(ec))(values)) {
               case Success(Left(v))  => OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, se.endpoint.errorOutput, v)
               case Success(Right(v)) => OutputToAkkaRoute(ServerDefaults.StatusCodes.success.code, se.endpoint.output, v)
               case Failure(e) =>
@@ -64,9 +63,9 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     }
   }
 
-  def toRoute(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStream, Future]]): Route = {
+  def toRoute(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams, Future]]): Route = {
     serverEndpoints.map(se => toRoute(se)).foldLeft(RouteDirectives.reject: Route)(_ ~ _)
   }
 
-  private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive1[I] = new EndpointToAkkaDirective(serverOptions)(e)
+  private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaStreams]): Directive1[I] = new EndpointToAkkaDirective(serverOptions)(e)
 }

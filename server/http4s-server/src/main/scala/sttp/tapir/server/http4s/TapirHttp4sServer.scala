@@ -4,8 +4,8 @@ import cats.{Monad, ~>}
 import cats.data.OptionT
 import cats.effect.{ContextShift, Sync}
 import cats.syntax.all._
-import org.http4s.{EntityBody, HttpRoutes, Http}
-import sttp.tapir.Endpoint
+import org.http4s.{Http, HttpRoutes}
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.ReplaceFirstInTuple
@@ -13,7 +13,7 @@ import sttp.tapir.typelevel.ReplaceFirstInTuple
 import scala.reflect.ClassTag
 
 trait TapirHttp4sServer {
-  implicit class RichHttp4sHttpEndpoint[I, E, O, F[_]](e: Endpoint[I, E, O, EntityBody[F]]) {
+  implicit class RichHttp4sHttpEndpoint[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F]]) {
     def toHttp[G[_]](t: F ~> G)(logic: I => G[Either[E, O]])(implicit
         serverOptions: Http4sServerOptions[F],
         gs: Sync[G],
@@ -51,7 +51,7 @@ trait TapirHttp4sServer {
     }
   }
 
-  implicit class RichHttp4sServerEndpoint0[I, E, O, F[_], G[_]](se: ServerEndpoint[I, E, O, EntityBody[F], G]) {
+  implicit class RichHttp4sServerEndpoint0[I, E, O, F[_], G[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F], G]) {
     def toHttp(
         t: F ~> G
     )(implicit
@@ -63,12 +63,12 @@ trait TapirHttp4sServer {
       new EndpointToHttp4sServer(serverOptions).toHttp(t, se)
   }
 
-  implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, EntityBody[F], F]) {
+  implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F], F]) {
     def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] =
       new EndpointToHttp4sServer(serverOptions).toRoutes(se)
   }
 
-  implicit class RichHttp4sServerEndpoints0[F[_], G[_]](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], G]]) {
+  implicit class RichHttp4sServerEndpoints0[F[_], G[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F], G]]) {
     def toHttp(t: F ~> G)(implicit
         serverOptions: Http4sServerOptions[F],
         gs: Sync[G],
@@ -79,7 +79,7 @@ trait TapirHttp4sServer {
     }
   }
 
-  implicit class RichHttp4sServerEndpoints[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]) {
+  implicit class RichHttp4sServerEndpoints[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F], F]]) {
     def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Sync[F], fcs: ContextShift[F]): HttpRoutes[F] = {
       new EndpointToHttp4sServer(serverOptions).toRoutes(serverEndpoints)
     }

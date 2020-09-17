@@ -7,17 +7,18 @@ import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{EntityBody, HttpRoutes, Request, Response}
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.Endpoint
 import sttp.tapir._
-import sttp.client._
+import sttp.client3._
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.{Port, PortCounter}
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] {
+class Http4sServerTests extends ServerTests[IO, Fs2Streams[IO], Fs2Streams[IO], HttpRoutes[IO]](Fs2Streams[IO]) {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
@@ -26,7 +27,7 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
   override def suspendResult[T](t: => T): IO[T] = IO.apply(t)
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, EntityBody[IO], IO],
+      e: ServerEndpoint[I, E, O, Fs2Streams[IO], IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): HttpRoutes[IO] = {
     implicit val serverOptions: Http4sServerOptions[IO] = Http4sServerOptions
@@ -37,7 +38,7 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
     e.toRoutes
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, EntityBody[IO]], fn: I => IO[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO]], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): HttpRoutes[IO] = {
     e.toRouteRecoverErrors(fn)
@@ -65,7 +66,7 @@ class Http4sServerTests extends ServerTests[IO, EntityBody[IO], HttpRoutes[IO]] 
         .bindHttp(port, "localhost")
         .withHttpApp(Router("/api" -> routes).orNotFound)
         .resource
-        .use { _ => basicRequest.get(uri"http://localhost:$port/api/test/router").send().map(_.body shouldBe Right("ok")) }
+        .use { _ => basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right("ok")) }
         .unsafeRunSync()
     }
   }

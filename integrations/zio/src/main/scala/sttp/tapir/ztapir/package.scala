@@ -6,8 +6,8 @@ import zio.{RIO, ZIO}
 import sttp.tapir.internal._
 
 package object ztapir extends Tapir {
-  type ZEndpoint[I, E, O] = Endpoint[I, E, O, Nothing]
-  type ZServerEndpoint[R, I, E, O] = ServerEndpoint[I, E, O, Nothing, RIO[R, *]]
+  type ZEndpoint[I, E, O] = Endpoint[I, E, O, Any]
+  type ZServerEndpoint[R, I, E, O] = ServerEndpoint[I, E, O, Any, RIO[R, *]]
 
   implicit class RichZEndpoint[I, E, O](e: ZEndpoint[I, E, O]) {
     def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O] = ServerEndpoint(e, _ => logic(_).either)

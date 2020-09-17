@@ -19,7 +19,7 @@ derived has the type:
 ```scala mdoc:compile-only
 import sttp.tapir._
 
-val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = ???
+val endpoint: Endpoint[Unit, Unit, Unit, Any] = ???
 ```
 
 An endpoint which accepts two parameters of types `UUID` and `Int`, upon error returns a `String`, and on normal 
@@ -34,7 +34,7 @@ case class User()
 ```scala mdoc:compile-only
 import sttp.tapir._
 
-val userEndpoint: Endpoint[(UUID, Int), String, User, Nothing] = ???
+val userEndpoint: Endpoint[(UUID, Int), String, User, Any] = ???
 ```
 
 You can think of an endpoint as a function, which takes input parameters of type `I` and returns a result of type 

@@ -17,7 +17,7 @@ trait TapirAliases {
   val Defaults = sttp.tapir.Defaults
 
   /** Endpoint.scala */
-  type Endpoint[I, E, O, +S] = sttp.tapir.Endpoint[I, E, O, S]
+  type Endpoint[I, E, O, -R] = sttp.tapir.Endpoint[I, E, O, R]
   val Endpoint = sttp.tapir.Endpoint
 
   type EndpointInfo = sttp.tapir.EndpointInfo
@@ -33,7 +33,7 @@ trait TapirAliases {
   type EndpointIO[I] = sttp.tapir.EndpointIO[I]
   val EndpointIO = sttp.tapir.EndpointIO
 
-  type StreamingEndpointIO[I, +S] = sttp.tapir.StreamingEndpointIO[I, S]
+  type StreamingEndpointIO[I, -R] = sttp.tapir.StreamingEndpointIO[I, R]
   val StreamingEndpointIO = sttp.tapir.StreamingEndpointIO
 
   /** package.scala */

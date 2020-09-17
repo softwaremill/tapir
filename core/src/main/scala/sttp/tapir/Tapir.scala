@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 
+import sttp.capabilities.Streams
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.StatusMapping
@@ -94,12 +95,18 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
   /**
+    * @param s A supported streams implementation.
     * @param schema Schema of the body. Note that any schema can be passed here, usually this will be a schema for the
     *               "deserialized" stream.
     * @param charset An optional charset of the resulting stream's data, to be used in the content type.
     */
-  def streamBody[S](schema: Schema[_], format: CodecFormat, charset: Option[Charset] = None): StreamingEndpointIO.Body[S, S] =
-    StreamingEndpointIO.Body(Codec.id(format, Some(schema.as[S])), EndpointIO.Info.empty, charset)
+  def streamBody[S](
+      s: Streams[S],
+      schema: Schema[_],
+      format: CodecFormat,
+      charset: Option[Charset] = None
+  ): StreamingEndpointIO.Body[S, s.BinaryStream, s.BinaryStream] =
+    StreamingEndpointIO.Body(s, Codec.id(format, Some(schema.as[s.BinaryStream])), EndpointIO.Info.empty, charset)
 
   /**
     * A body in any format, read using the given `codec`, from a raw string read using UTF-8.
@@ -217,15 +224,15 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
 
   def schemaFor[T: Schema]: Schema[T] = implicitly[Schema[T]]
 
-  val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing] =
-    Endpoint[Unit, Nothing, Unit, Nothing](
+  val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Any] =
+    Endpoint[Unit, Nothing, Unit, Any](
       emptyInput,
       EndpointOutput.Void(),
       emptyOutput,
       EndpointInfo(None, None, None, Vector.empty, deprecated = false)
     )
 
-  val endpoint: Endpoint[Unit, Unit, Unit, Nothing] = infallibleEndpoint.copy(errorOutput = emptyOutput)
+  val endpoint: Endpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
 }
 
 trait TapirDerivedInputs { this: Tapir =>

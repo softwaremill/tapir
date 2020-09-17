@@ -2,9 +2,9 @@ package sttp.tapir.server
 
 import io.vertx.core.Handler
 import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir._
 import sttp.tapir.internal.Params
-import sttp.tapir.monad.{FutureMonadError, MonadError}
 import sttp.tapir.server.vertx.decoders.VertxInputDecoders._
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers._
@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
 
 package object vertx {
 
-  implicit class VertxEndpoint[I, E, O, D](e: Endpoint[I, E, O, D]) {
+  implicit class VertxEndpoint[I, E, O](e: Endpoint[I, E, O, Any]) {
 
     /**
       * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
@@ -61,7 +61,7 @@ package object vertx {
       e.serverLogicRecoverErrors(logic).blockingRoute
   }
 
-  implicit class VertxServerEndpoint[I, E, O, D](e: ServerEndpoint[I, E, O, D, Future]) {
+  implicit class VertxServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]) {
 
     /**
       * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
@@ -94,7 +94,7 @@ package object vertx {
         logic: MonadError[Future] => I => Future[A],
         responseHandler: (A, RoutingContext) => Unit
     )(implicit serverOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Handler[RoutingContext] = { rc =>
-      val monad = new FutureMonadError()(serverOptions.executionContextOrCurrentCtx(rc))
+      val monad = new FutureMonad()(serverOptions.executionContextOrCurrentCtx(rc))
       decodeBodyAndInputsThen[E](
         e.endpoint,
         rc,
@@ -117,10 +117,9 @@ package object vertx {
               tryEncodeError(e.endpoint, rc, cause)
           }
         }
-        .recover {
-          case cause =>
-            tryEncodeError(e.endpoint, rc, cause)
-            serverOptions.logRequestHandling.logicException(e.endpoint, cause)(serverOptions.logger): Unit
+        .recover { case cause =>
+          tryEncodeError(e.endpoint, rc, cause)
+          serverOptions.logRequestHandling.logicException(e.endpoint, cause)(serverOptions.logger): Unit
         }
     }
 

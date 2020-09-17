@@ -3,7 +3,7 @@ package sttp.tapir.examples
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
-import sttp.client._
+import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
 import sttp.tapir.json.circe._
@@ -16,7 +16,7 @@ object ErrorOutputsAkkaServer extends App {
   // the endpoint description
   case class Result(result: Int)
 
-  val errorOrJson: Endpoint[Int, String, Result, Nothing] =
+  val errorOrJson: Endpoint[Int, String, Result, Any] =
     endpoint.get
       .in(query[Int]("amount"))
       .out(jsonBody[Result])
@@ -34,13 +34,13 @@ object ErrorOutputsAkkaServer extends App {
 
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(errorOrJsonRoute).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
+    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
-    val result1: Either[String, String] = basicRequest.get(uri"http://localhost:8080?amount=-5").send().body
+    val result1: Either[String, String] = basicRequest.get(uri"http://localhost:8080?amount=-5").send(backend).body
     println("Got result (1): " + result1)
     assert(result1 == Left("Invalid parameter, smaller than 0!"))
 
-    val result2: Either[String, String] = basicRequest.get(uri"http://localhost:8080?amount=21").send().body
+    val result2: Either[String, String] = basicRequest.get(uri"http://localhost:8080?amount=21").send(backend).body
     println("Got result (2): " + result2)
     assert(result2 == Right("""{"result":42}"""))
   }

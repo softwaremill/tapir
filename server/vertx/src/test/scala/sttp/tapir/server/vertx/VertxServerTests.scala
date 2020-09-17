@@ -9,6 +9,7 @@ import io.vertx.scala.core.http.HttpServerOptions
 import io.vertx.scala.ext.web.{Route, Router}
 import org.scalatest.BeforeAndAfterEach
 import sttp.tapir._
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.{Port, PortCounter}
@@ -16,7 +17,7 @@ import sttp.tapir.tests.{Port, PortCounter}
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class VertxServerTests extends ServerTests[Future, String, Router => Route] with BeforeAndAfterEach {
+class VertxServerTests extends ServerTests[Future, Nothing, Any, Router => Route](NoStreams) with BeforeAndAfterEach {
 
   implicit val options: VertxEndpointOptions = VertxEndpointOptions()
     .logWhenHandled(true)
@@ -40,12 +41,12 @@ class VertxServerTests extends ServerTests[Future, String, Router => Route] with
   override def suspendResult[T](t: => T): Future[T] = Future(t)(VertxExecutionContext(vertx.getOrCreateContext()))
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, String, Future],
+      e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route =
     e.route(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, String], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route =
     e.routeRecoverErrors(fn)

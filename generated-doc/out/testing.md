@@ -18,7 +18,7 @@ Add the dependency:
 And the following imports:
 
 ```scala
-import sttp.client.testing.SttpBackendStub
+import sttp.client3.testing.SttpBackendStub
 import sttp.tapir.server.stub._
 ``` 
 
@@ -41,7 +41,7 @@ val endpoint = sttp.tapir.endpoint
 Convert any endpoint to `SttpBackendStub`:
 
 ```scala
-import sttp.client.monad.IdMonad
+import sttp.client3.monad.IdMonad
 
 implicit val backend = SttpBackendStub
   .apply(IdMonad)

@@ -44,14 +44,13 @@ object ObjectSchemasForEndpoints {
   private def calculateUniqueKeys(infos: Iterable[TSchemaType.SObjectInfo]): Map[TSchemaType.SObjectInfo, SchemaKey] = {
     case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, TSchemaType.SObjectInfo], infoToKey: Map[TSchemaType.SObjectInfo, SchemaKey])
     infos
-      .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) {
-        case (SchemaKeyAssignment1(keyToInfo, infoToKey), objectInfo) =>
-          val key = uniqueName(objectInfoToName(objectInfo), n => !keyToInfo.contains(n) || keyToInfo.get(n).contains(objectInfo))
+      .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) { case (SchemaKeyAssignment1(keyToInfo, infoToKey), objectInfo) =>
+        val key = uniqueName(objectInfoToName(objectInfo), n => !keyToInfo.contains(n) || keyToInfo.get(n).contains(objectInfo))
 
-          SchemaKeyAssignment1(
-            keyToInfo + (key -> objectInfo),
-            infoToKey + (objectInfo -> key)
-          )
+        SchemaKeyAssignment1(
+          keyToInfo + (key -> objectInfo),
+          infoToKey + (objectInfo -> key)
+        )
       }
       .infoToKey
   }
@@ -89,8 +88,8 @@ object ObjectSchemasForEndpoints {
   }
 
   private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator[_]): Seq[TypeData[_]] = {
-    st.schemas.collect {
-      case s @ TSchema(st: TSchemaType.SProduct, _, _, _, _) => TypeData(s, subtypeValidator(v, st.info))
+    st.schemas.collect { case s @ TSchema(st: TSchemaType.SProduct, _, _, _, _) =>
+      TypeData(s, subtypeValidator(v, st.info))
     }
   }
 
@@ -135,7 +134,7 @@ object ObjectSchemasForEndpoints {
       case EndpointIO.Header(_, codec, _)     => forCodec(codec)
       case EndpointIO.Headers(_, _)           => List.empty
       case EndpointIO.Body(_, codec, _)       => forCodec(codec)
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(codec, _, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, _, _)) =>
         objectSchemas(TypeData(codec.schema.getOrElse(TSchema(TSchemaType.SBinary)), Validator.pass))
       case EndpointIO.MappedPair(wrapped, _) => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)   => List.empty

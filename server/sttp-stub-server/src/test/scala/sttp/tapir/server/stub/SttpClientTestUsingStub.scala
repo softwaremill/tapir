@@ -1,14 +1,15 @@
 package sttp.tapir.server.stub
 
-import sttp.client._
-import sttp.client.monad.{IdMonad, MonadError}
-import sttp.client.testing.SttpBackendStub
+import sttp.client3._
+import sttp.client3.monad.IdMonad
+import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir.Endpoint
 import sttp.tapir.client.sttp._
 import sttp.tapir.tests._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.monad.MonadError
 
 class SttpClientTestUsingStub extends AnyFunSuite with Matchers {
   implicit val idMonad: MonadError[Identity] = IdMonad
@@ -29,11 +30,11 @@ class SttpClientTestUsingStub extends AnyFunSuite with Matchers {
     response.header("P2") shouldBe Some("b")
   }
 
-  def testClient[I, E, O](endpoint: Endpoint[I, E, O, Nothing], inputValue: I, outputValue: Either[E, O])(
+  def testClient[I, E, O](endpoint: Endpoint[I, E, O, Any], inputValue: I, outputValue: Either[E, O])(
       verifyResponse: Response[Either[E, O]] => Unit
   ): Unit = {
     test(s"calling $endpoint with $inputValue should result in $outputValue") {
-      implicit val backend: SttpBackendStub[Identity, Nothing, NothingT] = outputValue match {
+      val backend: SttpBackendStub[Identity, Any] = outputValue match {
         case Left(e) =>
           SttpBackendStub(idMonad)
             .whenRequestMatchesEndpoint(endpoint)
@@ -44,7 +45,7 @@ class SttpClientTestUsingStub extends AnyFunSuite with Matchers {
             .thenSuccess(o)
       }
       val response: Identity[Response[Either[E, O]]] =
-        backend.send(endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(inputValue))
+        endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(inputValue).send(backend)
       verifyResponse(response)
     }
   }

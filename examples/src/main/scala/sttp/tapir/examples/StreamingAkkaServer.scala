@@ -5,7 +5,8 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
-import sttp.client._
+import sttp.capabilities.akka.AkkaStreams
+import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
 
@@ -16,8 +17,8 @@ object StreamingAkkaServer extends App {
   // The endpoint: corresponds to GET /receive.
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` and the media type is `text/plain`.
-  val streamingEndpoint: Endpoint[Unit, Unit, Source[ByteString, Any], Source[ByteString, Any]] =
-    endpoint.get.in("receive").out(streamBody[Source[ByteString, Any]](schemaFor[String], CodecFormat.TextPlain()))
+  val streamingEndpoint: Endpoint[Unit, Unit, Source[ByteString, Any], AkkaStreams] =
+    endpoint.get.in("receive").out(streamBody(AkkaStreams, schemaFor[String], CodecFormat.TextPlain()))
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
   val testStream: Source[ByteString, Any] = Source.repeat("Hello!").take(10).map(s => ByteString(s))
@@ -29,8 +30,8 @@ object StreamingAkkaServer extends App {
 
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(streamingRoute).map { _ =>
     // testing
-    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
-    val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send().body
+    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send(backend).body
     println("Got result: " + result)
 
     assert(result == "Hello!" * 10)

@@ -20,13 +20,14 @@ import sttp.tapir.{DecodeResult, _}
 import sttp.tapir.tests._
 import TestUtil._
 import org.http4s.multipart
+import sttp.capabilities.Streams
 import sttp.model.{QueryParams, StatusCode}
 import sttp.tapir.model.UsernamePassword
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-trait ClientTests[S] extends AnyFunSuite with Matchers with BeforeAndAfterAll {
+abstract class ClientTests[S <: Streams[S]](val streams: S) extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   private val logger = org.log4s.getLogger
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -137,12 +138,12 @@ trait ClientTests[S] extends AnyFunSuite with Matchers with BeforeAndAfterAll {
 
   //
 
-  def mkStream(s: String): S
-  def rmStream(s: S): String
+  def mkStream(s: String): streams.BinaryStream
+  def rmStream(s: streams.BinaryStream): String
 
-  test(in_stream_out_stream[S].showDetail) {
+  test(in_stream_out_stream(streams).showDetail) {
     rmStream(
-      send(in_stream_out_stream[S], port, mkStream("mango cranberry"))
+      send(in_stream_out_stream(streams), port, mkStream("mango cranberry"))
         .unsafeRunSync()
         .right
         .get
@@ -190,9 +191,8 @@ trait ClientTests[S] extends AnyFunSuite with Matchers with BeforeAndAfterAll {
         val parts: Vector[multipart.Part[IO]] = mp.parts
         def toString(s: fs2.Stream[IO, Byte]): IO[String] = s.through(fs2.text.utf8Decode).compile.foldMonoid
         def partToString(name: String): IO[String] = parts.find(_.name.contains(name)).map(p => toString(p.body)).getOrElse(IO.pure(""))
-        partToString("fruit").product(partToString("amount")).flatMap {
-          case (fruit, amount) =>
-            Ok(s"$fruit=$amount")
+        partToString("fruit").product(partToString("amount")).flatMap { case (fruit, amount) =>
+          Ok(s"$fruit=$amount")
         }
       }
     case r @ POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))

@@ -8,6 +8,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
+import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, HeaderNames, Part}
 import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
@@ -41,7 +42,7 @@ private[akkahttp] object OutputToAkkaRoute {
       contentLength =>
         rawValueToResponseEntity(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), contentLength, v)
     override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): EntityFromLength =
-      contentLength => streamToEntity(formatToContentType(format, charset), contentLength, v.asInstanceOf[AkkaStream])
+      contentLength => streamToEntity(formatToContentType(format, charset), contentLength, v.asInstanceOf[AkkaStreams.BinaryStream])
   })
 
   private def rawValueToResponseEntity[CF <: CodecFormat, R](
@@ -67,7 +68,7 @@ private[akkahttp] object OutputToAkkaRoute {
     }
   }
 
-  private def streamToEntity(contentType: ContentType, contentLength: Option[Long], stream: AkkaStream): ResponseEntity = {
+  private def streamToEntity(contentType: ContentType, contentLength: Option[Long], stream: AkkaStreams.BinaryStream): ResponseEntity = {
     contentLength match {
       case None    => HttpEntity(contentType, stream)
       case Some(l) => HttpEntity(contentType, l, stream)
@@ -76,8 +77,8 @@ private[akkahttp] object OutputToAkkaRoute {
 
   private def rawPartToBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T]): Option[Multipart.FormData.BodyPart] = {
     m.partType(part.name).map { partType =>
-      val headers = part.headers.map {
-        case Header(hk, hv) => parseHeaderOrThrow(hk, hv)
+      val headers = part.headers.map { case Header(hk, hv) =>
+        parseHeaderOrThrow(hk, hv)
       }
 
       val partContentType = part.contentType.map(parseContentType).getOrElse(ContentTypes.`application/octet-stream`)
@@ -123,8 +124,8 @@ private[akkahttp] object OutputToAkkaRoute {
   private def overrideContentTypeIfDefined[RE <: ResponseEntity](re: RE, headers: Seq[HttpHeader]): RE = {
     import akka.http.scaladsl.model.headers.`Content-Type`
     headers
-      .collectFirst {
-        case `Content-Type`(ct) => ct
+      .collectFirst { case `Content-Type`(ct) =>
+        ct
       }
       .map(ct => re.withContentType(ct).asInstanceOf[RE])
       .getOrElse(re)

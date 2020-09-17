@@ -16,12 +16,12 @@ This adds the two extension methods to any `Endpoint`:
  - `toSttpRequestUnsafe(Uri)`: given the base URI returns a function, which might throw an exception if 
    decoding of the result fails
    ```scala
-   I => Request[Either[E, O], Nothing]
+   I => Request[Either[E, O], Any]
    ```
  - `toSttpRequest(Uri)`: given the base URI returns a function, which represents decoding errors as the `DecodeResult` 
    class
    ```scala
-   I => Request[DecodeResult[Either[E, O]], Nothing]
+   I => Request[DecodeResult[Either[E, O]], Any]
    ```
 
 Note that these are a one-argument functions, where the single argument is the input of end endpoint. This might be a 

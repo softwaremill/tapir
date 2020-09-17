@@ -25,7 +25,7 @@ object Endpoints {
   private val baseEndpoint = endpoint.errorOut(stringBody).in("books")
 
   // The path for this endpoint will be '/books/add', as we are using the base endpoint
-  val addBook: Endpoint[(Book, AuthToken), String, Unit, Nothing] = baseEndpoint.post
+  val addBook: Endpoint[(Book, AuthToken), String, Unit, Any] = baseEndpoint.post
     .in("add")
     .in(
       jsonBody[Book]
@@ -37,12 +37,12 @@ object Endpoints {
   // Re-usable parameter description
   private val limitParameter = query[Option[Int]]("limit").description("Maximum number of books to retrieve")
 
-  val booksListing: Endpoint[Limit, String, Vector[Book], Nothing] = baseEndpoint.get
+  val booksListing: Endpoint[Limit, String, Vector[Book], Any] = baseEndpoint.get
     .in("list" / "all")
     .in(limitParameter)
     .out(jsonBody[Vector[Book]])
 
-  val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book], Nothing] = baseEndpoint.get
+  val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
     .in(("list" / path[String]("genre").map(Some(_))(_.get)).and(limitParameter).mapTo(BooksQuery))
     .out(jsonBody[Vector[Book]])
 }
@@ -111,16 +111,16 @@ object BooksExample extends App with StrictLogging {
   }
 
   def makeClientRequest(): Unit = {
-    import sttp.client._
+    import sttp.client3._
     import sttp.tapir.client.sttp._
 
-    implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
+    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
-    val booksListingRequest: Request[Either[String, Vector[Book]], Nothing] = booksListing
+    val booksListingRequest: Request[Either[String, Vector[Book]], Any] = booksListing
       .toSttpRequestUnsafe(uri"http://localhost:8080")
       .apply(Option(3))
 
-    val result: Either[String, Vector[Book]] = booksListingRequest.send().body
+    val result: Either[String, Vector[Book]] = booksListingRequest.send(backend).body
 
     logger.info("Result of listing request with limit 3: " + result)
   }

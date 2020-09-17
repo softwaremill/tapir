@@ -8,10 +8,11 @@ import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import sttp.client._
+import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.http4s._
 import fs2._
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.HeaderNames
 
 import scala.concurrent.ExecutionContext
@@ -25,7 +26,7 @@ object StreamingHttp4sFs2Server extends App {
   val streamingEndpoint = endpoint.get
     .in("receive")
     .out(header[Long](HeaderNames.ContentLength))
-    .out(streamBody[Stream[IO, Byte]](schemaFor[String], CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
+    .out(streamBody(Fs2Streams[IO], schemaFor[String], CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
 
   // mandatory implicits
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -54,8 +55,8 @@ object StreamingHttp4sFs2Server extends App {
     .resource
     .use { _ =>
       IO {
-        implicit val backend: SttpBackend[Identity, Nothing, NothingT] = HttpURLConnectionBackend()
-        val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send().body
+        val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+        val result: String = basicRequest.response(asStringAlways).get(uri"http://localhost:8080/receive").send(backend).body
         println("Got result: " + result)
 
         assert(result == "abcd" * 25)

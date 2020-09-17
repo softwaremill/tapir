@@ -32,7 +32,7 @@ import scala.concurrent.Future
 
 implicit val options: VertxEndpointOptions = ???
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? 
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
 val aRoute: Router => Route = anEndpoint.route((logic _).tupled)
 ```
 
@@ -53,7 +53,7 @@ object Main {
     val vertx = Vertx.vertx()
     val server = vertx.createHttpServer()
     val router = Router.router(vertx)
-    val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ??? // your definition here
+    val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? // your definition here
     def logic(s: String, i: Int): Future[Either[Unit, String]] = ??? // your logic here 
     val attach = anEndpoint.route((logic _).tupled)
     attach(router) // your endpoint is now attached to the router, and the route has been created

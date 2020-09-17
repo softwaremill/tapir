@@ -53,7 +53,7 @@ import com.twitter.util.Future
 def countCharacters(s: String): Future[Either[Unit, Int]] =
   Future.value(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] =
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
 val countCharactersRoute: FinatraRoute = countCharactersEndpoint.toRoute(countCharacters)
@@ -70,7 +70,7 @@ import sttp.tapir.server.finatra.cats._
 def countCharacters(s: String): IO[Either[Unit, Int]] =
   IO.pure(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] =
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
 val countCharactersRoute: FinatraRoute = countCharactersEndpoint.toRoute(countCharacters)
@@ -85,7 +85,7 @@ import sttp.tapir.server.finatra._
 import com.twitter.util.Future
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Nothing] = ???
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
 val aRoute: FinatraRoute = anEndpoint.toRoute((logic _).tupled)
 ```
 

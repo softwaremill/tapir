@@ -1,7 +1,7 @@
 package sttp.tapir.integ.cats
 
 import cats.~>
-import sttp.tapir.monad.MonadError
+import sttp.monad.MonadError
 
 trait MonadErrorSyntax {
   implicit class MonadErrorImapK[F[_]](mef: MonadError[F]) {
@@ -15,10 +15,12 @@ trait MonadErrorSyntax {
 
         override def error[T](t: Throwable): G[T] = fk(mef.error(t))
 
-        override def handleError[T](rt: G[T])(h: PartialFunction[Throwable, G[T]]): G[T] =
+        override protected def handleWrappedError[T](rt: G[T])(h: PartialFunction[Throwable, G[T]]): G[T] =
           fk(mef.handleError(gK(rt)) {
             case t if h.isDefinedAt(t) => gK(h(t))
           })
+
+        override def ensure[T](f: G[T], e: => G[Unit]): G[T] = fk(mef.ensure(gK(f), gK(e)))
       }
   }
 }

@@ -2,20 +2,21 @@ package sttp.tapir.server.http4s
 
 import cats.~>
 import cats.data._
-import cats.effect.{ContextShift, Sync}
+import cats.effect.{Concurrent, ContextShift, Sync}
 import cats.syntax.all._
-import org.http4s.{EntityBody, HttpRoutes, Http, Request, Response}
+import org.http4s.{Http, HttpRoutes, Request, Response}
 import org.log4s._
-import sttp.tapir.monad.MonadError
 import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import cats.arrow.FunctionK
+import sttp.capabilities.fs2.Fs2Streams
+import sttp.monad.MonadError
 
 class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
-  def toHttp[I, E, O, G[_]: Sync](t: F ~> G, se: ServerEndpoint[I, E, O, EntityBody[F], G]): Http[OptionT[G, *], F] = {
+  def toHttp[I, E, O, G[_]: Sync](t: F ~> G, se: ServerEndpoint[I, E, O, Fs2Streams[F], G]): Http[OptionT[G, *], F] = {
     def decodeBody(req: Request[F], result: DecodeInputsResult): G[DecodeInputsResult] = {
       result match {
         case values: DecodeInputsResult.Values =>
@@ -42,8 +43,8 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
           case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
         }
         .flatTap { response => t(serverOptions.logRequestHandling.requestHandled(se.endpoint, response.status.code)) }
-        .onError {
-          case e: Exception => t(serverOptions.logRequestHandling.logicException(se.endpoint, e))
+        .onError { case e: Exception =>
+          t(serverOptions.logRequestHandling.logicException(se.endpoint, e))
         }
     }
 
@@ -59,16 +60,16 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
     )
   }
 
-  def toHttp[G[_]: Sync](t: F ~> G)(se: List[ServerEndpoint[_, _, _, EntityBody[F], G]]): Http[OptionT[G, *], F] =
+  def toHttp[G[_]: Sync](t: F ~> G)(se: List[ServerEndpoint[_, _, _, Fs2Streams[F], G]]): Http[OptionT[G, *], F] =
     NonEmptyList.fromList(se.map(se => toHttp(t, se))) match {
       case Some(routes) => routes.reduceK
       case None         => Kleisli(_ => OptionT.none)
     }
 
-  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, EntityBody[F], F]): HttpRoutes[F] =
+  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, Fs2Streams[F], F]): HttpRoutes[F] =
     toHttp(FunctionK.id[F], se)
 
-  def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, EntityBody[F], F]]): HttpRoutes[F] =
+  def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F], F]]): HttpRoutes[F] =
     toHttp(FunctionK.id[F])(serverEndpoints)
 
   private def handleDecodeFailure[I](
@@ -89,12 +90,16 @@ class EndpointToHttp4sServer[F[_]: Sync: ContextShift](serverOptions: Http4sServ
   }
 }
 
-private[http4s] class CatsMonadError[F[_]](implicit F: cats.MonadError[F, Throwable]) extends MonadError[F] {
+private[http4s] class CatsMonadError[F[_]](implicit F: Sync[F]) extends MonadError[F] {
   override def unit[T](t: T): F[T] = F.pure(t)
   override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
   override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
   override def error[T](t: Throwable): F[T] = F.raiseError(t)
-  override def handleError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
+  override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
+  override def eval[T](t: => T): F[T] = F.delay(t)
+  override def suspend[T](t: => F[T]): F[T] = F.suspend(t)
+  override def flatten[T](ffa: F[F[T]]): F[T] = F.flatten(ffa)
+  override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guarantee(f)(e)
 }
 
 object EndpointToHttp4sServer {

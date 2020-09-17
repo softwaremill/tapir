@@ -1,6 +1,7 @@
 package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.server._
+import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.ReplaceFirstInTuple
