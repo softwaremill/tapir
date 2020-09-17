@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Route
 import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
-import sttp.client._
+import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
 

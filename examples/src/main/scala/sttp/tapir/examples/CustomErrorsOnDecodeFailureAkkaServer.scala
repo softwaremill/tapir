@@ -8,7 +8,7 @@ import sttp.tapir.server.akkahttp._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import sttp.client._
+import sttp.client3._
 import sttp.tapir.server.{DecodeFailureHandling, ServerDefaults}
 
 object CustomErrorsOnDecodeFailureAkkaServer extends App {

@@ -4,7 +4,7 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
 import sttp.capabilities.Streams
-import sttp.client._
+import sttp.client3._
 import sttp.model.Uri.PathSegment
 import sttp.model.{HeaderNames, Method, Part, Uri}
 import sttp.tapir.Codec.PlainCodec

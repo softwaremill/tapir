@@ -1,8 +1,8 @@
 package sttp.tapir.server.stub
 
-import sttp.client._
-import sttp.client.monad.IdMonad
-import sttp.client.testing.SttpBackendStub
+import sttp.client3._
+import sttp.client3.monad.IdMonad
+import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir.Endpoint
 import sttp.tapir.client.sttp._

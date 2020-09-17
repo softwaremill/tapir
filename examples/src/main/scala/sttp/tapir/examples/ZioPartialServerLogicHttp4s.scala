@@ -4,8 +4,8 @@ import org.http4s._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import sttp.client._
-import sttp.client.asynchttpclient.zio.AsyncHttpClientZioBackend
+import sttp.client3._
+import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
 import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._

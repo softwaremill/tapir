@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Directives
 import akka.http.scaladsl.server.Directives._
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import sttp.client._
+import sttp.client3._
 import com.typesafe.scalalogging.StrictLogging
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.{Endpoint, endpoint, stringBody}

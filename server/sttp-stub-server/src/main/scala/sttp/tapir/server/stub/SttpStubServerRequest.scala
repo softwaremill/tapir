@@ -2,7 +2,7 @@ package sttp.tapir.server.stub
 
 import java.net.URI
 
-import sttp.client.Request
+import sttp.client3.Request
 import sttp.model.Method
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 

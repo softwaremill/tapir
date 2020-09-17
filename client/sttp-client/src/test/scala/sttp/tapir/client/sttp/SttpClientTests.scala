@@ -4,8 +4,8 @@ import cats.effect.{Blocker, ContextShift, IO}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
-import sttp.client._
-import sttp.client.asynchttpclient.fs2.AsyncHttpClientFs2Backend
+import sttp.client3._
+import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 
 import scala.concurrent.ExecutionContext
 

@@ -8,7 +8,7 @@ import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import sttp.client._
+import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.http4s._
 import fs2._

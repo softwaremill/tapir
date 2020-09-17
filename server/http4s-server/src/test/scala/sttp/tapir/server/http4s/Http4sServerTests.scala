@@ -11,7 +11,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.Endpoint
 import sttp.tapir._
-import sttp.client._
+import sttp.client3._
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.{Port, PortCounter}
 

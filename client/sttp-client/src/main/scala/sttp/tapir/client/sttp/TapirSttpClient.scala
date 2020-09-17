@@ -1,6 +1,6 @@
 package sttp.tapir.client.sttp
 
-import sttp.client.Request
+import sttp.client3.Request
 import sttp.model.Uri
 import sttp.tapir.{DecodeResult, Endpoint}
 

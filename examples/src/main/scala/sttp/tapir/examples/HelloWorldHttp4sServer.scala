@@ -1,7 +1,7 @@
 package sttp.tapir.examples
 
 import cats.effect._
-import sttp.client._
+import sttp.client3._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder

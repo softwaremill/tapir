@@ -149,7 +149,7 @@ object BooksExample extends App with StrictLogging {
   }
 
   def makeClientRequest(): Unit = {
-    import sttp.client._
+    import sttp.client3._
     import sttp.tapir.client.sttp._
 
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()

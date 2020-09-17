@@ -1,9 +1,9 @@
 package sttp.tapir.server.stub
 
 import io.circe.generic.auto._
-import sttp.client._
-import sttp.client.monad._
-import sttp.client.testing.SttpBackendStub
+import sttp.client3._
+import sttp.client3.monad._
+import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.json.circe._

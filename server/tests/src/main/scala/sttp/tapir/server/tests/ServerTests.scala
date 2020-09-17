@@ -7,8 +7,8 @@ import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource}
 import cats.implicits._
 import com.typesafe.scalalogging.StrictLogging
-import sttp.client._
-import sttp.client.asynchttpclient.cats.AsyncHttpClientCatsBackend
+import sttp.client3._
+import sttp.client3.asynchttpclient.cats.AsyncHttpClientCatsBackend
 import io.circe.generic.auto._
 import org.scalatest.{Assertion, BeforeAndAfterAll}
 import sttp.model._

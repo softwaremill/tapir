@@ -8,7 +8,7 @@ import sttp.tapir.server.akkahttp._
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
-import sttp.client._
+import sttp.client3._
 
 object HelloWorldAkkaServer extends App {
   // the endpoint: single fixed path input ("hello"), single query parameter

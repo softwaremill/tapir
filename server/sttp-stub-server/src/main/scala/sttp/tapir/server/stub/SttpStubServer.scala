@@ -2,8 +2,8 @@ package sttp.tapir.server.stub
 
 import java.nio.charset.Charset
 
-import sttp.client.RequestMetadata
-import sttp.client.testing.SttpBackendStub
+import sttp.client3.RequestMetadata
+import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.server.internal.{
@@ -86,7 +86,7 @@ trait SttpStubServer {
         }
         val outputValues = new EncodeOutputs[Any](encodeOutputBody).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
         whenRequest.thenRespond(
-          sttp.client.Response(
+          sttp.client3.Response(
             outputValues.body.getOrElse(()),
             outputValues.statusCode.getOrElse(statusCode),
             "",
