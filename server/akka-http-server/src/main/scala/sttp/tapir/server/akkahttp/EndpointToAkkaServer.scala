@@ -4,6 +4,8 @@ import akka.http.scaladsl.model.{MediaType => _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
+import sttp.capabilities.akka.AkkaStreams
+import sttp.monad.FutureMonad
 import sttp.tapir._
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
 
@@ -29,7 +31,7 @@ class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
     *
     * If type `I` is a tuple, and `logic` has 1 parameter per tuple member, use {{{completion((logic _).tupled(input))}}}
     */
-  def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaStream]): Directive[(I, Future[Either[E, O]] => Route)] = {
+  def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaStreams]): Directive[(I, Future[Either[E, O]] => Route)] = {
     toDirective1(e).flatMap { (values: I) =>
       extractLog.flatMap { log =>
         val completion: Future[Either[E, O]] => Route = result =>

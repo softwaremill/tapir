@@ -10,7 +10,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 
 trait TapirAkkaHttpServer {
-  implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStream])(implicit serverOptions: AkkaHttpServerOptions) {
+  implicit class RichAkkaHttpEndpoint[I, E, O](e: Endpoint[I, E, O, AkkaStreams])(implicit serverOptions: AkkaHttpServerOptions) {
     def toDirective: Directive[(I, Future[Either[E, O]] => Route)] =
       new EndpointToAkkaServer(serverOptions).toDirective(e)
 
@@ -24,7 +24,7 @@ trait TapirAkkaHttpServer {
     }
   }
 
-  implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStream, Future])(implicit
+  implicit class RichAkkaHttpServerEndpoint[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, AkkaStreams, Future])(implicit
       serverOptions: AkkaHttpServerOptions
   ) {
     def toDirective: Directive[(I, Future[Either[E, O]] => Route)] =
@@ -33,7 +33,7 @@ trait TapirAkkaHttpServer {
     def toRoute: Route = new EndpointToAkkaServer(serverOptions).toRoute(serverEndpoint)
   }
 
-  implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStream, Future]])(implicit
+  implicit class RichAkkaHttpServerEndpoints(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams, Future]])(implicit
       serverOptions: AkkaHttpServerOptions
   ) {
     def toRoute: Route = {

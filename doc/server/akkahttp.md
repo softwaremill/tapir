@@ -80,7 +80,7 @@ import akka.http.scaladsl.server.Route
 def countCharacters(s: String): Future[Either[Unit, Int]] = 
   Future.successful(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] = 
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
   
 val countCharactersRoute: Route = countCharactersEndpoint.toDirective { (input, completion) =>
@@ -132,7 +132,7 @@ import scala.concurrent.Future
 def countCharacters(s: String): Future[Either[Unit, Int]] =
   Future.successful(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Nothing] =
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
 
 case class User(email: String)
