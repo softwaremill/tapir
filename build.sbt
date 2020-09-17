@@ -190,11 +190,12 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
     name := "tapir-refined",
     libraryDependencies ++= Seq(
       "eu.timepit" %% "refined" % Versions.refined,
-      scalaTest % Test
+      scalaTest % Test,
+      "io.circe" %% "circe-refined" % Versions.circe % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core)
+  .dependsOn(core, circeJson % "test->compile")
 
 lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
   .settings(commonSettings)
