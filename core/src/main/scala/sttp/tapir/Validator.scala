@@ -130,7 +130,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       }
     }
   }
-  case class Custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String]) extends Validator.Single[T] {
+  case class Custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String] = None) extends Validator.Single[T] {
     override def validate(t: T): List[ValidationError[_]] = {
       doValidate(t)
     }
@@ -237,17 +237,15 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
         case Enum(possibleValues, _)   => Some(s"in(${possibleValues.mkString(",")}")
         case CollectionElements(el, _) => recurse(el).map(se => s"elements($se)")
         case Product(fields) =>
-          fields.flatMap {
-            case (n, f) =>
-              recurse(f.validator).map(n -> _)
+          fields.flatMap { case (n, f) =>
+            recurse(f.validator).map(n -> _)
           }.toList match {
             case Nil => None
             case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
           }
         case c @ Coproduct(_) =>
-          c.subtypes.flatMap {
-            case (n, v) =>
-              recurse(v).map(n -> _)
+          c.subtypes.flatMap { case (n, v) =>
+            recurse(v).map(n -> _)
           }.toList match {
             case Nil => None
             case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
