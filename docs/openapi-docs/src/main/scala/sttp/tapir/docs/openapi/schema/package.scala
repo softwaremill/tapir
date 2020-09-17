@@ -32,6 +32,7 @@ package object schema {
       case Validator.Product(_)                    => Nil
       case Validator.Coproduct(_)                  => Nil
       case Validator.OpenProduct(_)                => Nil
+      case Validator.Custom(_)                     => Nil
       case bv: Validator.Primitive[_]              => List(bv)
     }
   }

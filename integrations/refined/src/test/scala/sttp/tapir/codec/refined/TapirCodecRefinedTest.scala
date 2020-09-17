@@ -18,7 +18,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
   "Generated codec" should "return DecodResult.Invalid if subtype can't be refined with correct tapir validator if available" in {
     val expectedValidator: Validator[String] = Validator.minLength(1)
     nonEmptyStringCodec.decode("") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(validator, "", _))) if validator == expectedValidator =>
+      case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, "", _))) if validator == expectedValidator =>
     }
   }
 
@@ -32,7 +32,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
 
     val expectedMsg = refineV[IPv4]("192.168.0.1000").left.get
     IPStringCodec.decode("192.168.0.1000") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(Validator.Custom(_, `expectedMsg`), "192.168.0.1000", _))) =>
+      case DecodeResult.InvalidValue(List(ValidationError.Custom("192.168.0.1000", `expectedMsg`, _))) =>
     }
   }
 
@@ -43,7 +43,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
 
     val expectedValidator: Validator[String] = Validator.pattern("[a-zA-Z][-a-zA-Z0-9_]*")
     identifierCodec.decode("-bad") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(validator, "-bad", _))) if validator == expectedValidator =>
+      case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, "-bad", _))) if validator == expectedValidator =>
     }
   }
 
@@ -54,7 +54,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
 
     val expectedValidator: Validator[Int] = Validator.max(3, exclusive = true)
     limitedIntCodec.decode("3") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(validator, 3, _))) if validator == expectedValidator =>
+      case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, 3, _))) if validator == expectedValidator =>
     }
   }
 
@@ -65,7 +65,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
 
     val expectedValidator: Validator[Int] = Validator.max(3)
     limitedIntCodec.decode("4") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(validator, 4, _))) if validator == expectedValidator =>
+      case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, 4, _))) if validator == expectedValidator =>
     }
   }
 
@@ -76,7 +76,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
 
     val expectedValidator: Validator[Int] = Validator.min(3, exclusive = true)
     limitedIntCodec.decode("3") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(validator, 3, _))) if validator == expectedValidator =>
+      case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, 3, _))) if validator == expectedValidator =>
     }
   }
 
@@ -87,7 +87,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
 
     val expectedValidator: Validator[Int] = Validator.min(3)
     limitedIntCodec.decode("2") should matchPattern {
-      case DecodeResult.InvalidValue(List(ValidationError(validator, 2, _))) if validator == expectedValidator =>
+      case DecodeResult.InvalidValue(List(ValidationError.Primitive(validator, 2, _))) if validator == expectedValidator =>
     }
   }
 
