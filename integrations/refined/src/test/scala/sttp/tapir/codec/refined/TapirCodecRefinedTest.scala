@@ -95,30 +95,24 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     type IntConstraint = Greater[W.`3`.T]
     type LimitedInt = Int Refined IntConstraint
 
-    implicitly[Validator[LimitedInt]] should matchPattern {
-      case Validator.Mapped(Validator.Min(3, true), _) =>
+    implicitly[Validator[LimitedInt]] should matchPattern { case Validator.Mapped(Validator.Min(3, true), _) =>
     }
   }
 
-  "TapirCodecRefined" should "provide implicit schema so that endpoints can use refined types" in {
-    """
-      |import io.circe.refined._
-      |import sttp.tapir
-      |import sttp.tapir._
-      |import sttp.tapir.json.circe._
-      |
-      |object TapirCodecRefinedDeepImplicitSearch extends TapirCodecRefined with TapirJsonCirce {
-      |  type StringConstraint = MatchesRegex[W.`"[^\u0000-\u001f]{1,29}"`.T]
-      |  type LimitedString    = String Refined StringConstraint
-      |
-      |  val refinedEndpoint:
-      |   Endpoint[(LimitedString, List[LimitedString]), Unit, List[Option[LimitedString]], Nothing] =
-      |    tapir
-      |      .endpoint
-      |      .post
-      |      .in(path[LimitedString]("ls") / jsonBody[List[LimitedString]])
-      |      .out(jsonBody[List[Option[LimitedString]]])
-      |}
-      |""".stripMargin should compile
+  "TapirCodecRefined" should "compile using implicit schema for refined types" in {
+    import io.circe.refined._
+    import sttp.tapir
+    import sttp.tapir._
+    import sttp.tapir.json.circe._
+
+    object TapirCodecRefinedDeepImplicitSearch extends TapirCodecRefined with TapirJsonCirce {
+      type StringConstraint = MatchesRegex[W.`"[^\u0000-\u001f]{1,29}"`.T]
+      type LimitedString = String Refined StringConstraint
+
+      val refinedEndpoint: Endpoint[(LimitedString, List[LimitedString]), Unit, List[Option[LimitedString]], Nothing] =
+        tapir.endpoint.post
+          .in(path[LimitedString]("ls") / jsonBody[List[LimitedString]])
+          .out(jsonBody[List[Option[LimitedString]]])
+    }
   }
 }

@@ -195,7 +195,7 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, circeJson % "test->compile")
+  .dependsOn(core, circeJson % Test)
 
 lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
   .settings(commonSettings)
