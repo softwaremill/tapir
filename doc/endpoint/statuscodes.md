@@ -52,8 +52,7 @@ dynamically assembled (e.g. using a default set of cases, plus endpoint-specific
 
 ## Status mapping and type erasure
 
-Type erasure may prevent a status mapping from working properly. In the following example, `Right[NotFound]` and `Right[BadRequest]` will 
-become `Right[Any]`:
+Type erasure may prevent a status mapping from working properly. The following example will fail at compile time because `Right[NotFound]` and `Right[BadRequest]` will become `Right[Any]`:
 
 ```scala mdoc:fail
 import sttp.tapir._
