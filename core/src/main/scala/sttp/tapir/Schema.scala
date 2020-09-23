@@ -14,6 +14,8 @@ import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
 import sttp.tapir.generic.Derived
 import sttp.tapir.internal.ModifySchemaMacro
 
+import scala.annotation.StaticAnnotation
+
 /**
   * Describes the shape of the low-level, "raw" representation of type `T`.
   * @param format The name of the format of the low-level representation of `T`.
@@ -76,6 +78,14 @@ case class Schema[T](
         copy(schemaType = schemaType2)
     }
 }
+
+class description(val text: String) extends StaticAnnotation
+
+class format(val format: String) extends StaticAnnotation
+
+class deprecated extends StaticAnnotation
+
+class name(val name: String) extends StaticAnnotation
 
 object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
   val ModifyCollectionElements = "each"
