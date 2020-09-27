@@ -2,10 +2,11 @@ package sttp.tapir
 
 import java.math.{BigDecimal => JBigDecimal}
 import java.time._
+import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.{Date, UUID}
 
-import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateJdk8, arbLocalDateTimeJdk8, genZonedDateTimeWithZone}
+import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateTimeJdk8, genZonedDateTimeWithZone}
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.Assertion
 import org.scalatestplus.scalacheck.Checkers
@@ -73,13 +74,7 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     checkEncodeDecodeToString[Uri]
     checkEncodeDecodeToString[BigDecimal]
     checkEncodeDecodeToString[JBigDecimal]
-    checkEncodeDecodeToString[LocalTime]
-    checkEncodeDecodeToString[LocalDate]
-    checkEncodeDecodeToString[OffsetDateTime]
-    checkEncodeDecodeToString[Instant]
-    checkEncodeDecodeToString[ZoneOffset]
     checkEncodeDecodeToString[Duration]
-    checkEncodeDecodeToString[OffsetTime]
     checkEncodeDecodeToString[SDuration]
   }
 
@@ -90,7 +85,9 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
   }
 
   it should "decode LocalDateTime from string with timezone" in {
-    check((zdt: ZonedDateTime) => localDateTimeCodec.decode(zdt.toOffsetDateTime.toString) == Value(zdt.toLocalDateTime))
+    check((zdt: ZonedDateTime) =>
+      localDateTimeCodec.decode(DateTimeFormatter.ISO_ZONED_DATE_TIME.format(zdt)) == Value(zdt.toLocalDateTime)
+    )
   }
 
   it should "correctly encode and decode ZonedDateTime" in {
@@ -110,7 +107,8 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
   it should "correctly encode and decode example Instants" in {
     val codec = implicitly[Codec[String, Instant, TextPlain]]
     codec.encode(Instant.ofEpochMilli(1583760958000L)) shouldBe "2020-03-09T13:35:58Z"
-    codec.decode("2020-02-19T12:35:58Z") shouldBe (Value(Instant.ofEpochMilli(1582115758000L)))
+    codec.encode(Instant.EPOCH) shouldBe "1970-01-01T00:00:00Z"
+    codec.decode("2020-02-19T12:35:58Z") shouldBe Value(Instant.ofEpochMilli(1582115758000L))
   }
 
   it should "correctly encode and decode example Durations" in {
