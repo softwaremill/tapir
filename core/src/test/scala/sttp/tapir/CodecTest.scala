@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.{Date, UUID}
 
-import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateTimeJdk8, genZonedDateTimeWithZone}
+import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateJdk8, arbLocalDateTimeJdk8, genZonedDateTimeWithZone}
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.Assertion
 import org.scalatestplus.scalacheck.Checkers
@@ -94,21 +94,31 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     val codec = implicitly[Codec[String, ZonedDateTime, TextPlain]]
     codec.encode(ZonedDateTime.of(LocalDateTime.of(2010, 9, 22, 14, 32, 1), ZoneOffset.ofHours(5))) shouldBe "2010-09-22T14:32:01+05:00"
     codec.encode(ZonedDateTime.of(LocalDateTime.of(2010, 9, 22, 14, 32, 1), ZoneOffset.UTC)) shouldBe "2010-09-22T14:32:01Z"
-    check((zdt: ZonedDateTime) => codec.decode(codec.encode(zdt)) == Value(zdt))
+    check { zdt: ZonedDateTime =>
+      val encoded = codec.encode(zdt)
+      codec.decode(encoded) == Value(zdt) && ZonedDateTime.parse(encoded) == zdt
+    }
   }
 
   it should "correctly encode and decode OffsetDateTime" in {
     val codec = implicitly[Codec[String, OffsetDateTime, TextPlain]]
     codec.encode(OffsetDateTime.of(LocalDateTime.of(2019, 12, 31, 23, 59, 14), ZoneOffset.ofHours(5))) shouldBe "2019-12-31T23:59:14+05:00"
     codec.encode(OffsetDateTime.of(LocalDateTime.of(2020, 9, 22, 14, 32, 1), ZoneOffset.ofHours(0))) shouldBe "2020-09-22T14:32:01Z"
-    check((odt: OffsetDateTime) => codec.decode(codec.encode(odt)) == Value(odt))
+    check { odt: OffsetDateTime =>
+      val encoded = codec.encode(odt)
+      codec.decode(encoded) == Value(odt) && OffsetDateTime.parse(encoded) == odt
+    }
   }
 
-  it should "correctly encode and decode example Instants" in {
+  it should "correctly encode and decode Instant" in {
     val codec = implicitly[Codec[String, Instant, TextPlain]]
     codec.encode(Instant.ofEpochMilli(1583760958000L)) shouldBe "2020-03-09T13:35:58Z"
     codec.encode(Instant.EPOCH) shouldBe "1970-01-01T00:00:00Z"
     codec.decode("2020-02-19T12:35:58Z") shouldBe Value(Instant.ofEpochMilli(1582115758000L))
+    check { i: Instant =>
+      val encoded = codec.encode(i)
+      codec.decode(encoded) == Value(i) && Instant.parse(encoded) == i
+    }
   }
 
   it should "correctly encode and decode example Durations" in {
@@ -116,6 +126,10 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     val start = OffsetDateTime.parse("2020-02-19T12:35:58Z")
     codec.encode(Duration.between(start, start.plusDays(791).plusDays(12).plusSeconds(3))) shouldBe "PT19272H3S"
     codec.decode("PT3H15S") shouldBe Value(Duration.of(10815000, ChronoUnit.MILLIS))
+    check { d: Duration =>
+      val encoded = codec.encode(d)
+      codec.decode(encoded) == Value(d) && Duration.parse(encoded) == d
+    }
   }
 
   it should "correctly encode and decode example ZoneOffsets" in {
@@ -130,15 +144,43 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     codec.encode(OffsetTime.parse("13:45:30.123456789+02:00")) shouldBe "13:45:30.123456789+02:00"
     codec.decode("12:00-11:30") shouldBe Value(OffsetTime.of(12, 0, 0, 0, ZoneOffset.ofHoursMinutes(-11, -30)))
     codec.decode("06:15Z") shouldBe Value(OffsetTime.of(6, 15, 0, 0, ZoneOffset.UTC))
+    check { ot: OffsetTime =>
+      val encoded = codec.encode(ot)
+      codec.decode(encoded) == Value(ot) && OffsetTime.parse(encoded) == ot
+    }
   }
 
   it should "correctly encode and decode Date" in {
     val codec = implicitly[Codec[String, Date, TextPlain]]
-    check((d: Date) => codec.decode(codec.encode(d)) == Value(d))
+    check { d: Date =>
+      val encoded = codec.encode(d)
+      codec.decode(encoded) == Value(d) && Date.from(Instant.parse(encoded)) == d
+    }
   }
 
   it should "decode LocalDateTime from string without timezone" in {
     check((ldt: LocalDateTime) => localDateTimeCodec.decode(ldt.toString) == Value(ldt))
+  }
+
+  it should "correctly encode and decode LocalTime" in {
+    val codec = implicitly[Codec[String, LocalTime, TextPlain]]
+    codec.encode(LocalTime.of(22, 59, 31, 3)) shouldBe "22:59:31.000000003"
+    codec.encode(LocalTime.of(13, 30)) shouldBe "13:30:00"
+    codec.decode("22:59:31.000000003") shouldBe Value(LocalTime.of(22, 59, 31, 3))
+    check { lt: LocalTime =>
+      val encoded = codec.encode(lt)
+      codec.decode(encoded) == Value(lt) && LocalTime.parse(encoded) == lt
+    }
+  }
+
+  it should "correctly encode and decode LocalDate" in {
+    val codec = implicitly[Codec[String, LocalDate, TextPlain]]
+    codec.encode(LocalDate.of(2019, 12, 31)) shouldBe "2019-12-31"
+    codec.encode(LocalDate.of(2020, 9, 22)) shouldBe "2020-09-22"
+    check { ld: LocalDate =>
+      val encoded = codec.encode(ld)
+      codec.decode(encoded) == Value(ld) && LocalDate.parse(encoded) == ld
+    }
   }
 
   def checkEncodeDecodeToString[T: Arbitrary](implicit c: Codec[String, T, TextPlain], ct: ClassTag[T]): Assertion =
