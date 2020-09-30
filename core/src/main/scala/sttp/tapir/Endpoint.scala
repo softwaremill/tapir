@@ -58,10 +58,10 @@ trait EndpointInputsOps[I, E, O, -R] {
   def prependIn[J, JI](i: EndpointInput[J])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[JI, E, O, R] =
     withInput(i.and(input))
 
-  def in[J, IJ, R2](i: StreamingEndpointIO[J, R2])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[IJ, E, O, R with R2] =
+  def in[J, IJ, R2](i: StreamBody[_, J, R2])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[IJ, E, O, R with R2] =
     withInput(input.and(i.toEndpointIO))
 
-  def prependIn[J, JI, R2](i: StreamingEndpointIO[J, R2])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[JI, E, O, R with R2] =
+  def prependIn[J, JI, R2](i: StreamBody[_, J, R2])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[JI, E, O, R with R2] =
     withInput(i.toEndpointIO.and(input))
 
   def mapIn[II](m: Mapping[I, II]): EndpointType[II, E, O, R] =
@@ -121,8 +121,11 @@ trait EndpointOutputsOps[I, E, O, -R] {
   def prependOut[P, PO](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
     withOutput(i.and(output))
 
-  def out[P, OP, R2](i: StreamingEndpointIO[P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R with R2] =
+  def out[P, OP, R2](i: StreamBody[_, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R with R2] =
     withOutput(output.and(i.toEndpointIO))
+
+  def prependOut[P, PO, R2](i: StreamBody[_, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
+    withOutput(i.toEndpointIO.and(output))
 
   def mapOut[OO](m: Mapping[O, OO]): EndpointType[I, E, OO, R] =
     withOutput(output.map(m))

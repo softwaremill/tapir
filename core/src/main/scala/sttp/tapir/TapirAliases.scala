@@ -33,8 +33,8 @@ trait TapirAliases {
   type EndpointIO[I] = sttp.tapir.EndpointIO[I]
   val EndpointIO = sttp.tapir.EndpointIO
 
-  type StreamingEndpointIO[I, -R] = sttp.tapir.StreamingEndpointIO[I, R]
-  val StreamingEndpointIO = sttp.tapir.StreamingEndpointIO
+  type StreamBody[BS, T, S] = sttp.tapir.StreamBody[BS, T, S]
+  val StreamBody = sttp.tapir.StreamBody
 
   /** package.scala */
   type RawPart = sttp.tapir.RawPart

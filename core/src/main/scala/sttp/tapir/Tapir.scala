@@ -105,8 +105,8 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
       schema: Schema[_],
       format: CodecFormat,
       charset: Option[Charset] = None
-  ): StreamingEndpointIO.Body[S, s.BinaryStream, s.BinaryStream] =
-    StreamingEndpointIO.Body(s, Codec.id(format, Some(schema.as[s.BinaryStream])), EndpointIO.Info.empty, charset)
+  ): StreamBody[s.BinaryStream, s.BinaryStream, S] =
+    StreamBody(s, Codec.id(format, Some(schema.as[s.BinaryStream])), EndpointIO.Info.empty, charset)
 
   /**
     * A body in any format, read using the given `codec`, from a raw string read using UTF-8.
