@@ -91,7 +91,7 @@ Automatic codec derivation usually requires other implicits, such as:
 ## Schema derivation
 
 For case classes types, `Schema[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
-that schemas are defined for all of the case class's fields. It is possible to configure the automatic derivation to use
+that schemas are defined for all the case class's fields. It is possible to configure the automatic derivation to use
 snake-case, kebab-case or a custom field naming policy, by providing an implicit `sttp.tapir.generic.Configuration` value:
 
 ```scala mdoc:silent
@@ -100,13 +100,6 @@ import sttp.tapir.generic.Configuration
 implicit val customConfiguration: Configuration =
   Configuration.default.withSnakeCaseMemberNames
 ```
-
-The automatic derivation can also be customized using following annotations:
-
-* `@encodedName` sets name for case class's field which is used in documentation (for example, OpenAPI)
-* `@description` sets description for case class or its field
-* `@format` modifies format for case class's field
-* `@deprecated` marks case class's field as deprecated
 
 Alternatively, `Schema[_]` values can be defined by hand, either for whole case classes, or only for some of its fields.
 For example, here we state that the schema for `MyCustomType` is a `String`:
@@ -156,9 +149,18 @@ implicit val sEntity: Schema[Entity] =
 ## Customising derived schemas
 
 In some cases, it might be desirable to customise the derived schemas, e.g. to add a description to a particular
-field of a case class. This can be done by looking up an implicit instance of the `Derived[Schema[T]]` type, 
-and assigning it to an implicit schema. When such an implicit `Schema[T]` is in scope will have higher priority 
-than the built-in low-priority conversion from `Derived[Schema[T]]` to `Schema[T]`.
+field of a case class. One way the automatic derivation can be customized is using annotations:
+
+* `@encodedName` sets name for case class's field which is used in the encoded form (and also in documentation)
+* `@description` sets description for the whole case class or its field
+* `@format` sets the format for a case class field
+* `@deprecated` marks a case class's field as deprecated
+
+If the target type isn't accessible or can't be modified, schemas can be customized by looking up an implicit instance 
+of the `Derived[Schema[T]]` type, modyfing the value, and assigning it to an implicit schema. 
+
+When such an implicit `Schema[T]` is in scope will have higher priority than the built-in low-priority conversion 
+from `Derived[Schema[T]]` to `Schema[T]`.
 
 Schemas for products/coproducts (case classes and case class families) can be traversed and modified using
 `.modify` method. To traverse collections, use `.each`.
@@ -172,7 +174,7 @@ import sttp.tapir.generic.Derived
 case class Basket(fruits: List[FruitAmount])
 case class FruitAmount(fruit: String, amount: Int)
 implicit val customBasketSchema: Schema[Basket] = implicitly[Derived[Schema[Basket]]].value
-      .modify(_.fruits.each.amount)(_.description("How many fruits?"))
+  .modify(_.fruits.each.amount)(_.description("How many fruits?"))
 ```
 
 There is also an unsafe variant of this method, but it should be avoided in most cases. 
