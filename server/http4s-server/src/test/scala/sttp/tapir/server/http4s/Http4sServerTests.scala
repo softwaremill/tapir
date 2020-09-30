@@ -6,7 +6,7 @@ import cats.syntax.all._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import org.http4s.{EntityBody, HttpRoutes, Request, Response}
+import org.http4s.{HttpRoutes, Request, Response}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.Endpoint

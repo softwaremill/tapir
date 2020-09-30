@@ -74,7 +74,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
 
     val bodies = outputs.collect {
       case EndpointIO.Body(_, codec, info) => (info.description, codecToMediaType(codec, info.examples))
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, info, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
         (info.description, codecToMediaType(codec, info.examples))
     }
     val body = bodies.headOption

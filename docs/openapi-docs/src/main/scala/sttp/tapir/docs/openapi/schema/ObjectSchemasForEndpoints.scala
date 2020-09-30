@@ -134,7 +134,7 @@ object ObjectSchemasForEndpoints {
       case EndpointIO.Header(_, codec, _)     => forCodec(codec)
       case EndpointIO.Headers(_, _)           => List.empty
       case EndpointIO.Body(_, codec, _)       => forCodec(codec)
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, _, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) =>
         objectSchemas(TypeData(codec.schema.getOrElse(TSchema(TSchemaType.SBinary)), Validator.pass))
       case EndpointIO.MappedPair(wrapped, _) => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)   => List.empty

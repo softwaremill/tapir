@@ -355,7 +355,7 @@ object EndpointIO {
     }
   }
 
-  case class StreamBodyWrapper[BS, T](wrapped: StreamBody[BS, T, _]) extends Basic[T] {
+  case class StreamBodyWrapper[BS, T](wrapped: StreamBodyIO[BS, T, _]) extends Basic[T] {
     override private[tapir] type ThisType[X] = StreamBodyWrapper[BS, X]
     override private[tapir] type L = BS
     override private[tapir] type CF = CodecFormat
@@ -469,9 +469,9 @@ factory method in `Tapir` which would directly create an instance of it.
 
 BS == streams.BinaryStream, but we can't express this using dependent types here
  */
-case class StreamBody[BS, T, S](streams: Streams[S], codec: Codec[BS, T, CodecFormat], info: Info[T], charset: Option[Charset])
+case class StreamBodyIO[BS, T, S](streams: Streams[S], codec: Codec[BS, T, CodecFormat], info: Info[T], charset: Option[Charset])
     extends EndpointTransput.Basic[T] {
-  override private[tapir] type ThisType[X] = StreamBody[BS, X, S]
+  override private[tapir] type ThisType[X] = StreamBodyIO[BS, X, S]
   override private[tapir] type L = BS
   override private[tapir] type CF = CodecFormat
   override private[tapir] def copyWith[U](c: Codec[BS, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)

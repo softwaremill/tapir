@@ -47,14 +47,14 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     output match {
       case s: EndpointOutput.Single[_] =>
         (s match {
-          case EndpointIO.Body(_, codec, _)                                           => codec.decode(body)
-          case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(_, codec, _, _)) => codec.decode(body)
-          case EndpointIO.Header(name, codec, _)                                      => codec.decode(meta.headers(name).toList)
-          case EndpointIO.Headers(codec, _)                                           => codec.decode(meta.headers.toList)
-          case EndpointOutput.StatusCode(_, codec, _)                                 => codec.decode(meta.code)
-          case EndpointOutput.FixedStatusCode(_, codec, _)                            => codec.decode(())
-          case EndpointIO.FixedHeader(_, codec, _)                                    => codec.decode(())
-          case EndpointIO.Empty(codec, _)                                             => codec.decode(())
+          case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
+          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
+          case EndpointIO.Header(name, codec, _)                          => codec.decode(meta.headers(name).toList)
+          case EndpointIO.Headers(codec, _)                               => codec.decode(meta.headers.toList)
+          case EndpointOutput.StatusCode(_, codec, _)                     => codec.decode(meta.code)
+          case EndpointOutput.FixedStatusCode(_, codec, _)                => codec.decode(())
+          case EndpointIO.FixedHeader(_, codec, _)                        => codec.decode(())
+          case EndpointIO.Empty(codec, _)                                 => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
             mappings
               .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
@@ -123,7 +123,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2)
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(streams, _, _, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
         val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
         (uri, req2)
       case EndpointIO.Header(name, codec, _) =>
@@ -238,12 +238,12 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
     out match {
-      case EndpointIO.StreamBodyWrapper(StreamingEndpointIO.Body(streams, _, _, _)) => Some(streams)
-      case EndpointIO.Pair(left, right, _, _)                                       => bodyIsStream(left).orElse(bodyIsStream(right))
-      case EndpointOutput.Pair(left, right, _, _)                                   => bodyIsStream(left).orElse(bodyIsStream(right))
-      case EndpointIO.MappedPair(wrapped, _)                                        => bodyIsStream(wrapped)
-      case EndpointOutput.MappedPair(wrapped, _)                                    => bodyIsStream(wrapped)
-      case _                                                                        => None
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) => Some(streams)
+      case EndpointIO.Pair(left, right, _, _)                           => bodyIsStream(left).orElse(bodyIsStream(right))
+      case EndpointOutput.Pair(left, right, _, _)                       => bodyIsStream(left).orElse(bodyIsStream(right))
+      case EndpointIO.MappedPair(wrapped, _)                            => bodyIsStream(wrapped)
+      case EndpointOutput.MappedPair(wrapped, _)                        => bodyIsStream(wrapped)
+      case _                                                            => None
     }
   }
 

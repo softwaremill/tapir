@@ -3,7 +3,7 @@ package sttp.tapir.server.internal
 import sttp.model.{Cookie, HeaderNames, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBody}
+import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO}
 
 import scala.annotation.tailrec
 
@@ -261,7 +261,7 @@ object DecodeInputs {
       case EndpointInput.ExtractFromRequest(codec, _) =>
         (codec.decode(ctx.serverRequest), ctx)
 
-      case EndpointIO.StreamBodyWrapper(StreamBody(_, codec, _, _)) =>
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) =>
         (codec.decode(ctx.bodyStream), ctx)
 
       case EndpointIO.Empty(codec, _) =>
