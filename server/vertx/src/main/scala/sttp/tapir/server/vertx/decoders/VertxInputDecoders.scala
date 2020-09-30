@@ -100,9 +100,8 @@ object VertxInputDecoders {
         }
       case RawBodyType.MultipartBody(partTypes, _) =>
         Future.successful(
-          partTypes.map {
-            case (partName, rawBodyType) =>
-              Part(partName, extractPart(partName, rawBodyType, rc))
+          partTypes.map { case (partName, rawBodyType) =>
+            Part(partName, extractPart(partName, rawBodyType, rc))
           }.toSeq
         )
     }
@@ -120,9 +119,8 @@ object VertxInputDecoders {
         val f = rc.fileUploads.find(_.name == name).get
         new File(f.uploadedFileName())
       case RawBodyType.MultipartBody(partTypes, _) =>
-        partTypes.map {
-          case (partName, rawBodyType) =>
-            Part(partName, extractPart(partName, rawBodyType, rc))
+        partTypes.map { case (partName, rawBodyType) =>
+          Part(partName, extractPart(partName, rawBodyType, rc))
         }.toSeq
     }
   }

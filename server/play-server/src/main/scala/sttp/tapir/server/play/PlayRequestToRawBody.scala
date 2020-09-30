@@ -40,14 +40,13 @@ class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
       case Left(_) =>
         Future.failed(new IllegalArgumentException("Unable to parse multipart form data.")) // TODO
       case Right(value) =>
-        val dataParts = value.dataParts.map {
-          case (key, value) =>
-            apply(
-              m.partType(key).get,
-              charset(m.partType(key).get),
-              request,
-              ByteString(value.flatMap(_.getBytes).toArray)
-            ).map(body => Part(key, body).asInstanceOf[RawPart])
+        val dataParts = value.dataParts.map { case (key, value) =>
+          apply(
+            m.partType(key).get,
+            charset(m.partType(key).get),
+            request,
+            ByteString(value.flatMap(_.getBytes).toArray)
+          ).map(body => Part(key, body).asInstanceOf[RawPart])
         }.toSeq
 
         val fileParts = value.files.map(f => {

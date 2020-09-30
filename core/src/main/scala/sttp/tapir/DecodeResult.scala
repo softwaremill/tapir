@@ -21,13 +21,12 @@ object DecodeResult {
   case class InvalidValue(errors: List[ValidationError[_]]) extends Failure
 
   def sequence[T](results: Seq[DecodeResult[T]]): DecodeResult[Seq[T]] = {
-    results.foldRight(Value(List.empty[T]): DecodeResult[Seq[T]]) {
-      case (result, acc) =>
-        (result, acc) match {
-          case (Value(v), Value(vs)) => Value(v +: vs)
-          case (Value(_), r)         => r
-          case (df: Failure, _)      => df
-        }
+    results.foldRight(Value(List.empty[T]): DecodeResult[Seq[T]]) { case (result, acc) =>
+      (result, acc) match {
+        case (Value(v), Value(vs)) => Value(v +: vs)
+        case (Value(_), r)         => r
+        case (df: Failure, _)      => df
+      }
     }
   }
 

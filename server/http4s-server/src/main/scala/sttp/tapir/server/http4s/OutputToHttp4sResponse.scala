@@ -71,8 +71,8 @@ class OutputToHttp4sResponse[F[_]: Sync: ContextShift](serverOptions: Http4sServ
 
   private def rawPartToBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T]): Option[multipart.Part[F]] = {
     m.partType(part.name).map { partType =>
-      val headers = part.headers.map {
-        case SttpHeader(hk, hv) => Header.Raw(CaseInsensitiveString(hk), hv)
+      val headers = part.headers.map { case SttpHeader(hk, hv) =>
+        Header.Raw(CaseInsensitiveString(hk), hv)
       }.toList
 
       val partContentType = part.contentType.map(parseContentType).getOrElse(`Content-Type`(http4s.MediaType.application.`octet-stream`))

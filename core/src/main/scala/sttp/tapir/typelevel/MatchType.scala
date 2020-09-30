@@ -10,8 +10,8 @@ trait MatchType[T] {
     * @return is `a` a value of type `T`?
     */
   def apply(a: Any): Boolean
-  def partial: PartialFunction[Any, Boolean] = {
-    case a: Any => apply(a)
+  def partial: PartialFunction[Any, Boolean] = { case a: Any =>
+    apply(a)
   }
 }
 

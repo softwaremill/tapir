@@ -18,10 +18,9 @@ private[openapi] object ExampleConverter {
       case (example @ EndpointIO.Example(_, None, _)) :: Nil =>
         Examples(exampleValue(example.value), ListMap.empty)
       case examples =>
-        val exampleValues = examples.zipWithIndex.map {
-          case (example, i) =>
-            example.name.getOrElse(s"Example$i") ->
-              Right(Example(summary = example.summary, description = None, value = exampleValue(example.value), externalValue = None))
+        val exampleValues = examples.zipWithIndex.map { case (example, i) =>
+          example.name.getOrElse(s"Example$i") ->
+            Right(Example(summary = example.summary, description = None, value = exampleValue(example.value), externalValue = None))
         }.toListMap
         Examples(None, exampleValues)
     }

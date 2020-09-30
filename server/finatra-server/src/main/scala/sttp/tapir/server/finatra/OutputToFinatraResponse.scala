@@ -50,8 +50,8 @@ object OutputToFinatraResponse {
     outputValues.headers.foreach { case (name, value) => responseWithContent.headerMap.add(name, value) }
 
     // If there's a content-type header in headers, override the content-type.
-    outputValues.headers.find(_._1.toLowerCase == "content-type").foreach {
-      case (_, value) => responseWithContent.contentType = value
+    outputValues.headers.find(_._1.toLowerCase == "content-type").foreach { case (_, value) =>
+      responseWithContent.contentType = value
     }
 
     responseWithContent

@@ -17,9 +17,8 @@ private[tapir] object UrlencodedData {
   }
 
   def encode(s: Seq[(String, String)], charset: Charset): String = {
-    s.map {
-      case (k, v) =>
-        s"${URLEncoder.encode(k, charset.toString)}=${URLEncoder.encode(v, charset.toString)}"
+    s.map { case (k, v) =>
+      s"${URLEncoder.encode(k, charset.toString)}=${URLEncoder.encode(v, charset.toString)}"
     }.mkString("&")
   }
 }

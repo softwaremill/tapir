@@ -78,20 +78,19 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
       .collect(
         RequestUtils
           .multiParams(request)
-          .flatMap {
-            case (name, multiPartItem) =>
-              val dispositionParams: Map[String, String] =
-                parseDispositionParams(Option(multiPartItem.headers.getHeader("content-disposition")))
-              val charset = getCharset(multiPartItem.contentType)
+          .flatMap { case (name, multiPartItem) =>
+            val dispositionParams: Map[String, String] =
+              parseDispositionParams(Option(multiPartItem.headers.getHeader("content-disposition")))
+            val charset = getCharset(multiPartItem.contentType)
 
-              for {
-                partType <- m.partType(name)
-                futureBody = apply(partType, Buf.ByteArray.Owned(multiPartItem.data), charset, request)
-              } yield futureBody
-                .map(body =>
-                  Part(name, body, otherDispositionParams = dispositionParams - "name", headers = fileItemHeaders(multiPartItem.headers))
-                    .asInstanceOf[RawPart]
-                )
+            for {
+              partType <- m.partType(name)
+              futureBody = apply(partType, Buf.ByteArray.Owned(multiPartItem.data), charset, request)
+            } yield futureBody
+              .map(body =>
+                Part(name, body, otherDispositionParams = dispositionParams - "name", headers = fileItemHeaders(multiPartItem.headers))
+                  .asInstanceOf[RawPart]
+              )
           }
           .toSeq
       )

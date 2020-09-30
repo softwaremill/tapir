@@ -16,9 +16,8 @@ object EndpointToOpenAPIDocs {
 
     val base = apiToOpenApi(api, componentsCreator)
 
-    es2.map(pathCreator.pathItem).foldLeft(base) {
-      case (current, (path, pathItem)) =>
-        current.addPathItem(path, pathItem)
+    es2.map(pathCreator.pathItem).foldLeft(base) { case (current, (path, pathItem)) =>
+      current.addPathItem(path, pathItem)
     }
   }
 
@@ -35,9 +34,8 @@ object EndpointToOpenAPIDocs {
 
   private def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _, _]): Endpoint[_, _, _, _] = {
     val (input2, _) = new EndpointInputMapper[Int](
-      {
-        case (EndpointInput.PathCapture(None, codec, info), i) =>
-          (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)
+      { case (EndpointInput.PathCapture(None, codec, info), i) =>
+        (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)
       },
       PartialFunction.empty
     ).mapInput(e.input, 1)
