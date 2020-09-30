@@ -4,7 +4,7 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType._
-import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, format, name}
+import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, format, encodedName}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
@@ -361,11 +361,11 @@ case class I(
     int: Int,
     noDesc: Long,
     @description("another optional boolean flag")
-    @name("alternativeBooleanName")
+    @encodedName("alternativeBooleanName")
     bool: Option[Boolean],
     @deprecated
     @description("child-k-desc")
-    @name("child-k-name")
+    @encodedName("child-k-name")
     child: K
 )
 
@@ -377,7 +377,7 @@ case class K(
 )
 
 case class L(
-    @name("specialName")
+    @encodedName("specialName")
     firstField: Int,
     secondField: Int
 )

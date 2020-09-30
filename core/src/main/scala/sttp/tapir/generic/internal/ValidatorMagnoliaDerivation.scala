@@ -12,7 +12,7 @@ trait ValidatorMagnoliaDerivation {
     Validator.Product(ctx.parameters.map { p =>
       p.label -> new Validator.ProductField[T] {
         override type FieldType = p.PType
-        override def name: FieldName = FieldName(p.label, genericDerivationConfig.toLowLevelName(p.label))
+        override def name: FieldName = FieldName(p.label, genericDerivationConfig.toEncodedName(p.label))
         override def get(t: T): FieldType = p.dereference(t)
         override def validator: Typeclass[FieldType] = p.typeclass
       }

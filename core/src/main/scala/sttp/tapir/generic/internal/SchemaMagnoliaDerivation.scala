@@ -4,7 +4,7 @@ import com.github.ghik.silencer.silent
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
-import sttp.tapir.{deprecated, description, format, name, FieldName, Schema, SchemaType}
+import sttp.tapir.{deprecated, description, format, encodedName, FieldName, Schema, SchemaType}
 import SchemaMagnoliaDerivation.deriveInProgress
 
 import scala.collection.mutable
@@ -30,7 +30,7 @@ trait SchemaMagnoliaDerivation {
                   typeNameToObjectInfo(ctx.typeName, ctx.annotations),
                   ctx.parameters.map { p =>
                     val schema = enrichSchema(p.typeclass, p.annotations)
-                    val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toLowLevelName(p.label))
+                    val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
                     (FieldName(p.label, encodedName), schema)
                   }.toList
                 )
@@ -47,7 +47,7 @@ trait SchemaMagnoliaDerivation {
   private def typeNameToObjectInfo(typeName: TypeName, annotations: Seq[Any]): SchemaType.SObjectInfo = {
     def allTypeArguments(tn: TypeName): Seq[TypeName] = tn.typeArguments.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
 
-    annotations.collectFirst { case ann: name => ann.name } match {
+    annotations.collectFirst { case ann: encodedName => ann.name } match {
       case Some(altName) =>
         SObjectInfo(altName, Nil)
       case None =>
@@ -72,7 +72,7 @@ trait SchemaMagnoliaDerivation {
   }
 
   private def getEncodedName(annotations: Seq[Any]): Option[String] =
-    annotations.collectFirst { case ann: name => ann.name }
+    annotations.collectFirst { case ann: encodedName => ann.name }
 
   private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
     val schemaWithDesc = annotations

@@ -160,7 +160,7 @@ object ServerDefaults {
     def pathMessage(ve: ValidationError[_]): Option[String] =
       ve.path match {
         case Nil => None
-        case l   => Some(l.map(_.lowLevelName).mkString("."))
+        case l   => Some(l.map(_.encodedName).mkString("."))
       }
 
     /**

@@ -103,7 +103,7 @@ implicit val customConfiguration: Configuration =
 
 The automatic derivation can also be customized using following annotations:
 
-* `@renameMe` sets name for case class's field which is used in documentation (for example, OpenAPI)
+* `@encodedName` sets name for case class's field which is used in documentation (for example, OpenAPI)
 * `@description` sets description for case class or its field
 * `@format` modifies format for case class's field
 * `@deprecated` marks case class's field as deprecated

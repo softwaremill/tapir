@@ -77,10 +77,9 @@ object MultipartCodecDerivation {
       (field, codec)
     }
 
-    val partCodecPairs = fieldsWithCodecs.map {
-      case (field, (bodyType, codec)) =>
-        val fieldName = field.name.decodedName.toString
-        q"""$conf.toLowLevelName($fieldName) -> sttp.tapir.PartCodec($bodyType, $codec)"""
+    val partCodecPairs = fieldsWithCodecs.map { case (field, (bodyType, codec)) =>
+      val fieldName = field.name.decodedName.toString
+      q"""$conf.toEncodedName($fieldName) -> sttp.tapir.PartCodec($bodyType, $codec)"""
     }
 
     val partCodecs = q"""Map(..$partCodecPairs)"""
@@ -88,7 +87,7 @@ object MultipartCodecDerivation {
     val encodeParams: Iterable[Tree] = fields.map { field =>
       val fieldName = field.name.asInstanceOf[TermName]
       val fieldNameAsString = fieldName.decodedName.toString
-      val transformedName = q"val transformedName = $conf.toLowLevelName($fieldNameAsString)"
+      val transformedName = q"val transformedName = $conf.toEncodedName($fieldNameAsString)"
 
       if (fieldIsPart(field)) {
         q"""$transformedName
@@ -112,10 +111,10 @@ object MultipartCodecDerivation {
     val decodeParams = fields.map { field =>
       val fieldName = field.name.decodedName.toString
       if (fieldIsPart(field)) {
-        q"""val transformedName = $conf.toLowLevelName($fieldName)
+        q"""val transformedName = $conf.toEncodedName($fieldName)
             partsByName(transformedName)"""
       } else {
-        q"""val transformedName = $conf.toLowLevelName($fieldName)
+        q"""val transformedName = $conf.toEncodedName($fieldName)
             partsByName(transformedName).body"""
       }
     }

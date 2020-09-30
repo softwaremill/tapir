@@ -27,18 +27,16 @@ object FormCodecMacros {
       (field, c.typecheck(q"implicitly[sttp.tapir.Codec[List[String], ${field.typeSignature}, sttp.tapir.CodecFormat.TextPlain]]"))
     }
 
-    val encodeParams: Iterable[Tree] = fieldsWithCodecs.map {
-      case (field, codec) =>
-        val fieldName = field.name.asInstanceOf[TermName]
-        val fieldNameAsString = fieldName.decodedName.toString
-        q"""val transformedName = $conf.toLowLevelName($fieldNameAsString)
+    val encodeParams: Iterable[Tree] = fieldsWithCodecs.map { case (field, codec) =>
+      val fieldName = field.name.asInstanceOf[TermName]
+      val fieldNameAsString = fieldName.decodedName.toString
+      q"""val transformedName = $conf.toEncodedName($fieldNameAsString)
             $codec.encode(o.$fieldName).map(v => (transformedName, v))"""
     }
 
-    val decodeParams = fieldsWithCodecs.map {
-      case (field, codec) =>
-        val fieldName = field.name.decodedName.toString
-        q"""val transformedName = $conf.toLowLevelName($fieldName)
+    val decodeParams = fieldsWithCodecs.map { case (field, codec) =>
+      val fieldName = field.name.decodedName.toString
+      q"""val transformedName = $conf.toEncodedName($fieldName)
             $codec.decode(paramsMap.get(transformedName).toList.flatten)"""
     }
 
