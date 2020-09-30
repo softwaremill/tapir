@@ -6,7 +6,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Path
 import java.time._
-import java.time.format.DateTimeParseException
+import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.util.{Base64, Date, UUID}
 
 import sttp.model._
@@ -124,15 +124,17 @@ object Codec extends FormCodecDerivation {
   implicit val uuid: Codec[String, UUID, TextPlain] = stringCodec[UUID](UUID.fromString)
   implicit val bigDecimal: Codec[String, BigDecimal, TextPlain] = stringCodec[BigDecimal](BigDecimal(_))
   implicit val javaBigDecimal: Codec[String, JBigDecimal, TextPlain] = stringCodec[JBigDecimal](new JBigDecimal(_))
-  implicit val localTime: Codec[String, LocalTime, TextPlain] = stringCodec[LocalTime](LocalTime.parse)
-  implicit val localDate: Codec[String, LocalDate, TextPlain] = stringCodec[LocalDate](LocalDate.parse)
-  implicit val offsetDateTime: Codec[String, OffsetDateTime, TextPlain] = stringCodec[OffsetDateTime](OffsetDateTime.parse)
-  implicit val zonedDateTime: Codec[String, ZonedDateTime, TextPlain] = offsetDateTime.map(_.toZonedDateTime)(_.toOffsetDateTime)
-  implicit val instant: Codec[String, Instant, TextPlain] = zonedDateTime.map(_.toInstant)(_.atZone(ZoneOffset.UTC))
+  implicit val localTime: Codec[String, LocalTime, TextPlain] = string.map(LocalTime.parse(_))(DateTimeFormatter.ISO_LOCAL_TIME.format)
+  implicit val localDate: Codec[String, LocalDate, TextPlain] = string.map(LocalDate.parse(_))(DateTimeFormatter.ISO_LOCAL_DATE.format)
+  implicit val offsetDateTime: Codec[String, OffsetDateTime, TextPlain] =
+    string.map(OffsetDateTime.parse(_))(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format)
+  implicit val zonedDateTime: Codec[String, ZonedDateTime, TextPlain] =
+    string.map(ZonedDateTime.parse(_))(DateTimeFormatter.ISO_ZONED_DATE_TIME.format)
+  implicit val instant: Codec[String, Instant, TextPlain] = string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format)
   implicit val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant)
   implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = stringCodec[ZoneOffset](ZoneOffset.of)
   implicit val duration: Codec[String, Duration, TextPlain] = stringCodec[Duration](Duration.parse)
-  implicit val offsetTime: Codec[String, OffsetTime, TextPlain] = stringCodec[OffsetTime](OffsetTime.parse)
+  implicit val offsetTime: Codec[String, OffsetTime, TextPlain] = string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format)
   implicit val scalaDuration: Codec[String, SDuration, TextPlain] = stringCodec[SDuration](SDuration.apply)
   implicit val localDateTime: Codec[String, LocalDateTime, TextPlain] = string.mapDecode { l =>
     try {
