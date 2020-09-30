@@ -89,7 +89,7 @@ class SchemaGenericTest extends AnyFlatSpec with Matchers {
   }
 
   it should "find schema for a simple case class and use kebab case naming transformation" in {
-    val expectedKebabCaseNaming = expectedDSchema.copy(fields = List((FieldName("someFieldName","some-field-name"), stringSchema)))
+    val expectedKebabCaseNaming = expectedDSchema.copy(fields = List((FieldName("someFieldName", "some-field-name"), stringSchema)))
     implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
     implicitly[Schema[D]].schemaType shouldBe expectedKebabCaseNaming
   }
@@ -182,7 +182,7 @@ class SchemaGenericTest extends AnyFlatSpec with Matchers {
     )
   }
 
-  it should "add description to schema from annotations" in {
+  it should "add meta-data to schema from annotations" in {
     val schema = implicitly[Schema[I]]
     schema shouldBe Schema[I](
       SProduct(
@@ -191,16 +191,35 @@ class SchemaGenericTest extends AnyFlatSpec with Matchers {
           (FieldName("int"), intSchema.description("some int field").format("int32")),
           (FieldName("noDesc"), longSchema),
           (FieldName("bool", "alternativeBooleanName"), implicitly[Schema[Option[Boolean]]].description("another optional boolean flag")),
-          (FieldName("child", "child-k-name"), Schema[K](SProduct(
-            SObjectInfo("sttp.tapir.generic.K"),
-            List(
-              (FieldName("double"), implicitly[Schema[Double]].format("double64")),
-              (FieldName("str"), stringSchema.format("special-string"))
-            )
-          )).deprecated(true).description("child-k-desc"))
+          (
+            FieldName("child", "child-k-name"),
+            Schema[K](
+              SProduct(
+                SObjectInfo("sttp.tapir.generic.K"),
+                List(
+                  (FieldName("double"), implicitly[Schema[Double]].format("double64")),
+                  (FieldName("str"), stringSchema.format("special-string"))
+                )
+              )
+            ).deprecated(true).description("child-k-desc")
+          )
         )
       )
     ).description("class I")
+  }
+
+  it should "not transform names which are annotated with a custom name" in {
+    implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
+    val schema = implicitly[Schema[L]]
+    schema shouldBe Schema[L](
+      SProduct(
+        SObjectInfo("sttp.tapir.generic.L"),
+        List(
+          (FieldName("firstField", "specialName"), intSchema),
+          (FieldName("secondField", "second_field"), intSchema)
+        )
+      )
+    )
   }
 
   it should "find schema for map of value classes" in {
@@ -337,24 +356,30 @@ case class H[T](data: T)
 
 @description("class I")
 case class I(
-  @description("some int field")
-  @format("int32")
-  int: Int,
-  noDesc: Long,
-  @description("another optional boolean flag")
-  @name("alternativeBooleanName")
-  bool: Option[Boolean],
-  @deprecated
-  @description("child-k-desc")
-  @name("child-k-name")
-  child: K
+    @description("some int field")
+    @format("int32")
+    int: Int,
+    noDesc: Long,
+    @description("another optional boolean flag")
+    @name("alternativeBooleanName")
+    bool: Option[Boolean],
+    @deprecated
+    @description("child-k-desc")
+    @name("child-k-name")
+    child: K
 )
 
 case class K(
-  @format("double64")
-  double: Double,
-  @format("special-string")
-  str: String
+    @format("double64")
+    double: Double,
+    @format("special-string")
+    str: String
+)
+
+case class L(
+    @name("specialName")
+    firstField: Int,
+    secondField: Int
 )
 
 sealed trait Node

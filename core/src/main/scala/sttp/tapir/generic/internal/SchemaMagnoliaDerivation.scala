@@ -30,9 +30,9 @@ trait SchemaMagnoliaDerivation {
                   typeNameToObjectInfo(ctx.typeName, ctx.annotations),
                   ctx.parameters.map { p =>
                     val schema = enrichSchema(p.typeclass, p.annotations)
-                    val altName = getAltName(p.annotations).getOrElse(p.label)
-                    (FieldName(p.label, genericDerivationConfig.toLowLevelName(altName)), schema)
-                  } toList
+                    val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toLowLevelName(p.label))
+                    (FieldName(p.label, encodedName), schema)
+                  }.toList
                 )
               )
             }
@@ -71,13 +71,15 @@ trait SchemaMagnoliaDerivation {
     }
   }
 
-  private def getAltName(annotations: Seq[Any]): Option[String] =
+  private def getEncodedName(annotations: Seq[Any]): Option[String] =
     annotations.collectFirst { case ann: name => ann.name }
 
   private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
-    val schemaWithDesc = annotations.collectFirst({ case ann: description => ann.text })
+    val schemaWithDesc = annotations
+      .collectFirst({ case ann: description => ann.text })
       .fold(schema)(schema.description)
-    annotations.collectFirst({ case ann: format => ann.format })
+    annotations
+      .collectFirst({ case ann: format => ann.format })
       .fold(schemaWithDesc)(schemaWithDesc.format)
       .deprecated(isDeprecated(annotations))
   }
