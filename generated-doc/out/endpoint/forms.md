@@ -24,7 +24,7 @@ formBody[RegistrationForm]: EndpointIO.Body[String, RegistrationForm]
 ```
 
 Each form-field is named the same as the case-class-field. The names can be transformed to snake or kebab case by 
-providing an implicit `tapir.generic.Configuraton`. 
+providing an implicit `tapir.generic.Configuraton`, or customised using the `@encodedName` annotation. 
 
 ## Multipart forms
 
@@ -47,7 +47,7 @@ on codecs for individual fields. Given a field of type `T`, first a plain text c
 found, any codec for any media type (e.g. JSON) is searched for.
 
 Each part is named the same as the case-class-field. The names can be transformed to snake or kebab case by 
-providing an implicit `sttp.tapir.generic.Configuraton`.
+providing an implicit `sttp.tapir.generic.Configuraton`, or customised using the `@encodedName` annotation. 
  
 Additionally, the case class to which the multipart body is mapped can contain both normal fields, and fields of type 
 `Part[T]`. This is useful, if part metadata (e.g. the filename) is relevant. 

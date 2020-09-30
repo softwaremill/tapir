@@ -5,7 +5,7 @@ import java.math.{BigDecimal => JBigDecimal}
 import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType.{SObjectInfo, SProduct}
 import sttp.tapir.util.CompileUtil
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, FieldName, Schema, Validator}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, FieldName, Schema, Validator, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -192,6 +192,16 @@ class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
     // when
     codec.encode(test1) shouldBe "f1=str&f2=42&f3=228&f4=322&f5=69&f6=27.0&f7=33.0&f8=true&f9=1337.7331&f10=31337.73313"
     codec.decode("f1=str&f2=42&f3=228&f4=322&f5=69&f6=27.0&f7=33.0&f8=true&f9=1337.7331&f10=31337.73313") shouldBe DecodeResult.Value(test1)
+  }
+
+  it should "generate a codec with custom field name" in {
+    // given
+    case class Test1(@encodedName("g1") f1: Int)
+    val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
+
+    // when
+    codec.encode(Test1(10)) shouldBe "g1=10"
+    codec.decode("g1=10") shouldBe DecodeResult.Value(Test1(10))
   }
 }
 

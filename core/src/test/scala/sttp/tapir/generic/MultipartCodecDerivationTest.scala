@@ -6,7 +6,7 @@ import com.github.ghik.silencer.silent
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.SchemaType._
 import sttp.tapir.util.CompileUtil
-import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, Validator}
+import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, Validator, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -195,11 +195,20 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
     codec.decode(createStringParts(List(("f1", "10")))) shouldBe DecodeResult.Value(Test1(10))
   }
 
+  it should "generate a codec with a custom field name" in {
+    // given
+    case class Test1(@encodedName("g1") f1: Int)
+    val codec = implicitly[MultipartCodec[Test1]].codec
+
+    // when
+    toPartData(codec.encode(Test1(10))) shouldBe List(("g1", "10"))
+    codec.decode(createStringParts(List(("g1", "10")))) shouldBe DecodeResult.Value(Test1(10))
+  }
+
   private def toPartData(parts: Seq[RawPart]): Seq[(String, Any)] = parts.map(p => (p.name, p.body))
 
   private def createStringParts(namesWithBodies: List[(String, String)]): List[RawPart] =
-    namesWithBodies.map {
-      case (name, body) =>
-        Part(name, body)
+    namesWithBodies.map { case (name, body) =>
+      Part(name, body)
     }
 }

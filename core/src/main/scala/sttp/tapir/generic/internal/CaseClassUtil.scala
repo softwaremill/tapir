@@ -1,5 +1,7 @@
 package sttp.tapir.generic.internal
 
+import sttp.tapir.encodedName
+
 import scala.reflect.macros.blackbox
 
 private[generic] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val c: C) {
@@ -27,4 +29,14 @@ private[generic] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](va
   }
 
   lazy val schema: Tree = c.typecheck(q"implicitly[sttp.tapir.Schema[$t]]")
+
+  def getEncodedName(field: Symbol): Option[String] = {
+    // https://stackoverflow.com/questions/20908671/scala-macros-how-to-read-an-annotation-object
+    field.annotations.collectFirst {
+      case a if a.tree.tpe <:< c.weakTypeOf[encodedName] =>
+        a.tree.children.tail match {
+          case List(Literal(Constant(str: String))) => str
+        }
+    }
+  }
 }
