@@ -101,6 +101,13 @@ implicit val customConfiguration: Configuration =
   Configuration.default.withSnakeCaseMemberNames
 ```
 
+The automatic derivation can also be customized using following annotations:
+
+* `@renameMe` sets name for case class's field which is used in documentation (for example, OpenAPI)
+* `@description` sets description for case class or its field
+* `@format` modifies format for case class's field
+* `@deprecated` marks case class's field as deprecated
+
 Alternatively, `Schema[_]` values can be defined by hand, either for whole case classes, or only for some of its fields.
 For example, here we state that the schema for `MyCustomType` is a `String`:
 

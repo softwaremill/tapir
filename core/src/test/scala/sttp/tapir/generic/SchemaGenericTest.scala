@@ -4,7 +4,7 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType._
-import sttp.tapir.{FieldName, Schema, SchemaType}
+import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, format, name}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
@@ -182,6 +182,27 @@ class SchemaGenericTest extends AnyFlatSpec with Matchers {
     )
   }
 
+  it should "add description to schema from annotations" in {
+    val schema = implicitly[Schema[I]]
+    schema shouldBe Schema[I](
+      SProduct(
+        SObjectInfo("sttp.tapir.generic.I"),
+        List(
+          (FieldName("int"), intSchema.description("some int field").format("int32")),
+          (FieldName("noDesc"), longSchema),
+          (FieldName("bool", "alternativeBooleanName"), implicitly[Schema[Option[Boolean]]].description("another optional boolean flag")),
+          (FieldName("child", "child-k-name"), Schema[K](SProduct(
+            SObjectInfo("sttp.tapir.generic.K"),
+            List(
+              (FieldName("double"), implicitly[Schema[Double]].format("double64")),
+              (FieldName("str"), stringSchema.format("special-string"))
+            )
+          )).deprecated(true).description("child-k-desc"))
+        )
+      )
+    ).description("class I")
+  }
+
   it should "find schema for map of value classes" in {
     val schema = implicitly[Schema[Map[String, IntegerValueClass]]].schemaType
     schema shouldBe SOpenProduct(SObjectInfo("Map", List("IntegerValueClass")), intSchema)
@@ -313,6 +334,28 @@ class Custom(c: String)
 case class G(f1: Int, f2: Custom)
 
 case class H[T](data: T)
+
+@description("class I")
+case class I(
+  @description("some int field")
+  @format("int32")
+  int: Int,
+  noDesc: Long,
+  @description("another optional boolean flag")
+  @name("alternativeBooleanName")
+  bool: Option[Boolean],
+  @deprecated
+  @description("child-k-desc")
+  @name("child-k-name")
+  child: K
+)
+
+case class K(
+  @format("double64")
+  double: Double,
+  @format("special-string")
+  str: String
+)
 
 sealed trait Node
 case class Edge(id: Long, source: Node) extends Node
