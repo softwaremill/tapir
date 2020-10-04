@@ -52,8 +52,8 @@ abstract class ClientTests[R] extends AnyFunSuite with Matchers with PortCounter
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ GET -> Root / "api" / "echo" / "headers" =>
       val headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse))
-      val filteredHeaders = r.headers.find(_.name.value == "Cookie") match {
-        case Some(c) => headers.filter(_.name.value == "Cookie") :+ Header("Set-Cookie", c.value.reverse)
+      val filteredHeaders = r.headers.find(_.name.value.equalsIgnoreCase("Cookie")) match {
+        case Some(c) => headers.filter(_.name.value.equalsIgnoreCase("Cookie")) :+ Header("Set-Cookie", c.value.reverse)
         case None    => headers
       }
       Ok(headers = filteredHeaders: _*)

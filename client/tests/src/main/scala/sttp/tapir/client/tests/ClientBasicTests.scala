@@ -40,9 +40,21 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       Right("kind=very good&name=apple&weight=42")
     )
     testClient(in_paths_out_string, List("fruit", "apple", "amount", "50"), Right("apple 50 None"))
-    testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
-    testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
-    testClient(in_cookie_cookie_out_header, (23, "pomegranate"), Right(List("etanargemop=2c ;32=1c")))
+    test(in_query_list_out_header_list.showDetail) {
+      // Note: some clients do not preserve the order in header values
+      send(
+        in_query_list_out_header_list,
+        port,
+        List("plum", "watermelon", "apple")
+      ).unsafeRunSync().right.get should contain theSameElementsAs List("apple", "watermelon", "plum")
+    }
+    test(in_cookie_cookie_out_header.showDetail) {
+      send(
+        in_cookie_cookie_out_header,
+        port,
+        (23, "pomegranate")
+      ).unsafeRunSync().right.get.head.split(" ;") should contain theSameElementsAs "etanargemop=2c ;32=1c".split(" ;")
+    }
     // TODO: test root path
     testClient(in_auth_apikey_header_out_string, "1234", Right("Authorization=None; X-Api-Key=Some(1234); Query=None"))
     testClient(in_auth_apikey_query_out_string, "1234", Right("Authorization=None; X-Api-Key=None; Query=Some(1234)"))
@@ -88,28 +100,10 @@ trait ClientBasicTests { this: ClientTests[Any] =>
 
     testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
 
-    test(in_simple_multipart_out_raw_string.showDetail) {
-      val result = send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
-        .unsafeRunSync()
-        .right
-        .get
-
-      val indexOfJson = result.indexOf("{\"fruit")
-      val beforeJson = result.substring(0, indexOfJson)
-      val afterJson = result.substring(indexOfJson)
-
-      beforeJson should include("""Content-Disposition: form-data; name="fruitAmount"""")
-      beforeJson should include("Content-Type: application/json")
-      beforeJson should not include ("Content-Type: text/plain")
-
-      afterJson should include("""Content-Disposition: form-data; name="notes"""")
-      afterJson should include("Content-Type: text/plain; charset=UTF-8")
-      afterJson should not include ("Content-Type: application/json")
-    }
-
     test(in_fixed_header_out_string.showDetail) {
       send(in_fixed_header_out_string, port, ())
         .unsafeRunSync() shouldBe Right("Location: secret")
     }
   }
+
 }

@@ -121,6 +121,7 @@ lazy val rootProject = (project in file("."))
       vertxServer.projectRefs ++
       zioServer.projectRefs ++
       sttpClient.projectRefs ++
+      playClient.projectRefs ++
       tests.projectRefs ++
       examples.projectRefs ++
       playground.projectRefs ++
@@ -631,6 +632,19 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, clientTests % Test)
 
+lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-play-client",
+    libraryDependencies ++= Seq(
+      "com.typesafe.play" %% "play-ahc-ws-standalone" % Versions.playClient,
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, clientTests % Test)
+
 import scala.collection.JavaConverters._
 lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
   .enablePlugins(SbtPlugin)
@@ -762,6 +776,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     playServer,
     sprayJson,
     sttpClient,
+    playClient,
     sttpStubServer,
     swaggerUiAkka,
     tethysJson,
