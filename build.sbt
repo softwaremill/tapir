@@ -58,7 +58,10 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     releaseStepCommand("sonatypeBundleRelease"),
     pushChanges
   ),
-  ideSkipProject := (scalaVersion.value == scala2_13),
+  ideSkipProject := (scalaVersion.value == scala2_13)
+)
+
+val commonSettingsJVM: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   testOptions := {
     val nextPort = portCounter.getAndUpdate((port: Int) => if (port >= 65000) PortCounterStart else port + 500)
     Seq(Tests.Argument(s"-Dport=$nextPort")) ++ testOptions.value
@@ -68,9 +71,9 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
 
-val scalaTest = "org.scalatest" %% "scalatest" % Versions.scalaTest
-val scalaCheck = "org.scalacheck" %% "scalacheck" % Versions.scalaCheck
-val scalaTestPlusScalaCheck = "org.scalatestplus" %% "scalacheck-1-14" % Versions.scalaTestPlusScalaCheck
+val scalaTest = Def.setting("org.scalatest" %%% "scalatest" % Versions.scalaTest)
+val scalaCheck = Def.setting("org.scalacheck" %%% "scalacheck" % Versions.scalaCheck)
+val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-14" % Versions.scalaTestPlusScalaCheck)
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
@@ -136,16 +139,15 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
-      "com.propensive" %% "magnolia" % "0.17.0",
+      "com.propensive" %%% "magnolia" % "0.17.0",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.softwaremill.sttp.model" %% "core" % Versions.sttpModel,
-      "com.softwaremill.sttp.shared" %% "core" % Versions.sttpShared,
-      "com.softwaremill.sttp.shared" %% "ws" % Versions.sttpShared,
-      scalaTest % Test,
-      scalaCheck % Test,
-      scalaTestPlusScalaCheck % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.4.0" % Test,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+      "com.softwaremill.sttp.model" %%% "core" % Versions.sttpModel,
+      "com.softwaremill.sttp.shared" %%% "core" % Versions.sttpShared,
+      "com.softwaremill.sttp.shared" %%% "ws" % Versions.sttpShared,
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test,
+      "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.4.0" % Test
     ),
     unmanagedSourceDirectories in Compile += {
       val sourceDir = (sourceDirectory in Compile).value
@@ -155,7 +157,19 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       }
     }
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(
+    scalaVersions = allScalaVersions,
+    libraryDependencies ++= Seq("org.scala-lang" % "scala-compiler" % scalaVersion.value % Test)
+  )
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test,
+        "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.0.0" % Test
+      )
+    )
+  )
   .enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
@@ -166,7 +180,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
       "io.circe" %% "circe-generic" % Versions.circe,
       "com.beachape" %% "enumeratum-circe" % Versions.enumeratum,
       "com.softwaremill.common" %% "tagging" % "2.2.1",
-      scalaTest,
+      scalaTest.value,
       "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided",
       "org.typelevel" %% "cats-effect" % Versions.catsEffect
     ),
@@ -182,15 +196,21 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % "2.2.0",
-      scalaTest % Test,
-      scalaCheck % Test,
-      scalaTestPlusScalaCheck % Test,
-      "org.typelevel" %% "discipline-scalatest" % "2.0.1" % Test,
-      "org.typelevel" %% "cats-laws" % "2.2.0" % Test
+      "org.typelevel" %%% "cats-core" % "2.2.0",
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test,
+      "org.typelevel" %%% "discipline-scalatest" % "2.0.1" % Test,
+      "org.typelevel" %%% "cats-laws" % "2.2.0" % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = libraryDependencies ++= Seq(
+      "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+    )
+  )
   .dependsOn(core)
 
 lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumeratum"))
@@ -198,11 +218,17 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
   .settings(
     name := "tapir-enumeratum",
     libraryDependencies ++= Seq(
-      "com.beachape" %% "enumeratum" % Versions.enumeratum,
-      scalaTest % Test
+      "com.beachape" %%% "enumeratum" % Versions.enumeratum,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = libraryDependencies ++= Seq(
+      "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+    )
+  )
   .dependsOn(core)
 
 lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined"))
@@ -210,12 +236,18 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
   .settings(
     name := "tapir-refined",
     libraryDependencies ++= Seq(
-      "eu.timepit" %% "refined" % Versions.refined,
-      scalaTest % Test,
-      "io.circe" %% "circe-refined" % Versions.circe % Test
+      "eu.timepit" %%% "refined" % Versions.refined,
+      scalaTest.value % Test,
+      "io.circe" %%% "circe-refined" % Versions.circe % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = libraryDependencies ++= Seq(
+      "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+    )
+  )
   .dependsOn(core, circeJson % Test)
 
 lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
@@ -225,7 +257,7 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-streams" % Versions.zio,
-      scalaTest % Test,
+      scalaTest.value % Test,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
     )
   )
@@ -239,11 +271,12 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
   .settings(
     name := "tapir-json-circe",
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-core" % Versions.circe,
-      "io.circe" %% "circe-parser" % Versions.circe
+      "io.circe" %%% "circe-core" % Versions.circe,
+      "io.circe" %%% "circe-parser" % Versions.circe
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
 
 lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
@@ -251,11 +284,19 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
   .settings(
     name := "tapir-json-play",
     libraryDependencies ++= Seq(
-      "com.typesafe.play" %% "play-json" % Versions.playJson,
-      scalaTest % Test
+      "com.typesafe.play" %%% "play-json" % Versions.playJson,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+      )
+    )
+  )
   .dependsOn(core)
 
 lazy val sprayJson: ProjectMatrix = (projectMatrix in file("json/sprayjson"))
@@ -264,7 +305,7 @@ lazy val sprayJson: ProjectMatrix = (projectMatrix in file("json/sprayjson"))
     name := "tapir-json-spray",
     libraryDependencies ++= Seq(
       "io.spray" %% "spray-json" % Versions.sprayJson,
-      scalaTest % Test
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -275,11 +316,17 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
   .settings(
     name := "tapir-json-upickle",
     libraryDependencies ++= Seq(
-      "com.lihaoyi" %% "upickle" % Versions.upickle,
-      scalaTest % Test
+      "com.lihaoyi" %%% "upickle" % Versions.upickle,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = libraryDependencies ++= Seq(
+      "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+    )
+  )
   .dependsOn(core)
 
 lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
@@ -299,36 +346,37 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %% "jsoniter-scala-core" % "2.6.2",
-      scalaTest % Test
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.6.2",
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
 
 // apispec
 
 lazy val apispecModel: ProjectMatrix = (projectMatrix in file("apispec/apispec-model"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-apispec-model"
   )
-  .settings(libraryDependencies += scalaTest % Test)
+  .settings(libraryDependencies += scalaTest.value % Test)
   .jvmPlatform(scalaVersions = allScalaVersions)
 
 // openapi
 
 lazy val openapiModel: ProjectMatrix = (projectMatrix in file("apispec/openapi-model"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-openapi-model"
   )
-  .settings(libraryDependencies += scalaTest % Test)
+  .settings(libraryDependencies += scalaTest.value % Test)
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(apispecModel)
 
 lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % Versions.circe,
@@ -341,7 +389,7 @@ lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-c
   .dependsOn(openapiModel)
 
 lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe-yaml"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
     name := "tapir-openapi-circe-yaml"
@@ -352,16 +400,16 @@ lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/opena
 // asyncapi
 
 lazy val asyncapiModel: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-model"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-asyncapi-model"
   )
-  .settings(libraryDependencies += scalaTest % Test)
+  .settings(libraryDependencies += scalaTest.value % Test)
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(apispecModel)
 
 lazy val asyncapiCirce: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-core" % Versions.circe,
@@ -374,7 +422,7 @@ lazy val asyncapiCirce: ProjectMatrix = (projectMatrix in file("apispec/asyncapi
   .dependsOn(asyncapiModel)
 
 lazy val asyncapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe-yaml"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
     name := "tapir-asyncapi-circe-yaml"
@@ -385,7 +433,7 @@ lazy val asyncapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/asyn
 // docs
 
 lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-apispec-docs"
   )
@@ -393,7 +441,7 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .dependsOn(core, tests % Test, apispecModel)
 
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-openapi-docs"
   )
@@ -401,7 +449,7 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
   .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test)
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-asyncapi-docs",
     libraryDependencies ++= Seq(
@@ -413,7 +461,7 @@ lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-doc
   .dependsOn(asyncapiModel, core, apispecDocs, tests % Test, asyncapiCirceYaml % Test)
 
 lazy val swaggerUiAkka: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-akka-http"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-swagger-ui-akka-http",
     libraryDependencies ++= Seq(
@@ -425,7 +473,7 @@ lazy val swaggerUiAkka: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-
   .jvmPlatform(scalaVersions = allScalaVersions)
 
 lazy val redocAkka: ProjectMatrix = (projectMatrix in file("docs/redoc-akka-http"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-redoc-akka-http",
     libraryDependencies ++= Seq(
@@ -436,7 +484,7 @@ lazy val redocAkka: ProjectMatrix = (projectMatrix in file("docs/redoc-akka-http
   .jvmPlatform(scalaVersions = allScalaVersions)
 
 lazy val swaggerUiHttp4s: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-http4s"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-swagger-ui-http4s",
     libraryDependencies ++= Seq(
@@ -447,7 +495,7 @@ lazy val swaggerUiHttp4s: ProjectMatrix = (projectMatrix in file("docs/swagger-u
   .jvmPlatform(scalaVersions = allScalaVersions)
 
 lazy val redocHttp4s: ProjectMatrix = (projectMatrix in file("docs/redoc-http4s"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-redoc-http4s",
     libraryDependencies += "org.http4s" %% "http4s-dsl" % Versions.http4s
@@ -455,7 +503,7 @@ lazy val redocHttp4s: ProjectMatrix = (projectMatrix in file("docs/redoc-http4s"
   .jvmPlatform(scalaVersions = allScalaVersions)
 
 lazy val swaggerUiFinatra: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-finatra"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-swagger-ui-finatra",
     libraryDependencies ++= Seq(
@@ -466,7 +514,7 @@ lazy val swaggerUiFinatra: ProjectMatrix = (projectMatrix in file("docs/swagger-
   .jvmPlatform(scalaVersions = scala2_12Versions)
 
 lazy val swaggerUiPlay: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-play"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-swagger-ui-play",
     libraryDependencies ++= Seq(
@@ -478,7 +526,7 @@ lazy val swaggerUiPlay: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-
 
 lazy val redocPlay: ProjectMatrix = (projectMatrix in file("docs/redoc-play"))
   .enablePlugins(SbtTwirl)
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-redoc-play",
     libraryDependencies += "com.typesafe.play" %% "play" % Versions.playServer
@@ -488,7 +536,7 @@ lazy val redocPlay: ProjectMatrix = (projectMatrix in file("docs/redoc-play"))
 // server
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
@@ -499,7 +547,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .jvmPlatform(scalaVersions = allScalaVersions)
 
 lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-http-server"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-akka-http-server",
     libraryDependencies ++= Seq(
@@ -512,7 +560,7 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
   .dependsOn(core, serverTests % Test)
 
 lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-server"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
@@ -524,7 +572,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
   .dependsOn(core, serverTests % Test)
 
 lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stub-server"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-sttp-stub-server"
   )
@@ -532,7 +580,7 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   .dependsOn(core, serverTests % "test", sttpClient)
 
 lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-server"))
-  .settings(commonSettings: _*)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-finatra-server",
     libraryDependencies ++= Seq(
@@ -557,7 +605,7 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
 
 lazy val finatraServerCats: ProjectMatrix =
   (projectMatrix in file("server/finatra-server/finatra-server-cats"))
-    .settings(commonSettings: _*)
+    .settings(commonSettingsJVM)
     .settings(
       name := "tapir-finatra-server-cats",
       libraryDependencies ++= Seq(
@@ -570,7 +618,7 @@ lazy val finatraServerCats: ProjectMatrix =
     .dependsOn(finatraServer % "compile->compile;test->test", serverTests % Test)
 
 lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-play-server",
     libraryDependencies ++= Seq(
@@ -583,7 +631,7 @@ lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"
   .dependsOn(core, serverTests % Test)
 
 lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
@@ -594,7 +642,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .dependsOn(core, serverTests % Test)
 
 lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4-server"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-zio-http4s-server",
     libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats
@@ -605,7 +653,7 @@ lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4-ser
 // client
 
 lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-client-tests",
     libraryDependencies ++= Seq(
@@ -618,11 +666,11 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .dependsOn(tests)
 
 lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
@@ -675,7 +723,7 @@ lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
 // other
 
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-examples",
     libraryDependencies ++= Seq(
@@ -705,7 +753,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
-  .settings(commonSettings)
+  .settings(commonSettingsJVM)
   .settings(
     name := "tapir-playground",
     libraryDependencies ++= Seq(

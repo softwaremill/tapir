@@ -22,4 +22,3 @@ class ExampleFunctorLawSpec extends AnyFunSuite with FunSuiteDiscipline with Che
 
   checkAll("Example.FunctorLaws", FunctorTests[Example].functor[Int, Int, String])
 }
-

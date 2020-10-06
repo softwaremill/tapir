@@ -4,7 +4,7 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.time._
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.util.{Date, UUID}
+import java.util.UUID
 
 import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateJdk8, arbLocalDateTimeJdk8, genZonedDateTimeWithZone}
 import org.scalacheck.{Arbitrary, Gen}
@@ -147,14 +147,6 @@ class CodecTest extends AnyFlatSpec with Matchers with Checkers {
     check { ot: OffsetTime =>
       val encoded = codec.encode(ot)
       codec.decode(encoded) == Value(ot) && OffsetTime.parse(encoded) == ot
-    }
-  }
-
-  it should "correctly encode and decode Date" in {
-    val codec = implicitly[Codec[String, Date, TextPlain]]
-    check { d: Date =>
-      val encoded = codec.encode(d)
-      codec.decode(encoded) == Value(d) && Date.from(Instant.parse(encoded)) == d
     }
   }
 
