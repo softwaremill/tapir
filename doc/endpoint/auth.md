@@ -6,13 +6,13 @@ when generating documentation. Otherwise, they behave as normal inputs which map
 
 Currently, the following authentication inputs are available (assuming `import sttp.tapir._`):
 
-* `auth.apiKey(anotherInput)`: wraps any other input and designates it as an api key. The input is typically a header, 
+* `TapirAuth.apiKey(anotherInput)`: wraps any other input and designates it as an api key. The input is typically a header, 
 cookie or a query parameter
-* `auth.basic[T]`: reads data from the `Authorization` header, removing the `Basic ` prefix. To parse the data as a 
+* `TapirAuth.basic[T]`: reads data from the `Authorization` header, removing the `Basic ` prefix. To parse the data as a 
 base64-encoded username/password combination, use: `basic[UsernamePassword]`.
-* `auth.bearer[T]`: reads data from the `Authorization` header, removing the `Bearer ` prefix. To get the string
+* `TapirAuth.bearer[T]`: reads data from the `Authorization` header, removing the `Bearer ` prefix. To get the string
 as a token, use: `bearer[String]`.
-* `auth.oauth2.authorizationCode(authorizationUrl, tokenUrl, scopes, refreshUrl): EndpointInput[String]`: creates an 
+* `TapirAuth.oauth2.authorizationCode(authorizationUrl, tokenUrl, scopes, refreshUrl): EndpointInput[String]`: creates an 
 OAuth2 authorization using authorization code - sign in using an auth service (for documentation, requires defining also 
 the `oauth2-redirect.html`, see [Generating OpenAPI documentation](../openapi.md))
 
