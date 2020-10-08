@@ -121,6 +121,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
       "com.softwaremill.sttp.model" %% "core" % Versions.sttpModel,
       "com.softwaremill.sttp.shared" %% "core" % Versions.sttpShared,
+      "com.softwaremill.sttp.shared" %% "ws" % Versions.sttpShared,
       scalaTest % Test,
       scalaCheck % Test,
       scalaTestPlusScalaCheck % Test,
@@ -407,7 +408,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp
     )
   )
   .dependsOn(tests)
@@ -538,7 +539,9 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)

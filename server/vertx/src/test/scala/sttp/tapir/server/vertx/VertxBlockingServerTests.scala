@@ -4,12 +4,11 @@ import io.vertx.scala.ext.web.{Route, Router}
 import org.scalatest.BeforeAndAfterEach
 import sttp.tapir._
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
-import sttp.tapir.tests.PortCounter
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class VertxBlockingServerTests extends VertxServerTests with BeforeAndAfterEach {
+abstract class VertxBlockingServerTests extends VertxServerTests with BeforeAndAfterEach {
 
   override def suspendResult[T](t: => T): Future[T] = vertx.executeBlocking(() => t)
 
@@ -23,7 +22,5 @@ class VertxBlockingServerTests extends VertxServerTests with BeforeAndAfterEach 
       eClassTag: ClassTag[E]
   ): Router => Route =
     e.blockingRouteRecoverErrors(fn)
-
-  override lazy val portCounter: PortCounter = new PortCounter(55000)
 
 }

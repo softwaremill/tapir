@@ -3,20 +3,23 @@ package sttp.tapir.server.akkahttp
 import java.nio.charset.{Charset, StandardCharsets}
 
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
+import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.model.{StatusCode => AkkaStatusCode, _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
-import akka.stream.scaladsl.StreamConverters
+import akka.stream.Materializer
+import akka.stream.scaladsl.{Flow, Source, StreamConverters}
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, HeaderNames, Part}
 import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
+import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-private[akkahttp] object OutputToAkkaRoute {
+private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Materializer) {
   private type EntityFromLength = Option[Long] => ResponseEntity
 
   def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
@@ -26,10 +29,14 @@ private[akkahttp] object OutputToAkkaRoute {
     val akkaHeaders = parseHeadersOrThrow(outputValues.headers)
 
     outputValues.body match {
-      case Some(entityFromLength) =>
+      case Some(Left(entityFromLength)) =>
         val entity = entityFromLength(outputValues.contentLength)
         val entity2 = overrideContentTypeIfDefined(entity, akkaHeaders)
         complete(HttpResponse(entity = entity2, status = statusCode, headers = akkaHeaders))
+      case Some(Right(flow)) =>
+        respondWithHeaders(akkaHeaders) {
+          handleWebSocketMessages(flow)
+        }
       case None => complete(HttpResponse(statusCode, headers = akkaHeaders))
     }
   }
@@ -37,13 +44,26 @@ private[akkahttp] object OutputToAkkaRoute {
   // We can only create the entity once we know if its size is defined; depending on this, the body might end up
   // as a chunked or normal response. That's why here we return a function creating the entity basing on the length,
   // which might be only known when all other outputs are encoded.
-  private val encodeOutputs: EncodeOutputs[EntityFromLength] = new EncodeOutputs(new EncodeOutputBody[EntityFromLength] {
-    override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): EntityFromLength =
-      contentLength =>
-        rawValueToResponseEntity(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), contentLength, v)
-    override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): EntityFromLength =
-      contentLength => streamToEntity(formatToContentType(format, charset), contentLength, v.asInstanceOf[AkkaStreams.BinaryStream])
-  })
+  private val encodeOutputs: EncodeOutputs[EntityFromLength, Flow[Message, Message, Any], AkkaStreams] = new EncodeOutputs(
+    new EncodeOutputBody[EntityFromLength, Flow[Message, Message, Any], AkkaStreams] {
+      override val streams: AkkaStreams = AkkaStreams
+      override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): EntityFromLength =
+        contentLength =>
+          rawValueToResponseEntity(
+            bodyType,
+            formatToContentType(format, charset(bodyType)),
+            contentLength,
+            v
+          )
+      override def streamValueToBody(v: Source[ByteString, Any], format: CodecFormat, charset: Option[Charset]): EntityFromLength =
+        contentLength => streamToEntity(formatToContentType(format, charset), contentLength, v)
+
+      override def webSocketPipeToBody[REQ, RESP](
+          pipe: Flow[REQ, RESP, Any],
+          o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, AkkaStreams]
+      ): Flow[Message, Message, Any] = AkkaWebSockets.pipeToBody(pipe, o)
+    }
+  )
 
   private def rawValueToResponseEntity[CF <: CodecFormat, R](
       bodyType: RawBodyType[R],

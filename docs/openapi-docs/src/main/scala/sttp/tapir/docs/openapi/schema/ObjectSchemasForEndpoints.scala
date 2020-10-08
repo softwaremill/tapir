@@ -124,6 +124,7 @@ object ObjectSchemasForEndpoints {
       case EndpointOutput.MappedPair(wrapped, _)   => forOutput(wrapped)
       case EndpointOutput.Void()                   => List.empty
       case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
+      case EndpointOutput.WebSocketBodyWrapper(_)  => List.empty
       case op: EndpointIO[_]                       => forIO(op)
     }
   }

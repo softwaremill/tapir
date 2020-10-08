@@ -2,14 +2,15 @@ package sttp.tapir.server.internal
 
 import java.nio.charset.Charset
 
+import sttp.capabilities.Streams
 import sttp.model.{HeaderNames, StatusCode}
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
-import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO}
+import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
 import scala.util.Try
 
-class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
-  def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
+class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
+  def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
     output match {
       case s: EndpointOutput.Single[_]                => applySingle(s, value, ov)
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
@@ -24,13 +25,13 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
       right: EndpointOutput[_],
       split: SplitParams,
       params: Params,
-      ov: OutputValues[B]
-  ): OutputValues[B] = {
+      ov: OutputValues[B, W]
+  ): OutputValues[B, W] = {
     val (leftParams, rightParams) = split(params)
     apply(right, rightParams, apply(left, leftParams, ov))
   }
 
-  private def applySingle(output: EndpointOutput.Single[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
+  private def applySingle(output: EndpointOutput.Single[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
     def encoded[T]: T = output._mapping.asInstanceOf[Mapping[T, Any]].encode(value.asAny)
     output match {
       case EndpointIO.Empty(_, _)                   => ov
@@ -44,6 +45,13 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
       case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
       case EndpointIO.MappedPair(wrapped, _)  => apply(wrapped, ParamsAsAny(encoded), ov)
       case EndpointOutput.StatusCode(_, _, _) => ov.withStatusCode(encoded[StatusCode])
+      case EndpointOutput.WebSocketBodyWrapper(o) =>
+        ov.withWebSocketBody(
+          encodeOutputBody.webSocketPipeToBody(
+            encoded,
+            o.asInstanceOf[WebSocketBodyOutput[encodeOutputBody.streams.Pipe, Any, Any, Any, S]]
+          )
+        )
       case EndpointOutput.OneOf(mappings, _) =>
         val enc = encoded[Any]
         val mapping = mappings
@@ -55,18 +63,30 @@ class EncodeOutputs[B](encodeOutputBody: EncodeOutputBody[B]) {
   }
 }
 
-case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], statusCode: Option[StatusCode]) {
-  def withBody(b: B): OutputValues[B] = {
+case class OutputValues[B, W](
+    body: Option[Either[B, W]],
+    headers: Vector[(String, String)],
+    statusCode: Option[StatusCode]
+) {
+  def withBody(b: B): OutputValues[B, W] = {
     if (body.isDefined) {
       throw new IllegalArgumentException("Body is already defined")
     }
 
-    copy(body = Some(b))
+    copy(body = Some(Left(b)))
   }
 
-  def withHeader(h: (String, String)): OutputValues[B] = copy(headers = headers :+ h)
+  def withWebSocketBody(w: W): OutputValues[B, W] = {
+    if (body.isDefined) {
+      throw new IllegalArgumentException("Body is already defined")
+    }
 
-  def withStatusCode(sc: StatusCode): OutputValues[B] = copy(statusCode = Some(sc))
+    copy(body = Some(Right(w)))
+  }
+
+  def withHeader(h: (String, String)): OutputValues[B, W] = copy(headers = headers :+ h)
+
+  def withStatusCode(sc: StatusCode): OutputValues[B, W] = copy(statusCode = Some(sc))
 
   def contentLength: Option[Long] =
     headers
@@ -76,10 +96,12 @@ case class OutputValues[B](body: Option[B], headers: Vector[(String, String)], s
       .flatMap(v => Try(v.toLong).toOption)
 }
 object OutputValues {
-  def empty[B]: OutputValues[B] = OutputValues[B](None, Vector.empty, None)
+  def empty[B, W]: OutputValues[B, W] = OutputValues[B, W](None, Vector.empty, None)
 }
 
-trait EncodeOutputBody[B] {
-  def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): B
-  def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): B
+trait EncodeOutputBody[B, W, S] {
+  val streams: Streams[S]
+  def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): B
+  def streamValueToBody(v: streams.BinaryStream, format: CodecFormat, charset: Option[Charset]): B
+  def webSocketPipeToBody[REQ, RESP](pipe: streams.Pipe[REQ, RESP], o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, S]): W
 }

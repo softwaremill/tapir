@@ -10,17 +10,23 @@ import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import sttp.model.{Header, Part}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.internal._
 
 object OutputToFinatraResponse {
-  private val encodeOutputs: EncodeOutputs[(FinatraContent, String)] = new EncodeOutputs(new EncodeOutputBody[(FinatraContent, String)] {
-    override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): (FinatraContent, String) =
-      rawValueToFinatraContent(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), v)
-    override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): (FinatraContent, String) = {
-      FinatraContentBuf(v.asInstanceOf[Buf]) -> format.mediaType.toString()
-    }
-  })
+  private val encodeOutputs: EncodeOutputs[(FinatraContent, String), Nothing, Nothing] =
+    new EncodeOutputs[(FinatraContent, String), Nothing, Nothing](
+      new EncodeOutputBody[(FinatraContent, String), Nothing, Nothing] {
+        override val streams: NoStreams = NoStreams
+        override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): (FinatraContent, String) =
+          rawValueToFinatraContent(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), v)
+        override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): (FinatraContent, String) = {
+          FinatraContentBuf(v.asInstanceOf[Buf]) -> format.mediaType.toString()
+        }
+        override def webSocketPipeToBody[REQ, RESP](pipe: Nothing, o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, Nothing]): Nothing =
+          pipe
+      }
+    )
 
   def apply[O](
       defaultStatus: Status,
@@ -30,19 +36,20 @@ object OutputToFinatraResponse {
     outputValuesToResponse(encodeOutputs(output, ParamsAsAny(v), OutputValues.empty), defaultStatus)
   }
 
-  private def outputValuesToResponse(outputValues: OutputValues[(FinatraContent, String)], defaultStatus: Status): Response = {
+  private def outputValuesToResponse(outputValues: OutputValues[(FinatraContent, String), Nothing], defaultStatus: Status): Response = {
     val status = outputValues.statusCode.map(sc => Status(sc.code)).getOrElse(defaultStatus)
 
     val responseWithContent = outputValues.body match {
-      case Some((FinatraContentBuf(buf), ct)) =>
+      case Some(Left((FinatraContentBuf(buf), ct))) =>
         val response = Response(Version.Http11, status)
         response.content = buf
         response.contentType = ct
         response
-      case Some((FinatraContentReader(reader), ct)) =>
+      case Some(Left((FinatraContentReader(reader), ct))) =>
         val response = Response(Version.Http11, status, reader)
         response.contentType = ct
         response
+      case Some(Right(v)) => v // impossible
       case None =>
         Response(Version.Http11, status)
     }

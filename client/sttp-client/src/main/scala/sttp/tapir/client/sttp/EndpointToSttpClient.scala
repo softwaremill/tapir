@@ -6,17 +6,18 @@ import java.nio.ByteBuffer
 import sttp.capabilities.Streams
 import sttp.client3._
 import sttp.model.Uri.PathSegment
-import sttp.model.{HeaderNames, Method, Part, Uri}
+import sttp.model.{HeaderNames, Method, Part, StatusCode, Uri}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.internal._
+import sttp.ws.WebSocket
 
-class EndpointToSttpClient(clientOptions: SttpClientOptions) {
-  def toSttpRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[Either[E, O], R] = { params =>
+class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
+  def toSttpRequestUnsafe[I, E, O](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[Either[E, O], R] = { params =>
     toSttpRequest(e, baseUri)(params).mapResponse(getOrThrow)
   }
 
-  def toSttpRequest[R, O, E, I](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], R] = { params =>
+  def toSttpRequest[O, E, I](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], R] = { params =>
     val (uri, req1) =
       setInputParams(
         e.input,
@@ -27,13 +28,15 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
 
     val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
 
+    val isWebSocket = bodyIsWebSocket(e.output)
+    def isSuccess(meta: ResponseMetadata) = if (isWebSocket) meta.code == StatusCode.SwitchingProtocols else meta.isSuccess
     val responseAs = fromMetadata(
-      responseAsFromOutputs(e.errorOutput),
-      ConditionalResponseAs(_.isSuccess, responseAsFromOutputs(e.output))
+      responseAsFromOutputs(e.errorOutput, isWebSocket = false),
+      ConditionalResponseAs(isSuccess, responseAsFromOutputs(e.output, isWebSocket))
     ).mapWithMetadata { (body, meta) =>
-      val output = if (meta.isSuccess) e.output else e.errorOutput
+      val output = if (isSuccess(meta)) e.output else e.errorOutput
       val params = getOutputParams(output, body, meta)
-      params.map(_.asAny).map(p => if (meta.isSuccess) Right(p) else Left(p))
+      params.map(_.asAny).map(p => if (isSuccess(meta)) Right(p) else Left(p))
     }.map {
       case DecodeResult.Error(o, e) =>
         DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req2.method} ${req2.uri}", e))
@@ -49,12 +52,21 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
         (s match {
           case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
           case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
-          case EndpointIO.Header(name, codec, _)                          => codec.decode(meta.headers(name).toList)
-          case EndpointIO.Headers(codec, _)                               => codec.decode(meta.headers.toList)
-          case EndpointOutput.StatusCode(_, codec, _)                     => codec.decode(meta.code)
-          case EndpointOutput.FixedStatusCode(_, codec, _)                => codec.decode(())
-          case EndpointIO.FixedHeader(_, codec, _)                        => codec.decode(())
-          case EndpointIO.Empty(codec, _)                                 => codec.decode(())
+          case EndpointOutput.WebSocketBodyWrapper(o: WebSocketBodyOutput[_, _, _, _, Any]) =>
+            val streams = o.streams.asInstanceOf[wsToPipe.S]
+            o.codec.decode(
+              wsToPipe
+                .apply(streams)(
+                  body.asInstanceOf[WebSocket[wsToPipe.F]],
+                  o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
+                )
+            )
+          case EndpointIO.Header(name, codec, _)           => codec.decode(meta.headers(name).toList)
+          case EndpointIO.Headers(codec, _)                => codec.decode(meta.headers.toList)
+          case EndpointOutput.StatusCode(_, codec, _)      => codec.decode(meta.code)
+          case EndpointOutput.FixedStatusCode(_, codec, _) => codec.decode(())
+          case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
+          case EndpointIO.Empty(codec, _)                  => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
             mappings
               .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
@@ -175,10 +187,10 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     setInputParams(tuple.asInstanceOf[EndpointInput[Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), uri, req)
   }
 
-  private def setBody[R, T, CF <: CodecFormat](
-      v: T,
-      bodyType: RawBodyType[R],
-      codec: Codec[R, T, CF],
+  private def setBody[L, H, CF <: CodecFormat](
+      v: H,
+      bodyType: RawBodyType[L],
+      codec: Codec[L, H, CF],
       req: PartialAnyRequest
   ): PartialAnyRequest = {
     val encoded = codec.encode(v)
@@ -208,7 +220,7 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
     req2.contentType(codec.format.mediaType)
   }
 
-  private def partToSttpPart[R](p: Part[R], bodyType: RawBodyType[R]): Part[RequestBody[Any]] =
+  private def partToSttpPart[T](p: Part[T], bodyType: RawBodyType[T]): Part[RequestBody[Any]] =
     bodyType match {
       case RawBodyType.StringBody(charset) => multipart(p.name, p.body, charset.toString)
       case RawBodyType.ByteArrayBody       => multipart(p.name, p.body)
@@ -218,10 +230,11 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
       case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
     }
 
-  private def responseAsFromOutputs(out: EndpointOutput[_]): ResponseAs[Any, Any] = {
-    (bodyIsStream(out) match {
-      case Some(streams) => asStreamAlwaysUnsafe(streams)
-      case None => {
+  private def responseAsFromOutputs(out: EndpointOutput[_], isWebSocket: Boolean): ResponseAs[Any, Any] = {
+    ((bodyIsStream(out), isWebSocket) match {
+      case (Some(streams), _) => asStreamAlwaysUnsafe(streams)
+      case (_, true)          => asWebSocketAlwaysUnsafe
+      case (None, false) =>
         out.bodyType
           .map {
             case RawBodyType.StringBody(charset) => asStringAlways(charset.name())
@@ -232,19 +245,19 @@ class EndpointToSttpClient(clientOptions: SttpClientOptions) {
             case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Multipart bodies aren't supported in responses")
           }
           .getOrElse(ignore)
-      }
     }).asInstanceOf[ResponseAs[Any, Any]]
   }
 
   private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
-    out match {
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) => Some(streams)
-      case EndpointIO.Pair(left, right, _, _)                           => bodyIsStream(left).orElse(bodyIsStream(right))
-      case EndpointOutput.Pair(left, right, _, _)                       => bodyIsStream(left).orElse(bodyIsStream(right))
-      case EndpointIO.MappedPair(wrapped, _)                            => bodyIsStream(wrapped)
-      case EndpointOutput.MappedPair(wrapped, _)                        => bodyIsStream(wrapped)
-      case _                                                            => None
-    }
+    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+      Vector(streams)
+    }.headOption
+  }
+
+  private def bodyIsWebSocket[I](out: EndpointOutput[I]): Boolean = {
+    out.traverseOutputs { case EndpointOutput.WebSocketBodyWrapper(_) =>
+      Vector(())
+    }.nonEmpty
   }
 
   private def getOrThrow[T](dr: DecodeResult[T]): T =

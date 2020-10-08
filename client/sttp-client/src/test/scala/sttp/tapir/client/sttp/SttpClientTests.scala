@@ -1,6 +1,7 @@
 package sttp.tapir.client.sttp
 
 import cats.effect.{Blocker, ContextShift, IO}
+import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.{DecodeResult, Endpoint}
 import sttp.tapir.client.tests.ClientTests
@@ -9,27 +10,23 @@ import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 
 import scala.concurrent.ExecutionContext
 
-class SttpClientTests extends ClientTests[Fs2Streams[IO]](Fs2Streams[IO]) {
-  private implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.Implicits.global)
-  private val backend: SttpBackend[IO, Fs2Streams[IO]] =
+abstract class SttpClientTests[R >: WebSockets with Fs2Streams[IO]] extends ClientTests[R] {
+  implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.Implicits.global)
+  val backend: SttpBackend[IO, R] =
     AsyncHttpClientFs2Backend[IO](Blocker.liftExecutionContext(ExecutionContext.Implicits.global)).unsafeRunSync()
+  def wsToPipe: WebSocketToPipe[R]
 
-  override def mkStream(s: String): fs2.Stream[IO, Byte] = fs2.Stream.emits(s.getBytes("utf-8"))
-  override def rmStream(s: fs2.Stream[IO, Byte]): String =
-    s.through(fs2.text.utf8Decode)
-      .compile
-      .foldMonoid
-      .unsafeRunSync()
-
-  override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, Fs2Streams[IO]], port: Port, args: I): IO[Either[E, O]] = {
-    e.toSttpRequestUnsafe(uri"http://localhost:$port").apply(args).send(backend).map(_.body)
+  override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
+    implicit val wst: WebSocketToPipe[R] = wsToPipe
+    e.toSttpRequestUnsafe(uri"$scheme://localhost:$port").apply(args).send(backend).map(_.body)
   }
 
   override def safeSend[I, E, O, FN[_]](
-      e: Endpoint[I, E, O, Fs2Streams[IO]],
+      e: Endpoint[I, E, O, R],
       port: Port,
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
+    implicit val wst: WebSocketToPipe[R] = wsToPipe
     e.toSttpRequest(uri"http://localhost:$port").apply(args).send(backend).map(_.body)
   }
 

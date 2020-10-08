@@ -5,20 +5,19 @@ import cats.effect.{ContextShift, IO, Resource, Timer}
 import com.github.ghik.silencer.silent
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.filters.{AccessLoggingFilter, ExceptionMappingFilter}
-import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.finatra.http.routing.HttpRouter
+import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Endpoint
-import sttp.tapir.internal.NoStreams
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.server.tests.ServerTests
-import sttp.tapir.tests.{Port, PortCounter}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.tests.Port
 
 import scala.concurrent.ExecutionContext
-import scala.reflect.ClassTag
 import scala.concurrent.duration._
+import scala.reflect.ClassTag
 
-class FinatraServerTests extends ServerTests[Future, Nothing, Any, FinatraRoute](NoStreams) {
+abstract class FinatraServerTests extends ServerTests[Future, Any, FinatraRoute] {
   private val futurePool = FuturePool.unboundedPool
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -48,8 +47,6 @@ class FinatraServerTests extends ServerTests[Future, Nothing, Any, FinatraRoute]
   }
 
   override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = FinatraServerTests.server(routes, port)
-
-  override lazy val portCounter: PortCounter = new PortCounter(58000)
 }
 
 object FinatraServerTests {

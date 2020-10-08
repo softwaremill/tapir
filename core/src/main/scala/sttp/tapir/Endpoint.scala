@@ -1,5 +1,6 @@
 package sttp.tapir
 
+import sttp.capabilities.WebSockets
 import sttp.model.Method
 import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.FixedMethod
@@ -126,6 +127,14 @@ trait EndpointOutputsOps[I, E, O, -R] {
 
   def prependOut[P, PO, R2](i: StreamBodyIO[_, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
     withOutput(i.toEndpointIO.and(output))
+
+  def out[Pipe[_, _], P, OP, R2](i: WebSocketBodyOutput[Pipe, _, _, P, R2])(implicit
+      ts: ParamConcat.Aux[O, P, OP]
+  ): EndpointType[I, E, OP, R with R2 with WebSockets] = withOutput(output.and(i.toEndpointOutput))
+
+  def prependOut[Pipe[_, _], P, PO, R2](i: WebSocketBodyOutput[Pipe, _, _, P, R2])(implicit
+      ts: ParamConcat.Aux[P, O, PO]
+  ): EndpointType[I, E, PO, R with R2 with WebSockets] = withOutput(i.toEndpointOutput.and(output))
 
   def mapOut[OO](m: Mapping[O, OO]): EndpointType[I, E, OO, R] =
     withOutput(output.map(m))

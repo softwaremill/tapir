@@ -13,6 +13,7 @@ import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
 import sttp.tapir.internal._
+import sttp.ws.WebSocketFrame
 
 import scala.reflect.ClassTag
 
@@ -107,6 +108,45 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
       charset: Option[Charset] = None
   ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, Some(schema.as[s.BinaryStream])), EndpointIO.Info.empty, charset)
+
+  // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
+  // while the third one (S) can be inferred.
+  final class WebSocketBodyBuilder[REQ, RESP, CF <: CodecFormat] {
+    def apply[S](
+        s: Streams[S]
+    )(implicit
+        requests: Codec[WebSocketFrame, REQ, CF],
+        responses: Codec[WebSocketFrame, RESP, CF]
+    ): WebSocketBodyOutput[s.Pipe, REQ, RESP, s.Pipe[REQ, RESP], S] =
+      WebSocketBodyOutput(
+        s,
+        requests,
+        responses,
+        Codec.idPlain(), // any codec format will do
+        EndpointIO.Info.empty,
+        concatenateFragmentedFrames = true,
+        ignorePong = true,
+        autoPongOnPing = true,
+        decodeCloseRequests = requests.schema.exists(_.isOptional),
+        decodeCloseResponses = responses.schema.exists(_.isOptional)
+      )
+  }
+
+  /**
+    * @tparam REQ The type of messages that are sent to the server.
+    * @tparam RESP The type of messages that are received from the server.
+    */
+  def webSocketBody[REQ, RESP, CF <: CodecFormat]: WebSocketBodyBuilder[REQ, RESP, CF] = new WebSocketBodyBuilder[REQ, RESP, CF]
+  def webSocketBodyRaw[S](
+      s: Streams[S]
+  ): WebSocketBodyOutput[s.Pipe, WebSocketFrame, WebSocketFrame, s.Pipe[WebSocketFrame, WebSocketFrame], S] =
+    new WebSocketBodyBuilder[WebSocketFrame, WebSocketFrame, CodecFormat]
+      .apply(s)
+      .concatenateFragmentedFrames(false)
+      .ignorePong(false)
+      .autoPongOnPing(false)
+      .decodeCloseRequests(true)
+      .decodeCloseResponses(true)
 
   /**
     * A body in any format, read using the given `codec`, from a raw string read using UTF-8.

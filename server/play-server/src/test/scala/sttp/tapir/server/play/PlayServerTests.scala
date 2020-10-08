@@ -9,21 +9,16 @@ import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.tapir.Endpoint
-import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
-import sttp.tapir.tests.{Port, PortCounter}
+import sttp.tapir.tests.Port
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.reflect.ClassTag
 
-class PlayServerTests extends ServerTests[Future, Nothing, Any, Router.Routes](NoStreams) {
-  override def multipleValueHeaderSupport: Boolean = false
-  override def multipartInlineHeaderSupport: Boolean = false
-  override def inputStreamSupport: Boolean = false
-
+abstract class PlayServerTests extends ServerTests[Future, Any, Router.Routes] {
   private implicit val actorSystem: ActorSystem = ActorSystem()
 
   override protected def afterAll(): Unit = {
@@ -69,6 +64,4 @@ class PlayServerTests extends ServerTests[Future, Nothing, Any, Router.Routes](N
     }
     Resource.make(bind)(s => IO(s.stop())).map(_ => ())
   }
-
-  override val portCounter: PortCounter = new PortCounter(38000)
 }

@@ -10,11 +10,11 @@ import io.vertx.scala.core.http.HttpServerResponse
 import io.vertx.scala.core.streams.ReadStream
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.{Header, Part}
-import sttp.tapir.internal.{ParamsAsAny, charset}
+import sttp.tapir.internal.{NoStreams, ParamsAsAny, charset}
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.server.vertx.VertxEndpointOptions
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -43,7 +43,7 @@ object VertxOutputEncoders {
       implicit endpointOptions: VertxEndpointOptions
   ): RoutingContextHandler = { rc =>
     val resp = rc.response
-    val options: OutputValues[RoutingContextHandlerWithLength] = OutputValues.empty
+    val options: OutputValues[RoutingContextHandlerWithLength, Nothing] = OutputValues.empty
     try {
       var outputValues = encodeOutputs(endpointOptions)(output, ParamsAsAny(result), options)
       if (isError && outputValues.statusCode.isEmpty) {
@@ -52,8 +52,9 @@ object VertxOutputEncoders {
       setStatus(outputValues)(resp)
       forwardHeaders(outputValues)(resp)
       outputValues.body match {
-        case Some(responseHandler) => responseHandler(outputValues.contentLength)(rc)
-        case None                  => resp.end()
+        case Some(Left(responseHandler)) => responseHandler(outputValues.contentLength)(rc)
+        case Some(Right(v))              => v // impossible
+        case None                        => resp.end()
       }
       logWhenHandled(resp.getStatusCode)
     } catch {
@@ -70,7 +71,7 @@ object VertxOutputEncoders {
     charset.fold(format.mediaType)(format.mediaType.charset(_)).toString // README: Charset doesn't seem to be accepted in tests
   }
 
-  private def forwardHeaders(outputValues: OutputValues[RoutingContextHandlerWithLength])(resp: HttpServerResponse): Unit = {
+  private def forwardHeaders(outputValues: OutputValues[RoutingContextHandlerWithLength, Nothing])(resp: HttpServerResponse): Unit = {
     outputValues.headers.foreach { case (k, v) => resp.headers.add(k, v) }
     if (!resp.headers.contains(HttpHeaders.CONTENT_LENGTH.toString)) {
       outputValues.contentLength.foreach { length => resp.headers.add(HttpHeaders.CONTENT_LENGTH.toString, length.toString) }
@@ -80,19 +81,24 @@ object VertxOutputEncoders {
   private def forwardHeaders(headers: Seq[Header], resp: HttpServerResponse): Unit =
     headers.foreach { h => resp.headers.add(h.name, h.value) }
 
-  private def setStatus[O](outputValues: OutputValues[O])(resp: HttpServerResponse): Unit =
+  private def setStatus[O](outputValues: OutputValues[O, Nothing])(resp: HttpServerResponse): Unit =
     outputValues.statusCode.map(_.code).foreach(resp.setStatusCode)
 
-  private def encodeOutputs(implicit endpointOptions: VertxEndpointOptions): EncodeOutputs[RoutingContextHandlerWithLength] =
-    new EncodeOutputs(
-      new EncodeOutputBody[RoutingContextHandlerWithLength] {
-        override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): RoutingContextHandlerWithLength =
+  private def encodeOutputs(implicit
+      endpointOptions: VertxEndpointOptions
+  ): EncodeOutputs[RoutingContextHandlerWithLength, Nothing, Nothing] =
+    new EncodeOutputs[RoutingContextHandlerWithLength, Nothing, Nothing](
+      new EncodeOutputBody[RoutingContextHandlerWithLength, Nothing, Nothing] {
+        override val streams: NoStreams = NoStreams
+        override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContextHandlerWithLength =
           _ =>
             BodyEncoders(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), v)(endpointOptions)(
               _
             )
-        override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength =
+        override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength =
           contentLength => StreamEncoders(formatToContentType(format, charset), v.asInstanceOf[ReadStream[Buffer]], contentLength)(_)
+        override def webSocketPipeToBody[REQ, RESP](pipe: Nothing, o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, Nothing]): Nothing =
+          pipe
       }
     )
 

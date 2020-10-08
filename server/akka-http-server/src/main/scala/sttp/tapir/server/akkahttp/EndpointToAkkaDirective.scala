@@ -9,6 +9,7 @@ import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
+import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
@@ -18,7 +19,7 @@ import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyTyp
 import scala.concurrent.{ExecutionContext, Future}
 
 private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOptions) {
-  def apply[I, E, O](e: Endpoint[I, E, O, AkkaStreams]): Directive1[I] = {
+  def apply[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets]): Directive1[I] = {
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._
 
@@ -43,14 +44,18 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       }
 
       extractRequestContext.flatMap { ctx =>
-        decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
-          case values: DecodeInputsResult.Values =>
-            InputValues(e.input, values) match {
-              case InputValuesResult.Value(params, _)        => provide(params.asAny.asInstanceOf[I])
-              case InputValuesResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
-            }
+        extractExecutionContext.flatMap { implicit ec =>
+          extractMaterializer.flatMap { implicit mat =>
+            decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
+              case values: DecodeInputsResult.Values =>
+                InputValues(e.input, values) match {
+                  case InputValuesResult.Value(params, _)        => provide(params.asAny.asInstanceOf[I])
+                  case InputValuesResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
+                }
 
-          case DecodeInputsResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
+              case DecodeInputsResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
+            }
+          }
         }
       }
     }
@@ -72,7 +77,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       e: Endpoint[_, _, _, _],
       input: EndpointInput[_],
       failure: DecodeResult.Failure
-  ): Directive1[I] = {
+  )(implicit ec: ExecutionContext, mat: Materializer): Directive1[I] = {
     val decodeFailureCtx = DecodeFailureContext(input, failure)
     val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
     handling match {
@@ -81,7 +86,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         reject
       case DecodeFailureHandling.RespondWithResponse(output, value) =>
         serverOptions.logRequestHandling.decodeFailureHandled(e, decodeFailureCtx, value)(ctx.log)
-        StandardRoute(OutputToAkkaRoute(ServerDefaults.StatusCodes.error.code, output, value))
+        StandardRoute(new OutputToAkkaRoute().apply(ServerDefaults.StatusCodes.error.code, output, value))
     }
   }
 

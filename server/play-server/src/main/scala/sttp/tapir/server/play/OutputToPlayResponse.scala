@@ -11,10 +11,12 @@ import akka.util.ByteString
 import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
+import sttp.capabilities
+import sttp.capabilities.Streams
 import sttp.model.{MediaType, Part, StatusCode}
-import sttp.tapir.internal.ParamsAsAny
+import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
 object OutputToPlayResponse {
   def apply[O](
@@ -35,20 +37,23 @@ object OutputToPlayResponse {
     val status = outputValues.statusCode.getOrElse(defaultStatus)
 
     outputValues.body match {
-      case Some(entity) =>
+      case Some(Left(entity)) =>
         val result = Result(ResponseHeader(status.code, headers), entity)
         headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
-      case None => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
+      case Some(Right(v)) => v // impossible
+      case None           => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
     }
   }
 
-  private val encodeOutputs: EncodeOutputs[HttpEntity] =
-    new EncodeOutputs[HttpEntity](new EncodeOutputBody[HttpEntity] {
-      override def rawValueToBody(v: Any, format: CodecFormat, bodyType: RawBodyType[_]): HttpEntity =
+  private val encodeOutputs: EncodeOutputs[HttpEntity, Nothing, Nothing] =
+    new EncodeOutputs[HttpEntity, Nothing, Nothing](new EncodeOutputBody[HttpEntity, Nothing, Nothing] {
+      override val streams: NoStreams = NoStreams
+      override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity =
         rawValueToResponseEntity(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format), v)
-      override def streamValueToBody(v: Any, format: CodecFormat, charset: Option[Charset]): HttpEntity =
-        HttpEntity.Streamed(v.asInstanceOf[Source[ByteString, _]], None, formatToContentType(format))
-
+      override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): HttpEntity =
+        HttpEntity.Streamed(v, None, formatToContentType(format))
+      override def webSocketPipeToBody[REQ, RESP](pipe: Nothing, o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, Nothing]): Nothing =
+        pipe
     })
 
   private def rawValueToResponseEntity[R](bodyType: RawBodyType[R], contentType: Option[String], r: R): HttpEntity = {

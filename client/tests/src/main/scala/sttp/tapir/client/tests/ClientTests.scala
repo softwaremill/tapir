@@ -1,160 +1,35 @@
 package sttp.tapir.client.tests
 
-import java.io.{ByteArrayInputStream, File, InputStream}
-import java.nio.ByteBuffer
+import java.io.{File, InputStream}
 
 import cats.effect._
 import cats.effect.concurrent.Ref
 import cats.implicits._
 import fs2.concurrent.SignallingRef
-import org.http4s._
 import org.http4s.dsl.io._
+import org.http4s.{multipart, _}
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
+import org.http4s.websocket.WebSocketFrame
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.{DecodeResult, _}
+import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
-import TestUtil._
-import org.http4s.multipart
-import sttp.capabilities.Streams
-import sttp.model.{QueryParams, StatusCode}
-import sttp.tapir.model.UsernamePassword
+import sttp.tapir.{DecodeResult, _}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-abstract class ClientTests[S <: Streams[S]](val streams: S) extends AnyFunSuite with Matchers with BeforeAndAfterAll {
+abstract class ClientTests[R] extends AnyFunSuite with Matchers with BeforeAndAfterAll {
   private val logger = org.log4s.getLogger
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit private val timer: Timer[IO] = IO.timer(ec)
-
-  private val testFile = writeToFile("pen pineapple apple pen")
-
-  testClient(endpoint, (), Right(()))
-  testClient(in_query_out_string, "apple", Right("fruit: apple"))
-  testClient(in_query_query_out_string, ("apple", Some(10)), Right("fruit: apple 10"))
-  testClient(in_header_out_string, "Admin", Right("Role: Admin"))
-  testClient(in_path_path_out_string, ("apple", 10), Right("apple 10 None"))
-  testClient(in_string_out_string, "delicious", Right("delicious"))
-  testClient(in_mapped_query_out_string, "apple".toList, Right("fruit: apple"))
-  testClient(in_mapped_path_out_string, Fruit("kiwi"), Right("kiwi"))
-  testClient(in_mapped_path_path_out_string, FruitAmount("apple", 10), Right("apple 10 None"))
-  testClient(in_query_mapped_path_path_out_string, (FruitAmount("apple", 10), "red"), Right("apple 10 Some(red)"))
-  testClient(in_query_out_mapped_string, "apple", Right("fruit: apple".toList))
-  testClient(in_query_out_mapped_string_header, "apple", Right(FruitAmount("fruit: apple", 5)))
-  testClient(in_json_out_json, FruitAmount("orange", 11), Right(FruitAmount("orange", 11)))
-  testClient(in_byte_array_out_byte_array, "banana kiwi".getBytes(), Right("banana kiwi".getBytes()))
-  testClient(in_byte_buffer_out_byte_buffer, ByteBuffer.wrap("mango".getBytes), Right(ByteBuffer.wrap("mango".getBytes)))
-  testClient(
-    in_input_stream_out_input_stream,
-    new ByteArrayInputStream("mango".getBytes),
-    Right(new ByteArrayInputStream("mango".getBytes))
-  )
-  testClient(in_file_out_file, testFile, Right(testFile))
-  testClient(in_form_out_form, FruitAmount("plum", 10), Right(FruitAmount("plum", 10)))
-  testClient(
-    in_query_params_out_string,
-    QueryParams.fromMap(Map("name" -> "apple", "weight" -> "42", "kind" -> "very good")),
-    Right("kind=very good&name=apple&weight=42")
-  )
-  testClient(in_paths_out_string, List("fruit", "apple", "amount", "50"), Right("apple 50 None"))
-  testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
-  testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
-  testClient(in_cookie_cookie_out_header, (23, "pomegranate"), Right(List("etanargemop=2c ;32=1c")))
-  // TODO: test root path
-  testClient(in_auth_apikey_header_out_string, "1234", Right("Authorization=None; X-Api-Key=Some(1234); Query=None"))
-  testClient(in_auth_apikey_query_out_string, "1234", Right("Authorization=None; X-Api-Key=None; Query=Some(1234)"))
-  testClient(
-    in_auth_basic_out_string,
-    UsernamePassword("teddy", Some("bear")),
-    Right("Authorization=Some(Basic dGVkZHk6YmVhcg==); X-Api-Key=None; Query=None")
-  )
-  testClient(in_auth_bearer_out_string, "1234", Right("Authorization=Some(Bearer 1234); X-Api-Key=None; Query=None"))
-  testClient(in_string_out_status_from_string.name("status one of 1"), "apple", Right(Right("fruit: apple")))
-  testClient(in_string_out_status_from_string.name("status one of 2"), "papaya", Right(Left(29)))
-  testClient(in_int_out_value_form_exact_match.name("first exact status of 2"), 1, Right("B"))
-  testClient(in_int_out_value_form_exact_match.name("second exact status of 2"), 2, Right("A"))
-  testClient(in_string_out_status, "apple", Right(StatusCode.Ok))
-
-  testClient(delete_endpoint, (), Right(()))
-
-  testClient(in_optional_json_out_optional_json.name("defined"), Some(FruitAmount("orange", 11)), Right(Some(FruitAmount("orange", 11))))
-  testClient(in_optional_json_out_optional_json.name("empty"), None, Right(None))
-
-  testClient(
-    in_4query_out_4header_extended.in("api" / "echo" / "param-to-upper-header"),
-    (("1", "2"), "3", "4"),
-    Right((("1", "2"), "3", "4"))
-  )
-
-  //
-
-  test(in_headers_out_headers.showDetail) {
-    send(
-      in_headers_out_headers,
-      port,
-      List(sttp.model.Header("X-Fruit", "apple"), sttp.model.Header("Y-Fruit", "Orange"))
-    ).unsafeRunSync().right.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO"))
-  }
-
-  test(in_json_out_headers.showDetail) {
-    send(in_json_out_headers, port, FruitAmount("apple", 10))
-      .unsafeRunSync()
-      .right
-      .get should contain(sttp.model.Header("Content-Type", "application/json".reverse))
-  }
-
-  testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
-
-  test(in_simple_multipart_out_raw_string.showDetail) {
-    val result = send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
-      .unsafeRunSync()
-      .right
-      .get
-
-    val indexOfJson = result.indexOf("{\"fruit")
-    val beforeJson = result.substring(0, indexOfJson)
-    val afterJson = result.substring(indexOfJson)
-
-    beforeJson should include("""Content-Disposition: form-data; name="fruitAmount"""")
-    beforeJson should include("Content-Type: application/json")
-    beforeJson should not include ("Content-Type: text/plain")
-
-    afterJson should include("""Content-Disposition: form-data; name="notes"""")
-    afterJson should include("Content-Type: text/plain; charset=UTF-8")
-    afterJson should not include ("Content-Type: application/json")
-  }
-
-  test(in_fixed_header_out_string.showDetail) {
-    send(in_fixed_header_out_string, port, ())
-      .unsafeRunSync() shouldBe Right("Location: secret")
-  }
-
-  //
-
-  def mkStream(s: String): streams.BinaryStream
-  def rmStream(s: streams.BinaryStream): String
-
-  test(in_stream_out_stream(streams).showDetail) {
-    rmStream(
-      send(in_stream_out_stream(streams), port, mkStream("mango cranberry"))
-        .unsafeRunSync()
-        .right
-        .get
-    ) shouldBe "mango cranberry"
-  }
-
-  test("not existing endpoint, with error output not matching 404") {
-    safeSend(not_existing_endpoint, port, ()).unsafeRunSync() should matchPattern {
-      case DecodeResult.Error(_, _: IllegalArgumentException) =>
-    }
-  }
 
   //
 
@@ -173,7 +48,7 @@ abstract class ClientTests[S <: Streams[S]](val streams: S) extends AnyFunSuite 
       }
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
-    case r @ GET -> Root / "api" / "unit"                                  => Ok("{}")
+    case _ @GET -> Root / "api" / "unit"                                   => Ok("{}")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ GET -> Root / "api" / "echo" / "headers" =>
       val headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse))
@@ -217,6 +92,24 @@ abstract class ClientTests[S <: Streams[S]](val streams: S) extends AnyFunSuite 
 
     case GET -> Root / "mapping" :? numParam(v) =>
       if (v % 2 == 0) Accepted("A") else Ok("B")
+
+    case GET -> Root / "ws" / "echo" =>
+      val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
+        _.collect { case WebSocketFrame.Text(msg, _) =>
+          if (msg.contains("\"f\"")) {
+            WebSocketFrame.Text(msg.replace("\"f\":\"", "\"f\":\"echo: ")) // json echo
+          } else {
+            WebSocketFrame.Text("echo: " + msg) // string echo
+          }
+        }
+
+      fs2.concurrent.Queue
+        .unbounded[IO, WebSocketFrame]
+        .flatMap { q =>
+          val d = q.dequeue.through(echoReply)
+          val e = q.enqueue
+          WebSocketBuilder[IO].build(d, e)
+        }
   }
 
   private val app: HttpApp[IO] = Router("/" -> service).orNotFound
@@ -225,10 +118,10 @@ abstract class ClientTests[S <: Streams[S]](val streams: S) extends AnyFunSuite 
 
   type Port = Int
 
-  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[Either[E, O]]
-  def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, S], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
+  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]]
+  def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
 
-  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, S], args: I, expectedResult: Either[E, O]): Unit = {
+  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, R], args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Either[Any, Any] = {
@@ -247,7 +140,7 @@ abstract class ClientTests[S <: Streams[S]](val streams: S) extends AnyFunSuite 
     }
   }
 
-  private var port: Port = _
+  var port: Port = _
   private var exitSignal: SignallingRef[IO, Boolean] = _
   private var serverExitCode: Future[Option[ExitCode]] = _
 
@@ -279,5 +172,5 @@ abstract class ClientTests[S <: Streams[S]](val streams: S) extends AnyFunSuite 
 
   //
 
-  lazy val portCounter: PortCounter = new PortCounter(41000)
+  def portCounter: PortCounter
 }

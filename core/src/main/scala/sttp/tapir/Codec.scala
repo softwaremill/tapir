@@ -15,6 +15,7 @@ import sttp.tapir.DecodeResult._
 import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import sttp.tapir.internal._
 import sttp.tapir.model.UsernamePassword
+import sttp.ws.WebSocketFrame
 
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.{Duration => SDuration}
@@ -285,6 +286,74 @@ object Codec extends FormCodecDerivation {
 
   //
 
+  implicit val webSocketFrameCodec: Codec[WebSocketFrame, WebSocketFrame, CodecFormat.TextPlain] = Codec.idPlain()
+
+  /**
+    * A codec which expects only text frames (all other frames cause a decoding error) and handles the text using
+    * the given `stringCodec`.
+    */
+  implicit def textWebSocketFrameCodec[A, CF <: CodecFormat](implicit
+      stringCodec: Codec[String, A, CF]
+  ): Codec[WebSocketFrame, A, CF] =
+    Codec
+      .id[WebSocketFrame, CF](stringCodec.format)
+      .mapDecode {
+        case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p)
+        case f                            => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
+      }(a => WebSocketFrame.text(stringCodec.encode(a)))
+
+  /**
+    * A codec which expects only text and close frames (all other frames cause a decoding error). Close frames
+    * correspond to `None`, while text frames are handled using the given `stringCodec` and wrapped with `Some`.
+    */
+  implicit def textOrCloseWebSocketFrameCodec[A, CF <: CodecFormat](implicit
+      stringCodec: Codec[String, A, CF]
+  ): Codec[WebSocketFrame, Option[A], CF] =
+    Codec
+      .id[WebSocketFrame, CF](stringCodec.format)
+      .mapDecode {
+        case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p).map(Some(_))
+        case WebSocketFrame.Close(_, _)   => DecodeResult.Value(None)
+        case f                            => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
+      } {
+        case None    => WebSocketFrame.close
+        case Some(a) => WebSocketFrame.text(stringCodec.encode(a))
+      }
+
+  /**
+    * A codec which expects only binary frames (all other frames cause a decoding error) and handles the text using
+    * the given `byteArrayCodec`.
+    */
+  implicit def binaryWebSocketFrameCodec[A, CF <: CodecFormat](implicit
+      byteArrayCodec: Codec[Array[Byte], A, CF]
+  ): Codec[WebSocketFrame, A, CF] =
+    Codec
+      .id[WebSocketFrame, CF](byteArrayCodec.format)
+      .mapDecode {
+        case WebSocketFrame.Binary(p, _, _) => byteArrayCodec.decode(p)
+        case f                              => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
+      }(a => WebSocketFrame.binary(byteArrayCodec.encode(a)))
+
+  /**
+    * A codec which expects only binary and close frames (all other frames cause a decoding error). Close frames
+    * correspond to `None`, while text frames are handled using the given `byteArrayCodec` and wrapped with `Some`.
+    */
+  implicit def binaryOrCloseWebSocketFrameCodec[A, CF <: CodecFormat](implicit
+      byteArrayCodec: Codec[Array[Byte], A, CF]
+  ): Codec[WebSocketFrame, Option[A], CF] =
+    Codec
+      .id[WebSocketFrame, CF](byteArrayCodec.format)
+      .mapDecode {
+        case WebSocketFrame.Binary(p, _, _) => byteArrayCodec.decode(p).map(Some(_))
+        case WebSocketFrame.Close(_, _)     => DecodeResult.Value(None)
+        case f                              => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
+      } {
+        case None    => WebSocketFrame.close
+        case Some(a) => WebSocketFrame.binary(byteArrayCodec.encode(a))
+      }
+
+  //
+
   private def listNoMeta[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
     id[List[T], CF](c.format)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
@@ -374,7 +443,7 @@ object Codec extends FormCodecDerivation {
       .validate(c.validator)
 
   /**
-    * Create a codec which decodes/encodes an optional low-level value to an optional high-levle value.. The given
+    * Create a codec which decodes/encodes an optional low-level value to an optional high-level value. The given
     * base codec `c` is used for decoding/encoding.
     *
     * The schema and validator are copied from the base codec.

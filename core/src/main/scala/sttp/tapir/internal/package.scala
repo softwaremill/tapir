@@ -159,7 +159,7 @@ package object internal {
       }
     }
 
-    private[internal] def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
+    def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
       output match {
         case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
         case EndpointOutput.Pair(left, right, _, _)        => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
@@ -180,14 +180,15 @@ package object internal {
   implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
     def sortByType: Vector[EndpointOutput.Basic[_]] =
       outputs.sortBy {
-        case _: EndpointIO.Empty[_]                => 0
-        case _: EndpointOutput.StatusCode[_]       => 0
-        case _: EndpointOutput.FixedStatusCode[_]  => 0
-        case _: EndpointIO.Header[_]               => 1
-        case _: EndpointIO.Headers[_]              => 1
-        case _: EndpointIO.FixedHeader[_]          => 1
-        case _: EndpointIO.Body[_, _]              => 2
-        case _: EndpointIO.StreamBodyWrapper[_, _] => 2
+        case _: EndpointIO.Empty[_]                             => 0
+        case _: EndpointOutput.StatusCode[_]                    => 0
+        case _: EndpointOutput.FixedStatusCode[_]               => 0
+        case _: EndpointIO.Header[_]                            => 1
+        case _: EndpointIO.Headers[_]                           => 1
+        case _: EndpointIO.FixedHeader[_]                       => 1
+        case _: EndpointIO.Body[_, _]                           => 2
+        case _: EndpointIO.StreamBodyWrapper[_, _]              => 2
+        case _: EndpointOutput.WebSocketBodyWrapper[_, _, _, _] => 2
       }
   }
 

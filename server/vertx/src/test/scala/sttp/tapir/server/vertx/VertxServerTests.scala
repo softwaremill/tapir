@@ -9,21 +9,18 @@ import io.vertx.scala.core.http.HttpServerOptions
 import io.vertx.scala.ext.web.{Route, Router}
 import org.scalatest.BeforeAndAfterEach
 import sttp.tapir._
-import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
-import sttp.tapir.tests.{Port, PortCounter}
+import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class VertxServerTests extends ServerTests[Future, Nothing, Any, Router => Route](NoStreams) with BeforeAndAfterEach {
+abstract class VertxServerTests extends ServerTests[Future, Any, Router => Route] with BeforeAndAfterEach {
 
   implicit val options: VertxEndpointOptions = VertxEndpointOptions()
     .logWhenHandled(true)
     .logAllDecodeFailures(true)
-
-  override def multipartInlineHeaderSupport: Boolean = false // README: doesn't seem supported but I may be wrong
 
   protected var vertx: Vertx = _
 
@@ -58,7 +55,4 @@ class VertxServerTests extends ServerTests[Future, Nothing, Any, Router => Route
     routes.toList.foreach(_.apply(router))
     Resource.make(listenIO)(s => IO(s.closeFuture())).void
   }
-
-  override lazy val portCounter: PortCounter = new PortCounter(54000)
-
 }
