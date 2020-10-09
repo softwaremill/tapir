@@ -8,6 +8,7 @@ import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.syntax.all._
 import com.typesafe.scalalogging.StrictLogging
+import org.scalatest.ConfigMap
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
@@ -22,14 +23,14 @@ import scala.reflect.ClassTag
 abstract class AkkaHttpServerTests[R >: AkkaStreams with WebSockets] extends ServerTests[Future, R, Route] with StrictLogging {
   private implicit var actorSystem: ActorSystem = _
 
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
+  override protected def beforeAll(configMap: ConfigMap): Unit = {
+    super.beforeAll(configMap)
     actorSystem = ActorSystem()
   }
 
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(configMap: ConfigMap): Unit = {
     Await.result(actorSystem.terminate(), 5.seconds)
-    super.afterAll()
+    super.afterAll(configMap)
   }
 
   override def route[I, E, O](

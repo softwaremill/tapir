@@ -5,7 +5,6 @@ import akka.stream.scaladsl.Flow
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.server.tests.ServerWebSocketTests
-import sttp.tapir.tests.PortCounter
 
 import scala.concurrent.Future
 
@@ -15,6 +14,4 @@ class AkkaHttpServerWebSocketTests
   override val streams: AkkaStreams = AkkaStreams
   override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
   webSocketTests()
-
-  override val portCounter: PortCounter = new PortCounter(40000)
 }

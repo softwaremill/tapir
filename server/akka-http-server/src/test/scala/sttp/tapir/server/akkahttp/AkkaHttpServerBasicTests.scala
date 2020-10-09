@@ -16,13 +16,11 @@ class AkkaHttpServerBasicTests extends AkkaHttpServerTests[Any] with ServerBasic
   if (testNameFilter.isEmpty) {
     test("endpoint nested in a path directive") {
       val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => pureResult("ok".asRight[Unit]))
-      val port = portCounter.next()
+      val port = PortCounter.next()
       val route = Directives.pathPrefix("api")(e.toRoute)
       server(NonEmptyList.of(route), port).use { _ =>
         basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
       }.unsafeRunSync
     }
   }
-
-  override val portCounter: PortCounter = new PortCounter(30000)
 }

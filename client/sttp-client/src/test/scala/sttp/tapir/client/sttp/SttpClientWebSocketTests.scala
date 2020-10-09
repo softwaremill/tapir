@@ -6,7 +6,6 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.tests.ClientWebSocketTests
 import sttp.tapir.client.sttp.ws.fs2._
-import sttp.tapir.tests.PortCounter
 
 class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Streams[IO]] with ClientWebSocketTests[Fs2Streams[IO]] {
   override val streams: Fs2Streams[IO] = Fs2Streams[IO]
@@ -17,6 +16,4 @@ class SttpClientWebSocketTests extends SttpClientTests[WebSockets with Fs2Stream
   }
 
   webSocketTests()
-
-  override val portCounter: PortCounter = new PortCounter(38000)
 }

@@ -7,7 +7,7 @@ import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.core.Vertx
 import io.vertx.scala.core.http.HttpServerOptions
 import io.vertx.scala.ext.web.{Route, Router}
-import org.scalatest.BeforeAndAfterEach
+import org.scalatest.{BeforeAndAfterEach, ConfigMap}
 import sttp.tapir._
 import sttp.tapir.server.tests.ServerTests
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
@@ -24,14 +24,14 @@ abstract class VertxServerTests extends ServerTests[Future, Any, Router => Route
 
   protected var vertx: Vertx = _
 
-  override def beforeAll(): Unit = {
-    super.beforeAll()
+  override def beforeAll(configMap: ConfigMap): Unit = {
+    super.beforeAll(configMap)
     vertx = Vertx.vertx()
   }
 
-  override def afterAll(): Unit = {
-    super.afterAll()
+  override def afterAll(configMap: ConfigMap): Unit = {
     vertx.close()
+    super.afterAll(configMap)
   }
 
   override def pureResult[T](t: T): Future[T] = Future.successful(t)

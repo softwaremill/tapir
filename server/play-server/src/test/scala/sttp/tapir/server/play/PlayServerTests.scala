@@ -3,6 +3,7 @@ package sttp.tapir.server.play
 import akka.actor.ActorSystem
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
+import org.scalatest.ConfigMap
 import play.api.Mode
 import play.api.mvc.{Handler, RequestHeader}
 import play.api.routing.Router
@@ -21,9 +22,9 @@ import scala.reflect.ClassTag
 abstract class PlayServerTests extends ServerTests[Future, Any, Router.Routes] {
   private implicit val actorSystem: ActorSystem = ActorSystem()
 
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(configMap: ConfigMap): Unit = {
     Await.result(actorSystem.terminate(), 5.seconds)
-    super.afterAll()
+    super.afterAll(configMap)
   }
 
   override def pureResult[T](t: T): Future[T] = Future.successful(t)

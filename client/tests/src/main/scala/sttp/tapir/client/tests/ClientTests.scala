@@ -14,7 +14,7 @@ import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
-import org.scalatest.BeforeAndAfterAll
+import org.scalatest.ConfigMap
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.tests.TestUtil._
@@ -24,7 +24,7 @@ import sttp.tapir.{DecodeResult, _}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, ExecutionContext, Future}
 
-abstract class ClientTests[R] extends AnyFunSuite with Matchers with BeforeAndAfterAll {
+abstract class ClientTests[R] extends AnyFunSuite with Matchers with PortCounterFromConfig {
   private val logger = org.log4s.getLogger
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -144,9 +144,9 @@ abstract class ClientTests[R] extends AnyFunSuite with Matchers with BeforeAndAf
   private var exitSignal: SignallingRef[IO, Boolean] = _
   private var serverExitCode: Future[Option[ExitCode]] = _
 
-  override protected def beforeAll(): Unit = {
-    super.beforeAll()
-    port = portCounter.next()
+  override protected def beforeAll(configMap: ConfigMap): Unit = {
+    super.beforeAll(configMap)
+    port = PortCounter.next()
 
     exitSignal = SignallingRef.apply[IO, Boolean](false).unsafeRunSync()
 
@@ -159,18 +159,14 @@ abstract class ClientTests[R] extends AnyFunSuite with Matchers with BeforeAndAf
       .unsafeToFuture()
   }
 
-  override protected def afterAll(): Unit = {
-    super.afterAll()
-
+  override protected def afterAll(configMap: ConfigMap): Unit = {
     val status = for {
       _ <- exitSignal.set(true).unsafeToFuture()
       exitCode <- serverExitCode
     } yield exitCode
 
     logger.debug(s"Server exited with code: ${Await.result(status, 5.seconds)}")
+
+    super.afterAll(configMap)
   }
-
-  //
-
-  def portCounter: PortCounter
 }

@@ -6,7 +6,7 @@ import cats.implicits._
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.{Assertion, BeforeAndAfterAll}
+import org.scalatest.{Assertion, ConfigMap}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.capabilities.WebSockets
 import sttp.client3._
@@ -18,15 +18,15 @@ import sttp.tapir.tests._
 
 import scala.reflect.ClassTag
 
-abstract class ServerTests[F[_], R, ROUTE] extends AnyFunSuite with Matchers with BeforeAndAfterAll with StrictLogging {
+abstract class ServerTests[F[_], R, ROUTE] extends AnyFunSuite with Matchers with PortCounterFromConfig with StrictLogging {
 
   implicit lazy val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
   val backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets] =
     AsyncHttpClientFs2Backend[IO](Blocker.liftExecutionContext(scala.concurrent.ExecutionContext.global)).unsafeRunSync()
 
-  override protected def afterAll(): Unit = {
+  override protected def afterAll(configMap: ConfigMap): Unit = {
     backend.close()
-    super.afterAll()
+    super.afterAll(configMap)
   }
 
   //
@@ -39,8 +39,6 @@ abstract class ServerTests[F[_], R, ROUTE] extends AnyFunSuite with Matchers wit
   def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, R], fn: I => F[O])(implicit eClassTag: ClassTag[E]): ROUTE
 
   def server(routes: NonEmptyList[ROUTE], port: Port): Resource[IO, Unit]
-
-  def portCounter: PortCounter
 
   def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
@@ -64,7 +62,7 @@ abstract class ServerTests[F[_], R, ROUTE] extends AnyFunSuite with Matchers wit
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Unit = {
     val resources = for {
-      port <- Resource.liftF(IO(portCounter.next()))
+      port <- Resource.liftF(IO(PortCounter.next()))
       _ <- Resource.liftF(IO(logger.info(s"Trying to bind to $port")))
       _ <- server(rs, port).onError { case e: Exception =>
         Resource.liftF(IO(logger.error(s"Starting server on $port failed because of ${e.getMessage}")))

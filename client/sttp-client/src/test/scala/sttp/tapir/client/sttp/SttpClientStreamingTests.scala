@@ -4,7 +4,6 @@ import cats.effect.IO
 import cats.implicits._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.tests.ClientStreamingTests
-import sttp.tapir.tests.PortCounter
 
 class SttpClientStreamingTests extends SttpClientTests[Fs2Streams[IO]] with ClientStreamingTests[Fs2Streams[IO]] {
   override def wsToPipe: WebSocketToPipe[Fs2Streams[IO]] = implicitly
@@ -18,6 +17,4 @@ class SttpClientStreamingTests extends SttpClientTests[Fs2Streams[IO]] with Clie
       .unsafeRunSync()
 
   streamingTests()
-
-  override val portCounter: PortCounter = new PortCounter(37000)
 }

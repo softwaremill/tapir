@@ -2,7 +2,6 @@ package sttp.tapir.server.play
 
 import play.api.routing.Router
 import sttp.tapir.server.tests.ServerBasicTests
-import sttp.tapir.tests.PortCounter
 
 import scala.concurrent.Future
 
@@ -12,6 +11,4 @@ class PlayServerBasicTests extends PlayServerTests with ServerBasicTests[Future,
   override def inputStreamSupport: Boolean = false
 
   basicTests()
-
-  override val portCounter: PortCounter = new PortCounter(43000)
 }

@@ -1,3 +1,6 @@
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.function.IntUnaryOperator
+
 import sbtrelease.ReleaseStateTransformations.{
   checkSnapshotDependencies,
   commitReleaseVersion,
@@ -19,6 +22,11 @@ val scala2_12Versions = List(scala2_12)
 val documentationScalaVersion = scala2_12 // Documentation depends on finatraServer, which is 2.12 only
 
 scalaVersion := scala2_12
+
+// Tests which start servers should use distinct ports to avoid errors. They use different class loaders, hence
+// they don't share any objects accessible from the test code, and we have to pass the starting port as test config.
+val PortCounterStart = 50000
+val portCounter = new AtomicInteger(PortCounterStart)
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
@@ -51,7 +59,11 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     releaseStepCommand("sonatypeBundleRelease"),
     pushChanges
   ),
-  ideSkipProject := (scalaVersion.value == scala2_13)
+  ideSkipProject := (scalaVersion.value == scala2_13),
+  testOptions := {
+    val nextPort = portCounter.getAndUpdate((port: Int) => if (port >= 65000) PortCounterStart else port + 500)
+    Seq(Tests.Argument(s"-Dport=$nextPort")) ++ testOptions.value
+  }
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
