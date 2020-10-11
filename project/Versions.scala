@@ -9,7 +9,7 @@ object Versions {
   val akkaHttp = "10.2.1"
   val akkaStreams = "2.6.10"
   val swaggerUi = "3.35.1"
-  val upickle = "1.2.1"
+  val upickle = "1.2.2"
   val playJson = "2.9.1"
   val silencer = "1.7.1"
   val finatra = "20.9.0"
