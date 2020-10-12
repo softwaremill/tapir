@@ -8,12 +8,24 @@ import sttp.tapir._
 import sttp.ws.{WebSocket, WebSocketFrame}
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
-import sttp.tapir.tests.Fruit
+import sttp.monad.MonadError
+import sttp.tapir.tests.{Fruit, Test}
+import org.scalatest.matchers.should.Matchers._
+import sttp.capabilities.fs2.Fs2Streams
 
-trait ServerWebSocketTests[F[_], S, ROUTE] { this: ServerTests[F, S with WebSockets, ROUTE] =>
-  val streams: Streams[S]
+abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
+    backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
+    serverTests: ServerTests[F, S with WebSockets, ROUTE],
+    val streams: S
+)(implicit
+    m: MonadError[F]
+) {
+  import serverTests._
 
-  def webSocketTests(): Unit = {
+  private def pureResult[T](t: T): F[T] = m.unit(t)
+  def functionToPipe[A, B](f: A => B): streams.Pipe[A, B]
+
+  def tests(): List[Test] = List(
     testServer(endpoint.out(webSocketBody[String, String, CodecFormat.TextPlain].apply(streams)), "string client-terminated echo")(
       (_: Unit) => pureResult(functionToPipe((s: String) => s"echo: $s").asRight[Unit])
     ) { baseUri =>
@@ -29,8 +41,7 @@ trait ServerWebSocketTests[F[_], S, ROUTE] { this: ServerTests[F, S with WebSock
         .get(baseUri.scheme("ws"))
         .send(backend)
         .map(_.body shouldBe Right(List(Right("echo: test1"), Right("echo: test2"))))
-    }
-
+    },
     testServer(endpoint.out(webSocketBody[Fruit, Fruit, CodecFormat.Json](streams)), "json client-terminated echo")((_: Unit) =>
       pureResult(functionToPipe((f: Fruit) => Fruit(s"echo: ${f.f}")).asRight[Unit])
     ) { baseUri =>
@@ -46,8 +57,7 @@ trait ServerWebSocketTests[F[_], S, ROUTE] { this: ServerTests[F, S with WebSock
         .get(baseUri.scheme("ws"))
         .send(backend)
         .map(_.body shouldBe Right(List(Right("""{"f":"echo: apple"}"""), Right("""{"f":"echo: orange"}"""))))
-    }
-
+    },
     testServer(endpoint.out(webSocketBody[String, Option[String], CodecFormat.TextPlain](streams)), "string server-terminated echo")(
       (_: Unit) =>
         pureResult(functionToPipe[String, Option[String]] {
@@ -74,9 +84,7 @@ trait ServerWebSocketTests[F[_], S, ROUTE] { this: ServerTests[F, S with WebSock
           )
         )
     }
+  )
 
-    // TODO: tests for ping/pong (control frames handling)
-  }
-
-  def functionToPipe[A, B](f: A => B): streams.Pipe[A, B]
+  // TODO: tests for ping/pong (control frames handling)
 }

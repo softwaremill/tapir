@@ -1,26 +1,29 @@
 package sttp.tapir.server.vertx
 
-import io.vertx.scala.ext.web.{Route, Router}
-import org.scalatest.BeforeAndAfterEach
-import sttp.tapir._
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import cats.effect.{IO, Resource}
+import io.vertx.scala.core.Vertx
+import sttp.monad.FutureMonad
+import sttp.tapir.server.tests.{ServerBasicTests, ServerTests, backendResource}
+import sttp.tapir.tests.{Test, TestSuite}
 
-import scala.concurrent.Future
-import scala.reflect.ClassTag
+import scala.concurrent.ExecutionContext
 
-abstract class VertxBlockingServerTests extends VertxServerTests with BeforeAndAfterEach {
+class VertxBlockingServerTests extends TestSuite {
+  def vertxResource: Resource[IO, Vertx] =
+    Resource.make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
 
-  override def suspendResult[T](t: => T): Future[T] = vertx.executeBlocking(() => t)
+  override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
+    vertxResource.map { implicit vertx =>
+      implicit val m: FutureMonad = new FutureMonad()(ExecutionContext.global)
+      val interpreter = new VertxServerBlockingInterpreter(vertx)
+      val serverTests = new ServerTests(interpreter)
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future],
-      decodeFailureHandler: Option[DecodeFailureHandler]
-  ): Router => Route =
-    e.blockingRoute(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
-
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
-      eClassTag: ClassTag[E]
-  ): Router => Route =
-    e.blockingRouteRecoverErrors(fn)
-
+      new ServerBasicTests(
+        backend,
+        serverTests,
+        interpreter,
+        multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
+      ).tests()
+    }
+  }
 }

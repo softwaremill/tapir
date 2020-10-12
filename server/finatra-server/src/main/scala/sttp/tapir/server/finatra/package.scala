@@ -123,7 +123,7 @@ package object finatra {
       .getOrElse(Method("ANY"))
   }
 
-  private object FutureMonadError extends MonadError[Future] {
+  private[finatra] object FutureMonadError extends MonadError[Future] {
     override def unit[T](t: T): Future[T] = Future(t)
     override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
     override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)

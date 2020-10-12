@@ -1,62 +1,51 @@
 package sttp.tapir.server.akkahttp
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Directives._
-import akka.http.scaladsl.server.Route
+import akka.http.scaladsl.server.Directives
+import akka.stream.scaladsl.Flow
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import cats.syntax.all._
-import com.typesafe.scalalogging.StrictLogging
-import org.scalatest.ConfigMap
-import sttp.capabilities.WebSockets
+import cats.implicits._
+import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
-import sttp.tapir.Endpoint
-import sttp.tapir.server.tests.ServerTests
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
-import sttp.tapir.tests.Port
+import sttp.client3._
+import sttp.monad.FutureMonad
+import sttp.monad.syntax._
+import sttp.tapir._
+import sttp.tapir.server.tests.{ServerBasicTests, ServerStreamingTests, ServerTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.tests.{PortCounter, Test, TestSuite}
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.reflect.ClassTag
+class AkkaHttpServerTests extends TestSuite {
 
-abstract class AkkaHttpServerTests[R >: AkkaStreams with WebSockets] extends ServerTests[Future, R, Route] with StrictLogging {
-  private implicit var actorSystem: ActorSystem = _
+  def actorSystemResource: Resource[IO, ActorSystem] =
+    Resource.make(IO.delay(ActorSystem()))(actorSystem => IO.fromFuture(IO.delay(actorSystem.terminate())).void)
 
-  override protected def beforeAll(configMap: ConfigMap): Unit = {
-    super.beforeAll(configMap)
-    actorSystem = ActorSystem()
-  }
+  override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
+    actorSystemResource.map { implicit actorSystem =>
+      implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
+      val interpreter = new AkkaServerInterpreter()(actorSystem)
+      val serverTests = new ServerTests(interpreter)
 
-  override protected def afterAll(configMap: ConfigMap): Unit = {
-    Await.result(actorSystem.terminate(), 5.seconds)
-    super.afterAll(configMap)
-  }
+      def additionalTests(): List[Test] = List(
+        Test("endpoint nested in a path directive") {
+          val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
+          val port = PortCounter.next()
+          val route = Directives.pathPrefix("api")(e.toRoute)
+          interpreter
+            .server(NonEmptyList.of(route), port)
+            .use { _ =>
+              basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
+            }
+            .unsafeRunSync()
+        }
+      )
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, R, Future],
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
-  ): Route = {
-    implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
-      decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
-    )
-    e.toRoute
-  }
-
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, R], fn: I => Future[O])(implicit
-      eClassTag: ClassTag[E]
-  ): Route = {
-    e.toRouteRecoverErrors(fn)
-  }
-
-  override def server(routes: NonEmptyList[Route], port: Port): Resource[IO, Unit] = {
-    val bind = IO.fromFuture(IO(Http().newServerAt("localhost", port).bind(concat(routes.toList: _*))))
-    Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).void
-  }
-
-  override def pureResult[T](t: T): Future[T] = Future.successful(t)
-  override def suspendResult[T](t: => T): Future[T] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
-    Future { t }
+      new ServerBasicTests(backend, serverTests, interpreter).tests() ++
+        new ServerStreamingTests(backend, serverTests, AkkaStreams).tests() ++
+        new ServerWebSocketTests(backend, serverTests, AkkaStreams) {
+          override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
+        }.tests() ++
+        additionalTests()
+    }
   }
 }
