@@ -9,7 +9,6 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.typelevel.ReplaceFirstInTuple
 
 import scala.reflect.ClassTag
 
@@ -85,34 +84,6 @@ trait TapirHttp4sServer {
   implicit class RichHttp4sServerEndpoints[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]]) {
     def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F]): HttpRoutes[F] = {
       new EndpointToHttp4sServer(serverOptions).toRoutes(serverEndpoints)
-    }
-  }
-
-  implicit class RichToMonadFunction[T, U, F[_]: Monad](a: T => F[U]) {
-    @deprecated
-    def andThenFirst[U_TUPLE, T_TUPLE, O](
-        l: U_TUPLE => F[O]
-    )(implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => F[O] = { tTuple =>
-      val t = replaceFirst.first(tTuple)
-      a(t).flatMap { u =>
-        val uTuple = replaceFirst.replace(tTuple, u)
-        l(uTuple)
-      }
-    }
-  }
-
-  implicit class RichToMonadOfEitherFunction[T, U, E, F[_]: Monad](a: T => F[Either[E, U]]) {
-    @deprecated
-    def andThenFirstE[U_TUPLE, T_TUPLE, O](
-        l: U_TUPLE => F[Either[E, O]]
-    )(implicit replaceFirst: ReplaceFirstInTuple[T, U, T_TUPLE, U_TUPLE]): T_TUPLE => F[Either[E, O]] = { tTuple =>
-      val t = replaceFirst.first(tTuple)
-      a(t).flatMap {
-        case Left(e) => implicitly[Monad[F]].point(Left(e))
-        case Right(u) =>
-          val uTuple = replaceFirst.replace(tTuple, u)
-          l(uTuple)
-      }
     }
   }
 }
