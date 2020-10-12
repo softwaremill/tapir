@@ -301,7 +301,7 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
 
 // openapi
 
-lazy val openapiModel: ProjectMatrix = (projectMatrix in file("openapi/openapi-model"))
+lazy val openapiModel: ProjectMatrix = (projectMatrix in file("apispec/openapi-model"))
   .settings(commonSettings)
   .settings(
     name := "tapir-openapi-model"
@@ -309,7 +309,7 @@ lazy val openapiModel: ProjectMatrix = (projectMatrix in file("openapi/openapi-m
   .settings(libraryDependencies += scalaTest % Test)
   .jvmPlatform(scalaVersions = allScalaVersions)
 
-lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("openapi/openapi-circe"))
+lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= Seq(
@@ -322,7 +322,7 @@ lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("openapi/openapi-c
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(openapiModel)
 
-lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("openapi/openapi-circe-yaml"))
+lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe-yaml"))
   .settings(commonSettings)
   .settings(
     libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
