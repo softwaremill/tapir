@@ -95,7 +95,7 @@ lazy val rootProject = (project in file("."))
       sprayJson.projectRefs ++
       uPickleJson.projectRefs ++
       tethysJson.projectRefs ++
-      schemaModel.projectRefs ++
+      apispecModel.projectRefs ++
       openapiModel.projectRefs ++
       openapiCirce.projectRefs ++
       openapiCirceYaml.projectRefs ++
@@ -305,10 +305,10 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
 
 // apispec
 
-lazy val schemaModel: ProjectMatrix = (projectMatrix in file("apispec/schema-model"))
+lazy val apispecModel: ProjectMatrix = (projectMatrix in file("apispec/apispec-model"))
   .settings(commonSettings)
   .settings(
-    name := "tapir-schema-model"
+    name := "tapir-apispec-model"
   )
   .settings(libraryDependencies += scalaTest % Test)
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -322,7 +322,7 @@ lazy val openapiModel: ProjectMatrix = (projectMatrix in file("apispec/openapi-m
   )
   .settings(libraryDependencies += scalaTest % Test)
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(schemaModel)
+  .dependsOn(apispecModel)
 
 lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe"))
   .settings(commonSettings)
@@ -355,7 +355,7 @@ lazy val asyncapiModel: ProjectMatrix = (projectMatrix in file("apispec/asyncapi
   )
   .settings(libraryDependencies += scalaTest % Test)
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(schemaModel)
+  .dependsOn(apispecModel)
 
 lazy val asyncapiCirce: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe"))
   .settings(commonSettings)
