@@ -7,7 +7,7 @@ import sttp.tapir.openapi.Components
 
 import scala.collection.immutable.ListMap
 
-private[openapi] class EndpointToOpenApiComponents(
+private[openapi] class EndpointToOpenAPIComponents(
     keyToSchema: ListMap[SchemaKey, ReferenceOr[ASchema]],
     securitySchemes: SecuritySchemes
 ) {

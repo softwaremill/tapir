@@ -16,7 +16,7 @@ object ObjectSchemasForEndpoints {
     val sObjects = uniqueObjects(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
-    val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
+    val discriminatorToOpenApi = new DiscriminatorToOpenAPI(schemaReferences)
     val tschemaToASchema = new TSchemaToASchema(schemaReferences, discriminatorToOpenApi)
     val schemas = new ObjectSchemas(tschemaToASchema, schemaReferences)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap

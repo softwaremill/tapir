@@ -11,8 +11,8 @@ object EndpointToOpenAPIDocs {
     val es2 = es.map(nameAllPathCapturesInEndpoint)
     val (keyToSchema, objectSchemas) = ObjectSchemasForEndpoints(es2)
     val securitySchemes = SecuritySchemesForEndpoints(es2)
-    val pathCreator = new EndpointToOpenApiPaths(objectSchemas, securitySchemes, options)
-    val componentsCreator = new EndpointToOpenApiComponents(keyToSchema, securitySchemes)
+    val pathCreator = new EndpointToOpenAPIPaths(objectSchemas, securitySchemes, options)
+    val componentsCreator = new EndpointToOpenAPIComponents(keyToSchema, securitySchemes)
 
     val base = apiToOpenApi(api, componentsCreator)
 
@@ -21,7 +21,7 @@ object EndpointToOpenAPIDocs {
     }
   }
 
-  private def apiToOpenApi(info: Info, componentsCreator: EndpointToOpenApiComponents): OpenAPI = {
+  private def apiToOpenApi(info: Info, componentsCreator: EndpointToOpenAPIComponents): OpenAPI = {
     OpenAPI(
       info = info,
       tags = List.empty,
