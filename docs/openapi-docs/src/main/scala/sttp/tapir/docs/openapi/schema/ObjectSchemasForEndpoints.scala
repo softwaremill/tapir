@@ -2,8 +2,8 @@ package sttp.tapir.docs.openapi.schema
 
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.openapi.uniqueName
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.openapi.{Schema => OSchema}
+import sttp.tapir.apispec._
+import sttp.tapir.apispec.{Schema => ASchema}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
 
 import scala.collection.immutable.ListMap
@@ -12,21 +12,20 @@ import scala.collection.mutable.ListBuffer
 object ObjectSchemasForEndpoints {
   private type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
 
-  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[OSchema]], ObjectSchemas) = {
+  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[ASchema]], ObjectSchemas) = {
     val sObjects = uniqueObjects(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
     val discriminatorToOpenApi = new DiscriminatorToOpenApi(schemaReferences)
-    val tschemaToOSchema = new TSchemaToOSchema(schemaReferences, discriminatorToOpenApi)
-    val schemas = new ObjectSchemas(tschemaToOSchema, schemaReferences)
-    val infosToSchema = sObjects.map(td => (td._1, tschemaToOSchema(td._2))).toListMap
+    val tschemaToASchema = new TSchemaToASchema(schemaReferences, discriminatorToOpenApi)
+    val schemas = new ObjectSchemas(tschemaToASchema, schemaReferences)
+    val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
   }
 
-  /**
-    * Keeps only the first object data for each `SObjectInfo`. In case of recursive objects, the first one is the
+  /** Keeps only the first object data for each `SObjectInfo`. In case of recursive objects, the first one is the
     * most complete as it contains the built-up structure, unlike subsequent ones, which only represent leaves (#354).
     */
   private def uniqueObjects(objs: Iterable[(TSchemaType.SObjectInfo, TypeData[_])]): Iterable[(TSchemaType.SObjectInfo, TypeData[_])] = {

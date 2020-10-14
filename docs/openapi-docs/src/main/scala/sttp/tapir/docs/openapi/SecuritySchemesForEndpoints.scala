@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import sttp.tapir.internal._
-import sttp.tapir.openapi.{OAuthFlow, OAuthFlows, SecurityScheme}
+import sttp.tapir.apispec.{OAuthFlow, OAuthFlows, SecurityScheme}
 import sttp.tapir.{Endpoint, EndpointIO, EndpointInput}
 
 import scala.annotation.tailrec

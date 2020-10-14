@@ -1,13 +1,14 @@
 package sttp.tapir.docs.openapi
 
 import sttp.tapir.docs.openapi.schema.SchemaKey
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.openapi.{Schema => OSchema, _}
+import sttp.tapir.apispec.ReferenceOr
+import sttp.tapir.apispec.{Schema => ASchema}
+import sttp.tapir.openapi.Components
 
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenApiComponents(
-    keyToSchema: ListMap[SchemaKey, ReferenceOr[OSchema]],
+    keyToSchema: ListMap[SchemaKey, ReferenceOr[ASchema]],
     securitySchemes: SecuritySchemes
 ) {
   def components: Option[Components] = {

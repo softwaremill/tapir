@@ -1,6 +1,6 @@
 package sttp.tapir.docs
 
-import sttp.tapir.openapi.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
+import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
 import sttp.tapir.{Codec, EndpointInput, SchemaType}
 
 package object openapi extends TapirOpenAPIDocs {

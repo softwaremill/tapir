@@ -1,21 +1,21 @@
 package sttp.tapir.docs.openapi.schema
 
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.openapi.{SchemaType, Schema => OSchema}
+import sttp.tapir.apispec.ReferenceOr
+import sttp.tapir.apispec.{SchemaType, Schema => ASchema}
 import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
 class ObjectSchemas(
-    tschemaToOSchema: TSchemaToOSchema,
+    tschemaToASchema: TSchemaToASchema,
     schemaReferenceMapper: SchemaReferenceMapper
 ) {
-  def apply[T](codec: Codec[T, _, _]): ReferenceOr[OSchema] = apply(TypeData(codec))
+  def apply[T](codec: Codec[T, _, _]): ReferenceOr[ASchema] = apply(TypeData(codec))
 
-  def apply(typeData: TypeData[_]): ReferenceOr[OSchema] = {
+  def apply(typeData: TypeData[_]): ReferenceOr[ASchema] = {
     typeData.schema.schemaType match {
       case TSchemaType.SArray(TSchema(o: TSchemaType.SObject, _, _, _, _)) =>
-        Right(OSchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(o.info)))))
+        Right(ASchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(o.info)))))
       case o: TSchemaType.SObject => Left(schemaReferenceMapper.map(o.info))
-      case _                      => tschemaToOSchema(typeData)
+      case _                      => tschemaToASchema(typeData)
     }
   }
 }

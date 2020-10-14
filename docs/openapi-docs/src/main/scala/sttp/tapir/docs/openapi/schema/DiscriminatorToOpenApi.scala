@@ -1,6 +1,6 @@
 package sttp.tapir.docs.openapi.schema
 
-import sttp.tapir.openapi.{Discriminator, _}
+import sttp.tapir.apispec._
 import sttp.tapir.{SchemaType => TSchemaType}
 
 class DiscriminatorToOpenApi(schemaReferenceMapper: SchemaReferenceMapper) {

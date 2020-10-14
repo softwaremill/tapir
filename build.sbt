@@ -95,9 +95,13 @@ lazy val rootProject = (project in file("."))
       sprayJson.projectRefs ++
       uPickleJson.projectRefs ++
       tethysJson.projectRefs ++
+      schemaModel.projectRefs ++
       openapiModel.projectRefs ++
       openapiCirce.projectRefs ++
       openapiCirceYaml.projectRefs ++
+      asyncapiModel.projectRefs ++
+      asyncapiCirce.projectRefs ++
+      asyncapiCirceYaml.projectRefs ++
       openapiDocs.projectRefs ++
       swaggerUiAkka.projectRefs ++
       redocAkka.projectRefs ++
@@ -299,6 +303,16 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
 
+// apispec
+
+lazy val schemaModel: ProjectMatrix = (projectMatrix in file("apispec/schema-model"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-schema-model"
+  )
+  .settings(libraryDependencies += scalaTest % Test)
+  .jvmPlatform(scalaVersions = allScalaVersions)
+
 // openapi
 
 lazy val openapiModel: ProjectMatrix = (projectMatrix in file("apispec/openapi-model"))
@@ -308,6 +322,7 @@ lazy val openapiModel: ProjectMatrix = (projectMatrix in file("apispec/openapi-m
   )
   .settings(libraryDependencies += scalaTest % Test)
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(schemaModel)
 
 lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe"))
   .settings(commonSettings)
@@ -330,6 +345,39 @@ lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/opena
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(openapiCirce)
+
+// asyncapi
+
+lazy val asyncapiModel: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-model"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-asyncapi-model"
+  )
+  .settings(libraryDependencies += scalaTest % Test)
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(schemaModel)
+
+lazy val asyncapiCirce: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-parser" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe
+    ),
+    name := "tapir-asyncapi-circe"
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(asyncapiModel)
+
+lazy val asyncapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe-yaml"))
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
+    name := "tapir-asyncapi-circe-yaml"
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(asyncapiCirce)
 
 // docs
 
@@ -600,6 +648,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     http4sServer,
     sttpClient,
     openapiCirceYaml,
+    asyncapiCirceYaml,
     openapiDocs,
     circeJson,
     swaggerUiAkka,

@@ -5,7 +5,21 @@ import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Encoder, Json}
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
+import sttp.tapir.apispec.{
+  Discriminator,
+  ExampleMultipleValue,
+  ExampleSingleValue,
+  ExampleValue,
+  ExternalDocumentation,
+  OAuthFlow,
+  OAuthFlows,
+  Reference,
+  ReferenceOr,
+  Schema,
+  SchemaType,
+  SecurityScheme,
+  Tag
+}
 
 import scala.collection.immutable.ListMap
 

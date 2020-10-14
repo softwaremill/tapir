@@ -3,8 +3,9 @@ package sttp.tapir.docs.openapi
 import sttp.tapir._
 import sttp.tapir.docs.openapi.schema.ObjectSchemas
 import sttp.tapir.internal._
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.openapi.{Schema => OSchema, SchemaType => OSchemaType, _}
+import sttp.tapir.apispec.ReferenceOr
+import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
+import sttp.tapir.openapi.{Header, Response, ResponsesCodeKey, ResponsesDefaultKey, ResponsesKey}
 
 import scala.collection.immutable.ListMap
 
@@ -64,7 +65,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas,
             None,
             None,
             None,
-            Option(Right(OSchema(OSchemaType.String))),
+            Option(Right(ASchema(ASchemaType.String))),
             None,
             ListMap.empty,
             ListMap.empty

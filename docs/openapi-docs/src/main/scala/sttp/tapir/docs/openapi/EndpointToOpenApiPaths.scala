@@ -4,8 +4,9 @@ import sttp.model.Method
 import sttp.tapir._
 import sttp.tapir.docs.openapi.schema.ObjectSchemas
 import sttp.tapir.internal._
-import sttp.tapir.openapi.OpenAPI.{ReferenceOr, SecurityRequirement}
-import sttp.tapir.openapi.{Schema => OSchema, SchemaType => OSchemaType, _}
+import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
+import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
+import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, ResponsesKey}
 
 import scala.collection.immutable.ListMap
 
@@ -102,7 +103,7 @@ private[openapi] class EndpointToOpenApiPaths(objectSchemas: ObjectSchemas, secu
   }
 
   private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) = {
-    EndpointInputToParameterConverter.from(header, Right(OSchema(OSchemaType.String)))
+    EndpointInputToParameterConverter.from(header, Right(ASchema(ASchemaType.String)))
   }
 
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {

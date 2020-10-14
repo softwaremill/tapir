@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
-import sttp.tapir.openapi.{Parameter, ParameterIn, Schema}
+import sttp.tapir.apispec.{ReferenceOr, Schema}
+import sttp.tapir.openapi.{Parameter, ParameterIn}
 import sttp.tapir.{Codec, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap

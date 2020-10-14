@@ -1,8 +1,8 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.openapi.OpenAPI.ReferenceOr
+import sttp.tapir.apispec._
 import sttp.tapir.{Codec, EndpointIO}
-import sttp.tapir.openapi.{Example, ExampleValue}
+import sttp.tapir.openapi.Example
 
 import scala.collection.immutable.ListMap
 
