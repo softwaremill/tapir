@@ -1,6 +1,7 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.docs.openapi.schema.ObjectSchemasForEndpoints
+import sttp.tapir.docs.apispec.SecuritySchemesForEndpoints
+import sttp.tapir.docs.apispec.schema.ObjectSchemasForEndpoints
 import sttp.tapir.openapi._
 import sttp.tapir.{EndpointInput, _}
 

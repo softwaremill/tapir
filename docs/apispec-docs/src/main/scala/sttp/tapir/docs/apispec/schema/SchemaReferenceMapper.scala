@@ -1,4 +1,4 @@
-package sttp.tapir.docs.openapi.schema
+package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.apispec.Reference
 import sttp.tapir.{SchemaType => TSchemaType}

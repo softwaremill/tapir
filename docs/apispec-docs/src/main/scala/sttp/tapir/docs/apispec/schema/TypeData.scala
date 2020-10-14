@@ -1,4 +1,4 @@
-package sttp.tapir.docs.openapi.schema
+package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
 

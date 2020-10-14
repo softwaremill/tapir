@@ -1,10 +1,11 @@
 package sttp.tapir.docs.openapi
 
 import sttp.tapir._
-import sttp.tapir.docs.openapi.schema.ObjectSchemas
 import sttp.tapir.internal._
 import sttp.tapir.apispec.ReferenceOr
 import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
+import sttp.tapir.docs.apispec.exampleValue
+import sttp.tapir.docs.apispec.schema.ObjectSchemas
 import sttp.tapir.openapi.{Header, Response, ResponsesCodeKey, ResponsesDefaultKey, ResponsesKey}
 
 import scala.collection.immutable.ListMap

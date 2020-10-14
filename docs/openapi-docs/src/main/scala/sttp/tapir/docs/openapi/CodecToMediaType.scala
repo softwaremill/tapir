@@ -1,6 +1,6 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.docs.openapi.schema.ObjectSchemas
+import sttp.tapir.docs.apispec.schema.ObjectSchemas
 import sttp.tapir.openapi.{MediaType => OMediaType}
 import sttp.tapir.{CodecFormat, _}
 

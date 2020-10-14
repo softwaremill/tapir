@@ -1,6 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import sttp.tapir.apispec._
+import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.{Codec, EndpointIO}
 import sttp.tapir.openapi.Example
 

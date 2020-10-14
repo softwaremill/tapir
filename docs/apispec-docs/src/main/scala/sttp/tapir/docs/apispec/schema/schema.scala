@@ -1,4 +1,4 @@
-package sttp.tapir.docs.openapi
+package sttp.tapir.docs.apispec
 
 import sttp.tapir.Validator
 

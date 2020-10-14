@@ -1,8 +1,7 @@
-package sttp.tapir.docs.openapi.schema
+package sttp.tapir.docs.apispec.schema
 
-import sttp.tapir.docs.openapi.rawToString
-import sttp.tapir.apispec.ReferenceOr
-import sttp.tapir.apispec.{Schema => ASchema, _}
+import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
+import sttp.tapir.docs.apispec.rawToString
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.

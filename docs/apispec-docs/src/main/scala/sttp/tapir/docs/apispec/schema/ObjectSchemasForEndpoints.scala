@@ -1,7 +1,7 @@
-package sttp.tapir.docs.openapi.schema
+package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.docs.openapi.uniqueName
+import sttp.tapir.docs.apispec.uniqueName
 import sttp.tapir.apispec._
 import sttp.tapir.apispec.{Schema => ASchema}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}

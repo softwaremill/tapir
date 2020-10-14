@@ -102,7 +102,9 @@ lazy val rootProject = (project in file("."))
       asyncapiModel.projectRefs ++
       asyncapiCirce.projectRefs ++
       asyncapiCirceYaml.projectRefs ++
+      apispecDocs.projectRefs ++
       openapiDocs.projectRefs ++
+      asyncapiDocs.projectRefs ++
       swaggerUiAkka.projectRefs ++
       redocAkka.projectRefs ++
       swaggerUiHttp4s.projectRefs ++
@@ -381,13 +383,29 @@ lazy val asyncapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/asyn
 
 // docs
 
+lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-apispec-docs"
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(openapiModel, core, tests % Test, apispecModel)
+
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
   .settings(commonSettings)
   .settings(
     name := "tapir-openapi-docs"
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(openapiModel, core, tests % Test, openapiCirceYaml % Test)
+  .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test)
+
+lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-asyncapi-docs"
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(asyncapiModel, core, apispecDocs, tests % Test, asyncapiCirceYaml % Test)
 
 lazy val swaggerUiAkka: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-akka-http"))
   .settings(commonSettings)

@@ -1,7 +1,6 @@
-package sttp.tapir.docs.openapi.schema
+package sttp.tapir.docs.apispec.schema
 
-import sttp.tapir.apispec.ReferenceOr
-import sttp.tapir.apispec.{SchemaType, Schema => ASchema}
+import sttp.tapir.apispec.{ReferenceOr, SchemaType, Schema => ASchema}
 import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
 class ObjectSchemas(
