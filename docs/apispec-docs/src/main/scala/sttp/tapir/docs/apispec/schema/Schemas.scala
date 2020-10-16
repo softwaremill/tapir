@@ -3,7 +3,7 @@ package sttp.tapir.docs.apispec.schema
 import sttp.tapir.apispec.{ReferenceOr, SchemaType, Schema => ASchema}
 import sttp.tapir.{Codec, Schema => TSchema, SchemaType => TSchemaType}
 
-class ObjectSchemas(
+class Schemas(
     tschemaToASchema: TSchemaToASchema,
     schemaReferenceMapper: SchemaReferenceMapper
 ) {

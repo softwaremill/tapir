@@ -52,8 +52,6 @@ trait TapirAsyncAPICirceEncoders {
     parse(av.value).right.getOrElse(Json.fromString(av.value))
   }
   implicit val encoderCorrelationId: Encoder[CorrelationId] = deriveEncoder[CorrelationId]
-  implicit val encoderMessageTrait: Encoder[MessageTrait] = deriveEncoder[MessageTrait]
-  implicit val encoderMessage: Encoder[Message] = deriveEncoder[Message]
   implicit val encoderParameter: Encoder[Parameter] = deriveEncoder[Parameter]
 
   implicit val encoderMessageBinding: Encoder[List[MessageBinding]] = {
@@ -61,12 +59,14 @@ trait TapirAsyncAPICirceEncoders {
     implicit val encoderWebSocketMessageBinding: Encoder[WebSocketMessageBinding] = deriveEncoder[WebSocketMessageBinding]
     implicit val encoderKafkaMessageBinding: Encoder[KafkaMessageBinding] = deriveEncoder[KafkaMessageBinding]
     (a: List[MessageBinding]) =>
-      Json.obj(
-        a.map {
-          case v: HttpMessageBinding      => "http" -> v.asJson
-          case v: WebSocketMessageBinding => "ws" -> v.asJson
-          case v: KafkaMessageBinding     => "kafka" -> v.asJson
-        }: _*
+      nullIfEmpty(a)(
+        Json.obj(
+          a.map {
+            case v: HttpMessageBinding      => "http" -> v.asJson
+            case v: WebSocketMessageBinding => "ws" -> v.asJson
+            case v: KafkaMessageBinding     => "kafka" -> v.asJson
+          }: _*
+        )
       )
   }
 
@@ -75,12 +75,14 @@ trait TapirAsyncAPICirceEncoders {
     implicit val encoderWebSocketOperationBinding: Encoder[WebSocketOperationBinding] = deriveEncoder[WebSocketOperationBinding]
     implicit val encoderKafkaOperationBinding: Encoder[KafkaOperationBinding] = deriveEncoder[KafkaOperationBinding]
     (a: List[OperationBinding]) =>
-      Json.obj(
-        a.map {
-          case v: HttpOperationBinding      => "http" -> v.asJson
-          case v: WebSocketOperationBinding => "ws" -> v.asJson
-          case v: KafkaOperationBinding     => "kafka" -> v.asJson
-        }: _*
+      nullIfEmpty(a)(
+        Json.obj(
+          a.map {
+            case v: HttpOperationBinding      => "http" -> v.asJson
+            case v: WebSocketOperationBinding => "ws" -> v.asJson
+            case v: KafkaOperationBinding     => "kafka" -> v.asJson
+          }: _*
+        )
       )
   }
 
@@ -89,12 +91,14 @@ trait TapirAsyncAPICirceEncoders {
     implicit val encoderWebSocketChannelBinding: Encoder[WebSocketChannelBinding] = deriveEncoder[WebSocketChannelBinding]
     implicit val encoderKafkaChannelBinding: Encoder[KafkaChannelBinding] = deriveEncoder[KafkaChannelBinding]
     (a: List[ChannelBinding]) =>
-      Json.obj(
-        a.map {
-          case v: HttpChannelBinding      => "http" -> v.asJson
-          case v: WebSocketChannelBinding => "ws" -> v.asJson
-          case v: KafkaChannelBinding     => "kafka" -> v.asJson
-        }: _*
+      nullIfEmpty(a)(
+        Json.obj(
+          a.map {
+            case v: HttpChannelBinding      => "http" -> v.asJson
+            case v: WebSocketChannelBinding => "ws" -> v.asJson
+            case v: KafkaChannelBinding     => "kafka" -> v.asJson
+          }: _*
+        )
       )
   }
 
@@ -103,13 +107,31 @@ trait TapirAsyncAPICirceEncoders {
     implicit val encoderWebSocketServerBinding: Encoder[WebSocketServerBinding] = deriveEncoder[WebSocketServerBinding]
     implicit val encoderKafkaServerBinding: Encoder[KafkaServerBinding] = deriveEncoder[KafkaServerBinding]
     (a: List[ServerBinding]) =>
-      Json.obj(
-        a.map {
-          case v: HttpServerBinding      => "http" -> v.asJson
-          case v: WebSocketServerBinding => "ws" -> v.asJson
-          case v: KafkaServerBinding     => "kafka" -> v.asJson
-        }: _*
+      nullIfEmpty(a)(
+        Json.obj(
+          a.map {
+            case v: HttpServerBinding      => "http" -> v.asJson
+            case v: WebSocketServerBinding => "ws" -> v.asJson
+            case v: KafkaServerBinding     => "kafka" -> v.asJson
+          }: _*
+        )
       )
+  }
+
+  private def nullIfEmpty[T](a: List[T])(otherwise: => Json): Json = if (a.isEmpty) Json.Null else otherwise
+
+  implicit val encoderMessagePayload: Encoder[Option[Either[AnyValue, ReferenceOr[Schema]]]] = {
+    case None           => Json.Null
+    case Some(Left(av)) => encoderAnyValue.apply(av)
+    case Some(Right(s)) => encoderReferenceOr[Schema].apply(s)
+  }
+
+  implicit val encoderMessageTrait: Encoder[MessageTrait] = deriveEncoder[MessageTrait]
+  implicit val encoderSingleMessage: Encoder[SingleMessage] = deriveEncoder[SingleMessage]
+  implicit val encoderOneOfMessage: Encoder[OneOfMessage] = deriveEncoder[OneOfMessage]
+  implicit val encoderMessage: Encoder[Message] = {
+    case s: SingleMessage => encoderSingleMessage.apply(s)
+    case o: OneOfMessage  => encoderOneOfMessage.apply(o)
   }
 
   implicit val encoderOperationTrait: Encoder[OperationTrait] = deriveEncoder[OperationTrait]

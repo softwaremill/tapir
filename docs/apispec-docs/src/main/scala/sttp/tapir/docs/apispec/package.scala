@@ -1,6 +1,6 @@
 package sttp.tapir.docs
 
-import sttp.tapir.{Codec, EndpointInput, SchemaType}
+import sttp.tapir.{Codec, Endpoint, EndpointInput, SchemaType}
 import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
 
 package object apispec {
@@ -28,5 +28,32 @@ package object apispec {
       case (it: Option[_], _)                            => it.map(v => ExampleSingleValue(rawToString(v)))
       case (v, _)                                        => Some(ExampleSingleValue(rawToString(v)))
     }
+  }
+
+  private[docs] def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _, _]): Endpoint[_, _, _, _] = {
+    val (input2, _) = new EndpointInputMapper[Int](
+      { case (EndpointInput.PathCapture(None, codec, info), i) =>
+        (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)
+      },
+      PartialFunction.empty
+    ).mapInput(e.input, 1)
+
+    e.copy(input = input2)
+  }
+
+  private[docs] def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
+    inputs
+      .collect {
+        case EndpointInput.PathCapture(name, _, _) => Left(name)
+        case EndpointInput.FixedPath(s, _, _)      => Right(s)
+      }
+      .foldLeft((Vector.empty[String], 1)) { case ((acc, i), component) =>
+        component match {
+          case Left(None)    => throw new IllegalStateException("All path captures should be named")
+          case Left(Some(p)) => (acc :+ p, i)
+          case Right(p)      => (acc :+ p, i)
+        }
+      }
+      ._1
   }
 }

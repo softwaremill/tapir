@@ -6,7 +6,10 @@ import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
   */
-private[schema] class TSchemaToASchema(schemaReferenceMapper: SchemaReferenceMapper, discriminatorToOpenApi: DiscriminatorToOpenAPI) {
+private[schema] class TSchemaToASchema(
+    schemaReferenceMapper: SchemaReferenceMapper,
+    tDiscriminatorToADiscriminator: TDiscriminatorToADiscriminator
+) {
   def apply(typeData: TypeData[_]): ReferenceOr[ASchema] = {
     val result = typeData.schema.schemaType match {
       case TSchemaType.SInteger => Right(ASchema(SchemaType.Integer))
@@ -37,7 +40,7 @@ private[schema] class TSchemaToASchema(schemaReferenceMapper: SchemaReferenceMap
         Right(
           ASchema.apply(
             schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _) => Left(schemaReferenceMapper.map(s.info)) },
-            d.map(discriminatorToOpenApi.apply)
+            d.map(tDiscriminatorToADiscriminator.apply)
           )
         )
       case TSchemaType.SOpenProduct(_, valueSchema) =>

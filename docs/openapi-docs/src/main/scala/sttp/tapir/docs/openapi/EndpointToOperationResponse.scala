@@ -5,12 +5,12 @@ import sttp.tapir.internal._
 import sttp.tapir.apispec.ReferenceOr
 import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
 import sttp.tapir.docs.apispec.exampleValue
-import sttp.tapir.docs.apispec.schema.ObjectSchemas
+import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.openapi.{Header, Response, ResponsesCodeKey, ResponsesDefaultKey, ResponsesKey}
 
 import scala.collection.immutable.ListMap
 
-private[openapi] class EndpointToOperationResponse(objectSchemas: ObjectSchemas, codecToMediaType: CodecToMediaType) {
+private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codecToMediaType: CodecToMediaType) {
   def apply(e: Endpoint[_, _, _, _]): ListMap[ResponsesKey, ReferenceOr[Response]] = {
     // There always needs to be at least a 200 empty response
     outputToResponses(e.output, ResponsesCodeKey(200), Some(Response("", ListMap.empty, ListMap.empty))) ++

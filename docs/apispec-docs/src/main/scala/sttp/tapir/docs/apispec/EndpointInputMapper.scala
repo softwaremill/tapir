@@ -1,9 +1,9 @@
-package sttp.tapir.docs.openapi
+package sttp.tapir.docs.apispec
 
 import sttp.tapir.{EndpointIO, EndpointInput}
 
 // ideally the parameters would be polymporphic functions returning EI[I] => EI[I]
-private[openapi] class EndpointInputMapper[S](
+private[docs] class EndpointInputMapper[S](
     inputMapping: PartialFunction[(EndpointInput.Single[_], S), (EndpointInput.Single[_], S)],
     ioMapping: PartialFunction[(EndpointIO.Single[_], S), (EndpointIO.Single[_], S)]
 ) {

@@ -9,42 +9,41 @@ case class AsyncAPI(
     id: Option[String],
     info: Info,
     servers: ListMap[String, Server],
-    channels: ListMap[String, ChannelItem],
+    channels: ListMap[String, ReferenceOr[ChannelItem]],
     components: Option[Components],
     tags: List[Tag],
     externalDocs: Option[ExternalDocumentation]
 ) {
+  def id(id: String): AsyncAPI = copy(id = Some(id))
   def servers(s: ListMap[String, Server]): AsyncAPI = copy(servers = s)
-
   def tags(t: List[Tag]): AsyncAPI = copy(tags = t)
 }
 
 case class Info(
     title: String,
     version: String,
-    description: Option[String],
-    termsOfService: Option[String],
-    contact: Option[Contact],
-    license: Option[License]
+    description: Option[String] = None,
+    termsOfService: Option[String] = None,
+    contact: Option[Contact] = None,
+    license: Option[License] = None
 )
 
-case class Contact(name: Option[String], url: Option[String], email: Option[String])
+case class Contact(name: Option[String] = None, url: Option[String] = None, email: Option[String] = None)
 
-case class License(name: String, url: Option[String])
+case class License(name: String, url: Option[String] = None)
 
 case class Server(
     url: String,
     protocol: String,
-    protocolVersion: Option[String],
-    description: Option[String],
-    variables: ListMap[String, ServerVariable],
-    security: List[SecurityRequirement],
-    bindings: List[ServerBinding]
+    protocolVersion: Option[String] = None,
+    description: Option[String] = None,
+    variables: ListMap[String, ServerVariable] = ListMap.empty,
+    security: List[SecurityRequirement] = Nil,
+    bindings: List[ServerBinding] = Nil
 )
 case class ServerVariable(enum: List[String], default: Option[String], description: Option[String], examples: List[String])
 
 case class ChannelItem(
-    $ref: Option[String],
     description: Option[String],
     subscribe: Option[Operation],
     publish: Option[Operation],
@@ -59,7 +58,7 @@ case class Operation(
     externalDocs: Option[ExternalDocumentation],
     bindings: List[OperationBinding],
     traits: List[OperationTrait],
-    message: Option[Message]
+    message: Option[ReferenceOr[Message]]
 )
 
 case class OperationTrait(
@@ -95,9 +94,11 @@ case class HttpMessageBinding(headers: Option[Schema], bindingVersion: Option[St
 case class WebSocketMessageBinding() extends MessageBinding
 case class KafkaMessageBinding(key: Option[Schema], bindingVersion: Option[String]) extends MessageBinding
 
-case class Message(
+sealed trait Message
+case class OneOfMessage(oneOf: List[SingleMessage]) extends Message
+case class SingleMessage(
     headers: Option[ReferenceOr[Schema]],
-    payload: Option[AnyValue],
+    payload: Option[Either[AnyValue, ReferenceOr[Schema]]],
     correlationId: Option[ReferenceOr[Schema]],
     schemaFormat: Option[String],
     contentType: Option[String],
@@ -110,7 +111,7 @@ case class Message(
     bindings: List[MessageBinding],
     examples: ListMap[String, ExampleValue],
     traits: List[ReferenceOr[MessageTrait]]
-)
+) extends Message
 
 case class MessageTrait(
     headers: Option[ReferenceOr[Schema]],

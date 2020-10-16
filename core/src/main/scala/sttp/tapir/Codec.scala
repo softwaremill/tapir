@@ -20,8 +20,7 @@ import sttp.ws.WebSocketFrame
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.{Duration => SDuration}
 
-/**
-  * A [[Mapping]] between low-level values of type `L` and high-level values of type `H`. Low level values are
+/** A [[Mapping]] between low-level values of type `L` and high-level values of type `H`. Low level values are
   * formatted as `CF`.
   *
   * The mapping consists of a pair of functions, one to decode (`L => H`), and one to encode (`H => L`)
@@ -225,8 +224,7 @@ object Codec extends FormCodecDerivation {
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
     }
 
-  /**
-    * @param partCodecs For each supported part, a (raw body type, codec) pair which encodes the part value into a
+  /** @param partCodecs For each supported part, a (raw body type, codec) pair which encodes the part value into a
     *                   raw value of the given type. A single part value might be encoded as multiple (or none) raw
     *                   values.
     * @param defaultPartCodec Default codec to use for parts which are not defined in `partCodecs`. `None`, if extra
@@ -288,8 +286,7 @@ object Codec extends FormCodecDerivation {
 
   implicit val webSocketFrameCodec: Codec[WebSocketFrame, WebSocketFrame, CodecFormat.TextPlain] = Codec.idPlain()
 
-  /**
-    * A codec which expects only text frames (all other frames cause a decoding error) and handles the text using
+  /** A codec which expects only text frames (all other frames cause a decoding error) and handles the text using
     * the given `stringCodec`.
     */
   implicit def textWebSocketFrameCodec[A, CF <: CodecFormat](implicit
@@ -301,9 +298,10 @@ object Codec extends FormCodecDerivation {
         case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p)
         case f                            => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
       }(a => WebSocketFrame.text(stringCodec.encode(a)))
+      .schema(stringCodec.schema)
+      .validate(stringCodec.validator)
 
-  /**
-    * A codec which expects only text and close frames (all other frames cause a decoding error). Close frames
+  /** A codec which expects only text and close frames (all other frames cause a decoding error). Close frames
     * correspond to `None`, while text frames are handled using the given `stringCodec` and wrapped with `Some`.
     */
   implicit def textOrCloseWebSocketFrameCodec[A, CF <: CodecFormat](implicit
@@ -319,9 +317,10 @@ object Codec extends FormCodecDerivation {
         case None    => WebSocketFrame.close
         case Some(a) => WebSocketFrame.text(stringCodec.encode(a))
       }
+      .schema(stringCodec.schema.map(_.as[Option[A]]))
+      .validate(stringCodec.validator.asOptionElement)
 
-  /**
-    * A codec which expects only binary frames (all other frames cause a decoding error) and handles the text using
+  /** A codec which expects only binary frames (all other frames cause a decoding error) and handles the text using
     * the given `byteArrayCodec`.
     */
   implicit def binaryWebSocketFrameCodec[A, CF <: CodecFormat](implicit
@@ -333,9 +332,10 @@ object Codec extends FormCodecDerivation {
         case WebSocketFrame.Binary(p, _, _) => byteArrayCodec.decode(p)
         case f                              => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
       }(a => WebSocketFrame.binary(byteArrayCodec.encode(a)))
+      .schema(byteArrayCodec.schema)
+      .validate(byteArrayCodec.validator)
 
-  /**
-    * A codec which expects only binary and close frames (all other frames cause a decoding error). Close frames
+  /** A codec which expects only binary and close frames (all other frames cause a decoding error). Close frames
     * correspond to `None`, while text frames are handled using the given `byteArrayCodec` and wrapped with `Some`.
     */
   implicit def binaryOrCloseWebSocketFrameCodec[A, CF <: CodecFormat](implicit
@@ -351,6 +351,8 @@ object Codec extends FormCodecDerivation {
         case None    => WebSocketFrame.close
         case Some(a) => WebSocketFrame.binary(byteArrayCodec.encode(a))
       }
+      .schema(byteArrayCodec.schema.map(_.as[Option[A]]))
+      .validate(byteArrayCodec.validator.asOptionElement)
 
   //
 
@@ -358,8 +360,7 @@ object Codec extends FormCodecDerivation {
     id[List[T], CF](c.format)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
-  /**
-    * Create a codec which decodes/encodes a list of low-level values to a list of high-level values, using the given
+  /** Create a codec which decodes/encodes a list of low-level values to a list of high-level values, using the given
     * base codec `c`.
     *
     * The schema and validator are copied from the base codec.
@@ -369,8 +370,7 @@ object Codec extends FormCodecDerivation {
       .schema(c.schema.map(_.asArrayElement.as[List[U]]))
       .validate(c.validator.asIterableElements[List])
 
-  /**
-    * Create a codec which decodes/encodes a list of low-level values to a set of high-level values, using the given
+  /** Create a codec which decodes/encodes a list of low-level values to a set of high-level values, using the given
     * base codec `c`.
     *
     * The schema and validator are copied from the base codec.
@@ -382,8 +382,7 @@ object Codec extends FormCodecDerivation {
       .schema(c.schema.map(_.asArrayElement.as[Set[U]]))
       .validate(c.validator.asIterableElements[Set])
 
-  /**
-    * Create a codec which decodes/encodes a list of low-level values to a vector of high-level values, using the given
+  /** Create a codec which decodes/encodes a list of low-level values to a vector of high-level values, using the given
     * base codec `c`.
     *
     * The schema and validator are copied from the base codec.
@@ -395,8 +394,7 @@ object Codec extends FormCodecDerivation {
       .schema(c.schema.map(_.asArrayElement.as[Vector[U]]))
       .validate(c.validator.asIterableElements[Vector])
 
-  /**
-    * Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode
+  /** Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode
     * failure is returned. The given base codec `c` is used for decoding/encoding.
     *
     * The schema and validator are copied from the base codec.
@@ -411,8 +409,7 @@ object Codec extends FormCodecDerivation {
       .schema(c.schema)
       .validate(c.validator)
 
-  /**
-    * Create a codec which requires that a list of low-level values is empty or contains a single element. If it
+  /** Create a codec which requires that a list of low-level values is empty or contains a single element. If it
     * contains multiple elements, a decode failure is returned. The given base codec `c` is used for decoding/encoding.
     *
     * The schema and validator are copied from the base codec.
@@ -427,8 +424,7 @@ object Codec extends FormCodecDerivation {
       .schema(c.schema.map(_.asOptional[Option[U]]))
       .validate(c.validator.asOptionElement)
 
-  /**
-    * Create a codec which requires that an optional low-level value is defined. If it is `None`, a decode failure is
+  /** Create a codec which requires that an optional low-level value is defined. If it is `None`, a decode failure is
     * returned. The given base codec `c` is used for decoding/encoding.
     *
     * The schema and validator are copied from the base codec.
@@ -442,8 +438,7 @@ object Codec extends FormCodecDerivation {
       .schema(c.schema)
       .validate(c.validator)
 
-  /**
-    * Create a codec which decodes/encodes an optional low-level value to an optional high-level value. The given
+  /** Create a codec which decodes/encodes an optional low-level value to an optional high-level value. The given
     * base codec `c` is used for decoding/encoding.
     *
     * The schema and validator are copied from the base codec.
@@ -485,8 +480,7 @@ object Codec extends FormCodecDerivation {
   }
 }
 
-/**
-  * Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec
+/** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec
   * which further decodes it.
   */
 case class PartCodec[R, T](rawBodyType: RawBodyType[R], codec: Codec[List[R], T, _ <: CodecFormat])
@@ -508,8 +502,7 @@ object MultipartCodec extends MultipartCodecDerivation {
   }
 }
 
-/**
-  * The raw format of the body: what do we need to know, to read it and pass to a codec for further decoding.
+/** The raw format of the body: what do we need to know, to read it and pass to a codec for further decoding.
   */
 sealed trait RawBodyType[R]
 object RawBodyType {

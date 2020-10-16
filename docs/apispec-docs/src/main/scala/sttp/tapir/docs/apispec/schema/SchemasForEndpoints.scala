@@ -9,16 +9,16 @@ import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
 import scala.collection.immutable.ListMap
 import scala.collection.mutable.ListBuffer
 
-object ObjectSchemasForEndpoints {
+object SchemasForEndpoints {
   private type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
 
-  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[ASchema]], ObjectSchemas) = {
+  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[ASchema]], Schemas) = {
     val sObjects = uniqueObjects(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
     val schemaReferences = new SchemaReferenceMapper(infoToKey)
-    val discriminatorToOpenApi = new DiscriminatorToOpenAPI(schemaReferences)
-    val tschemaToASchema = new TSchemaToASchema(schemaReferences, discriminatorToOpenApi)
-    val schemas = new ObjectSchemas(tschemaToASchema, schemaReferences)
+    val tDiscriminatorToADiscriminator = new TDiscriminatorToADiscriminator(schemaReferences)
+    val tschemaToASchema = new TSchemaToASchema(schemaReferences, tDiscriminatorToADiscriminator)
+    val schemas = new Schemas(tschemaToASchema, schemaReferences)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
@@ -123,8 +123,9 @@ object ObjectSchemasForEndpoints {
       case EndpointOutput.MappedPair(wrapped, _)   => forOutput(wrapped)
       case EndpointOutput.Void()                   => List.empty
       case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
-      case EndpointOutput.WebSocketBodyWrapper(_)  => List.empty
-      case op: EndpointIO[_]                       => forIO(op)
+      case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
+        forCodec(wrapped.codec) ++ forCodec(wrapped.requests) ++ forCodec(wrapped.responses)
+      case op: EndpointIO[_] => forIO(op)
     }
   }
 

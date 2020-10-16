@@ -389,7 +389,7 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
     name := "tapir-apispec-docs"
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(openapiModel, core, tests % Test, apispecModel)
+  .dependsOn(core, tests % Test, apispecModel)
 
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
   .settings(commonSettings)
@@ -402,7 +402,11 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonSettings)
   .settings(
-    name := "tapir-asyncapi-docs"
+    name := "tapir-asyncapi-docs",
+    libraryDependencies ++= Seq(
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Test,
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Test
+    )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(asyncapiModel, core, apispecDocs, tests % Test, asyncapiCirceYaml % Test)

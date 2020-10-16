@@ -1,18 +1,19 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.docs.apispec.SecuritySchemesForEndpoints
-import sttp.tapir.docs.apispec.schema.ObjectSchemasForEndpoints
+import sttp.tapir._
+import sttp.tapir.internal._
+import sttp.tapir.docs.apispec.schema.SchemasForEndpoints
+import sttp.tapir.docs.apispec.{SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
 import sttp.tapir.openapi._
-import sttp.tapir.{EndpointInput, _}
 
 import scala.collection.immutable.ListMap
 
 object EndpointToOpenAPIDocs {
   def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): OpenAPI = {
-    val es2 = es.map(nameAllPathCapturesInEndpoint)
-    val (keyToSchema, objectSchemas) = ObjectSchemasForEndpoints(es2)
+    val es2 = es.filter(e => isWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
+    val (keyToSchema, schemas) = SchemasForEndpoints(es2)
     val securitySchemes = SecuritySchemesForEndpoints(es2)
-    val pathCreator = new EndpointToOpenAPIPaths(objectSchemas, securitySchemes, options)
+    val pathCreator = new EndpointToOpenAPIPaths(schemas, securitySchemes, options)
     val componentsCreator = new EndpointToOpenAPIComponents(keyToSchema, securitySchemes)
 
     val base = apiToOpenApi(api, componentsCreator)
@@ -31,16 +32,5 @@ object EndpointToOpenAPIDocs {
       components = componentsCreator.components,
       security = List.empty
     )
-  }
-
-  private def nameAllPathCapturesInEndpoint(e: Endpoint[_, _, _, _]): Endpoint[_, _, _, _] = {
-    val (input2, _) = new EndpointInputMapper[Int](
-      { case (EndpointInput.PathCapture(None, codec, info), i) =>
-        (EndpointInput.PathCapture(Some(s"p$i"), codec, info), i + 1)
-      },
-      PartialFunction.empty
-    ).mapInput(e.input, 1)
-
-    e.copy(input = input2)
   }
 }

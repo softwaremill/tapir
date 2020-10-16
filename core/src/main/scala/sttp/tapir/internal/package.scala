@@ -4,6 +4,7 @@ import java.nio.charset.Charset
 
 import sttp.model.{Method, StatusCode}
 import sttp.monad.MonadError
+import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
 import scala.collection.immutable.ListMap
@@ -12,8 +13,7 @@ import scala.util.{Failure, Success, Try}
 
 package object internal {
 
-  /**
-    * A union type: () | value | 2+ tuple. Represents the possible parameters of an endpoint's input/output:
+  /** A union type: () | value | 2+ tuple. Represents the possible parameters of an endpoint's input/output:
     * no parameters, a single parameter (a "stand-alone" value instead of a 1-tuple), and multiple parameters.
     *
     * There are two views on parameters: [[ParamsAsAny]], where the parameters are represented as instances of
@@ -237,6 +237,13 @@ package object internal {
       case Failure(exception)                                                 => monad.error(exception)
     }
   }
+
+  def isWebSocket[P[_, _]](e: Endpoint[_, _, _, _]): Option[WebSocketBodyWrapper[P, _, _, _]] =
+    e.output
+      .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[P, _, _, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[P, _, _, _] =>
+        Vector(ws)
+      }
+      .headOption
 
   private def wrapException[F[_], O, E, I](exception: Throwable)(implicit me: MonadError[F]): F[Either[E, O]] = {
     me.unit(Left(exception.asInstanceOf[E]): Either[E, O])

@@ -5,15 +5,15 @@ import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
 import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
-import sttp.tapir.docs.apispec.SecuritySchemes
-import sttp.tapir.docs.apispec.schema.ObjectSchemas
+import sttp.tapir.docs.apispec.{SecuritySchemes, namedPathComponents}
+import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, ResponsesKey}
 
 import scala.collection.immutable.ListMap
 
-private[openapi] class EndpointToOpenAPIPaths(objectSchemas: ObjectSchemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
-  private val codecToMediaType = new CodecToMediaType(objectSchemas)
-  private val endpointToOperationResponse = new EndpointToOperationResponse(objectSchemas, codecToMediaType)
+private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
+  private val codecToMediaType = new CodecToMediaType(schemas)
+  private val endpointToOperationResponse = new EndpointToOperationResponse(schemas, codecToMediaType)
 
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
     import Method._
@@ -100,7 +100,7 @@ private[openapi] class EndpointToOpenAPIPaths(objectSchemas: ObjectSchemas, secu
   }
 
   private def headerToParameter[T](header: EndpointIO.Header[T]) = {
-    EndpointInputToParameterConverter.from(header, objectSchemas(header.codec))
+    EndpointInputToParameterConverter.from(header, schemas(header.codec))
   }
 
   private def fixedHeaderToParameter[T](header: EndpointIO.FixedHeader[_]) = {
@@ -108,30 +108,14 @@ private[openapi] class EndpointToOpenAPIPaths(objectSchemas: ObjectSchemas, secu
   }
 
   private def cookieToParameter[T](cookie: EndpointInput.Cookie[T]) = {
-    EndpointInputToParameterConverter.from(cookie, objectSchemas(cookie.codec))
+    EndpointInputToParameterConverter.from(cookie, schemas(cookie.codec))
   }
 
   private def pathCaptureToParameter[T](p: EndpointInput.PathCapture[T]) = {
-    EndpointInputToParameterConverter.from(p, objectSchemas(p.codec))
+    EndpointInputToParameterConverter.from(p, schemas(p.codec))
   }
 
   private def queryToParameter[T](query: EndpointInput.Query[T]) = {
-    EndpointInputToParameterConverter.from(query, objectSchemas(query.codec))
-  }
-
-  private def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
-    inputs
-      .collect {
-        case EndpointInput.PathCapture(name, _, _) => Left(name)
-        case EndpointInput.FixedPath(s, _, _)      => Right(s)
-      }
-      .foldLeft((Vector.empty[String], 1)) { case ((acc, i), component) =>
-        component match {
-          case Left(None)    => (acc :+ s"param$i", i + 1)
-          case Left(Some(p)) => (acc :+ p, i)
-          case Right(p)      => (acc :+ p, i)
-        }
-      }
-      ._1
+    EndpointInputToParameterConverter.from(query, schemas(query.codec))
   }
 }
