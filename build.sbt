@@ -1,5 +1,4 @@
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.function.IntUnaryOperator
 
 import sbtrelease.ReleaseStateTransformations.{
   checkSnapshotDependencies,

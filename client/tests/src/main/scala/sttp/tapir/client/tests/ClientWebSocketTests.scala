@@ -14,7 +14,12 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
 
   def webSocketTests(): Unit = {
     test("web sockets, string client-terminated echo") {
-      send(endpoint.get.in("ws" / "echo").out(webSocketBody[String, String, CodecFormat.TextPlain].apply(streams)), port, (), "ws")
+      send(
+        endpoint.get.in("ws" / "echo").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams)),
+        port,
+        (),
+        "ws"
+      )
         .flatMap { r =>
           sendAndReceiveLimited(r.right.get, 2, List("test1", "test2"))
         }
@@ -22,7 +27,12 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
     }
 
     test("web sockets, json client-terminated echo") {
-      send(endpoint.get.in("ws" / "echo").out(webSocketBody[Fruit, Fruit, CodecFormat.Json].apply(streams)), port, (), "ws")
+      send(
+        endpoint.get.in("ws" / "echo").out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json].apply(streams)),
+        port,
+        (),
+        "ws"
+      )
         .flatMap { r =>
           sendAndReceiveLimited(r.right.get, 2, List(Fruit("apple"), Fruit("orange")))
         }

@@ -2,8 +2,6 @@ package sttp.tapir.server.stub
 
 import java.nio.charset.Charset
 
-import sttp.capabilities
-import sttp.capabilities.Streams
 import sttp.client3.RequestMetadata
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
@@ -106,8 +104,7 @@ trait SttpStubServer {
         )
       }
 
-      /**
-        * Exposes underlying generic stubbing which allows to stub with an arbitrary response
+      /** Exposes underlying generic stubbing which allows to stub with an arbitrary response
         */
       def generic: stub.WhenRequest = whenRequest
     }
