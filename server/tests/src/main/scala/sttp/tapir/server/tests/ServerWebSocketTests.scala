@@ -25,11 +25,14 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
   private def pureResult[T](t: T): F[T] = m.unit(t)
   def functionToPipe[A, B](f: A => B): streams.Pipe[A, B]
 
+  private def stringWs = webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams)
+  private def stringEcho = functionToPipe((s: String) => s"echo: $s")
+
   def tests(): List[Test] = List(
     testServer(
-      endpoint.out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain].apply(streams)),
+      endpoint.out(stringWs),
       "string client-terminated echo"
-    )((_: Unit) => pureResult(functionToPipe((s: String) => s"echo: $s").asRight[Unit])) { baseUri =>
+    )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { baseUri =>
       basicRequest
         .response(asWebSocket { ws: WebSocket[IO] =>
           for {
@@ -86,6 +89,19 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
             List(Right("echo: test1"), Right("echo: test2"), Left(WebSocketFrame.close.statusCode))
           )
         )
+    },
+    testServer(
+      endpoint
+        .in(isWebSocket)
+        .errorOut(stringBody)
+        .out(stringWs),
+      "non web-socket request"
+    )(isWS => if (isWS) pureResult(stringEcho.asRight) else pureResult("Not a WS!".asLeft)) { baseUri =>
+      basicRequest
+        .response(asString)
+        .get(baseUri.scheme("http"))
+        .send(backend)
+        .map(_.body shouldBe Left("Not a WS!"))
     }
   )
 

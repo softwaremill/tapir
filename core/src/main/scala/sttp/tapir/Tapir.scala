@@ -267,10 +267,18 @@ trait TapirDerivedInputs { this: Tapir =>
   def clientIp: EndpointInput[Option[String]] =
     extractFromRequest(request =>
       request
-        .header("X-Forwarded-For")
+        .header(HeaderNames.XForwardedFor)
         .flatMap(_.split(",").headOption)
         .orElse(request.header("Remote-Address"))
         .orElse(request.header("X-Real-Ip"))
         .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
+    )
+
+  def isWebSocket: EndpointInput[Boolean] =
+    extractFromRequest(request =>
+      (for {
+        connection <- request.header(HeaderNames.Connection)
+        upgrade <- request.header(HeaderNames.Upgrade)
+      } yield connection.equalsIgnoreCase("Upgrade") && upgrade.equalsIgnoreCase("websocket")).getOrElse(false)
     )
 }
