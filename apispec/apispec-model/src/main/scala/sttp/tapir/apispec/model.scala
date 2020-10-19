@@ -1,12 +1,9 @@
 package sttp.tapir.apispec
 
-case class Reference($ref: String) {
-  def dereference: String = $ref.replace(Reference.ReferencePrefix, "")
-}
+case class Reference($ref: String)
 
 object Reference {
-  private val ReferencePrefix = "#/components/schemas/"
-  def apply($ref: String): Reference = new Reference(s"$ReferencePrefix${$ref}")
+  def to(prefix: String, $ref: String): Reference = new Reference(s"$prefix${$ref}")
 }
 
 sealed trait ExampleValue

@@ -2,7 +2,7 @@ package sttp.tapir.docs.asyncapi
 
 import sttp.model.Method
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
-import sttp.tapir.apispec.{IterableToListMap, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
+import sttp.tapir.apispec.{IterableToListMap, Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.asyncapi._
 import sttp.tapir.docs.apispec.namedPathComponents
 import sttp.tapir.docs.apispec.schema.Schemas
@@ -11,8 +11,15 @@ import sttp.tapir.{Codec, CodecFormat, Endpoint, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
 
-class EndpointToAsyncAPIWebSocketChannel(schemas: Schemas, options: AsyncAPIDocsOptions) {
-  def apply[P[_, _]](e: Endpoint[_, _, _, _], ws: WebSocketBodyWrapper[P, _, _, _]): (String, ChannelItem) = {
+class EndpointToAsyncAPIWebSocketChannel[P[_, _]](
+    schemas: Schemas,
+    codecToMessageKey: Map[Codec[_, _, _ <: CodecFormat], MessageKey],
+    options: AsyncAPIDocsOptions
+) {
+  def apply(
+      e: Endpoint[_, _, _, _],
+      ws: WebSocketBodyWrapper[P, _, _, _]
+  ): (String, ChannelItem) = {
     val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
     val method = e.input.method.getOrElse(Method.GET)
@@ -42,23 +49,6 @@ class EndpointToAsyncAPIWebSocketChannel(schemas: Schemas, options: AsyncAPIDocs
       e: Endpoint[_, _, _, _],
       codec: Codec[_, _, _ <: CodecFormat]
   ): Operation = {
-    val message = SingleMessage(
-      None,
-      Some(Right(schemas(codec))),
-      None,
-      None,
-      Some(codec.format.mediaType.toString()),
-      None,
-      None,
-      None,
-      codec.schema.flatMap(_.description),
-      Nil,
-      None,
-      Nil,
-      ListMap.empty,
-      Nil
-    )
-
     Operation(
       Some(id),
       e.info.summary,
@@ -67,7 +57,7 @@ class EndpointToAsyncAPIWebSocketChannel(schemas: Schemas, options: AsyncAPIDocs
       None,
       Nil,
       Nil,
-      Some(Right(message))
+      codecToMessageKey.get(codec).map(mk => Left(Reference.to("#/components/messages/", mk)))
     )
   }
 

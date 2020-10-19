@@ -1,112 +1,31 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.docs.apispec.uniqueName
-import sttp.tapir.apispec._
-import sttp.tapir.apispec.{Schema => ASchema}
+import sttp.tapir.apispec.{Schema => ASchema, _}
 import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
 
 import scala.collection.immutable.ListMap
-import scala.collection.mutable.ListBuffer
 
 object SchemasForEndpoints {
-  private type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
-
-  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[SchemaKey, ReferenceOr[ASchema]], Schemas) = {
-    val sObjects = uniqueObjects(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
-    val infoToKey = calculateUniqueKeys(sObjects.map(_._1))
-    val schemaReferences = new SchemaReferenceMapper(infoToKey)
-    val tDiscriminatorToADiscriminator = new TDiscriminatorToADiscriminator(schemaReferences)
-    val tschemaToASchema = new TSchemaToASchema(schemaReferences, tDiscriminatorToADiscriminator)
-    val schemas = new Schemas(tschemaToASchema, schemaReferences)
+  def apply(es: Iterable[Endpoint[_, _, _, _]]): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
+    val sObjects = ObjectTypeData.unique(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
+    val infoToKey = calculateUniqueKeys(sObjects.map(_._1), objectInfoToName)
+    val objectToSchemaReference = new ObjectToSchemaReference(infoToKey)
+    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference)
+    val schemas = new Schemas(tschemaToASchema, objectToSchemaReference)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
     val schemaKeys = infosToSchema.map { case (k, v) => k -> ((infoToKey(k), v)) }
     (schemaKeys.values.toListMap, schemas)
   }
 
-  /** Keeps only the first object data for each `SObjectInfo`. In case of recursive objects, the first one is the
-    * most complete as it contains the built-up structure, unlike subsequent ones, which only represent leaves (#354).
-    */
-  private def uniqueObjects(objs: Iterable[(TSchemaType.SObjectInfo, TypeData[_])]): Iterable[(TSchemaType.SObjectInfo, TypeData[_])] = {
-    val seen: collection.mutable.Set[TSchemaType.SObjectInfo] = collection.mutable.Set()
-    val result: ListBuffer[(TSchemaType.SObjectInfo, TypeData[_])] = ListBuffer()
-    objs.foreach { obj =>
-      if (!seen.contains(obj._1)) {
-        seen.add(obj._1)
-        result += obj
-      }
-    }
-    result.toList
-  }
-
-  private def calculateUniqueKeys(infos: Iterable[TSchemaType.SObjectInfo]): Map[TSchemaType.SObjectInfo, SchemaKey] = {
-    case class SchemaKeyAssignment1(keyToInfo: Map[SchemaKey, TSchemaType.SObjectInfo], infoToKey: Map[TSchemaType.SObjectInfo, SchemaKey])
-    infos
-      .foldLeft(SchemaKeyAssignment1(Map.empty, Map.empty)) { case (SchemaKeyAssignment1(keyToInfo, infoToKey), objectInfo) =>
-        val key = uniqueName(objectInfoToName(objectInfo), n => !keyToInfo.contains(n) || keyToInfo.get(n).contains(objectInfo))
-
-        SchemaKeyAssignment1(
-          keyToInfo + (key -> objectInfo),
-          infoToKey + (objectInfo -> key)
-        )
-      }
-      .infoToKey
-  }
-
-  private def objectSchemas(typeData: TypeData[_]): List[ObjectTypeData] = {
-    typeData match {
-      case TypeData(TSchema(TSchemaType.SArray(o), _, _, _, _), validator) =>
-        objectSchemas(TypeData(o, elementValidator(validator)))
-      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _, _), validator) =>
-        productSchemas(s, st, validator)
-      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _, _), validator) =>
-        coproductSchemas(s, st, validator)
-      case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _, _), validator) =>
-        (st.info -> TypeData(s, validator): ObjectTypeData) +: objectSchemas(
-          TypeData(st.valueSchema, elementValidator(validator))
-        )
-      case _ => List.empty
-    }
-  }
-
-  private def productSchemas(s: TSchema[_], st: TSchemaType.SProduct, validator: Validator[_]): List[ObjectTypeData] = {
-    (st.info -> TypeData(s, validator): ObjectTypeData) +: fieldsSchemaWithValidator(st, validator)
-      .flatMap(objectSchemas)
-      .toList
-  }
-
-  private def coproductSchemas(s: TSchema[_], st: TSchemaType.SCoproduct, validator: Validator[_]): List[ObjectTypeData] = {
-    (st.info -> TypeData(s, validator): ObjectTypeData) +: subtypesSchemaWithValidator(st, validator)
-      .flatMap(objectSchemas)
-      .toList
-  }
-
-  private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator[_]): Seq[TypeData[_]] = {
-    p.fields.map { f => TypeData(f._2, fieldValidator(v, f._1.name)) }.toList
-  }
-
-  private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator[_]): Seq[TypeData[_]] = {
-    st.schemas.collect { case s @ TSchema(st: TSchemaType.SProduct, _, _, _, _) =>
-      TypeData(s, subtypeValidator(v, st.info))
-    }
-  }
-
-  private def subtypeValidator(v: Validator[_], subtype: SObjectInfo): Validator[_] =
-    v match {
-      case v @ Validator.Coproduct(_)                                  => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
-      case Validator.CollectionElements(v @ Validator.Coproduct(_), _) => v.subtypes.getOrElse(subtype.fullName, Validator.pass)
-      case _                                                           => Validator.pass
-    }
-
   private def forInput(input: EndpointInput[_]): List[ObjectTypeData] = {
     input match {
       case EndpointInput.FixedMethod(_, _, _)     => List.empty
       case EndpointInput.FixedPath(_, _, _)       => List.empty
-      case EndpointInput.PathCapture(_, codec, _) => forCodec(codec)
+      case EndpointInput.PathCapture(_, codec, _) => ObjectTypeData(codec)
       case EndpointInput.PathsCapture(_, _)       => List.empty
-      case EndpointInput.Query(_, codec, _)       => forCodec(codec)
-      case EndpointInput.Cookie(_, codec, _)      => forCodec(codec)
+      case EndpointInput.Query(_, codec, _)       => ObjectTypeData(codec)
+      case EndpointInput.Cookie(_, codec, _)      => ObjectTypeData(codec)
       case EndpointInput.QueryParams(_, _)        => List.empty
       case _: EndpointInput.Auth[_]               => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
@@ -124,7 +43,7 @@ object SchemasForEndpoints {
       case EndpointOutput.Void()                   => List.empty
       case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
       case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
-        forCodec(wrapped.codec) ++ forCodec(wrapped.requests) ++ forCodec(wrapped.responses)
+        ObjectTypeData(wrapped.codec) ++ ObjectTypeData(wrapped.requests) ++ ObjectTypeData(wrapped.responses)
       case op: EndpointIO[_] => forIO(op)
     }
   }
@@ -132,21 +51,14 @@ object SchemasForEndpoints {
   private def forIO(io: EndpointIO[_]): List[ObjectTypeData] = {
     io match {
       case EndpointIO.Pair(left, right, _, _) => forIO(left) ++ forIO(right)
-      case EndpointIO.Header(_, codec, _)     => forCodec(codec)
+      case EndpointIO.Header(_, codec, _)     => ObjectTypeData(codec)
       case EndpointIO.Headers(_, _)           => List.empty
-      case EndpointIO.Body(_, codec, _)       => forCodec(codec)
+      case EndpointIO.Body(_, codec, _)       => ObjectTypeData(codec)
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) =>
-        objectSchemas(TypeData(codec.schema.getOrElse(TSchema(TSchemaType.SBinary)), Validator.pass))
+        ObjectTypeData(TypeData(codec.schema.getOrElse(TSchema(TSchemaType.SBinary)), Validator.pass))
       case EndpointIO.MappedPair(wrapped, _) => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)   => List.empty
       case EndpointIO.Empty(_, _)            => List.empty
     }
-  }
-
-  private def forCodec[T](codec: Codec[_, T, _]): List[ObjectTypeData] = objectSchemas(TypeData(codec))
-
-  private def objectInfoToName(info: TSchemaType.SObjectInfo): String = {
-    val shortName = info.fullName.split('.').last
-    (shortName +: info.typeParameterShortNames).mkString("_")
   }
 }

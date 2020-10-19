@@ -1,14 +1,14 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
+import sttp.tapir.docs.apispec.ValidatorUtil.{asPrimitiveValidators, elementValidator, fieldValidator}
 import sttp.tapir.docs.apispec.rawToString
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
-/** Converts a tapir schema to an OpenAPI schema, using the given map to resolve references.
+/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve references.
   */
 private[schema] class TSchemaToASchema(
-    schemaReferenceMapper: SchemaReferenceMapper,
-    tDiscriminatorToADiscriminator: TDiscriminatorToADiscriminator
+    objectToSchemaReference: ObjectToSchemaReference
 ) {
   def apply(typeData: TypeData[_]): ReferenceOr[ASchema] = {
     val result = typeData.schema.schemaType match {
@@ -22,25 +22,25 @@ private[schema] class TSchemaToASchema(
             required = p.required.map(_.encodedName).toList,
             properties = fields.map {
               case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _)) =>
-                fieldName.encodedName -> Left(schemaReferenceMapper.map(s.info))
+                fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
               case (fieldName, fieldSchema) =>
                 fieldName.encodedName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name)))
             }.toListMap
           )
         )
       case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _)) =>
-        Right(ASchema(SchemaType.Array).copy(items = Some(Left(schemaReferenceMapper.map(el.info)))))
+        Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
       case TSchemaType.SBinary        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate          => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
       case TSchemaType.SDateTime      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
-      case TSchemaType.SRef(fullName) => Left(schemaReferenceMapper.map(fullName))
+      case TSchemaType.SRef(fullName) => Left(objectToSchemaReference.map(fullName))
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           ASchema.apply(
-            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _) => Left(schemaReferenceMapper.map(s.info)) },
-            d.map(tDiscriminatorToADiscriminator.apply)
+            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _) => Left(objectToSchemaReference.map(s.info)) },
+            d.map(tDiscriminatorToADiscriminator)
           )
         )
       case TSchemaType.SOpenProduct(_, valueSchema) =>
@@ -48,7 +48,7 @@ private[schema] class TSchemaToASchema(
           ASchema(SchemaType.Object).copy(
             required = List.empty,
             additionalProperties = Some(valueSchema.schemaType match {
-              case so: TSchemaType.SObject => Left(schemaReferenceMapper.map(so.info))
+              case so: TSchemaType.SObject => Left(objectToSchemaReference.map(so.info))
               case _                       => apply(TypeData(valueSchema, elementValidator(typeData.validator)))
             })
           )
@@ -111,5 +111,14 @@ private[schema] class TSchemaToASchema(
 
   private def toBigDecimal[N](v: N, vIsNumeric: Numeric[N], wholeNumber: Boolean): BigDecimal = {
     if (wholeNumber) BigDecimal(vIsNumeric.toLong(v)) else BigDecimal(vIsNumeric.toDouble(v))
+  }
+
+  private def tDiscriminatorToADiscriminator(discriminator: TSchemaType.Discriminator): Discriminator = {
+    val schemas = Some(
+      discriminator.mappingOverride.map { case (k, TSchemaType.SRef(fullName)) =>
+        k -> objectToSchemaReference.map(fullName).$ref
+      }.toListMap
+    )
+    Discriminator(discriminator.propertyName, schemas)
   }
 }

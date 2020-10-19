@@ -1,46 +1,27 @@
 package sttp.tapir.docs.apispec
 
-import sttp.tapir.Validator
+import sttp.tapir.{SchemaType => TSchemaType}
 
 package object schema {
-  type SchemaKey = String
+  private[docs] type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
+  private[docs] type ObjectKey = String
 
-  private[schema] def elementValidator(v: Validator[_]): Validator[_] = {
-    val result = asSingleValidators(v).collect {
-      case Validator.OpenProduct(elementValidator)           => elementValidator
-      case Validator.CollectionElements(elementValidator, _) => elementValidator
-    }
+  private[docs] def calculateUniqueKeys[T](ts: Iterable[T], toName: T => String): Map[T, String] = {
+    case class Assigment(nameToT: Map[String, T], tToKey: Map[T, String])
+    ts
+      .foldLeft(Assigment(Map.empty, Map.empty)) { case (Assigment(nameToT, tToKey), t) =>
+        val key = uniqueName(toName(t), n => !nameToT.contains(n) || nameToT.get(n).contains(t))
 
-    Validator.all(result: _*)
+        Assigment(
+          nameToT + (key -> t),
+          tToKey + (t -> key)
+        )
+      }
+      .tToKey
   }
 
-  private[schema] def asSingleValidators(v: Validator[_]): Seq[Validator.Single[_]] = {
-    v match {
-      case Validator.All(validators)    => validators.flatMap(asSingleValidators)
-      case Validator.Any(validators)    => validators.flatMap(asSingleValidators)
-      case Validator.Mapped(wrapped, _) => asSingleValidators(wrapped)
-      case sv: Validator.Single[_]      => List(sv)
-    }
-  }
-
-  private[schema] def asPrimitiveValidators(v: Validator[_], unwrapCollections: Boolean): Seq[Validator.Primitive[_]] = {
-    v match {
-      case Validator.Mapped(wrapped, _)            => asPrimitiveValidators(wrapped, unwrapCollections)
-      case Validator.All(validators)               => validators.flatMap(asPrimitiveValidators(_, unwrapCollections))
-      case Validator.Any(validators)               => validators.flatMap(asPrimitiveValidators(_, unwrapCollections))
-      case Validator.CollectionElements(mapped, _) => if (unwrapCollections) asPrimitiveValidators(mapped, unwrapCollections) else Nil
-      case Validator.Product(_)                    => Nil
-      case Validator.Coproduct(_)                  => Nil
-      case Validator.OpenProduct(_)                => Nil
-      case Validator.Custom(_, _)                  => Nil
-      case bv: Validator.Primitive[_]              => List(bv)
-    }
-  }
-
-  private[schema] def fieldValidator(v: Validator[_], fieldName: String): Validator[_] = {
-    Validator.all(asSingleValidators(v).collect {
-      case Validator.CollectionElements(Validator.Product(fields), _) if fields.isDefinedAt(fieldName) => fields(fieldName).validator
-      case Validator.Product(fields) if fields.isDefinedAt(fieldName)                                  => fields(fieldName).validator
-    }: _*)
+  private[docs] def objectInfoToName(info: TSchemaType.SObjectInfo): String = {
+    val shortName = info.fullName.split('.').last
+    (shortName +: info.typeParameterShortNames).mkString("_")
   }
 }
