@@ -1,0 +1,35 @@
+asyncapi: 2.0.0
+info:
+  title: The fruit basket
+  version: '0.1'
+channels:
+  /fruit:
+    subscribe:
+      operationId: onFruit
+      message:
+        $ref: '#/components/messages/Fruit'
+    publish:
+      operationId: sendFruit
+      message:
+        $ref: '#/components/messages/string'
+    bindings:
+      ws:
+        method: GET
+components:
+  schemas:
+    Fruit:
+      required:
+        - f
+      type: object
+      properties:
+        f:
+          type: string
+  messages:
+    string:
+      payload:
+        type: string
+      contentType: text/plain
+    Fruit:
+      payload:
+        $ref: '#/components/schemas/Fruit'
+      contentType: application/json

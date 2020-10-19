@@ -62,16 +62,14 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
 
-  /**
-    * Json codecs are usually derived from json-library-specific implicits. That's why integrations with
+  /** Json codecs are usually derived from json-library-specific implicits. That's why integrations with
     * various json libraries define `jsonBody` methods, which directly require the library-specific implicits.
     *
     * If you have a custom json codec, you should use this method instead.
     */
   def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
 
-  /**
-    * Implement your own xml codec using `Codec.xml()` before using this method.
+  /** Implement your own xml codec using `Codec.xml()` before using this method.
     */
   def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Xml]])
 
@@ -95,8 +93,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
-  /**
-    * @param s A supported streams implementation.
+  /** @param s A supported streams implementation.
     * @param schema Schema of the body. Note that any schema can be passed here, usually this will be a schema for the
     *               "deserialized" stream.
     * @param charset An optional charset of the resulting stream's data, to be used in the content type.
@@ -111,12 +108,12 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
 
   // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
   // while the third one (S) can be inferred.
-  final class WebSocketBodyBuilder[REQ, RESP, CF <: CodecFormat] {
+  final class WebSocketBodyBuilder[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat] {
     def apply[S](
         s: Streams[S]
     )(implicit
-        requests: Codec[WebSocketFrame, REQ, CF],
-        responses: Codec[WebSocketFrame, RESP, CF]
+        requests: Codec[WebSocketFrame, REQ, REQ_CF],
+        responses: Codec[WebSocketFrame, RESP, RESP_CF]
     ): WebSocketBodyOutput[s.Pipe, REQ, RESP, s.Pipe[REQ, RESP], S] =
       WebSocketBodyOutput(
         s,
@@ -132,15 +129,15 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
       )
   }
 
-  /**
-    * @tparam REQ The type of messages that are sent to the server.
+  /** @tparam REQ The type of messages that are sent to the server.
     * @tparam RESP The type of messages that are received from the server.
     */
-  def webSocketBody[REQ, RESP, CF <: CodecFormat]: WebSocketBodyBuilder[REQ, RESP, CF] = new WebSocketBodyBuilder[REQ, RESP, CF]
+  def webSocketBody[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat]: WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF] =
+    new WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF]
   def webSocketBodyRaw[S](
       s: Streams[S]
   ): WebSocketBodyOutput[s.Pipe, WebSocketFrame, WebSocketFrame, s.Pipe[WebSocketFrame, WebSocketFrame], S] =
-    new WebSocketBodyBuilder[WebSocketFrame, WebSocketFrame, CodecFormat]
+    new WebSocketBodyBuilder[WebSocketFrame, CodecFormat, WebSocketFrame, CodecFormat]
       .apply(s)
       .concatenateFragmentedFrames(false)
       .ignorePong(false)
@@ -148,22 +145,19 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
       .decodeCloseRequests(true)
       .decodeCloseResponses(true)
 
-  /**
-    * A body in any format, read using the given `codec`, from a raw string read using UTF-8.
+  /** A body in any format, read using the given `codec`, from a raw string read using UTF-8.
     */
   def anyFromUtf8StringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF]): EndpointIO.Body[String, T] =
     anyFromStringBody[T, CF](codec, StandardCharsets.UTF_8)
 
-  /**
-    * A body in any format, read using the given `codec`, from a raw string read using `charset`.
+  /** A body in any format, read using the given `codec`, from a raw string read using `charset`.
     */
   def anyFromStringBody[T, CF <: CodecFormat](codec: Codec[String, T, CF], charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), codec, EndpointIO.Info.empty)
 
   def auth: TapirAuth.type = TapirAuth
 
-  /**
-    * Extract a value from a server request. This input is only used by server interpreters, it is ignored by
+  /** Extract a value from a server request. This input is only used by server interpreters, it is ignored by
     * documentation interpreters and the provided value is discarded by client interpreters.
     */
   def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
@@ -174,8 +168,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def statusCode(statusCode: sttp.model.StatusCode): EndpointOutput.FixedStatusCode[Unit] =
     EndpointOutput.FixedStatusCode(statusCode, Codec.idPlain(), EndpointIO.Info.empty)
 
-  /**
-    * Maps status codes to outputs. All outputs must have a common supertype (`T`). Typically, the supertype is a sealed
+  /** Maps status codes to outputs. All outputs must have a common supertype (`T`). Typically, the supertype is a sealed
     * trait, and the mappings are implementing cases classes.
     *
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `T` are covered).
@@ -183,8 +176,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def oneOf[T](firstCase: StatusMapping[_ <: T], otherCases: StatusMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
     EndpointOutput.OneOf[T, T](firstCase +: otherCases, Codec.idPlain())
 
-  /**
-    * Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
+  /** Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the runtime class of `T`.
     *
     * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this
@@ -196,8 +188,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): StatusMapping[T] =
     macro StatusMappingMacro.classMatcherIfErasedSameAsType[T]
 
-  /**
-    * Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
+  /** Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
@@ -210,8 +201,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     StatusMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
   }
 
-  /**
-    * Create a status mapping which uses `statusCode` and `output` if the provided value (when interpreting as a server
+  /** Create a status mapping which uses `statusCode` and `output` if the provided value (when interpreting as a server
     * matches the `matcher` predicate.
     *
     * Should be used in [[oneOf]] output descriptions.
@@ -221,8 +211,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   ): StatusMapping[T] =
     StatusMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
 
-  /**
-    * Create a status mapping which uses `statusCode` and `output` if the provided value exactly matches one
+  /** Create a status mapping which uses `statusCode` and `output` if the provided value exactly matches one
     * of the values provided in the second argument list.
     *
     * Should be used in [[oneOf]] output descriptions.
@@ -236,8 +225,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   ): StatusMapping[T] =
     statusMappingValueMatcher(statusCode, output)(exactMatch(rest.toSet + firstExactValue))
 
-  /**
-    * Experimental!
+  /** Experimental!
     *
     * Create a status mapping which uses `statusCode` and `output` if the provided value matches the target type, as
     * checked by [[MatchType]]. Instances of [[MatchType]] are automatically derived and recursively check that
@@ -248,15 +236,13 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def statusMappingFromMatchType[T: MatchType](statusCode: StatusCode, output: EndpointOutput[T]): StatusMapping[T] =
     statusMappingValueMatcher(statusCode, output)(implicitly[MatchType[T]].partial)
 
-  /**
-    * Create a fallback mapping to be used in [[oneOf]] output descriptions.
+  /** Create a fallback mapping to be used in [[oneOf]] output descriptions.
     */
   def statusDefaultMapping[T](output: EndpointOutput[T]): StatusMapping[T] = {
     StatusMapping(None, output, _ => true)
   }
 
-  /**
-    * An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
+  /** An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
     */
   val emptyOutput: EndpointOutput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
