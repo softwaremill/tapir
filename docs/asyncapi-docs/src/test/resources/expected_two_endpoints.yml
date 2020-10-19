@@ -1,0 +1,65 @@
+asyncapi: 2.0.0
+info:
+  title: The fruit basket
+  version: '0.1'
+channels:
+  /stringify:
+    subscribe:
+      operationId: onStringify
+      message:
+        $ref: '#/components/messages/string'
+    publish:
+      operationId: sendStringify
+      message:
+        $ref: '#/components/messages/integer'
+    bindings:
+      ws:
+        method: GET
+  /pack:
+    subscribe:
+      operationId: onPack
+      message:
+        $ref: '#/components/messages/FruitAmount'
+    publish:
+      operationId: sendPack
+      message:
+        $ref: '#/components/messages/Fruit'
+    bindings:
+      ws:
+        method: GET
+components:
+  schemas:
+    Fruit:
+      required:
+        - f
+      type: object
+      properties:
+        f:
+          type: string
+    FruitAmount:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
+  messages:
+    integer:
+      payload:
+        type: integer
+      contentType: text/plain
+    Fruit:
+      payload:
+        $ref: '#/components/schemas/Fruit'
+      contentType: application/json
+    string:
+      payload:
+        type: string
+      contentType: text/plain
+    FruitAmount:
+      payload:
+        $ref: '#/components/schemas/FruitAmount'
+      contentType: application/json

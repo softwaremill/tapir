@@ -5,7 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
-import sttp.tapir.tests.Fruit
+import sttp.tapir.tests.{Fruit, FruitAmount}
 import sttp.tapir.{CodecFormat, endpoint, webSocketBody}
 import sttp.tapir.json.circe._
 
@@ -30,6 +30,18 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_string_json.yml")
 
     val actualYaml = e.toAsyncAPI("The fruit basket", "0.1").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support multiple websocket endpoints") {
+    val e1 = endpoint.in("stringify").out(webSocketBody[Int, CodecFormat.TextPlain, String, CodecFormat.TextPlain](AkkaStreams))
+    val e2 = endpoint.in("pack").out(webSocketBody[Fruit, CodecFormat.Json, FruitAmount, CodecFormat.Json](AkkaStreams))
+
+    val expectedYaml = loadYaml("expected_two_endpoints.yml")
+
+    val actualYaml = List(e1, e2).toAsyncAPI("The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

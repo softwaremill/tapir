@@ -130,7 +130,9 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   }
 
   /** @tparam REQ The type of messages that are sent to the server.
+    * @tparam REQ_CF The codec format (media type) of messages that are sent to the server.
     * @tparam RESP The type of messages that are received from the server.
+    * @tparam RESP_CF The codec format (media type) of messages that are received from the server.
     */
   def webSocketBody[REQ, REQ_CF <: CodecFormat, RESP, RESP_CF <: CodecFormat]: WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF] =
     new WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF]
