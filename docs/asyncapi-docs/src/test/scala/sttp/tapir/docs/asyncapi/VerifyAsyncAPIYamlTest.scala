@@ -4,9 +4,10 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.akka.AkkaStreams
+import sttp.model.HeaderNames
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
 import sttp.tapir.tests.{Fruit, FruitAmount}
-import sttp.tapir.{CodecFormat, endpoint, webSocketBody}
+import sttp.tapir.{CodecFormat, endpoint, header, query, webSocketBody}
 import sttp.tapir.json.circe._
 
 import scala.io.Source
@@ -42,6 +43,21 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_two_endpoints.yml")
 
     val actualYaml = List(e1, e2).toAsyncAPI("The fruit basket", "0.1").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support complex bindings") {
+    val e = endpoint.post
+      .in("fruit")
+      .in(header[String](HeaderNames.Authorization))
+      .in(query[String]("multiplier"))
+      .out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](AkkaStreams))
+
+    val expectedYaml = loadYaml("expected_binding.yml")
+
+    val actualYaml = e.toAsyncAPI("The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
