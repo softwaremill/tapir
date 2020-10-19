@@ -16,9 +16,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas) {
       wss: Iterable[WebSocketBodyWrapper[P, _, _, _]]
   ): (Map[Codec[_, _, _ <: CodecFormat], MessageKey], ListMap[MessageKey, Message]) = {
 
-    val codecs = wss.toList.flatMap[Codec[_, _, _ <: CodecFormat], List[Codec[_, _, _ <: CodecFormat]]](ws =>
-      List(ws.wrapped.requests, ws.wrapped.responses)
-    )
+    val codecs: Iterable[Codec[_, _, _ <: CodecFormat]] = wss.map(ws => ws.wrapped.requests) ++ wss.map(ws => ws.wrapped.responses)
     val codecToData: ListMap[Codec[_, _, _ <: CodecFormat], CodecData] = codecs.toList.map(c => c -> toData(c)).toListMap
 
     val dataToKey = calculateUniqueKeys(codecToData.values.toSet, dataToName)
