@@ -1,7 +1,6 @@
 package sttp.tapir.typelevel
 
-/**
-  * Implicits values of this type are defined when `T` is a prefix of the tuple `TU`. Then, `Out` (`= U`) is the type of
+/** Implicits values of this type are defined when `T` is a prefix of the tuple `TU`. Then, `Out` (`= U`) is the type of
   * the rest of the tuple.
   *
   * See also [[ParamConcat]] for information on arity.

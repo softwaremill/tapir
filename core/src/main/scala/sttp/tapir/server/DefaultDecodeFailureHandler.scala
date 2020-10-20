@@ -2,8 +2,7 @@ package sttp.tapir.server
 
 import sttp.model.StatusCode
 
-/**
-  * Create a decode failure handler, which:
+/** Create a decode failure handler, which:
   * - decides whether the given decode failure should lead to a response (and if so, with which status code),
   *   or return a [[DecodeFailureHandling.noMatch]], using `respondWithStatusCode`
   * - creates decode failure messages using `failureMessage`

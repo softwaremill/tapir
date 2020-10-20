@@ -8,8 +8,7 @@ import com.twitter.finatra.http.Controller
 import com.twitter.io.{Buf, InputStreamReader, Reader}
 import com.twitter.util.Future
 
-/**
-  * Usage: add `new SwaggerFinatra(yaml)` to your Finatra HttpServer's configureHttp function. For example:
+/** Usage: add `new SwaggerFinatra(yaml)` to your Finatra HttpServer's configureHttp function. For example:
   *
   * <pre>
   * override def configureHttp(router: HttpRouter): Unit =

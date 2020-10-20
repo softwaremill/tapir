@@ -10,8 +10,7 @@ import scala.annotation.tailrec
 trait DecodeInputsResult
 object DecodeInputsResult {
 
-  /**
-    * @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint.
+  /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint.
     */
   case class Values(basicInputsValues: Vector[Any], bodyInputWithIndex: Option[(EndpointIO.Body[_, _], Int)]) extends DecodeInputsResult {
     def addBodyInput(input: EndpointIO.Body[_, _], bodyIndex: Int): Values = {
@@ -23,8 +22,7 @@ object DecodeInputsResult {
     }
     def bodyInput: Option[EndpointIO.Body[_, _]] = bodyInputWithIndex.map(_._1)
 
-    /**
-      * Sets the value of the body input, once it is known, if a body input is defined.
+    /** Sets the value of the body input, once it is known, if a body input is defined.
       */
     def setBodyInputValue(v: Any): Values =
       bodyInputWithIndex match {
@@ -56,8 +54,7 @@ trait DecodeInputsContext {
 object DecodeInputs {
   private final case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
 
-  /**
-    * Decodes values of all inputs defined by the given `input`, and returns a map from the input to the input's value.
+  /** Decodes values of all inputs defined by the given `input`, and returns a map from the input to the input's value.
     *
     * An exception is the body input, which is not decoded. This is because typically bodies can be only read once.
     * That's why, all non-body inputs are used to decide if a request matches the endpoint, or not. If a body input
@@ -85,8 +82,7 @@ object DecodeInputs {
     )(DecodeInputsResult.Values(Vector.fill(basicInputs.size)(null), None), ctx)._1
   }
 
-  /**
-    * We're decoding paths differently than other inputs. We first map all path segments to their decoding results
+  /** We're decoding paths differently than other inputs. We first map all path segments to their decoding results
     * (not checking if this is a successful or failed decoding at this stage). This is collected as the
     * `decodedPathInputs` value.
     *

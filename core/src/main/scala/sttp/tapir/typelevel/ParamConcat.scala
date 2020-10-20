@@ -2,8 +2,7 @@ package sttp.tapir.typelevel
 
 import com.github.ghik.silencer.silent
 
-/**
-  * Concatenates two parameter lists into one. Each parameter list can be either a single type, or a tuple.
+/** Concatenates two parameter lists into one. Each parameter list can be either a single type, or a tuple.
   *
   * The arity of a type if `0` if it's `Unit`/`Nothing`, as these types act as a neutral element in the
   * tuple-concatenation operation that takes place when combining inputs/outputs.

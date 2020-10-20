@@ -8,8 +8,7 @@ import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
-/**
-  * An endpoint description together with partial server logic. See [[Endpoint.serverLogicPart]].
+/** An endpoint description together with partial server logic. See [[Endpoint.serverLogicPart]].
   *
   * The part of the server logic which is provided transforms some inputs either to an error of type `E`, or value of
   * type `U`.
@@ -30,8 +29,7 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
     extends EndpointInfoOps[I, E, O, R]
     with EndpointMetaOps[I, E, O, R] { outer =>
 
-  /**
-    * Part of the input, consumed by `logicFragment`.
+  /** Part of the input, consumed by `logicFragment`.
     */
   protected type T
   protected def splitInput: I => (T, IR)
@@ -52,14 +50,12 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
 
   override protected def showType: String = "FragmentedServerEndpoint"
 
-  /**
-    * Complete the server logic for this endpoint, given the result of applying the partial server logic, and
+  /** Complete the server logic for this endpoint, given the result of applying the partial server logic, and
     * the remaining input.
     */
   def andThen(remainingLogic: ((U, IR)) => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] = andThenM(_ => remainingLogic)
 
-  /**
-    * Same as [[andThen]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+  /** Same as [[andThen]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
     * endpoint errors.
     */
   def andThenRecoverErrors(
@@ -81,8 +77,7 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
       }
     )
 
-  /**
-    * Define logic for some part of the remaining input. The result will be an server endpoint, which will need to be
+  /** Define logic for some part of the remaining input. The result will be an server endpoint, which will need to be
     * completed with a function accepting as arguments outputs of both previous and this server logic parts, and
     * the input.
     */
@@ -93,8 +88,7 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
       uu2Concat: ParamConcat.Aux[U, V, UV]
   ): ServerEndpointInParts[UV, R2, I, E, O, R, F] = andThenPartM(_ => nextPart)
 
-  /**
-    * Same as [[andThenPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+  /** Same as [[andThenPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
     * endpoint errors.
     */
   def andThenPartRecoverErrors[T2, R2, V, UV](

@@ -11,8 +11,7 @@ import play.api.routing.sird._
 
 import scala.concurrent.ExecutionContext
 
-/**
-  * Usage: add `new SwaggerPlay(yaml).routes` to your Play routes. Docs will be available using the `/docs` path.
+/** Usage: add `new SwaggerPlay(yaml).routes` to your Play routes. Docs will be available using the `/docs` path.
   * To re-use the ActionBuilder from an existing PlayServerOptions instance, import `sttp.tapir.server.play._`
   *
   * @param yaml           The yaml with the OpenAPI documentation.

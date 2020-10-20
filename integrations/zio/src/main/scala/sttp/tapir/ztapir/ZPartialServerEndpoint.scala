@@ -6,8 +6,7 @@ import sttp.tapir.typelevel.ParamConcat
 import sttp.tapir.{EndpointInfo, EndpointInfoOps, EndpointInput, EndpointInputsOps, EndpointMetaOps, EndpointOutput, EndpointOutputsOps}
 import zio.ZIO
 
-/**
-  * An endpoint, with some of the server logic already provided, and some left unspecified.
+/** An endpoint, with some of the server logic already provided, and some left unspecified.
   * See [[RichZEndpoint.zServerLogicForCurrent]].
   *
   * The part of the server logic which is provided transforms some inputs either to an error of type `E`, or value of

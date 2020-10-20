@@ -29,13 +29,11 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   def all[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else All[T](v.toList)
   def any[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else Any[T](v.toList)
 
-  /**
-    * A validator instance that always pass.
+  /** A validator instance that always pass.
     */
   def pass[T]: Validator[T] = _pass.asInstanceOf[Validator[T]]
 
-  /**
-    * A validator instance that always reject.
+  /** A validator instance that always reject.
     */
   def reject[T]: Validator[T] = _reject.asInstanceOf[Validator[T]]
 
@@ -49,16 +47,14 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   def custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String] = None): Validator[T] =
     Custom(doValidate, showMessage)
 
-  /**
-    * Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s.
+  /** Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s.
     * This enumeration will only be used for documentation, as a value outside of the allowed values will not be
     * decoded in the first place (the decoder has no other option than to fail).
     */
   def enum[T]: Validator.Enum[T] = macro validatorForEnum[T]
   def enum[T](possibleValues: List[T]): Validator.Enum[T] = Enum(possibleValues, None)
 
-  /**
-    * @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
+  /** @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
     *               This will be automatically inferred if the validator is directly added to a codec.
     */
   def enum[T](possibleValues: List[T], encode: EncodeToRaw[T]): Validator.Enum[T] = Enum(possibleValues, Some(encode))
@@ -145,8 +141,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
       }
     }
 
-    /**
-      * Specify how values of this type can be encoded to a raw value (typically a [[String]]). This encoding
+    /** Specify how values of this type can be encoded to a raw value (typically a [[String]]). This encoding
       * will be used when generating documentation.
       */
     def encode(e: T => scala.Any): Enum[T] = copy(encode = Some(v => Some(e(v))))

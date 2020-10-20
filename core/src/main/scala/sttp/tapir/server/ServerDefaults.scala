@@ -8,8 +8,7 @@ import scala.annotation.tailrec
 
 object ServerDefaults {
 
-  /**
-    * The default implementation of the [[DecodeFailureHandler]].
+  /** The default implementation of the [[DecodeFailureHandler]].
     *
     * A 400 (bad request) is returned if a query, header or body input can't be decoded (for any reason), or if
     * decoding a path capture causes a validation error.
@@ -37,8 +36,7 @@ object ServerDefaults {
     def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
       DecodeFailureHandling.response(failureOutput)((statusCode, message))
 
-    /**
-      * @param badRequestOnPathErrorIfPathShapeMatches Should a status 400 be returned if the shape of the path
+    /** @param badRequestOnPathErrorIfPathShapeMatches Should a status 400 be returned if the shape of the path
       * of the request matches, but decoding some path segment fails with a [[DecodeResult.Error]].
       * @param badRequestOnPathInvalidIfPathShapeMatches Should a status 400 be returned if the shape of the path
       * of the request matches, but decoding some path segment fails with a [[DecodeResult.InvalidValue]].
@@ -71,13 +69,11 @@ object ServerDefaults {
     }
   }
 
-  /**
-    * Default messages for [[DecodeFailure]]s.
+  /** Default messages for [[DecodeFailure]]s.
     */
   object FailureMessages {
 
-    /**
-      * Describes the source of the failure: in which part of the request did the failure occur.
+    /** Describes the source of the failure: in which part of the request did the failure occur.
       */
     @tailrec
     def failureSourceMessage(input: EndpointInput[_]): String =
@@ -106,8 +102,7 @@ object ServerDefaults {
         case Some(d) => s"$source ($d)"
       }
 
-    /**
-      * Default message describing the source of a decode failure, alongside with optional validation details.
+    /** Default message describing the source of a decode failure, alongside with optional validation details.
       */
     def failureMessage(ctx: DecodeFailureContext): String = {
       val base = failureSourceMessage(ctx.input)
@@ -121,13 +116,11 @@ object ServerDefaults {
     }
   }
 
-  /**
-    * Default messages when the decode failure is due to a validation error.
+  /** Default messages when the decode failure is due to a validation error.
     */
   object ValidationMessages {
 
-    /**
-      * Default message describing why a value is invalid.
+    /** Default message describing why a value is invalid.
       * @param valueName Name of the validated value to be used in error messages
       */
     def invalidValueMessage[T](ve: ValidationError[T], valueName: String): String =
@@ -153,8 +146,7 @@ object ServerDefaults {
           s"expected $valueName to pass custom validation: ${c.message}, but was '${ve.invalidValue}'"
       }
 
-    /**
-      * Default message describing the path to an invalid value.
+    /** Default message describing the path to an invalid value.
       * This is the path inside the validated object, e.g. `user.address.street.name`.
       */
     def pathMessage(ve: ValidationError[_]): Option[String] =
@@ -163,13 +155,11 @@ object ServerDefaults {
         case l   => Some(l.map(_.encodedName).mkString("."))
       }
 
-    /**
-      * Default message describing the validation error: which value is invalid, and why.
+    /** Default message describing the validation error: which value is invalid, and why.
       */
     def validationErrorMessage(ve: ValidationError[_]): String = invalidValueMessage(ve, pathMessage(ve).getOrElse("value"))
 
-    /**
-      * Default message describing a list of validation errors: which values are invalid, and why.
+    /** Default message describing a list of validation errors: which values are invalid, and why.
       */
     def validationErrorsMessage(ve: List[ValidationError[_]]): String = ve.map(validationErrorMessage).mkString(", ")
   }

@@ -11,8 +11,7 @@ object PathMapping {
   // The necessary stuff to create a Route from a Router
   type RouteDefinition = (Option[HttpMethod], String)
 
-  /**
-    * Given a Router, creates a Vert.x Route matching the route definition
+  /** Given a Router, creates a Vert.x Route matching the route definition
     * @param router a Vert.x Router
     * @param route the definition of the route (method, and path)
     * @return a route, attached to the router
@@ -23,8 +22,7 @@ object PathMapping {
       case (None, path)         => router.route(path)
     }
 
-  /**
-    * Extracts the route definition from the endpoint inputs
+  /** Extracts the route definition from the endpoint inputs
     * @param endpoint a Tapir endpoint
     * @return the route definition matching the endpoint input definition
     */

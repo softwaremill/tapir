@@ -7,8 +7,7 @@ import org.http4s.{Charset, HttpRoutes, MediaType}
 
 import scala.io.Source
 
-/**
-  * Usage: add `new RedocHttp4s(title, yaml).routes[F]` to your http4s router. For example:
+/** Usage: add `new RedocHttp4s(title, yaml).routes[F]` to your http4s router. For example:
   * `Router("/docs" -> new RedocHttp4s(yaml).routes[IO])`.
   *
   * @param title       The title of the HTML page.

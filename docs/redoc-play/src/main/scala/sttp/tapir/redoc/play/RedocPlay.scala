@@ -5,8 +5,7 @@ import play.api.mvc.Results._
 import play.api.routing.Router.Routes
 import play.api.routing.sird._
 
-/**
-  * Usage: add `new RedocPlay("My App", yaml).routes` to your Play routes. Docs will be available using the `/docs` path.
+/** Usage: add `new RedocPlay("My App", yaml).routes` to your Play routes. Docs will be available using the `/docs` path.
   * To re-use the ActionBuilder from an existing PlayServerOptions instance, import `sttp.tapir.server.play._`
   *
   * @param title          The title of the HTML page.

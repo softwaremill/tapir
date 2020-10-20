@@ -18,8 +18,7 @@ package object vertx {
 
   implicit class VertxEndpoint[I, E, O](e: Endpoint[I, E, O, Any]) {
 
-    /**
-      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
+    /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
       * @param logic the logic to associate with the endpoint
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
       * @return A function, that given a router, will attach this endpoint to it
@@ -27,8 +26,7 @@ package object vertx {
     def route(logic: I => Future[Either[E, O]])(implicit endpointOptions: VertxEndpointOptions): Router => Route =
       e.serverLogic(logic).route
 
-    /**
-      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
+    /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
       * The logic will be executed in a blocking context
       * @param logic the logic to associate with the endpoint
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
@@ -37,8 +35,7 @@ package object vertx {
     def blockingRoute(logic: I => Future[Either[E, O]])(implicit endpointOptions: VertxEndpointOptions): Router => Route =
       e.serverLogic(logic).blockingRoute
 
-    /**
-      * Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
+    /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
       * @param logic the logic to associate with the endpoint
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
       * @return A function, that given a router, will attach this endpoint to it
@@ -48,8 +45,7 @@ package object vertx {
     )(implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
       e.serverLogicRecoverErrors(logic).route
 
-    /**
-      * Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
+    /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
       * The logic will be executed in a blocking context
       * @param logic the logic to associate with the endpoint
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
@@ -63,8 +59,7 @@ package object vertx {
 
   implicit class VertxServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]) {
 
-    /**
-      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
+    /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
       * @return A function, that given a router, will attach this endpoint to it
       */
@@ -73,8 +68,7 @@ package object vertx {
         .handler(endpointHandler(e.logic, responseHandlerWithError)(endpointOptions, None))
     }
 
-    /**
-      * Given a Router, creates and mounts a Route matching this endpoint, with default error handling
+    /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
       * The logic will be executed in a blocking context
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
       * @return A function, that given a router, will attach this endpoint to it

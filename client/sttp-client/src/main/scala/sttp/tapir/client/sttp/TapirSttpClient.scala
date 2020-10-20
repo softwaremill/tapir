@@ -7,8 +7,7 @@ import sttp.tapir.{DecodeResult, Endpoint}
 trait TapirSttpClient {
   implicit class RichEndpoint[I, E, O, R](e: Endpoint[I, E, O, R]) {
 
-    /**
-      * Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
+    /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
       * uri.
       *
       * Returns a function which, when applied to the endpoint's input parameters (given as a tuple), will encode them
@@ -23,8 +22,7 @@ trait TapirSttpClient {
     )(implicit clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]): I => Request[Either[E, O], R] =
       new EndpointToSttpClient(clientOptions, wsToPipe).toSttpRequestUnsafe(e, baseUri)
 
-    /**
-      * Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
+    /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
       * uri.
       *
       * Returns a function which, when applied to the endpoint's input parameters (given as a tuple), will encode them

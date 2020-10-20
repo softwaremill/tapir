@@ -16,8 +16,7 @@ import sttp.tapir.internal.ModifySchemaMacro
 
 import scala.annotation.StaticAnnotation
 
-/**
-  * Describes the shape of the low-level, "raw" representation of type `T`.
+/** Describes the shape of the low-level, "raw" representation of type `T`.
   * @param format The name of the format of the low-level representation of `T`.
   */
 case class Schema[T](
@@ -28,18 +27,15 @@ case class Schema[T](
     deprecated: Boolean = false
 ) {
 
-  /**
-    * Returns an optional version of this schema, with `isOptional` set to true.
+  /** Returns an optional version of this schema, with `isOptional` set to true.
     */
   def asOptional[U]: Schema[U] = copy(isOptional = true)
 
-  /**
-    * Returns a required version of this schema, with `isOptional` set to false.
+  /** Returns a required version of this schema, with `isOptional` set to false.
     */
   def asRequired[U]: Schema[U] = copy(isOptional = false)
 
-  /**
-    * Returns a collection version of this schema, with the schema type wrapped in [[SArray]].
+  /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]].
     * Also, sets `isOptional` to true as the collection might be empty.
     * Also, sets 'format' to None. Formats are only applicable to the array elements, not to the array as a whole.
     */

@@ -6,8 +6,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.StatusCodes
 
-/**
-  * Usage: add `new SwaggerAkka(yaml).routes` to your akka-http routes. Docs will be available using the `/docs` path.
+/** Usage: add `new SwaggerAkka(yaml).routes` to your akka-http routes. Docs will be available using the `/docs` path.
   *
   * @param yaml        The yaml with the OpenAPI documentation.
   * @param contextPath The context in which the documentation will be served. Defaults to `docs`, so the address

@@ -13,8 +13,7 @@ object BooksExample extends App with StrictLogging {
   case class Book(title: String, genre: Genre, year: Int, author: Author)
   case class BooksQuery(genre: Option[String], limit: Limit)
 
-  /**
-    * Descriptions of endpoints used in the example.
+  /** Descriptions of endpoints used in the example.
     */
   object Endpoints {
     import io.circe.generic.auto._

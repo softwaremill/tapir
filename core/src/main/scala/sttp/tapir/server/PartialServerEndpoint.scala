@@ -8,8 +8,7 @@ import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
-/**
-  * An endpoint, with some of the server logic already provided, and some left unspecified.
+/** An endpoint, with some of the server logic already provided, and some left unspecified.
   * See [[Endpoint.serverLogicForCurrent]].
   *
   * The part of the server logic which is provided transforms some inputs either to an error of type `E`, or value of

@@ -21,8 +21,7 @@ import scala.util.Random
 
 object VertxInputDecoders {
 
-  /**
-    * Decodes the inputs, the body if needed, and if it succeeds invokes the logicHandler
+  /** Decodes the inputs, the body if needed, and if it succeeds invokes the logicHandler
     * @param endpoint the endpoint definition
     * @param rc the RoutingContext
     * @param logicHandler callback to execute if the inputs are decoded properly

@@ -38,8 +38,7 @@ object ModifySchemaMacro {
      }"""
   }
 
-  /**
-    * Converts path to list of strings
+  /** Converts path to list of strings
     */
   def extractPathFromFunctionCall[T: c.WeakTypeTag, U: c.WeakTypeTag](c: blackbox.Context)(
       path: c.Expr[T => U]
@@ -50,8 +49,7 @@ object ModifySchemaMacro {
     case class TermPathElement(term: c.TermName, xargs: c.Tree*) extends PathElement
     case class FunctorPathElement(functor: c.Tree, method: c.TermName, xargs: c.Tree*) extends PathElement
 
-    /**
-      * _.a.b.each.c => List(TPE(a), TPE(b), FPE(functor, each/at/eachWhere, xargs), TPE(c))
+    /** _.a.b.each.c => List(TPE(a), TPE(b), FPE(functor, each/at/eachWhere, xargs), TPE(c))
       */
     @tailrec
     def collectPathElements(tree: c.Tree, acc: List[PathElement]): List[PathElement] = {

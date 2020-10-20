@@ -6,8 +6,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.{ParamConcat, ParamSubtract}
 import zio.ZIO
 
-/**
-  * An endpoint description together with partial server logic. See [[RichZEndpoint.zServerLogicPart]].
+/** An endpoint description together with partial server logic. See [[RichZEndpoint.zServerLogicPart]].
   *
   * The part of the server logic which is provided transforms some inputs either to an error of type `E`, or value of
   * type `U`.
@@ -27,8 +26,7 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
     extends EndpointInfoOps[I, E, O, Nothing]
     with EndpointMetaOps[I, E, O, Nothing] { outer =>
 
-  /**
-    * Part of the input, consumed by `logicFragment`.
+  /** Part of the input, consumed by `logicFragment`.
     */
   protected type T
   protected def splitInput: I => (T, J)
@@ -49,8 +47,7 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
 
   override protected def showType: String = "FragmentedServerEndpoint"
 
-  /**
-    * Complete the server logic for this endpoint, given the result of applying the partial server logic, and
+  /** Complete the server logic for this endpoint, given the result of applying the partial server logic, and
     * the remaining input.
     */
   def andThen[R2 <: R](remainingLogic: ((U, J)) => ZIO[R2, E, O]): ZServerEndpoint[R2, I, E, O] =
@@ -64,8 +61,7 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
       }
     )
 
-  /**
-    * Define logic for some part of the remaining input. The result will be an server endpoint, which will need to be
+  /** Define logic for some part of the remaining input. The result will be an server endpoint, which will need to be
     * completed with a function accepting as arguments outputs of both previous and this server logic parts, and
     * the input.
     */

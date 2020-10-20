@@ -4,8 +4,7 @@ import sttp.tapir.DecodeResult.Value
 
 import scala.util.{Failure, Success, Try}
 
-/**
-  * A bi-directional mapping between values of type `L` and values of type `H`.
+/** A bi-directional mapping between values of type `L` and values of type `H`.
   *
   * Low-level values of type `L` can be **decoded** to a higher-level value of type `H`. The decoding can fail;
   * this is represented by a result of type [[DecodeResult.Failure]]. Failures might occur due to format errors, wrong
@@ -22,8 +21,7 @@ trait Mapping[L, H] { outer =>
   def rawDecode(l: L): DecodeResult[H]
   def encode(h: H): L
 
-  /**
-    * - calls `rawDecode`
+  /** - calls `rawDecode`
     * - catches any exceptions that might occur, converting them to decode failures
     * - validates the result
     */
@@ -88,8 +86,7 @@ object Mapping {
       override def validator: Validator[H] = Validator.pass
     }
 
-  /**
-    * A mapping which, during encoding, adds the given `prefix`. When decoding, the prefix is removed (if present),
+  /** A mapping which, during encoding, adds the given `prefix`. When decoding, the prefix is removed (if present),
     * otherwise an error is reported.
     */
   def stringPrefix(prefix: String): Mapping[String, String] = {

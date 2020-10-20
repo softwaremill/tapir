@@ -4,8 +4,7 @@ import sttp.capabilities.{Effect, Streams}
 import sttp.tapir.WebSocketBodyOutput
 import sttp.ws.WebSocket
 
-/**
-  * Captures the logic of converting a [[WebSocket]] to a interpreter-specific pipe, which is then returned
+/** Captures the logic of converting a [[WebSocket]] to a interpreter-specific pipe, which is then returned
   * to the client. Implementations of this trait are looked up in the implicit scope by the compiler, depending
   * on the capabilities that are required by the endpoint to be interpreted as a client.
   *

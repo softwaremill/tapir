@@ -2,8 +2,7 @@ package sttp.tapir.server
 
 import sttp.tapir.{DecodeResult, Endpoint}
 
-/**
-  * Callbacks to log how a request was handled.
+/** Callbacks to log how a request was handled.
   * @tparam T Interpreter-specific value representing the log action.
   */
 case class LogRequestHandling[T](
@@ -16,8 +15,7 @@ case class LogRequestHandling[T](
     logLogicExceptions: Boolean = true
 ) {
 
-  /**
-    * Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
+  /** Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
     * given failure returns a no-match.
     */
   def decodeFailureNotHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext): T = {
@@ -29,8 +27,7 @@ case class LogRequestHandling[T](
     else noLog
   }
 
-  /**
-    * Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
+  /** Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
     * given failure provides a response.
     */
   def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, responseValue: Any): T = {
@@ -42,8 +39,7 @@ case class LogRequestHandling[T](
     else noLog
   }
 
-  /**
-    * Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by
+  /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by
     * providing a response (which might be an error or success).
     */
   def requestHandled(e: Endpoint[_, _, _, _], statusCode: Int): T = {
@@ -52,8 +48,7 @@ case class LogRequestHandling[T](
     else noLog
   }
 
-  /**
-    * Invoked when an exception has been thrown when running the server logic.
+  /** Invoked when an exception has been thrown when running the server logic.
     */
   def logicException(e: Endpoint[_, _, _, _], ex: Throwable): T = {
     if (logLogicExceptions)

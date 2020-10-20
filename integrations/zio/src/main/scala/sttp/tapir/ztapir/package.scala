@@ -12,8 +12,7 @@ package object ztapir extends Tapir {
   implicit class RichZEndpoint[I, E, O](e: ZEndpoint[I, E, O]) {
     def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O] = ServerEndpoint(e, _ => logic(_).either)
 
-    /**
-      * Combine this endpoint description with a function, which implements a part of the server-side logic.
+    /** Combine this endpoint description with a function, which implements a part of the server-side logic.
       *
       * Subsequent parts of the logic can be provided later using [[ZServerEndpointInParts.andThenPart]], consuming
       * successive input parts. Finally, the logic can be completed, given a function which accepts as arguments the
@@ -44,8 +43,7 @@ package object ztapir extends Tapir {
       }
     }
 
-    /**
-      * Combine this endpoint description with a function, which implements a part of the server-side logic, for the
+    /** Combine this endpoint description with a function, which implements a part of the server-side logic, for the
       * entire input defined so far.
       *
       * Subsequently, the endpoint inputs and outputs can be extended (but not error outputs!). Then, either further

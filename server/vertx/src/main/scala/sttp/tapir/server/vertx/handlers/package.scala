@@ -48,8 +48,7 @@ package object handlers {
     route
   }
 
-  /**
-    * Encodes an error given an endpoint definition, by trying to invoke the endpoint.errorOut, or just failing properly
+  /** Encodes an error given an endpoint definition, by trying to invoke the endpoint.errorOut, or just failing properly
     * @param endpoint the endpoint definition
     * @param rc the RoutingContext
     * @param error the error to write to the response

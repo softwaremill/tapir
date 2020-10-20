@@ -9,20 +9,17 @@ object TapirAuth {
   private val BasicAuthType = "Basic"
   private val BearerAuthType = "Bearer"
 
-  /**
-    * Reads authorization data from the given `input`.
+  /** Reads authorization data from the given `input`.
     */
   def apiKey[T](input: EndpointInput.Single[T]): EndpointInput.Auth.ApiKey[T] = EndpointInput.Auth.ApiKey[T](input)
 
-  /**
-    * Reads authorization data from the `Authorization` header, removing the `Basic ` prefix.
+  /** Reads authorization data from the `Authorization` header, removing the `Basic ` prefix.
     * To parse the data as a base64-encoded username/password combination, use: `basic[UsernamePassword]`
     * @see UsernamePassword
     */
   def basic[T: Codec[List[String], *, CodecFormat.TextPlain]]: EndpointInput.Auth.Http[UsernamePassword] = httpAuth(BasicAuthType)
 
-  /**
-    * Reads authorization data from the `Authorization` header, removing the `Bearer ` prefix.
+  /** Reads authorization data from the `Authorization` header, removing the `Bearer ` prefix.
     */
   def bearer[T: Codec[List[String], *, CodecFormat.TextPlain]]: EndpointInput.Auth.Http[T] = httpAuth(BearerAuthType)
 
