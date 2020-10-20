@@ -10,6 +10,9 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.tapir._
+import sttp.tapir.docs.asyncapi._
+import sttp.tapir.asyncapi.Server
+import sttp.tapir.asyncapi.circe.yaml._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.akkahttp._
 import sttp.ws.WebSocket
@@ -20,13 +23,17 @@ import scala.concurrent.{Await, Future}
 object WebSocketAkkaServer extends App {
   case class Response(hello: String)
 
-  // The endpoint: GET /ws.
+  // The endpoint: GET /ping.
   // We need to provide both the type & media type for the requests, and responses. Here, the requests will be
   // strings, and responses will be returned as json.
   val wsEndpoint: Endpoint[Unit, Unit, Flow[String, Response, Any], AkkaStreams with WebSockets] =
     endpoint.get.in("ping").out(webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
   val wsRoute: Route = wsEndpoint.toRoute(_ => Future.successful(Right(Flow.fromFunction((in: String) => Response(in)))))
+
+  // documentation
+  val apiDocs = wsEndpoint.toAsyncAPI("JSON echo", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
+  println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

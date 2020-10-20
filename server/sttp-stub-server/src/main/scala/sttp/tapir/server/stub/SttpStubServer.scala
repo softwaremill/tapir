@@ -86,7 +86,7 @@ trait SttpStubServer {
           override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): Any = v
           override def webSocketPipeToBody[REQ, RESP](
               pipe: streams.Pipe[REQ, RESP],
-              o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, Nothing]
+              o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
           ): Any = throw new IllegalArgumentException("Web sockets are not supported")
         }
         val outputValues =

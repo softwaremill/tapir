@@ -1,9 +1,8 @@
 package sttp.tapir.server.http4s
 
-import cats.{Monad, ~>}
+import cats.~>
 import cats.data.OptionT
 import cats.effect.{Concurrent, ContextShift, Sync}
-import cats.syntax.all._
 import org.http4s.{Http, HttpRoutes}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams

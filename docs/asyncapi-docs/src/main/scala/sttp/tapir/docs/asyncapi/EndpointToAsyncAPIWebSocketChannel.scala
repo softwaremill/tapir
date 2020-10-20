@@ -11,14 +11,14 @@ import sttp.tapir.{Codec, CodecFormat, Endpoint, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
 
-class EndpointToAsyncAPIWebSocketChannel[P[_, _]](
+class EndpointToAsyncAPIWebSocketChannel(
     schemas: Schemas,
     codecToMessageKey: Map[Codec[_, _, _ <: CodecFormat], MessageKey],
     options: AsyncAPIDocsOptions
 ) {
   def apply(
       e: Endpoint[_, _, _, _],
-      ws: WebSocketBodyWrapper[P, _, _, _]
+      ws: WebSocketBodyWrapper[_, _]
   ): (String, ChannelItem) = {
     val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)

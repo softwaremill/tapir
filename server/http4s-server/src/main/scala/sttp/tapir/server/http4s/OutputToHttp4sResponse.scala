@@ -68,7 +68,7 @@ class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift](serverOptions: Http
         }
         override def webSocketPipeToBody[REQ, RESP](
             pipe: Pipe[F, REQ, RESP],
-            o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, Fs2Streams[F]]
+            o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
         ): EncodeOutputsWebSocket = Http4sWebSockets.pipeToBody(pipe, o)
       }
     )

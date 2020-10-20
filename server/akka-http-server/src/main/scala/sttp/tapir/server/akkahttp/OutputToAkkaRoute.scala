@@ -60,7 +60,7 @@ private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Ma
 
       override def webSocketPipeToBody[REQ, RESP](
           pipe: Flow[REQ, RESP, Any],
-          o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, AkkaStreams]
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
       ): Flow[Message, Message, Any] = AkkaWebSockets.pipeToBody(pipe, o)
     }
   )

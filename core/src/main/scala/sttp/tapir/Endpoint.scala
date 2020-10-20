@@ -11,8 +11,7 @@ import sttp.tapir.internal._
 
 import scala.reflect.ClassTag
 
-/**
-  * @tparam I Input parameter types.
+/** @tparam I Input parameter types.
   * @tparam E Error output parameter types.
   * @tparam O Output parameter types.
   * @tparam R The capabilities that are required by this endpoint's inputs/outputs. This might be `Any` (no
@@ -128,11 +127,11 @@ trait EndpointOutputsOps[I, E, O, -R] {
   def prependOut[P, PO, R2](i: StreamBodyIO[_, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
     withOutput(i.toEndpointIO.and(output))
 
-  def out[Pipe[_, _], P, OP, R2](i: WebSocketBodyOutput[Pipe, _, _, P, R2])(implicit
+  def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
       ts: ParamConcat.Aux[O, P, OP]
   ): EndpointType[I, E, OP, R with R2 with WebSockets] = withOutput(output.and(i.toEndpointOutput))
 
-  def prependOut[Pipe[_, _], P, PO, R2](i: WebSocketBodyOutput[Pipe, _, _, P, R2])(implicit
+  def prependOut[PIPE_REQ_RESP, P, PO, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
       ts: ParamConcat.Aux[P, O, PO]
   ): EndpointType[I, E, PO, R with R2 with WebSockets] = withOutput(i.toEndpointOutput.and(output))
 
@@ -173,8 +172,7 @@ trait EndpointMetaOps[I, E, O, -R] {
   def output: EndpointOutput[O]
   def info: EndpointInfo
 
-  /**
-    * Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then
+  /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then
     * path, etc.)
     */
   def show: String = {
@@ -201,21 +199,18 @@ trait EndpointMetaOps[I, E, O, -R] {
   }
   protected def additionalInputsForShow: Vector[EndpointInput.Basic[_]] = Vector.empty
 
-  /**
-    * Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined,
+  /** Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined,
     * including mapping information.
     */
   def showDetail: String =
     s"$showType${info.name.map("[" + _ + "]").getOrElse("")}(in: ${input.show}, errout: ${errorOutput.show}, out: ${output.show})"
   protected def showType: String
 
-  /**
-    * Equivalent to `.toString`, shows the whole case class structure.
+  /** Equivalent to `.toString`, shows the whole case class structure.
     */
   def showRaw: String = toString
 
-  /**
-    * Renders endpoint path, by default all parametrised path and query components are replaced by {param_name} or
+  /** Renders endpoint path, by default all parametrised path and query components are replaced by {param_name} or
     * {paramN}, e.g. for
     * {{{
     * endpoint.in("p1" / path[String] / query[String]("par2"))
@@ -233,8 +228,7 @@ trait EndpointMetaOps[I, E, O, -R] {
 
 trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
 
-  /**
-    * Combine this endpoint description with a function, which implements the server-side logic. The logic returns
+  /** Combine this endpoint description with a function, which implements the server-side logic. The logic returns
     * a result, which is either an error or a successful output, wrapped in an effect type `F`.
     *
     * A server endpoint can be passed to a server interpreter. Each server interpreter supports effects of a specific
@@ -246,8 +240,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     */
   def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] = ServerEndpoint(this, _ => f)
 
-  /**
-    * Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
+  /** Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
     * errors.
     */
   def serverLogicRecoverErrors[F[_]](
@@ -255,8 +248,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, R, F] =
     ServerEndpoint(this, recoverErrors[I, E, O, F](f))
 
-  /**
-    * Combine this endpoint description with a function, which implements a part of the server-side logic. The
+  /** Combine this endpoint description with a function, which implements a part of the server-side logic. The
     * partial logic returns a result, which is either an error or a success value, wrapped in an effect type `F`.
     *
     * Subsequent parts of the logic can be provided later using [[ServerEndpointInParts.andThenPart]], consuming
@@ -288,8 +280,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     }
   }
 
-  /**
-    * Same as [[serverLogicPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+  /** Same as [[serverLogicPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
     * endpoint errors.
     */
   def serverLogicPartRecoverErrors[T, IR, U, F[_]](
@@ -307,8 +298,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     }
   }
 
-  /**
-    * Combine this endpoint description with a function, which implements a part of the server-side logic, for the
+  /** Combine this endpoint description with a function, which implements a part of the server-side logic, for the
     * entire input defined so far. The partial logic returns a result, which is either an error or a success value,
     * wrapped in an effect type `F`.
     *
@@ -334,8 +324,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
       override def partialLogic: MonadError[F] => T => F[Either[E, U]] = _ => f
     }
 
-  /**
-    * Same as [[serverLogicForCurrent]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
+  /** Same as [[serverLogicForCurrent]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
     * endpoint errors.
     */
   def serverLogicForCurrentRecoverErrors[U, F[_]](

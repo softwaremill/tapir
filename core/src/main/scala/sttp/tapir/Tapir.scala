@@ -114,7 +114,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     )(implicit
         requests: Codec[WebSocketFrame, REQ, REQ_CF],
         responses: Codec[WebSocketFrame, RESP, RESP_CF]
-    ): WebSocketBodyOutput[s.Pipe, REQ, RESP, s.Pipe[REQ, RESP], S] =
+    ): WebSocketBodyOutput[s.Pipe[REQ, RESP], REQ, RESP, s.Pipe[REQ, RESP], S] =
       WebSocketBodyOutput(
         s,
         requests,
@@ -138,7 +138,10 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     new WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF]
   def webSocketBodyRaw[S](
       s: Streams[S]
-  ): WebSocketBodyOutput[s.Pipe, WebSocketFrame, WebSocketFrame, s.Pipe[WebSocketFrame, WebSocketFrame], S] =
+  ): WebSocketBodyOutput[s.Pipe[WebSocketFrame, WebSocketFrame], WebSocketFrame, WebSocketFrame, s.Pipe[
+    WebSocketFrame,
+    WebSocketFrame
+  ], S] =
     new WebSocketBodyBuilder[WebSocketFrame, CodecFormat, WebSocketFrame, CodecFormat]
       .apply(s)
       .concatenateFragmentedFrames(false)

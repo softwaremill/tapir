@@ -13,8 +13,7 @@ import sttp.ws.WebSocketFrame
 
 import scala.collection.immutable.ListMap
 
-/**
-  * A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
+/** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
   * The transput traits contain common functionality, shared by all inputs and outputs.
   *
   * Note that implementations of `EndpointIO` can be used BOTH as inputs and outputs.
@@ -275,23 +274,22 @@ object EndpointOutput {
     override def show: String = s"status code ($statusCode)"
   }
 
-  case class WebSocketBodyWrapper[P[_, _], REQ, RESP, T](wrapped: WebSocketBodyOutput[P, REQ, RESP, T, _]) extends Basic[T] {
-    override private[tapir] type ThisType[X] = WebSocketBodyWrapper[P, REQ, RESP, X]
-    override private[tapir] type L = P[REQ, RESP]
+  case class WebSocketBodyWrapper[PIPE_REQ_RESP, T](wrapped: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, T, _]) extends Basic[T] {
+    override private[tapir] type ThisType[X] = WebSocketBodyWrapper[PIPE_REQ_RESP, X]
+    override private[tapir] type L = PIPE_REQ_RESP
     override private[tapir] type CF = CodecFormat
-    override private[tapir] def copyWith[U](c: Codec[P[REQ, RESP], U, CodecFormat], i: Info[U]): WebSocketBodyWrapper[P, REQ, RESP, U] =
+    override private[tapir] def copyWith[U](c: Codec[PIPE_REQ_RESP, U, CodecFormat], i: Info[U]): WebSocketBodyWrapper[PIPE_REQ_RESP, U] =
       copy(
         wrapped.copyWith(c, i)
       )
 
-    override def codec: Codec[P[REQ, RESP], T, CodecFormat] = wrapped.codec
+    override def codec: Codec[PIPE_REQ_RESP, T, CodecFormat] = wrapped.codec
     override def info: Info[T] = wrapped.info
 
     override def show: String = wrapped.show
   }
 
-  /**
-    * Specifies that for `statusCode`, the given `output` should be used.
+  /** Specifies that for `statusCode`, the given `output` should be used.
     *
     * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
     * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
@@ -502,11 +500,11 @@ Same rationale as for StreamBodyIO applies.
 
 P == streams.Pipe, but we can't express this using dependent types here.
  */
-case class WebSocketBodyOutput[P[_, _], REQ, RESP, T, S](
+case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
     streams: Streams[S],
     requests: Codec[WebSocketFrame, REQ, CodecFormat],
     responses: Codec[WebSocketFrame, RESP, CodecFormat],
-    codec: Codec[P[REQ, RESP], T, CodecFormat],
+    codec: Codec[PIPE_REQ_RESP, T, CodecFormat],
     info: Info[T],
     concatenateFragmentedFrames: Boolean,
     ignorePong: Boolean,
@@ -514,12 +512,12 @@ case class WebSocketBodyOutput[P[_, _], REQ, RESP, T, S](
     decodeCloseRequests: Boolean,
     decodeCloseResponses: Boolean
 ) extends EndpointTransput.Basic[T] {
-  override private[tapir] type ThisType[X] = WebSocketBodyOutput[P, REQ, RESP, X, S]
-  override private[tapir] type L = P[REQ, RESP]
+  override private[tapir] type ThisType[X] = WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, X, S]
+  override private[tapir] type L = PIPE_REQ_RESP
   override private[tapir] type CF = CodecFormat
-  override private[tapir] def copyWith[U](c: Codec[P[REQ, RESP], U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
+  override private[tapir] def copyWith[U](c: Codec[PIPE_REQ_RESP, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
 
-  private[tapir] def toEndpointOutput: EndpointOutput.WebSocketBodyWrapper[P, REQ, RESP, T] = EndpointOutput.WebSocketBodyWrapper(this)
+  private[tapir] def toEndpointOutput: EndpointOutput.WebSocketBodyWrapper[PIPE_REQ_RESP, T] = EndpointOutput.WebSocketBodyWrapper(this)
 
   def requestsSchema(s: Schema[REQ]): ThisType[T] = copy(requests = requests.schema(s))
   def requestsSchema(s: Option[Schema[REQ]]): ThisType[T] = copy(requests = requests.schema(s))
@@ -529,37 +527,33 @@ case class WebSocketBodyOutput[P[_, _], REQ, RESP, T, S](
   def responsesSchema(s: Option[Schema[RESP]]): ThisType[T] = copy(responses = responses.schema(s))
   def modifyResponsesSchema(modify: Schema[RESP] => Schema[RESP]): ThisType[T] = copy(responses = responses.modifySchema(modify))
 
-  /**
-    * @param c If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses`
+  /** @param c If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses`
     *          codecs decode will always have `finalFragment` set to `true`.
     *          Note that only some interpreters expose fragmented frames.
     */
-  def concatenateFragmentedFrames(c: Boolean): WebSocketBodyOutput[P, REQ, RESP, T, S] = this.copy(concatenateFragmentedFrames = c)
+  def concatenateFragmentedFrames(c: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
+    this.copy(concatenateFragmentedFrames = c)
 
-  /**
-    * @param i If `true`, [[WebSocketFrame.Pong]] frames will be ignored and won't be passed to the codecs for decoding.
+  /** @param i If `true`, [[WebSocketFrame.Pong]] frames will be ignored and won't be passed to the codecs for decoding.
     *          Note that only some interpreters expose ping-pong frames.
     */
-  def ignorePong(i: Boolean): WebSocketBodyOutput[P, REQ, RESP, T, S] = this.copy(concatenateFragmentedFrames = i)
+  def ignorePong(i: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(concatenateFragmentedFrames = i)
 
-  /**
-    * @param a If `true`, [[WebSocketFrame.Ping]] frames will cause a matching [[WebSocketFrame.Pong]] frame to be sent
+  /** @param a If `true`, [[WebSocketFrame.Ping]] frames will cause a matching [[WebSocketFrame.Pong]] frame to be sent
     *          back, and won't be passed to codecs for decoding.
     *          Note that only some interpreters expose ping-pong frames.
     */
-  def autoPongOnPing(a: Boolean): WebSocketBodyOutput[P, REQ, RESP, T, S] = this.copy(concatenateFragmentedFrames = a)
+  def autoPongOnPing(a: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(concatenateFragmentedFrames = a)
 
-  /**
-    * @param d If `true`, [[WebSocketFrame.Close]] frames won't be passed to the request codec for decoding (in server
+  /** @param d If `true`, [[WebSocketFrame.Close]] frames won't be passed to the request codec for decoding (in server
     *          interpreters).
     */
-  def decodeCloseRequests(d: Boolean): WebSocketBodyOutput[P, REQ, RESP, T, S] = this.copy(decodeCloseRequests = d)
+  def decodeCloseRequests(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseRequests = d)
 
-  /**
-    * @param d If `true`, [[WebSocketFrame.Close]] frames won't be passed to the response codec for decoding (in client
+  /** @param d If `true`, [[WebSocketFrame.Close]] frames won't be passed to the response codec for decoding (in client
     *          interpreters).
     */
-  def decodeCloseResponses(d: Boolean): WebSocketBodyOutput[P, REQ, RESP, T, S] = this.copy(decodeCloseResponses = d)
+  def decodeCloseResponses(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseResponses = d)
 
   override def show: String = "{body as web socket}"
 }

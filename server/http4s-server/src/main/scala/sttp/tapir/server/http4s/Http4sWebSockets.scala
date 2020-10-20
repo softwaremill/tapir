@@ -15,7 +15,7 @@ import cats.syntax.all._
 private[http4s] object Http4sWebSockets {
   def pipeToBody[F[_]: Concurrent, REQ, RESP](
       pipe: Pipe[F, REQ, RESP],
-      o: WebSocketBodyOutput[Pipe[F, *, *], REQ, RESP, _, Fs2Streams[F]]
+      o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
   ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {
     Queue.bounded[F, WebSocketFrame](1).map { pongs => (in: Stream[F, Http4sWebSocketFrame]) =>
       val sttpFrames = in.map(http4sFrameToFrame)

@@ -52,7 +52,10 @@ object OutputToPlayResponse {
         rawValueToResponseEntity(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format), v)
       override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): HttpEntity =
         HttpEntity.Streamed(v, None, formatToContentType(format))
-      override def webSocketPipeToBody[REQ, RESP](pipe: Nothing, o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, Nothing]): Nothing =
+      override def webSocketPipeToBody[REQ, RESP](
+          pipe: Nothing,
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+      ): Nothing =
         pipe
     })
 

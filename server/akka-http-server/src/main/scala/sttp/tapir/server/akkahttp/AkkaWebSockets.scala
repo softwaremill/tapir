@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 private[akkahttp] object AkkaWebSockets {
   def pipeToBody[REQ, RESP](
       pipe: Flow[REQ, RESP, Any],
-      o: WebSocketBodyOutput[Flow[*, *, Any], REQ, RESP, _, AkkaStreams]
+      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, _, AkkaStreams]
   )(implicit ec: ExecutionContext, mat: Materializer): Flow[Message, Message, Any] = {
     Flow[Message]
       .mapAsync(1)(messageToFrame(_))

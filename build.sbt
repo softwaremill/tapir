@@ -647,7 +647,19 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     publishArtifact := false
   )
   .jvmPlatform(scalaVersions = scala2_12Versions)
-  .dependsOn(akkaHttpServer, http4sServer, sttpClient, openapiCirceYaml, openapiDocs, circeJson, swaggerUiAkka, swaggerUiHttp4s, zioServer)
+  .dependsOn(
+    akkaHttpServer,
+    http4sServer,
+    sttpClient,
+    openapiCirceYaml,
+    openapiDocs,
+    asyncapiCirceYaml,
+    asyncapiDocs,
+    circeJson,
+    swaggerUiAkka,
+    swaggerUiHttp4s,
+    zioServer
+  )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
   .settings(commonSettings)

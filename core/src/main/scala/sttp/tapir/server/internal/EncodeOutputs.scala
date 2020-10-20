@@ -49,7 +49,7 @@ class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
         ov.withWebSocketBody(
           encodeOutputBody.webSocketPipeToBody(
             encoded,
-            o.asInstanceOf[WebSocketBodyOutput[encodeOutputBody.streams.Pipe, Any, Any, Any, S]]
+            o.asInstanceOf[WebSocketBodyOutput[encodeOutputBody.streams.Pipe[Any, Any], Any, Any, Any, S]]
           )
         )
       case EndpointOutput.OneOf(mappings, _) =>
@@ -103,5 +103,5 @@ trait EncodeOutputBody[B, W, S] {
   val streams: Streams[S]
   def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): B
   def streamValueToBody(v: streams.BinaryStream, format: CodecFormat, charset: Option[Charset]): B
-  def webSocketPipeToBody[REQ, RESP](pipe: streams.Pipe[REQ, RESP], o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, S]): W
+  def webSocketPipeToBody[REQ, RESP](pipe: streams.Pipe[REQ, RESP], o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]): W
 }

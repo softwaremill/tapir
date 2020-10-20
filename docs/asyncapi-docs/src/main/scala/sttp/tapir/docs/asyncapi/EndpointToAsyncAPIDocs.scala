@@ -16,13 +16,12 @@ object EndpointToAsyncAPIDocs {
       es: Iterable[Endpoint[_, _, _, _]],
       options: AsyncAPIDocsOptions
   ): AsyncAPI = {
-    type P[A, B] = Nothing // we need to pass the same P to isWebSocket and channelCreator to make the compiler happy
-    val wsEndpointsWithWrapper = es.map(e => (e, isWebSocket[P](e))).collect { case (e, Some(ws)) => (e, ws) }
+    val wsEndpointsWithWrapper = es.map(e => (e, findWebSocket(e))).collect { case (e, Some(ws)) => (e, ws) }
     val wsEndpoints = wsEndpointsWithWrapper.map(_._1).map(nameAllPathCapturesInEndpoint)
     val (keyToSchema, schemas) = SchemasForEndpoints(wsEndpoints)
     val (codecToMessageKey, keyToMessage) = new MessagesForEndpoints(schemas)(wsEndpointsWithWrapper.map(_._2))
     val securitySchemes = SecuritySchemesForEndpoints(wsEndpoints)
-    val channelCreator = new EndpointToAsyncAPIWebSocketChannel[P](schemas, codecToMessageKey, options)
+    val channelCreator = new EndpointToAsyncAPIWebSocketChannel(schemas, codecToMessageKey, options)
     val componentsCreator = new EndpointToAsyncAPIComponents(keyToSchema, keyToMessage, securitySchemes)
     val allSecurityRequirements = securityRequirements(securitySchemes, es)
 

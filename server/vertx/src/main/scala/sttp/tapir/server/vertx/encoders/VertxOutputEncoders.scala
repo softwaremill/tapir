@@ -18,8 +18,7 @@ import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput
 
 import scala.concurrent.{ExecutionContext, Future}
 
-/**
-  * All the necessary methods to write Endpoint.outputs to Vert.x HttpServerResponse
+/** All the necessary methods to write Endpoint.outputs to Vert.x HttpServerResponse
   * Contains:
   *   - Headers handling
   *   - Body handling (string, binaries, files, multipart, ...)
@@ -30,8 +29,7 @@ object VertxOutputEncoders {
   type RoutingContextHandler = RoutingContext => Unit
   type RoutingContextHandlerWithLength = Option[Long] => RoutingContext => Unit
 
-  /**
-    * Creates a function, that given a RoutingContext will write the result to its response, according to the endpoint definition
+  /** Creates a function, that given a RoutingContext will write the result to its response, according to the endpoint definition
     * @param output the endpoint definition
     * @param result the result to encode
     * @param isError boolean indicating if the result is an error or not
@@ -97,7 +95,10 @@ object VertxOutputEncoders {
             )
         override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength =
           contentLength => StreamEncoders(formatToContentType(format, charset), v.asInstanceOf[ReadStream[Buffer]], contentLength)(_)
-        override def webSocketPipeToBody[REQ, RESP](pipe: Nothing, o: WebSocketBodyOutput[streams.Pipe, REQ, RESP, _, Nothing]): Nothing =
+        override def webSocketPipeToBody[REQ, RESP](
+            pipe: Nothing,
+            o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+        ): Nothing =
           pipe
       }
     )
