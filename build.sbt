@@ -142,7 +142,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       scalaTest % Test,
       scalaCheck % Test,
       scalaTestPlusScalaCheck % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.3.5" % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.4.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     ),
     unmanagedSourceDirectories in Compile += {
