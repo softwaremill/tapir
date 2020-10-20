@@ -142,33 +142,6 @@ To match only the root path, use an empty string: `endpoint.in("")` will match `
 To match a path prefix, first define inputs which match the path prefix, and then capture any remaining part using
 `paths`, e.g.: `endpoint.in("api" / "download").in(paths)"`.
 
-## Streaming support
-
-Both input and output bodies can be mapped to a stream, by using `streamBody(streams)`. The parameter `streams` must 
-implement the `Streams[S]` capability, and determines the precise type of the binary stream supported by the given
-non-blocking streams implementation. The interpreter must then support the given capability. Refer to the documentation 
-of server/client interpreters for more information.
-
-Adding a stream body input/output influences both the type of the input/output, as well as the 4th type parameter
-of `Endpoint`, which specifies the requirements regarding supported stream types for interpreters.
-
-When using a stream body, the schema (for documentation) and format (media type) of the body must be provided by hand, 
-as they cannot be inferred from the raw stream type. For example, to specify that the output is an akka-stream, which
-is a (presumably large) serialised list of json objects mapping to the `Person` class:  
-
-```scala
-import sttp.tapir._
-import sttp.capabilities.akka.AkkaStreams
-import akka.stream.scaladsl._
-import akka.util.ByteString
-
-case class Person(name: String)
-
-endpoint.out(streamBody(AkkaStreams, schemaFor[List[Person]], CodecFormat.Json()))
-```
-
-See also the [runnable streaming example](../examples.md). 
-
 ## Next
 
 Read on about [status codes](statuscodes.md).

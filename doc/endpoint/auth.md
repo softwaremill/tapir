@@ -26,4 +26,4 @@ details.
 
 ## Next
 
-Read on about [datatypes integrations](integrations.md).
+Read on about [streaming support](streaming.md).

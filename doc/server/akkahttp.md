@@ -157,6 +157,14 @@ capability. Both response bodies and request bodies can be streamed. Usage: `str
 The capability can be added to the classpath independently of the interpreter through the 
 `"com.softwaremill.sttp.shared" %% "akka"` dependency.
 
+## Web sockets
+
+The interpreter supports web sockets, with pipes of type `Flow[REQ, RESP, Any]`. See [web sockets](../endpoint/websockets.md) 
+for more details.
+
+[Automatic pings](https://doc.akka.io/docs/akka-http/current/server-side/websocket-support.html#automatic-keep-alive-ping-support) 
+can be enabled through configuration.
+
 ## Configuration
 
 The interpreter can be configured by providing an implicit `AkkaHttpServerOptions` value and status mappers, see

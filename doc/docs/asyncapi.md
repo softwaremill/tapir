@@ -1,0 +1,72 @@
+# Generating AsyncAPI documentation
+
+To use, add the following dependencies:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "@VERSION@"
+```
+
+Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
+model is independent from all other tapir modules and can be used stand-alone).
+ 
+An endpoint can be converted to an instance of the model by importing the `sttp.tapir.docs.asyncapi._` package and calling
+the provided extension method:
+
+```scala mdoc:silent
+import sttp.capabilities.akka.AkkaStreams
+import sttp.tapir._
+import sttp.tapir.asyncapi.AsyncAPI
+import sttp.tapir.docs.asyncapi._
+import sttp.tapir.json.circe._
+import io.circe.generic.auto._
+
+case class Response(msg: String, count: Int)
+val echoWS = endpoint.out(
+  webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
+
+val docs: AsyncAPI = echoWS.toAsyncAPI("Echo web socket", "1.0")
+```
+
+Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
+class structure such as the `AstncAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
+
+The documentation is generated in a large part basing on [schemas](endpoint/codecs.md#schemas). Schemas can be
+[automatically derived and customised](endpoint/customtypes.md#schema-derivation).
+
+Quite often, you'll need to define the servers, through which the API can be reached. Any servers provided to the 
+`.toAsyncAPI` invocation will be supplemented with security requirements, as specified by the endpoints:
+
+```scala mdoc:silent
+import sttp.tapir.asyncapi.Server
+
+val docsWithServers: AsyncAPI = echoWS.toAsyncAPI(
+  "Echo web socket", 
+  "1.0",
+  List("production" -> Server("api.example.com", "wss"))
+)
+```
+
+Servers can also be later added through methods on the `AsyncAPI` object.
+
+Multiple endpoints can be converted to an `AsyncAPI` instance by calling the extension method on a list of endpoints/
+
+The asyncapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
+
+```scala mdoc:silent
+import sttp.tapir.asyncapi.circe.yaml._
+
+println(docs.toYaml)
+```
+
+## Options
+
+Options can be customised by providing an implicit instance of `AsyncAPIDocsOptions`, when calling `.toAsyncAPI`.
+
+* `subscribeOperationId`: basing on the endpoint's path and the entire endpoint, determines the id of the subscribe 
+  operation. This can be later used by code generators as the name of the method to receive messages from the socket.
+* `publishOperationId`: as above, but for publishing (sending messages to the web socket).
+
+## Exposing AsyncAPI documentation
+
+AsyncAPI documentation can be exposed through the [AsyncAPI playground](https://playground.asyncapi.io).

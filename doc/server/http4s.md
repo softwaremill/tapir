@@ -78,6 +78,11 @@ capability. Both response bodies and request bodies can be streamed. Usage: `str
 The capability can be added to the classpath independently of the interpreter through the 
 `"com.softwaremill.sttp.shared" %% "http4s"` dependency.
 
+## Web sockets
+
+The interpreter supports web sockets, with pipes of type `Pipe[F, REQ, RESP]`. See [web sockets](../endpoint/websockets.md) 
+for more details.
+
 ## Configuration
 
 The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see

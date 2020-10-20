@@ -112,6 +112,8 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/json
    endpoint/forms
    endpoint/auth
+   endpoint/streaming
+   endpoint/websockets
    endpoint/integrations
    endpoint/zio
 
@@ -139,7 +141,8 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    :maxdepth: 2
    :caption: Documentation interpreters
 
-   openapi
+   docs/openapi
+   docs/asyncapi
 
 .. toctree::
    :maxdepth: 2
