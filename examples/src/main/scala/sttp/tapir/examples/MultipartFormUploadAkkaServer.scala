@@ -45,12 +45,12 @@ object MultipartFormUploadAkkaServer extends App {
     val pw = new PrintWriter(testFile); pw.write("This is not a photo"); pw.close()
 
     // testing
-    implicit val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
+    val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
     val result: String = basicRequest
       .response(asStringAlways)
       .get(uri"http://localhost:8080/user/profile")
       .multipartBody(multipart("name", "Frodo"), multipart("hobby", "hiking"), multipart("age", "33"), multipartFile("photo", testFile))
-      .send()
+      .send(backend)
       .body
     println("Got result: " + result)
 

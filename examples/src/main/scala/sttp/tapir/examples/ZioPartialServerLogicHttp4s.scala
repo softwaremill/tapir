@@ -1,5 +1,7 @@
 package sttp.tapir.examples
 
+import java.util.concurrent.TimeUnit
+
 import org.http4s._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
@@ -12,7 +14,8 @@ import sttp.tapir.ztapir._
 import zio._
 import zio.console._
 import zio.interop.catz._
-import zio.interop.catz.implicits._
+
+import scala.concurrent.duration.FiniteDuration
 
 object ZioPartialServerLogicHttp4s extends App {
 
@@ -56,8 +59,8 @@ object ZioPartialServerLogicHttp4s extends App {
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: URIO[UserService with Console, HttpRoutes[Task]] =
-    List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic).toRoutesR
+  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console, *]] =
+    List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic).toRoutes
 
   // testing
   val test = AsyncHttpClientZioBackend.managed().use { backend =>
@@ -85,24 +88,36 @@ object ZioPartialServerLogicHttp4s extends App {
       assertEquals(testWith("hello2", "Hello", "1234"), AuthenticationErrorCode.toString)
   }
 
+  // Additional implicits
+  implicit def zioTimer[R](implicit r: Runtime[zio.clock.Clock]): cats.effect.Timer[RIO[R, *]] = new cats.effect.Timer[RIO[R, *]] {
+    override final def clock: cats.effect.Clock[RIO[R, *]] = zioCatsClock
+    override final def sleep(duration: FiniteDuration): RIO[R, Unit] =
+      zio.clock.sleep(zio.duration.Duration.fromNanos(duration.toNanos)).provideLayer(ZLayer.succeedMany(r.environment))
+  }
+
+  def zioCatsClock[R](implicit r: Runtime[zio.clock.Clock]): cats.effect.Clock[RIO[R, *]] = new cats.effect.Clock[RIO[R, *]] {
+    override final def monotonic(unit: TimeUnit): RIO[R, Long] =
+      zio.clock.nanoTime.map(unit.convert(_, TimeUnit.NANOSECONDS)).provide(r.environment)
+    override final def realTime(unit: TimeUnit): RIO[R, Long] =
+      zio.clock.currentTime(unit).provide(r.environment)
+  }
+
   //
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZIO.runtime
-      .flatMap { implicit runtime: Runtime[Any] =>
-        helloWorldRoutes.flatMap { routes =>
-          BlazeServerBuilder[Task](runtime.platform.executor.asEC)
-            .bindHttp(8080, "localhost")
-            .withHttpApp(Router("/" -> routes).orNotFound)
-            .resource
-            .use { _ =>
-              test
-            }
-            .exitCode
-        }
+      .flatMap { implicit runtime: Runtime[ZEnv with UserService with Console] =>
+        BlazeServerBuilder[RIO[UserService with Console, *]](runtime.platform.executor.asEC)
+          .bindHttp(8080, "localhost")
+          .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
+          .resource
+          .use { _ =>
+            test
+          }
       // starting
       }
       .provideCustomLayer(UserService.live)
+      .exitCode
 }
 
 object UserAuthenticationLayer {
