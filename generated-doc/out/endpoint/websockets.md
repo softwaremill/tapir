@@ -59,7 +59,9 @@ Request/response schemas can be customised through `.requestsSchema` and `.respo
 ## Interpreting as a sever
 
 When interpreting a web socket endpoint as a server, the [server logic](../server/logic.md) needs to provide a
-streaming-specific pipe from requests to responses. E.g. in Akka's case, this will be `Flow[REQ, RESP, Any]`.
+streaming-specific pipe from requests to responses. E.g. in akka's case, this will be `Flow[REQ, RESP, Any]`.
+
+Refer to the documentation of interpreters for more details, as not all interpreters support all settings.
 
 ## Interpreting as a client
 

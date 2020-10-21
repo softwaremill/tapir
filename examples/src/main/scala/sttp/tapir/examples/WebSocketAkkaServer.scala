@@ -23,19 +23,20 @@ import scala.concurrent.{Await, Future}
 object WebSocketAkkaServer extends App {
   case class Response(hello: String)
 
-  // The endpoint: GET /ping.
+  // The web socket endpoint: GET /ping.
   // We need to provide both the type & media type for the requests, and responses. Here, the requests will be
   // strings, and responses will be returned as json.
   val wsEndpoint: Endpoint[Unit, Unit, Flow[String, Response, Any], AkkaStreams with WebSockets] =
     endpoint.get.in("ping").out(webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
+  // Implementation of the web socket: a flow which echoes incoming messages
   val wsRoute: Route = wsEndpoint.toRoute(_ => Future.successful(Right(Flow.fromFunction((in: String) => Response(in)))))
 
-  // documentation
+  // Documentation
   val apiDocs = wsEndpoint.toAsyncAPI("JSON echo", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
   println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
-  // starting the server
+  // Starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
   import actorSystem.dispatcher
 
@@ -43,8 +44,9 @@ object WebSocketAkkaServer extends App {
     .newServerAt("localhost", 8080)
     .bindFlow(wsRoute)
     .flatMap { _ =>
-      // we could have interpreted wsEndpoint as a client, but here we are using sttp client directly
+      // We could have interpreted wsEndpoint as a client, but here we are using sttp client directly
       val backend: SttpBackend[Future, WebSockets] = AkkaHttpBackend.usingActorSystem(actorSystem)
+      // Client which interacts with the web socket
       basicRequest
         .response(asWebSocket { ws: WebSocket[Future] =>
           for {

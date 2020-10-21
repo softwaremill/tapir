@@ -33,13 +33,13 @@ object WebSocketHttp4sServer extends App {
 
   case class CountResponse(received: Int)
 
-  // The endpoint: GET /count.
+  // The web socket endpoint: GET /count.
   // We need to provide both the type & media type for the requests, and responses. Here, the requests will be
   // byte arrays, and responses will be returned as json.
   val wsEndpoint: Endpoint[Unit, Unit, Pipe[IO, String, CountResponse], Fs2Streams[IO] with WebSockets] =
     endpoint.get.in("count").out(webSocketBody[String, CodecFormat.TextPlain, CountResponse, CodecFormat.Json](Fs2Streams[IO]))
 
-  // counts the number of bytes received each second
+  // A pipe which counts the number of bytes received each second
   val countBytes: Pipe[IO, String, CountResponse] = { in =>
     sealed trait CountAction
     case class AddAction(n: Int) extends CountAction
@@ -65,19 +65,21 @@ object WebSocketHttp4sServer extends App {
       }
   }
 
-  // implementing the endpoint's logic
+  // Implementing the endpoint's logic, by providing the web socket pipe
   val wsRoutes: HttpRoutes[IO] = wsEndpoint.toRoutes(_ => IO.pure(Right(countBytes)))
 
+  // Documentation
   val apiDocs = wsEndpoint.toAsyncAPI("Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
   println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
-  // starting the server
+  // Starting the server
   BlazeServerBuilder[IO](ec)
     .bindHttp(8080, "localhost")
     .withHttpApp(Router("/" -> wsRoutes).orNotFound)
     .resource
     .flatMap(_ => AsyncHttpClientFs2Backend.resource[IO](blocker))
     .use { backend =>
+      // Client which interacts with the web socket
       basicRequest
         .response(asWebSocket { ws: WebSocket[IO] =>
           for {

@@ -162,8 +162,9 @@ The capability can be added to the classpath independently of the interpreter th
 The interpreter supports web sockets, with pipes of type `Flow[REQ, RESP, Any]`. See [web sockets](../endpoint/websockets.md) 
 for more details.
 
-[Automatic pings](https://doc.akka.io/docs/akka-http/current/server-side/websocket-support.html#automatic-keep-alive-ping-support) 
-can be enabled through configuration.
+akka-http does not expose control frames (`Ping`, `Pong` and `Close`), so any setting regarding them are discarded, and
+ping/pong frames which are sent explicitly are ignored. [Automatic pings](https://doc.akka.io/docs/akka-http/current/server-side/websocket-support.html#automatic-keep-alive-ping-support) 
+can be instead enabled through configuration.
 
 ## Configuration
 

@@ -534,23 +534,27 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
   def concatenateFragmentedFrames(c: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
     this.copy(concatenateFragmentedFrames = c)
 
-  /** @param i If `true`, [[WebSocketFrame.Pong]] frames will be ignored and won't be passed to the codecs for decoding.
+  /** Note: some interpreters ignore this setting.
+    * @param i If `true`, [[WebSocketFrame.Pong]] frames will be ignored and won't be passed to the codecs for decoding.
     *          Note that only some interpreters expose ping-pong frames.
     */
   def ignorePong(i: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(concatenateFragmentedFrames = i)
 
-  /** @param a If `true`, [[WebSocketFrame.Ping]] frames will cause a matching [[WebSocketFrame.Pong]] frame to be sent
+  /** Note: some interpreters ignore this setting.
+    * @param a If `true`, [[WebSocketFrame.Ping]] frames will cause a matching [[WebSocketFrame.Pong]] frame to be sent
     *          back, and won't be passed to codecs for decoding.
     *          Note that only some interpreters expose ping-pong frames.
     */
   def autoPongOnPing(a: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(concatenateFragmentedFrames = a)
 
-  /** @param d If `true`, [[WebSocketFrame.Close]] frames won't be passed to the request codec for decoding (in server
+  /** Note: some interpreters ignore this setting.
+    * @param d If `true`, [[WebSocketFrame.Close]] frames won't be passed to the request codec for decoding (in server
     *          interpreters).
     */
   def decodeCloseRequests(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseRequests = d)
 
-  /** @param d If `true`, [[WebSocketFrame.Close]] frames won't be passed to the response codec for decoding (in client
+  /** Note: some interpreters ignore this setting.
+    * @param d If `true`, [[WebSocketFrame.Close]] frames won't be passed to the response codec for decoding (in client
     *          interpreters).
     */
   def decodeCloseResponses(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseResponses = d)
