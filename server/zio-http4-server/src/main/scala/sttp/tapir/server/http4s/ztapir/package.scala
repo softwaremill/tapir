@@ -21,7 +21,7 @@ package object ztapir {
 
   implicit class RichZServerEndpointsRoutes[I, E, O](serverEndpoints: List[ZServerEndpoint[Any, _, _, _]]) {
     def toRoutes(implicit serverOptions: Http4sServerOptions[Task]): HttpRoutes[Task] = {
-      new EndpointToHttp4sServer(serverOptions).toRoutes(serverEndpoints)
+      new EndpointToHttp4sServer(serverOptions)(implicitly, implicitly, implicits.ioTimer[Throwable]).toRoutes(serverEndpoints)
     }
   }
 
@@ -33,7 +33,7 @@ package object ztapir {
     def toRoutesR(implicit serverOptions: Http4sServerOptions[Task]): URIO[R, HttpRoutes[Task]] =
       URIO.access[R] { env =>
         val taskServerEndpoints = serverEndpoints.map(toTaskEndpointR(env, _))
-        new EndpointToHttp4sServer(serverOptions).toRoutes(taskServerEndpoints)
+        new EndpointToHttp4sServer(serverOptions)(implicitly, implicitly, implicits.ioTimer[Throwable]).toRoutes(taskServerEndpoints)
       }
   }
 

@@ -2,7 +2,7 @@ package sttp.tapir.server.http4s
 
 import cats.~>
 import cats.data.OptionT
-import cats.effect.{Concurrent, ContextShift, Sync}
+import cats.effect.{Concurrent, ContextShift, Sync, Timer}
 import org.http4s.{Http, HttpRoutes}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -19,7 +19,8 @@ trait TapirHttp4sServer {
         serverOptions: Http4sServerOptions[F],
         gs: Sync[G],
         fs: Concurrent[F],
-        fcs: ContextShift[F]
+        fcs: ContextShift[F],
+        timer: Timer[F]
     ): Http[OptionT[G, *], F] = {
       new EndpointToHttp4sServer(serverOptions).toHttp(t, e.serverLogic(logic))
     }
@@ -30,14 +31,15 @@ trait TapirHttp4sServer {
         fs: Concurrent[F],
         fcs: ContextShift[F],
         eIsThrowable: E <:< Throwable,
-        eClassTag: ClassTag[E]
+        eClassTag: ClassTag[E],
+        timer: Timer[F]
     ): Http[OptionT[G, *], F] = {
       new EndpointToHttp4sServer(serverOptions).toHttp(t, e.serverLogicRecoverErrors(logic))
     }
 
     def toRoutes(
         logic: I => F[Either[E, O]]
-    )(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F]): HttpRoutes[F] = {
+    )(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = {
       new EndpointToHttp4sServer(serverOptions).toRoutes(e.serverLogic(logic))
     }
 
@@ -46,7 +48,8 @@ trait TapirHttp4sServer {
         fs: Concurrent[F],
         fcs: ContextShift[F],
         eIsThrowable: E <:< Throwable,
-        eClassTag: ClassTag[E]
+        eClassTag: ClassTag[E],
+        timer: Timer[F]
     ): HttpRoutes[F] = {
       new EndpointToHttp4sServer(serverOptions).toRoutes(e.serverLogicRecoverErrors(logic))
     }
@@ -59,13 +62,14 @@ trait TapirHttp4sServer {
         serverOptions: Http4sServerOptions[F],
         gs: Sync[G],
         fs: Concurrent[F],
-        fcs: ContextShift[F]
+        fcs: ContextShift[F],
+        timer: Timer[F]
     ): Http[OptionT[G, *], F] =
       new EndpointToHttp4sServer(serverOptions).toHttp(t, se)
   }
 
   implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]) {
-    def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F]): HttpRoutes[F] =
+    def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] =
       new EndpointToHttp4sServer(serverOptions).toRoutes(se)
   }
 
@@ -74,14 +78,20 @@ trait TapirHttp4sServer {
         serverOptions: Http4sServerOptions[F],
         gs: Sync[G],
         fs: Concurrent[F],
-        fcs: ContextShift[F]
+        fcs: ContextShift[F],
+        timer: Timer[F]
     ): Http[OptionT[G, *], F] = {
       new EndpointToHttp4sServer[F](serverOptions).toHttp(t)(serverEndpoints)
     }
   }
 
   implicit class RichHttp4sServerEndpoints[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]]) {
-    def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F]): HttpRoutes[F] = {
+    def toRoutes(implicit
+        serverOptions: Http4sServerOptions[F],
+        fs: Concurrent[F],
+        fcs: ContextShift[F],
+        timer: Timer[F]
+    ): HttpRoutes[F] = {
       new EndpointToHttp4sServer(serverOptions).toRoutes(serverEndpoints)
     }
   }

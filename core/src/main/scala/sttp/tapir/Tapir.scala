@@ -15,6 +15,7 @@ import sttp.tapir.typelevel.MatchType
 import sttp.tapir.internal._
 import sttp.ws.WebSocketFrame
 
+import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
 trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
@@ -125,7 +126,8 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
         ignorePong = true,
         autoPongOnPing = true,
         decodeCloseRequests = requests.schema.exists(_.isOptional),
-        decodeCloseResponses = responses.schema.exists(_.isOptional)
+        decodeCloseResponses = responses.schema.exists(_.isOptional),
+        autoPing = Some((13.seconds, WebSocketFrame.ping))
       )
   }
 
@@ -149,6 +151,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
       .autoPongOnPing(false)
       .decodeCloseRequests(true)
       .decodeCloseResponses(true)
+      .autoPing(None)
 
   /** A body in any format, read using the given `codec`, from a raw string read using UTF-8.
     */

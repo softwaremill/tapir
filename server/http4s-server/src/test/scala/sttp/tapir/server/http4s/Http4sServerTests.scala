@@ -12,8 +12,10 @@ import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.tests.{ServerBasicTests, ServerStreamingTests, ServerTests, ServerWebSocketTests, backendResource}
 import sttp.tapir.tests.{PortCounter, Test, TestSuite}
+import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
 
@@ -22,13 +24,13 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
     val interpreter = new Http4sServerInterpreter()
     val serverTests = new ServerTests(interpreter)
 
+    import interpreter.timer
+
     def additionalTests(): List[Test] = List(
       Test("should work with a router and routes in a context") {
         val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
         val routes = e.toRoutes
         val port = PortCounter.next()
-
-        import interpreter.timer
 
         BlazeServerBuilder[IO](ExecutionContext.global)
           .bindHttp(port, "localhost")
@@ -36,6 +38,22 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
           .resource
           .use { _ => basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right("ok")) }
           .unsafeRunSync()
+      },
+      serverTests.testServer(
+        endpoint.out(
+          webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain]
+            .apply(Fs2Streams[IO])
+            .autoPing(Some((1.second, WebSocketFrame.ping)))
+        ),
+        "automatic pings"
+      )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { baseUri =>
+        basicRequest
+          .response(asWebSocket { ws: WebSocket[IO] =>
+            List(ws.receive().timeout(2.seconds), ws.receive().timeout(2.seconds)).sequence
+          })
+          .get(baseUri.scheme("ws"))
+          .send(backend)
+          .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
       }
     )
 

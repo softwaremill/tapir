@@ -2,7 +2,7 @@ package sttp.tapir.server.http4s
 
 import java.nio.charset.StandardCharsets
 
-import cats.effect.{Blocker, Concurrent, ContextShift}
+import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
 import cats.syntax.all._
 import fs2.concurrent.Queue
 import fs2.{Chunk, Pipe}
@@ -18,7 +18,7 @@ import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
-class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift](serverOptions: Http4sServerOptions[F]) {
+class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   def apply[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): F[Response[F]] = {
     val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(statusCodeToHttp4sStatus(defaultStatusCode))

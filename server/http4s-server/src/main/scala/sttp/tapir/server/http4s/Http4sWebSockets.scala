@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s
 
 import cats.Monad
-import cats.effect.Concurrent
+import cats.effect.{Concurrent, Timer}
 import fs2._
 import fs2.concurrent.Queue
 import org.http4s.websocket.{WebSocketFrame => Http4sWebSocketFrame}
@@ -11,9 +11,8 @@ import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailur
 import sttp.ws.WebSocketFrame
 import cats.syntax.all._
 
-// TODO: auto pings
 private[http4s] object Http4sWebSockets {
-  def pipeToBody[F[_]: Concurrent, REQ, RESP](
+  def pipeToBody[F[_]: Concurrent: Timer, REQ, RESP](
       pipe: Pipe[F, REQ, RESP],
       o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
   ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {
@@ -22,6 +21,10 @@ private[http4s] object Http4sWebSockets {
       val concatenated = optionallyConcatenateFrames(sttpFrames, o.concatenateFragmentedFrames)
       val ignorePongs = optionallyIgnorePong(concatenated, o.ignorePong)
       val autoPongs = optionallyAutoPong(ignorePongs, pongs, o.autoPongOnPing)
+      val autoPings = o.autoPing match {
+        case Some((interval, frame)) => Stream.awakeEvery[F](interval).map(_ => frame)
+        case None                    => Stream.empty
+      }
 
       autoPongs
         .map {
@@ -36,6 +39,7 @@ private[http4s] object Http4sWebSockets {
         .through(pipe)
         .map(o.responses.encode)
         .mergeHaltL(pongs.dequeue)
+        .mergeHaltL(autoPings)
         .map(frameToHttp4sFrame)
     }
   }
