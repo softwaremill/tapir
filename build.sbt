@@ -629,6 +629,22 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, clientTests % Test)
 
+import scala.collection.JavaConverters._
+lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
+  .enablePlugins(SbtPlugin)
+  .settings(
+    name := "sbt-openapi-codegen",
+    organization := "com.softwaremill.sttp.tapir",
+    version := "0.1-SNAPSHOT",
+    sbtPlugin := true,
+    scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
+    scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala.filter(
+      a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)
+    ),
+    scriptedBufferLog := false,
+    sbtTestDirectory := sourceDirectory.value / "sbt-test"
+  )
+
 // other
 
 lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
