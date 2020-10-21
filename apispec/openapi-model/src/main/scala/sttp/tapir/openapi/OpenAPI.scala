@@ -5,7 +5,7 @@ import sttp.tapir.apispec.{ExampleValue, ReferenceOr, Schema, SecurityRequiremen
 import scala.collection.immutable.ListMap
 
 case class OpenAPI(
-    openapi: String = "3.0.1",
+    openapi: String = "3.0.3",
     info: Info,
     tags: List[Tag],
     servers: List[Server],
