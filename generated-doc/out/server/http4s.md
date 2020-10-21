@@ -28,11 +28,13 @@ import sttp.tapir._
 import sttp.tapir.server.http4s._
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import cats.effect.ContextShift
+import cats.effect.{ContextShift, Timer}
 
 // will probably come from somewhere else
 implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
+implicit val t: Timer[IO] =
+  IO.timer(scala.concurrent.ExecutionContext.global)  
 
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
   IO.pure(Right[Unit, Int](s.length))
@@ -51,11 +53,13 @@ import sttp.tapir._
 import sttp.tapir.server.http4s._
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import cats.effect.ContextShift
+import cats.effect.{ContextShift, Timer}
 
 // will probably come from somewhere else
 implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
+implicit val t: Timer[IO] =
+  IO.timer(scala.concurrent.ExecutionContext.global)
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
