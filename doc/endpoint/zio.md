@@ -61,8 +61,11 @@ If you have multiple endpoints with different environmental requirements, the en
 so that it is uniform across all endpoints, using the `.widen` method:
 
 ```scala mdoc:compile-only
-import zio.{Has, ZIO}
+import org.http4s.HttpRoutes
 import sttp.tapir.ztapir._
+import sttp.tapir.server.http4s.ztapir._
+import zio.{Has, RIO, ZIO}
+import zio.clock.Clock
 import zio.interop.catz._
 
 trait Component1

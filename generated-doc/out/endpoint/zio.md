@@ -47,19 +47,48 @@ import:
 import sttp.tapir.server.http4s.ztapir._
 ```
 
-This adds the following methods on `ZEndpoint`:
+This adds the following method on `ZEndpoint`:
 
-* `def toRoutes(logic: I => ZIO[Any, E, O]): HttpRoutes[Task]`
-* `def toRoutesR(logic: I => ZIO[R, E, O]): URIO[R, HttpRoutes[Task]]` (when the logic requires an environment)
+* `def toRoutes[R](logic: I => ZIO[R, E, O]): HttpRoutes[ZIO[R with Clock, Throwable, *]]`
 
 And the following methods on `ZServerEndpoint` or `List[ZServerEndpoint]`: 
 
-* `def toRoutes: HttpRoutes[Task]`
-* `def toRoutesR: URIO[R, HttpRoutes[Task]]` (when the logic requires an environment)
+* `def toRoutes[R]: HttpRoutes[ZIO[R with Clock, Throwable, *]]`
+
+Note that the resulting `HttpRoutes` always require a clock in their environment.
+
+If you have multiple endpoints with different environmental requirements, the environment must be first widened
+so that it is uniform across all endpoints, using the `.widen` method:
+
+```scala
+import org.http4s.HttpRoutes
+import sttp.tapir.ztapir._
+import sttp.tapir.server.http4s.ztapir._
+import zio.{Has, RIO, ZIO}
+import zio.clock.Clock
+import zio.interop.catz._
+
+trait Component1
+trait Component2
+type Service1 = Has[Component1]
+type Service2 = Has[Component2]
+
+val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit] = ???                                                            
+val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit] = ???
+
+type Env = Service1 with Service2
+val routes: HttpRoutes[RIO[Env with Clock, *]] = 
+  List(
+    serverEndpoint1.widen[Env], 
+    serverEndpoint2.widen[Env]
+  )
+  .toRoutes // this is where zio-cats interop is needed
+```
 
 ## Example
 
-Two examples of using the ZIO integration are available. The first showcases basic functionality, while the second shows how to use partial server logic methods:
+Three examples of using the ZIO integration are available. The first two showcase basic functionality, while the third shows how to use partial server logic methods:
 
 * [ZIO basic example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleHttp4sServer.scala)
+* [ZIO environment example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioEnvExampleHttp4sServer.scala)
 * [ZIO partial server logic example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioPartialServerLogicHttp4s.scala)
