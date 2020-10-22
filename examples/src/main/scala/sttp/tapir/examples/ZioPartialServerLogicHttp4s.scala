@@ -10,9 +10,9 @@ import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
 import zio._
+import zio.clock.Clock
 import zio.console._
 import zio.interop.catz._
-import zio.interop.catz.implicits._
 
 object ZioPartialServerLogicHttp4s extends App {
 
@@ -56,11 +56,11 @@ object ZioPartialServerLogicHttp4s extends App {
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: URIO[UserService with Console, HttpRoutes[Task]] =
-    List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic).toRoutesR
+  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock, *]] =
+    List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic).toRoutes
 
   // testing
-  val test = AsyncHttpClientZioBackend.managed().use { backend =>
+  val test: Task[Unit] = AsyncHttpClientZioBackend.managed().use { backend =>
     def testWith(path: String, salutation: String, token: String): Task[String] =
       backend
         .send(
@@ -89,20 +89,18 @@ object ZioPartialServerLogicHttp4s extends App {
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZIO.runtime
-      .flatMap { implicit runtime: Runtime[Any] =>
-        helloWorldRoutes.flatMap { routes =>
-          BlazeServerBuilder[Task](runtime.platform.executor.asEC)
-            .bindHttp(8080, "localhost")
-            .withHttpApp(Router("/" -> routes).orNotFound)
-            .resource
-            .use { _ =>
-              test
-            }
-            .exitCode
-        }
+      .flatMap { implicit runtime: Runtime[ZEnv with UserService with Console] =>
+        BlazeServerBuilder[RIO[UserService with Console with Clock, *]](runtime.platform.executor.asEC)
+          .bindHttp(8080, "localhost")
+          .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
+          .resource
+          .use { _ =>
+            test
+          }
       // starting
       }
       .provideCustomLayer(UserService.live)
+      .exitCode
 }
 
 object UserAuthenticationLayer {
