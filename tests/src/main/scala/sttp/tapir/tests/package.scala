@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets
 
 import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}

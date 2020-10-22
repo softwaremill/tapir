@@ -9,13 +9,13 @@ To expose endpoint as a [play-server](https://www.playframework.com/) first add 
 and (if you don't already depend on Play) 
 
 ```scala
-"com.typesafe.play" %% "play-akka-http-server" % "2.8.3"
+"com.typesafe.play" %% "play-akka-http-server" % "2.8.4"
 ```
 
 or
 
 ```scala
-"com.typesafe.play" %% "play-netty-server" % "2.8.3"
+"com.typesafe.play" %% "play-netty-server" % "2.8.4"
 ```
 
 depending on whether you want to use netty or akka based http-server under the hood.

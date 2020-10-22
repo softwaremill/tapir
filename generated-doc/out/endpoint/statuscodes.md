@@ -57,6 +57,7 @@ Type erasure may prevent a status mapping from working properly. The following e
 ```scala
 import sttp.tapir._
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import sttp.model.StatusCode
 import io.circe.generic.auto._
 

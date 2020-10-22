@@ -57,6 +57,7 @@ Type erasure may prevent a status mapping from working properly. The following e
 ```scala mdoc:fail
 import sttp.tapir._
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import sttp.model.StatusCode
 import io.circe.generic.auto._
 
@@ -80,6 +81,7 @@ The solution is therefore to handwrite a function checking that a `val` (of type
 ```scala mdoc:invisible
 import sttp.tapir._
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import sttp.model.StatusCode
 import io.circe.generic.auto._
 

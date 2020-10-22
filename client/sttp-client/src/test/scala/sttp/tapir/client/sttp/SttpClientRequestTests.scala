@@ -4,6 +4,7 @@ import java.io.File
 
 import sttp.tapir._
 import sttp.client3._
+import sttp.tapir.generic.auto._
 import sttp.model.{Header, HeaderNames, MediaType, Part}
 import sttp.tapir.tests.FruitData
 import org.scalatest.funsuite.AnyFunSuite

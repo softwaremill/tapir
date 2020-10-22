@@ -8,6 +8,7 @@ import io.circe.generic.auto._
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}

@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
+import sttp.tapir.generic.auto._
 import io.circe.generic.auto._
 import sttp.client3._
 import sttp.model._

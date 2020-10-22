@@ -4,6 +4,7 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType.{SObjectInfo, SProduct}
+import sttp.tapir.generic.auto._
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, FieldName, Schema, Validator, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

@@ -3,13 +3,15 @@ package sttp.tapir.generic.internal
 import com.github.ghik.silencer.silent
 import magnolia._
 import sttp.tapir.SchemaType._
-import sttp.tapir.generic.{Configuration, Derived}
+import sttp.tapir.generic.Configuration
 import sttp.tapir.{deprecated, description, format, encodedName, FieldName, Schema, SchemaType}
 import SchemaMagnoliaDerivation.deriveInProgress
 
 import scala.collection.mutable
+import sttp.tapir.generic.Derived
 
 trait SchemaMagnoliaDerivation {
+
   type Typeclass[T] = Schema[T]
 
   @silent("discarded")
@@ -96,7 +98,6 @@ trait SchemaMagnoliaDerivation {
     Schema(coproduct)
   }
 
-  implicit def schemaForCaseClass[T]: Derived[Schema[T]] = macro MagnoliaDerivedMacro.derivedGen[T]
 }
 
 object SchemaMagnoliaDerivation {

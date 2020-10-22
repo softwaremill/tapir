@@ -1,9 +1,20 @@
 package sttp.tapir
 
+import java.io.{File, InputStream}
+import java.math.{BigDecimal => JBigDecimal}
+import java.nio.ByteBuffer
+import java.nio.file.Path
+import java.time._
+import java.util.{Date, UUID}
+import sttp.tapir.generic.internal.Refute
+
 import sttp.tapir.generic.SealedTrait
 import sttp.tapir.generic.internal.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
 
 import scala.collection.immutable
+import sttp.tapir.generic.Derived
+import com.github.ghik.silencer.silent
+import magnolia.Magnolia
 
 sealed trait Validator[T] {
   def validate(t: T): List[ValidationError[_]]
@@ -20,7 +31,7 @@ sealed trait Validator[T] {
   def show: Option[String] = Validator.show(this)
 }
 
-object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
+object Validator extends ValidatorEnumMacro with ValidatorMagnoliaDerivation {
   type EncodeToRaw[T] = T => Option[scala.Any]
 
   private val _pass: Validator[Nothing] = all()
@@ -269,6 +280,47 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
   implicit def arrayElements[T: Validator]: Validator[Array[T]] = implicitly[Validator[T]].asArrayElements
   implicit def iterableElements[T: Validator, C[X] <: Iterable[X]]: Validator[C[T]] = implicitly[Validator[T]].asIterableElements[C]
   implicit def openProduct[T: Validator]: Validator[Map[String, T]] = OpenProduct(implicitly[Validator[T]])
+
+  implicit val validatorForString: Validator[String] = pass
+  implicit val validatorForByte: Validator[Byte] = pass
+  implicit val validatorForShort: Validator[Short] = pass
+  implicit val validatorForInt: Validator[Int] = pass
+  implicit val validatorForLong: Validator[Long] = pass
+  implicit val validatorForFloat: Validator[Float] = pass
+  implicit val validatorForDouble: Validator[Double] = pass
+  implicit val validatorForBoolean: Validator[Boolean] = pass
+  implicit val validatorForUnit: Validator[Unit] = pass
+  implicit val validatorForFile: Validator[File] = pass
+  implicit val validatorForPath: Validator[Path] = pass
+  implicit val validatorForByteArray: Validator[Array[Byte]] = pass
+  implicit val validatorForByteBuffer: Validator[ByteBuffer] = pass
+  implicit val validatorForInputStream: Validator[InputStream] = pass
+  implicit val validatorForInstant: Validator[Instant] = pass
+  implicit val validatorForZonedDateTime: Validator[ZonedDateTime] = pass
+  implicit val validatorForOffsetDateTime: Validator[OffsetDateTime] = pass
+  implicit val validatorForDate: Validator[Date] = pass
+  implicit val validatorForLocalDateTime: Validator[LocalDateTime] = pass
+  implicit val validatorForLocalDate: Validator[LocalDate] = pass
+  implicit val validatorForZoneOffset: Validator[ZoneOffset] = pass
+  implicit val validatorForJavaDuration: Validator[Duration] = pass
+  implicit val validatorForLocalTime: Validator[LocalTime] = pass
+  implicit val validatorForOffsetTime: Validator[OffsetTime] = pass
+  implicit val validatorForScalaDuration: Validator[scala.concurrent.duration.Duration] = pass
+  implicit val validatorForUUID: Validator[UUID] = pass
+  implicit val validatorForBigDecimal: Validator[BigDecimal] = pass
+  implicit val validatorForJBigDecimal: Validator[JBigDecimal] = pass
+
+  def derive[T]: Validator[T] = macro Magnolia.gen[T]
+
+}
+
+trait LowPriorityValidator {
+  /* 
+    This instance is directly imported via sttp.tapir.generic.auto._ and sttp.tapir.generic.auto.validator._.
+    In order to avoid conflicts with primitive types instances, we need to lower its priority using an implicit Refute[Validator[T]
+  */
+  @silent("never used")
+  implicit def derivedValidator[T](implicit refute: Refute[Validator[T]], derived: Derived[Validator[T]]): Validator[T] = derived.value
 }
 
 sealed trait ValidationError[T] {

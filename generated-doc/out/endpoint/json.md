@@ -42,6 +42,7 @@ For example, to automatically generate a JSON codec for a case class:
 ```scala
 import sttp.tapir._
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import io.circe.generic.auto._
 
 case class Book(author: String, title: String, year: Int)
@@ -105,6 +106,7 @@ import sttp.tapir.json.upickle._
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import upickle.default._
 import sttp.tapir.json.upickle._
 

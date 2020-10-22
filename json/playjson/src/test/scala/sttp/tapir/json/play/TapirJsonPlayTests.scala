@@ -4,6 +4,7 @@ import org.scalatest.Assertion
 import play.api.libs.json._
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
+import sttp.tapir.generic.auto._
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

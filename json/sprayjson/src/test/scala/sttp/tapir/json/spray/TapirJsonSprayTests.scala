@@ -3,6 +3,7 @@ package sttp.tapir.json.spray
 import org.scalatest.Assertion
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
+import sttp.tapir.generic.auto._
 import spray.json._
 import sttp.tapir.Codec.JsonCodec
 import org.scalatest.flatspec.AnyFlatSpec

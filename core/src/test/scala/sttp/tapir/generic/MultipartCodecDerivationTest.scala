@@ -2,6 +2,7 @@ package sttp.tapir.generic
 
 import com.github.ghik.silencer.silent
 import sttp.model.{Header, MediaType, Part}
+import sttp.tapir.generic.auto._
 import sttp.tapir.SchemaType._
 import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, Validator, TapirFile, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec

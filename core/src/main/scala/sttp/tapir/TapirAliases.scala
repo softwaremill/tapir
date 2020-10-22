@@ -51,7 +51,7 @@ trait TapirAliases {
 
   /** Schema.scala */
   type Schema[T] = sttp.tapir.Schema[T]
-  val Schema: sttp.tapir.Schema.type with SchemaMagnoliaDerivation = sttp.tapir.Schema
+  val Schema: sttp.tapir.Schema.type = sttp.tapir.Schema
 
   /** Tapir.scala */
   type Tapir = sttp.tapir.Tapir

@@ -1,13 +1,16 @@
 package sttp.tapir.generic.internal
 
 import com.github.ghik.silencer.silent
-import magnolia.{Magnolia, ReadOnlyCaseClass, SealedTrait}
 import sttp.tapir.{FieldName, Validator, encodedName, generic}
 import sttp.tapir.generic.Configuration
+import magnolia.ReadOnlyCaseClass
+import magnolia.SealedTrait
+import sttp.tapir.generic.Derived
 
 trait ValidatorMagnoliaDerivation {
-  type Typeclass[T] = Validator[T]
 
+  type Typeclass[T] = Validator[T]
+  
   def combine[T](ctx: ReadOnlyCaseClass[Validator, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
     Validator.Product(ctx.parameters.map { p =>
       p.label -> new Validator.ProductField[T] {
@@ -28,11 +31,12 @@ trait ValidatorMagnoliaDerivation {
     Validator.Coproduct(new generic.SealedTrait[Validator, T] {
       override def dispatch(t: T): Typeclass[T] = ctx.dispatch(t) { v => v.typeclass.asInstanceOf[Validator[T]] }
 
-      override def subtypes: Map[String, Typeclass[Any]] =
+      override def subtypes: Map[String, Validator[Any]] =
         ctx.subtypes.map(st => st.typeName.full -> st.typeclass.asInstanceOf[Validator[scala.Any]]).toMap
     })
 
-  implicit def validatorForCaseClass[T]: Validator[T] = macro Magnolia.gen[T]
-
   def fallback[T]: Validator[T] = Validator.pass
+
+  implicit def validatorForCaseClass[T]: Derived[Validator[T]] = macro MagnoliaDerivedMacro.derivedGen[T]
+
 }

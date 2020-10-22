@@ -23,6 +23,7 @@ which is a (presumably large) serialised list of json objects mapping to the `Pe
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import akka.stream.scaladsl._
 import akka.util.ByteString
