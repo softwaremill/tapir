@@ -77,4 +77,31 @@ class SchemaTest extends AnyFlatSpec with Matchers {
     openProductSchema
       .modifyUnsafe[Nothing]()(_.description("test")) shouldBe openProductSchema.description("test")
   }
+
+  it should "generate one-of schema using the given discriminator" in {
+    val coproduct = SCoproduct(
+      SObjectInfo("A"),
+      List(
+        Schema(SProduct(SObjectInfo("H"), List(FieldName("f1") -> Schema(SInteger)))),
+        Schema(SProduct(SObjectInfo("G"), List(FieldName("f1") -> Schema(SString), FieldName("f2") -> Schema(SString)))),
+        Schema(SString)
+      ),
+      None
+    )
+
+    coproduct.addDiscriminatorField(FieldName("who_am_i")) shouldBe SCoproduct(
+      SObjectInfo("A"),
+      List(
+        Schema(SProduct(SObjectInfo("H"), List(FieldName("f1") -> Schema(SInteger), FieldName("who_am_i") -> Schema(SString)))),
+        Schema(
+          SProduct(
+            SObjectInfo("G"),
+            List(FieldName("f1") -> Schema(SString), FieldName("f2") -> Schema(SString), FieldName("who_am_i") -> Schema(SString))
+          )
+        ),
+        Schema(SString)
+      ),
+      Some(Discriminator("who_am_i", Map.empty))
+    )
+  }
 }

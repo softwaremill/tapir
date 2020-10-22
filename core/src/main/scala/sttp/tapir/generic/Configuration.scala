@@ -2,20 +2,14 @@ package sttp.tapir.generic
 
 import java.util.regex.Pattern
 
-final case class Configuration(toEncodedName: String => String) {
-  def withSnakeCaseMemberNames: Configuration =
-    copy(
-      toEncodedName = Configuration.snakeCaseTransformation
-    )
-
-  def withKebabCaseMemberNames: Configuration =
-    copy(
-      toEncodedName = Configuration.kebabCaseTransformation
-    )
+final case class Configuration(toEncodedName: String => String, discriminator: Option[String]) {
+  def withSnakeCaseMemberNames: Configuration = copy(toEncodedName = Configuration.snakeCaseTransformation)
+  def withKebabCaseMemberNames: Configuration = copy(toEncodedName = Configuration.kebabCaseTransformation)
+  def withDiscriminator(d: String): Configuration = copy(discriminator = Some(d))
 }
 
 object Configuration {
-  implicit val default: Configuration = Configuration(Predef.identity)
+  implicit val default: Configuration = Configuration(Predef.identity, None)
 
   private val basePattern: Pattern = Pattern.compile("([A-Z]+)([A-Z][a-z])")
   private val swapPattern: Pattern = Pattern.compile("([a-z\\d])([A-Z])")
