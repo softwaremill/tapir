@@ -1,7 +1,5 @@
 package sttp.tapir.examples
 
-import java.util.concurrent.TimeUnit
-
 import org.http4s._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
@@ -12,10 +10,9 @@ import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
 import zio._
+import zio.clock.Clock
 import zio.console._
 import zio.interop.catz._
-
-import scala.concurrent.duration.FiniteDuration
 
 object ZioPartialServerLogicHttp4s extends App {
 
@@ -59,11 +56,11 @@ object ZioPartialServerLogicHttp4s extends App {
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console, *]] =
+  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock, *]] =
     List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic).toRoutes
 
   // testing
-  val test = AsyncHttpClientZioBackend.managed().use { backend =>
+  val test: Task[Unit] = AsyncHttpClientZioBackend.managed().use { backend =>
     def testWith(path: String, salutation: String, token: String): Task[String] =
       backend
         .send(
@@ -88,26 +85,12 @@ object ZioPartialServerLogicHttp4s extends App {
       assertEquals(testWith("hello2", "Hello", "1234"), AuthenticationErrorCode.toString)
   }
 
-  // Additional implicits
-  implicit def zioTimer[R](implicit r: Runtime[zio.clock.Clock]): cats.effect.Timer[RIO[R, *]] = new cats.effect.Timer[RIO[R, *]] {
-    override final def clock: cats.effect.Clock[RIO[R, *]] = zioCatsClock
-    override final def sleep(duration: FiniteDuration): RIO[R, Unit] =
-      zio.clock.sleep(zio.duration.Duration.fromNanos(duration.toNanos)).provideLayer(ZLayer.succeedMany(r.environment))
-  }
-
-  def zioCatsClock[R](implicit r: Runtime[zio.clock.Clock]): cats.effect.Clock[RIO[R, *]] = new cats.effect.Clock[RIO[R, *]] {
-    override final def monotonic(unit: TimeUnit): RIO[R, Long] =
-      zio.clock.nanoTime.map(unit.convert(_, TimeUnit.NANOSECONDS)).provide(r.environment)
-    override final def realTime(unit: TimeUnit): RIO[R, Long] =
-      zio.clock.currentTime(unit).provide(r.environment)
-  }
-
   //
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZIO.runtime
       .flatMap { implicit runtime: Runtime[ZEnv with UserService with Console] =>
-        BlazeServerBuilder[RIO[UserService with Console, *]](runtime.platform.executor.asEC)
+        BlazeServerBuilder[RIO[UserService with Console with Clock, *]](runtime.platform.executor.asEC)
           .bindHttp(8080, "localhost")
           .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
           .resource

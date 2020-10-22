@@ -68,4 +68,11 @@ package object ztapir extends Tapir {
         override def partialLogic: T => ZIO[R, E, U] = f
       }
   }
+
+  implicit class RichZServiceEndpoint[R, I, E, O](zse: ZServerEndpoint[R, I, E, O]) {
+
+    /** Extends the environment so that it can be made uniform across multiple endpoints.
+      */
+    def widen[R2 <: R]: ZServerEndpoint[R2, I, E, O] = zse.asInstanceOf[ZServerEndpoint[R2, I, E, O]] // this is fine
+  }
 }
