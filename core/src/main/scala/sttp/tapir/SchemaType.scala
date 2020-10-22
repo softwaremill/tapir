@@ -45,6 +45,22 @@ object SchemaType {
   }
   case class SCoproduct(info: SObjectInfo, schemas: List[Schema[_]], discriminator: Option[Discriminator]) extends SObject {
     override def show: String = "oneOf:" + schemas.mkString(",")
+
+    def addDiscriminatorField[D](
+        discriminatorName: FieldName,
+        discriminatorSchema: Schema[D] = Schema(SchemaType.SString),
+        discriminatorMappingOverride: Map[String, SRef] = Map.empty
+    ): SCoproduct = {
+      SCoproduct(
+        info,
+        schemas.map {
+          case s @ Schema(st: SchemaType.SProduct, _, _, _, _) =>
+            s.copy(schemaType = st.copy(fields = st.fields.toSeq :+ (discriminatorName -> discriminatorSchema)))
+          case s => s
+        },
+        Some(Discriminator(discriminatorName.encodedName, discriminatorMappingOverride))
+      )
+    }
   }
   case class SOpenProduct(info: SObjectInfo, valueSchema: Schema[_]) extends SObject {
     override def show: String = s"map"

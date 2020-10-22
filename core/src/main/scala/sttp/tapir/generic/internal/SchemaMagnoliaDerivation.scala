@@ -87,8 +87,13 @@ trait SchemaMagnoliaDerivation {
   private def isDeprecated(annotations: Seq[Any]): Boolean =
     annotations.collectFirst { case _: deprecated => true } getOrElse false
 
-  def dispatch[T](ctx: SealedTrait[Schema, T]): Schema[T] = {
-    Schema(SCoproduct(typeNameToObjectInfo(ctx.typeName, ctx.annotations), ctx.subtypes.map(_.typeclass).toList, None))
+  def dispatch[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
+    val baseCoproduct = SCoproduct(typeNameToObjectInfo(ctx.typeName, ctx.annotations), ctx.subtypes.map(_.typeclass).toList, None)
+    val coproduct = genericDerivationConfig.discriminator match {
+      case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
+      case None    => baseCoproduct
+    }
+    Schema(coproduct)
   }
 
   implicit def schemaForCaseClass[T]: Derived[Schema[T]] = macro MagnoliaDerivedMacro.derivedGen[T]

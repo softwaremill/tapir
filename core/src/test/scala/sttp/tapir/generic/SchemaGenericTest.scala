@@ -337,6 +337,29 @@ class SchemaGenericTest extends AnyFlatSpec with Matchers {
     implicitly[Schema[IList]] shouldBe expectedISchema
     implicitly[Schema[JList]] shouldBe expectedJSchema
   }
+
+  it should "generate one-of schema using the given discriminator" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i")
+
+    implicitly[Schema[Entity]].schemaType shouldBe SCoproduct(
+      SObjectInfo("sttp.tapir.generic.Entity"),
+      List(
+        Schema(
+          SProduct(
+            SObjectInfo("sttp.tapir.generic.Organization"),
+            List((FieldName("name"), Schema(SString)), (FieldName("who_am_i"), Schema(SString)))
+          )
+        ),
+        Schema(
+          SProduct(
+            SObjectInfo("sttp.tapir.generic.Person"),
+            List((FieldName("first"), Schema(SString)), (FieldName("age"), Schema(SInteger)), (FieldName("who_am_i"), Schema(SString)))
+          )
+        )
+      ),
+      Some(Discriminator("who_am_i", Map.empty))
+    )
+  }
 }
 
 case class StringValueClass(value: String) extends AnyVal
@@ -391,3 +414,7 @@ case class JOpt(data: Option[IOpt])
 
 case class IList(i1: List[IList], i2: Int)
 case class JList(data: List[IList])
+
+sealed trait Entity
+case class Person(first: String, age: Int) extends Entity
+case class Organization(name: String) extends Entity

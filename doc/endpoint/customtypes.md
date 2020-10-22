@@ -88,11 +88,14 @@ Automatic codec derivation usually requires other implicits, such as:
 * codecs for individual form fields
 * schema of the custom type, through the `Schema[T]` implicit
 
+Note the derivation of e.g. circe json encoders/decoders and tapir schema are separate processes, and must be 
+hence configured separately.
+
 ## Schema derivation
 
 For case classes types, `Schema[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
 that schemas are defined for all the case class's fields. It is possible to configure the automatic derivation to use
-snake-case, kebab-case or a custom field naming policy, by providing an implicit `sttp.tapir.generic.Configuration` value:
+snake_case, kebab-case or a custom field naming policy, by providing an implicit `sttp.tapir.generic.Configuration` value:
 
 ```scala mdoc:silent
 import sttp.tapir.generic.Configuration
@@ -117,11 +120,25 @@ be derived automatically.
 
 ### Sealed traits / coproducts
 
-Tapir supports schema generation for coproduct types (sealed trait hierarchies) out of the box, but they need to be defined
-by hand as `implicit` values. To properly reflect the schema in [OpenAPI](../openapi.md) documentation, a
-discriminator object can be specified. 
+Schema derivation for coproduct types (sealed trait hierarchies) is supported as well. By default, such hierarchies
+will be represented as a coproduct which contains a list of child schemas, without any discriminator field.
 
-For example, given following coproduct:
+A discriminator field can be specified for coproducts by providing it in the configuration; this will be only used
+during automatic derivation:
+
+```scala mdoc:silent:reset
+import sttp.tapir.generic.Configuration
+
+implicit val customConfiguration: Configuration =
+  Configuration.default.withDiscriminator("who_am_i")
+```
+
+Alternatively, derived schemas can be customised (see below), and a discriminator can be added by calling
+the `SchemaType.SCoproduct.addDiscriminatorField(name, schema, mapingOverride)` method.
+
+Finally, if the discriminator is a field that's defined on the base trait (and hence in each implementation), the
+schemas can be specified using `Schema.oneOfUsingField`, for example (this will also generate the appropriate
+mapping overrides):
 
 ```scala mdoc:silent:reset
 sealed trait Entity {
@@ -133,17 +150,13 @@ case class Person(firstName:String, lastName:String) extends Entity {
 case class Organization(name: String) extends Entity {
   def kind: String = "org"  
 }
-```
 
-The schema may look like this:
-
-```scala mdoc:silent
 import sttp.tapir._
 
 val sPerson = implicitly[Schema[Person]]
 val sOrganization = implicitly[Schema[Organization]]
 implicit val sEntity: Schema[Entity] = 
-    Schema.oneOf[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
+    Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```
 
 ## Customising derived schemas
