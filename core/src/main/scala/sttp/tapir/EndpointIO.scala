@@ -12,6 +12,7 @@ import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 import sttp.ws.WebSocketFrame
 
 import scala.collection.immutable.ListMap
+import scala.concurrent.duration.FiniteDuration
 
 /** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
   * The transput traits contain common functionality, shared by all inputs and outputs.
@@ -510,7 +511,8 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
     ignorePong: Boolean,
     autoPongOnPing: Boolean,
     decodeCloseRequests: Boolean,
-    decodeCloseResponses: Boolean
+    decodeCloseResponses: Boolean,
+    autoPing: Option[(FiniteDuration, WebSocketFrame.Ping)]
 ) extends EndpointTransput.Basic[T] {
   override private[tapir] type ThisType[X] = WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, X, S]
   override private[tapir] type L = PIPE_REQ_RESP
@@ -558,6 +560,12 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
     *          interpreters).
     */
   def decodeCloseResponses(d: Boolean): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] = this.copy(decodeCloseResponses = d)
+
+  /** Note: some interpreters ignore this setting.
+    * @param p If `Some`, send the given `Ping` frame at the given interval. If `None`, do not automatically send pings.
+    */
+  def autoPing(p: Option[(FiniteDuration, WebSocketFrame.Ping)]): WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S] =
+    this.copy(autoPing = p)
 
   override def show: String = "{body as web socket}"
 }

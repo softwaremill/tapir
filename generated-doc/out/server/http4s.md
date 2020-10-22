@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.17.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.17.0-M3"
 ```
 
 and import the package:
@@ -28,11 +28,13 @@ import sttp.tapir._
 import sttp.tapir.server.http4s._
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import cats.effect.ContextShift
+import cats.effect.{ContextShift, Timer}
 
 // will probably come from somewhere else
 implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
+implicit val t: Timer[IO] =
+  IO.timer(scala.concurrent.ExecutionContext.global)  
 
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
   IO.pure(Right[Unit, Int](s.length))
@@ -51,11 +53,13 @@ import sttp.tapir._
 import sttp.tapir.server.http4s._
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import cats.effect.ContextShift
+import cats.effect.{ContextShift, Timer}
 
 // will probably come from somewhere else
 implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
+implicit val t: Timer[IO] =
+  IO.timer(scala.concurrent.ExecutionContext.global)
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  

@@ -2,7 +2,7 @@ package sttp.tapir.server.http4s
 
 import cats.~>
 import cats.data._
-import cats.effect.{Concurrent, ContextShift, Sync}
+import cats.effect.{Concurrent, ContextShift, Sync, Timer}
 import cats.syntax.all._
 import org.http4s.{Http, HttpRoutes, Request, Response}
 import org.log4s._
@@ -14,7 +14,7 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 
-class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift](serverOptions: Http4sServerOptions[F]) {
+class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
   def toHttp[I, E, O, G[_]: Sync](t: F ~> G, se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G]): Http[OptionT[G, *], F] = {

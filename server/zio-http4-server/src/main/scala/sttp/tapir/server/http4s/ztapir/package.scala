@@ -20,4 +20,23 @@ package object ztapir {
       new EndpointToHttp4sServer(serverOptions).toRoutes(serverEndpoints)
     }
   }
+
+  implicit class RichZServerEndpointRRoutes[R, I, E, O](se: ZServerEndpoint[R, I, E, O]) {
+    def toRoutesR(implicit serverOptions: Http4sServerOptions[Task]): URIO[R, HttpRoutes[Task]] = List(se).toRoutesR
+  }
+
+  implicit class RichZServerEndpointsRRoutes[R](serverEndpoints: List[ZServerEndpoint[R, _, _, _]]) {
+    def toRoutesR(implicit serverOptions: Http4sServerOptions[Task]): URIO[R, HttpRoutes[Task]] =
+      URIO.access[R] { env =>
+        val taskServerEndpoints = serverEndpoints.map(toTaskEndpointR(env, _))
+        new EndpointToHttp4sServer(serverOptions).toRoutes(taskServerEndpoints)
+      }
+  }
+
+  private def toTaskEndpointR[R, I, E, O](env: R, se: ZServerEndpoint[R, I, E, O]): ServerEndpoint[I, E, O, Any, Task] = {
+    ServerEndpoint(
+      se.endpoint,
+      _ => (i: I) => se.logic(new ZIOMonadError[R])(i).provide(env)
+    )
+  }
 }
