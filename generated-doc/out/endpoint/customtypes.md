@@ -88,6 +88,9 @@ Automatic codec derivation usually requires other implicits, such as:
 * codecs for individual form fields
 * schema of the custom type, through the `Schema[T]` implicit
 
+Note the derivation of e.g. circe json encoders/decoders and tapir schema are separate processes, and must be 
+hence configured separately.
+
 ## Schema derivation
 
 For case classes types, `Schema[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
