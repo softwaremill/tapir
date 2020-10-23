@@ -10,12 +10,14 @@ interpreted as:
 
 * a server, given the "business logic": a function, which computes output parameters based on input parameters. 
   Currently supported: 
-  * [Akka HTTP](https://tapir.softwaremill.com/en/latest/server/akkahttp.html) `Route`s/`Directive`s.
+  * [Akka HTTP](https://tapir.softwaremill.com/en/latest/server/akkahttp.html) `Route`s/`Directive`s
   * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
 * a client, which is a function from input parameters to output parameters. Currently supported: [sttp](https://tapir.softwaremill.com/en/latest/sttp.html).
-* documentation. Currently supported: [OpenAPI](https://tapir.softwaremill.com/en/latest/openapi.html).
+* documentation. Currently supported: 
+  * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
+  * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
 
 ## Teaser
 

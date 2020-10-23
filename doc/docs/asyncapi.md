@@ -29,7 +29,7 @@ val docs: AsyncAPI = echoWS.toAsyncAPI("Echo web socket", "1.0")
 ```
 
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
-class structure such as the `AstncAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
+class structure such as the `AsyncAPI` one can be made easier by using a lens library, e.g. [Quicklens](https://github.com/adamw/quicklens).
 
 The documentation is generated in a large part basing on [schemas](endpoint/codecs.md#schemas). Schemas can be
 [automatically derived and customised](endpoint/customtypes.md#schema-derivation).

@@ -10,7 +10,9 @@ interpreted as:
   * [Http4s](server/http4s.md) `HttpRoutes[F]`
   * [Finatra](server/finatra.md) `http.Controller`
 * a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.md).
-* documentation. Currently supported: [OpenAPI](openapi.md).
+* documentation. Currently supported: :
+  * [OpenAPI](docs/openapi.md).
+  * [AsyncAPI](docs/asyncapi.md).
 
 Tapir is licensed under Apache2, the source code is [available on GitHub](https://github.com/softwaremill/tapir).
 
