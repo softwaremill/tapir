@@ -2,6 +2,7 @@ import sbt._, Keys._
 import codegen._
 
 case class OpenapiCodegenTask(
+    inputYaml: File,
     dir: File,
     cacheDir: File
 ) {
@@ -29,7 +30,8 @@ case class OpenapiCodegenTask(
 
   def makeFile(file: File): Task[File] = {
     task {
-      val lines = MockGenerator.mockSource.lines.toSeq
+      val parsed = YamlParser.parseFile(IO.readLines(inputYaml).mkString("\n"))
+      val lines = BasicGenerator.generateObjects(parsed.right.get).lines.toSeq
       IO.writeLines(file, lines, IO.utf8)
       file
     }

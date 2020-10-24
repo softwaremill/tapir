@@ -642,7 +642,17 @@ lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
       a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)
     ),
     scriptedBufferLog := false,
-    sbtTestDirectory := sourceDirectory.value / "sbt-test"
+    sbtTestDirectory := sourceDirectory.value / "sbt-test",
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %% "circe-yaml" % Versions.circeYaml,
+      scalaTest % Test,
+      scalaCheck % Test,
+      scalaTestPlusScalaCheck % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.4.0" % Test,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test,
+    ),
   )
 
 // other

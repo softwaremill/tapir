@@ -28,14 +28,16 @@ object OpenapiCodegenPlugin extends AutoPlugin {
     val log = sLog.value
     log.info("Zipping file...")
     (((
+      swaggerFile,
       sourceManaged,
       streams
     ) flatMap {
       (
+          swaggerFile: File,
           srcDir: File,
           taskStreams: TaskStreams
       ) =>
-        OpenapiCodegenTask(srcDir, taskStreams.cacheDirectory).file
+        OpenapiCodegenTask(swaggerFile, srcDir, taskStreams.cacheDirectory).file
     }) map (Seq(_))).value
   }
 }
