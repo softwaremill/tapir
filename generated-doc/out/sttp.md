@@ -1,4 +1,4 @@
-## Using as an sttp client
+# Using as an sttp client
 
 Add the dependency:
 
@@ -34,3 +34,18 @@ customised and sent using any sttp backend. The response will then contain the d
 
 See  the [runnable example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExample.scala)
 for example usage.
+
+## Web sockets
+
+To interpret a web socket enddpoint, an additional streams-specific import is needed, so that the interpreter can
+convert sttp's `WebSocket` instance into a pipe. This logic is looked up via the `WebSocketToPipe` implicit.
+
+The required imports are as follows:
+
+```scala
+import sttp.tapir.client.sttp.ws.akkahttp._ // for akka-streams // for akka-streams
+import sttp.tapir.client.sttp.ws.fs2._      // for fs2
+```
+
+No additional dependencies are needed, as both of the above implementations are included in the main interpreter,]
+with dependencies on akka-streams and fs2 being marked as optional (hence these are not transitive).

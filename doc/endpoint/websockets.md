@@ -68,6 +68,8 @@ Refer to the documentation of interpreters for more details, as not all interpre
 When interpreting a web socket endpoint as a client, after applying the input parameters, the result is a pipe
 representing message processing as it happens on the server.
 
+Refer to the documentation of interpreters for more details, as there are interpreter-specific additional requirements.
+
 ## Interpreting as documentation
 
 Web socket endpoints can be interpreted into [AsyncAPI documentation](../docs/asyncapi.md).

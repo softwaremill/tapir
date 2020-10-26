@@ -23,18 +23,19 @@ class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] with WebSockets]
 
     val receives = Stream
       .repeatEval(ws.receive())
-      .evalMap[F, Option[RESP]] {
-        case _: WebSocketFrame.Close if !o.decodeCloseResponses => none.pure[F]
-        case _: WebSocketFrame.Pong if o.ignorePong             => none.pure[F]
+      .evalMap[F, Either[Unit, Option[RESP]]] { // left - ignore; right - close or response
+        case _: WebSocketFrame.Close if !o.decodeCloseResponses => (Right(None): Either[Unit, Option[RESP]]).pure[F]
+        case _: WebSocketFrame.Pong if o.ignorePong             => (Left(()): Either[Unit, Option[RESP]]).pure[F]
         case WebSocketFrame.Ping(p) if o.autoPongOnPing =>
-          ws.send(WebSocketFrame.Pong(p)).map(_ => none)
+          ws.send(WebSocketFrame.Pong(p)).map(_ => (Left(()): Either[Unit, Option[RESP]]))
         case f =>
           o.responses.decode(f) match {
             case failure: DecodeResult.Failure =>
               implicitly[MonadError[F, Throwable]].raiseError(new WebSocketFrameDecodeFailure(f, failure))
-            case DecodeResult.Value(v) => v.some.pure[F]
+            case DecodeResult.Value(v) => (Right(Some(v)): Either[Unit, Option[RESP]]).pure[F]
           }
       }
+      .collect { case Right(d) => d }
       .unNoneTerminate
 
     sends.drain.merge(receives)

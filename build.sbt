@@ -623,7 +623,8 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
       "com.softwaremill.sttp.client3" %% "core" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
