@@ -13,8 +13,8 @@ class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify product schema" in {
     val info1 = SObjectInfo("X")
     Schema(SProduct(info1, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger)))))
-      .modifyUnsafe[String]("f2")(_.description("test")) shouldBe Schema(
-      SProduct(info1, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger).description("test"))))
+      .modifyUnsafe[String]("f2")(_.description("test").default("f2")) shouldBe Schema(
+      SProduct(info1, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger).description("test").default("f2"))))
     )
   }
 
@@ -24,10 +24,10 @@ class SchemaTest extends AnyFlatSpec with Matchers {
 
     val nestedProduct = Schema(SProduct(info2, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger)))))
     val expectedNestedProduct =
-      Schema(SProduct(info2, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger).description("test")))))
+      Schema(SProduct(info2, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger).description("test").default("f2")))))
 
     Schema(SProduct(info1, List((FieldName("f3"), Schema(SString)), (FieldName("f4"), nestedProduct), (FieldName("f5"), Schema(SBoolean)))))
-      .modifyUnsafe[String]("f4", "f2")(_.description("test")) shouldBe
+      .modifyUnsafe[String]("f4", "f2")(_.description("test").default("f2")) shouldBe
       Schema(
         SProduct(
           info1,
@@ -63,10 +63,10 @@ class SchemaTest extends AnyFlatSpec with Matchers {
 
   it should "modify property of map value" in {
     Schema(SOpenProduct(SObjectInfo("Map", List("X")), Schema(SProduct(SObjectInfo("X"), List(FieldName("f1") -> Schema(SInteger))))))
-      .modifyUnsafe[Int](Schema.ModifyCollectionElements)(_.description("test")) shouldBe Schema(
+      .modifyUnsafe[Int](Schema.ModifyCollectionElements)(_.description("test").default("f2")) shouldBe Schema(
       SOpenProduct(
         SObjectInfo("Map", List("X")),
-        Schema(SProduct(SObjectInfo("X"), List(FieldName("f1") -> Schema(SInteger)))).description("test")
+        Schema(SProduct(SObjectInfo("X"), List(FieldName("f1") -> Schema(SInteger)))).description("test").default("f2")
       )
     )
   }
@@ -75,7 +75,7 @@ class SchemaTest extends AnyFlatSpec with Matchers {
     val openProductSchema =
       Schema(SOpenProduct(SObjectInfo("Map", List("X")), Schema(SProduct(SObjectInfo("X"), List(FieldName("f1") -> Schema(SInteger))))))
     openProductSchema
-      .modifyUnsafe[Nothing]()(_.description("test")) shouldBe openProductSchema.description("test")
+      .modifyUnsafe[Nothing]()(_.description("test").default("f2")) shouldBe openProductSchema.description("test").default("f2")
   }
 
   it should "generate one-of schema using the given discriminator" in {

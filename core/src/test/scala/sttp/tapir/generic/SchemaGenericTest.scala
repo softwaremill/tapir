@@ -4,7 +4,7 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType._
-import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, format, encodedName}
+import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, default, format, encodedName}
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.duration._
@@ -188,7 +188,7 @@ class SchemaGenericTest extends AnyFlatSpec with Matchers {
       SProduct(
         SObjectInfo("sttp.tapir.generic.I"),
         List(
-          (FieldName("int"), intSchema.description("some int field").format("int32")),
+          (FieldName("int"), intSchema.description("some int field").format("int32").default("1234")),
           (FieldName("noDesc"), longSchema),
           (FieldName("bool", "alternativeBooleanName"), implicitly[Schema[Option[Boolean]]].description("another optional boolean flag")),
           (
@@ -380,6 +380,7 @@ case class H[T](data: T)
 @description("class I")
 case class I(
     @description("some int field")
+    @default("1234")
     @format("int32")
     int: Int,
     noDesc: Long,

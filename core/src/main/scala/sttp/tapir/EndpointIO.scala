@@ -58,6 +58,7 @@ object EndpointTransput {
     def modifySchema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.modifySchema(modify), info)
 
     def description(d: String): ThisType[T] = copyWith(codec, info.description(d))
+    def default(d: T): ThisType[T] = copyWith(codec.modifySchema(_.default(d.toString)), info)
     def example(t: T): ThisType[T] = copyWith(codec, info.example(t))
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))

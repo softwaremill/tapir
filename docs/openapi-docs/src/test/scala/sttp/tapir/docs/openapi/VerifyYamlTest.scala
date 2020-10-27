@@ -662,7 +662,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_examples_of_list_and_not_list_types.yml")
     val actualYaml = endpoint.post
       .in(query[List[String]]("friends").example(List("bob", "alice")))
-      .in(query[String]("current-person").example("alan"))
+      .in(query[String]("current-person").example("alan").default("tom"))
       .in(jsonBody[Person].example(Person("bob", 23)))
       .toOpenAPI(Info("Entities", "1.0"))
       .toYaml

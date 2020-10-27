@@ -4,7 +4,7 @@ import com.github.ghik.silencer.silent
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.{Configuration, Derived}
-import sttp.tapir.{deprecated, description, format, encodedName, FieldName, Schema, SchemaType}
+import sttp.tapir.{deprecated, description, default, format, encodedName, FieldName, Schema, SchemaType}
 import SchemaMagnoliaDerivation.deriveInProgress
 
 import scala.collection.mutable
@@ -78,9 +78,12 @@ trait SchemaMagnoliaDerivation {
     val schemaWithDesc = annotations
       .collectFirst({ case ann: description => ann.text })
       .fold(schema)(schema.description)
+    val schemaWithDefault = annotations
+      .collectFirst({ case ann: default => ann.default })
+      .fold(schemaWithDesc)(schemaWithDesc.default)
     annotations
       .collectFirst({ case ann: format => ann.format })
-      .fold(schemaWithDesc)(schemaWithDesc.format)
+      .fold(schemaWithDefault)(schemaWithDefault.format)
       .deprecated(isDeprecated(annotations))
   }
 

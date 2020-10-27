@@ -23,6 +23,7 @@ case class Schema[T](
     schemaType: SchemaType,
     isOptional: Boolean = false,
     description: Option[String] = None,
+    default: Option[String] = None,
     format: Option[String] = None,
     deprecated: Boolean = false
 ) {
@@ -43,6 +44,8 @@ case class Schema[T](
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
+  def default(d: String): Schema[T] = copy(default = Some(d))
+
   def format(f: String): Schema[T] = copy(format = Some(f))
 
   def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
@@ -50,6 +53,8 @@ case class Schema[T](
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 
   def setDescription[U](path: T => U, description: String): Schema[T] = macro ModifySchemaMacro.setDescriptionMacro[T, U]
+
+  def setDefault[U](path: T => U, default: String): Schema[T] = macro ModifySchemaMacro.setDefaultMacro[T, U]
 
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
@@ -75,6 +80,8 @@ case class Schema[T](
 }
 
 class description(val text: String) extends StaticAnnotation
+
+class default(val default: String) extends StaticAnnotation
 
 class format(val format: String) extends StaticAnnotation
 

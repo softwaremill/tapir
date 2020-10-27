@@ -9,15 +9,15 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   behavior of "apply modification"
 
   it should "modify basic schema" in {
-    implicitly[Schema[String]].modify(x => x)(_.description("test")) shouldBe implicitly[Schema[String]]
-      .copy(description = Some("test"))
+    implicitly[Schema[String]].modify(x => x)(_.description("test").default("f2")) shouldBe implicitly[Schema[String]]
+      .copy(description = Some("test"), default = Some("f2"))
   }
 
   it should "modify product schema" in {
     val info1 = SObjectInfo("sttp.tapir.Person")
     implicitly[Schema[Person]]
-      .modify(_.age)(_.description("test")) shouldBe Schema(
-      SProduct(info1, List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).description("test"))))
+      .modify(_.age)(_.description("test").default("f2")) shouldBe Schema(
+      SProduct(info1, List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).description("test").default("f2"))))
     )
   }
 
@@ -26,10 +26,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     val info2 = SObjectInfo("sttp.tapir.Person")
 
     val expectedNestedProduct =
-      Schema(SProduct(info2, List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).description("test")))))
+      Schema(SProduct(info2, List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).description("test").default("f2")))))
 
     implicitly[Schema[DevTeam]]
-      .modify(_.p1.age)(_.description("test")) shouldBe
+      .modify(_.p1.age)(_.description("test").default("f2")) shouldBe
       Schema(SProduct(info1, List((FieldName("p1"), expectedNestedProduct), (FieldName("p2"), implicitly[Schema[Person]]))))
   }
 
@@ -89,17 +89,30 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
 
   it should "modify property of open product" in {
     implicitly[Schema[Team]]
-      .modify(_.v.each)(_.description("test")) shouldBe Schema(
+      .modify(_.v.each)(_.description("test").default("f2")) shouldBe Schema(
       SProduct(
         SObjectInfo("sttp.tapir.Team"),
-        List(FieldName("v") -> Schema(SOpenProduct(SObjectInfo("Map", List("Person")), implicitly[Schema[Person]].description("test"))))
+        List(FieldName("v") -> Schema(SOpenProduct(SObjectInfo("Map", List("Person")), implicitly[Schema[Person]].description("test").default("f2"))))
       )
     )
   }
 
   it should "modify open product" in {
     val schema = implicitly[Schema[Map[String, String]]]
-    schema.modify(x => x)(_.description("test")) shouldBe schema.description("test")
+    schema.modify(x => x)(_.description("test").default("f2")) shouldBe schema.description("test").default("f2")
+  }
+
+  behavior of "apply default"
+
+  it should "add default to product" in {
+    val expected = Schema(
+      SProduct(
+        SObjectInfo("sttp.tapir.Person"),
+        List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).default("34")))
+      )
+    )
+
+    implicitly[Schema[Person]].setDefault(_.age, "34") shouldBe expected
   }
 
   behavior of "apply description"
