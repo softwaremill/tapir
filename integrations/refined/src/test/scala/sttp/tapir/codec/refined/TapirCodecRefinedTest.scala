@@ -115,4 +115,15 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
           .out(jsonBody[List[Option[LimitedString]]])
     }
   }
+
+  "Using refined" should "compile when using tapir endpoints" in {
+    // this used to cause a:
+    // [error] java.lang.StackOverflowError
+    // [error] scala.reflect.internal.Types$TypeRef.foldOver(Types.scala:2376)
+    // [error] scala.reflect.internal.tpe.TypeMaps$IsRelatableCollector$.apply(TypeMaps.scala:1272)
+    // [error] scala.reflect.internal.tpe.TypeMaps$IsRelatableCollector$.apply(TypeMaps.scala:1267)
+    import eu.timepit.refined.auto._
+    import sttp.tapir._
+    endpoint.in("x")
+  }
 }
