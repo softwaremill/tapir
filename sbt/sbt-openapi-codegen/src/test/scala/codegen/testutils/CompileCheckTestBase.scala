@@ -1,7 +1,6 @@
 package codegen.testutils
 
 import org.scalactic.source
-import org.scalatest.Succeeded
 import org.scalatest.exceptions.{StackDepthException, TestFailedException}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -31,10 +30,10 @@ trait CompileCheckTestBase extends AnyFlatSpec with Matchers with Checkers {
     def shouldCompile(): Unit = {
       compileWithoutHeader(code) match {
         case util.Success(_) =>
-          Succeeded
+          ()
         case util.Failure(ex) =>
           throw new TestFailedException(
-            (sde: StackDepthException) => Some(s"The input strings not compiles; ${ex.getMessage}"),
+            (_: StackDepthException) => Some(s"The input strings not compiles; ${ex.getMessage}"),
             Some(ex),
             pos
           )

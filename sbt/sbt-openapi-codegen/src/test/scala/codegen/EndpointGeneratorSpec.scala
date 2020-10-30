@@ -8,7 +8,7 @@ import codegen.openapi.models.OpenapiModels.{
   OpenapiResponse,
   OpenapiResponseContent
 }
-import codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaRef, OpenapiSchemaString}
+import codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaString}
 import codegen.testutils.CompileCheckTestBase
 
 class EndpointGeneratorSpec extends CompileCheckTestBase {

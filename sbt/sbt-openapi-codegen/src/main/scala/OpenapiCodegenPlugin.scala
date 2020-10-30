@@ -1,5 +1,4 @@
 import sbt._, Keys._
-import sbt.io.{IO, Path}
 
 object OpenapiCodegenPlugin extends AutoPlugin {
 

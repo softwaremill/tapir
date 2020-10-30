@@ -13,7 +13,6 @@ import codegen.openapi.models.OpenapiModels.{
 import codegen.openapi.models.OpenapiSchemaType.{
   OpenapiSchemaArray,
   OpenapiSchemaInt,
-  OpenapiSchemaLong,
   OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaString

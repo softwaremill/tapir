@@ -1,7 +1,5 @@
 package codegen.testutils
 
-import scala.tools.reflect.ToolBoxError
-
 class CompileCheckTestBaseSpec extends CompileCheckTestBase {
   //Sure why not test the test :D
 

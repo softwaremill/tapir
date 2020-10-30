@@ -1,4 +1,4 @@
-import sbt._, Keys._
+import sbt._
 import codegen._
 
 case class OpenapiCodegenTask(
@@ -22,7 +22,7 @@ case class OpenapiCodegenTask(
   }
 
   val cachedCopyFile =
-    inputChanged(cacheDir / "sbt-openapi-codegen-inputs") { (inChanged, input: HashFileInfo) =>
+    inputChanged(cacheDir / "sbt-openapi-codegen-inputs") { (inChanged, _: HashFileInfo) =>
       if (inChanged || !outFile.exists) {
         IO.copyFile(tempFile, outFile, preserveLastModified = true)
       } // if

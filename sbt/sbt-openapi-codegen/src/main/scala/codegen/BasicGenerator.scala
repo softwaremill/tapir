@@ -1,22 +1,12 @@
 package codegen
 
-import codegen.openapi.models.OpenapiModels.{
-  OpenapiDocument,
-  OpenapiParameter,
-  OpenapiPath,
-  OpenapiRequestBody,
-  OpenapiResponse,
-  OpenapiResponseContent
-}
-import codegen.openapi.models.OpenapiSchemaType
+import codegen.openapi.models.OpenapiModels.OpenapiDocument
 import codegen.openapi.models.OpenapiSchemaType.{
-  OpenapiSchemaArray,
   OpenapiSchemaBoolean,
   OpenapiSchemaDouble,
   OpenapiSchemaFloat,
   OpenapiSchemaInt,
   OpenapiSchemaLong,
-  OpenapiSchemaObject,
   OpenapiSchemaRef,
   OpenapiSchemaSimpleType,
   OpenapiSchemaString
@@ -54,7 +44,7 @@ object BasicGenerator {
       |""".stripMargin
 
   def indent(i: Int)(str: String): String = {
-    str.linesIterator.map(" " * i + _ + "\n").mkString
+    str.linesIterator.map(" " * i + _).mkString("\n")
   }
 
   def mapSchemaSimpleTypeToType(osst: OpenapiSchemaSimpleType): (String, Boolean) = {
