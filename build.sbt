@@ -125,7 +125,7 @@ lazy val rootProject = (project in file("."))
       examples.projectRefs ++
       playground.projectRefs ++
       documentation.projectRefs ++
-      List(openapiCodegen.project): _*
+      openapiCodegen.projectRefs: _*
   )
 
 // core
@@ -632,9 +632,10 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   .dependsOn(core, clientTests % Test)
 
 import scala.collection.JavaConverters._
-lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
+lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
   .enablePlugins(SbtPlugin)
   .settings(commonSettings)
+  .jvmPlatform(scalaVersions = scala2_12Versions)
   .settings(
     name := "sbt-openapi-codegen",
     organization := "com.softwaremill.sttp.tapir",
@@ -655,8 +656,7 @@ lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.4.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     ),
-    scalaVersion := scala2_12
-  )
+  ).dependsOn(core % Test, circeJson % Test)
 
 // other
 
