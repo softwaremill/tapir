@@ -634,6 +634,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
 import scala.collection.JavaConverters._
 lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
   .enablePlugins(SbtPlugin)
+  .settings(commonSettings)
   .settings(
     name := "sbt-openapi-codegen",
     organization := "com.softwaremill.sttp.tapir",
@@ -653,7 +654,8 @@ lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
       scalaTestPlusScalaCheck % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.4.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
-    )
+    ),
+    scalaVersion := scala2_12
   )
 
 // other
