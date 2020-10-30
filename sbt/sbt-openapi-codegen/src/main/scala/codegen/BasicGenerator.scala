@@ -53,7 +53,7 @@ object BasicGenerator {
   def allEndpoints: String = "generatedEndpoints"
 
   def indent(i: Int)(str: String): String = {
-    str.lines.map(" " * i + _ + "\n").mkString
+    str.linesIterator.map(" " * i + _ + "\n").mkString
   }
 
   def urlMapper(url: String, parameters: Seq[OpenapiParameter]): String = {
