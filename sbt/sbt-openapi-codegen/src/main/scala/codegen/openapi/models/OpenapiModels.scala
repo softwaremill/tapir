@@ -1,0 +1,132 @@
+package codegen.openapi.models
+
+// https://swagger.io/specification/
+object OpenapiModels {
+
+  case class OpenapiDocument(
+      openapi: String,
+      // not used so not parsed; servers, contact, license, termsOfService
+      info: OpenapiInfo,
+      paths: Seq[OpenapiPath],
+      components: OpenapiComponent
+  )
+
+  case class OpenapiInfo(
+      // not used so not parsed; description
+      title: String,
+      version: String
+  )
+
+  case class OpenapiPath(
+      url: String,
+      methods: Seq[OpenapiPathMethod]
+  )
+
+  case class OpenapiPathMethod(
+      methodType: String,
+      parameters: Seq[OpenapiParameter],
+      responses: Seq[OpenapiResponse],
+      requestBody: Option[OpenapiRequestBody],
+      summary: Option[String] = None
+  )
+
+  case class OpenapiParameter(
+      name: String,
+      in: String,
+      required: Boolean,
+      description: Option[String],
+      schema: OpenapiSchemaType
+  )
+
+  case class OpenapiResponse(
+      code: String,
+      description: String,
+      content: Seq[OpenapiResponseContent]
+  )
+
+  case class OpenapiRequestBody(
+      required: Boolean,
+      contentType: String,
+      schema: OpenapiSchemaType
+  )
+
+  case class OpenapiResponseContent(
+      contentType: String,
+      schema: OpenapiSchemaType
+  )
+
+  /////////////////////////////////////////////////////////
+  // decoders
+  ////////////////////////////////////////////////////////
+
+  import io.circe._
+  import io.circe.generic.semiauto._
+  import cats.implicits._
+
+  implicit val OpenapiResponseContentDecoder: Decoder[Seq[OpenapiResponseContent]] = { (c: HCursor) =>
+    case class Holder(d: OpenapiSchemaType)
+    implicit val InnerDecoder: Decoder[Holder] = { (c: HCursor) =>
+      for {
+        schema <- c.downField("schema").as[OpenapiSchemaType]
+      } yield {
+        Holder(schema)
+      }
+    }
+    for {
+      responses <- c.as[Map[String, Holder]]
+    } yield {
+      responses.map { case (ct, s) => OpenapiResponseContent(ct, s.d) }.toSeq
+    }
+  }
+
+  implicit val OpenapiResponseDecoder: Decoder[Seq[OpenapiResponse]] = { (c: HCursor) =>
+    implicit val InnerDecoder: Decoder[(String, Seq[OpenapiResponseContent])] = { (c: HCursor) =>
+      for {
+        description <- c.downField("description").as[String]
+        content <- c.downField("content").as[Seq[OpenapiResponseContent]]
+      } yield {
+        (description, content)
+      }
+    }
+    for {
+      schema <- c.as[Map[String, (String, Seq[OpenapiResponseContent])]]
+    } yield {
+      schema.map { case (code, (desc, content)) =>
+        OpenapiResponse(code, desc, content)
+      }.toSeq
+    }
+  }
+
+  implicit val OpenapiInfoDecoder: Decoder[OpenapiInfo] = deriveDecoder[OpenapiInfo]
+  implicit val OpenapiParameterDecoder: Decoder[OpenapiParameter] = deriveDecoder[OpenapiParameter]
+  implicit val OpenapiRequestBodyDecoder: Decoder[OpenapiRequestBody] = deriveDecoder[OpenapiRequestBody]
+  implicit val OpenapiPathMethodDecoder: Decoder[Seq[OpenapiPathMethod]] = { (c: HCursor) =>
+    implicit val InnerDecoder: Decoder[(Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String])] = {
+      (c: HCursor) =>
+        for {
+          parameters <- c.downField("parameters").as[Seq[OpenapiParameter]]
+          responses <- c.downField("responses").as[Seq[OpenapiResponse]]
+          requestBody <- c.downField("requestBody").as[Option[OpenapiRequestBody]]
+          summary <- c.downField("summary").as[Option[String]]
+        } yield {
+          (parameters, responses, requestBody, summary)
+        }
+    }
+    for {
+      methods <- c.as[Map[String, (Seq[OpenapiParameter], Seq[OpenapiResponse], Option[OpenapiRequestBody], Option[String])]]
+    } yield {
+      methods.map { case (t, (p, r, rb, s)) => OpenapiPathMethod(t, p, r, rb, s) }.toSeq
+    }
+  }
+
+  implicit val OpenapiPathDecoder: Decoder[Seq[OpenapiPath]] = { (c: HCursor) =>
+    for {
+      paths <- c.as[Map[String, Seq[OpenapiPathMethod]]]
+    } yield {
+      paths.map { case (url, ms) => OpenapiPath(url, ms) }.toSeq
+    }
+  }
+
+  implicit val OpenapiDocumentDecoder: Decoder[OpenapiDocument] = deriveDecoder[OpenapiDocument]
+
+}
