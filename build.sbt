@@ -124,7 +124,8 @@ lazy val rootProject = (project in file("."))
       tests.projectRefs ++
       examples.projectRefs ++
       playground.projectRefs ++
-      documentation.projectRefs: _*
+      documentation.projectRefs ++
+      List(openapiCodegen.project): _*
   )
 
 // core
@@ -639,9 +640,8 @@ lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
     version := "0.1-SNAPSHOT",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
-    scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala.filter(
-      a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)
-    ),
+    scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala
+      .filter(a => Seq("-Xmx", "-Xms", "-XX", "-Dfile").exists(a.startsWith)),
     scriptedBufferLog := false,
     sbtTestDirectory := sourceDirectory.value / "sbt-test",
     libraryDependencies ++= Seq(
@@ -652,8 +652,8 @@ lazy val openapiCodegen = (project in file("sbt/sbt-openapi-codegen"))
       scalaCheck % Test,
       scalaTestPlusScalaCheck % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.4.0" % Test,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test,
-    ),
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+    )
   )
 
 // other
