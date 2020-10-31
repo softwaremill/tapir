@@ -8,6 +8,7 @@ import sttp.capabilities.Streams
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.StatusMapping
+import sttp.tapir.FileExtensions.TapirFile
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
@@ -81,6 +82,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody[Array[Byte]]
   def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody[ByteBuffer]
   def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody[InputStream]
+  def fileBody: EndpointIO.Body[TapirFile, TapirFile] = rawBinaryBody[TapirFile]
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
     anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)

@@ -6,7 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 @silent("never used")
-class FormCodecDerivationTestJVM extends AnyFlatSpec with Matchers {
+trait FormCodecDerivationTestExtensions extends AnyFlatSpec with Matchers {
   it should "report a user-friendly error when a codec for a parameter cannot be found" in {
     val error = CompileUtil.interceptEval("""
         |import sttp.tapir._

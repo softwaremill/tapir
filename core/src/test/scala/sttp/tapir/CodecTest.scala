@@ -20,7 +20,7 @@ import scala.reflect.ClassTag
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class CodecTest extends AnyFlatSpec with Matchers with Checkers {
+class CodecTest extends AnyFlatSpec with CodecTestExtensions with Matchers with Checkers {
 
   implicit val arbitraryUri: Arbitrary[Uri] = Arbitrary(for {
     scheme <- Gen.alphaLowerStr if scheme.nonEmpty

@@ -6,10 +6,11 @@ import sttp.tapir.SchemaType._
 import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, Validator, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.FileExtensions.TapirFile
 
 @silent("discarded")
 @silent("never used")
-class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
+class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDerivationTestExtensions with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
     case class Test1(f1: Int)
@@ -56,6 +57,20 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
       SProduct(
         SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"),
         List((FieldName("f1"), implicitly[Schema[String]]), (FieldName("f2"), implicitly[Schema[Int]]))
+      )
+    )
+  }
+
+  it should "use the right schema for a two-arg case class" in {
+    // given
+    case class Test1(f1: Part[TapirFile], f2: Int)
+    val codec = implicitly[MultipartCodec[Test1]].codec
+
+    // when
+    codec.schema.map(_.schemaType) shouldBe Some(
+      SProduct(
+        SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
+        List((FieldName("f1"), implicitly[Schema[TapirFile]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
     )
   }
@@ -113,6 +128,49 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
         )
       )
     )
+  }
+
+  it should "generate a codec for a case class with file part" in {
+    // given
+    case class Test1(f1: TapirFile)
+    val codec = implicitly[MultipartCodec[Test1]].codec
+    val f = createTempFile()
+    println(f.getName)
+
+    val x = codec.encode(Test1(f))
+    println(x.head)
+
+    try {
+      // when
+      codec.encode(Test1(f)) shouldBe List(Part("f1", f, fileName = Some(f.getName), contentType = Some(MediaType.ApplicationOctetStream)))
+      codec.decode(List(Part("f1", f, fileName = Some(f.getName)))) shouldBe DecodeResult.Value(Test1(f))
+    } finally {
+      f.delete()
+    }
+  }
+
+  it should "use the right schema for an optional file part with metadata 2" in {
+    // given
+    case class Test1(f1: Part[Option[TapirFile]], f2: Int)
+    val codec = implicitly[MultipartCodec[Test1]].codec
+    val f = createTempFile()
+
+    // when
+    try {
+      // when
+      codec.encode(Test1(Part("?", Some(f), otherDispositionParams = Map("a1" -> "b1")), 12)) shouldBe List(
+        Part("f1", f, otherDispositionParams = Map("a1" -> "b1"), contentType = Some(MediaType.ApplicationOctetStream)),
+        Part("f2", "12", contentType = Some(MediaType.TextPlain))
+      )
+      codec.decode(List(Part("f1", f, fileName = Some(f.getName)), Part("f2", "12"))) shouldBe DecodeResult.Value(
+        Test1(Part("f1", Some(f), fileName = Some(f.getName)), 12)
+      )
+    } finally {
+      f.delete()
+    }
+
+    codec.encode(Test1(Part("f1", None), 12)) shouldBe List(Part("f2", "12", contentType = Some(MediaType.TextPlain)))
+    codec.decode(List(Part("f2", "12"))) shouldBe DecodeResult.Value(Test1(Part("f1", None), 12))
   }
 
   it should "generate a codec for a one-arg case class with implicit validator" in {

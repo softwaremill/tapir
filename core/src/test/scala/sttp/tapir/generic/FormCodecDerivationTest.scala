@@ -9,7 +9,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 @silent("never used")
-class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
+class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestExtensions with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
     case class Test1(f1: Int)

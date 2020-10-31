@@ -5,7 +5,7 @@ import java.util.Date
 import sttp.tapir.DecodeResult
 import sttp.tapir.DecodeResult.Value
 
-class TapirJsonPlayTestsJVM extends TapirJsonPlayTests {
+trait TapirJsonPlayTestExtensions { self: TapirJsonPlayTests =>
   // JVM only because Play JSON provides no Reads[java.util.Date] on Scala.js
   it should "encode and decode using custom Date serializer" in {
     val d = new Date

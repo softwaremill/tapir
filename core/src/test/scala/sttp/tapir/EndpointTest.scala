@@ -9,7 +9,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 
-class EndpointTest extends AnyFlatSpec with Matchers {
+class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers {
   "endpoint" should "compile inputs" in {
     endpoint.in(query[String]("q1")): Endpoint[String, Unit, Unit, Any]
     endpoint.in(query[String]("q1").and(query[Int]("q2"))): Endpoint[(String, Int), Unit, Unit, Any]

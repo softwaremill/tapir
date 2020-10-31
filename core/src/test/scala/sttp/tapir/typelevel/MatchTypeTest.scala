@@ -4,7 +4,7 @@ import org.scalatest.AppendedClues
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class MatchTypeTest extends AnyFlatSpec with Matchers with AppendedClues {
+class MatchTypeTest extends AnyFlatSpec with MatchTypeTestExtensions with Matchers with AppendedClues {
   "MatchType" should "provide implicit for basic type" in {
 
     val string: Any = "String"
@@ -25,20 +25,6 @@ class MatchTypeTest extends AnyFlatSpec with Matchers with AppendedClues {
     matchTypeInt(bool) shouldBe false
     matchTypeInt(int) shouldBe true
   }
-
-  val t: Byte = 0xf.toByte
-  val s: Short = 1
-
-  val matcherAndTypes: Seq[(MatchType[_], Any)] = Seq(
-    implicitly[MatchType[String]] -> "string",
-    implicitly[MatchType[Boolean]] -> true,
-    implicitly[MatchType[Char]] -> 'c',
-    implicitly[MatchType[Byte]] -> t,
-    implicitly[MatchType[Short]] -> s,
-    implicitly[MatchType[Float]] -> 42.2f,
-    implicitly[MatchType[Double]] -> 42.2d,
-    implicitly[MatchType[Int]] -> 42
-  )
 
   it should "provide implicit for all primitive class returning true for other primitive type" in {
     matcherAndTypes.foreach({ (matcher: MatchType[_], a: Any) =>

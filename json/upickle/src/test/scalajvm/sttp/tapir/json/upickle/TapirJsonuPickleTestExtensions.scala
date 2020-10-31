@@ -6,7 +6,7 @@ import java.util.Date
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
 
-class TapirJsonuPickleTestsJVM extends TapirJsonuPickleTests {
+trait TapirJsonuPickleTestExtensions { self: TapirJsonuPickleTests =>
 
   // Custom Date serialization
 

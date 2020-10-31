@@ -10,7 +10,7 @@ import org.scalatest.matchers.should.Matchers
 
 object TapirJsonPlayCodec extends TapirJsonPlay
 
-class TapirJsonPlayTests extends AnyFlatSpec with Matchers {
+class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions with Matchers {
   case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
 
   object Customer {

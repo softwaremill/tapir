@@ -11,7 +11,7 @@ import org.scalatest.matchers.should.Matchers
 
 object TapirJsonuPickleCodec extends TapirJsonuPickle
 
-class TapirJsonuPickleTests extends AnyFlatSpec with Matchers {
+class TapirJsonuPickleTests extends AnyFlatSpec with TapirJsonuPickleTestExtensions with Matchers {
   case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
 
   object Customer {
