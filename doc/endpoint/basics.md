@@ -45,7 +45,7 @@ You can think of an endpoint as a function, which takes input parameters of type
 Note that the empty `endpoint` description maps no values to either error and success outputs, however errors
 are still represented and allowed to occur. If you would prefer to use an endpoint description, where
 errors can not happen, use `infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Nothing]`. This might be useful when
-interpreting endpoints [as a client](../sttp.md).
+interpreting endpoints [as a client](../client/sttp.md).
 
 ## Defining an endpoint
 
