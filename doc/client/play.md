@@ -39,17 +39,28 @@ After providing the input parameters, the two following are returned:
 
 Example:
 
-```scala
-val e: Endpoint[I, E, O, S] = ???
-val inputArgs: I = ???
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.client.play._
+import sttp.capabilities.akka.AkkaStreams
 
-val (req, responseParser) = e
-    .toPlayRequestUnsafe(s"http://localhost:9000")
-    .apply(inputArgs)
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
-val result: Future[Either[E, O]] = req
-    .execute()
-    .map(responseParser)
+import play.api.libs.ws.StandaloneWSClient
+
+def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
+  val e: Endpoint[I, E, O, R] = ???
+  val inputArgs: I = ???
+  
+  val (req, responseParser) = e
+      .toPlayRequestUnsafe(s"http://localhost:9000")
+      .apply(inputArgs)
+  
+  val result: Future[Either[E, O]] = req
+      .execute()
+      .map(responseParser)
+}
 ```
 
 ## Limitations

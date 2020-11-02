@@ -9,7 +9,11 @@ interpreted as:
   * [Akka HTTP](server/akkahttp.md) `Route`s/`Directive`s.
   * [Http4s](server/http4s.md) `HttpRoutes[F]`
   * [Finatra](server/finatra.md) `http.Controller`
-* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](sttp.md).
+  * [Play](server/play.md) `Route`
+* a client, which is a function from input parameters to output parameters.
+  Currently supported:
+  * [sttp](client/sttp.md).
+  * [Play](client/play.md).
 * documentation. Currently supported: :
   * [OpenAPI](docs/openapi.md).
   * [AsyncAPI](docs/asyncapi.md).
@@ -137,7 +141,8 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    :maxdepth: 2
    :caption: Client interpreters
    
-   sttp
+   client/sttp
+   client/play
 
 .. toctree::
    :maxdepth: 2
