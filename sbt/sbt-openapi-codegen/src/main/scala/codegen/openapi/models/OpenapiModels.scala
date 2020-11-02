@@ -61,7 +61,6 @@ object OpenapiModels {
 
   import io.circe._
   import io.circe.generic.semiauto._
-  import cats.implicits._
 
   implicit val OpenapiResponseContentDecoder: Decoder[Seq[OpenapiResponseContent]] = { (c: HCursor) =>
     case class Holder(d: OpenapiSchemaType)

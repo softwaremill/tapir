@@ -1,13 +1,11 @@
 package codegen
 
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
-import org.scalatestplus.scalacheck.Checkers
+import codegen.testutils.CompileCheckTestBase
 
-class BasicGeneratorSpec extends AnyFlatSpec with Matchers with Checkers {
+class BasicGeneratorSpec extends CompileCheckTestBase {
 
   it should "generate the bookshop example" in {
-    BasicGenerator.generateObjects(TestHelpers.myBookshopDoc)
+    BasicGenerator.generateObjects(TestHelpers.myBookshopDoc) shouldCompile ()
   }
 
 }

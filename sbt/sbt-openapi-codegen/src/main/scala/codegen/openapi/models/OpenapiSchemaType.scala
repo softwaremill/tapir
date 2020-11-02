@@ -230,7 +230,7 @@ object OpenapiSchemaType {
 
   implicit val OpenapiSchemaArrayDecoder: Decoder[OpenapiSchemaArray] = { (c: HCursor) =>
     for {
-      t <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not array!", c.history))(v => v == "array")
+      _ <- c.downField("type").as[String].ensure(DecodingFailure("Given type is not array!", c.history))(v => v == "array")
       f <- c.downField("items").as[OpenapiSchemaType]
       nb <- c.downField("nullable").as[Option[Boolean]]
     } yield {

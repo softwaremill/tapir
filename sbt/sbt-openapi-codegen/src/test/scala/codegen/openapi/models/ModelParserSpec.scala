@@ -1,22 +1,8 @@
 package codegen.openapi.models
 
 import codegen.TestHelpers
-import codegen.openapi.models.OpenapiModels.{
-  OpenapiDocument,
-  OpenapiInfo,
-  OpenapiParameter,
-  OpenapiPath,
-  OpenapiPathMethod,
-  OpenapiResponse,
-  OpenapiResponseContent
-}
-import codegen.openapi.models.OpenapiSchemaType.{
-  OpenapiSchemaArray,
-  OpenapiSchemaLong,
-  OpenapiSchemaObject,
-  OpenapiSchemaRef,
-  OpenapiSchemaString
-}
+import codegen.openapi.models.OpenapiModels.{OpenapiDocument, OpenapiResponse, OpenapiResponseContent}
+import codegen.openapi.models.OpenapiSchemaType.{OpenapiSchemaArray, OpenapiSchemaRef, OpenapiSchemaString}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
