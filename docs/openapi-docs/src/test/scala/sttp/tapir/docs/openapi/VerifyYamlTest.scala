@@ -1,5 +1,7 @@
 package sttp.tapir.docs.openapi
 
+import java.time.Instant
+
 import com.github.ghik.silencer.silent
 import io.circe.Json
 import io.circe.generic.auto._
@@ -870,6 +872,18 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val e = endpoint.in(header("Content-Type", "application/json"))
     val actualYaml = e.toOpenAPI(Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should use date-time format for Instant fields") {
+    val expectedYaml = loadYaml("expected_date_time.yml")
+
+    println(query[Instant]("instant").codec.schema)
+    val e = endpoint.in(query[Instant]("instant"))
+    val actualYaml = e.toOpenAPI(Info("Examples", "1.0")).toYaml
+    println(actualYaml)
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

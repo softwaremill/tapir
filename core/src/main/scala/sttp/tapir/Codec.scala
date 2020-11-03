@@ -112,41 +112,49 @@ object Codec extends FormCodecDerivation {
     }
   def idPlain[L](s: Option[Schema[L]] = None): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
 
-  implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Some(Schema(SchemaType.SString)))
+  implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Some(Schema.schemaForString))
 
-  implicit val byte: Codec[String, Byte, TextPlain] = stringCodec[Byte](_.toByte)
-  implicit val short: Codec[String, Short, TextPlain] = stringCodec[Short](_.toShort)
-  implicit val int: Codec[String, Int, TextPlain] = stringCodec[Int](_.toInt)
-  implicit val long: Codec[String, Long, TextPlain] = stringCodec[Long](_.toLong)
-  implicit val float: Codec[String, Float, TextPlain] = stringCodec[Float](_.toFloat)
-  implicit val double: Codec[String, Double, TextPlain] = stringCodec[Double](_.toDouble)
-  implicit val boolean: Codec[String, Boolean, TextPlain] = stringCodec[Boolean](_.toBoolean)
-  implicit val uuid: Codec[String, UUID, TextPlain] = stringCodec[UUID](UUID.fromString)
-  implicit val bigDecimal: Codec[String, BigDecimal, TextPlain] = stringCodec[BigDecimal](BigDecimal(_))
-  implicit val javaBigDecimal: Codec[String, JBigDecimal, TextPlain] = stringCodec[JBigDecimal](new JBigDecimal(_))
-  implicit val localTime: Codec[String, LocalTime, TextPlain] = string.map(LocalTime.parse(_))(DateTimeFormatter.ISO_LOCAL_TIME.format)
-  implicit val localDate: Codec[String, LocalDate, TextPlain] = string.map(LocalDate.parse(_))(DateTimeFormatter.ISO_LOCAL_DATE.format)
+  implicit val byte: Codec[String, Byte, TextPlain] = stringCodec[Byte](_.toByte).schema(Schema.schemaForByte)
+  implicit val short: Codec[String, Short, TextPlain] = stringCodec[Short](_.toShort).schema(Schema.schemaForShort)
+  implicit val int: Codec[String, Int, TextPlain] = stringCodec[Int](_.toInt).schema(Schema.schemaForInt)
+  implicit val long: Codec[String, Long, TextPlain] = stringCodec[Long](_.toLong).schema(Schema.schemaForLong)
+  implicit val float: Codec[String, Float, TextPlain] = stringCodec[Float](_.toFloat).schema(Schema.schemaForFloat)
+  implicit val double: Codec[String, Double, TextPlain] = stringCodec[Double](_.toDouble).schema(Schema.schemaForDouble)
+  implicit val boolean: Codec[String, Boolean, TextPlain] = stringCodec[Boolean](_.toBoolean).schema(Schema.schemaForBoolean)
+  implicit val uuid: Codec[String, UUID, TextPlain] = stringCodec[UUID](UUID.fromString).schema(Schema.schemaForUUID)
+  implicit val bigDecimal: Codec[String, BigDecimal, TextPlain] = stringCodec[BigDecimal](BigDecimal(_)).schema(Schema.schemaForBigDecimal)
+  implicit val javaBigDecimal: Codec[String, JBigDecimal, TextPlain] =
+    stringCodec[JBigDecimal](new JBigDecimal(_)).schema(Schema.schemaForJBigDecimal)
+  implicit val localTime: Codec[String, LocalTime, TextPlain] =
+    string.map(LocalTime.parse(_))(DateTimeFormatter.ISO_LOCAL_TIME.format).schema(Schema.schemaForLocalTime)
+  implicit val localDate: Codec[String, LocalDate, TextPlain] =
+    string.map(LocalDate.parse(_))(DateTimeFormatter.ISO_LOCAL_DATE.format).schema(Schema.schemaForLocalDate)
   implicit val offsetDateTime: Codec[String, OffsetDateTime, TextPlain] =
-    string.map(OffsetDateTime.parse(_))(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format)
+    string.map(OffsetDateTime.parse(_))(DateTimeFormatter.ISO_OFFSET_DATE_TIME.format).schema(Schema.schemaForOffsetDateTime)
   implicit val zonedDateTime: Codec[String, ZonedDateTime, TextPlain] =
-    string.map(ZonedDateTime.parse(_))(DateTimeFormatter.ISO_ZONED_DATE_TIME.format)
-  implicit val instant: Codec[String, Instant, TextPlain] = string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format)
-  implicit val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant)
-  implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = stringCodec[ZoneOffset](ZoneOffset.of)
-  implicit val duration: Codec[String, Duration, TextPlain] = stringCodec[Duration](Duration.parse)
-  implicit val offsetTime: Codec[String, OffsetTime, TextPlain] = string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format)
-  implicit val scalaDuration: Codec[String, SDuration, TextPlain] = stringCodec[SDuration](SDuration.apply)
-  implicit val localDateTime: Codec[String, LocalDateTime, TextPlain] = string.mapDecode { l =>
-    try {
+    string.map(ZonedDateTime.parse(_))(DateTimeFormatter.ISO_ZONED_DATE_TIME.format).schema(Schema.schemaForZonedDateTime)
+  implicit val instant: Codec[String, Instant, TextPlain] =
+    string.map(Instant.parse(_))(DateTimeFormatter.ISO_INSTANT.format).schema(Schema.schemaForInstant)
+  implicit val date: Codec[String, Date, TextPlain] = instant.map(Date.from(_))(_.toInstant).schema(Schema.schemaForDate)
+  implicit val zoneOffset: Codec[String, ZoneOffset, TextPlain] = stringCodec[ZoneOffset](ZoneOffset.of).schema(Schema.schemaForZoneOffset)
+  implicit val duration: Codec[String, Duration, TextPlain] = stringCodec[Duration](Duration.parse).schema(Schema.schemaForJavaDuration)
+  implicit val offsetTime: Codec[String, OffsetTime, TextPlain] =
+    string.map(OffsetTime.parse(_))(DateTimeFormatter.ISO_OFFSET_TIME.format).schema(Schema.schemaForOffsetTime)
+  implicit val scalaDuration: Codec[String, SDuration, TextPlain] =
+    stringCodec[SDuration](SDuration.apply).schema(Schema.schemaForScalaDuration)
+  implicit val localDateTime: Codec[String, LocalDateTime, TextPlain] = string
+    .mapDecode { l =>
       try {
-        Value(LocalDateTime.parse(l))
+        try {
+          Value(LocalDateTime.parse(l))
+        } catch {
+          case _: DateTimeParseException => Value(OffsetDateTime.parse(l).toLocalDateTime)
+        }
       } catch {
-        case _: DateTimeParseException => Value(OffsetDateTime.parse(l).toLocalDateTime)
+        case e: Exception => Error(l, e)
       }
-    } catch {
-      case e: Exception => Error(l, e)
-    }
-  }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
+    }(h => OffsetDateTime.of(h, ZoneOffset.UTC).toString)
+    .schema(Schema.schemaForLocalDateTime)
   implicit val uri: PlainCodec[Uri] =
     string.mapDecode(raw => Uri.parse(raw).fold(e => DecodeResult.Error(raw, new IllegalArgumentException(e)), DecodeResult.Value(_)))(
       _.toString()
@@ -156,12 +164,12 @@ object Codec extends FormCodecDerivation {
     string.map(parse)(_.toString).schema(implicitly[Schema[T]])
 
   implicit val byteArray: Codec[Array[Byte], Array[Byte], OctetStream] =
-    id[Array[Byte], OctetStream](OctetStream(), Some(Schema(SchemaType.SBinary)))
+    id[Array[Byte], OctetStream](OctetStream(), Some(Schema.schemaForByteArray))
   implicit val inputStream: Codec[InputStream, InputStream, OctetStream] =
-    id[InputStream, OctetStream](OctetStream(), Some(Schema(SchemaType.SBinary)))
+    id[InputStream, OctetStream](OctetStream(), Some(Schema.schemaForInputStream))
   implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
-    id[ByteBuffer, OctetStream](OctetStream(), Some(Schema(SchemaType.SBinary)))
-  implicit val file: Codec[File, File, OctetStream] = id[File, OctetStream](OctetStream(), Some(Schema(SchemaType.SBinary)))
+    id[ByteBuffer, OctetStream](OctetStream(), Some(Schema.schemaForByteBuffer))
+  implicit val file: Codec[File, File, OctetStream] = id[File, OctetStream](OctetStream(), Some(Schema.schemaForFile))
   implicit val path: Codec[File, Path, OctetStream] = file.map((_: File).toPath)(_.toFile)
 
   implicit val formSeqCodecUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeqCodec(StandardCharsets.UTF_8)

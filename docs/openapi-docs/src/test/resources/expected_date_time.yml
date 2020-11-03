@@ -1,0 +1,18 @@
+openapi: 3.0.3
+info:
+  title: Examples
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: instant
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: ''
