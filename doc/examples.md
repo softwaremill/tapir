@@ -27,6 +27,9 @@ The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/
 To see an example project using Tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) 
 using tapir and http4s.
 
+For a quick start using http4s and tapir you can use [a gitter8 template](https://codeberg.org/wegtam/http4s-tapir.g8).
+A project is created via: `sbt new https://codeberg.org/wegtam/http4s-tapir.g8.git`
+
 ## Blogs, articles
 
 * [Three easy endpoints](https://blog.softwaremill.com/three-easy-endpoints-a6cbd52b0a6e)
