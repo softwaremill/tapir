@@ -27,8 +27,12 @@ The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/
 To see an example project using Tapir, [check out this Todo-Backend](https://github.com/hejfelix/tapir-http4s-todo-mvc) 
 using tapir and http4s.
 
+For a quick start using http4s and tapir you can use [a gitter8 template](https://codeberg.org/wegtam/http4s-tapir.g8).
+A new project can be created using: `sbt new https://codeberg.org/wegtam/http4s-tapir.g8.git`
+
 ## Blogs, articles
 
+* [Designing tapir's WebSockets support](https://blog.softwaremill.com/designing-tapirs-websockets-support-ff1573166368)
 * [Three easy endpoints](https://blog.softwaremill.com/three-easy-endpoints-a6cbd52b0a6e)
 * [tAPIr’s Endpoint meets ZIO’s IO](https://blog.softwaremill.com/tapirs-endpoint-meets-zio-s-io-3278099c5e10)
 * [Describe, then interpret: HTTP endpoints using tapir](https://blog.softwaremill.com/describe-then-interpret-http-endpoints-using-tapir-ac139ba565b0)
