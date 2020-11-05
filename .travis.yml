@@ -1,4 +1,6 @@
 language: scala
+addons:
+  chrome: stable
 jdk:
   - openjdk11
 dist: bionic
