@@ -1,6 +1,6 @@
 package sttp.tapir.generic.internal
 
-import sttp.tapir.MultipartCodec
+import sttp.tapir.{MultipartCodec, encodedName}
 import sttp.tapir.generic.Configuration
 
 import scala.annotation.tailrec
@@ -30,7 +30,7 @@ object MultipartCodecDerivation {
       }
 
     val t = weakTypeOf[T]
-    val util = new CaseClassUtil[c.type, T](c)
+    val util = new CaseClassUtil[c.type, T](c, "multipart code")
     val fields = util.fields
 
     def fieldIsPart(field: Symbol): Boolean = field.typeSignature.typeSymbol.fullName.startsWith("sttp.model.Part")
@@ -79,9 +79,10 @@ object MultipartCodecDerivation {
       (field, codec)
     }
 
+    val encodedNameType = c.weakTypeOf[encodedName]
     val partCodecPairs = fieldsWithCodecs.map { case (field, (bodyType, codec)) =>
       val fieldName = field.name.decodedName.toString
-      val encodedName = util.getEncodedName(field)
+      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
       q"""$encodedName.getOrElse($conf.toEncodedName($fieldName)) -> sttp.tapir.PartCodec($bodyType, $codec)"""
     }
 
@@ -90,7 +91,7 @@ object MultipartCodecDerivation {
     val encodeParams: Iterable[Tree] = fields.map { field =>
       val fieldName = field.name.asInstanceOf[TermName]
       val fieldNameAsString = fieldName.decodedName.toString
-      val encodedName = util.getEncodedName(field)
+      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
       val transformedName = q"val transformedName = $encodedName.getOrElse($conf.toEncodedName($fieldNameAsString))"
 
       if (fieldIsPart(field)) {
@@ -116,7 +117,7 @@ object MultipartCodecDerivation {
 
     val decodeParams = fields.map { field =>
       val fieldName = field.name.decodedName.toString
-      val encodedName = util.getEncodedName(field)
+      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
       if (fieldIsPart(field)) {
         q"""val transformedName = $encodedName.getOrElse($conf.toEncodedName($fieldName))
             partsByName(transformedName)"""
