@@ -24,6 +24,13 @@ When interpreting a route as a server, it is useful to define the authentication
 authentication logic among multiple endpoints easily. See [server logic](../server/logic.md) for more
 details.
 
+## Caveat emptor
+
+All endpoints defined with an input auf `auth.xxx` expect the input to be provided. Please note that this implies that
+the headers needed for basic authentication will not be rendered by tapir automatically. Long story short: If you
+define `endpoint.get.in("path").in(auth.basic[UsernamePassword])` then your browser will _not_ show you a password
+prompt as you might expect. Instead you'll get an error message about missing headers.
+
 ## Next
 
 Read on about [streaming support](streaming.md).
