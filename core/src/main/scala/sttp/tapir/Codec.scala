@@ -11,7 +11,6 @@ import java.util.{Base64, Date, UUID}
 import sttp.model._
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
-import sttp.tapir.FileExtensions.TapirFile
 import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import sttp.tapir.internal._
 import sttp.tapir.model.UsernamePassword

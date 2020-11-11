@@ -1,3 +1,5 @@
 package sttp.tapir
 
-trait TapirExtensions
+trait TapirExtensions {
+  type TapirFile = org.scalajs.dom.File
+}

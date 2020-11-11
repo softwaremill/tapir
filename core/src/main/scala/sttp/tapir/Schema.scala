@@ -7,7 +7,6 @@ import java.time._
 import java.util.{Date, UUID}
 
 import sttp.model.Part
-import sttp.tapir.FileExtensions.TapirFile
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
 import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
