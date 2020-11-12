@@ -70,7 +70,14 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
 )
 
 // run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ browserTestSettings
+val commonJsSettings = commonSettings ++ browserTestSettings ++ Seq(
+  // slow down for CI
+  Test / parallelExecution := false,
+  // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
+  scalaJSLinkerConfig ~= {
+    _.withBatchMode(System.getenv("CONTINUOUS_INTEGRATION") == "true")
+  }
+)
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
