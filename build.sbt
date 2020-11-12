@@ -1,5 +1,6 @@
 import java.util.concurrent.atomic.AtomicInteger
 
+import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import sbtrelease.ReleaseStateTransformations.{
   checkSnapshotDependencies,
   commitReleaseVersion,
@@ -68,73 +69,8 @@ val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   }
 )
 
-lazy val downloadChromeDriver = taskKey[Unit]("Download chrome driver corresponding to installed google-chrome version")
-Global / downloadChromeDriver := {
-  if (java.nio.file.Files.notExists(new File("target", "chromedriver").toPath)) {
-    println("ChromeDriver binary file not found. Detecting google-chrome version...")
-    import sys.process._
-    val osName = sys.props("os.name")
-    val isMac = osName.toLowerCase.contains("mac")
-    val isWin = osName.toLowerCase.contains("win")
-    val chromeVersionExecutable =
-      if (isMac)
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-      else "google-chrome"
-    val chromeVersion = Seq(chromeVersionExecutable, "--version").!!.split(' ')(2)
-    println(s"Detected google-chrome version: $chromeVersion")
-    val withoutLastPart = chromeVersion.split('.').dropRight(1).mkString(".")
-    println(s"Selected release: $withoutLastPart")
-    val latestVersion =
-      IO.readLinesURL(new URL(s"https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$withoutLastPart")).mkString
-    val platformDependentName = if (isMac) {
-      "chromedriver_mac64.zip"
-    } else if (isWin) {
-      "chromedriver_win32.zip"
-    } else {
-      "chromedriver_linux64.zip"
-    }
-    println(s"Downloading chrome driver version $latestVersion for $osName")
-    IO.unzipURL(
-      new URL(s"https://chromedriver.storage.googleapis.com/$latestVersion/$platformDependentName"),
-      new File("target")
-    )
-    IO.chmod("rwxrwxr-x", new File("target", "chromedriver"))
-  } else {
-    println("Detected chromedriver binary file, skipping downloading.")
-  }
-}
-
 // run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ Seq(
-  // slow down for CI
-  Test / parallelExecution := false,
-  // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
-  scalaJSLinkerConfig ~= {
-    _.withBatchMode(System.getenv("CONTINUOUS_INTEGRATION") == "true")
-  },
-  jsEnv in Test := {
-    val debugging = false // set to true to help debugging
-    System.setProperty("webdriver.chrome.driver", "target/chromedriver")
-    new org.scalajs.jsenv.selenium.SeleniumJSEnv(
-      {
-        val options = new org.openqa.selenium.chrome.ChromeOptions()
-        val args = Seq(
-          "auto-open-devtools-for-tabs", // devtools needs to be open to capture network requests
-          "no-sandbox",
-          "allow-file-access-from-files" // change the origin header from 'null' to 'file'
-        ) ++ (if (debugging) Seq.empty else Seq("headless"))
-        options.addArguments(args: _*)
-        val capabilities = org.openqa.selenium.remote.DesiredCapabilities.chrome()
-        capabilities.setCapability(org.openqa.selenium.chrome.ChromeOptions.CAPABILITY, options)
-        capabilities
-      },
-      org.scalajs.jsenv.selenium.SeleniumJSEnv.Config().withKeepAlive(debugging)
-    )
-  },
-  test in Test := (test in Test)
-    .dependsOn(downloadChromeDriver in Global)
-    .value
-)
+val commonJsSettings = commonSettings ++ browserTestSettings
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
@@ -320,7 +256,7 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
-      ),
+      )
     )
   )
   .dependsOn(core, circeJson % Test)
@@ -800,8 +736,9 @@ lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %% "scalacheck-toolbox-datetime" % "0.4.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
-    ),
-  ).dependsOn(core % Test, circeJson % Test)
+    )
+  )
+  .dependsOn(core % Test, circeJson % Test)
 
 // other
 
