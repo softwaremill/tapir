@@ -60,7 +60,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     releaseStepCommand("sonatypeBundleRelease"),
     pushChanges
   ),
-  ideSkipProject := (scalaVersion.value == scala2_13)
+  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS")
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
