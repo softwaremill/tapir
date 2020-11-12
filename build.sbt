@@ -1,6 +1,7 @@
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
+import sbt.Reference.display
 import sbtrelease.ReleaseStateTransformations.{
   checkSnapshotDependencies,
   commitReleaseVersion,
@@ -92,56 +93,67 @@ lazy val loggerDependencies = Seq(
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
 )
 
+lazy val allAggregates = core.projectRefs ++
+  cats.projectRefs ++
+  enumeratum.projectRefs ++
+  refined.projectRefs ++
+  zio.projectRefs ++
+  circeJson.projectRefs ++
+  jsoniterScala.projectRefs ++
+  playJson.projectRefs ++
+  sprayJson.projectRefs ++
+  uPickleJson.projectRefs ++
+  tethysJson.projectRefs ++
+  apispecModel.projectRefs ++
+  openapiModel.projectRefs ++
+  openapiCirce.projectRefs ++
+  openapiCirceYaml.projectRefs ++
+  asyncapiModel.projectRefs ++
+  asyncapiCirce.projectRefs ++
+  asyncapiCirceYaml.projectRefs ++
+  apispecDocs.projectRefs ++
+  openapiDocs.projectRefs ++
+  asyncapiDocs.projectRefs ++
+  swaggerUiAkka.projectRefs ++
+  redocAkka.projectRefs ++
+  swaggerUiHttp4s.projectRefs ++
+  redocHttp4s.projectRefs ++
+  swaggerUiFinatra.projectRefs ++
+  swaggerUiPlay.projectRefs ++
+  redocPlay.projectRefs ++
+  serverTests.projectRefs ++
+  akkaHttpServer.projectRefs ++
+  http4sServer.projectRefs ++
+  sttpStubServer.projectRefs ++
+  finatraServer.projectRefs ++
+  finatraServerCats.projectRefs ++
+  playServer.projectRefs ++
+  vertxServer.projectRefs ++
+  zioServer.projectRefs ++
+  sttpClient.projectRefs ++
+  playClient.projectRefs ++
+  tests.projectRefs ++
+  examples.projectRefs ++
+  playground.projectRefs ++
+  documentation.projectRefs ++
+  openapiCodegen.projectRefs
+
+val testJVM = taskKey[Unit]("Test JVM projects")
+val testJS = taskKey[Unit]("Test JS projects")
+
+def filterProject(p: String => Boolean) =
+  ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
+
 lazy val rootProject = (project in file("."))
   .settings(commonSettings)
   .settings(mimaPreviousArtifacts := Set.empty)
-  .settings(publishArtifact := false, name := "tapir")
-  .aggregate(
-    core.projectRefs ++
-      cats.projectRefs ++
-      enumeratum.projectRefs ++
-      refined.projectRefs ++
-      zio.projectRefs ++
-      circeJson.projectRefs ++
-      jsoniterScala.projectRefs ++
-      playJson.projectRefs ++
-      sprayJson.projectRefs ++
-      uPickleJson.projectRefs ++
-      tethysJson.projectRefs ++
-      apispecModel.projectRefs ++
-      openapiModel.projectRefs ++
-      openapiCirce.projectRefs ++
-      openapiCirceYaml.projectRefs ++
-      asyncapiModel.projectRefs ++
-      asyncapiCirce.projectRefs ++
-      asyncapiCirceYaml.projectRefs ++
-      apispecDocs.projectRefs ++
-      openapiDocs.projectRefs ++
-      asyncapiDocs.projectRefs ++
-      swaggerUiAkka.projectRefs ++
-      redocAkka.projectRefs ++
-      swaggerUiHttp4s.projectRefs ++
-      redocHttp4s.projectRefs ++
-      swaggerUiFinatra.projectRefs ++
-      swaggerUiPlay.projectRefs ++
-      redocPlay.projectRefs ++
-      serverTests.projectRefs ++
-      akkaHttpServer.projectRefs ++
-      http4sServer.projectRefs ++
-      sttpStubServer.projectRefs ++
-      finatraServer.projectRefs ++
-      finatraServerCats.projectRefs ++
-      playServer.projectRefs ++
-      vertxServer.projectRefs ++
-      zioServer.projectRefs ++
-      sttpClient.projectRefs ++
-      playClient.projectRefs ++
-      tests.projectRefs ++
-      examples.projectRefs ++
-      playground.projectRefs ++
-      documentation.projectRefs ++
-      openapiCodegen.projectRefs: _*
+  .settings(
+    publishArtifact := false,
+    name := "tapir",
+    testJVM := (test in Test).all(filterProject(p => !p.contains("JS") && !p.contains("Native"))).value,
+    testJS := (test in Test).all(filterProject(_.contains("JS"))).value
   )
+  .aggregate(allAggregates: _*)
 
 // core
 
