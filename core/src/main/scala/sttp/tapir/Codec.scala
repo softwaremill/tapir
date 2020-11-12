@@ -1,10 +1,9 @@
 package sttp.tapir
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-import java.nio.file.Path
 import java.time._
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.util.{Base64, Date, UUID}
@@ -97,7 +96,7 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
     }
 }
 
-object Codec extends FormCodecDerivation {
+object Codec extends CodecExtensions with FormCodecDerivation {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
@@ -169,8 +168,6 @@ object Codec extends FormCodecDerivation {
     id[InputStream, OctetStream](OctetStream(), Some(Schema.schemaForInputStream))
   implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
     id[ByteBuffer, OctetStream](OctetStream(), Some(Schema.schemaForByteBuffer))
-  implicit val file: Codec[File, File, OctetStream] = id[File, OctetStream](OctetStream(), Some(Schema.schemaForFile))
-  implicit val path: Codec[File, Path, OctetStream] = file.map((_: File).toPath)(_.toFile)
 
   implicit val formSeqCodecUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeqCodec(StandardCharsets.UTF_8)
   implicit val formMapCodecUtf8: Codec[String, Map[String, String], XWwwFormUrlencoded] = formMapCodec(StandardCharsets.UTF_8)
@@ -520,7 +517,7 @@ object RawBodyType {
   implicit case object ByteArrayBody extends Binary[Array[Byte]]
   implicit case object ByteBufferBody extends Binary[ByteBuffer]
   implicit case object InputStreamBody extends Binary[InputStream]
-  implicit case object FileBody extends Binary[File]
+  implicit case object FileBody extends Binary[TapirFile]
 
   case class MultipartBody(partTypes: Map[String, RawBodyType[_]], defaultType: Option[RawBodyType[_]]) extends RawBodyType[Seq[RawPart]] {
     def partType(name: String): Option[RawBodyType[_]] = partTypes.get(name).orElse(defaultType)

@@ -1,18 +1,15 @@
 package sttp.tapir.generic
 
-import java.io.File
-
 import com.github.ghik.silencer.silent
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.SchemaType._
-import sttp.tapir.util.CompileUtil
-import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, Validator, encodedName}
+import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, Validator, TapirFile, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 @silent("discarded")
 @silent("never used")
-class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
+class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDerivationTestExtensions with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
     case class Test1(f1: Int)
@@ -49,17 +46,6 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
     codec.decode(createStringParts(List(("f2", "10")))) shouldBe DecodeResult.Value(Test4(None, 10))
   }
 
-  it should "report a user-friendly error when a codec for a parameter cannot be found" in {
-    val error = CompileUtil.interceptEval("""
-                                            |import sttp.tapir._
-                                            |trait NoCodecForThisTrait
-                                            |case class Test5(f1: String, f2: NoCodecForThisTrait)
-                                            |implicitly[MultipartCodec[Test5]]
-                                            |""".stripMargin)
-
-    error.message should include("Cannot find a codec between a List[T] for some basic type T and: NoCodecForThisTrait")
-  }
-
   it should "use the right schema for a case class with part metadata" in {
     // given
     case class Test6(f1: String, f2: Int)
@@ -76,14 +62,14 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
 
   it should "use the right schema for a two-arg case class" in {
     // given
-    case class Test1(f1: Part[File], f2: Int)
+    case class Test1(f1: Part[TapirFile], f2: Int)
     val codec = implicitly[MultipartCodec[Test1]].codec
 
     // when
     codec.schema.map(_.schemaType) shouldBe Some(
       SProduct(
         SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
-        List((FieldName("f1"), implicitly[Schema[File]]), (FieldName("f2"), implicitly[Schema[Int]]))
+        List((FieldName("f1"), implicitly[Schema[TapirFile]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
     )
   }
@@ -145,9 +131,13 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
 
   it should "generate a codec for a case class with file part" in {
     // given
-    case class Test1(f1: File)
+    case class Test1(f1: TapirFile)
     val codec = implicitly[MultipartCodec[Test1]].codec
-    val f = File.createTempFile("tapir", "test")
+    val f = createTempFile()
+    println(f.getName)
+
+    val x = codec.encode(Test1(f))
+    println(x.head)
 
     try {
       // when
@@ -160,9 +150,9 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with Matchers {
 
   it should "use the right schema for an optional file part with metadata 2" in {
     // given
-    case class Test1(f1: Part[Option[File]], f2: Int)
+    case class Test1(f1: Part[Option[TapirFile]], f2: Int)
     val codec = implicitly[MultipartCodec[Test1]].codec
-    val f = File.createTempFile("tapir", "test")
+    val f = createTempFile()
 
     // when
     try {

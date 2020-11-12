@@ -1,9 +1,8 @@
 package sttp.tapir
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
-import java.nio.file.Path
 import java.time._
 import java.util.{Date, UUID}
 
@@ -82,7 +81,7 @@ class deprecated extends StaticAnnotation
 
 class encodedName(val name: String) extends StaticAnnotation
 
-object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
+object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPrioritySchema {
   val ModifyCollectionElements = "each"
 
   implicit val schemaForString: Schema[String] = Schema(SString)
@@ -94,8 +93,7 @@ object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber).format("double")
   implicit val schemaForBoolean: Schema[Boolean] = Schema(SBoolean)
   implicit val schemaForUnit: Schema[Unit] = Schema(SProduct.Empty)
-  implicit val schemaForFile: Schema[File] = Schema(SBinary)
-  implicit val schemaForPath: Schema[Path] = Schema(SBinary)
+  implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary)
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary)
   implicit val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary)
   implicit val schemaForInputStream: Schema[InputStream] = Schema(SBinary)

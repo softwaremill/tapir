@@ -1,9 +1,8 @@
 package sttp.tapir
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-import java.nio.file.Path
 
 import sttp.capabilities.Streams
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, Part, QueryParams, StatusCode}
@@ -18,7 +17,7 @@ import sttp.ws.WebSocketFrame
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
+trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -82,8 +81,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody[Array[Byte]]
   def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody[ByteBuffer]
   def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody[InputStream]
-  def fileBody: EndpointIO.Body[File, File] = rawBinaryBody[File]
-  def pathBody: EndpointIO.Body[File, Path] = binaryBody[File, Path]
+  def fileBody: EndpointIO.Body[TapirFile, TapirFile] = rawBinaryBody[TapirFile]
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
     anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)

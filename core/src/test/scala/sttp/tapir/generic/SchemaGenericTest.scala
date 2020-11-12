@@ -6,14 +6,12 @@ import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType._
 import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, format, encodedName}
 
-import scala.concurrent.ExecutionContext.Implicits._
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import org.scalatest.flatspec.AnyFlatSpec
+import scala.concurrent.Future
+import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 @silent("never used")
-class SchemaGenericTest extends AnyFlatSpec with Matchers {
+class SchemaGenericTest extends AsyncFlatSpec with Matchers {
   private val stringSchema = implicitly[Schema[String]]
   private val intSchema = implicitly[Schema[Int]]
   private val longSchema = implicitly[Schema[Long]]
@@ -132,9 +130,9 @@ class SchemaGenericTest extends AnyFlatSpec with Matchers {
     }
 
     val eventualSchemas = Future.sequence(futures)
-
-    val schemas = Await.result(eventualSchemas, 5 seconds)
-    schemas should contain only expected
+    eventualSchemas.map { schemas =>
+      schemas should contain only expected
+    }
   }
 
   it should "use custom schema for custom types" in {

@@ -66,7 +66,9 @@ object MultipartCodecDerivation {
             q"implicitly[sttp.tapir.Codec[List[java.nio.ByteBuffer], $codecType, _ <: sttp.tapir.CodecFormat]]"
           ),
         () =>
-          (q"sttp.tapir.RawBodyType.FileBody", q"implicitly[sttp.tapir.Codec[List[java.io.File], $codecType, _ <: sttp.tapir.CodecFormat]]")
+          (q"sttp.tapir.RawBodyType.FileBody", q"implicitly[sttp.tapir.Codec[List[java.io.File], $codecType, _ <: sttp.tapir.CodecFormat]]"),
+        () =>
+          (q"sttp.tapir.RawBodyType.FileBody", q"implicitly[sttp.tapir.Codec[List[org.scalajs.dom.raw.File], $codecType, _ <: sttp.tapir.CodecFormat]]")
       )
 
       val codec = firstNotEmpty(codecsToCheck)
@@ -104,6 +106,8 @@ object MultipartCodecDerivation {
           q"$base.fileName(o.$fieldName.getName)"
         } else if (fieldTypeName.startsWith("java.io.File")) {
           q"$base.fileName(o.$fieldName.toFile.getName)"
+        } else if (fieldTypeName.startsWith("org.scalajs.dom.raw.File")) {
+          q"$base.fileName(o.$fieldName.name)"
         } else {
           base
         }
