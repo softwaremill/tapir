@@ -79,6 +79,7 @@ a different format (other than textual):
 import sttp.tapir._
 import sttp.tapir.server._
 import sttp.tapir.server.akkahttp._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.model.StatusCode
 import io.circe.generic.auto._

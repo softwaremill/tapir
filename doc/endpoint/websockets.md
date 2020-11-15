@@ -17,6 +17,7 @@ are parsed/formatted as json:
 import sttp.tapir._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import io.circe.generic.auto._
 
 case class Response(msg: String, count: Int)

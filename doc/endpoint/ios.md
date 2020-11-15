@@ -50,6 +50,7 @@ parameters, `start` (mandatory) and `limit` (optional) can be written down as:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 import java.util.UUID
@@ -71,6 +72,7 @@ base endpoint for our API, where all paths always start with `/api/v1.0`, and er
 
 ```scala mdoc:silent
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 

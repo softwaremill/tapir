@@ -13,6 +13,7 @@ import org.http4s.syntax.kleisli._
 import sttp.tapir._
 import sttp.tapir.docs.openapi._
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.server.http4s._

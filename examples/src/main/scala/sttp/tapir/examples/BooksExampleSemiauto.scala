@@ -1,18 +1,28 @@
 package sttp.tapir.examples
 
 import com.typesafe.scalalogging.StrictLogging
+import sttp.tapir.{Schema, Validator}
 import sttp.tapir.swagger.akkahttp.SwaggerAkka
-import sttp.tapir.generic.auto._
 
-object BooksExample extends App with StrictLogging {
+object BooksExampleSemiauto extends App with StrictLogging {
   type Limit = Option[Int]
   type AuthToken = String
 
   case class Country(name: String)
   case class Author(name: String, country: Country)
   case class Genre(name: String, description: String)
+
   case class Book(title: String, genre: Genre, year: Int, author: Author)
   case class BooksQuery(genre: Option[String], limit: Limit)
+
+  implicit val sCountry: Schema[Country] = Schema.derive
+  implicit val validateCountry: Validator[Country] = Validator.derive
+  implicit val sAuthor: Schema[Author] = Schema.derive
+  implicit val validateAuthor: Validator[Author] = Validator.derive
+  implicit val sGenre: Schema[Genre] = Schema.derive
+  implicit val validateGenre: Validator[Genre] = Validator.derive
+  implicit val sBook: Schema[Book] = Schema.derive
+  implicit val validateBook: Validator[Book] = Validator.derive
 
   /** Descriptions of endpoints used in the example.
     */

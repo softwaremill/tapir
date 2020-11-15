@@ -4,6 +4,7 @@ import java.math.{BigDecimal => JBigDecimal}
 
 import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType._
+import sttp.tapir.generic.auto._
 import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, format, encodedName}
 
 import scala.concurrent.Future
@@ -11,12 +12,12 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 @silent("never used")
-class SchemaGenericTest extends AsyncFlatSpec with Matchers {
+class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   private val stringSchema = implicitly[Schema[String]]
   private val intSchema = implicitly[Schema[Int]]
   private val longSchema = implicitly[Schema[Long]]
 
-  "Schema" should "find schema for simple types" in {
+  "Schema auto derivation" should "find schema for simple types" in {
     stringSchema.schemaType shouldBe SString
     stringSchema.isOptional shouldBe false
 
@@ -283,7 +284,7 @@ class SchemaGenericTest extends AsyncFlatSpec with Matchers {
 
     // when
     schema.schemaType shouldBe SProduct(
-      SObjectInfo("sttp.tapir.generic.SchemaGenericTest.<local SchemaGenericTest>.Test1"),
+      SObjectInfo("sttp.tapir.generic.SchemaGenericAutoTest.<local SchemaGenericAutoTest>.Test1"),
       List(
         (FieldName("f1"), implicitly[Schema[String]]),
         (FieldName("f2"), implicitly[Schema[Byte]]),
@@ -358,6 +359,7 @@ class SchemaGenericTest extends AsyncFlatSpec with Matchers {
       Some(Discriminator("who_am_i", Map.empty))
     )
   }
+  
 }
 
 case class StringValueClass(value: String) extends AnyVal

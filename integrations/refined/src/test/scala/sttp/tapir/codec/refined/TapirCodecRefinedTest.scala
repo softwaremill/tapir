@@ -7,6 +7,7 @@ import eu.timepit.refined.string.{IPv4, MatchesRegex}
 import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.{W, refineMV, refineV}
 import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.generic.auto._
 import sttp.tapir.{DecodeResult, ValidationError, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers

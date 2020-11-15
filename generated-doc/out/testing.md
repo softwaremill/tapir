@@ -26,6 +26,7 @@ Given the following endpoint:
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
