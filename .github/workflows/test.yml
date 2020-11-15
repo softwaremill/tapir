@@ -3,8 +3,14 @@ on:
   pull_request:
   push:
 jobs:
-  build:
+  test:
     runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        target-platform: [ "JVM", "JS" ]
+    env:
+      JAVA_OPTS: -Xmx4G -Xss6M -XX:ReservedCodeCacheSize=256M -Dfile.encoding=UTF-8
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -20,10 +26,11 @@ jobs:
         key: ${{ runner.os }}-sbt-cache-${{ hashFiles('**/*.sbt') }}-${{ hashFiles('project/build.properties') }}
     - name: Build and Test
       run: |
-        sbt mimaReportBinaryIssues test compileDocumentation
+        sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }} compileDocumentation
         rm -rf "$HOME/.ivy2/local" || true
         find $HOME/Library/Caches/Coursier/v1        -name "ivydata-*.properties" -delete || true
         find $HOME/.ivy2/cache                       -name "ivydata-*.properties" -delete || true
         find $HOME/.ivy2/cache                       -name "*-LM-SNAPSHOT*"       -delete || true
         find $HOME/.cache/coursier/v1                -name "ivydata-*.properties" -delete || true
         find $HOME/.sbt                              -name "*.lock"               -delete || true
+
