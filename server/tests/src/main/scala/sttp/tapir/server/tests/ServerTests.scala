@@ -40,9 +40,15 @@ class ServerTests[F[_], +R, ROUTE](interpreter: ServerInterpreter[F, R, ROUTE])(
       _ <- interpreter.server(rs, port).onError { case e: Exception =>
         Resource.liftF(IO(logger.error(s"Starting server on $port failed because of ${e.getMessage}")))
       }
-    } yield uri"http://localhost:$port"
+    } yield port
 
-    Test(name)(retryIfAddressAlreadyInUse(resources, 3).use(runTest).unsafeRunSync())
+    Test(name)(
+      retryIfAddressAlreadyInUse(resources, 3)
+        .use { port =>
+          runTest(uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
+        }
+        .unsafeRunSync()
+    )
   }
 
   private def retryIfAddressAlreadyInUse[A](r: Resource[IO, A], tries: Int): Resource[IO, A] = {

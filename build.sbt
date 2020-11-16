@@ -65,7 +65,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   testOptions := {
-    val nextPort = portCounter.getAndUpdate((port: Int) => if (port >= 65000) PortCounterStart else port + 500)
+    val nextPort = portCounter.getAndUpdate((port: Int) => if (port >= 65000) PortCounterStart else port + 250)
+    println(s"Setting $nextPort as start port")
     Seq(Tests.Argument(s"-Dport=$nextPort")) ++ testOptions.value
   }
 )

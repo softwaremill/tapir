@@ -3,7 +3,7 @@ package sttp.tapir.tests
 import com.typesafe.scalalogging.StrictLogging
 
 object PortCounter extends StrictLogging {
-  val DefaultStartPort: Port = 5000
+  val DefaultStartPort: Port = 50000
 
   private var _start: Port = DefaultStartPort
   private var _next: Port = _start
