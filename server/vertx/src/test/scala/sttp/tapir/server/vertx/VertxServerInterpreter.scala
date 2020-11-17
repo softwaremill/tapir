@@ -35,6 +35,6 @@ class VertxServerInterpreter(vertx: Vertx) extends ServerInterpreter[Future, Any
     val server = vertx.createHttpServer(HttpServerOptions().setPort(port)).requestHandler(router)
     val listenIO = IO.fromFuture(IO(server.listenFuture(port)))
     routes.toList.foreach(_.apply(router))
-    Resource.make(listenIO)(s => IO(s.closeFuture())).void
+    Resource.make(listenIO)(s => IO.fromFuture(IO(s.closeFuture()))).void
   }
 }
