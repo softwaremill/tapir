@@ -1,7 +1,6 @@
 package sttp.tapir.tests
 
-import java.io.File
-
 import sttp.model.Part
+import sttp.tapir.TapirFile
 
-case class FruitData(data: Part[File])
+case class FruitData(data: Part[TapirFile])

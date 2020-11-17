@@ -2,17 +2,7 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import sbt.Reference.display
-import sbtrelease.ReleaseStateTransformations.{
-  checkSnapshotDependencies,
-  commitReleaseVersion,
-  inquireVersions,
-  publishArtifacts,
-  pushChanges,
-  runClean,
-  runTest,
-  setReleaseVersion,
-  tagRelease
-}
+import sbtrelease.ReleaseStateTransformations.{checkSnapshotDependencies, commitReleaseVersion, inquireVersions, publishArtifacts, pushChanges, runClean, runTest, setReleaseVersion, tagRelease}
 import sbt.internal.ProjectMatrix
 
 val scala2_12 = "2.12.12"
@@ -23,6 +13,9 @@ val scala2_12Versions = List(scala2_12)
 val documentationScalaVersion = scala2_12 // Documentation depends on finatraServer, which is 2.12 only
 
 scalaVersion := scala2_12
+
+lazy val testServerPort = settingKey[Int]("Port to run the http test server on")
+lazy val startTestServer = taskKey[Unit]("Start a http server used by tests")
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
@@ -144,6 +137,43 @@ lazy val rootProject = (project in file("."))
   )
   .aggregate(allAggregates: _*)
 
+// start a test server before running tests of a backend; this is required both for JS tests run inside a
+// nodejs/browser environment, as well as for JVM tests where akka-http isn't available (e.g. dotty). To simplify
+// things, we always start the test server.
+val testServerSettings = Seq(
+  test in Test := (test in Test)
+    .dependsOn(startTestServer in testServer2_13)
+    .value,
+  testOnly in Test := (testOnly in Test)
+    .dependsOn(startTestServer in testServer2_13)
+    .evaluated,
+  testOptions in Test += Tests.Setup(() => {
+    val port = (testServerPort in testServer2_13).value
+    PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
+  })
+)
+
+lazy val testServer = (projectMatrix in file("client/testserver"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "testing-server",
+    skip in publish := true,
+    libraryDependencies ++= loggerDependencies ++ Seq(
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-circe" % Versions.http4s
+    ),
+    // the test server needs to be started before running any client tests
+    mainClass in reStart := Some("sttp.tapir.client.tests.HttpServer"),
+    reStartArgs in reStart := Seq(s"${(testServerPort in Test).value}"),
+    fullClasspath in reStart := (fullClasspath in Test).value,
+    testServerPort := 51823,
+    startTestServer := reStart.toTask("").value
+  )
+  .jvmPlatform(scalaVersions = List(scala2_13))
+
+lazy val testServer2_13 = testServer.jvm(scala2_13)
+
 // core
 
 lazy val core: ProjectMatrix = (projectMatrix in file("core"))
@@ -190,16 +220,20 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .settings(
     name := "tapir-tests",
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-generic" % Versions.circe,
-      "com.beachape" %% "enumeratum-circe" % Versions.enumeratum,
-      "com.softwaremill.common" %% "tagging" % "2.2.1",
+      "io.circe" %%% "circe-generic" % Versions.circe,
+      "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum,
+      "com.softwaremill.common" %%% "tagging" % "2.2.1",
       scalaTest.value,
       "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided",
-      "org.typelevel" %% "cats-effect" % Versions.catsEffect
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
     ),
     libraryDependencies ++= loggerDependencies
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
   .dependsOn(core, circeJson, enumeratum, cats)
 
 // integrations
@@ -690,21 +724,39 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
   .dependsOn(tests)
 
 lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"))
-  .settings(commonJvmSettings)
+  .settings(testServerSettings)
   .settings(
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
+    )
+  )
+  .jvmPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies ++=  loggerDependencies ++ Seq(
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
       "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
     )
+    )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+      )
+    )
+  )
   .dependsOn(core, clientTests % Test)
 
 lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))

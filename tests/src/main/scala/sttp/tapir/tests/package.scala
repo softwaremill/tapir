@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import java.io.{File, InputStream, PrintWriter}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
@@ -14,8 +14,6 @@ import sttp.capabilities.Streams
 import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, QueryParams, StatusCode}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model._
-
-import scala.io.Source
 
 package object tests {
   val in_query_out_string: Endpoint[String, Unit, String, Any] = endpoint.in(query[String]("fruit")).out(stringBody)
@@ -90,7 +88,7 @@ package object tests {
       .out(header[Option[Long]]("Content-Length"))
       .name("input string output stream with header")
 
-  val in_file_out_file: Endpoint[File, Unit, File, Any] =
+  val in_file_out_file: Endpoint[TapirFile, Unit, TapirFile, Any] =
     endpoint.post.in("api" / "echo").in(fileBody).out(fileBody).name("echo file")
 
   val in_unit_out_json_unit: Endpoint[Unit, Unit, Unit, Any] =
@@ -431,22 +429,6 @@ package object tests {
   //
 
   val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]] ++ Validation.allEndpoints
-
-  def writeToFile(s: String): File = {
-    val f = File.createTempFile("test", "tapir")
-    new PrintWriter(f) { write(s); close() }
-    f.deleteOnExit()
-    f
-  }
-
-  def readFromFile(f: File): String = {
-    val s = Source.fromFile(f)
-    try {
-      s.mkString
-    } finally {
-      s.close()
-    }
-  }
 
   type Port = Int
 }
