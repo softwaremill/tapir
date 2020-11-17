@@ -3,17 +3,16 @@ package sttp.tapir.client.tests
 import java.io.{File, InputStream}
 
 import cats.effect._
-import cats.effect.concurrent.Ref
 import cats.implicits._
-import fs2.concurrent.SignallingRef
+import com.typesafe.scalalogging.StrictLogging
 import org.http4s.dsl.io._
-import org.http4s.{multipart, _}
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
+import org.http4s.{multipart, _}
 import org.scalatest.ConfigMap
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -21,12 +20,9 @@ import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 import sttp.tapir.{DecodeResult, _}
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
-abstract class ClientTests[R] extends AnyFunSuite with Matchers with PortCounterFromConfig {
-  private val logger = org.log4s.getLogger
-
+abstract class ClientTests[R] extends AnyFunSuite with Matchers with PortCounterFromConfig with StrictLogging {
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit private val timer: Timer[IO] = IO.timer(ec)
@@ -141,31 +137,27 @@ abstract class ClientTests[R] extends AnyFunSuite with Matchers with PortCounter
   }
 
   var port: Port = _
-  private var exitSignal: SignallingRef[IO, Boolean] = _
-  private var serverExitCode: Future[Option[ExitCode]] = _
+  private var stopServer: IO[Unit] = _
 
   override protected def beforeAll(configMap: ConfigMap): Unit = {
     super.beforeAll(configMap)
     port = PortCounter.next()
 
-    exitSignal = SignallingRef.apply[IO, Boolean](false).unsafeRunSync()
-
-    serverExitCode = BlazeServerBuilder[IO](ec)
+    val (_, _stopServer) = BlazeServerBuilder[IO](ec)
       .bindHttp(port)
       .withHttpApp(app)
-      .serveWhile(exitSignal, Ref.unsafe(ExitCode.Success))
-      .compile
-      .last
-      .unsafeToFuture()
+      .resource
+      .allocated
+      .unsafeRunSync()
+
+    stopServer = _stopServer
+
+    logger.info(s"Server on port $port started")
   }
 
   override protected def afterAll(configMap: ConfigMap): Unit = {
-    val status = for {
-      _ <- exitSignal.set(true).unsafeToFuture()
-      exitCode <- serverExitCode
-    } yield exitCode
-
-    logger.debug(s"Server exited with code: ${Await.result(status, 5.seconds)}")
+    stopServer.unsafeRunSync()
+    logger.info(s"Server on port $port stopped")
 
     super.afterAll(configMap)
   }
