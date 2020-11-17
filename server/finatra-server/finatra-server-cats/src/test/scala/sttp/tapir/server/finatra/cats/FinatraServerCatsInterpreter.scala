@@ -29,5 +29,5 @@ class FinatraServerCatsInterpreter extends ServerInterpreter[IO, Any, FinatraRou
       eClassTag: ClassTag[E]
   ): FinatraRoute = e.toRouteRecoverErrors(fn)
 
-  override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = FinatraServerInterpreter.server(routes, port)
+  override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraServerInterpreter.server(routes)
 }

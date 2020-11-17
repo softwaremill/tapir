@@ -1,7 +1,6 @@
 package sttp.tapir.client.sttp
 
 import cats.effect.{Blocker, ContextShift, IO}
-import org.scalatest.ConfigMap
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.{DecodeResult, Endpoint}
@@ -31,8 +30,8 @@ abstract class SttpClientTests[R >: WebSockets with Fs2Streams[IO]] extends Clie
     e.toSttpRequest(uri"http://localhost:$port").apply(args).send(backend).map(_.body)
   }
 
-  override protected def afterAll(configMap: ConfigMap): Unit = {
+  override protected def afterAll(): Unit = {
     backend.close().unsafeRunSync()
-    super.afterAll(configMap)
+    super.afterAll()
   }
 }

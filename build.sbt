@@ -24,11 +24,6 @@ val documentationScalaVersion = scala2_12 // Documentation depends on finatraSer
 
 scalaVersion := scala2_12
 
-// Tests which start servers should use distinct ports to avoid errors. They use different class loaders, hence
-// they don't share any objects accessible from the test code, and we have to pass the starting port as test config.
-val PortCounterStart = 50000
-val portCounter = new AtomicInteger(PortCounterStart)
-
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   libraryDependencies ++= Seq(
@@ -64,12 +59,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
-  concurrentRestrictions += Tags.limit(Tags.Test, 3),
-  testOptions := {
-    val nextPort = portCounter.getAndUpdate((port: Int) => if (port >= 65000) PortCounterStart else port + 250)
-    println(s"Setting $nextPort as start port")
-    Seq(Tests.Argument(s"-Dport=$nextPort")) ++ testOptions.value
-  }
+  concurrentRestrictions += Tags.limit(Tags.Test, 3)
 )
 
 // run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node

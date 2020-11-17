@@ -34,8 +34,8 @@ class AkkaServerInterpreter(implicit actorSystem: ActorSystem) extends ServerInt
     e.toRouteRecoverErrors(fn)
   }
 
-  override def server(routes: NonEmptyList[Route], port: Port): Resource[IO, Unit] = {
-    val bind = IO.fromFuture(IO(Http().newServerAt("localhost", port).bind(concat(routes.toList: _*))))
-    Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).void
+  override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {
+    val bind = IO.fromFuture(IO(Http().newServerAt("localhost", 0).bind(concat(routes.toList: _*))))
+    Resource.make(bind)(binding => IO.fromFuture(IO(binding.unbind())).void).map(_.localAddress.getPort)
   }
 }

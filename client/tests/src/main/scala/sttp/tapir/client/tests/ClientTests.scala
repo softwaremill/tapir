@@ -13,7 +13,7 @@ import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.{multipart, _}
-import org.scalatest.ConfigMap
+import org.scalatest.{BeforeAndAfterAll, ConfigMap}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.tests.TestUtil._
@@ -22,7 +22,7 @@ import sttp.tapir.{DecodeResult, _}
 
 import scala.concurrent.ExecutionContext
 
-abstract class ClientTests[R] extends AnyFunSuite with Matchers with PortCounterFromConfig with StrictLogging {
+abstract class ClientTests[R] extends AnyFunSuite with Matchers with StrictLogging with BeforeAndAfterAll {
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit private val timer: Timer[IO] = IO.timer(ec)
@@ -139,26 +139,27 @@ abstract class ClientTests[R] extends AnyFunSuite with Matchers with PortCounter
   var port: Port = _
   private var stopServer: IO[Unit] = _
 
-  override protected def beforeAll(configMap: ConfigMap): Unit = {
-    super.beforeAll(configMap)
-    port = PortCounter.next()
+  override protected def beforeAll(): Unit = {
+    super.beforeAll()
 
-    val (_, _stopServer) = BlazeServerBuilder[IO](ec)
-      .bindHttp(port)
+    val (_port, _stopServer) = BlazeServerBuilder[IO](ec)
+      .bindHttp(0)
       .withHttpApp(app)
       .resource
+      .map(_.address.getPort)
       .allocated
       .unsafeRunSync()
 
+    port = _port
     stopServer = _stopServer
 
     logger.info(s"Server on port $port started")
   }
 
-  override protected def afterAll(configMap: ConfigMap): Unit = {
+  override protected def afterAll(): Unit = {
     stopServer.unsafeRunSync()
     logger.info(s"Server on port $port stopped")
 
-    super.afterAll(configMap)
+    super.afterAll()
   }
 }

@@ -1,10 +1,10 @@
 package sttp.tapir.tests
 
 import cats.effect.{ContextShift, IO, Resource}
-import org.scalatest.ConfigMap
+import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 
-trait TestSuite extends AnyFunSuite with PortCounterFromConfig {
+trait TestSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   implicit lazy val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
 
@@ -20,9 +20,9 @@ trait TestSuite extends AnyFunSuite with PortCounterFromConfig {
   }
   private val release = doRelease
 
-  override protected def afterAll(configMap: ConfigMap): Unit = {
+  override protected def afterAll(): Unit = {
     // the resources can only be released after all of the tests are run
     release.unsafeRunSync()
-    super.afterAll(configMap)
+    super.afterAll()
   }
 }

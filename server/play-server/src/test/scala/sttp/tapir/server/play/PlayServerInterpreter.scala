@@ -34,9 +34,9 @@ class PlayServerInterpreter(implicit actorSystem: ActorSystem) extends ServerInt
     e.toRouteRecoverErrors(fn)
   }
 
-  override def server(routes: NonEmptyList[Routes], port: Port): Resource[IO, Unit] = {
+  override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
     val components = new DefaultAkkaHttpServerComponents {
-      override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(port), address = "127.0.0.1", mode = Mode.Test)
+      override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
       override def router: Router =
         Router.from(
           routes.reduce((a: Routes, b: Routes) => {
@@ -51,6 +51,6 @@ class PlayServerInterpreter(implicit actorSystem: ActorSystem) extends ServerInt
     val bind = IO {
       components.server
     }
-    Resource.make(bind)(s => IO(s.stop())).map(_ => ())
+    Resource.make(bind)(s => IO(s.stop())).map(_.mainAddress.getPort)
   }
 }

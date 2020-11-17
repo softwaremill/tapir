@@ -35,11 +35,10 @@ class ServerTests[F[_], +R, ROUTE](interpreter: ServerInterpreter[F, R, ROUTE])(
 
   def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Test = {
     val resources = for {
-      port <- Resource.liftF(IO(PortCounter.next()))
-      _ <- Resource.liftF(IO(logger.info(s"Trying to bind to $port")))
-      _ <- interpreter.server(rs, port).onError { case e: Exception =>
-        Resource.liftF(IO(logger.error(s"Starting server on $port failed because of ${e.getMessage}")))
+      port <- interpreter.server(rs).onError { case e: Exception =>
+        Resource.liftF(IO(logger.error(s"Starting server failed because of ${e.getMessage}")))
       }
+      _ <- Resource.liftF(IO(logger.info(s"Bound server on port: $port")))
     } yield port
 
     Test(name)(
