@@ -42,19 +42,11 @@ class ServerTests[F[_], +R, ROUTE](interpreter: ServerInterpreter[F, R, ROUTE])(
     } yield port
 
     Test(name)(
-      retryIfAddressAlreadyInUse(resources, 3)
+      resources
         .use { port =>
           runTest(uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
         }
         .unsafeRunSync()
     )
-  }
-
-  private def retryIfAddressAlreadyInUse[A](r: Resource[IO, A], tries: Int): Resource[IO, A] = {
-    r.recoverWith {
-      case e: Exception if tries > 1 && e.getMessage.contains("Address already in use") =>
-        logger.error(s"Exception when evaluating resource, retrying ${tries - 1} more times", e)
-        retryIfAddressAlreadyInUse(r, tries - 1)
-    }
   }
 }
