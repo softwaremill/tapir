@@ -30,7 +30,7 @@ class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOption
         Queue.bounded[F, WebSocketFrame](32).flatMap { queue =>
           pipeF.flatMap { pipe =>
             val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.enqueue1(f)))
-            WebSocketBuilder[F].build(queue.dequeue, receive, headers = headers)
+            WebSocketBuilder[F].build(queue.dequeue, receive, headers = headers, filterPingPongs = false)
           }
         }
 
