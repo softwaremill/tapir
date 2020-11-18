@@ -3,8 +3,6 @@ package sttp.tapir.server.finatra
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource, Timer}
 import com.github.ghik.silencer.silent
-import com.twitter.finagle.http.Request
-import com.twitter.finatra.http.filters.{AccessLoggingFilter, ExceptionMappingFilter}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.util.Future
@@ -55,10 +53,7 @@ object FinatraServerInterpreter {
       class TestServer extends HttpServer {
         @silent("discarded")
         override protected def configureHttp(router: HttpRouter): Unit = {
-          router
-            .filter[AccessLoggingFilter[Request]]
-            .filter[ExceptionMappingFilter[Request]]
-            .add(new TestController)
+          router.add(new TestController)
         }
       }
 
@@ -69,7 +64,11 @@ object FinatraServerInterpreter {
         ),
         // in the default implementation waitForWarmup suspends the thread for 1 second between healthy checks
         // we improve on that by checking every 10ms
-        waitForWarmup = false
+        waitForWarmup = false,
+        globalFlags = Map(
+          com.twitter.finagle.netty4.numWorkers -> "1",
+          com.twitter.jvm.numProcs -> "1"
+        )
       )
       server.start()
       server
