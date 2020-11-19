@@ -55,17 +55,15 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     releaseStepCommand("sonatypeBundleRelease"),
     pushChanges
   ),
-  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS")
+  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
+  // slow down for CI
+  Test / parallelExecution := false
 )
 
-val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
-  concurrentRestrictions += Tags.limit(Tags.Test, 3)
-)
+val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
 
 // run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
 val commonJsSettings = commonSettings ++ browserTestSettings ++ Seq(
-  // slow down for CI
-  Test / parallelExecution := false,
   // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
   scalaJSLinkerConfig ~= {
     _.withBatchMode(System.getenv("CONTINUOUS_INTEGRATION") == "true")
