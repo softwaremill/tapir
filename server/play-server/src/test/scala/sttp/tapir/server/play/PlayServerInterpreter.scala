@@ -37,6 +37,8 @@ class PlayServerInterpreter(implicit actorSystem: ActorSystem) extends ServerInt
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
     val components = new DefaultAkkaHttpServerComponents {
       override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
+      override lazy val actorSystem: ActorSystem =
+        ActorSystem("tapir", defaultExecutionContext = Some(PlayServerInterpreter.this.actorSystem.dispatcher))
       override def router: Router =
         Router.from(
           routes.reduce((a: Routes, b: Routes) => {
