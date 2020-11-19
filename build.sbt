@@ -27,7 +27,6 @@ scalaVersion := scala2_12
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   libraryDependencies ++= Seq(
-    compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.5"),
     compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
     "com.github.ghik" % "silencer-lib" % Versions.silencer % Provided cross CrossVersion.full
   ),
