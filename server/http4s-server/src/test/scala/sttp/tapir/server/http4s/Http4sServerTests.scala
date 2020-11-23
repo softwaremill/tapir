@@ -40,24 +40,23 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
             basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right("ok"))
           }
           .unsafeRunSync()
+      },
+      serverTests.testServer(
+        endpoint.out(
+          webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain]
+            .apply(Fs2Streams[IO])
+            .autoPing(Some((1.second, WebSocketFrame.ping)))
+        ),
+        "automatic pings"
+      )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { baseUri =>
+        basicRequest
+          .response(asWebSocket { ws: WebSocket[IO] =>
+            List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
+          })
+          .get(baseUri.scheme("ws"))
+          .send(backend)
+          .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
       }
-      // TODO https://github.com/http4s/http4s/issues/3879
-//      serverTests.testServer(
-//        endpoint.out(
-//          webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain]
-//            .apply(Fs2Streams[IO])
-//            .autoPing(Some((1.second, WebSocketFrame.ping)))
-//        ),
-//        "automatic pings"
-//      )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { baseUri =>
-//        basicRequest
-//          .response(asWebSocket { ws: WebSocket[IO] =>
-//            List(ws.receive().timeout(2.seconds), ws.receive().timeout(2.seconds)).sequence
-//          })
-//          .get(baseUri.scheme("ws"))
-//          .send(backend)
-//          .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
-//      }
     )
 
     new ServerBasicTests(backend, serverTests, interpreter).tests() ++
