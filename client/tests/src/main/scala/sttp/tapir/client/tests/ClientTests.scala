@@ -44,4 +44,6 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
       } yield adjustedResult shouldBe adjustedExpectedResult
     }
   }
+
+  def platformIsScalaJS: Boolean = System.getProperty("java.vm.name") == "Scala.js"
 }

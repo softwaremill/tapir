@@ -49,13 +49,15 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         List("plum", "watermelon", "apple")
       ).unsafeToFuture().map(_.right.get should contain theSameElementsAs List("apple", "watermelon", "plum"))
     }
-    test(in_cookie_cookie_out_header.showDetail) {
-      send(
-        in_cookie_cookie_out_header,
-        port,
-        (23, "pomegranate")
-      ).unsafeToFuture().map(
-        _.right.get.head.split(" ;") should contain theSameElementsAs "etanargemop=2c ;32=1c".split(" ;"))
+    // cookie support in sttp is currently only available on the JVM
+    if (!platformIsScalaJS) {
+      test(in_cookie_cookie_out_header.showDetail) {
+        send(
+          in_cookie_cookie_out_header,
+          port,
+          (23, "pomegranate")
+        ).unsafeToFuture().map(_.right.get.head.split(" ;") should contain theSameElementsAs "etanargemop=2c ;32=1c".split(" ;"))
+      }
     }
     // TODO: test root path
     testClient(in_auth_apikey_header_out_string, "1234", Right("Authorization=None; X-Api-Key=Some(1234); Query=None"))
@@ -90,19 +92,25 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         in_headers_out_headers,
         port,
         List(sttp.model.Header("X-Fruit", "apple"), sttp.model.Header("Y-Fruit", "Orange"))
-      ).unsafeToFuture().map(_.right.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO")))
+      ).unsafeToFuture()
+        .map(_.right.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO")))
     }
 
-    test(in_json_out_headers.showDetail) {
-      send(in_json_out_headers, port, FruitAmount("apple", 10))
-        .unsafeToFuture().map(_.right.get should contain(sttp.model.Header("Content-Type", "application/json".reverse)))
+    // the fetch API doesn't allow bodies in get requests
+    if (!platformIsScalaJS) {
+      test(in_json_out_headers.showDetail) {
+        send(in_json_out_headers, port, FruitAmount("apple", 10))
+          .unsafeToFuture()
+          .map(_.right.get should contain(sttp.model.Header("Content-Type", "application/json".reverse)))
+      }
     }
 
     testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
 
     test(in_fixed_header_out_string.showDetail) {
       send(in_fixed_header_out_string, port, ())
-        .unsafeToFuture().map(_ shouldBe Right("Location: secret"))
+        .unsafeToFuture()
+        .map(_ shouldBe Right("Location: secret"))
     }
   }
 

@@ -22,7 +22,7 @@ trait ClientMultipartTests { this: ClientTests[Any] =>
 
           afterJson should include("""Content-Disposition: form-data; name="notes"""")
           // We can't control the charset in Scala.js because dom.FormData sets the content-type in this case
-          if (System.getProperty("java.vm.name") == "Scala.js")
+          if (platformIsScalaJS)
             afterJson should include("Content-Type: text/plain")
           else
             afterJson should include("Content-Type: text/plain; charset=UTF-8")
