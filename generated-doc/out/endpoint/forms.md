@@ -17,6 +17,7 @@ compile-time. The fields of the case class should have types, for which there is
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 
 case class RegistrationForm(name: String, age: Int, news: Boolean, city: Option[String])
 
@@ -58,6 +59,7 @@ For example:
 import sttp.tapir._
 import sttp.model.Part
 import java.io.File
+import sttp.tapir.generic.auto._
 
 case class RegistrationForm(userData: User, photo: Part[File], news: Boolean)
 case class User(email: String)

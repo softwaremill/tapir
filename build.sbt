@@ -24,15 +24,9 @@ val documentationScalaVersion = scala2_12 // Documentation depends on finatraSer
 
 scalaVersion := scala2_12
 
-// Tests which start servers should use distinct ports to avoid errors. They use different class loaders, hence
-// they don't share any objects accessible from the test code, and we have to pass the starting port as test config.
-val PortCounterStart = 50000
-val portCounter = new AtomicInteger(PortCounterStart)
-
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   libraryDependencies ++= Seq(
-    compilerPlugin("com.softwaremill.neme" %% "neme-plugin" % "0.0.5"),
     compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
     "com.github.ghik" % "silencer-lib" % Versions.silencer % Provided cross CrossVersion.full
   ),
@@ -60,20 +54,15 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     releaseStepCommand("sonatypeBundleRelease"),
     pushChanges
   ),
-  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS")
+  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
+  // slow down for CI
+  Test / parallelExecution := false
 )
 
-val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
-  testOptions := {
-    val nextPort = portCounter.getAndUpdate((port: Int) => if (port >= 65000) PortCounterStart else port + 500)
-    Seq(Tests.Argument(s"-Dport=$nextPort")) ++ testOptions.value
-  }
-)
+val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
 
 // run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
 val commonJsSettings = commonSettings ++ browserTestSettings ++ Seq(
-  // slow down for CI
-  Test / parallelExecution := false,
   // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
   scalaJSLinkerConfig ~= {
     _.withBatchMode(System.getenv("CONTINUOUS_INTEGRATION") == "true")
@@ -220,12 +209,12 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.2.0",
+      "org.typelevel" %%% "cats-core" % "2.3.0",
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "org.typelevel" %%% "discipline-scalatest" % "2.1.0" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.2.0" % Test
+      "org.typelevel" %%% "discipline-scalatest" % "2.0.1" % Test,
+      "org.typelevel" %%% "cats-laws" % "2.3.0" % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)

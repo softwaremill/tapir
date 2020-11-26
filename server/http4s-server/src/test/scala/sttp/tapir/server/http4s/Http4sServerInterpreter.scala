@@ -39,13 +39,13 @@ class Http4sServerInterpreter extends ServerInterpreter[IO, Fs2Streams[IO] with 
     e.toRouteRecoverErrors(fn)
   }
 
-  override def server(routes: NonEmptyList[HttpRoutes[IO]], port: Port): Resource[IO, Unit] = {
+  override def server(routes: NonEmptyList[HttpRoutes[IO]]): Resource[IO, Port] = {
     val service: Kleisli[IO, Request[IO], Response[IO]] = routes.reduceK.orNotFound
 
     BlazeServerBuilder[IO](ExecutionContext.global)
-      .bindHttp(port, "localhost")
+      .bindHttp(0, "localhost")
       .withHttpApp(service)
       .resource
-      .void
+      .map(_.address.getPort)
   }
 }

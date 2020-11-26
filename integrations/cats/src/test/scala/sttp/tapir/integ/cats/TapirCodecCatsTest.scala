@@ -6,6 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
 import org.scalacheck.Arbitrary.arbString
+import sttp.tapir.generic.auto._
 import sttp.tapir.SchemaType.{SArray, SString}
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema, Validator}
 import sttp.tapir.internal._

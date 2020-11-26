@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
+import sttp.tapir.generic.auto._
 import sttp.tapir._
 import sttp.tapir.docs.openapi._
 import sttp.tapir.json.circe._

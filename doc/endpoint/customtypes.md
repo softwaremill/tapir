@@ -93,8 +93,58 @@ hence configured separately.
 
 ## Schema derivation
 
-For case classes types, `Schema[_]` values are derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
-that schemas are defined for all the case class's fields. It is possible to configure the automatic derivation to use
+For case classes types, `Schema[_]` values can be derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
+that schemas are defined for all the case class's fields. 
+
+Two policies enable to choose the way custom types are derived : 
+- Automatic derivation
+- Semi automatic derivation 
+
+
+### Automatic mode
+
+Cases classes, traits and their children are recursively derived by Magnolia.   
+ 
+Importing `sttp.tapir.generic.auto._` enables fully automatic derivation for `Schema` and `Validator`.
+
+```scala mdoc:silent:reset
+import sttp.tapir.Schema
+import sttp.tapir.generic.auto._
+
+case class Parent(child: Child)
+case class Child(value: String)
+
+// implicit schema used by codecs
+implicitly[Schema[Parent]]
+
+```
+
+If you have a case class which contains some non-standard types (other than strings, number, other case classes, 
+collections), you only need to provide schemas for them. Using these, the rest will be derived automatically.
+
+### Semi-automatic mode
+
+Semi-automatic derivation can be done using `Schema.derive[T]` or `Validator.derive[T]`. 
+
+It only derives selected type `T`. However derivation is not recursive : 
+schemas and validators must be explicitly defined for every child type.
+
+This mode is easier to debug and helps to avoid issues encountered by automatic mode (wrong schemas for value classes or custom types).   
+
+```scala mdoc:silent:reset
+import sttp.tapir.Schema
+
+case class Parent(child: Child)
+case class Child(value: String)
+
+implicit def sChild: Schema[Child] = Schema.derive
+implicit def sParent: Schema[Parent] = Schema.derive
+
+```
+
+### Configuring derivation
+
+It is possible to configure Magnolia's automatic derivation to use
 snake_case, kebab-case or a custom field naming policy, by providing an implicit `sttp.tapir.generic.Configuration` value:
 
 ```scala mdoc:silent
@@ -113,10 +163,6 @@ import sttp.tapir._
 case class MyCustomType()
 implicit val schemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaType.SString)
 ```
-
-If you have a case class which contains some non-standard types (other than strings, number, other case classes, 
-collections), you only need to provide the schema for the non-standard types. Using these schemas, the rest will
-be derived automatically.
 
 ### Sealed traits / coproducts
 
@@ -153,8 +199,8 @@ case class Organization(name: String) extends Entity {
 
 import sttp.tapir._
 
-val sPerson = implicitly[Schema[Person]]
-val sOrganization = implicitly[Schema[Organization]]
+val sPerson = Schema.derive[Person]
+val sOrganization = Schema.derive[Organization]
 implicit val sEntity: Schema[Entity] = 
     Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```
@@ -182,6 +228,7 @@ For example:
 
 ```scala mdoc:silent:reset
 import sttp.tapir._
+import sttp.tapir.generic.auto.schema._
 import sttp.tapir.generic.Derived
 
 case class Basket(fruits: List[FruitAmount])

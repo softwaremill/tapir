@@ -7,6 +7,7 @@ import sttp.client3._
 import sttp.tapir._
 import sttp.ws.{WebSocket, WebSocketFrame}
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import io.circe.generic.auto._
 import sttp.monad.MonadError
 import sttp.tapir.tests.{Fruit, Test}

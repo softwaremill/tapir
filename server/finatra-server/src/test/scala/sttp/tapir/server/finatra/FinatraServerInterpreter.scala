@@ -3,8 +3,6 @@ package sttp.tapir.server.finatra
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource, Timer}
 import com.github.ghik.silencer.silent
-import com.twitter.finagle.http.Request
-import com.twitter.finatra.http.filters.{AccessLoggingFilter, ExceptionMappingFilter}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.util.Future
@@ -37,11 +35,11 @@ class FinatraServerInterpreter extends ServerInterpreter[Future, Any, FinatraRou
     e.toRouteRecoverErrors(fn)
   }
 
-  override def server(routes: NonEmptyList[FinatraRoute], port: Port): Resource[IO, Unit] = FinatraServerInterpreter.server(routes, port)
+  override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraServerInterpreter.server(routes)
 }
 
 object FinatraServerInterpreter {
-  def server(routes: NonEmptyList[FinatraRoute], port: Port)(implicit ioTimer: Timer[IO]): Resource[IO, Unit] = {
+  def server(routes: NonEmptyList[FinatraRoute])(implicit ioTimer: Timer[IO]): Resource[IO, Port] = {
     def waitUntilHealthy(s: EmbeddedHttpServer, count: Int): IO[EmbeddedHttpServer] =
       if (s.isHealthy) IO.pure(s)
       else if (count > 1000) IO.raiseError(new IllegalStateException("Server unhealthy"))
@@ -55,21 +53,22 @@ object FinatraServerInterpreter {
       class TestServer extends HttpServer {
         @silent("discarded")
         override protected def configureHttp(router: HttpRouter): Unit = {
-          router
-            .filter[AccessLoggingFilter[Request]]
-            .filter[ExceptionMappingFilter[Request]]
-            .add(new TestController)
+          router.add(new TestController)
         }
       }
 
       val server = new EmbeddedHttpServer(
         new TestServer,
         Map(
-          "http.port" -> s":$port"
+          "http.port" -> s":0"
         ),
         // in the default implementation waitForWarmup suspends the thread for 1 second between healthy checks
         // we improve on that by checking every 10ms
-        waitForWarmup = false
+        waitForWarmup = false,
+        globalFlags = Map(
+          com.twitter.finagle.netty4.numWorkers -> "1",
+          com.twitter.jvm.numProcs -> "1"
+        )
       )
       server.start()
       server
@@ -77,6 +76,6 @@ object FinatraServerInterpreter {
 
     Resource
       .make(bind)(httpServer => IO(httpServer.close()))
-      .map(_ => ())
+      .map(_.httpExternalPort())
   }
 }

@@ -9,11 +9,13 @@ import java.util.{Date, UUID}
 import sttp.model.Part
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
-import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
-import sttp.tapir.generic.Derived
+import sttp.tapir.generic.internal.SchemaMapMacro
 import sttp.tapir.internal.ModifySchemaMacro
 
 import scala.annotation.StaticAnnotation
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.internal.SchemaMagnoliaDerivation
+import magnolia.Magnolia
 
 /** Describes the shape of the low-level, "raw" representation of type `T`.
   * @param format The name of the format of the low-level representation of `T`.
@@ -123,6 +125,9 @@ object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPri
   implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro SchemaMapMacro.schemaForMap[Map[String, V], V]
 
   def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*): Schema[E] = macro oneOfMacro[E, V]
+
+  def derive[T]: Schema[T] = macro Magnolia.gen[T]
+
 }
 
 trait LowPrioritySchema {

@@ -41,6 +41,7 @@ class CompileCheckTestBaseSpec extends CompileCheckTestBase {
     """object Asd{
       |  import sttp.tapir._
       |  import sttp.tapir.json.circe._
+      |  import sttp.tapir.generic.auto._
       |  import io.circe.generic.auto._
       |  case class Book(title: String)
       |  endpoint.get.in("books" / "my").out(jsonBody[List[Book]])

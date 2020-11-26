@@ -35,8 +35,13 @@ Validation rules added using the built-in validators are translated to [OpenAPI]
 
 ### Validation rules and automatic codec derivation
 
-When a codec is automatically derived for a type (see [custom types](customtypes.md)), validators for all types 
-(for json this is a recursive process) are looked up through implicit `Validator[T]` values.
+Validator instances are looked up through implicit `Validator[T]` values. 
+
+While they can be manually defined, Tapir provides tools to derive automatically validators for custom types (traits and case classes).
+ 
+Like in `Schema`s ([custom types](customtypes.md)), two policies enable schema derivation : 
+- Automatic derivation 
+- Semi-automatic derivation
 
 ```eval_rst
 .. note::
@@ -44,6 +49,43 @@ When a codec is automatically derived for a type (see [custom types](customtypes
   Implicit ``Validator[T]`` values are used *only* when automatically deriving codecs. They are not used
   when the codec is defined by hand.
 ```
+
+### Automatic derivation
+
+When importing `sttp.tapir.generic.auto._`, validators are automatically derived for all types (for json this is a recursive process).  
+By default a leaf type without an already existing `Validator` is always considered as valid (`Validator.pass`). 
+
+```scala mdoc:compile-only
+
+import sttp.tapir.generic.auto._
+import sttp.tapir.Validator
+
+case class Parent(child: Child)
+case class Child(value: String)
+
+// implicit validator used in tapir codecs
+implicitly[Validator[Parent]]
+
+```
+
+If you need to automatically derive validators while using semi-automatic derivation for schemas, you can import only `sttp.tapir.generic.validator._` and use `Schema.derive[T]`. 
+
+### Semi-automatic derivation
+
+In semi-automatic derivation, Tapir only helps to derive the selected `case class` or `trait` (no recursion involved).
+  
+```scala mdoc:compile-only
+import sttp.tapir.Validator
+
+case class Parent(child: Child)
+case class Child(value: String)
+
+implicit val schemaForChild = Validator.derive[Child]
+implicit val schemaForParent = Validator.derive[Parent]
+
+```
+
+## Specific type validation
 
 Note that to validate a nested member of a case class, it needs to have a unique type (that is, not an `Int`, as 
 providing an implicit `Validator[Int]` would validate all ints in the hierarchy), as validator lookup is type-driven.
@@ -55,6 +97,8 @@ decoders (if that's the json library that we are using), schema information and 
  
 ```scala mdoc:silent:reset-object
 import sttp.tapir._
+import sttp.tapir.generic.auto.schema._
+import sttp.tapir.generic.auto.validator._
 import sttp.tapir.json.circe._
 import io.circe.{ Encoder, Decoder }
 import io.circe.generic.semiauto._

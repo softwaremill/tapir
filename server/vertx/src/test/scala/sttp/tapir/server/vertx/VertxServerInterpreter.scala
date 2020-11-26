@@ -30,11 +30,11 @@ class VertxServerInterpreter(vertx: Vertx) extends ServerInterpreter[Future, Any
   ): Router => Route =
     e.routeRecoverErrors(fn)
 
-  override def server(routes: NonEmptyList[Router => Route], port: Port): Resource[IO, Unit] = {
+  override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)
-    val server = vertx.createHttpServer(HttpServerOptions().setPort(port)).requestHandler(router)
-    val listenIO = IO.fromFuture(IO(server.listenFuture(port)))
+    val server = vertx.createHttpServer(HttpServerOptions().setPort(0)).requestHandler(router)
+    val listenIO = IO.fromFuture(IO(server.listenFuture(0)))
     routes.toList.foreach(_.apply(router))
-    Resource.make(listenIO)(s => IO(s.closeFuture())).void
+    Resource.make(listenIO)(s => IO.fromFuture(IO(s.closeFuture()))).map(_.actualPort())
   }
 }

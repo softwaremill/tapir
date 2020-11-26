@@ -1,8 +1,8 @@
 ![tapir, or Typed API descRiptions](https://github.com/softwaremill/tapir/raw/master/banner.png)
 
 [![Join the chat at https://gitter.im/softwaremill/tapir](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/softwaremill/tapir?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/softwaremill/tapir.svg?branch=master)](https://travis-ci.org/softwaremill/tapir)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.12)
+[![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
 
 With tapir you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
 input parameters, error-output parameters, and normal-output parameters. An endpoint specification can be 
@@ -26,6 +26,7 @@ interpreted as:
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
@@ -88,7 +89,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.0-M9"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):

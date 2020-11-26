@@ -13,7 +13,7 @@ import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.server.tests.{ServerBasicTests, ServerStreamingTests, ServerTests, ServerWebSocketTests, backendResource}
-import sttp.tapir.tests.{PortCounter, Test, TestSuite}
+import sttp.tapir.tests.{Test, TestSuite}
 
 class AkkaHttpServerTests extends TestSuite {
 
@@ -29,11 +29,10 @@ class AkkaHttpServerTests extends TestSuite {
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val port = PortCounter.next()
           val route = Directives.pathPrefix("api")(e.toRoute)
           interpreter
-            .server(NonEmptyList.of(route), port)
-            .use { _ =>
+            .server(NonEmptyList.of(route))
+            .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
             }
             .unsafeRunSync()

@@ -18,6 +18,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir._
 import sttp.tapir.asyncapi.AsyncAPI
 import sttp.tapir.docs.asyncapi._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 

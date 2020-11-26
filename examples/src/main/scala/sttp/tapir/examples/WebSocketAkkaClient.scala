@@ -10,6 +10,7 @@ import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.tapir._
 import sttp.tapir.client.sttp._
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import sttp.tapir.client.sttp.ws.akkahttp._
 
 import scala.concurrent.ExecutionContext.Implicits.global

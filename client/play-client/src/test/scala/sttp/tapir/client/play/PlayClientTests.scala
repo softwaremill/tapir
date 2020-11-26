@@ -3,7 +3,6 @@ package sttp.tapir.client.play
 import akka.actor.ActorSystem
 import akka.stream.Materializer
 import cats.effect.{ContextShift, IO}
-import org.scalatest.ConfigMap
 import play.api.libs.ws.StandaloneWSClient
 import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import sttp.tapir.client.tests.ClientTests
@@ -37,10 +36,6 @@ abstract class PlayClientTests[R] extends ClientTests[R] {
       req.execute().map(responseParser)
     }
     IO.fromFuture(IO(response))
-  }
-
-  override protected def afterAll(configMap: ConfigMap): Unit = {
-    super.afterAll(configMap)
   }
 
 }

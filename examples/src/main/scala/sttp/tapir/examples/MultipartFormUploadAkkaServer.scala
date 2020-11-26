@@ -6,6 +6,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import sttp.client3._
+import sttp.tapir.generic.auto._
 import sttp.model.Part
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._

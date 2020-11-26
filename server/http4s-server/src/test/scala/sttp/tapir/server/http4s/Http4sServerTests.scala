@@ -11,7 +11,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.tests.{ServerBasicTests, ServerStreamingTests, ServerTests, ServerWebSocketTests, backendResource}
-import sttp.tapir.tests.{PortCounter, Test, TestSuite}
+import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.ExecutionContext
@@ -30,13 +30,15 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
       Test("should work with a router and routes in a context") {
         val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
         val routes = e.toRoutes
-        val port = PortCounter.next()
 
         BlazeServerBuilder[IO](ExecutionContext.global)
-          .bindHttp(port, "localhost")
+          .bindHttp(0, "localhost")
           .withHttpApp(Router("/api" -> routes).orNotFound)
           .resource
-          .use { _ => basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right("ok")) }
+          .use { server =>
+            val port = server.address.getPort
+            basicRequest.get(uri"http://localhost:$port/api/test/router").send(backend).map(_.body shouldBe Right("ok"))
+          }
           .unsafeRunSync()
       },
       serverTests.testServer(
@@ -49,7 +51,7 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
       )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { baseUri =>
         basicRequest
           .response(asWebSocket { ws: WebSocket[IO] =>
-            List(ws.receive().timeout(2.seconds), ws.receive().timeout(2.seconds)).sequence
+            List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
           })
           .get(baseUri.scheme("ws"))
           .send(backend)
