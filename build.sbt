@@ -26,10 +26,6 @@ scalaVersion := scala2_12
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
-  libraryDependencies ++= Seq(
-    compilerPlugin("com.github.ghik" % "silencer-plugin" % Versions.silencer cross CrossVersion.full),
-    "com.github.ghik" % "silencer-lib" % Versions.silencer % Provided cross CrossVersion.full
-  ),
   mimaPreviousArtifacts := Set.empty, //Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
   // cross-release doesn't work when subprojects have different cross versions
   // work-around from https://github.com/sbt/sbt-release/issues/214,

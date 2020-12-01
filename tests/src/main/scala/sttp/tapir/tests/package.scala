@@ -4,7 +4,6 @@ import java.io.{File, InputStream, PrintWriter}
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
-import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -294,7 +293,6 @@ package object tests {
 
   //
 
-  @silent("never used")
   object Validation {
     type MyTaggedString = String @@ Tapir
 

@@ -1,6 +1,5 @@
 package sttp.tapir.server
 
-import com.github.ghik.silencer.silent
 import sttp.tapir.Validator
 import sttp.tapir.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpec
@@ -9,7 +8,6 @@ import org.scalatest.matchers.should.Matchers
 class ServerDefaultsTest extends AnyFlatSpec with Matchers {
   it should "create a validation error message for a nested field" in {
     // given
-    @silent("never used")
     implicit val addressNumberValidator: Validator[Int] = Validator.min(1)
 
     // when

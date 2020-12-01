@@ -4,7 +4,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir._
@@ -50,7 +49,6 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
   )
 
   val booksListingRoute = booksListing.toRoute(_ => Future.successful(Right(books.get())))
-  @silent("discarded")
   val addBookRoute = addBook.toRoute(book => Future.successful(Right(books.getAndUpdate(books => books :+ book))))
 
   // generating the documentation in yml; extension methods come from imported packages

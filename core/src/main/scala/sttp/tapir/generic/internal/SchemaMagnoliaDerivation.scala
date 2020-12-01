@@ -1,6 +1,5 @@
 package sttp.tapir.generic.internal
 
-import com.github.ghik.silencer.silent
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
@@ -14,7 +13,6 @@ trait SchemaMagnoliaDerivation {
 
   type Typeclass[T] = Schema[T]
 
-  @silent("discarded")
   def combine[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withProgressCache { cache =>
       val cacheKey = ctx.typeName.full

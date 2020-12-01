@@ -2,7 +2,6 @@ package sttp.tapir.generic
 
 import java.math.{BigDecimal => JBigDecimal}
 
-import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.auto._
 import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, format, encodedName}
@@ -11,7 +10,6 @@ import scala.concurrent.Future
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-@silent("never used")
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   private val stringSchema = implicitly[Schema[String]]
   private val intSchema = implicitly[Schema[Int]]
@@ -359,7 +357,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       Some(Discriminator("who_am_i", Map.empty))
     )
   }
-  
+
 }
 
 case class StringValueClass(value: String) extends AnyVal
@@ -371,7 +369,6 @@ case class C(h1: List[String], h2: Option[Int])
 case class D(someFieldName: String)
 case class F(f1: List[F], f2: Int)
 
-@silent("never used")
 class Custom(c: String)
 case class G(f1: Int, f2: Custom)
 

@@ -1,7 +1,5 @@
 package sttp.tapir.typelevel
 
-import com.github.ghik.silencer.silent
-
 /** Concatenates two parameter lists into one. Each parameter list can be either a single type, or a tuple.
   *
   * The arity of a type if `0` if it's `Unit`/`Nothing`, as these types act as a neutral element in the
@@ -75,7 +73,6 @@ trait LowPriorityTupleConcat3 extends LowPriorityTupleConcat2 {
 }
 
 trait LowPriorityTupleConcat2 extends LowPriorityTupleConcat1 {
-  @silent("never used")
   implicit def concatTuples[T, U, TU](implicit tc: TupleOps.JoinAux[T, U, TU], ta: TupleArity[T], ua: TupleArity[U]): Aux[T, U, TU] =
     new ParamConcat[T, U] {
       override type Out = TU
@@ -85,14 +82,12 @@ trait LowPriorityTupleConcat2 extends LowPriorityTupleConcat1 {
 }
 
 trait LowPriorityTupleConcat1 extends LowPriorityTupleConcat0 {
-  @silent("never used")
   implicit def concatSingleAndTuple[T, U, TU](implicit tc: TupleOps.JoinAux[Tuple1[T], U, TU], ua: TupleArity[U]): Aux[T, U, TU] =
     new ParamConcat[T, U] {
       override type Out = TU
       override def leftArity = 1
       override def rightArity: Int = ua.arity
     }
-  @silent("never used")
   implicit def concatTupleAndSingle[T, U, TU](implicit tc: TupleOps.JoinAux[T, Tuple1[U], TU], ta: TupleArity[T]): Aux[T, U, TU] =
     new ParamConcat[T, U] {
       override type Out = TU
@@ -104,7 +99,6 @@ trait LowPriorityTupleConcat1 extends LowPriorityTupleConcat0 {
 trait LowPriorityTupleConcat0 {
   type Aux[T, U, TU] = ParamConcat[T, U] { type Out = TU }
 
-  @silent("never used")
   implicit def concatSingleAndSingle[T, U, TU](implicit tc: TupleOps.JoinAux[Tuple1[T], Tuple1[U], TU]): Aux[T, U, TU] =
     new ParamConcat[T, U] {
       override type Out = TU

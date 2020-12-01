@@ -4,7 +4,6 @@ import java.util.concurrent.atomic.AtomicReference
 
 import cats.effect._
 import cats.syntax.all._
-import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
@@ -57,7 +56,6 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
   )
 
   val booksListingRoutes: HttpRoutes[IO] = booksListing.toRoutes(_ => IO(books.get().asRight[Unit]))
-  @silent("discarded")
   val addBookRoutes: HttpRoutes[IO] = addBook.toRoutes(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes
 

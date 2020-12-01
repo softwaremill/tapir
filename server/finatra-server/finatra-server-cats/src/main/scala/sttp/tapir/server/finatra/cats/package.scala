@@ -1,7 +1,6 @@
 package sttp.tapir.server.finatra
 
 import _root_.cats.effect.Effect
-import com.github.ghik.silencer.silent
 import com.twitter.inject.Logging
 import io.catbird.util.Rerunnable
 import io.catbird.util.effect._
@@ -17,7 +16,6 @@ package object cats {
       e.serverLogic(logic).toRoute
     }
 
-    @silent("never used")
     def toRouteRecoverErrors[F[_]](logic: I => F[O])(implicit
         eIsThrowable: E <:< Throwable,
         eClassTag: ClassTag[E],

@@ -13,7 +13,6 @@ import sttp.tapir.generic.internal.{ValidatorEnumMacro, ValidatorMagnoliaDerivat
 
 import scala.collection.immutable
 import sttp.tapir.generic.Derived
-import com.github.ghik.silencer.silent
 import magnolia.Magnolia
 
 sealed trait Validator[T] {
@@ -315,11 +314,10 @@ object Validator extends ValidatorEnumMacro with ValidatorMagnoliaDerivation {
 }
 
 trait LowPriorityValidator {
-  /* 
+  /*
     This instance is directly imported via sttp.tapir.generic.auto._ and sttp.tapir.generic.auto.validator._.
     In order to avoid conflicts with primitive types instances, we need to lower its priority using an implicit Refute[Validator[T]
-  */
-  @silent("never used")
+   */
   implicit def derivedValidator[T](implicit refute: Refute[Validator[T]], derived: Derived[Validator[T]]): Validator[T] = derived.value
 }
 
