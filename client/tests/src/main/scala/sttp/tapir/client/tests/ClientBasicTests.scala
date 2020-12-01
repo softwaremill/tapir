@@ -47,7 +47,13 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         in_query_list_out_header_list,
         port,
         List("plum", "watermelon", "apple")
-      ).unsafeToFuture().map(_.right.get should contain theSameElementsAs List("apple", "watermelon", "plum"))
+      ).unsafeToFuture().map(
+        _.right.get should contain theSameElementsAs (
+          // The fetch API merges multiple header values having the same name into a single comma separated value
+          if (platformIsScalaJS)
+            List("apple, watermelon, plum")
+          else
+            List("apple", "watermelon", "plum")))
     }
     // cookie support in sttp is currently only available on the JVM
     if (!platformIsScalaJS) {
