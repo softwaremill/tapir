@@ -1,15 +1,13 @@
 package sttp.tapir.generic.internal
 
-import sttp.tapir.encodedName
-
 import scala.reflect.macros.blackbox
 
-private[generic] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val c: C) {
+private[generic] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val c: C, name: String) {
   import c.universe._
 
   val t: Type = weakTypeOf[T]
   if (!t.typeSymbol.isClass || !t.typeSymbol.asClass.isCaseClass) {
-    c.error(c.enclosingPosition, s"Multipart codec can only be generated for a case class, but got: $t.")
+    c.error(c.enclosingPosition, s"${name.capitalize} can only be generated for a case class, but got: $t.")
   }
 
   lazy val fields: List[Symbol] = t.decls
@@ -30,13 +28,30 @@ private[generic] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](va
 
   lazy val schema: Tree = c.typecheck(q"implicitly[sttp.tapir.Schema[$t]]")
 
-  def getEncodedName(field: Symbol): Option[String] = {
+  lazy val classSymbol = t.typeSymbol.asClass
+
+  def annotated(field: Symbol, annotationType: c.Type): Boolean =
+    field.annotations.exists(_.tree.tpe <:< annotationType)
+
+  def extractArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[String] = {
     // https://stackoverflow.com/questions/20908671/scala-macros-how-to-read-an-annotation-object
     field.annotations.collectFirst {
-      case a if a.tree.tpe <:< c.weakTypeOf[encodedName] =>
+      case a if a.tree.tpe <:< annotationType =>
         a.tree.children.tail match {
           case List(Literal(Constant(str: String))) => str
         }
     }
   }
+
+  def extractOptArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[Option[String]] =
+    field.annotations.collectFirst {
+      case a if a.tree.tpe <:< annotationType =>
+        a.tree.children.tail match {
+          case List(Select(_, name @ TermName(_)))
+            if name.decodedName.toString.startsWith("<init>$default") =>
+            None
+          case List(Literal(Constant(str: String))) =>
+            Some(str)
+        }
+    }
 }
