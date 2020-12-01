@@ -26,6 +26,8 @@ scalaVersion := scala2_12
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
+excludeLintKeys in Global ++= Set(ideSkipProject)
+
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   mimaPreviousArtifacts := Set.empty, //Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
