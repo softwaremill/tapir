@@ -1,3 +1,5 @@
+import java.io.File
+import java.net.URL
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
@@ -54,12 +56,68 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
 
+lazy val downloadGeckoDriver: TaskKey[Unit] = taskKey[Unit](
+  "Download gecko driver"
+)
+
+val downloadGeckoDriverSettings: Seq[Def.Setting[Task[Unit]]] = Seq(
+  Global / downloadGeckoDriver := {
+    if (
+      java.nio.file.Files.notExists(new File("target", "geckodriver").toPath)
+    ) {
+      val version = "v0.28.0"
+      println(s"geckodriver binary file not found")
+      import sys.process._
+      val osName = sys.props("os.name")
+      val isMac = osName.toLowerCase.contains("mac")
+      val isWin = osName.toLowerCase.contains("win")
+      val platformDependentName = if (isMac) {
+        "macos.tar.gz"
+      } else if (isWin) {
+        "win64.zip"
+      } else {
+        "linux64.tar.gz"
+      }
+      println(s"Downloading gecko driver version $version for $osName")
+      val geckoDriverUrl = s"https://github.com/mozilla/geckodriver/releases/download/$version/geckodriver-$version-$platformDependentName"
+      if (!isWin) {
+        url(geckoDriverUrl) #> file("target/geckodriver.tar.gz") #&&
+          "tar -xz -C target -f target/geckodriver.tar.gz" #&&
+          "rm target/geckodriver.tar.gz" !
+      } else {
+        IO.unzipURL(new URL(geckoDriverUrl), new File("target"))
+      }
+      IO.chmod("rwxrwxr-x", new File("target", "geckodriver"))
+    } else {
+      println("Detected geckodriver binary file, skipping downloading.")
+    }
+  }
+)
+
 // run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ browserTestSettings ++ Seq(
+val commonJsSettings = commonSettings ++ downloadGeckoDriverSettings ++ Seq(
   // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
   scalaJSLinkerConfig ~= {
     _.withBatchMode(System.getenv("CONTINUOUS_INTEGRATION") == "true")
-  }
+  },
+  jsEnv in Test := {
+    val debugging = false // set to true to help debugging
+    System.setProperty("webdriver.gecko.driver", "target/geckodriver")
+    new org.scalajs.jsenv.selenium.SeleniumJSEnv(
+      {
+        val options = new org.openqa.selenium.firefox.FirefoxOptions()
+        val args = (if (debugging) Seq("--devtools") else Seq("-headless"))
+        options.addArguments(args: _*)
+        options
+      },
+      org.scalajs.jsenv.selenium.SeleniumJSEnv
+        .Config()
+        .withKeepAlive(debugging)
+    )
+  },
+  test in Test := (test in Test)
+    .dependsOn(downloadGeckoDriver)
+    .value
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
