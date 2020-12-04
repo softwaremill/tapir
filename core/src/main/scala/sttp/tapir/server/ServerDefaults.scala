@@ -46,7 +46,15 @@ object ServerDefaults {
         badRequestOnPathErrorIfPathShapeMatches: Boolean,
         badRequestOnPathInvalidIfPathShapeMatches: Boolean
     ): Option[StatusCode] = {
-      ctx.input match {
+      import sttp.tapir.internal.RichEndpointInput
+
+      val authFailure = ctx.rootInput.pathTo(ctx.input).collectFirst { case a: EndpointInput.Auth[_] =>
+        a
+      }
+
+      val failingInput = authFailure.getOrElse(ctx.input)
+
+      failingInput match {
         case _: EndpointInput.Query[_]             => Some(StatusCode.BadRequest)
         case _: EndpointInput.QueryParams[_]       => Some(StatusCode.BadRequest)
         case _: EndpointInput.Cookie[_]            => Some(StatusCode.BadRequest)
@@ -61,6 +69,7 @@ object ServerDefaults {
             if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
               (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
           Some(StatusCode.BadRequest)
+        case _: EndpointInput.Auth[_] => Some(StatusCode.Unauthorized)
         // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
         case _: EndpointInput.Basic[_] => None
         // all other inputs (tuples, mapped) - responding with bad request

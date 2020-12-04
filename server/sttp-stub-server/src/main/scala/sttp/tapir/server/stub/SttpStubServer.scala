@@ -25,8 +25,8 @@ trait SttpStubServer {
         endpoint,
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
-            case DecodeInputsResult.Failure(_, _) => false
-            case DecodeInputsResult.Values(_, _)  => true
+            case _: DecodeInputsResult.Failure => false
+            case _: DecodeInputsResult.Values  => true
           }
         )
       )
@@ -37,11 +37,11 @@ trait SttpStubServer {
         endpoint,
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
-            case DecodeInputsResult.Failure(_, _) => false
+            case _: DecodeInputsResult.Failure => false
             case values: DecodeInputsResult.Values =>
               InputValues(endpoint.input, values) match {
                 case InputValuesResult.Value(params, _) => inputMatcher(params.asAny.asInstanceOf[I])
-                case InputValuesResult.Failure(_, _)    => false
+                case _: InputValuesResult.Failure       => false
               }
           }
         )
@@ -56,8 +56,8 @@ trait SttpStubServer {
         new stub.WhenRequest(req => {
           val result = DecodeInputs(endpoint.input, new SttpDecodeInputs(req))
           result match {
-            case DecodeInputsResult.Failure(_, f) if failureMatcher.isDefinedAt(f) => failureMatcher(f)
-            case DecodeInputsResult.Values(_, _)                                   => false
+            case DecodeInputsResult.Failure(_, f, _) if failureMatcher.isDefinedAt(f) => failureMatcher(f)
+            case DecodeInputsResult.Values(_, _)                                      => false
           }
         })
       )

@@ -33,7 +33,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
                   .map { v =>
                     codec.decode(v) match {
                       case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                      case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                      case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure, e.input): DecodeInputsResult
                     }
                   }
 
@@ -49,11 +49,11 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
             decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
               case values: DecodeInputsResult.Values =>
                 InputValues(e.input, values) match {
-                  case InputValuesResult.Value(params, _)        => provide(params.asAny.asInstanceOf[I])
-                  case InputValuesResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
+                  case InputValuesResult.Value(params, _)                   => provide(params.asAny.asInstanceOf[I])
+                  case InputValuesResult.Failure(input, failure, rootInput) => decodeFailureDirective(ctx, e, input, failure)
                 }
 
-              case DecodeInputsResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
+              case DecodeInputsResult.Failure(input, failure, rootInput) => decodeFailureDirective(ctx, e, input, failure)
             }
           }
         }
@@ -78,7 +78,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       input: EndpointInput[_],
       failure: DecodeResult.Failure
   )(implicit ec: ExecutionContext, mat: Materializer): Directive1[I] = {
-    val decodeFailureCtx = DecodeFailureContext(input, failure)
+    val decodeFailureCtx = DecodeFailureContext(input, failure, e.input)
     val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
     handling match {
       case DecodeFailureHandling.NoMatch =>

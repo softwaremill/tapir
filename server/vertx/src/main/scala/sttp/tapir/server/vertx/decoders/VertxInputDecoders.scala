@@ -3,7 +3,6 @@ package sttp.tapir.server.vertx.decoders
 import java.io.{ByteArrayInputStream, File}
 import java.nio.ByteBuffer
 import java.util.Date
-
 import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.Part
@@ -13,7 +12,7 @@ import sttp.tapir.server.vertx.VertxEndpointOptions
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers.tryEncodeError
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling}
-import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, RawBodyType}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyType}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
@@ -39,11 +38,11 @@ object VertxInputDecoders {
         InputValues(endpoint.input, values) match {
           case InputValuesResult.Value(params, _) =>
             logicHandler(params)
-          case InputValuesResult.Failure(_, failure) =>
+          case InputValuesResult.Failure(_, failure, _) =>
             tryEncodeError(endpoint, rc, failure)
         }
-      case DecodeInputsResult.Failure(input, failure) =>
-        val decodeFailureCtx = DecodeFailureContext(input, failure)
+      case DecodeInputsResult.Failure(input, failure, rootInput) =>
+        val decodeFailureCtx = DecodeFailureContext(input, failure, rootInput)
         endpointOptions.decodeFailureHandler(decodeFailureCtx) match {
           case DecodeFailureHandling.NoMatch =>
             endpointOptions.logRequestHandling.decodeFailureNotHandled(endpoint, decodeFailureCtx)(endpointOptions.logger)
@@ -58,9 +57,9 @@ object VertxInputDecoders {
   private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)(implicit
       serverOptions: VertxEndpointOptions
   ): Future[DecodeInputsResult] =
-    decodeBody(DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc)
+    decodeBody(e.input, DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc)
 
-  private def decodeBody(result: DecodeInputsResult, rc: RoutingContext)(implicit
+  private def decodeBody(rootInput: EndpointInput[_], result: DecodeInputsResult, rc: RoutingContext)(implicit
       serverOptions: VertxEndpointOptions
   ): Future[DecodeInputsResult] = {
     implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
@@ -71,7 +70,7 @@ object VertxInputDecoders {
           case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
             extractRawBody(bodyType, rc).map(codec.decode).map {
               case DecodeResult.Value(body)      => values.setBodyInputValue(body)
-              case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+              case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure, rootInput): DecodeInputsResult
             }
         }
       case failure: DecodeInputsResult.Failure => Future.successful(failure)

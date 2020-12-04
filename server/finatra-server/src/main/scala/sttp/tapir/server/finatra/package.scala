@@ -40,7 +40,7 @@ package object finatra {
                       val decodeResult = codec.decode(rawBody)
                       decodeResult match {
                         case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                        case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                        case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure, e.input): DecodeInputsResult
                       }
                     }
                 case None => Future.value(values)
@@ -72,7 +72,7 @@ package object finatra {
             input: EndpointInput[_],
             failure: DecodeResult.Failure
         ): Response = {
-          val decodeFailureCtx = DecodeFailureContext(input, failure)
+          val decodeFailureCtx = DecodeFailureContext(input, failure, e.input)
           val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
 
           handling match {
@@ -88,10 +88,10 @@ package object finatra {
         decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
           case values: DecodeInputsResult.Values =>
             InputValues(e.input, values) match {
-              case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
-              case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
+              case InputValuesResult.Value(params, _)           => valueToResponse(params.asAny)
+              case InputValuesResult.Failure(input, failure, _) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
             }
-          case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
+          case DecodeInputsResult.Failure(input, failure, _) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
         }
       }
 
