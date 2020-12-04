@@ -3,7 +3,7 @@ package sttp.tapir.json.upickle
 import scala.util.{Try, Success, Failure}
 import sttp.tapir._
 import sttp.tapir.Codec.JsonCodec
-import sttp.tapir.DecodeResult.{Error, Value}
+import sttp.tapir.DecodeResult.{InvalidJson, Value}
 import upickle.default.{ReadWriter, read, write}
 
 trait TapirJsonuPickle {
@@ -14,7 +14,7 @@ trait TapirJsonuPickle {
     Codec.json[T] { s =>
       Try(read[T](s)) match {
         case Success(v) => Value(v)
-        case Failure(e) => Error("upickle decoder failed", e)
+        case Failure(e) => InvalidJson(s, e)
       }
     } { t => write(t) }
 }

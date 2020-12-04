@@ -19,6 +19,7 @@ object DecodeResult {
   case class Error(original: String, error: Throwable) extends Failure
   case class Mismatch(expected: String, actual: String) extends Failure
   case class InvalidValue(errors: List[ValidationError[_]]) extends Failure
+  case class InvalidJson(json: String, error: Throwable) extends Failure
 
   def sequence[T](results: Seq[DecodeResult[T]]): DecodeResult[Seq[T]] = {
     results.foldRight(Value(List.empty[T]): DecodeResult[Seq[T]]) { case (result, acc) =>

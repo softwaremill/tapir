@@ -50,4 +50,11 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
   it should "encode and decode Long type" in {
     testEncodeDecode(1566150331L)
   }
+
+  it should "return a JSON specific decode error on failure" in {
+    val codec = TapirJsonSprayCodec.jsonFormatCodec[String]
+    val actual = codec.decode("[]")
+    actual shouldBe a[DecodeResult.InvalidJson]
+    actual.asInstanceOf[DecodeResult.InvalidJson].json shouldEqual "[]"
+  }
 }
