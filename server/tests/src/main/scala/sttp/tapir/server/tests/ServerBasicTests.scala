@@ -2,7 +2,6 @@ package sttp.tapir.server.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
-
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
@@ -14,7 +13,7 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.{AuthenticationFailureHandler, DecodeFailureHandler, DefaultDecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 import org.scalatest.matchers.should.Matchers._

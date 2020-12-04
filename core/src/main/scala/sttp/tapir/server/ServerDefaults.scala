@@ -30,6 +30,14 @@ object ServerDefaults {
       FailureMessages.failureMessage
     )
 
+  // TODO szczygi docs
+  def decodeFailureHandlerWithAuthentication(// TODO szczygi better name
+      handler: AuthenticationFailureHandler.Handle
+  ): DecodeFailureHandler =
+    {
+      new AuthenticationFailureHandler(handler, decodeFailureHandler)
+    }
+
   object FailureHandling {
     val failureOutput: EndpointOutput[(StatusCode, String)] = statusCode.and(stringBody)
 

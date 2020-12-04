@@ -12,7 +12,14 @@ import sttp.client3._
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
-import sttp.tapir.server.tests.{ServerBasicTests, ServerStreamingTests, ServerTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.server.tests.{
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerStreamingTests,
+  ServerTests,
+  ServerWebSocketTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 
 class AkkaHttpServerTests extends TestSuite {
@@ -44,6 +51,7 @@ class AkkaHttpServerTests extends TestSuite {
         new ServerWebSocketTests(backend, serverTests, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
+        new ServerAuthenticationTests(backend, serverTests).tests() ++
         additionalTests()
     }
   }
