@@ -98,7 +98,7 @@ val downloadGeckoDriverSettings: Seq[Def.Setting[Task[Unit]]] = Seq(
 val commonJsSettings = commonSettings ++ downloadGeckoDriverSettings ++ Seq(
   // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
   scalaJSLinkerConfig ~= {
-    _.withBatchMode(System.getenv("CONTINUOUS_INTEGRATION") == "true")
+    _.withBatchMode(System.getenv("GITHUB_ACTIONS") == "true")
   },
   jsEnv in Test := {
     val debugging = false // set to true to help debugging
