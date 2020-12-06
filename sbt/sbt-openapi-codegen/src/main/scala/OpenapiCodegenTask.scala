@@ -3,14 +3,17 @@ import codegen._
 
 case class OpenapiCodegenTask(
     inputYaml: File,
+    packageName: String,
+    objectName: String,
     dir: File,
     cacheDir: File
 ) {
+
   import FileInfo.hash
   import Tracked.inputChanged
 
-  val tempFile = cacheDir / "sbt-openapi-codegen" / s"TapirGeneratedEndpoints.scala"
-  val outFile = dir / "sbt-openapi-codegen" / s"TapirGeneratedEndpoints.scala"
+  val tempFile = cacheDir / "sbt-openapi-codegen" / s"$objectName.scala"
+  val outFile = dir / "sbt-openapi-codegen" / s"$objectName.scala"
 
   // 1. make the file under cache/sbt-tapircodegen.
   // 2. compare its SHA1 against cache/sbtbuildinfo-inputs
@@ -31,7 +34,7 @@ case class OpenapiCodegenTask(
   def makeFile(file: File): Task[File] = {
     task {
       val parsed = YamlParser.parseFile(IO.readLines(inputYaml).mkString("\n"))
-      val lines = BasicGenerator.generateObjects(parsed.right.get).linesIterator.toSeq
+      val lines = BasicGenerator.generateObjects(parsed.right.get, packageName, objectName).linesIterator.toSeq
       IO.writeLines(file, lines, IO.utf8)
       file
     }

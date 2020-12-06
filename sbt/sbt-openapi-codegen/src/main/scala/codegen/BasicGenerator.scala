@@ -17,9 +17,9 @@ object BasicGenerator {
   val classGenerator = new ClassDefinitionGenerator()
   val endpointGenerator = new EndpointGenerator()
 
-  def generateObjects(doc: OpenapiDocument) = {
+  def generateObjects(doc: OpenapiDocument, packagePath: String, objName: String): String = {
     s"""|
-        |$packageStr
+        |package $packagePath
         |
         |object $objName {
         |
@@ -32,10 +32,6 @@ object BasicGenerator {
         |}
         |""".stripMargin
   }
-
-  private[codegen] def packageStr: String = "package sttp.tapir.generated"
-
-  private[codegen] def objName = "TapirGeneratedEndpoints"
 
   private[codegen] def imports: String =
     """import sttp.tapir._
