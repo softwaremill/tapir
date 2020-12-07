@@ -46,9 +46,9 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     inquireVersions,
     // publishing locally so that the pgp password prompt is displayed early
     // in the process
-    releaseStepCommand("publishLocalSigned"),
-    runClean,
-    runTest,
+    releaseStepCommandAndRemaining("publishLocalSigned"),
+    releaseStepCommandAndRemaining("clean"),
+    releaseStepCommandAndRemaining("compile"),
     setReleaseVersion,
     releaseStepInputTask(documentation.jvm(documentationScalaVersion) / mdoc),
     Release.stageChanges("generated-doc/out"),
