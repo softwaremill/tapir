@@ -4,7 +4,17 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import sbt.Reference.display
-import sbtrelease.ReleaseStateTransformations.{checkSnapshotDependencies, commitReleaseVersion, inquireVersions, publishArtifacts, pushChanges, runClean, runTest, setReleaseVersion, tagRelease}
+import sbtrelease.ReleaseStateTransformations.{
+  checkSnapshotDependencies,
+  commitReleaseVersion,
+  inquireVersions,
+  publishArtifacts,
+  pushChanges,
+  runClean,
+  runTest,
+  setReleaseVersion,
+  tagRelease
+}
 import sbt.internal.ProjectMatrix
 
 val scala2_12 = "2.12.12"
@@ -16,8 +26,8 @@ val documentationScalaVersion = scala2_12 // Documentation depends on finatraSer
 
 scalaVersion := scala2_12
 
-lazy val testServerPort = settingKey[Int]("Port to run the http test server on")
-lazy val startTestServer = taskKey[Unit]("Start a http server used by tests")
+lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
+lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
@@ -62,9 +72,7 @@ lazy val downloadGeckoDriver: TaskKey[Unit] = taskKey[Unit](
 
 val downloadGeckoDriverSettings: Seq[Def.Setting[Task[Unit]]] = Seq(
   Global / downloadGeckoDriver := {
-    if (
-      java.nio.file.Files.notExists(new File("target", "geckodriver").toPath)
-    ) {
+    if (java.nio.file.Files.notExists(new File("target", "geckodriver").toPath)) {
       val version = "v0.28.0"
       println(s"geckodriver binary file not found")
       import sys.process._
@@ -195,18 +203,17 @@ lazy val rootProject = (project in file("."))
   )
   .aggregate(allAggregates: _*)
 
-// start a test server before running tests of a backend; this is required both for JS tests run inside a
-// nodejs/browser environment, as well as for JVM tests where akka-http isn't available (e.g. dotty). To simplify
-// things, we always start the test server.
+// start a test server before running tests of a client interpreter; this is required both for JS tests run inside a
+// nodejs/browser environment, as well as for JVM tests where akka-http isn't available (e.g. dotty).
 val testServerSettings = Seq(
   test in Test := (test in Test)
-    .dependsOn(startTestServer in testServer2_13)
+    .dependsOn(startClientTestServer in testServer2_13)
     .value,
   testOnly in Test := (testOnly in Test)
-    .dependsOn(startTestServer in testServer2_13)
+    .dependsOn(startClientTestServer in testServer2_13)
     .evaluated,
   testOptions in Test += Tests.Setup(() => {
-    val port = (testServerPort in testServer2_13).value
+    val port = (clientTestServerPort in testServer2_13).value
     PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
   })
 )
@@ -223,10 +230,10 @@ lazy val testServer = (projectMatrix in file("client/testserver"))
     ),
     // the test server needs to be started before running any client tests
     mainClass in reStart := Some("sttp.tapir.client.tests.HttpServer"),
-    reStartArgs in reStart := Seq(s"${(testServerPort in Test).value}"),
+    reStartArgs in reStart := Seq(s"${(clientTestServerPort in Test).value}"),
     fullClasspath in reStart := (fullClasspath in Test).value,
-    testServerPort := 51823,
-    startTestServer := reStart.toTask("").value
+    clientTestServerPort := 51823,
+    startClientTestServer := reStart.toTask("").value
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
 
@@ -793,18 +800,18 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   .settings(
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp
     )
   )
   .jvmPlatform(
     scalaVersions = allScalaVersions,
     settings = commonJvmSettings ++ Seq(
-      libraryDependencies ++=  loggerDependencies ++ Seq(
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
-    )
+      libraryDependencies ++= loggerDependencies ++ Seq(
+        "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+        "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+      )
     )
   )
   .jsPlatform(
