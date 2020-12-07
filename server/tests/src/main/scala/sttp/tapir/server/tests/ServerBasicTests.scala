@@ -19,6 +19,9 @@ import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 import org.scalatest.matchers.should.Matchers._
 
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+
 class ServerBasicTests[F[_], ROUTE](
     backend: SttpBackend[IO, Any],
     serverTests: ServerTests[F, Any, ROUTE],
@@ -223,7 +226,7 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
       pureResult(
         FruitData(
-          Part("", writeToFile(readFromFile(fd.data.body).reverse), fd.data.otherDispositionParams, Nil)
+          Part("", writeToFile(Await.result(readFromFile(fd.data.body), 3.seconds).reverse), fd.data.otherDispositionParams, Nil)
             .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
         ).asRight[Unit]
       )

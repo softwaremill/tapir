@@ -1,3 +1,5 @@
+import java.io.File
+import java.net.URL
 import java.util.concurrent.atomic.AtomicInteger
 
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
@@ -23,6 +25,9 @@ val scala2_12Versions = List(scala2_12)
 val documentationScalaVersion = scala2_12 // Documentation depends on finatraServer, which is 2.12 only
 
 scalaVersion := scala2_12
+
+lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
+lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
@@ -61,12 +66,66 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
 
+lazy val downloadGeckoDriver: TaskKey[Unit] = taskKey[Unit](
+  "Download gecko driver"
+)
+
+val downloadGeckoDriverSettings: Seq[Def.Setting[Task[Unit]]] = Seq(
+  Global / downloadGeckoDriver := {
+    if (java.nio.file.Files.notExists(new File("target", "geckodriver").toPath)) {
+      val version = "v0.28.0"
+      println(s"geckodriver binary file not found")
+      import sys.process._
+      val osName = sys.props("os.name")
+      val isMac = osName.toLowerCase.contains("mac")
+      val isWin = osName.toLowerCase.contains("win")
+      val platformDependentName = if (isMac) {
+        "macos.tar.gz"
+      } else if (isWin) {
+        "win64.zip"
+      } else {
+        "linux64.tar.gz"
+      }
+      println(s"Downloading gecko driver version $version for $osName")
+      val geckoDriverUrl = s"https://github.com/mozilla/geckodriver/releases/download/$version/geckodriver-$version-$platformDependentName"
+      if (!isWin) {
+        url(geckoDriverUrl) #> file("target/geckodriver.tar.gz") #&&
+          "tar -xz -C target -f target/geckodriver.tar.gz" #&&
+          "rm target/geckodriver.tar.gz" !
+      } else {
+        IO.unzipURL(new URL(geckoDriverUrl), new File("target"))
+      }
+      IO.chmod("rwxrwxr-x", new File("target", "geckodriver"))
+    } else {
+      println("Detected geckodriver binary file, skipping downloading.")
+    }
+  }
+)
+
 // run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ browserTestSettings ++ Seq(
+val commonJsSettings = commonSettings ++ downloadGeckoDriverSettings ++ Seq(
   // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
   scalaJSLinkerConfig ~= {
-    _.withBatchMode(System.getenv("CONTINUOUS_INTEGRATION") == "true")
-  }
+    _.withBatchMode(System.getenv("GITHUB_ACTIONS") == "true")
+  },
+  jsEnv in Test := {
+    val debugging = false // set to true to help debugging
+    System.setProperty("webdriver.gecko.driver", "target/geckodriver")
+    new org.scalajs.jsenv.selenium.SeleniumJSEnv(
+      {
+        val options = new org.openqa.selenium.firefox.FirefoxOptions()
+        val args = (if (debugging) Seq("--devtools") else Seq("-headless"))
+        options.addArguments(args: _*)
+        options
+      },
+      org.scalajs.jsenv.selenium.SeleniumJSEnv
+        .Config()
+        .withKeepAlive(debugging)
+    )
+  },
+  test in Test := (test in Test)
+    .dependsOn(downloadGeckoDriver)
+    .value
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
@@ -125,7 +184,8 @@ lazy val allAggregates = core.projectRefs ++
   examples.projectRefs ++
   playground.projectRefs ++
   documentation.projectRefs ++
-  openapiCodegen.projectRefs
+  openapiCodegen.projectRefs ++
+  clientTestServer.projectRefs
 
 val testJVM = taskKey[Unit]("Test JVM projects")
 val testJS = taskKey[Unit]("Test JS projects")
@@ -143,6 +203,42 @@ lazy val rootProject = (project in file("."))
     testJS := (test in Test).all(filterProject(_.contains("JS"))).value
   )
   .aggregate(allAggregates: _*)
+
+// start a test server before running tests of a client interpreter; this is required both for JS tests run inside a
+// nodejs/browser environment, as well as for JVM tests where akka-http isn't available (e.g. dotty).
+val clientTestServerSettings = Seq(
+  test in Test := (test in Test)
+    .dependsOn(startClientTestServer in clientTestServer2_13)
+    .value,
+  testOnly in Test := (testOnly in Test)
+    .dependsOn(startClientTestServer in clientTestServer2_13)
+    .evaluated,
+  testOptions in Test += Tests.Setup(() => {
+    val port = (clientTestServerPort in clientTestServer2_13).value
+    PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
+  })
+)
+
+lazy val clientTestServer = (projectMatrix in file("client/testserver"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "testing-server",
+    skip in publish := true,
+    libraryDependencies ++= loggerDependencies ++ Seq(
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-circe" % Versions.http4s
+    ),
+    // the test server needs to be started before running any client tests
+    mainClass in reStart := Some("sttp.tapir.client.tests.HttpServer"),
+    reStartArgs in reStart := Seq(s"${(clientTestServerPort in Test).value}"),
+    fullClasspath in reStart := (fullClasspath in Test).value,
+    clientTestServerPort := 51823,
+    startClientTestServer := reStart.toTask("").value
+  )
+  .jvmPlatform(scalaVersions = List(scala2_13))
+
+lazy val clientTestServer2_13 = clientTestServer.jvm(scala2_13)
 
 // core
 
@@ -190,16 +286,20 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .settings(
     name := "tapir-tests",
     libraryDependencies ++= Seq(
-      "io.circe" %% "circe-generic" % Versions.circe,
-      "com.beachape" %% "enumeratum-circe" % Versions.enumeratum,
-      "com.softwaremill.common" %% "tagging" % "2.2.1",
+      "io.circe" %%% "circe-generic" % Versions.circe,
+      "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum,
+      "com.softwaremill.common" %%% "tagging" % "2.2.1",
       scalaTest.value,
       "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided",
-      "org.typelevel" %% "cats-effect" % Versions.catsEffect
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
     ),
     libraryDependencies ++= loggerDependencies
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
   .dependsOn(core, circeJson, enumeratum, cats)
 
 // integrations
@@ -690,21 +790,39 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
   .dependsOn(tests)
 
 lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"))
-  .settings(commonJvmSettings)
+  .settings(clientTestServerSettings)
   .settings(
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
-      "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp
     )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJvmSettings ++ Seq(
+      libraryDependencies ++= loggerDependencies ++ Seq(
+        "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+        "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+      )
+    )
+  )
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings ++ Seq(
+      libraryDependencies ++= Seq(
+        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+      )
+    )
+  )
   .dependsOn(core, clientTests % Test)
 
 lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))

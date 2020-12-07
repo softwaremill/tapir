@@ -10,7 +10,7 @@ jobs:
       matrix:
         target-platform: [ "JVM", "JS" ]
     env:
-      JAVA_OPTS: -Xmx4G
+      JAVA_OPTS: -Xmx5G
     steps:
     - name: Checkout
       uses: actions/checkout@v2
@@ -29,7 +29,13 @@ jobs:
     - name: Compile
       run: sbt -v compile compileDocumentation
     - name: Test
+      if: matrix.target-platform != 'JS'
       run: sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }}
+      # Temporarily call JS tests for each subproject explicitly as a workaround until
+      # https://github.com/scala-js/scala-js/issues/4317 has a solution
+    - name: Test Scala.js
+      if: matrix.target-platform == 'JS'
+      run: sbt -v mimaReportBinaryIssues coreJS/test catsJS/test enumeratumJS/test refinedJS/test circeJsonJS/test playJsonJS/test uPickleJsonJS/test jsoniterScalaJS/test sttpClientJS/test
     - name: Cleanup
       run: |
         rm -rf "$HOME/.ivy2/local" || true

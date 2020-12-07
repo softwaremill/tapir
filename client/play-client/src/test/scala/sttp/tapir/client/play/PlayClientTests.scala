@@ -8,7 +8,6 @@ import play.api.libs.ws.ahc.StandaloneAhcWSClient
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
 
 abstract class PlayClientTests[R] extends ClientTests[R] {
