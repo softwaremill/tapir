@@ -49,3 +49,8 @@ import sttp.tapir.client.sttp.ws.fs2._      // for fs2
 
 No additional dependencies are needed, as both of the above implementations are included in the main interpreter,]
 with dependencies on akka-streams and fs2 being marked as optional (hence these are not transitive).
+
+## Scala.JS
+
+The client interpreter also supports Scala.JS, the request must then be send using the 
+[sttp client Scala.JS Fetch backend](https://sttp.softwaremill.com/en/latest/backends/javascript/fetch.html).
