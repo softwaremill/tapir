@@ -35,6 +35,7 @@ excludeLintKeys in Global ++= Set(ideSkipProject)
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
+  scmInfo := Some(ScmInfo(url("https://github.com/softwaremill/tapir"), "scm:git@github.com:softwaremill/tapir.git")),
   mimaPreviousArtifacts := Set.empty, //Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
   // cross-release doesn't work when subprojects have different cross versions
   // work-around from https://github.com/sbt/sbt-release/issues/214,
