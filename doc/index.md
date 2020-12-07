@@ -162,6 +162,12 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
 .. toctree::
    :maxdepth: 2
+   :caption: Generators
+   
+   generator/sbt-openapi-codegen
+   
+.. toctree::
+   :maxdepth: 2
    :caption: Other subjects
 
    other_interpreters

@@ -20,23 +20,29 @@ object OpenapiCodegenPlugin extends AutoPlugin {
   )
 
   def openapiCodegenDefaultSettings: Seq[Setting[_]] = Seq(
-    swaggerFile := baseDirectory.value / "swagger.yaml"
+    openapiSwaggerFile := baseDirectory.value / "swagger.yaml",
+    openapiPackage := "sttp.tapir.generated",
+    openapiObject := "TapirGeneratedEndpoints"
   )
 
   private def codegen = Def.task {
     val log = sLog.value
     log.info("Zipping file...")
     (((
-      swaggerFile,
+      openapiSwaggerFile,
+      openapiPackage,
+      openapiObject,
       sourceManaged,
       streams
     ) flatMap {
       (
           swaggerFile: File,
+          packageName: String,
+          objectName: String,
           srcDir: File,
           taskStreams: TaskStreams
       ) =>
-        OpenapiCodegenTask(swaggerFile, srcDir, taskStreams.cacheDirectory).file
+        OpenapiCodegenTask(swaggerFile, packageName, objectName, srcDir, taskStreams.cacheDirectory).file
     }) map (Seq(_))).value
   }
 }
