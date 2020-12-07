@@ -184,7 +184,8 @@ lazy val allAggregates = core.projectRefs ++
   examples.projectRefs ++
   playground.projectRefs ++
   documentation.projectRefs ++
-  openapiCodegen.projectRefs
+  openapiCodegen.projectRefs ++
+  clientTestServer.projectRefs
 
 val testJVM = taskKey[Unit]("Test JVM projects")
 val testJS = taskKey[Unit]("Test JS projects")
@@ -205,20 +206,20 @@ lazy val rootProject = (project in file("."))
 
 // start a test server before running tests of a client interpreter; this is required both for JS tests run inside a
 // nodejs/browser environment, as well as for JVM tests where akka-http isn't available (e.g. dotty).
-val testServerSettings = Seq(
+val clientTestServerSettings = Seq(
   test in Test := (test in Test)
-    .dependsOn(startClientTestServer in testServer2_13)
+    .dependsOn(startClientTestServer in clientTestServer2_13)
     .value,
   testOnly in Test := (testOnly in Test)
-    .dependsOn(startClientTestServer in testServer2_13)
+    .dependsOn(startClientTestServer in clientTestServer2_13)
     .evaluated,
   testOptions in Test += Tests.Setup(() => {
-    val port = (clientTestServerPort in testServer2_13).value
+    val port = (clientTestServerPort in clientTestServer2_13).value
     PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
   })
 )
 
-lazy val testServer = (projectMatrix in file("client/testserver"))
+lazy val clientTestServer = (projectMatrix in file("client/testserver"))
   .settings(commonJvmSettings)
   .settings(
     name := "testing-server",
@@ -237,7 +238,7 @@ lazy val testServer = (projectMatrix in file("client/testserver"))
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
 
-lazy val testServer2_13 = testServer.jvm(scala2_13)
+lazy val clientTestServer2_13 = clientTestServer.jvm(scala2_13)
 
 // core
 
@@ -796,7 +797,7 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .dependsOn(tests)
 
 lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"))
-  .settings(testServerSettings)
+  .settings(clientTestServerSettings)
   .settings(
     name := "tapir-sttp-client",
     libraryDependencies ++= Seq(
