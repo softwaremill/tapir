@@ -200,7 +200,7 @@ lazy val rootProject = (project in file("."))
   .settings(
     publishArtifact := false,
     name := "tapir",
-    testJVM := (test in Test).all(filterProject(p => !p.contains("JS") && !p.contains("Native"))).value,
+    testJVM := (test in Test).all(filterProject(p => !p.contains("JS"))).value,
     testJS := (test in Test).all(filterProject(_.contains("JS"))).value
   )
   .aggregate(allAggregates: _*)
@@ -275,8 +275,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
         "org.scala-js" %%% "scalajs-dom" % "1.1.0",
-        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test,
-        "io.github.cquiroz" %%% "scala-java-time-tzdb" % "2.0.0" % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
+        "io.github.cquiroz" %%% "scala-java-time-tzdb" % Versions.jsScalaJavaTime % Test
       )
     )
   )
@@ -323,7 +323,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
     scalaVersions = allScalaVersions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
     )
   )
@@ -343,7 +343,7 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
     scalaVersions = allScalaVersions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
     )
   )
@@ -364,7 +364,7 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
     scalaVersions = allScalaVersions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
     )
   )
@@ -416,7 +416,7 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
     scalaVersions = allScalaVersions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
     )
   )
@@ -448,7 +448,7 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
     scalaVersions = allScalaVersions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
     )
   )
@@ -820,7 +820,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     scalaVersions = allScalaVersions,
     settings = commonJsSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "io.github.cquiroz" %%% "scala-java-time" % "2.0.0" % Test
+        "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
     )
   )
