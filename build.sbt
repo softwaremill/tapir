@@ -103,12 +103,15 @@ val downloadGeckoDriverSettings: Seq[Def.Setting[Task[Unit]]] = Seq(
   }
 )
 
-// run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ downloadGeckoDriverSettings ++ Seq(
+val commonJsSettings = commonSettings ++ Seq(
   // https://github.com/scalaz/scalaz/pull/1734#issuecomment-385627061
   scalaJSLinkerConfig ~= {
-    _.withBatchMode(System.getenv("GITHUB_ACTIONS") == "true")
-  },
+    _.withBatchMode(System.getenv("GITHUB_ACTIONS") == "true" || System.getenv("CONTINUOUS_INTEGRATION") == "true")
+  }
+)
+
+// run JS tests inside Firefox, due to jsdom not supporting fetch
+val commonJsSettingsBrowser = commonJsSettings ++ downloadGeckoDriverSettings ++ Seq(
   jsEnv in Test := {
     val debugging = false // set to true to help debugging
     System.setProperty("webdriver.gecko.driver", "target/geckodriver")
@@ -127,6 +130,10 @@ val commonJsSettings = commonSettings ++ downloadGeckoDriverSettings ++ Seq(
   test in Test := (test in Test)
     .dependsOn(downloadGeckoDriver)
     .value
+)
+
+val commonJsSettingsJsDom = commonJsSettings ++ Seq(
+  jsEnv := new org.scalajs.jsenv.jsdomnodejs.JSDOMNodeJSEnv()
 )
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
@@ -272,7 +279,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
   )
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings ++ Seq(
+    settings = commonJsSettingsJsDom ++ Seq(
       libraryDependencies ++= Seq(
         "org.scala-js" %%% "scalajs-dom" % "1.1.0",
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test,
@@ -299,7 +306,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings
+    settings = commonJsSettingsJsDom
   )
   .dependsOn(core, circeJson, enumeratum, cats)
 
@@ -321,7 +328,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings ++ Seq(
+    settings = commonJsSettingsJsDom ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
@@ -341,7 +348,7 @@ lazy val enumeratum: ProjectMatrix = (projectMatrix in file("integrations/enumer
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings ++ Seq(
+    settings = commonJsSettingsJsDom ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
@@ -362,7 +369,7 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings ++ Seq(
+    settings = commonJsSettingsJsDom ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
@@ -398,7 +405,7 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings
+    settings = commonJsSettingsJsDom
   )
   .dependsOn(core)
 
@@ -414,7 +421,7 @@ lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings ++ Seq(
+    settings = commonJsSettingsJsDom ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
@@ -446,7 +453,7 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings ++ Seq(
+    settings = commonJsSettingsJsDom ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
@@ -478,7 +485,7 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings
+    settings = commonJsSettingsJsDom
   )
   .dependsOn(core)
 
@@ -793,7 +800,7 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings
+    settings = commonJsSettingsJsDom
   )
   .dependsOn(tests)
 
@@ -818,7 +825,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   )
   .jsPlatform(
     scalaVersions = allScalaVersions,
-    settings = commonJsSettings ++ Seq(
+    settings = commonJsSettingsBrowser ++ Seq(
       libraryDependencies ++= Seq(
         "io.github.cquiroz" %%% "scala-java-time" % Versions.jsScalaJavaTime % Test
       )
