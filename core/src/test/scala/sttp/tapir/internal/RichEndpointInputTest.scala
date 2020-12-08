@@ -40,7 +40,7 @@ class RichEndpointInputTest extends AnyFlatSpec with Matchers {
     val h1 = header[String]("h1")
     val h2 = header[String]("h2").mapTo(Wrap)
 
-    val authB = auth.bearer[String]
+    val authB = auth.bearer[String]()
 
   }
 }

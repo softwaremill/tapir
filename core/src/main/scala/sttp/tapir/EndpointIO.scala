@@ -1,9 +1,8 @@
 package sttp.tapir
 
 import java.nio.charset.Charset
-
 import sttp.capabilities.Streams
-import sttp.model.Method
+import sttp.model.{Header, Method}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.Info
 import sttp.tapir.internal._
@@ -169,17 +168,28 @@ object EndpointInput {
 
   //
 
+  case class WWWAuthenticate(values: List[String])
+
+  object WWWAuthenticate {
+    val DefaultRealm = "default realm"
+    def basic(realm: String = DefaultRealm): WWWAuthenticate = single("Basic", realm)
+    def bearer(realm: String = DefaultRealm): WWWAuthenticate = single("Bearer", realm)
+    def apiKey(realm: String = DefaultRealm): WWWAuthenticate = single("ApiKey", realm)
+    def single(scheme: String, realm: String = DefaultRealm): WWWAuthenticate = WWWAuthenticate(List(s"""$scheme realm="$realm""""))
+  }
+
   trait Auth[T] extends EndpointInput.Single[T] {
     def input: EndpointInput.Single[T]
+    def challenge: WWWAuthenticate
   }
 
   object Auth {
-    case class ApiKey[T](input: EndpointInput.Single[T]) extends Auth[T] {
+    case class ApiKey[T](input: EndpointInput.Single[T], challenge: WWWAuthenticate) extends Auth[T] {
       override private[tapir] type ThisType[X] = ApiKey[X]
       override def show: String = s"auth(api key, via ${input.show})"
       override def map[U](mapping: Mapping[T, U]): ApiKey[U] = copy(input = input.map(mapping))
     }
-    case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
+    case class Http[T](scheme: String, input: EndpointInput.Single[T], challenge: WWWAuthenticate) extends Auth[T] {
       override private[tapir] type ThisType[X] = Http[X]
       override def show: String = s"auth($scheme http, via ${input.show})"
       override def map[U](mapping: Mapping[T, U]): Http[U] = copy(input = input.map(mapping))
@@ -189,7 +199,8 @@ object EndpointInput {
         tokenUrl: String,
         scopes: ListMap[String, String],
         refreshUrl: Option[String] = None,
-        input: EndpointInput.Single[T]
+        input: EndpointInput.Single[T],
+        challenge: WWWAuthenticate
     ) extends Auth[T] {
       override private[tapir] type ThisType[X] = Oauth2[X]
       override def show: String = s"auth(oauth2, via ${input.show})"
@@ -206,6 +217,8 @@ object EndpointInput {
       override def map[U](mapping: Mapping[T, U]): ScopedOauth2[U] = copy(oauth2 = oauth2.map(mapping))
 
       override def input: Single[T] = oauth2.input
+
+      override def challenge: WWWAuthenticate = oauth2.challenge
     }
   }
 
