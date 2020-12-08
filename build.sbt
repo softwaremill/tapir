@@ -31,7 +31,7 @@ lazy val startClientTestServer = taskKey[Unit]("Start a http server used by clie
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
-excludeLintKeys in Global ++= Set(ideSkipProject)
+excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
