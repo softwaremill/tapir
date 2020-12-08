@@ -112,6 +112,7 @@ val commonJsSettings = commonSettings ++ downloadGeckoDriverSettings ++ Seq(
   jsEnv in Test := {
     val debugging = false // set to true to help debugging
     System.setProperty("webdriver.gecko.driver", "target/geckodriver")
+    System.setProperty("webdriver.firefox.driver", "target/geckodriver")
     new org.scalajs.jsenv.selenium.SeleniumJSEnv(
       {
         val options = new org.openqa.selenium.firefox.FirefoxOptions()
