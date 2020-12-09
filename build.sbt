@@ -819,7 +819,6 @@ lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
   .settings(
     name := "sbt-openapi-codegen",
     organization := "com.softwaremill.sttp.tapir",
-    version := "0.1-SNAPSHOT",
     sbtPlugin := true,
     scriptedLaunchOpts += ("-Dplugin.version=" + version.value),
     scriptedLaunchOpts ++= java.lang.management.ManagementFactory.getRuntimeMXBean.getInputArguments.asScala
