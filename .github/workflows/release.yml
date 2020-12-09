@@ -8,11 +8,11 @@ on:
 jobs:
   update_release_draft:
     runs-on: ubuntu-latest
-    if: "contains(github.event.head_commit.message, 'Setting version to ') && !contains(github.event.head_commit.message, 'SNAPSHOT')"
+    if: "contains(github.event.head_commit.message, 'Release ') && !contains(github.event.head_commit.message, 'SNAPSHOT')"
     steps:
       - name: Extract version from commit message
         run: |
-          version=${COMMIT_MSG#"Setting version to "}
+          version=${COMMIT_MSG#"Release "}
           echo "VERSION=$version" >> $GITHUB_ENV
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}

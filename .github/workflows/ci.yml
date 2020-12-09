@@ -1,5 +1,10 @@
 name: CI
-on: [push, pull_request]
+on:
+  pull_request:
+    branches: ['*']
+  push:
+    branches: ['*']
+    tags: [v*]
 jobs:
   ci:
     # run on external PRs, but not on internal PRs since those will be run by push to branch
@@ -36,6 +41,14 @@ jobs:
     - name: Test Scala.js
       if: matrix.target-platform == 'JS'
       run: sbt -v mimaReportBinaryIssues coreJS/test catsJS/test enumeratumJS/test refinedJS/test circeJsonJS/test playJsonJS/test uPickleJsonJS/test jsoniterScalaJS/test sttpClientJS/test
+    - name: Publish
+      if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v'))
+      run: sbt ci-release
+      env:
+        PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+        PGP_SECRET: ${{ secrets.PGP_SECRET }}
+        SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+        SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
     - name: Cleanup
       run: |
         rm -rf "$HOME/.ivy2/local" || true

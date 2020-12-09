@@ -1,20 +1,8 @@
 import java.io.File
 import java.net.URL
-import java.util.concurrent.atomic.AtomicInteger
-
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
+import com.softwaremill.UpdateVersionInDocs
 import sbt.Reference.display
-import sbtrelease.ReleaseStateTransformations.{
-  checkSnapshotDependencies,
-  commitReleaseVersion,
-  inquireVersions,
-  publishArtifacts,
-  pushChanges,
-  runClean,
-  runTest,
-  setReleaseVersion,
-  tagRelease
-}
 import sbt.internal.ProjectMatrix
 
 val scala2_12 = "2.12.12"
@@ -37,29 +25,13 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
   scmInfo := Some(ScmInfo(url("https://github.com/softwaremill/tapir"), "scm:git@github.com:softwaremill/tapir.git")),
   mimaPreviousArtifacts := Set.empty, //Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
-  // cross-release doesn't work when subprojects have different cross versions
-  // work-around from https://github.com/sbt/sbt-release/issues/214,
-  releaseCrossBuild := false,
-  // similar to Release.steps, but without setting the next version. That way automatic release notes work w/ github
-  // actions, and when we get compiled docs, re-generating them won't cause versions to change to -SNAPSHOT.
-  releaseProcess := Seq(
-    checkSnapshotDependencies,
-    inquireVersions,
-    // publishing locally so that the pgp password prompt is displayed early
-    // in the process
-    releaseStepCommandAndRemaining("publishLocalSigned"),
-    releaseStepCommandAndRemaining("clean"),
-    releaseStepCommandAndRemaining("compile"),
-    setReleaseVersion,
-    releaseStepInputTask(documentation.jvm(documentationScalaVersion) / mdoc),
-    Release.stageChanges("generated-doc/out"),
-    Release.updateVersionInDocs(organization.value),
-    commitReleaseVersion,
-    tagRelease,
-    publishArtifacts,
-    releaseStepCommand("sonatypeBundleRelease"),
-    pushChanges
-  ),
+  updateDocs := Def.taskDyn {
+    val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
+    Def.task {
+      (documentation.jvm(documentationScalaVersion) / mdoc).toTask("").value
+      files1 ++ Seq(file("generated-doc/out"))
+    }
+  }.value,
   ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false
