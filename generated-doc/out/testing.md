@@ -12,7 +12,7 @@ details on how the stub works).
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.17.0-M10"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.17.0-M11"
 ```
 
 And the following imports:
