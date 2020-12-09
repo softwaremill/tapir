@@ -1,12 +1,14 @@
 package sttp.tapir.server
 
-import sttp.model.{Header, StatusCode}
+import sttp.model.StatusCode
 import sttp.tapir.DecodeResult.InvalidValue
 import sttp.tapir._
 
 import scala.annotation.tailrec
 
 object ServerDefaults {
+  def failureOutput[R, T](body: EndpointIO.Body[R, T]): EndpointOutput[(DefaultDecodeFailureResponse, T)] =
+    statusCode.and(headers).mapTo(DefaultDecodeFailureResponse.apply _).and(body)
 
   /** The default implementation of the [[DecodeFailureHandler]].
     *
@@ -31,11 +33,8 @@ object ServerDefaults {
     )
 
   object FailureHandling {
-    val failureOutput: EndpointOutput[(DefaultDecodeFailureResponse, String)] =
-      statusCode.and(headers).mapTo(DefaultDecodeFailureResponse.apply _).and(stringBody)
-
     def failureResponse(result: DefaultDecodeFailureResponse, message: String): DecodeFailureHandling =
-      DecodeFailureHandling.response(failureOutput)((result, message))
+      DecodeFailureHandling.response(failureOutput(stringBody))((result, message))
 
     /** @param badRequestOnPathErrorIfPathShapeMatches Should a status 400 be returned if the shape of the path
       * of the request matches, but decoding some path segment fails with a [[DecodeResult.Error]].
