@@ -10,19 +10,21 @@ import sttp.tapir._
 import sttp.tapir.tests.Test
 import cats.implicits._
 import sttp.model.Uri.QuerySegment
+import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.model.UsernamePassword
 
 class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], serverTests: ServerTests[F, S, ROUTE])(implicit
     m: MonadError[F]
 ) extends Matchers {
   import serverTests._
+  private val Realm = "realm"
 
   private val base = endpoint.post.in("secret" / path[Long]("id")).in(query[String]("q"))
 
-  private val basic = base.in(auth.basic[UsernamePassword])
-  private val bearer = base.in(auth.bearer[String])
-  private val apiKeyInQuery = base.in(auth.apiKey(query[String]("token")))
-  private val apiKeyInHeader = base.in(auth.apiKey(header[String]("x-api-key")))
+  private val basic = base.in(auth.basic[UsernamePassword](WWWAuthenticate.basic(Realm)))
+  private val bearer = base.in(auth.bearer[String](WWWAuthenticate.bearer(Realm)))
+  private val apiKeyInQuery = base.in(auth.apiKey(query[String]("token"), WWWAuthenticate.apiKey(Realm)))
+  private val apiKeyInHeader = base.in(auth.apiKey(header[String]("x-api-key"), WWWAuthenticate.apiKey(Realm)))
 
   private val result = m.unit(().asRight[Unit])
 
@@ -48,8 +50,17 @@ class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], s
 
   private def missingAuthTests = endpoints.map { case (authType, endpoint, _) =>
     testServer(endpoint, s"missing $authType")(_ => result) { baseUri =>
-      validRequest(baseUri).send(backend).map(_.code shouldBe StatusCode.Unauthorized)
+      validRequest(baseUri).send(backend).map { r =>
+        r.code shouldBe StatusCode.Unauthorized
+        r.header("WWW-Authenticate") shouldBe Some(expectedChallenge(authType))
+      }
     }
+  }
+
+  private def expectedChallenge(authType: String) = authType match {
+    case "basic"                                      => s"""Basic realm="$Realm""""
+    case "bearer"                                     => s"""Bearer realm="$Realm""""
+    case "apiKey in query param" | "apiKey in header" => s"""ApiKey realm="$Realm""""
   }
 
   private def correctAuthTests = endpoints.map { case (authType, endpoint, auth) =>

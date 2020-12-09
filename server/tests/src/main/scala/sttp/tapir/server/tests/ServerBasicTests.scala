@@ -695,8 +695,8 @@ class ServerBasicTests[F[_], ROUTE](
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
     ServerDefaults.decodeFailureHandler.copy(
-      respondWithStatusCode = ServerDefaults.FailureHandling
-        .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
+      respond = ServerDefaults.FailureHandling
+        .respond(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
     )
 
   def throwFruits(name: String): F[String] =

@@ -168,7 +168,9 @@ object EndpointInput {
 
   //
 
-  case class WWWAuthenticate(values: List[String])
+  case class WWWAuthenticate(values: List[String]) {
+    def headers: List[Header] = values.map(Header("WWW-Authenticate", _))
+  }
 
   object WWWAuthenticate {
     val DefaultRealm = "default realm"
