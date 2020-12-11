@@ -40,7 +40,7 @@ jobs:
       # https://github.com/scala-js/scala-js/issues/4317 has a solution
     - name: Test Scala.js
       if: matrix.target-platform == 'JS'
-      run: sbt -v mimaReportBinaryIssues coreJS/test catsJS/test enumeratumJS/test refinedJS/test circeJsonJS/test playJsonJS/test uPickleJsonJS/test jsoniterScalaJS/test sttpClientJS/test
+      run: sbt coreJS/test coreJS2_12/test catsJS/test catsJS2_12/test enumeratumJS/test enumeratumJS2_12/test refinedJS/test refinedJS2_12/test circeJsonJS/test circeJsonJS2_12/test playJsonJS/test playJsonJS2_12/test uPickleJsonJS/test uPickleJsonJS2_12/test jsoniterScalaJS/test jsoniterScalaJS2_12/test sttpClientJS/test sttpClientJS2_12/test
     - name: Cleanup
       run: |
         rm -rf "$HOME/.ivy2/local" || true
