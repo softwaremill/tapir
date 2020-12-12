@@ -15,7 +15,11 @@ trait TapirJsonSpray {
     Codec.json { s =>
       Try(s.parseJson.convertTo[T]) match {
         case Success(v) => Value(v)
-        case Failure(e) => InvalidJson(s, e)
+        case Failure(e @ DeserializationException(msg, _, fieldNames)) =>
+          val errors = fieldNames.map(field => InvalidJson.Error(msg, Some(field)))
+          InvalidJson(s, errors, e)
+        case Failure(e) =>
+          InvalidJson(s, errors = List.empty, e)
       }
     } { t => t.toJson.toString() }
 

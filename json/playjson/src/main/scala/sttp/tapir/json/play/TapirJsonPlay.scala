@@ -12,7 +12,16 @@ trait TapirJsonPlay {
   implicit def readsWritesCodec[T: Reads: Writes: Schema]: JsonCodec[T] =
     Codec.json[T] { s =>
       implicitly[Reads[T]].reads(Json.parse(s)) match {
-        case JsError(errors)     => InvalidJson(s, JsResultException(errors))
+        case JsError(errors) =>
+          val jsonErrors = errors
+            .flatMap { case (path, validationErrors) =>
+              validationErrors.map(error => path -> error)
+            }
+            .map { case (path, validationError) =>
+              InvalidJson.Error(validationError.message, Some(path.toJsonString))
+            }
+            .toList
+          InvalidJson(s, jsonErrors, JsResultException(errors))
         case JsSuccess(value, _) => Value(value)
       }
     } { t => Json.stringify(Json.toJson(t)) }

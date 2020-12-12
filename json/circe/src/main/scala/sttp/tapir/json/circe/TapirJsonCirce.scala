@@ -13,8 +13,12 @@ trait TapirJsonCirce {
   implicit def circeCodec[T: Encoder: Decoder: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json[T] { s =>
       io.circe.parser.decode[T](s) match {
-        case Left(error) => InvalidJson(s, error)
-        case Right(v)    => Value(v)
+        case Left(failure @ ParsingFailure(msg, _)) =>
+          InvalidJson(s, List(InvalidJson.Error(msg, atPath = None)), failure)
+        case Left(failure: DecodingFailure) =>
+          val path = CursorOp.opsToPath(failure.history)
+          InvalidJson(s, List(InvalidJson.Error(failure.message, Some(path))), failure)
+        case Right(v) => Value(v)
       }
     } { t => jsonPrinter.print(t.asJson) }
 

@@ -52,9 +52,14 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
   }
 
   it should "return a JSON specific decode error on failure" in {
-    val codec = TapirJsonSprayCodec.jsonFormatCodec[String]
-    val actual = codec.decode("[]")
+    val codec = TapirJsonSprayCodec.jsonFormatCodec[Customer]
+    val actual = codec.decode("{}")
     actual shouldBe a[DecodeResult.InvalidJson]
-    actual.asInstanceOf[DecodeResult.InvalidJson].json shouldEqual "[]"
+    val invalidJsonFailure = actual.asInstanceOf[InvalidJson]
+    invalidJsonFailure.json shouldEqual "{}"
+    invalidJsonFailure.errors shouldEqual List(
+      InvalidJson.Error("Object is missing required member 'name'", Some("name"))
+    )
+    invalidJsonFailure.underlying shouldBe a[DeserializationException]
   }
 }

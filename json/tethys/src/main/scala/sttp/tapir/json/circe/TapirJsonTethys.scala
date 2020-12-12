@@ -12,7 +12,7 @@ trait TapirJsonTethys {
   implicit def tethysCodec[T: JsonReader: JsonWriter: Schema]: JsonCodec[T] =
     Codec.json(s =>
       s.jsonAs[T] match {
-        case Left(readerError) => InvalidJson(s, readerError)
+        case Left(readerError) => InvalidJson(s, List.empty, readerError)
         case Right(value)      => Value(value)
       }
     )(_.asJson)

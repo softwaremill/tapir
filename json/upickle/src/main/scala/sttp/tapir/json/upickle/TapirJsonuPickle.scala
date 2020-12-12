@@ -14,7 +14,7 @@ trait TapirJsonuPickle {
     Codec.json[T] { s =>
       Try(read[T](s)) match {
         case Success(v) => Value(v)
-        case Failure(e) => InvalidJson(s, e)
+        case Failure(e) => InvalidJson(s, List.empty, e)
       }
     } { t => write(t) }
 }

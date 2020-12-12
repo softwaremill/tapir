@@ -19,7 +19,19 @@ object DecodeResult {
   case class Error(original: String, error: Throwable) extends Failure
   case class Mismatch(expected: String, actual: String) extends Failure
   case class InvalidValue(errors: List[ValidationError[_]]) extends Failure
-  case class InvalidJson(json: String, error: Throwable) extends Failure
+  case class InvalidJson(
+      json: String,
+      errors: List[InvalidJson.Error],
+      underlying: Throwable
+  ) extends Failure {
+    def message: String =
+      if (errors.isEmpty) underlying.getMessage else errors.map(_.message).mkString(", ")
+  }
+  object InvalidJson {
+    case class Error(msg: String, atPath: Option[String]) {
+      def message: String = msg + atPath.map(path => s" at '$path'")
+    }
+  }
 
   def sequence[T](results: Seq[DecodeResult[T]]): DecodeResult[Seq[T]] = {
     results.foldRight(Value(List.empty[T]): DecodeResult[Seq[T]]) { case (result, acc) =>

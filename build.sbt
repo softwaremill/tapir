@@ -304,7 +304,8 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-core" % Versions.circe,
       "io.circe" %%% "circe-parser" % Versions.circe,
-      scalaTest.value % Test
+      scalaTest.value % Test,
+      "io.circe" %%% "circe-generic" % Versions.circe % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -373,7 +374,8 @@ lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
     libraryDependencies ++= Seq(
       "com.tethys-json" %% "tethys-core" % Versions.tethys,
       "com.tethys-json" %% "tethys-jackson" % Versions.tethys,
-      scalaTest.value % Test
+      scalaTest.value % Test,
+      "com.tethys-json" %% "tethys-derivation" % Versions.tethys % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)

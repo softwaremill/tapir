@@ -14,7 +14,7 @@ trait TapirJsonJsoniter {
   implicit def jsoniterCodec[T: JsonValueCodec: Schema]: JsonCodec[T] =
     sttp.tapir.Codec.json { s =>
       Try(readFromString[T](s)) match {
-        case Failure(error) => InvalidJson(s, error)
+        case Failure(error) => InvalidJson(s, List.empty, error)
         case Success(v)     => Value(v)
       }
     } { t => writeToString[T](t) }
