@@ -3,7 +3,6 @@ package sttp.tapir.server.vertx.decoders
 import java.io.{ByteArrayInputStream, File}
 import java.nio.ByteBuffer
 import java.util.Date
-
 import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.Part
@@ -15,6 +14,8 @@ import sttp.tapir.server.vertx.handlers.tryEncodeError
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, RawBodyType}
 
+import java.nio.charset.Charset
+import java.nio.file.{Files, Paths}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
 import scala.util.Random
@@ -97,9 +98,20 @@ object VertxInputDecoders {
                 .map(_ => new File(filePath))
             }
         }
-      case RawBodyType.MultipartBody(partTypes, _) =>
+      case RawBodyType.MultipartBody(partTypes, defaultType) =>
+        val defaultParts = defaultType
+          .fold(Map.empty[String, RawBodyType[_]]) { bodyType =>
+            val files = rc.fileUploads().map(_.name())
+            val form = rc.request().formAttributes().names()
+
+            (files ++ form)
+              .diff(partTypes.keySet)
+              .map(_ -> bodyType)
+              .toMap
+          }
+        val allParts = defaultParts ++ partTypes
         Future.successful(
-          partTypes.map { case (partName, rawBodyType) =>
+          allParts.map { case (partName, rawBodyType) =>
             Part(partName, extractPart(partName, rawBodyType, rc))
           }.toSeq
         )
@@ -107,12 +119,10 @@ object VertxInputDecoders {
   }
 
   private def extractPart[B](name: String, bodyType: RawBodyType[B], rc: RoutingContext): B = {
-    val formAttributes = rc.request.formAttributes
-    val param = formAttributes.get(name)
     bodyType match {
-      case RawBodyType.StringBody(charset) => new String(param.get.getBytes(charset))
-      case RawBodyType.ByteArrayBody       => param.get.getBytes
-      case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(param.get.getBytes)
+      case RawBodyType.StringBody(charset) => new String(readBytes(name, rc, charset))
+      case RawBodyType.ByteArrayBody       => readBytes(name, rc, Charset.defaultCharset())
+      case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(readBytes(name, rc, Charset.defaultCharset()))
       case RawBodyType.InputStreamBody     => throw new IllegalArgumentException("Cannot create a multipart as an InputStream")
       case RawBodyType.FileBody =>
         val f = rc.fileUploads.find(_.name == name).get
@@ -122,6 +132,17 @@ object VertxInputDecoders {
           Part(partName, extractPart(partName, rawBodyType, rc))
         }.toSeq
     }
+  }
+
+  private def readBytes(name: String, rc: RoutingContext, charset: Charset) = {
+    val formAttributes = rc.request.formAttributes
+
+    val formBytes = formAttributes.get(name).map(_.getBytes(charset))
+    val fileBytes = rc.fileUploads().find(_.name() == name).map { upload =>
+      Files.readAllBytes(Paths.get(upload.uploadedFileName()))
+    }
+
+    formBytes.orElse(fileBytes).get
   }
 
 }

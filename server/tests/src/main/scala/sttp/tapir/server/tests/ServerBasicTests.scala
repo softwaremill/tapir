@@ -242,6 +242,26 @@ class ServerBasicTests[F[_], ROUTE](
           r.body should include regex "name=\"data\"[\\s\\S]*oiram hcaep"
         }
     },
+    testServer(in_raw_multipart_out_string)((parts: Seq[Part[Array[Byte]]]) =>
+      pureResult(
+        parts.map(part => s"${part.name}:${new String(part.body)}").mkString("\n").asRight[Unit]
+      )
+    ) { baseUri =>
+      val file1 = writeToFile("peach mario")
+      val file2 = writeToFile("daisy luigi")
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(
+          multipartFile("file1", file1).fileName("file1.txt"),
+          multipartFile("file2", file2).fileName("file2.txt")
+        )
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body should include("file1:peach mario")
+          r.body should include("file2:daisy luigi")
+        }
+    },
     testServer(in_query_out_string, "invalid query parameter")((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
       basicRequest.get(uri"$baseUri?fruit2=orange").send(backend).map(_.code shouldBe StatusCode.BadRequest)
     },
