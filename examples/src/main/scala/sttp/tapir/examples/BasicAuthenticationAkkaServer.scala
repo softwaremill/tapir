@@ -13,7 +13,7 @@ import sttp.tapir.server.akkahttp._
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
-object BasicAuthenticationServer extends App {
+object BasicAuthenticationAkkaServer extends App {
   val secret: Endpoint[UsernamePassword, Unit, String, Any] =
     endpoint.get.in("secret").in(auth.basic[UsernamePassword](WWWAuthenticate.basic("example"))).out(stringBody)
 
