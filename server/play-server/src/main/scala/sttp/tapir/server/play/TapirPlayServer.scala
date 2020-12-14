@@ -54,8 +54,8 @@ trait TapirPlayServer {
           input: EndpointInput[_],
           failure: DecodeResult.Failure
       ): Result = {
-        val decodeFailureCtx = DecodeFailureContext(input, failure, e.input)
-        val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
+        val decodeFailureCtx = DecodeFailureContext(input, failure)
+        val handling = serverOptions.decodeFailureHandler(decodeFailureCtx, e)
         handling match {
           case DecodeFailureHandling.NoMatch =>
             serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(serverOptions.logger)
@@ -81,7 +81,7 @@ trait TapirPlayServer {
                   .map { rawBody =>
                     codec.decode(rawBody) match {
                       case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                      case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure, e.input): DecodeInputsResult
+                      case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                     }
                   }
               case None => Future(values)
@@ -94,10 +94,10 @@ trait TapirPlayServer {
         override def isDefinedAt(x: RequestHeader): Boolean = {
           val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x, 0, serverOptions))
           val handlingResult = decodeInputResult match {
-            case DecodeInputsResult.Failure(input, failure, rootInput) =>
-              val decodeFailureCtx = DecodeFailureContext(input, failure, rootInput)
+            case DecodeInputsResult.Failure(input, failure) =>
+              val decodeFailureCtx = DecodeFailureContext(input, failure)
               serverOptions.logRequestHandling.decodeFailureNotHandled(e.endpoint, decodeFailureCtx)(serverOptions.logger)
-              serverOptions.decodeFailureHandler(decodeFailureCtx) != DecodeFailureHandling.noMatch
+              serverOptions.decodeFailureHandler(decodeFailureCtx, e.endpoint) != DecodeFailureHandling.noMatch
             case DecodeInputsResult.Values(_, _) => true
           }
           handlingResult
@@ -108,10 +108,10 @@ trait TapirPlayServer {
             decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1, 0, serverOptions))).flatMap {
               case values: DecodeInputsResult.Values =>
                 InputValues(e.input, values) match {
-                  case InputValuesResult.Value(params, _)           => valueToResponse(params.asAny)
-                  case InputValuesResult.Failure(input, failure, _) => Future.successful(handleDecodeFailure(e.endpoint, input, failure))
+                  case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
+                  case InputValuesResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e.endpoint, input, failure))
                 }
-              case DecodeInputsResult.Failure(input, failure, _) =>
+              case DecodeInputsResult.Failure(input, failure) =>
                 Future.successful(handleDecodeFailure(e.endpoint, input, failure))
             }
           }

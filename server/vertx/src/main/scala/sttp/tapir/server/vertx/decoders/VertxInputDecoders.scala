@@ -38,12 +38,12 @@ object VertxInputDecoders {
         InputValues(endpoint.input, values) match {
           case InputValuesResult.Value(params, _) =>
             logicHandler(params)
-          case InputValuesResult.Failure(_, failure, _) =>
+          case InputValuesResult.Failure(_, failure) =>
             tryEncodeError(endpoint, rc, failure)
         }
-      case DecodeInputsResult.Failure(input, failure, rootInput) =>
-        val decodeFailureCtx = DecodeFailureContext(input, failure, rootInput)
-        endpointOptions.decodeFailureHandler(decodeFailureCtx) match {
+      case DecodeInputsResult.Failure(input, failure) =>
+        val decodeFailureCtx = DecodeFailureContext(input, failure)
+        endpointOptions.decodeFailureHandler(decodeFailureCtx, endpoint) match {
           case DecodeFailureHandling.NoMatch =>
             endpointOptions.logRequestHandling.decodeFailureNotHandled(endpoint, decodeFailureCtx)(endpointOptions.logger)
             rc.response.setStatusCode(404).end()
@@ -57,9 +57,9 @@ object VertxInputDecoders {
   private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)(implicit
       serverOptions: VertxEndpointOptions
   ): Future[DecodeInputsResult] =
-    decodeBody(e.input, DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc)
+    decodeBody(DecodeInputs(e.input, new VertxDecodeInputsContext(rc)), rc)
 
-  private def decodeBody(rootInput: EndpointInput[_], result: DecodeInputsResult, rc: RoutingContext)(implicit
+  private def decodeBody(result: DecodeInputsResult, rc: RoutingContext)(implicit
       serverOptions: VertxEndpointOptions
   ): Future[DecodeInputsResult] = {
     implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
@@ -70,7 +70,7 @@ object VertxInputDecoders {
           case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
             extractRawBody(bodyType, rc).map(codec.decode).map {
               case DecodeResult.Value(body)      => values.setBodyInputValue(body)
-              case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure, rootInput): DecodeInputsResult
+              case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
             }
         }
       case failure: DecodeInputsResult.Failure => Future.successful(failure)

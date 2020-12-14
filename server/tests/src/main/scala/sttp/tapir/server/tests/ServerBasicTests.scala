@@ -13,7 +13,7 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.server.{DecodeFailureHandler , ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 import org.scalatest.matchers.should.Matchers._
@@ -696,7 +696,7 @@ class ServerBasicTests[F[_], ROUTE](
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
     ServerDefaults.decodeFailureHandler.copy(
       respond = ServerDefaults.FailureHandling
-        .respond(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
+        .respond(_, _, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
     )
 
   def throwFruits(name: String): F[String] =

@@ -56,8 +56,8 @@ trait SttpStubServer {
         new stub.WhenRequest(req => {
           val result = DecodeInputs(endpoint.input, new SttpDecodeInputs(req))
           result match {
-            case DecodeInputsResult.Failure(_, f, _) if failureMatcher.isDefinedAt(f) => failureMatcher(f)
-            case DecodeInputsResult.Values(_, _)                                      => false
+            case DecodeInputsResult.Failure(_, f) if failureMatcher.isDefinedAt(f) => failureMatcher(f)
+            case DecodeInputsResult.Values(_, _)                                   => false
           }
         })
       )

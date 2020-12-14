@@ -17,7 +17,7 @@ class DecodeInputsTest extends AnyFlatSpec with Matchers {
     val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false))
 
     // when & then
-    DecodeInputs(input, StubDecodeInputContext) shouldBe DecodeInputsResult.Failure(input, DecodeResult.Error("v", e), input)
+    DecodeInputs(input, StubDecodeInputContext) shouldBe DecodeInputsResult.Failure(input, DecodeResult.Error("v", e))
   }
 
   object StubDecodeInputContext extends DecodeInputsContext {

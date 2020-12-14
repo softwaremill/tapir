@@ -27,7 +27,7 @@ object ServerDefaults {
   def decodeFailureHandler: DefaultDecodeFailureHandler =
     DefaultDecodeFailureHandler(
       FailureHandling
-        .respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
+        .respond(_, _, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
       FailureHandling.failureResponse,
       FailureMessages.failureMessage
     )
@@ -43,12 +43,13 @@ object ServerDefaults {
       */
     def respond(
         ctx: DecodeFailureContext,
+        endpoint: Endpoint[_, _, _, _],
         badRequestOnPathErrorIfPathShapeMatches: Boolean,
         badRequestOnPathInvalidIfPathShapeMatches: Boolean
     ): Option[DefaultDecodeFailureResponse] = {
       import sttp.tapir.server.{DefaultDecodeFailureResponse => fr}
 
-      failingInput(ctx) match {
+      failingInput(ctx, endpoint) match {
         case _: EndpointInput.Query[_]             => Some(fr.status(StatusCode.BadRequest))
         case _: EndpointInput.QueryParams[_]       => Some(fr.status(StatusCode.BadRequest))
         case _: EndpointInput.Cookie[_]            => Some(fr.status(StatusCode.BadRequest))
@@ -71,11 +72,11 @@ object ServerDefaults {
       }
     }
 
-    private def failingInput(ctx: DecodeFailureContext) = {
+    private def failingInput(ctx: DecodeFailureContext, endpoint: Endpoint[_, _, _, _]) = {
       import sttp.tapir.internal.RichEndpointInput
       ctx.failure match {
         case DecodeResult.Missing =>
-          val missingAuth = ctx.rootInput.pathTo(ctx.input).collectFirst { case a: EndpointInput.Auth[_] =>
+          val missingAuth = endpoint.input.pathTo(ctx.input).collectFirst { case a: EndpointInput.Auth[_] =>
             a
           }
           missingAuth.getOrElse(ctx.input)

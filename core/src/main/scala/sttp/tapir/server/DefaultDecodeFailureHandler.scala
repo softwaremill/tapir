@@ -1,6 +1,7 @@
 package sttp.tapir.server
 
 import sttp.model.{Header, StatusCode}
+import sttp.tapir.Endpoint
 
 final case class DefaultDecodeFailureResponse(status: StatusCode, headers: List[Header])
 
@@ -15,12 +16,12 @@ object DefaultDecodeFailureResponse {
   * - creates the response using `response`
   */
 case class DefaultDecodeFailureHandler(
-    respond: DecodeFailureContext => Option[DefaultDecodeFailureResponse],
+    respond: (DecodeFailureContext, Endpoint[_, _, _, _]) => Option[DefaultDecodeFailureResponse],
     response: (DefaultDecodeFailureResponse, String) => DecodeFailureHandling,
     failureMessage: DecodeFailureContext => String
 ) extends DecodeFailureHandler {
-  def apply(ctx: DecodeFailureContext): DecodeFailureHandling = {
-    respond(ctx) match {
+  def apply(ctx: DecodeFailureContext, endpoint: Endpoint[_, _, _, _]): DecodeFailureHandling = {
+    respond(ctx, endpoint) match {
       case Some(c) =>
         val failureMsg = failureMessage(ctx)
         response(c, failureMsg)

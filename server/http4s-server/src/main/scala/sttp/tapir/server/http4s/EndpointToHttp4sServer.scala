@@ -26,7 +26,7 @@ class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOption
               t(new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req)).map { v =>
                 codec.decode(v) match {
                   case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                  case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure, se.input): DecodeInputsResult
+                  case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
                 }
               }
 
@@ -53,10 +53,10 @@ class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOption
       OptionT(decodeBody(req, internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values =>
           InputValues(se.endpoint.input, values) match {
-            case InputValuesResult.Value(params, _)           => valueToResponse(params.asAny).map(_.some)
-            case InputValuesResult.Failure(input, failure, _) => t(handleDecodeFailure(se.endpoint, input, failure))
+            case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny).map(_.some)
+            case InputValuesResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
           }
-        case DecodeInputsResult.Failure(input, failure, _) => t(handleDecodeFailure(se.endpoint, input, failure))
+        case DecodeInputsResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
       })
     )
   }
@@ -78,8 +78,8 @@ class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOption
       input: EndpointInput[_],
       failure: DecodeResult.Failure
   ): F[Option[Response[F]]] = {
-    val decodeFailureCtx = DecodeFailureContext(input, failure, e.input)
-    val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
+    val decodeFailureCtx = DecodeFailureContext(input, failure)
+    val handling = serverOptions.decodeFailureHandler(decodeFailureCtx, e)
     handling match {
       case DecodeFailureHandling.NoMatch =>
         serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx).map(_ => None)
