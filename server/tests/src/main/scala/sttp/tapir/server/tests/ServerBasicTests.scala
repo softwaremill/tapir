@@ -2,7 +2,6 @@ package sttp.tapir.server.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
-
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
@@ -716,8 +715,8 @@ class ServerBasicTests[F[_], ROUTE](
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
     ServerDefaults.decodeFailureHandler.copy(
-      respondWithStatusCode = ServerDefaults.FailureHandling
-        .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
+      respond = ServerDefaults.FailureHandling
+        .respond(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
     )
 
   def throwFruits(name: String): F[String] =

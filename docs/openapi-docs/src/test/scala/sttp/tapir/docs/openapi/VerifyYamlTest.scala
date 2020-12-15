@@ -126,8 +126,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support authentication") {
     val expectedYaml = loadYaml("expected_auth.yml")
 
-    val e1 = endpoint.in(auth.bearer[String]).in("api1" / path[String]).out(stringBody)
-    val e2 = endpoint.in(auth.bearer[String]).in("api2" / path[String]).out(stringBody)
+    val e1 = endpoint.in(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
+    val e2 = endpoint.in(auth.bearer[String]()).in("api2" / path[String]).out(stringBody)
     val e3 = endpoint.in(auth.apiKey(header[String]("apikey"))).in("api3" / path[String]).out(stringBody)
 
     val actualYaml = List(e1, e2, e3).toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -139,8 +139,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support optional authentication") {
     val expectedYaml = loadYaml("expected_optional_auth.yml")
 
-    val e1 = endpoint.in(auth.bearer[String]).in("api1" / path[String]).out(stringBody)
-    val e2 = endpoint.in(auth.bearer[Option[String]]).in("api2" / path[String]).out(stringBody)
+    val e1 = endpoint.in(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
+    val e2 = endpoint.in(auth.bearer[Option[String]]()).in("api2" / path[String]).out(stringBody)
     val e3 = endpoint.in(auth.apiKey(header[Option[String]]("apikey"))).in("api3" / path[String]).out(stringBody)
 
     val actualYaml = List(e1, e2, e3).toOpenAPI(Info("Fruits", "1.0")).toYaml

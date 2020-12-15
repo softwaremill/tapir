@@ -12,7 +12,7 @@ import sttp.tapir.server.vertx.VertxEndpointOptions
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers.tryEncodeError
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling}
-import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, RawBodyType}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyType}
 
 import java.nio.charset.Charset
 import java.nio.file.{Files, Paths}
@@ -44,7 +44,7 @@ object VertxInputDecoders {
             tryEncodeError(endpoint, rc, failure)
         }
       case DecodeInputsResult.Failure(input, failure) =>
-        val decodeFailureCtx = DecodeFailureContext(input, failure)
+        val decodeFailureCtx = DecodeFailureContext(input, failure, endpoint)
         endpointOptions.decodeFailureHandler(decodeFailureCtx) match {
           case DecodeFailureHandling.NoMatch =>
             endpointOptions.logRequestHandling.decodeFailureNotHandled(endpoint, decodeFailureCtx)(endpointOptions.logger)

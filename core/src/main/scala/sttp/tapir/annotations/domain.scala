@@ -1,8 +1,8 @@
 package sttp.tapir.annotations
 
 import java.nio.charset.StandardCharsets
-
 import sttp.tapir.CodecFormat
+import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.RawBodyType
 import sttp.tapir.RawBodyType.StringBody
 
@@ -28,10 +28,10 @@ class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json
 
 class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
 
-class apikey extends StaticAnnotation
+class apikey(val challenge: WWWAuthenticate = WWWAuthenticate.apiKey()) extends StaticAnnotation
 
-class basic extends StaticAnnotation
+class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends StaticAnnotation
 
-class bearer extends StaticAnnotation
+class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
 
 class endpointInput(val path: String = "") extends StaticAnnotation
