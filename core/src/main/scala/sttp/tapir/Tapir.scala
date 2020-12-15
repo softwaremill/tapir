@@ -250,8 +250,6 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
 
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
-  def schemaFor[T: Schema]: Schema[T] = implicitly[Schema[T]] // TODO: remove?
-
   val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Nothing, Unit, Any](
       emptyInput,
