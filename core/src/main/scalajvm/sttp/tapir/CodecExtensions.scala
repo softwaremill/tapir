@@ -7,6 +7,6 @@ import sttp.tapir.Codec.id
 import sttp.tapir.CodecFormat.OctetStream
 
 trait CodecExtensions {
-  implicit val file: Codec[File, File, OctetStream] = id[File, OctetStream](OctetStream(), Some(Schema.schemaForFile))
+  implicit val file: Codec[File, File, OctetStream] = id[File, OctetStream](OctetStream(), Schema.schemaForFile)
   implicit val path: Codec[File, Path, OctetStream] = file.map((_: File).toPath)(_.toFile)
 }

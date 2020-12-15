@@ -68,7 +68,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
-    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.exists(_.isOptional))
+    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
 
     if (securityRequirement.isEmpty) List.empty
     else {
@@ -83,7 +83,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
       case EndpointIO.Body(_, codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.exists(_.isOptional))))
+        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.isOptional)))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
         Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true)))
     }

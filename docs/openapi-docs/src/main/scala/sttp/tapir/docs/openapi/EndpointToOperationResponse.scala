@@ -44,7 +44,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
         name -> Right(
           Header(
             info.description,
-            Some(!codec.schema.exists(_.isOptional)),
+            Some(!codec.schema.isOptional),
             None,
             None,
             None,

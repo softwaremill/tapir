@@ -55,9 +55,12 @@ class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify property of optional parameter" in {
     val info1 = SObjectInfo("X")
     val info2 = SObjectInfo("Y")
-    Schema(SProduct(info1, List(FieldName("f1") -> Schema(SProduct(info2, List(FieldName("p1") -> Schema(SInteger).asOptional))))))
+    Schema(SProduct(info1, List(FieldName("f1") -> Schema(SProduct(info2, List(FieldName("p1") -> Schema(SInteger).asOption))))))
       .modifyUnsafe[Int]("f1", "p1")(_.format("xyz")) shouldBe Schema(
-      SProduct(info1, List(FieldName("f1") -> Schema(SProduct(info2, List(FieldName("p1") -> Schema(SInteger).asOptional.format("xyz"))))))
+      SProduct(
+        info1,
+        List(FieldName("f1") -> Schema(SProduct(info2, List(FieldName("p1") -> Schema(SInteger).asOption.format("xyz")))))
+      )
     )
   }
 

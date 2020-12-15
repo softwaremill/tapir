@@ -32,9 +32,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   object TestStreams extends TestStreams
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBody(TestStreams, schemaFor[String], CodecFormat.Json())): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
+    endpoint.in(streamBody(TestStreams)(schemaFor[Vector[Byte]], CodecFormat.Json())): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
     endpoint
-      .in(streamBody(TestStreams, schemaFor[String], CodecFormat.Json()))
+      .in(streamBody(TestStreams)(schemaFor[Vector[Byte]], CodecFormat.Json()))
       .in(path[Int]): Endpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
   }
 
@@ -47,9 +47,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBody(TestStreams, schemaFor[String], CodecFormat.Json())): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
+    endpoint.out(streamBody(TestStreams)(schemaFor[Vector[Byte]], CodecFormat.Json())): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
     endpoint
-      .out(streamBody(TestStreams, schemaFor[String], CodecFormat.Json()))
+      .out(streamBody(TestStreams)(schemaFor[Vector[Byte]], CodecFormat.Json()))
       .out(header[Int]("h1")): Endpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
   }
 

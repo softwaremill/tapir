@@ -93,17 +93,13 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
   /** @param s A supported streams implementation.
-    * @param schema Schema of the body. Note that any schema can be passed here, usually this will be a schema for the
-    *               "deserialized" stream.
+    * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
     * @param charset An optional charset of the resulting stream's data, to be used in the content type.
     */
   def streamBody[S](
-      s: Streams[S],
-      schema: Schema[_],
-      format: CodecFormat,
-      charset: Option[Charset] = None
-  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, Some(schema.as[s.BinaryStream])), EndpointIO.Info.empty, charset)
+      s: Streams[S]
+  )(schema: Schema[s.BinaryStream], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, schema), EndpointIO.Info.empty, charset)
 
   // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
   // while the third one (S) can be inferred.
@@ -123,8 +119,8 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
         concatenateFragmentedFrames = true,
         ignorePong = true,
         autoPongOnPing = true,
-        decodeCloseRequests = requests.schema.exists(_.isOptional),
-        decodeCloseResponses = responses.schema.exists(_.isOptional),
+        decodeCloseRequests = requests.schema.isOptional,
+        decodeCloseResponses = responses.schema.isOptional,
         autoPing = Some((13.seconds, WebSocketFrame.ping))
       )
   }
@@ -254,7 +250,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
 
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
-  def schemaFor[T: Schema]: Schema[T] = implicitly[Schema[T]]
+  def schemaFor[T: Schema]: Schema[T] = implicitly[Schema[T]] // TODO: remove?
 
   val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Nothing, Unit, Any](

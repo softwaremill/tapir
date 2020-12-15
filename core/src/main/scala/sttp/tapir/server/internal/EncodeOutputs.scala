@@ -12,10 +12,10 @@ import scala.util.Try
 class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
     output match {
-      case s: EndpointOutput.Single[_]                => applySingle(s, value, ov)
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
-      case EndpointOutput.Pair(left, right, _, split) => applyPair(left, right, split, value, ov)
+      case s: EndpointOutput.Single[_]                => applySingle(s, value, ov)
       case EndpointIO.Pair(left, right, _, split)     => applyPair(left, right, split, value, ov)
+      case EndpointOutput.Pair(left, right, _, split) => applyPair(left, right, split, value, ov)
       case EndpointOutput.Void()                      => throw new IllegalArgumentException("Cannot encode a void output!")
     }
   }

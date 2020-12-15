@@ -7,7 +7,6 @@ import java.nio.charset.{Charset, StandardCharsets}
 import java.time._
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.util.{Base64, Date, UUID}
-
 import sttp.model._
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
@@ -47,15 +46,16 @@ Did you define a codec for: ${H}?
 Did you import the codecs for: ${CF}?
 """)
 trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
-  def schema: Option[Schema[H]]
+  def schema: Schema[H]
   def format: CF
+
+  override def validator: Validator[H] = schema.validator
 
   override def map[HH](codec: Mapping[H, HH]): Codec[L, HH, CF] =
     new Codec[L, HH, CF] {
       override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(codec.rawDecode)
       override def encode(hh: HH): L = outer.encode(codec.encode(hh))
-      override def schema: Option[Schema[HH]] = outer.schema.map(_.as[HH])
-      override def validator: Validator[HH] = outer.validator.contramap(codec.encode).and(codec.validator)
+      override def schema: Schema[HH] = outer.schema.contramap(codec.encode).validate(codec.validator)
       override def format: CF = outer.format
     }
 
@@ -66,34 +66,21 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
     new Codec[L, H, CF] {
       override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
       override def encode(h: H): L = outer.encode(h)
-      override def schema: Option[Schema[H]] = Some(s2)
-      override def validator: Validator[H] = outer.validator
+      override def schema: Schema[H] = s2
       override def format: CF = outer.format
     }
   def schema(s2: Option[Schema[H]]): Codec[L, H, CF] = s2.map(schema).getOrElse(this)
-  def modifySchema(modify: Schema[H] => Schema[H]): Codec[L, H, CF] =
-    schema match {
-      case None    => this
-      case Some(s) => schema(modify(s))
-    }
+  def modifySchema(modify: Schema[H] => Schema[H]): Codec[L, H, CF] = schema(modify(schema))
 
   def format[CF2 <: CodecFormat](f: CF2): Codec[L, H, CF2] =
     new Codec[L, H, CF2] {
       override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
       override def encode(h: H): L = outer.encode(h)
-      override def schema: Option[Schema[H]] = outer.schema
-      override def validator: Validator[H] = outer.validator
+      override def schema: Schema[H] = outer.schema
       override def format: CF2 = f
     }
 
-  override def validate(v: Validator[H]): Codec[L, H, CF] =
-    new Codec[L, H, CF] {
-      override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
-      override def encode(h: H): L = outer.encode(h)
-      override def schema: Option[Schema[H]] = outer.schema
-      override def validator: Validator[H] = addEncodeToEnumValidator(v).and(outer.validator)
-      override def format: CF = outer.format
-    }
+  override def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(addEncodeToEnumValidator(v)))
 }
 
 object Codec extends CodecExtensions with FormCodecDerivation {
@@ -101,17 +88,16 @@ object Codec extends CodecExtensions with FormCodecDerivation {
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
 
-  def id[L, CF <: CodecFormat](f: CF, s: Option[Schema[L]] = None): Codec[L, L, CF] =
+  def id[L, CF <: CodecFormat](f: CF, s: Schema[L]): Codec[L, L, CF] =
     new Codec[L, L, CF] {
       override def rawDecode(l: L): DecodeResult[L] = Value(l)
       override def encode(h: L): L = h
-      override def schema: Option[Schema[L]] = s
-      override def validator: Validator[L] = Validator.pass
+      override def schema: Schema[L] = s
       override def format: CF = f
     }
-  def idPlain[L](s: Option[Schema[L]] = None): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
+  def idPlain[L](s: Schema[L] = Schema[L](SchemaType.SString)): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
 
-  implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Some(Schema.schemaForString))
+  implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Schema.schemaForString)
 
   implicit val byte: Codec[String, Byte, TextPlain] = stringCodec[Byte](_.toByte).schema(Schema.schemaForByte)
   implicit val short: Codec[String, Short, TextPlain] = stringCodec[Short](_.toShort).schema(Schema.schemaForShort)
@@ -163,11 +149,11 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     string.map(parse)(_.toString).schema(implicitly[Schema[T]])
 
   implicit val byteArray: Codec[Array[Byte], Array[Byte], OctetStream] =
-    id[Array[Byte], OctetStream](OctetStream(), Some(Schema.schemaForByteArray))
+    id[Array[Byte], OctetStream](OctetStream(), Schema.schemaForByteArray)
   implicit val inputStream: Codec[InputStream, InputStream, OctetStream] =
-    id[InputStream, OctetStream](OctetStream(), Some(Schema.schemaForInputStream))
+    id[InputStream, OctetStream](OctetStream(), Schema.schemaForInputStream)
   implicit val byteBuffer: Codec[ByteBuffer, ByteBuffer, OctetStream] =
-    id[ByteBuffer, OctetStream](OctetStream(), Some(Schema.schemaForByteBuffer))
+    id[ByteBuffer, OctetStream](OctetStream(), Schema.schemaForByteBuffer)
 
   implicit val formSeqCodecUtf8: Codec[String, Seq[(String, String)], XWwwFormUrlencoded] = formSeqCodec(StandardCharsets.UTF_8)
   implicit val formMapCodecUtf8: Codec[String, Map[String, String], XWwwFormUrlencoded] = formMapCodec(StandardCharsets.UTF_8)
@@ -224,7 +210,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
         DecodeResult.sequence(anyParts)
       }
 
-      override def schema: Option[Schema[Seq[RawPart]]] = None
+      override def schema: Schema[Seq[RawPart]] = Schema(SchemaType.SBinary)
       override def validator: Validator[Seq[RawPart]] = Validator.pass
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
     }
@@ -298,13 +284,12 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       stringCodec: Codec[String, A, CF]
   ): Codec[WebSocketFrame, A, CF] =
     Codec
-      .id[WebSocketFrame, CF](stringCodec.format)
+      .id[WebSocketFrame, CF](stringCodec.format, Schema(SchemaType.SString))
       .mapDecode {
         case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p)
         case f                            => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
       }(a => WebSocketFrame.text(stringCodec.encode(a)))
       .schema(stringCodec.schema)
-      .validate(stringCodec.validator)
 
   /** A codec which expects only text and close frames (all other frames cause a decoding error). Close frames
     * correspond to `None`, while text frames are handled using the given `stringCodec` and wrapped with `Some`.
@@ -313,7 +298,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       stringCodec: Codec[String, A, CF]
   ): Codec[WebSocketFrame, Option[A], CF] =
     Codec
-      .id[WebSocketFrame, CF](stringCodec.format)
+      .id[WebSocketFrame, CF](stringCodec.format, Schema(SchemaType.SString))
       .mapDecode {
         case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p).map(Some(_))
         case WebSocketFrame.Close(_, _)   => DecodeResult.Value(None)
@@ -322,8 +307,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
         case None    => WebSocketFrame.close
         case Some(a) => WebSocketFrame.text(stringCodec.encode(a))
       }
-      .schema(stringCodec.schema.map(_.as[Option[A]]))
-      .validate(stringCodec.validator.asOptionElement)
+      .schema(stringCodec.schema.asOption)
 
   /** A codec which expects only binary frames (all other frames cause a decoding error) and handles the text using
     * the given `byteArrayCodec`.
@@ -332,13 +316,12 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       byteArrayCodec: Codec[Array[Byte], A, CF]
   ): Codec[WebSocketFrame, A, CF] =
     Codec
-      .id[WebSocketFrame, CF](byteArrayCodec.format)
+      .id[WebSocketFrame, CF](byteArrayCodec.format, Schema(SchemaType.SBinary))
       .mapDecode {
         case WebSocketFrame.Binary(p, _, _) => byteArrayCodec.decode(p)
         case f                              => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
       }(a => WebSocketFrame.binary(byteArrayCodec.encode(a)))
       .schema(byteArrayCodec.schema)
-      .validate(byteArrayCodec.validator)
 
   /** A codec which expects only binary and close frames (all other frames cause a decoding error). Close frames
     * correspond to `None`, while text frames are handled using the given `byteArrayCodec` and wrapped with `Some`.
@@ -347,7 +330,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       byteArrayCodec: Codec[Array[Byte], A, CF]
   ): Codec[WebSocketFrame, Option[A], CF] =
     Codec
-      .id[WebSocketFrame, CF](byteArrayCodec.format)
+      .id[WebSocketFrame, CF](byteArrayCodec.format, Schema(SchemaType.SBinary))
       .mapDecode {
         case WebSocketFrame.Binary(p, _, _) => byteArrayCodec.decode(p).map(Some(_))
         case WebSocketFrame.Close(_, _)     => DecodeResult.Value(None)
@@ -356,36 +339,32 @@ object Codec extends CodecExtensions with FormCodecDerivation {
         case None    => WebSocketFrame.close
         case Some(a) => WebSocketFrame.binary(byteArrayCodec.encode(a))
       }
-      .schema(byteArrayCodec.schema.map(_.as[Option[A]]))
-      .validate(byteArrayCodec.validator.asOptionElement)
+      .schema(byteArrayCodec.schema.asOption)
 
   //
 
-  private def listNoMeta[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
-    id[List[T], CF](c.format)
+  private def listBinarySchema[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
+    id[List[T], CF](c.format, Schema(SchemaType.SBinary))
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
   /** Create a codec which decodes/encodes a list of low-level values to a list of high-level values, using the given
     * base codec `c`.
     *
-    * The schema and validator are copied from the base codec.
+    * The schema is copied from the base codec.
     */
   implicit def list[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
-    listNoMeta(c)
-      .schema(c.schema.map(_.asArrayElement.as[List[U]]))
-      .validate(c.validator.asIterableElements[List])
+    listBinarySchema(c).schema(c.schema.asIterable[List])
 
   /** Create a codec which decodes/encodes a list of low-level values to a set of high-level values, using the given
     * base codec `c`.
     *
-    * The schema and validator are copied from the base codec.
+    * The schema is copied from the base codec.
     */
   implicit def set[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Set[U], CF] =
     Codec
-      .id[List[T], CF](c.format)
+      .id[List[T], CF](c.format, Schema(SchemaType.SBinary))
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toSet))(us => us.map(c.encode).toList)
-      .schema(c.schema.map(_.asArrayElement.as[Set[U]]))
-      .validate(c.validator.asIterableElements[Set])
+      .schema(c.schema.asIterable[Set])
 
   /** Create a codec which decodes/encodes a list of low-level values to a vector of high-level values, using the given
     * base codec `c`.
@@ -394,10 +373,9 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     */
   implicit def vector[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Vector[U], CF] =
     Codec
-      .id[List[T], CF](c.format)
+      .id[List[T], CF](c.format, Schema(SchemaType.SBinary))
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toVector))(us => us.map(c.encode).toList)
-      .schema(c.schema.map(_.asArrayElement.as[Vector[U]]))
-      .validate(c.validator.asIterableElements[Vector])
+      .schema(c.schema.asIterable[Vector])
 
   /** Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode
     * failure is returned. The given base codec `c` is used for decoding/encoding.
@@ -405,14 +383,13 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     * The schema and validator are copied from the base codec.
     */
   implicit def listHead[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], U, CF] =
-    listNoMeta(c)
+    listBinarySchema(c)
       .mapDecode({
         case Nil     => DecodeResult.Missing
         case List(e) => DecodeResult.Value(e)
         case l       => DecodeResult.Multiple(l)
       })(List(_))
       .schema(c.schema)
-      .validate(c.validator)
 
   /** Create a codec which requires that a list of low-level values is empty or contains a single element. If it
     * contains multiple elements, a decode failure is returned. The given base codec `c` is used for decoding/encoding.
@@ -420,14 +397,13 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     * The schema and validator are copied from the base codec.
     */
   implicit def listHeadOption[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Option[U], CF] =
-    listNoMeta(c)
+    listBinarySchema(c)
       .mapDecode({
         case Nil     => DecodeResult.Value(None)
         case List(e) => DecodeResult.Value(Some(e))
         case l       => DecodeResult.Multiple(l.map(_.toString))
       })(_.toList)
-      .schema(c.schema.map(_.asOptional[Option[U]]))
-      .validate(c.validator.asOptionElement)
+      .schema(c.schema.asOption)
 
   /** Create a codec which requires that an optional low-level value is defined. If it is `None`, a decode failure is
     * returned. The given base codec `c` is used for decoding/encoding.
@@ -435,13 +411,12 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     * The schema and validator are copied from the base codec.
     */
   implicit def optionHead[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Option[T], U, CF] =
-    id[Option[T], CF](c.format)
+    id[Option[T], CF](c.format, Schema(SchemaType.SBinary))
       .mapDecode({
         case None    => DecodeResult.Missing
         case Some(e) => c.decode(e)
       })(u => Some(c.encode(u)))
       .schema(c.schema)
-      .validate(c.validator)
 
   /** Create a codec which decodes/encodes an optional low-level value to an optional high-level value. The given
     * base codec `c` is used for decoding/encoding.
@@ -449,32 +424,30 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     * The schema and validator are copied from the base codec.
     */
   implicit def option[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Option[T], Option[U], CF] =
-    id[Option[T], CF](c.format)
+    id[Option[T], CF](c.format, Schema(SchemaType.SBinary))
       .mapDecode {
         case None    => DecodeResult.Value(None)
         case Some(v) => c.decode(v).map(Some(_))
       }(us => us.map(c.encode))
-      .schema(c.schema.map(_.asOptional[Option[U]]))
-      .validate(c.validator.asOptionElement)
+      .schema(c.schema.asOption)
 
-  def fromDecodeAndMeta[L, H: Schema: Validator, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
+  def fromDecodeAndMeta[L, H: Schema, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
     new Codec[L, H, CF] {
       override def rawDecode(l: L): DecodeResult[H] = f(l)
       override def encode(h: H): L = g(h)
-      override def schema: Option[Schema[H]] = Some(implicitly[Schema[H]])
-      override def validator: Validator[H] = implicitly[Validator[H]]
+      override def schema: Schema[H] = implicitly[Schema[H]]
       override def format: CF = cf
     }
 
-  def json[T: Schema: Validator](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
+  def json[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
     anyStringCodec(CodecFormat.Json())(_rawDecode)(_encode)
   }
 
-  def xml[T: Schema: Validator](_rawDecode: String => DecodeResult[T])(_encode: T => String): XmlCodec[T] = {
+  def xml[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): XmlCodec[T] = {
     anyStringCodec(CodecFormat.Xml())(_rawDecode)(_encode)
   }
 
-  def anyStringCodec[T: Schema: Validator, CF <: CodecFormat](
+  def anyStringCodec[T: Schema, CF <: CodecFormat](
       cf: CF
   )(_rawDecode: String => DecodeResult[T])(_encode: T => String): Codec[String, T, CF] = {
     val isOptional = implicitly[Schema[T]].isOptional

@@ -6,10 +6,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatestplus.scalacheck.Checkers
 import org.scalacheck.Arbitrary.arbString
-import sttp.tapir.generic.auto._
 import sttp.tapir.SchemaType.{SArray, SString}
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema, Validator}
-import sttp.tapir.internal._
 import codec._
 
 import scala.collection.immutable.SortedSet
@@ -29,15 +27,15 @@ class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
   }
 
   it should "find proper validator for cats collections" in {
-    implicit val validatorForTest: Validator[Test] = Validator.minLength(3).contramap(_.value)
+    implicit val schemaForTest: Schema[Test] = Schema.derive[Test].validate(Validator.minLength(3).contramap(_.value))
 
-    def expectedValidator[C[X] <: Iterable[X]] = validatorForTest.asIterableElements[C].and(Validator.minSize(1))
+    def expectedValidator[C[X] <: Iterable[X]] = schemaForTest.validator.asIterableElements[C].and(Validator.minSize(1))
 
-    implicitly[Validator[NonEmptyList[Test]]].show shouldBe expectedValidator[List].show
+    implicitly[Schema[NonEmptyList[Test]]].validator.show shouldBe expectedValidator[List].show
 
-    implicitly[Validator[NonEmptySet[Test]]].show shouldBe expectedValidator[List].show
+    implicitly[Schema[NonEmptySet[Test]]].validator.show shouldBe expectedValidator[List].show
 
-    implicitly[Validator[NonEmptyChain[Test]]].show shouldBe expectedValidator[Set].show
+    implicitly[Schema[NonEmptyChain[Test]]].validator.show shouldBe expectedValidator[Set].show
   }
 
   implicit def arbitraryNonEmptyList[T: Arbitrary]: Arbitrary[NonEmptyList[T]] =
@@ -73,12 +71,13 @@ class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
 
   it should "have the proper schema" in {
     val codecForNel = implicitly[Codec[List[String], NonEmptyList[String], CodecFormat.TextPlain]]
-    codecForNel.schema shouldBe Some(implicitly[Schema[NonEmptyList[String]]])
+    codecForNel.schema.copy(validator = Validator.pass) shouldBe implicitly[Schema[NonEmptyList[String]]].copy(validator = Validator.pass)
+    codecForNel.schema.validator.show shouldBe implicitly[Schema[NonEmptyList[String]]].validator.show
   }
 
   it should "have the proper validator" in {
     val codecForNel = implicitly[Codec[List[String], NonEmptyList[String], CodecFormat.TextPlain]]
-    codecForNel.validator.show shouldBe implicitly[Validator[NonEmptyList[String]]].show
+    codecForNel.validator.show shouldBe implicitly[Schema[NonEmptyList[String]]].validator.show
   }
 
   "Provided PlainText codec for non empty chain" should "correctly serialize a non empty chain" in {
@@ -99,44 +98,39 @@ class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
 
   it should "have the proper schema" in {
     val codecForNec = implicitly[Codec[List[String], NonEmptyChain[String], CodecFormat.TextPlain]]
-    codecForNec.schema shouldBe Some(implicitly[Schema[NonEmptyChain[String]]])
+    codecForNec.schema.copy(validator = Validator.pass) shouldBe implicitly[Schema[NonEmptyChain[String]]].copy(validator = Validator.pass)
+    codecForNec.schema.validator.show shouldBe implicitly[Schema[NonEmptyChain[String]]].validator.show
   }
 
   it should "have the proper validator" in {
     val codecForNec = implicitly[Codec[List[String], NonEmptyChain[String], CodecFormat.TextPlain]]
-    codecForNec.validator.show shouldBe implicitly[Validator[NonEmptyChain[String]]].show
+    codecForNec.validator.show shouldBe implicitly[Schema[NonEmptyChain[String]]].validator.show
   }
 
-  implicit def set[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Set[T], Set[U], CF] =
-    Codec
-      .id[Set[T], CF](c.format)
-      .mapDecode(ts => DecodeResult.sequence(ts.toList.map(c.decode)).map(_.toSet))(us => us.map(c.encode))
-      .schema(c.schema.map(_.asArrayElement.as[Set[U]]))
-      .validate(c.validator.asIterableElements[Set])
-
   "Provided PlainText codec for non empty set" should "correctly serialize a non empty set" in {
-    val codecForNes = implicitly[Codec[Set[String], NonEmptySet[String], CodecFormat.TextPlain]]
-    val rawCodec = implicitly[Codec[Set[String], Set[String], CodecFormat.TextPlain]]
+    val codecForNes = implicitly[Codec[List[String], NonEmptySet[String], CodecFormat.TextPlain]]
+    val rawCodec = implicitly[Codec[List[String], Set[String], CodecFormat.TextPlain]]
     check((a: NonEmptySet[String]) => codecForNes.encode(a) == rawCodec.encode(a.toSortedSet))
   }
 
   it should "correctly deserialize everything it serialize" in {
-    val codecForNes = implicitly[Codec[Set[String], NonEmptySet[String], CodecFormat.TextPlain]]
+    val codecForNes = implicitly[Codec[List[String], NonEmptySet[String], CodecFormat.TextPlain]]
     check((a: NonEmptySet[String]) => codecForNes.decode(codecForNes.encode(a)) == DecodeResult.Value(a))
   }
 
   it should "fail on empty set" in {
-    val codecForNes = implicitly[Codec[Set[String], NonEmptySet[String], CodecFormat.TextPlain]]
-    codecForNes.decode(Set()) shouldBe DecodeResult.Missing
+    val codecForNes = implicitly[Codec[List[String], NonEmptySet[String], CodecFormat.TextPlain]]
+    codecForNes.decode(Nil) shouldBe DecodeResult.Missing
   }
 
   it should "have the proper schema" in {
-    val codecForNes = implicitly[Codec[Set[String], NonEmptySet[String], CodecFormat.TextPlain]]
-    codecForNes.schema shouldBe Some(implicitly[Schema[NonEmptySet[String]]])
+    val codecForNes = implicitly[Codec[List[String], NonEmptySet[String], CodecFormat.TextPlain]]
+    codecForNes.schema.copy(validator = Validator.pass) shouldBe implicitly[Schema[NonEmptySet[String]]].copy(validator = Validator.pass)
+    codecForNes.schema.validator.show shouldBe implicitly[Schema[NonEmptySet[String]]].validator.show
   }
 
   it should "have the proper validator" in {
-    val codecForNes = implicitly[Codec[Set[String], NonEmptySet[String], CodecFormat.TextPlain]]
-    codecForNes.validator.show shouldBe implicitly[Validator[NonEmptySet[String]]].show
+    val codecForNes = implicitly[Codec[List[String], NonEmptySet[String], CodecFormat.TextPlain]]
+    codecForNes.validator.show shouldBe implicitly[Schema[NonEmptySet[String]]].validator.show
   }
 }

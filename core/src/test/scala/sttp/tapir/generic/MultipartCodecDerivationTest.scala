@@ -50,12 +50,11 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
     val codec = implicitly[MultipartCodec[Test6]].codec
 
     // when
-    codec.schema.map(_.schemaType) shouldBe Some(
+    codec.schema.schemaType shouldBe
       SProduct(
         SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"),
         List((FieldName("f1"), implicitly[Schema[String]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
-    )
   }
 
   it should "use the right schema for a two-arg case class" in {
@@ -64,12 +63,11 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
     val codec = implicitly[MultipartCodec[Test1]].codec
 
     // when
-    codec.schema.map(_.schemaType) shouldBe Some(
+    codec.schema.schemaType shouldBe
       SProduct(
         SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
         List((FieldName("f1"), implicitly[Schema[TapirFile]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
-    )
   }
 
   it should "generate a codec for a one-arg case class using snake-case naming transformation" in {
@@ -172,7 +170,7 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
 
   it should "generate a codec for a one-arg case class with implicit validator" in {
     // given
-    implicit val v: Validator[Int] = Validator.min(5)
+    implicit val s: Schema[Int] = Schema.schemaForInt.validate(Validator.min(5))
     case class Test1(f1: Int)
     val codec = implicitly[MultipartCodec[Test1]].codec
 

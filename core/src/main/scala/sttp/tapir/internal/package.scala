@@ -209,10 +209,6 @@ package object internal {
 
   def showOneOf(mappings: Seq[String]): String = s"status one of(${mappings.mkString("|")})"
 
-  implicit class RichSchema[T](val s: Schema[T]) extends AnyVal {
-    def as[U]: Schema[U] = s.asInstanceOf[Schema[U]]
-  }
-
   def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {
       case RawBodyType.StringBody(charset) => Some(charset)

@@ -17,6 +17,7 @@ private[docs] object ValidatorUtil {
       case Validator.All(validators)    => validators.flatMap(asSingleValidators)
       case Validator.Any(validators)    => validators.flatMap(asSingleValidators)
       case Validator.Mapped(wrapped, _) => asSingleValidators(wrapped)
+      case Validator.Ref(_)             => Nil
       case sv: Validator.Single[_]      => List(sv)
     }
   }
@@ -31,6 +32,7 @@ private[docs] object ValidatorUtil {
       case Validator.Coproduct(_)                  => Nil
       case Validator.OpenProduct(_)                => Nil
       case Validator.Custom(_, _)                  => Nil
+      case Validator.Ref(_)                        => Nil
       case bv: Validator.Primitive[_]              => List(bv)
     }
   }

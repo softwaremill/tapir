@@ -9,26 +9,20 @@ trait TapirCodecCats {
 
   private def nonEmpty[T, C[X] <: Iterable[X]]: Validator.Primitive[C[T]] = Validator.minSize[T, C](1)
 
-  private def iterableAndNonEmpty[T, C[X] <: Iterable[X]](implicit v: Validator[T]): Validator[C[T]] =
-    v.asIterableElements[C].and(nonEmpty)
-
-  implicit def validatorNel[T: Validator]: Validator[NonEmptyList[T]] =
-    iterableAndNonEmpty[T, List].contramap(_.toList)
-
-  implicit def validatorNec[T: Validator]: Validator[NonEmptyChain[T]] =
-    iterableAndNonEmpty[T, List].contramap(_.toChain.toList)
-
-  implicit def validatorNes[T: Validator]: Validator[NonEmptySet[T]] =
-    iterableAndNonEmpty[T, Set].contramap(_.toSortedSet)
+  private def iterableAndNonEmpty[T, C[X] <: Iterable[X]](implicit s: Schema[T]): Validator[C[T]] =
+    s.validator.asIterableElements[C].and(nonEmpty)
 
   implicit def schemaForNel[T: Schema]: Schema[NonEmptyList[T]] =
-    Schema[NonEmptyList[T]](SchemaType.SArray(implicitly[Schema[T]])).copy(isOptional = false)
+    Schema[NonEmptyList[T]](SchemaType.SArray(implicitly[Schema[T]]), validator = iterableAndNonEmpty[T, List].contramap(_.toList))
+      .copy(isOptional = false)
 
   implicit def schemaForNec[T: Schema]: Schema[NonEmptyChain[T]] =
-    Schema[NonEmptyChain[T]](SchemaType.SArray(implicitly[Schema[T]])).copy(isOptional = false)
+    Schema[NonEmptyChain[T]](SchemaType.SArray(implicitly[Schema[T]]), validator = iterableAndNonEmpty[T, List].contramap(_.toChain.toList))
+      .copy(isOptional = false)
 
   implicit def schemaForNes[T: Schema]: Schema[NonEmptySet[T]] =
-    Schema[NonEmptySet[T]](SchemaType.SArray(implicitly[Schema[T]])).copy(isOptional = false)
+    Schema[NonEmptySet[T]](SchemaType.SArray(implicitly[Schema[T]]), validator = iterableAndNonEmpty[T, Set].contramap(_.toSortedSet))
+      .copy(isOptional = false)
 
   implicit def codecForNonEmptyList[L, H, CF <: CodecFormat](implicit c: Codec[L, List[H], CF]): Codec[L, NonEmptyList[H], CF] =
     c.modifySchema(_.copy(isOptional = false))

@@ -3,39 +3,34 @@ package sttp.tapir.generic.internal
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{deprecated, description, format, encodedName, FieldName, Schema, SchemaType}
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, encodedName, format, generic}
 import SchemaMagnoliaDerivation.deriveInProgress
 
 import scala.collection.mutable
-import sttp.tapir.generic.Derived
 
 trait SchemaMagnoliaDerivation {
 
   type Typeclass[T] = Schema[T]
 
   def combine[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
-    withProgressCache { cache =>
+    withProgressCache { (cache, validatorRefs) =>
       val cacheKey = ctx.typeName.full
       if (cache.contains(cacheKey)) {
-        Schema[T](SRef(typeNameToObjectInfo(ctx.typeName, ctx.annotations)))
+        val validator = Validator.Ref[T]()
+        validatorRefs.put(cacheKey, validator)
+        Schema[T](SRef(typeNameToObjectInfo(ctx.typeName, ctx.annotations)), validator = validator)
       } else {
         try {
           cache.add(cacheKey)
+          val validator = productValidator(ctx)
           val result =
             if (ctx.isValueClass) {
-              Schema[T](ctx.parameters.head.typeclass.schemaType)
+              Schema[T](schemaType = ctx.parameters.head.typeclass.schemaType, validator = validator)
             } else {
-              Schema[T](
-                SProduct(
-                  typeNameToObjectInfo(ctx.typeName, ctx.annotations),
-                  ctx.parameters.map { p =>
-                    val schema = enrichSchema(p.typeclass, p.annotations)
-                    val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
-                    (FieldName(p.label, encodedName), schema)
-                  }.toList
-                )
-              )
+              Schema[T](schemaType = productSchemaType(ctx), validator = validator)
             }
+          // filling in recursive validators, if there has been a reference
+          validatorRefs.get(cacheKey).foreach(ref => ref.asInstanceOf[Validator.Ref[T]].set(validator))
           enrichSchema(result, ctx.annotations)
         } finally {
           cache.remove(cacheKey)
@@ -43,6 +38,15 @@ trait SchemaMagnoliaDerivation {
       }
     }
   }
+
+  private def productSchemaType[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): SProduct = SProduct(
+    typeNameToObjectInfo(ctx.typeName, ctx.annotations),
+    ctx.parameters.map { p =>
+      val schema = enrichSchema(p.typeclass, p.annotations)
+      val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
+      (FieldName(p.label, encodedName), schema)
+    }.toList
+  )
 
   private def typeNameToObjectInfo(typeName: TypeName, annotations: Seq[Any]): SchemaType.SObjectInfo = {
     def allTypeArguments(tn: TypeName): Seq[TypeName] = tn.typeArguments.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
@@ -55,15 +59,21 @@ trait SchemaMagnoliaDerivation {
     }
   }
 
-  private def withProgressCache[T](f: mutable.Set[String] => Schema[T]): Schema[T] = {
+  /** To avoid recursive loops, we keep track of the fully qualified names of types for which derivation is in
+    * progress using a mutable Set.
+    *
+    * We also store all recursive validator references (in a mutable map), which have to be filled in when the top-most
+    * recursive validator is generated.
+    */
+  private def withProgressCache[T](f: (mutable.Set[String], mutable.Map[String, Validator.Ref[_]]) => Schema[T]): Schema[T] = {
     var cache = deriveInProgress.get()
     val newCache = cache == null
     if (newCache) {
-      cache = mutable.Set[String]()
+      cache = (mutable.Set[String](), mutable.Map[String, Validator.Ref[_]]())
       deriveInProgress.set(cache)
     }
 
-    try f(cache)
+    try f(cache._1, cache._2)
     finally {
       if (newCache) {
         deriveInProgress.remove()
@@ -93,11 +103,38 @@ trait SchemaMagnoliaDerivation {
       case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
       case None    => baseCoproduct
     }
-    Schema(coproduct)
+    Schema(schemaType = coproduct, validator = coproductValidator(ctx))
   }
 
+  private def productValidator[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
+    // type parameters & Nil/List instead of None/Some are needed because of 2.12
+    val fieldValidators = ctx.parameters.toList.flatMap { p =>
+      val pValidator = p.typeclass.validator
+      if (pValidator == Validator.pass) Nil: List[(String, Validator.ProductField[T])]
+      else
+        List(p.label -> new Validator.ProductField[T] {
+          override type FieldType = p.PType
+          override def name: FieldName =
+            FieldName(p.label, getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label)))
+          override def get(t: T): FieldType = p.dereference(t)
+          override def validator: Validator[FieldType] = pValidator
+        }): List[(String, Validator.ProductField[T])]
+    }
+
+    if (fieldValidators.isEmpty) Validator.pass
+    else Validator.Product(fieldValidators.toMap)
+  }
+
+  private def coproductValidator[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
+    Validator.Coproduct(new generic.SealedTrait[Validator, T] {
+      override def dispatch(t: T): Validator[T] = ctx.dispatch(t) { v => v.typeclass.validator.asInstanceOf[Validator[T]] }
+
+      override def subtypes: Map[String, Validator[Any]] =
+        ctx.subtypes.map(st => st.typeName.full -> st.typeclass.validator.asInstanceOf[Validator[scala.Any]]).toMap
+    })
+  }
 }
 
 object SchemaMagnoliaDerivation {
-  private[internal] val deriveInProgress: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
+  private[internal] val deriveInProgress: ThreadLocal[(mutable.Set[String], mutable.Map[String, Validator.Ref[_]])] = new ThreadLocal()
 }
