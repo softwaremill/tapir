@@ -124,12 +124,13 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
   private def makeBearerAuthInput(field: c.Symbol, annotation: Annotation): Tree = {
     val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
-    q"sttp.tapir.TapirAuth.bearer($challenge)($codec)"
+    setSecuritySchemeName(annotation, q"sttp.tapir.TapirAuth.bearer($challenge)($codec)")
   }
 
   private def makeBasicAuthInput(field: c.Symbol, annotation: Annotation): Tree = {
     val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
-    q"sttp.tapir.TapirAuth.basic($challenge)($codec)"
+    setSecuritySchemeName(annotation, q"sttp.tapir.TapirAuth.basic($challenge)($codec)")
   }
+
 }

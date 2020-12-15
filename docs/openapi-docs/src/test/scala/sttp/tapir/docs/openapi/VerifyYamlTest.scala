@@ -1,7 +1,6 @@
 package sttp.tapir.docs.openapi
 
 import java.time.Instant
-
 import io.circe.Json
 import io.circe.generic.auto._
 import sttp.model.{Method, StatusCode}
@@ -22,6 +21,7 @@ import scala.io.Source
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.tapir.model.UsernamePassword
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
@@ -142,6 +142,21 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val e1 = endpoint.in(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
     val e2 = endpoint.in(auth.bearer[Option[String]]()).in("api2" / path[String]).out(stringBody)
     val e3 = endpoint.in(auth.apiKey(header[Option[String]]("apikey"))).in("api3" / path[String]).out(stringBody)
+
+    val actualYaml = List(e1, e2, e3).toOpenAPI(Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support naming of security schemes") {
+
+    val expectedYaml = loadYaml("expected_auth_with_named_schemes.yml")
+
+    val e1 = endpoint.in(auth.bearer[String]().securitySchemeName("secBearer")).in("secure" / "bearer").out(stringBody)
+    val e2 = endpoint.in(auth.basic[UsernamePassword]().securitySchemeName("secBasic")).in("secure" / "basic").out(stringBody)
+    val e3 =
+      endpoint.in(auth.apiKey(header[String]("apikey")).securitySchemeName("secApiKeyHeader")).in("secure" / "apiKeyHeader").out(stringBody)
 
     val actualYaml = List(e1, e2, e3).toOpenAPI(Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

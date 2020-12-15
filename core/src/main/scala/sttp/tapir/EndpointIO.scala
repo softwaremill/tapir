@@ -183,18 +183,25 @@ object EndpointInput {
   trait Auth[T] extends EndpointInput.Single[T] {
     def input: EndpointInput.Single[T]
     def challenge: WWWAuthenticate
+    def securitySchemeName: Option[String]
+    def securitySchemeName(name: String): ThisType[T]
   }
 
   object Auth {
-    case class ApiKey[T](input: EndpointInput.Single[T], challenge: WWWAuthenticate) extends Auth[T] {
+    case class ApiKey[T](input: EndpointInput.Single[T], challenge: WWWAuthenticate, securitySchemeName: Option[String]) extends Auth[T] {
       override private[tapir] type ThisType[X] = ApiKey[X]
       override def show: String = s"auth(api key, via ${input.show})"
       override def map[U](mapping: Mapping[T, U]): ApiKey[U] = copy(input = input.map(mapping))
+
+      override def securitySchemeName(name: String): ApiKey[T] = copy(securitySchemeName = Some(name))
     }
-    case class Http[T](scheme: String, input: EndpointInput.Single[T], challenge: WWWAuthenticate) extends Auth[T] {
+    case class Http[T](scheme: String, input: EndpointInput.Single[T], challenge: WWWAuthenticate, securitySchemeName: Option[String])
+        extends Auth[T] {
       override private[tapir] type ThisType[X] = Http[X]
       override def show: String = s"auth($scheme http, via ${input.show})"
       override def map[U](mapping: Mapping[T, U]): Http[U] = copy(input = input.map(mapping))
+
+      override def securitySchemeName(name: String): Http[T] = copy(securitySchemeName = Some(name))
     }
     case class Oauth2[T](
         authorizationUrl: String,
@@ -202,13 +209,16 @@ object EndpointInput {
         scopes: ListMap[String, String],
         refreshUrl: Option[String] = None,
         input: EndpointInput.Single[T],
-        challenge: WWWAuthenticate
+        challenge: WWWAuthenticate,
+        securitySchemeName: Option[String]
     ) extends Auth[T] {
       override private[tapir] type ThisType[X] = Oauth2[X]
       override def show: String = s"auth(oauth2, via ${input.show})"
       override def map[U](mapping: Mapping[T, U]): Oauth2[U] = copy(input = input.map(mapping))
 
       def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2[T] = ScopedOauth2(this, requiredScopes)
+
+      override def securitySchemeName(name: String): Oauth2[T] = copy(securitySchemeName = Some(name))
     }
 
     case class ScopedOauth2[T](oauth2: Oauth2[T], requiredScopes: Seq[String]) extends Auth[T] {
@@ -221,6 +231,9 @@ object EndpointInput {
       override def input: Single[T] = oauth2.input
 
       override def challenge: WWWAuthenticate = oauth2.challenge
+      override def securitySchemeName: Option[String] = oauth2.securitySchemeName
+
+      override def securitySchemeName(name: String): ScopedOauth2[T] = copy(oauth2 = oauth2.securitySchemeName(name))
     }
   }
 

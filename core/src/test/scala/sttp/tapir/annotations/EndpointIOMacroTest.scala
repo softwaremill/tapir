@@ -85,6 +85,15 @@ final case class TapirRequestTest6(
     field5: Int
 )
 
+final case class TapirRequestTest7(
+    @apikey(securitySchemeName = Some("secapi")) @query
+    param1: Int,
+    @basic(securitySchemeName = Some("secbearer"))
+    basicAuth: UsernamePassword,
+    @bearer(securitySchemeName = Some("secbasic"))
+    token: String
+)
+
 final case class TapirResponseTest1(
     @header
     header1: Int,
@@ -146,6 +155,14 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
       .mapTo(TapirRequestTest4.apply _)
 
     compareTransputs(deriveEndpointInput[TapirRequestTest4], expectedInput) shouldBe true
+  }
+
+  it should "derive correct input for auth annotations with named security schemes" in {
+    val expectedInput = TapirAuth
+      .apiKey(query[Int]("param1")).securitySchemeName("secapi")
+      .and(TapirAuth.basic[UsernamePassword]().securitySchemeName("secbasic"))
+      .and(TapirAuth.bearer[String]().securitySchemeName("secbearer"))
+      .mapTo(TapirRequestTest7.apply _)
   }
 
   it should "derive input with descriptions" in {
@@ -360,10 +377,10 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
         name1 == name2 && info1 == info2
       case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
         info1 == info2
-      case (ApiKey(input1, challenge1), ApiKey(input2, challenge2)) =>
-        challenge1 == challenge2 && compareTransputs(input1, input2)
-      case (Http(scheme1, input1, challenge1), Http(scheme2, input2, challenge2)) =>
-        challenge1 == challenge2 && scheme1 == scheme2 && compareTransputs(input1, input2)
+      case (ApiKey(input1, challenge1, securitySchemeName1), ApiKey(input2, challenge2, securitySchemeName2)) =>
+        challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)
+      case (Http(scheme1, input1, challenge1, securitySchemeName1), Http(scheme2, input2, challenge2, securitySchemeName2)) =>
+        challenge1 == challenge2 && scheme1 == scheme2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)
       case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
         bodyType1 == bodyType2 && info1 == info2
       case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>

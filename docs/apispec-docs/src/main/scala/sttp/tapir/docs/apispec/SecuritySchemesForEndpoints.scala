@@ -10,7 +10,7 @@ private[docs] object SecuritySchemesForEndpoints {
   def apply(es: Iterable[Endpoint[_, _, _, _]]): SecuritySchemes = {
     val auths = es.flatMap(e => e.input.auths)
     val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a)))
-    val securitySchemes = authSecuritySchemes.map(_._2).toSet
+    val securitySchemes = authSecuritySchemes.map { case (auth, scheme) => auth.securitySchemeName -> scheme }.toSet
     val namedSecuritySchemes = nameSecuritySchemes(securitySchemes.toVector, Set(), Map())
 
     authSecuritySchemes.map { case (a, s) => a -> ((namedSecuritySchemes(s), s)) }.toMap
@@ -18,27 +18,29 @@ private[docs] object SecuritySchemesForEndpoints {
 
   @tailrec
   private def nameSecuritySchemes(
-      schemes: Vector[SecurityScheme],
+      schemes: Vector[(Option[String], SecurityScheme)],
       takenNames: Set[SchemeName],
       acc: Map[SecurityScheme, SchemeName]
   ): Map[SecurityScheme, SchemeName] = {
     schemes.headAndTail match {
-      case None => acc
-      case Some((scheme, tail)) =>
+      case Some(((Some(name), scheme), tail)) =>
+        nameSecuritySchemes(tail, takenNames + name, acc + (scheme -> name))
+      case Some(((None, scheme), tail)) =>
         val baseName = scheme.`type` + "Auth"
         val name = uniqueName(baseName, !takenNames.contains(_))
         nameSecuritySchemes(tail, takenNames + name, acc + (scheme -> name))
+      case None => acc
     }
   }
 
   private def authToSecurityScheme(a: EndpointInput.Auth[_]): SecurityScheme =
     a match {
-      case EndpointInput.Auth.ApiKey(input, _) =>
+      case EndpointInput.Auth.ApiKey(input, _, _) =>
         val (name, in) = apiKeyInputNameAndIn(input.asVectorOfBasicInputs())
         SecurityScheme("apiKey", None, Some(name), Some(in), None, None, None, None)
-      case EndpointInput.Auth.Http(scheme, _, _) =>
+      case EndpointInput.Auth.Http(scheme, _, _, _) =>
         SecurityScheme("http", None, None, None, Some(scheme.toLowerCase()), None, None, None)
-      case EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _, _) =>
+      case EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _, _, _) =>
         SecurityScheme(
           "oauth2",
           None,
@@ -49,7 +51,7 @@ private[docs] object SecuritySchemesForEndpoints {
           Some(OAuthFlows(authorizationCode = Some(OAuthFlow(authorizationUrl, tokenUrl, refreshUrl, scopes)))),
           None
         )
-      case EndpointInput.Auth.ScopedOauth2(EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _, _), _) =>
+      case EndpointInput.Auth.ScopedOauth2(EndpointInput.Auth.Oauth2(authorizationUrl, tokenUrl, scopes, refreshUrl, _, _, _), _) =>
         SecurityScheme(
           "oauth2",
           None,

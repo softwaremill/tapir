@@ -110,7 +110,7 @@ abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
 
     util.findAnnotation(field, apikeyType).fold(inputWithDeprecation) { a =>
       val challenge = authChallenge(a)
-      q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge)"
+      q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge, None)"
     }
   }
 
@@ -119,5 +119,12 @@ abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
 
   protected def authChallenge(annotation: Annotation): Tree = {
     q"${c.untypecheck(annotation.tree)}.challenge"
+  }
+
+  protected def setSecuritySchemeName(annotation: Annotation, auth: Tree): Tree = {
+    q"""
+       val schemeName = ${c.untypecheck(annotation.tree)}.securitySchemeName
+       schemeName.fold($auth)(name => ${c.untypecheck(auth)}.securitySchemeName(name))
+    """
   }
 }
