@@ -14,7 +14,7 @@ Mappings can be chained using one of the `map` functions.
 
 ## Codecs
 
-A `Codec[L, H, CF]` is a `Mapping[L, H]`, with additional meta-data: an optional schema and the format of the 
+A `Codec[L, H, CF]` is a `Mapping[L, H]`, with additional meta-data: a schema and the format of the 
 low-level value (more on that below). 
 
 There are built-in codecs for most common types such as `String`, `Int` etc. Codecs are usually defined as implicit 
@@ -49,12 +49,15 @@ into a list.
 
 ## Schemas
 
-A codec contains an optional schema, which describes how the high-level value is encoded when sent over the network. 
-This schema information is used when generating documentation. 
+A codec contains a schema, which describes the high-level type. The schema is used when generating documentation
+and enforcing validation rules.
 
-Schemas consists of the schema type, which is one of the values defined in `SchemaType`, such as `SString`,
-`SBinary`, `SArray` or `SProduct` (for objects). Moreover, a schema contains meta-data: value optionality,
-description and low-level format.
+Schema consists of:
+
+* the schema type, which is one of the values defined in `SchemaType`, such as `SString`, `SBinary`, `SArray` 
+  or `SProduct`/`SCoproduct` (for ADTs). This is the shape of the encoded value - as it is sent over the network
+* meta-data: value optionality, description and low-level format name
+* validation rules
 
 For primitive types, the schema values are built-in, and defined in the `Schema` companion object.
 

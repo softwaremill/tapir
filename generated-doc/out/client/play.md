@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "0.17.0-M11"
+"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "0.17.0-M11+3-910acc2c+20201215-1528-SNAPSHOT"
 ```
 
 To make requests using an endpoint definition using the [play client](https://github.com/playframework/play-ws), import:
