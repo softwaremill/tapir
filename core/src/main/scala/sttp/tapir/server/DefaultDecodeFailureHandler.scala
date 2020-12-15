@@ -16,12 +16,12 @@ object DefaultDecodeFailureResponse {
   * - creates the response using `response`
   */
 case class DefaultDecodeFailureHandler(
-    respond: (DecodeFailureContext, Endpoint[_, _, _, _]) => Option[DefaultDecodeFailureResponse],
+    respond: DecodeFailureContext => Option[DefaultDecodeFailureResponse],
     response: (DefaultDecodeFailureResponse, String) => DecodeFailureHandling,
     failureMessage: DecodeFailureContext => String
 ) extends DecodeFailureHandler {
-  def apply(ctx: DecodeFailureContext, endpoint: Endpoint[_, _, _, _]): DecodeFailureHandling = {
-    respond(ctx, endpoint) match {
+  def apply(ctx: DecodeFailureContext): DecodeFailureHandling = {
+    respond(ctx) match {
       case Some(c) =>
         val failureMsg = failureMessage(ctx)
         response(c, failureMsg)

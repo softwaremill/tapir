@@ -78,8 +78,8 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       input: EndpointInput[_],
       failure: DecodeResult.Failure
   )(implicit ec: ExecutionContext, mat: Materializer): Directive1[I] = {
-    val decodeFailureCtx = DecodeFailureContext(input, failure)
-    val handling = serverOptions.decodeFailureHandler(decodeFailureCtx, e)
+    val decodeFailureCtx = DecodeFailureContext(input, failure, e)
+    val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
     handling match {
       case DecodeFailureHandling.NoMatch =>
         serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(ctx.log)

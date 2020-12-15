@@ -42,8 +42,8 @@ object VertxInputDecoders {
             tryEncodeError(endpoint, rc, failure)
         }
       case DecodeInputsResult.Failure(input, failure) =>
-        val decodeFailureCtx = DecodeFailureContext(input, failure)
-        endpointOptions.decodeFailureHandler(decodeFailureCtx, endpoint) match {
+        val decodeFailureCtx = DecodeFailureContext(input, failure, endpoint)
+        endpointOptions.decodeFailureHandler(decodeFailureCtx) match {
           case DecodeFailureHandling.NoMatch =>
             endpointOptions.logRequestHandling.decodeFailureNotHandled(endpoint, decodeFailureCtx)(endpointOptions.logger)
             rc.response.setStatusCode(404).end()

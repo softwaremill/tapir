@@ -78,8 +78,8 @@ class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOption
       input: EndpointInput[_],
       failure: DecodeResult.Failure
   ): F[Option[Response[F]]] = {
-    val decodeFailureCtx = DecodeFailureContext(input, failure)
-    val handling = serverOptions.decodeFailureHandler(decodeFailureCtx, e)
+    val decodeFailureCtx = DecodeFailureContext(input, failure, e)
+    val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
     handling match {
       case DecodeFailureHandling.NoMatch =>
         serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx).map(_ => None)

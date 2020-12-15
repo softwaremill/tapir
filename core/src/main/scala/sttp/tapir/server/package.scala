@@ -7,5 +7,5 @@ package object server {
     *
     * See also [[DecodeFailureHandling]] and [[DefaultDecodeFailureHandler]].
     */
-  type DecodeFailureHandler = (DecodeFailureContext, Endpoint[_, _, _, _]) => DecodeFailureHandling
+  type DecodeFailureHandler = DecodeFailureContext => DecodeFailureHandling
 }
