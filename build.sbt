@@ -5,7 +5,7 @@ import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
 val scala2_12 = "2.12.12"
-val scala2_13 = "2.13.4"
+val scala2_13 = "2.13.3"
 
 val allScalaVersions = List(scala2_12, scala2_13)
 val scala2_12Versions = List(scala2_12)
@@ -32,7 +32,11 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   }.value,
   ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
-  Test / parallelExecution := false
+  Test / parallelExecution := false,
+  scalacOptions := {
+    if (scalaVersion.value == scala2_13) scalacOptions.value :+ "-Wconf:cat=other-match-analysis:error"
+    else scalacOptions.value
+  }
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
