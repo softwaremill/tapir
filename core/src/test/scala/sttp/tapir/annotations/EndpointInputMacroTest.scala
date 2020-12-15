@@ -58,11 +58,11 @@ final case class TapirRequestTest3(
 )
 
 final case class TapirRequestTest4(
-    @apikey @query
+    @apikey(challenge = WWWAuthenticate.apiKey("api realm")) @query
     param1: Int,
-    @basic
+    @basic(challenge = WWWAuthenticate.basic("basic realm"))
     basicAuth: UsernamePassword,
-    @bearer
+    @bearer(challenge = WWWAuthenticate.bearer("bearer realm"))
     token: String
 )
 
@@ -124,9 +124,9 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
 
   it should "derive correct input for auth annotations" in {
     val expectedInput = TapirAuth
-      .apiKey(query[Int]("param1"))
-      .and(TapirAuth.basic[UsernamePassword])
-      .and(TapirAuth.bearer[String])
+      .apiKey(query[Int]("param1"), challenge = WWWAuthenticate.apiKey("api realm"))
+      .and(TapirAuth.basic[UsernamePassword](challenge = WWWAuthenticate.basic("basic realm")))
+      .and(TapirAuth.bearer[String](challenge = WWWAuthenticate.bearer("bearer realm")))
       .mapTo(TapirRequestTest4.apply _)
 
     compareInputs(deriveEndpointInput[TapirRequestTest4], expectedInput) shouldBe true
@@ -281,10 +281,10 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
         name1 == name2 && info1 == info2
       case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
         info1 == info2
-      case (ApiKey(input1), ApiKey(input2)) =>
-        compareInputs(input1, input2)
-      case (Http(scheme1, input1), Http(scheme2, input2)) =>
-        scheme1 == scheme2 && compareInputs(input1, input2)
+      case (ApiKey(input1, challenge1), ApiKey(input2, challenge2)) =>
+        challenge1 == challenge2 && compareInputs(input1, input2)
+      case (Http(scheme1, input1, challenge1), Http(scheme2, input2, challenge2)) =>
+        challenge1 == challenge2 && scheme1 == scheme2 && compareInputs(input1, input2)
       case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
         bodyType1 == bodyType2 && info1 == info2
       case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>

@@ -7,6 +7,8 @@ import sttp.tapir._
 import scala.annotation.tailrec
 
 object ServerDefaults {
+  def failureOutput[R, T](body: EndpointIO.Body[R, T]): EndpointOutput[(DefaultDecodeFailureResponse, T)] =
+    statusCode.and(headers).mapTo(DefaultDecodeFailureResponse.apply _).and(body)
 
   /** The default implementation of the [[DecodeFailureHandler]].
     *
@@ -25,46 +27,59 @@ object ServerDefaults {
   def decodeFailureHandler: DefaultDecodeFailureHandler =
     DefaultDecodeFailureHandler(
       FailureHandling
-        .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
+        .respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
       FailureHandling.failureResponse,
       FailureMessages.failureMessage
     )
 
   object FailureHandling {
-    val failureOutput: EndpointOutput[(StatusCode, String)] = statusCode.and(stringBody)
-
-    def failureResponse(statusCode: StatusCode, message: String): DecodeFailureHandling =
-      DecodeFailureHandling.response(failureOutput)((statusCode, message))
+    def failureResponse(result: DefaultDecodeFailureResponse, message: String): DecodeFailureHandling =
+      DecodeFailureHandling.response(failureOutput(stringBody))((result, message))
 
     /** @param badRequestOnPathErrorIfPathShapeMatches Should a status 400 be returned if the shape of the path
       * of the request matches, but decoding some path segment fails with a [[DecodeResult.Error]].
       * @param badRequestOnPathInvalidIfPathShapeMatches Should a status 400 be returned if the shape of the path
       * of the request matches, but decoding some path segment fails with a [[DecodeResult.InvalidValue]].
       */
-    def respondWithStatusCode(
+    def respond(
         ctx: DecodeFailureContext,
         badRequestOnPathErrorIfPathShapeMatches: Boolean,
         badRequestOnPathInvalidIfPathShapeMatches: Boolean
-    ): Option[StatusCode] = {
-      ctx.input match {
-        case _: EndpointInput.Query[_]             => Some(StatusCode.BadRequest)
-        case _: EndpointInput.QueryParams[_]       => Some(StatusCode.BadRequest)
-        case _: EndpointInput.Cookie[_]            => Some(StatusCode.BadRequest)
-        case _: EndpointIO.Header[_]               => Some(StatusCode.BadRequest)
-        case _: EndpointIO.Headers[_]              => Some(StatusCode.BadRequest)
-        case _: EndpointIO.Body[_, _]              => Some(StatusCode.BadRequest)
-        case _: EndpointIO.StreamBodyWrapper[_, _] => Some(StatusCode.BadRequest)
+    ): Option[DefaultDecodeFailureResponse] = {
+      import sttp.tapir.server.{DefaultDecodeFailureResponse => fr}
+
+      failingInput(ctx) match {
+        case _: EndpointInput.Query[_]             => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointInput.QueryParams[_]       => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointInput.Cookie[_]            => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Header[_]               => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Headers[_]              => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Body[_, _]              => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.StreamBodyWrapper[_, _] => Some(fr.status(StatusCode.BadRequest))
         // we assume that the only decode failure that might happen during path segment decoding is an error
         // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
         // a path shape mismatch
         case _: EndpointInput.PathCapture[_]
             if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
               (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
-          Some(StatusCode.BadRequest)
+          Some(fr.status(StatusCode.BadRequest))
+        case a: EndpointInput.Auth[_] => Some(fr(StatusCode.Unauthorized, a.challenge.headers))
         // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
         case _: EndpointInput.Basic[_] => None
         // all other inputs (tuples, mapped) - responding with bad request
-        case _ => Some(StatusCode.BadRequest)
+        case _ => Some(fr.status(StatusCode.BadRequest))
+      }
+    }
+
+    private def failingInput(ctx: DecodeFailureContext) = {
+      import sttp.tapir.internal.RichEndpointInput
+      ctx.failure match {
+        case DecodeResult.Missing =>
+          val missingAuth = ctx.endpoint.input.pathTo(ctx.input).collectFirst { case a: EndpointInput.Auth[_] =>
+            a
+          }
+          missingAuth.getOrElse(ctx.input)
+        case _ => ctx.input
       }
     }
   }

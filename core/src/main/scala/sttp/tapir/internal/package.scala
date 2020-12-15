@@ -90,6 +90,25 @@ package object internal {
       traverseInputs { case i: EndpointInput.FixedMethod[_] =>
         Vector(i.m)
       }.headOption
+
+    def pathTo(targetInput: EndpointInput[_]): Vector[EndpointInput[_]] = {
+      def findIn(parent: EndpointInput[_], inputs: EndpointInput[_]*) = inputs.foldLeft(Vector.empty[EndpointInput[_]]) {
+        case (v, input) if v.isEmpty =>
+          val path = input.pathTo(targetInput)
+          if (path.nonEmpty) parent +: path else path
+        case (v, _) => v
+      }
+      if (targetInput == input) Vector(input)
+      else
+        input match {
+          case _: EndpointInput.Basic[_]                 => Vector.empty
+          case i @ EndpointInput.Pair(left, right, _, _) => findIn(i, left, right)
+          case i @ EndpointIO.Pair(left, right, _, _)    => findIn(i, left, right)
+          case a: EndpointInput.Auth[_]                  => findIn(a, a.input)
+          case i @ EndpointInput.MappedPair(p, _)        => findIn(i, p)
+          case i @ EndpointIO.MappedPair(p, _)           => findIn(i, p)
+        }
+    }
   }
 
   def basicInputSortIndex(i: EndpointInput.Basic[_]): Int =

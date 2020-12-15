@@ -4,6 +4,7 @@ import sttp.model._
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput
+import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.annotations._
 import sttp.tapir.deprecated
 import sttp.tapir.description
@@ -38,8 +39,7 @@ class EndpointInputAnnotations(val c: blackbox.Context) {
       c.abort(c.enclosingPosition, "No more than one body annotation is allowed")
     }
 
-    val segments = util.classSymbol
-      .annotations
+    val segments = util.classSymbol.annotations
       .map(_.tree)
       .collectFirst { case Apply(Select(New(tree), _), List(arg)) if tree.tpe <:< endpointInput => arg }
       .collectFirst { case Literal(Constant(path: String)) =>
@@ -79,15 +79,17 @@ class EndpointInputAnnotations(val c: blackbox.Context) {
     }
 
     val nonPathInputs = nonPathFields map { case (field, fieldIdx) =>
-      val input = util.extractOptArgFromAnnotation(field, queryType).map(makeQueryInput(field))
+      val input = util
+        .extractOptArgFromAnnotation(field, queryType)
+        .map(makeQueryInput(field))
         .orElse(util.extractOptArgFromAnnotation(field, headerType).map(makeHeaderInput(field)))
         .orElse(util.extractOptArgFromAnnotation(field, cookieType).map(makeCookieInput(field)))
         .orElse(hasBodyAnnotation(field).map(makeBodyInput(field)))
         .orElse(if (util.annotated(field, paramsType)) Some(makeQueryParamsInput(field)) else None)
         .orElse(if (util.annotated(field, headersType)) Some(makeHeadersInput(field)) else None)
         .orElse(if (util.annotated(field, cookiesType)) Some(makeCookiesInput(field)) else None)
-        .orElse(if (util.annotated(field, bearerType)) Some(makeBearerInput(field)) else None)
-        .orElse(if (util.annotated(field, basicType)) Some(makeBasicInput(field)) else None)
+        .orElse(util.findAnnotation(field, bearerType).map(makeBearerInput(field, _)))
+        .orElse(util.findAnnotation(field, basicType).map(makeBasicInput(field, _)))
         .getOrElse {
           c.abort(
             c.enclosingPosition,
@@ -162,14 +164,16 @@ class EndpointInputAnnotations(val c: blackbox.Context) {
       c.abort(c.enclosingPosition, s"Annotation @cookies can be applied only for field with type ${typeOf[List[Cookie]]}")
     }
 
-  private def makeBearerInput(field: c.Symbol): Tree = {
+  private def makeBearerInput(field: c.Symbol, annotation: Annotation): Tree = {
+    val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
-    q"sttp.tapir.TapirAuth.bearer($codec)"
+    q"sttp.tapir.TapirAuth.bearer($challenge)($codec)"
   }
 
-  private def makeBasicInput(field: c.Symbol): Tree = {
+  private def makeBasicInput(field: c.Symbol, annotation: Annotation): Tree = {
+    val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
-    q"sttp.tapir.TapirAuth.basic($codec)"
+    q"sttp.tapir.TapirAuth.basic($challenge)($codec)"
   }
 
   private def summonCodec(field: c.Symbol, tpe: Type): Tree = {
@@ -199,18 +203,22 @@ class EndpointInputAnnotations(val c: blackbox.Context) {
   }
 
   private def assignSchemaAnnotations[A](input: Tree, field: Symbol, util: CaseClassUtil[c.type, A]): Tree = {
-    val inputWithDescription = util.extractArgFromAnnotation(field, descriptionType)
+    val inputWithDescription = util
+      .extractArgFromAnnotation(field, descriptionType)
       .fold(input)(desc => q"$input.description($desc)")
     val inputWithDeprecation = if (util.annotated(field, deprecatedType)) {
       q"$inputWithDescription.deprecated"
     } else {
       inputWithDescription
     }
-    if (util.annotated(field, apikeyType)) {
-      q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation)"
-    } else {
-      inputWithDeprecation
+    util.findAnnotation(field, apikeyType).fold(inputWithDeprecation) { a =>
+      val challenge = authChallenge(a)
+      q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge)"
     }
+  }
+
+  private def authChallenge(annotation: Annotation): Tree = {
+    q"${c.untypecheck(annotation.tree)}.challenge"
   }
 
   private def mapToTargetFunc[A](fieldIdxToInputIdx: mutable.Map[Int, Int], util: CaseClassUtil[c.type, A]) = {

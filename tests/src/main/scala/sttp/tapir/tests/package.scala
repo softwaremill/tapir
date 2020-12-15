@@ -11,7 +11,7 @@ import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, QueryParams, StatusCode}
+import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model._
 
@@ -147,6 +147,9 @@ package object tests {
   val in_file_multipart_out_multipart: Endpoint[FruitData, Unit, FruitData, Any] =
     endpoint.post.in("api" / "echo" / "multipart").in(multipartBody[FruitData]).out(multipartBody[FruitData]).name("echo file")
 
+  val in_raw_multipart_out_string: Endpoint[Seq[Part[Array[Byte]]], Unit, String, Any] =
+    endpoint.post.in("api" / "echo" / "multipart").in(multipartBody).out(stringBody).name("echo raw parts")
+
   val in_cookie_cookie_out_header: Endpoint[(Int, String), Unit, List[String], Any] =
     endpoint.get
       .in("api" / "echo" / "headers")
@@ -174,9 +177,9 @@ package object tests {
     endpoint.in("auth").in(auth.apiKey(query[String]("api-key"))).out(stringBody)
 
   val in_auth_basic_out_string: Endpoint[UsernamePassword, Unit, String, Any] =
-    endpoint.in("auth").in(auth.basic[UsernamePassword]).out(stringBody)
+    endpoint.in("auth").in(auth.basic[UsernamePassword]()).out(stringBody)
 
-  val in_auth_bearer_out_string: Endpoint[String, Unit, String, Any] = endpoint.in("auth").in(auth.bearer[String]).out(stringBody)
+  val in_auth_bearer_out_string: Endpoint[String, Unit, String, Any] = endpoint.in("auth").in(auth.bearer[String]()).out(stringBody)
 
   val in_string_out_status_from_string: Endpoint[String, Unit, Either[Int, String], Any] =
     endpoint

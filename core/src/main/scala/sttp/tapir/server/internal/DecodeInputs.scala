@@ -106,7 +106,7 @@ object DecodeInputs {
           ctx = ctx,
           decodeValues = decodeValues,
           decodedPathInputs = Vector.empty,
-          last
+          lastPathInput = last
         )
     }
   }
@@ -167,7 +167,8 @@ object DecodeInputs {
           case Some(_) =>
             // shape path mismatch - input path too long; there are more segments in the request path than expected by
             // that input. Reporting a failure on the last path input.
-            val failure = DecodeInputsResult.Failure(lastPathInput.input, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
+            val failure =
+              DecodeInputsResult.Failure(lastPathInput.input, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
             (failure, newCtx)
           case None =>
             (foldDecodedPathInputs(decodedPathInputs, decodeValues), newCtx)
