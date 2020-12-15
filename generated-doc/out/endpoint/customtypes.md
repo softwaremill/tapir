@@ -137,8 +137,8 @@ import sttp.tapir.Schema
 case class Parent(child: Child)
 case class Child(value: String)
 
-implicit def sChild: Schema[Child] = Schema.derive
-implicit def sParent: Schema[Parent] = Schema.derive
+implicit def sChild: Schema[Child] = Schema.derived
+implicit def sParent: Schema[Parent] = Schema.derived
 
 ```
 
@@ -199,8 +199,8 @@ case class Organization(name: String) extends Entity {
 
 import sttp.tapir._
 
-val sPerson = Schema.derive[Person]
-val sOrganization = Schema.derive[Organization]
+val sPerson = Schema.derived[Person]
+val sOrganization = Schema.derived[Organization]
 implicit val sEntity: Schema[Entity] = 
     Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
 ```

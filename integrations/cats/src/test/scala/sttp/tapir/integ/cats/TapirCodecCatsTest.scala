@@ -27,7 +27,7 @@ class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
   }
 
   it should "find proper validator for cats collections" in {
-    implicit val schemaForTest: Schema[Test] = Schema.derive[Test].validate(Validator.minLength(3).contramap(_.value))
+    implicit val schemaForTest: Schema[Test] = Schema.derived[Test].validate(Validator.minLength(3).contramap(_.value))
 
     def expectedValidator[C[X] <: Iterable[X]] = schemaForTest.validator.asIterableElements[C].and(Validator.minSize(1))
 

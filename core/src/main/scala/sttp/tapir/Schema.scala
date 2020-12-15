@@ -139,7 +139,7 @@ object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPri
 
   def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*): Schema[E] = macro oneOfMacro[E, V]
 
-  def derive[T]: Schema[T] = macro Magnolia.gen[T] // TODO rename
+  def derived[T]: Schema[T] = macro Magnolia.gen[T]
 }
 
 trait LowPrioritySchema {

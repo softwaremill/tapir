@@ -138,7 +138,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     case class Person(name: String, age: Int)
     implicit val nameSchema: Schema[String] = Schema.schemaForString.validate(Validator.pattern("^[A-Z].*"))
     implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(18))
-    val validator = Schema.derive[Person].validator
+    val validator = Schema.derived[Person].validator
     validator.validate(Person("notImportantButOld", 21)).map(noPath(_)) shouldBe List(
       ValidationError.Primitive(Validator.pattern("^[A-Z].*"), "notImportantButOld")
     )
