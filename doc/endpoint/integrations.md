@@ -64,7 +64,7 @@ trait EnumHelper { e: Enumeration =>
     implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
     implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
 
-    implicit val schemaForEnum: Schema[e.Value] = Schema(SchemaType.SString)
+    implicit val schemaForEnum: Schema[e.Value] = Schema.string
     implicit def validatorForEnum: Validator[e.Value] = Validator.`enum`(e.values.toList, v => Option(v))
 }
 object Color extends Enumeration with EnumHelper {

@@ -18,7 +18,7 @@ object StreamingAkkaServer extends App {
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` and the media type is `text/plain`.
   val streamingEndpoint: Endpoint[Unit, Unit, Source[ByteString, Any], AkkaStreams] =
-    endpoint.get.in("receive").out(streamBody(AkkaStreams)(Schema(SchemaType.SString), CodecFormat.TextPlain()))
+    endpoint.get.in("receive").out(streamBody(AkkaStreams)(Schema.string, CodecFormat.TextPlain()))
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
   val testStream: Source[ByteString, Any] = Source.repeat("Hello!").take(10).map(s => ByteString(s))

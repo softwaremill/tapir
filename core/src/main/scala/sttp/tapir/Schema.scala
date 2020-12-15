@@ -99,6 +99,14 @@ class encodedName(val name: String) extends StaticAnnotation
 object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPrioritySchema {
   val ModifyCollectionElements = "each"
 
+  /** Creates a schema for type `T`, where the low-level representation is a `String`.
+    */
+  def string[T]: Schema[T] = Schema(SString)
+
+  /** Creates a schema for type `T`, where the low-level representation is binary.
+    */
+  def binary[T]: Schema[T] = Schema(SBinary)
+
   implicit val schemaForString: Schema[String] = Schema(SString)
   implicit val schemaForByte: Schema[Byte] = Schema(SInteger)
   implicit val schemaForShort: Schema[Short] = Schema(SInteger)
@@ -128,17 +136,12 @@ object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPri
   implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString)
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
-
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray
-
   implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
-
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = Schema[Part[T]](implicitly[Schema[T]].schemaType)
-
   implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro SchemaMapMacro.schemaForMap[Map[String, V], V]
 
   def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*): Schema[E] = macro oneOfMacro[E, V]
-
   def derived[T]: Schema[T] = macro Magnolia.gen[T]
 }
 

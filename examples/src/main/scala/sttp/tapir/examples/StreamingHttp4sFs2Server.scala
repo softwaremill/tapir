@@ -26,7 +26,7 @@ object StreamingHttp4sFs2Server extends App {
   val streamingEndpoint = endpoint.get
     .in("receive")
     .out(header[Long](HeaderNames.ContentLength))
-    .out(streamBody(Fs2Streams[IO])(Schema(SchemaType.SString), CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
+    .out(streamBody(Fs2Streams[IO])(Schema.string, CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
 
   // mandatory implicits
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global

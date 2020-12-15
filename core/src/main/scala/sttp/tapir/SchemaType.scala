@@ -48,7 +48,7 @@ object SchemaType {
 
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
-        discriminatorSchema: Schema[D] = Schema(SchemaType.SString),
+        discriminatorSchema: Schema[D] = Schema.string,
         discriminatorMappingOverride: Map[String, SRef] = Map.empty
     ): SCoproduct = {
       SCoproduct(

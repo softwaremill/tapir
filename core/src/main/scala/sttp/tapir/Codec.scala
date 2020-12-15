@@ -210,7 +210,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
         DecodeResult.sequence(anyParts)
       }
 
-      override def schema: Schema[Seq[RawPart]] = Schema(SchemaType.SBinary)
+      override def schema: Schema[Seq[RawPart]] = Schema.binary
       override def validator: Validator[Seq[RawPart]] = Validator.pass
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
     }
@@ -284,7 +284,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       stringCodec: Codec[String, A, CF]
   ): Codec[WebSocketFrame, A, CF] =
     Codec
-      .id[WebSocketFrame, CF](stringCodec.format, Schema(SchemaType.SString))
+      .id[WebSocketFrame, CF](stringCodec.format, Schema.string)
       .mapDecode {
         case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p)
         case f                            => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
@@ -298,7 +298,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       stringCodec: Codec[String, A, CF]
   ): Codec[WebSocketFrame, Option[A], CF] =
     Codec
-      .id[WebSocketFrame, CF](stringCodec.format, Schema(SchemaType.SString))
+      .id[WebSocketFrame, CF](stringCodec.format, Schema.string)
       .mapDecode {
         case WebSocketFrame.Text(p, _, _) => stringCodec.decode(p).map(Some(_))
         case WebSocketFrame.Close(_, _)   => DecodeResult.Value(None)
@@ -316,7 +316,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       byteArrayCodec: Codec[Array[Byte], A, CF]
   ): Codec[WebSocketFrame, A, CF] =
     Codec
-      .id[WebSocketFrame, CF](byteArrayCodec.format, Schema(SchemaType.SBinary))
+      .id[WebSocketFrame, CF](byteArrayCodec.format, Schema.binary)
       .mapDecode {
         case WebSocketFrame.Binary(p, _, _) => byteArrayCodec.decode(p)
         case f                              => DecodeResult.Error(f.toString, new UnsupportedWebSocketFrameException(f))
@@ -330,7 +330,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       byteArrayCodec: Codec[Array[Byte], A, CF]
   ): Codec[WebSocketFrame, Option[A], CF] =
     Codec
-      .id[WebSocketFrame, CF](byteArrayCodec.format, Schema(SchemaType.SBinary))
+      .id[WebSocketFrame, CF](byteArrayCodec.format, Schema.binary)
       .mapDecode {
         case WebSocketFrame.Binary(p, _, _) => byteArrayCodec.decode(p).map(Some(_))
         case WebSocketFrame.Close(_, _)     => DecodeResult.Value(None)
@@ -344,7 +344,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
   //
 
   private def listBinarySchema[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
-    id[List[T], CF](c.format, Schema(SchemaType.SBinary))
+    id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
   /** Create a codec which decodes/encodes a list of low-level values to a list of high-level values, using the given
@@ -362,7 +362,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     */
   implicit def set[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Set[U], CF] =
     Codec
-      .id[List[T], CF](c.format, Schema(SchemaType.SBinary))
+      .id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toSet))(us => us.map(c.encode).toList)
       .schema(c.schema.asIterable[Set])
 
@@ -373,7 +373,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     */
   implicit def vector[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[List[T], Vector[U], CF] =
     Codec
-      .id[List[T], CF](c.format, Schema(SchemaType.SBinary))
+      .id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toVector))(us => us.map(c.encode).toList)
       .schema(c.schema.asIterable[Vector])
 
@@ -411,7 +411,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     * The schema and validator are copied from the base codec.
     */
   implicit def optionHead[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Option[T], U, CF] =
-    id[Option[T], CF](c.format, Schema(SchemaType.SBinary))
+    id[Option[T], CF](c.format, Schema.binary)
       .mapDecode({
         case None    => DecodeResult.Missing
         case Some(e) => c.decode(e)
@@ -424,7 +424,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     * The schema and validator are copied from the base codec.
     */
   implicit def option[T, U, CF <: CodecFormat](implicit c: Codec[T, U, CF]): Codec[Option[T], Option[U], CF] =
-    id[Option[T], CF](c.format, Schema(SchemaType.SBinary))
+    id[Option[T], CF](c.format, Schema.binary)
       .mapDecode {
         case None    => DecodeResult.Value(None)
         case Some(v) => c.decode(v).map(Some(_))

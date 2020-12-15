@@ -71,8 +71,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   object TestStreams extends TestStreams
 
   val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], TestStreams] = endpoint
-    .in(streamBody(TestStreams)(Schema(SchemaType.SString), CodecFormat.TextPlain()))
-    .out(streamBody(TestStreams)(Schema(SchemaType.SBinary), CodecFormat.OctetStream()))
+    .in(streamBody(TestStreams)(Schema.string, CodecFormat.TextPlain()))
+    .out(streamBody(TestStreams)(Schema.binary, CodecFormat.OctetStream()))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")
@@ -643,7 +643,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     import sttp.tapir.integ.cats.codec._
     import cats.data.NonEmptyList
     implicit def schemaForColor: Schema[Color] =
-      Schema(SchemaType.SString).validate(Validator.enum(List(Blue, Red), { c => Some(c.toString.toLowerCase()) }))
+      Schema.string.validate(Validator.enum(List(Blue, Red), { c => Some(c.toString.toLowerCase()) }))
 
     val expectedYaml = loadYaml("expected_valid_enum_cats_nel.yml")
 
