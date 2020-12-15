@@ -135,7 +135,7 @@ package object internal {
 
       output match {
         case EndpointOutput.Pair(left, right, _, _) => mergeMultiple(Vector(left.asBasicOutputsOrMap, right.asBasicOutputsOrMap))
-        case EndpointIO.Pair(left, right, _, _)     => mergeMultiple(Vector(left.asBasicOutputsOrMap, right.asBasicOutputsOrMap)) // TODO
+        case EndpointIO.Pair(left, right, _, _)     => mergeMultiple(Vector(left.asBasicOutputsOrMap, right.asBasicOutputsOrMap))
         case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsOrMap
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsOrMap
         case _: EndpointOutput.Void[_]              => Left(Vector.empty)
