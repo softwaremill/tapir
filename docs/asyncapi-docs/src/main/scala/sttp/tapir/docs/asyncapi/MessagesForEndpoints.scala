@@ -29,7 +29,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas) {
   private def toData(codec: Codec[_, _, _ <: CodecFormat]): CodecData =
     ObjectTypeData(codec).headOption match { // the first element, if any, corresponds to the object
       case Some(otd) => Left((otd._1, codec.format.mediaType))
-      case None      => Right(codec.schema.getOrElse(TSchema.schemaForByteArray).copy(description = None, deprecated = false))
+      case None      => Right(codec.schema.copy(description = None, deprecated = false))
     }
 
   private def message(codec: Codec[_, _, _ <: CodecFormat]): Message = {
@@ -42,7 +42,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas) {
       None,
       None,
       None,
-      codec.schema.flatMap(_.description),
+      codec.schema.description,
       Nil,
       None,
       Nil,

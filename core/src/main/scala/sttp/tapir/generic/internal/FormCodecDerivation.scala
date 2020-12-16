@@ -57,7 +57,6 @@ object FormCodecMacros {
         sttp.tapir.Codec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
           .schema(${util.schema})
-          .validate(implicitly[sttp.tapir.Validator[$t]])
       }
      """
     Debug.logGeneratedCode(c)(t.typeSymbol.fullName, codecTree)

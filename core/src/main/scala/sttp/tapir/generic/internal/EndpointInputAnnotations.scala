@@ -4,6 +4,7 @@ import sttp.model._
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput
+import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.annotations._
 
 import scala.collection.mutable
@@ -24,8 +25,7 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
     val util = new CaseClassUtil[c.type, A](c, "request endpoint")
     validateCaseClass(util)
 
-    val segments = util.classSymbol
-      .annotations
+    val segments = util.classSymbol.annotations
       .map(_.tree)
       .collectFirst { case Apply(Select(New(tree), _), List(arg)) if tree.tpe <:< endpointInput => arg }
       .collectFirst { case Literal(Constant(path: String)) =>
@@ -65,7 +65,9 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
     }
 
     val nonPathInputs = nonPathFields map { case (field, fieldIdx) =>
-      val input = util.extractOptArgFromAnnotation(field, queryType).map(makeQueryInput(field))
+      val input = util
+        .extractOptArgFromAnnotation(field, queryType)
+        .map(makeQueryInput(field))
         .orElse(util.extractOptArgFromAnnotation(field, headerType).map(makeHeaderIO(field)))
         .orElse(util.extractOptArgFromAnnotation(field, cookieType).map(makeCookieInput(field)))
         .orElse(hasBodyAnnotation(field).map(makeBodyIO(field)))
@@ -121,12 +123,18 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
     }
 
   private def makeBearerInput(field: c.Symbol): Tree = {
+    val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
-    q"sttp.tapir.TapirAuth.bearer($codec)"
+    q"sttp.tapir.TapirAuth.bearer($challenge)($codec)"
   }
 
-  private def makeBasicInput(field: c.Symbol): Tree = {
+  private def makeBasicInput(field: c.Symbol, annotation: Annotation): Tree = {
+    val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
-    q"sttp.tapir.TapirAuth.basic($codec)"
+    q"sttp.tapir.TapirAuth.basic($challenge)($codec)"
+  }
+
+  private def authChallenge(annotation: Annotation): Tree = {
+    q"${c.untypecheck(annotation.tree)}.challenge"
   }
 }

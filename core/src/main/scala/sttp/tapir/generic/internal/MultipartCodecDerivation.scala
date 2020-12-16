@@ -66,9 +66,15 @@ object MultipartCodecDerivation {
             q"implicitly[sttp.tapir.Codec[List[java.nio.ByteBuffer], $codecType, _ <: sttp.tapir.CodecFormat]]"
           ),
         () =>
-          (q"sttp.tapir.RawBodyType.FileBody", q"implicitly[sttp.tapir.Codec[List[java.io.File], $codecType, _ <: sttp.tapir.CodecFormat]]"),
+          (
+            q"sttp.tapir.RawBodyType.FileBody",
+            q"implicitly[sttp.tapir.Codec[List[java.io.File], $codecType, _ <: sttp.tapir.CodecFormat]]"
+          ),
         () =>
-          (q"sttp.tapir.RawBodyType.FileBody", q"implicitly[sttp.tapir.Codec[List[org.scalajs.dom.raw.File], $codecType, _ <: sttp.tapir.CodecFormat]]")
+          (
+            q"sttp.tapir.RawBodyType.FileBody",
+            q"implicitly[sttp.tapir.Codec[List[org.scalajs.dom.raw.File], $codecType, _ <: sttp.tapir.CodecFormat]]"
+          )
       )
 
       val codec = firstNotEmpty(codecsToCheck)
@@ -139,7 +145,6 @@ object MultipartCodecDerivation {
         sttp.tapir.Codec.multipartCodec($partCodecs, None)
           .map(decode _)(encode _)
           .schema(${util.schema})
-          .validate(implicitly[sttp.tapir.Validator[$t]])
       }
      """
     Debug.logGeneratedCode(c)(t.typeSymbol.fullName, codecTree)

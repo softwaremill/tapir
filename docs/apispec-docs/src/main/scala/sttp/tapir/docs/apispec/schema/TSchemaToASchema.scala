@@ -21,14 +21,14 @@ private[schema] class TSchemaToASchema(
           ASchema(SchemaType.Object).copy(
             required = p.required.map(_.encodedName).toList,
             properties = fields.map {
-              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _)) =>
+              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _)) =>
                 fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
               case (fieldName, fieldSchema) =>
                 fieldName.encodedName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name)))
             }.toListMap
           )
         )
-      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
@@ -39,7 +39,7 @@ private[schema] class TSchemaToASchema(
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           ASchema.apply(
-            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _) => Left(objectToSchemaReference.map(s.info)) },
+            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _, _) => Left(objectToSchemaReference.map(s.info)) },
             d.map(tDiscriminatorToADiscriminator)
           )
         )

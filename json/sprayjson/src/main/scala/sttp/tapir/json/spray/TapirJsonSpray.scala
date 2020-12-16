@@ -9,9 +9,9 @@ import sttp.tapir._
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonSpray {
-  def jsonBody[T: JsonFormat: Schema: Validator]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(jsonFormatCodec[T])
+  def jsonBody[T: JsonFormat: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(jsonFormatCodec[T])
 
-  implicit def jsonFormatCodec[T: JsonFormat: Schema: Validator]: JsonCodec[T] =
+  implicit def jsonFormatCodec[T: JsonFormat: Schema]: JsonCodec[T] =
     Codec.json { s =>
       Try(s.parseJson.convertTo[T]) match {
         case Success(v) => Value(v)
@@ -25,6 +25,4 @@ trait TapirJsonSpray {
       List.empty
     )
   )
-
-  implicit val validatorForSprayJsValue: Validator[JsValue] = Validator.pass
 }

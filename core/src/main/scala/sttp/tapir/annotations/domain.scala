@@ -1,8 +1,8 @@
 package sttp.tapir.annotations
 
 import java.nio.charset.StandardCharsets
-
 import sttp.tapir.CodecFormat
+import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.RawBodyType
 import sttp.tapir.RawBodyType.StringBody
 
@@ -32,18 +32,16 @@ class setCookies extends EndpointOutputAnnotation
 
 class statusCode extends EndpointOutputAnnotation
 
-class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF)
-  extends EndpointInputAnnotation
-  with EndpointOutputAnnotation
+class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends EndpointInputAnnotation with EndpointOutputAnnotation
 
 class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
 
 class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
 
-class apikey extends EndpointInputAnnotation
+class apikey(val challenge: WWWAuthenticate = WWWAuthenticate.apiKey()) extends StaticAnnotation
 
-class basic extends EndpointInputAnnotation
+class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends StaticAnnotation
 
-class bearer extends EndpointInputAnnotation
+class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
 
 class endpointInput(val path: String = "") extends EndpointInputAnnotation

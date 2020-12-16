@@ -71,8 +71,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   object TestStreams extends TestStreams
 
   val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], TestStreams] = endpoint
-    .in(streamBody(TestStreams, schemaFor[String], CodecFormat.TextPlain()))
-    .out(streamBody(TestStreams, schemaFor[Array[Byte]], CodecFormat.OctetStream()))
+    .in(streamBody(TestStreams)(Schema.string, CodecFormat.TextPlain()))
+    .out(streamBody(TestStreams)(Schema.binary, CodecFormat.OctetStream()))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")
@@ -126,8 +126,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support authentication") {
     val expectedYaml = loadYaml("expected_auth.yml")
 
-    val e1 = endpoint.in(auth.bearer[String]).in("api1" / path[String]).out(stringBody)
-    val e2 = endpoint.in(auth.bearer[String]).in("api2" / path[String]).out(stringBody)
+    val e1 = endpoint.in(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
+    val e2 = endpoint.in(auth.bearer[String]()).in("api2" / path[String]).out(stringBody)
     val e3 = endpoint.in(auth.apiKey(header[String]("apikey"))).in("api3" / path[String]).out(stringBody)
 
     val actualYaml = List(e1, e2, e3).toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -139,8 +139,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support optional authentication") {
     val expectedYaml = loadYaml("expected_optional_auth.yml")
 
-    val e1 = endpoint.in(auth.bearer[String]).in("api1" / path[String]).out(stringBody)
-    val e2 = endpoint.in(auth.bearer[Option[String]]).in("api2" / path[String]).out(stringBody)
+    val e1 = endpoint.in(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
+    val e2 = endpoint.in(auth.bearer[Option[String]]()).in("api2" / path[String]).out(stringBody)
     val e3 = endpoint.in(auth.apiKey(header[Option[String]]("apikey"))).in("api3" / path[String]).out(stringBody)
 
     val actualYaml = List(e1, e2, e3).toOpenAPI(Info("Fruits", "1.0")).toYaml
@@ -642,9 +642,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("use enum validator for a cats non-empty-list of enums") {
     import sttp.tapir.integ.cats.codec._
     import cats.data.NonEmptyList
-    implicit def schemaForColor: Schema[Color] = Schema(SchemaType.SString)
-    implicit def validatorForColor: Validator[Color] =
-      Validator.enum(List(Blue, Red), { c => Some(c.toString.toLowerCase()) })
+    implicit def schemaForColor: Schema[Color] =
+      Schema.string.validate(Validator.enum(List(Blue, Red), { c => Some(c.toString.toLowerCase()) }))
 
     val expectedYaml = loadYaml("expected_valid_enum_cats_nel.yml")
 
@@ -752,7 +751,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("render field validator when used inside of coproduct") {
-    implicit val ageValidator: Validator[Int] = Validator.min(11)
+    implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(11))
     val expectedYaml = loadYaml("expected_valid_coproduct.yml")
     val actualYaml = endpoint.get
       .out(jsonBody[Entity])
@@ -764,7 +763,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("render field validator when used inside of optional coproduct") {
-    implicit val ageValidator: Validator[Int] = Validator.min(11)
+    implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(11))
     val expectedYaml = loadYaml("expected_valid_optional_coproduct.yml")
     val actualYaml = endpoint.get
       .in(jsonBody[Option[Entity]])
@@ -876,10 +875,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should use date-time format for Instant fields") {
     val expectedYaml = loadYaml("expected_date_time.yml")
 
-    println(query[Instant]("instant").codec.schema)
     val e = endpoint.in(query[Instant]("instant"))
     val actualYaml = e.toOpenAPI(Info("Examples", "1.0")).toYaml
-    println(actualYaml)
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

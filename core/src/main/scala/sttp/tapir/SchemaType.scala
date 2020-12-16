@@ -48,13 +48,13 @@ object SchemaType {
 
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
-        discriminatorSchema: Schema[D] = Schema(SchemaType.SString),
+        discriminatorSchema: Schema[D] = Schema.string,
         discriminatorMappingOverride: Map[String, SRef] = Map.empty
     ): SCoproduct = {
       SCoproduct(
         info,
         schemas.map {
-          case s @ Schema(st: SchemaType.SProduct, _, _, _, _) =>
+          case s @ Schema(st: SchemaType.SProduct, _, _, _, _, _) =>
             s.copy(schemaType = st.copy(fields = st.fields.toSeq :+ (discriminatorName -> discriminatorSchema)))
           case s => s
         },

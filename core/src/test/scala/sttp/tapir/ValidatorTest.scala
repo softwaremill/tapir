@@ -114,21 +114,21 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
   }
 
   it should "validate option" in {
-    val validator = Validator.optionElement(Validator.min(10))
+    val validator = Validator.min(10).asOptionElement
     validator.validate(None) shouldBe empty
     validator.validate(Some(12)) shouldBe empty
     validator.validate(Some(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
   }
 
   it should "validate iterable" in {
-    val validator = Validator.iterableElements[Int, List](Validator.min(10))
+    val validator = Validator.min(10).asIterableElements[List]
     validator.validate(List.empty[Int]) shouldBe empty
     validator.validate(List(11)) shouldBe empty
     validator.validate(List(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
   }
 
   it should "validate array" in {
-    val validator = Validator.arrayElements[Int](Validator.min(10))
+    val validator = Validator.min(10).asArrayElements
     validator.validate(Array.empty[Int]) shouldBe empty
     validator.validate(Array(11)) shouldBe empty
     validator.validate(Array(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
@@ -136,9 +136,9 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
 
   it should "validate product" in {
     case class Person(name: String, age: Int)
-    implicit val nameValidator: Validator[String] = Validator.pattern("^[A-Z].*")
-    implicit val ageValidator: Validator[Int] = Validator.min(18)
-    val validator = Validator.derive[Person]
+    implicit val nameSchema: Schema[String] = Schema.schemaForString.validate(Validator.pattern("^[A-Z].*"))
+    implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(18))
+    val validator = Schema.derived[Person].validator
     validator.validate(Person("notImportantButOld", 21)).map(noPath(_)) shouldBe List(
       ValidationError.Primitive(Validator.pattern("^[A-Z].*"), "notImportantButOld")
     )
@@ -228,10 +228,28 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     Duration(summaryTime, TimeUnit.NANOSECONDS).toSeconds should be <= 1L
   }
 
+  it should "validate recursive values" in {
+    import sttp.tapir.generic.auto._
+    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
+    val v: Validator[RecursiveName] = implicitly[Schema[RecursiveName]].validator
+
+    v.validate(RecursiveName("x", None)) shouldBe Nil
+    v.validate(RecursiveName("", None)) shouldBe List(ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("name"))))
+    v.validate(RecursiveName("x", Some(Vector(RecursiveName("x", None))))) shouldBe Nil
+    v.validate(RecursiveName("x", Some(Vector(RecursiveName("", None))))) shouldBe List(
+      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("name")))
+    )
+    v.validate(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("x", None)))))))) shouldBe Nil
+    v.validate(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("", None)))))))) shouldBe List(
+      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("subNames"), FieldName("name")))
+    )
+  }
+
   it should "show recursive validators" in {
-    import sttp.tapir.generic.auto.validator._
-    val v: Validator[RecursiveName] = implicitly[Validator[RecursiveName]]
-    v.show shouldBe Some("subNames->(elements(elements(recursive)))")
+    import sttp.tapir.generic.auto._
+    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
+    val v: Validator[RecursiveName] = implicitly[Schema[RecursiveName]].validator
+    v.show shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
   }
 
   private def noPath[T](v: ValidationError[T]): ValidationError[T] =

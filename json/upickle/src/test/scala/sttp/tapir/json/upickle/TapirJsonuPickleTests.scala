@@ -23,7 +23,7 @@ class TapirJsonuPickleTests extends AnyFlatSpec with TapirJsonuPickleTestExtensi
   val customerDecoder: JsonCodec[Customer] = TapirJsonuPickleCodec.readWriterCodec[Customer]
 
   // Helper to test encoding then decoding an object is the same as the original
-  def testEncodeDecode[T: ReadWriter: Schema: Validator](original: T): Assertion = {
+  def testEncodeDecode[T: ReadWriter: Schema](original: T): Assertion = {
     val codec = TapirJsonuPickleCodec.readWriterCodec[T]
 
     val encoded = codec.encode(original)

@@ -86,9 +86,9 @@ import io.circe.generic.auto._
 
 implicit val ec = scala.concurrent.ExecutionContext.global
 case class MyFailure(msg: String)
-def myFailureResponse(code: StatusCode, message: String): DecodeFailureHandling =
-  DecodeFailureHandling.response(statusCode.and(jsonBody[MyFailure]))(
-   (code, MyFailure(message))
+def myFailureResponse(response: DefaultDecodeFailureResponse, message: String): DecodeFailureHandling =
+  DecodeFailureHandling.response(ServerDefaults.failureOutput(jsonBody[MyFailure]))(
+   (response, MyFailure(message))
   )
   
 val myDecodeFailureHandler = ServerDefaults.decodeFailureHandler.copy(

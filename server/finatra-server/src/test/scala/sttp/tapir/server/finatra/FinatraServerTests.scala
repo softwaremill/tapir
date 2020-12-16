@@ -2,7 +2,7 @@ package sttp.tapir.server.finatra
 
 import cats.effect.{IO, Resource}
 import sttp.tapir.server.finatra
-import sttp.tapir.server.tests.{ServerBasicTests, ServerTests, backendResource}
+import sttp.tapir.server.tests.{ServerAuthenticationTests, ServerBasicTests, ServerTests, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 
 class FinatraServerTests extends TestSuite {
@@ -12,6 +12,6 @@ class FinatraServerTests extends TestSuite {
     val interpreter = new FinatraServerInterpreter()
     val serverTests = new ServerTests(interpreter)
 
-    new ServerBasicTests(backend, serverTests, interpreter).tests()
+    new ServerBasicTests(backend, serverTests, interpreter).tests() ++ new ServerAuthenticationTests(backend, serverTests).tests()
   }
 }

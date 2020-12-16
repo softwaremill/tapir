@@ -64,14 +64,17 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   }
 
   it should "modify optional parameter" in {
-    implicitly[Schema[Parent]]
+    val parentSchema = implicitly[Schema[Parent]]
+    parentSchema
       .modify(_.child)(_.format("xyz")) shouldBe Schema(
-      SProduct(SObjectInfo("sttp.tapir.Parent"), List(FieldName("child") -> implicitly[Schema[Person]].format("xyz").asOptional))
+      SProduct(SObjectInfo("sttp.tapir.Parent"), List(FieldName("child") -> implicitly[Schema[Person]].format("xyz").asOption)),
+      validator = parentSchema.validator
     )
   }
 
   it should "modify property of optional parameter" in {
-    implicitly[Schema[Parent]]
+    val parentSchema = implicitly[Schema[Parent]]
+    parentSchema
       .modify(_.child.each.age)(_.format("xyz")) shouldBe Schema(
       SProduct(
         SObjectInfo("sttp.tapir.Parent"),
@@ -84,7 +87,8 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
             isOptional = true
           )
         )
-      )
+      ),
+      validator = parentSchema.validator
     )
   }
 

@@ -11,7 +11,7 @@ class Schemas(
 
   def apply(typeData: TypeData[_]): ReferenceOr[ASchema] = {
     typeData.schema.schemaType match {
-      case TSchemaType.SArray(TSchema(o: TSchemaType.SObject, _, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(o: TSchemaType.SObject, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(o.info)))))
       case o: TSchemaType.SObject => Left(objectToSchemaReference.map(o.info))
       case _                      => tschemaToASchema(typeData)

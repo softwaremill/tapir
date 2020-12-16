@@ -8,9 +8,9 @@ import upickle.default.{ReadWriter, read, write}
 
 trait TapirJsonuPickle {
 
-  def jsonBody[T: ReadWriter: Schema: Validator]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(readWriterCodec[T])
+  def jsonBody[T: ReadWriter: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(readWriterCodec[T])
 
-  implicit def readWriterCodec[T: ReadWriter: Schema: Validator]: JsonCodec[T] =
+  implicit def readWriterCodec[T: ReadWriter: Schema]: JsonCodec[T] =
     Codec.json[T] { s =>
       Try(read[T](s)) match {
         case Success(v) => Value(v)

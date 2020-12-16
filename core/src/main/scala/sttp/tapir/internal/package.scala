@@ -90,6 +90,25 @@ package object internal {
       traverseInputs { case i: EndpointInput.FixedMethod[_] =>
         Vector(i.m)
       }.headOption
+
+    def pathTo(targetInput: EndpointInput[_]): Vector[EndpointInput[_]] = {
+      def findIn(parent: EndpointInput[_], inputs: EndpointInput[_]*) = inputs.foldLeft(Vector.empty[EndpointInput[_]]) {
+        case (v, input) if v.isEmpty =>
+          val path = input.pathTo(targetInput)
+          if (path.nonEmpty) parent +: path else path
+        case (v, _) => v
+      }
+      if (targetInput == input) Vector(input)
+      else
+        input match {
+          case _: EndpointInput.Basic[_]                 => Vector.empty
+          case i @ EndpointInput.Pair(left, right, _, _) => findIn(i, left, right)
+          case i @ EndpointIO.Pair(left, right, _, _)    => findIn(i, left, right)
+          case a: EndpointInput.Auth[_]                  => findIn(a, a.input)
+          case i @ EndpointInput.MappedPair(p, _)        => findIn(i, p)
+          case i @ EndpointIO.MappedPair(p, _)           => findIn(i, p)
+        }
+    }
   }
 
   def basicInputSortIndex(i: EndpointInput.Basic[_]): Int =
@@ -135,7 +154,7 @@ package object internal {
 
       output match {
         case EndpointOutput.Pair(left, right, _, _) => mergeMultiple(Vector(left.asBasicOutputsOrMap, right.asBasicOutputsOrMap))
-        case EndpointIO.Pair(left, right, _, _)     => mergeMultiple(Vector(left.asBasicOutputsOrMap, right.asBasicOutputsOrMap)) // TODO
+        case EndpointIO.Pair(left, right, _, _)     => mergeMultiple(Vector(left.asBasicOutputsOrMap, right.asBasicOutputsOrMap))
         case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsOrMap
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsOrMap
         case _: EndpointOutput.Void[_]              => Left(Vector.empty)
@@ -208,10 +227,6 @@ package object internal {
   }
 
   def showOneOf(mappings: Seq[String]): String = s"status one of(${mappings.mkString("|")})"
-
-  implicit class RichSchema[T](val s: Schema[T]) extends AnyVal {
-    def as[U]: Schema[U] = s.asInstanceOf[Schema[U]]
-  }
 
   def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {

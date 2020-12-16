@@ -29,14 +29,13 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   }
 
   it should "find proper validator for enumeratum enum entries" in {
-
-    testEnumValidator(implicitly[Validator[TestEnumEntry]])
-    testValueEnumValidator[Int, TestIntEnumEntry, IntEnum[TestIntEnumEntry]](implicitly[Validator[TestIntEnumEntry]])
-    testValueEnumValidator[Long, TestLongEnumEntry, LongEnum[TestLongEnumEntry]](implicitly[Validator[TestLongEnumEntry]])
-    testValueEnumValidator[Short, TestShortEnumEntry, ShortEnum[TestShortEnumEntry]](implicitly[Validator[TestShortEnumEntry]])
-    testValueEnumValidator[String, TestStringEnumEntry, StringEnum[TestStringEnumEntry]](implicitly[Validator[TestStringEnumEntry]])
-    testValueEnumValidator[Byte, TestByteEnumEntry, ByteEnum[TestByteEnumEntry]](implicitly[Validator[TestByteEnumEntry]])
-    testValueEnumValidator[Char, TestCharEnumEntry, CharEnum[TestCharEnumEntry]](implicitly[Validator[TestCharEnumEntry]])
+    testEnumValidator(implicitly[Schema[TestEnumEntry]].validator)
+    testValueEnumValidator[Int, TestIntEnumEntry, IntEnum[TestIntEnumEntry]](implicitly[Schema[TestIntEnumEntry]].validator)
+    testValueEnumValidator[Long, TestLongEnumEntry, LongEnum[TestLongEnumEntry]](implicitly[Schema[TestLongEnumEntry]].validator)
+    testValueEnumValidator[Short, TestShortEnumEntry, ShortEnum[TestShortEnumEntry]](implicitly[Schema[TestShortEnumEntry]].validator)
+    testValueEnumValidator[String, TestStringEnumEntry, StringEnum[TestStringEnumEntry]](implicitly[Schema[TestStringEnumEntry]].validator)
+    testValueEnumValidator[Byte, TestByteEnumEntry, ByteEnum[TestByteEnumEntry]](implicitly[Schema[TestByteEnumEntry]].validator)
+    testValueEnumValidator[Char, TestCharEnumEntry, CharEnum[TestCharEnumEntry]](implicitly[Schema[TestCharEnumEntry]].validator)
   }
 
   private def testEnumValidator[E <: EnumEntry](validator: Validator[E])(implicit enum: Enum[E]) = {

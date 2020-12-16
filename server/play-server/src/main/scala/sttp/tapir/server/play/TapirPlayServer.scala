@@ -54,7 +54,7 @@ trait TapirPlayServer {
           input: EndpointInput[_],
           failure: DecodeResult.Failure
       ): Result = {
-        val decodeFailureCtx = DecodeFailureContext(input, failure)
+        val decodeFailureCtx = DecodeFailureContext(input, failure, e)
         val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
         handling match {
           case DecodeFailureHandling.NoMatch =>
@@ -95,7 +95,7 @@ trait TapirPlayServer {
           val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x, 0, serverOptions))
           val handlingResult = decodeInputResult match {
             case DecodeInputsResult.Failure(input, failure) =>
-              val decodeFailureCtx = DecodeFailureContext(input, failure)
+              val decodeFailureCtx = DecodeFailureContext(input, failure, e.endpoint)
               serverOptions.logRequestHandling.decodeFailureNotHandled(e.endpoint, decodeFailureCtx)(serverOptions.logger)
               serverOptions.decodeFailureHandler(decodeFailureCtx) != DecodeFailureHandling.noMatch
             case DecodeInputsResult.Values(_, _) => true

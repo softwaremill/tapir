@@ -11,7 +11,7 @@ class SchemaGenericSemiautoTest extends AsyncFlatSpec with Matchers {
         |import sttp.tapir._
         |case class Unknown(str: String)
         |case class Example(str: String, unknown: Unknown)
-        |Schema.derive[Example]
+        |Schema.derived[Example]
         |""".stripMargin)
 
     error.message should include("magnolia: could not find Schema.Typeclass for type Unknown")

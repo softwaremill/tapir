@@ -21,90 +21,90 @@ object JsonCodecs {
 }
 
 final case class TapirRequestTest1(
-  @query
-  field1: Int,
-  @query("another-field-name")
-  field2: String,
-  @cookie
-  cookie: Boolean,
-  @cookie("another-cookie-name")
-  namedCookie: Boolean,
-  @header
-  header: Long,
-  @header("another-header-name")
-  namedHeader: Int,
-  @jsonbody
-  body: String
+    @query
+    field1: Int,
+    @query("another-field-name")
+    field2: String,
+    @cookie
+    cookie: Boolean,
+    @cookie("another-cookie-name")
+    namedCookie: Boolean,
+    @header
+    header: Long,
+    @header("another-header-name")
+    namedHeader: Int,
+    @jsonbody
+    body: String
 )
 
 final case class TapirRequestTest2(
-  @body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
-  body: Boolean
+    @body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
+    body: Boolean
 )
 
 final case class TapirRequestTest3(
-  @params
-  params: ModelQueryParams,
-  @headers
-  headers: List[ModelHeader],
-  @cookies
-  cookies: List[ModelCookie]
+    @params
+    params: ModelQueryParams,
+    @headers
+    headers: List[ModelHeader],
+    @cookies
+    cookies: List[ModelCookie]
 )
 
 final case class TapirRequestTest4(
-  @apikey @query
-  param1: Int,
-  @basic
-  basicAuth: UsernamePassword,
-  @bearer
-  token: String
+    @apikey(challenge = WWWAuthenticate.apiKey("api realm")) @query
+    param1: Int,
+    @basic(challenge = WWWAuthenticate.basic("basic realm"))
+    basicAuth: UsernamePassword,
+    @bearer(challenge = WWWAuthenticate.bearer("bearer realm"))
+    token: String
 )
 
 final case class TapirRequestTest5(
-  @query
-  @description("field-description")
-  field1: Int,
-  @cookie
-  @deprecated
-  cookie: Boolean,
+    @query
+    @description("field-description")
+    field1: Int,
+    @cookie
+    @deprecated
+    cookie: Boolean
 )
 
 @endpointInput("some/{field5}/path/{field2}")
 final case class TapirRequestTest6(
-  @query
-  field1: Int,
-  @path
-  @description("path-description")
-  field2: Boolean,
-  @query
-  field3: Long,
-  @query
-  field4: String,
-  @path
-  @apikey
-  field5: Int
+    @query
+    field1: Int,
+    @path
+    @description("path-description")
+    field2: Boolean,
+    @query
+    field3: Long,
+    @query
+    field4: String,
+    @path
+    @apikey
+    field5: Int
 )
 
 final case class TapirResponseTest1(
-  @header
-  header1: Int,
-  @header("another-header-name")
-  header2: Boolean,
-  @setCookie("cookie-name")
-  setCookie: CookieValueWithMeta,
-  @jsonbody
-  body: String,
-  @statusCode
-  status: StatusCode
+    @header
+    header1: Int,
+    @header("another-header-name")
+    header2: Boolean,
+    @setCookie("cookie-name")
+    setCookie: CookieValueWithMeta,
+    @jsonbody
+    body: String,
+    @statusCode
+    status: StatusCode
 )
 
 final case class TapirResponseTest2(
-  @headers
-  headers: List[ModelHeader],
-  @cookies
-  cookies: List[ModelCookie],
-  @setCookies
-  setCookies: List[CookieWithMeta]
+    @headers
+    headers: List[ModelHeader],
+    @cookies
+    cookies: List[ModelCookie],
+    @setCookies
+    setCookies: List[CookieWithMeta]
 )
 
 class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
@@ -139,16 +139,18 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
   }
 
   it should "derive correct input for auth annotations" in {
-    val expectedInput = TapirAuth.apiKey(query[Int]("param1"))
-      .and(TapirAuth.basic[UsernamePassword])
-      .and(TapirAuth.bearer[String])
+    val expectedInput = TapirAuth
+      .apiKey(query[Int]("param1"), challenge = WWWAuthenticate.apiKey("api realm"))
+      .and(TapirAuth.basic[UsernamePassword](challenge = WWWAuthenticate.basic("basic realm")))
+      .and(TapirAuth.bearer[String](challenge = WWWAuthenticate.bearer("bearer realm")))
       .mapTo(TapirRequestTest4.apply _)
 
     compareTransputs(deriveEndpointInput[TapirRequestTest4], expectedInput) shouldBe true
   }
 
   it should "derive input with descriptions" in {
-    val expectedInput = query[Int]("field1").description("field-description")
+    val expectedInput = query[Int]("field1")
+      .description("field-description")
       .and(cookie[Boolean]("cookie").deprecated)
       .mapTo(TapirRequestTest5.apply _)
 
@@ -358,10 +360,10 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
         name1 == name2 && info1 == info2
       case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
         info1 == info2
-      case (ApiKey(input1), ApiKey(input2)) =>
-        compareTransputs(input1, input2)
-      case (Http(scheme1, input1), Http(scheme2, input2)) =>
-        scheme1 == scheme2 && compareTransputs(input1, input2)
+      case (ApiKey(input1, challenge1), ApiKey(input2, challenge2)) =>
+        challenge1 == challenge2 && compareTransputs(input1, input2)
+      case (Http(scheme1, input1, challenge1), Http(scheme2, input2, challenge2)) =>
+        challenge1 == challenge2 && scheme1 == scheme2 && compareTransputs(input1, input2)
       case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
         bodyType1 == bodyType2 && info1 == info2
       case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>
@@ -391,9 +393,7 @@ class JsonCodecMock[T] extends Codec[String, T, CodecFormat.Json] {
 
   override def encode(h: T): String = ???
 
-  override def validator: Validator[T] = ???
-
-  override def schema: Option[Schema[T]] = ???
+  override def schema: Schema[T] = ???
 
   override def format: CodecFormat.Json = ???
 }

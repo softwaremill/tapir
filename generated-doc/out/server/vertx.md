@@ -4,7 +4,7 @@ Endpoints can be mounted as Vert.x `Route`s on top of a Vert.x `Router`.
 
 Use the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.17.0-M11"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.17.0-M11+25-8d0263ff+20201216-0826-SNAPSHOT"
 ```
 
 Then import the package:

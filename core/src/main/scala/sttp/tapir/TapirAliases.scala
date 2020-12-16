@@ -1,7 +1,5 @@
 package sttp.tapir
 
-import sttp.tapir.generic.internal.SchemaMagnoliaDerivation
-
 /** Mixin containing aliases for top-level types and modules in the tapir package. */
 trait TapirAliases {
 
