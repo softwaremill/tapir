@@ -31,7 +31,7 @@ import akka.util.ByteString
 case class Person(name: String)
 
 // copying the derived json schema type
-endpoint.out(streamBody(AkkaStreams)(Schema(implicitly[Schema[List[Person]]].schemaType), CodecFormat.Json()))
+endpoint.out(streamBody(AkkaStreams)(Schema(Schema.derived[List[Person]].schemaType), CodecFormat.Json()))
 ```
 
 See also the [runnable streaming example](../examples.md). 

@@ -50,7 +50,7 @@ implicit val myIdCodec: Codec[String, MyId, TextPlain] =
   Codec.string.mapDecode(decode)(encode)
 ```
 
-Or, using the type alias for codecs in the TextPlain format and String as the raw value:
+Or, using the type alias for codecs in the `TextPlain` format and `String` as the raw value:
 
 ```scala
 import sttp.tapir.Codec.PlainCodec
@@ -66,7 +66,7 @@ implicit val myIdCodec: PlainCodec[MyId] = Codec.string.mapDecode(decode)(encode
   usually better to define a codec for that type. 
 ```
 
-Then, you can use the new codec e.g. to obtain an id from a query parameter or a path segment:
+Then, you can use the new codec e.g. to obtain an id from a query parameter, or a path segment:
 
 ```scala
 endpoint.in(query[MyId]("myId"))
@@ -95,15 +95,16 @@ configured separately.
 For case classes types, `Schema[_]` values can be derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
 that schemas are defined for all the case class's fields. 
 
-Two policies enable to choose the way custom types are derived : 
-- Automatic derivation
-- Semi automatic derivation 
+Two policies enable to choose the way custom types are derived:
 
-### Automatic mode
+* automatic derivation
+* semi automatic derivation
 
-Cases classes, traits and their children are recursively derived by Magnolia.   
- 
-Importing `sttp.tapir.generic.auto._` enables fully automatic derivation for `Schema`.
+### Automatic derivation
+
+Case classes, traits and their children are recursively derived by Magnolia.
+
+Importing `sttp.tapir.generic.auto._` enables fully automatic derivation for `Schema`:
 
 ```scala
 import sttp.tapir.Schema
@@ -119,7 +120,7 @@ implicitly[Schema[Parent]]
 If you have a case class which contains some non-standard types (other than strings, number, other case classes, 
 collections), you only need to provide schemas for them. Using these, the rest will be derived automatically.
 
-### Semi-automatic mode
+### Semi-automatic derivation
 
 Semi-automatic derivation can be done using `Schema.derived[T]`. 
 
@@ -127,7 +128,7 @@ It only derives selected type `T`. However, derivation is not recursive: schemas
 child type.
 
 This mode is easier to debug and helps to avoid issues encountered by automatic mode (wrong schemas for value classes 
-or custom types).   
+or custom types):
 
 ```scala
 import sttp.tapir.Schema
@@ -141,8 +142,9 @@ implicit def sParent: Schema[Parent] = Schema.derived
 
 ### Configuring derivation
 
-It is possible to configure Magnolia's automatic derivation to use
-snake_case, kebab-case or a custom field naming policy, by providing an implicit `sttp.tapir.generic.Configuration` value:
+It is possible to configure Magnolia's automatic derivation to use `snake_case`, `kebab-case` or a custom field naming 
+policy, by providing an implicit `sttp.tapir.generic.Configuration` value. This influences how the low-level 
+representation is described in documentation:
 
 ```scala
 import sttp.tapir.generic.Configuration
@@ -207,7 +209,7 @@ implicit val sEntity: Schema[Entity] =
 ## Customising derived schemas
 
 In some cases, it might be desirable to customise the derived schemas, e.g. to add a description to a particular
-field of a case class. One way the automatic derivation can be customized is using annotations:
+field of a case class. One way the automatic derivation can be customised is using annotations:
 
 * `@encodedName` sets name for case class's field which is used in the encoded form (and also in documentation)
 * `@description` sets description for the whole case class or its field
@@ -215,7 +217,7 @@ field of a case class. One way the automatic derivation can be customized is usi
 * `@deprecated` marks a case class's field as deprecated
 
 If the target type isn't accessible or can't be modified, schemas can be customized by looking up an implicit instance 
-of the `Derived[Schema[T]]` type, modyfing the value, and assigning it to an implicit schema. 
+of the `Derived[Schema[T]]` type, modifying the value, and assigning it to an implicit schema. 
 
 When such an implicit `Schema[T]` is in scope will have higher priority than the built-in low-priority conversion 
 from `Derived[Schema[T]]` to `Schema[T]`.

@@ -11,7 +11,7 @@
 Add the sbt plugin to the `project/plugins.sbt`:
 
 ```scala
-addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "0.17.0-M11+3-910acc2c+20201215-1528-SNAPSHOT")
+addSbtPlugin("com.softwaremill.sttp.tapir" % "sbt-openapi-codegen" % "0.17.0-M11+25-8d0263ff+20201216-0826-SNAPSHOT")
 ```
 
 Enable the plugin for your project in the `build.sbt`:

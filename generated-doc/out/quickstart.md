@@ -3,7 +3,7 @@
 To use tapir, add the following dependency to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.0-M11+3-910acc2c+20201215-1528-SNAPSHOT"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.0-M11+25-8d0263ff+20201216-0826-SNAPSHOT"
 ```
 
 This will import only the core classes needed to create endpoint descriptions. To generate a server or a client, you

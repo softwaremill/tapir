@@ -24,9 +24,9 @@ For example, a `query[Int]("quantity")` specifies an input parameter which corre
 parameter and will be mapped as an `Int`. There's an implicit `Codec[List[String], Int, TextPlain]` value that is 
 referenced by the `query` method (which is defined in the `sttp.tapir` package). 
 
-In this example, the low-level value is a `List[String]`, as a given query parameter can be absent, have a single or 
-many values. The high-level value is an `Int`. The codec will verify that there's a single query paramater with the 
-given name, and parse it as an int. If any of this fails, a failure will be reported. 
+In this example, the low-level value is a `List[String]`, as a given query parameter can be absent, have a single or
+many values. The high-level value is an `Int`. The codec will verify that there's a single query parameter with the
+given name, and parse it as an int. If any of this fails, a failure will be reported.
 
 In a server setting, if the value cannot be parsed as an int, a decoding failure is reported, and the endpoint 
 won't match the request, or a `400 Bad Request` response is returned (depending on configuration).
@@ -61,7 +61,7 @@ Schema consists of:
 
 For primitive types, the schema values are built-in, and defined in the `Schema` companion object.
 
-The schema is left unchanged when mapping a codec or an input/output, as the underlying representation of the value 
+The schema is left unchanged when mapping a codec, or an input/output, as the underlying representation of the value
 doesn't change. However, schemas can be changed for individual inputs/outputs using the `.schema(Schema)` method.
 
 When codecs are derived for complex types, e.g. for json mapping, schemas are looked up through implicit
