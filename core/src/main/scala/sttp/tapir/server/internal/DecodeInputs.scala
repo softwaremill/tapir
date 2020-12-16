@@ -96,11 +96,11 @@ object DecodeInputs {
       decodeValues: DecodeInputsResult.Values,
       ctx: DecodeInputsContext
   ): (DecodeInputsResult, DecodeInputsContext) = {
-    pathInputs match {
-      case Vector() =>
+    pathInputs.initAndLast match {
+      case None =>
         // Match everything if no path input is specified
         (decodeValues, ctx)
-      case _ :+ last =>
+      case Some((_, last)) =>
         matchPathInner(
           pathInputs = pathInputs,
           ctx = ctx,
@@ -119,8 +119,8 @@ object DecodeInputs {
       decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
       lastPathInput: IndexedBasicInput
   ): (DecodeInputsResult, DecodeInputsContext) = {
-    pathInputs match {
-      case (idxInput @ IndexedBasicInput(in, _)) +: restInputs =>
+    pathInputs.headAndTail match {
+      case Some((idxInput @ IndexedBasicInput(in, _), restInputs)) =>
         in match {
           case EndpointInput.FixedPath(expectedSegment, codec, _) =>
             val (nextSegment, newCtx) = ctx.nextPathSegment
@@ -161,7 +161,7 @@ object DecodeInputs {
           case _ =>
             throw new IllegalStateException(s"Unexpected EndpointInput ${in.show} encountered. This is most likely a bug in the library")
         }
-      case Vector() =>
+      case None =>
         val (extraSegmentOpt, newCtx) = ctx.nextPathSegment
         extraSegmentOpt match {
           case Some(_) =>
@@ -181,9 +181,9 @@ object DecodeInputs {
       decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
       acc: DecodeInputsResult.Values
   ): DecodeInputsResult = {
-    decodedPathInputs match {
-      case Vector() => acc
-      case t +: ts =>
+    decodedPathInputs.headAndTail match {
+      case None => acc
+      case Some((t, ts)) =>
         t match {
           case (indexedInput, failure: DecodeResult.Failure) => DecodeInputsResult.Failure(indexedInput.input, failure)
           case (indexedInput, DecodeResult.Value(v))         => foldDecodedPathInputs(ts, acc.setBasicInputValue(v, indexedInput.index))
@@ -204,11 +204,11 @@ object DecodeInputs {
       values: DecodeInputsResult.Values,
       ctx: DecodeInputsContext
   ): (DecodeInputsResult, DecodeInputsContext) = {
-    inputs match {
-      case Vector() => (values, ctx)
-      case IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index) +: inputsTail =>
+    inputs.headAndTail match {
+      case None => (values, ctx)
+      case Some((IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index), inputsTail)) =>
         matchOthers(inputsTail, values.addBodyInput(input, index), ctx)
-      case indexedInput +: inputsTail =>
+      case Some((indexedInput, inputsTail)) =>
         val (result, ctx2) = matchOther(indexedInput.input, ctx)
         result match {
           case DecodeResult.Value(v)         => matchOthers(inputsTail, values.setBasicInputValue(v, indexedInput.index), ctx2)

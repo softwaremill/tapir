@@ -22,9 +22,9 @@ private[docs] object SecuritySchemesForEndpoints {
       takenNames: Set[SchemeName],
       acc: Map[SecurityScheme, SchemeName]
   ): Map[SecurityScheme, SchemeName] = {
-    schemes match {
-      case Vector() => acc
-      case scheme +: tail =>
+    schemes.headAndTail match {
+      case None => acc
+      case Some((scheme, tail)) =>
         val baseName = scheme.`type` + "Auth"
         val name = uniqueName(baseName, !takenNames.contains(_))
         nameSecuritySchemes(tail, takenNames + name, acc + (scheme -> name))

@@ -42,6 +42,7 @@ private[generic] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](va
       case a if a.tree.tpe <:< annotationType =>
         a.tree.children.tail match {
           case List(Literal(Constant(str: String))) => str
+          case _                                    => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
         }
     }
   }
@@ -54,6 +55,7 @@ private[generic] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](va
             None
           case List(Literal(Constant(str: String))) =>
             Some(str)
+          case _ => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
         }
     }
 }

@@ -263,4 +263,10 @@ package object internal {
   private def wrapException[F[_], O, E, I](exception: Throwable)(implicit me: MonadError[F]): F[Either[E, O]] = {
     me.unit(Left(exception.asInstanceOf[E]): Either[E, O])
   }
+
+  // see https://github.com/scala/bug/issues/12186
+  implicit class RichVector[T](c: Vector[T]) {
+    def headAndTail: Option[(T, Vector[T])] = if (c.isEmpty) None else Some((c.head, c.tail))
+    def initAndLast: Option[(Vector[T], T)] = if (c.isEmpty) None else Some((c.init, c.last))
+  }
 }
