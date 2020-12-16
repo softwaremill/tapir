@@ -25,7 +25,6 @@ object HttpServer {
   }
 }
 
-
 class HttpServer(port: Port) {
 
   private val logger = org.log4s.getLogger
@@ -141,5 +140,3 @@ class HttpServer(port: Port) {
     logger.info(s"Server on port $port stopped")
   }
 }
-
-

@@ -23,7 +23,9 @@ class EndpointOutputAnnotations(override val c: blackbox.Context) extends Endpoi
     validateCaseClass(util)
 
     val outputs = util.fields map { field =>
-      val output = util.extractOptArgFromAnnotation(field, headerType).map(makeHeaderIO(field))
+      val output = util
+        .extractOptArgFromAnnotation(field, headerType)
+        .map(makeHeaderIO(field))
         .orElse(util.extractOptArgFromAnnotation(field, setCookieType).map(makeSetCookieOutput(field)))
         .orElse(hasBodyAnnotation(field).map(makeBodyIO(field)))
         .orElse(if (util.annotated(field, statusCodeType)) Some(makeStatusCodeOutput(field)) else None)

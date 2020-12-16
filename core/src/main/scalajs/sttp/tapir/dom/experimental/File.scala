@@ -12,9 +12,9 @@ import scala.scalajs.js.annotation.JSGlobal
 @js.native
 @JSGlobal
 class File(
-  parts: js.Array[js.Any] = js.native,
-  override val name: String = js.native,
-  options: FilePropertyBag = js.native
+    parts: js.Array[js.Any] = js.native,
+    override val name: String = js.native,
+    options: FilePropertyBag = js.native
 ) extends org.scalajs.dom.File {
   val lastModified: Int = js.native
 }
@@ -33,8 +33,8 @@ trait FilePropertyBag extends js.Object {
 object FilePropertyBag {
   @inline
   def apply(
-    `type`: js.UndefOr[String] = js.undefined,
-    lastModified: js.UndefOr[Int] = js.undefined
+      `type`: js.UndefOr[String] = js.undefined,
+      lastModified: js.UndefOr[Int] = js.undefined
   ): FilePropertyBag = {
     val result = js.Dynamic.literal()
     `type`.foreach(result.`type` = _)
