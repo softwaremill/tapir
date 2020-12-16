@@ -11,7 +11,8 @@ private[docs] object SecuritySchemesForEndpoints {
     val auths = es.flatMap(e => e.input.auths)
     val authSecuritySchemes = auths.map(a => (a, authToSecurityScheme(a)))
     val securitySchemes = authSecuritySchemes.map { case (auth, scheme) => auth.securitySchemeName -> scheme }.toSet
-    val namedSecuritySchemes = nameSecuritySchemes(securitySchemes.toVector, Set(), Map())
+    val takenNames = authSecuritySchemes.flatMap(_._1.securitySchemeName).toSet
+    val namedSecuritySchemes = nameSecuritySchemes(securitySchemes.toVector, takenNames, Map())
 
     authSecuritySchemes.map { case (a, s) => a -> ((namedSecuritySchemes(s), s)) }.toMap
   }
@@ -24,7 +25,7 @@ private[docs] object SecuritySchemesForEndpoints {
   ): Map[SecurityScheme, SchemeName] = {
     schemes.headAndTail match {
       case Some(((Some(name), scheme), tail)) =>
-        nameSecuritySchemes(tail, takenNames + name, acc + (scheme -> name))
+        nameSecuritySchemes(tail, takenNames, acc + (scheme -> name))
       case Some(((None, scheme), tail)) =>
         val baseName = scheme.`type` + "Auth"
         val name = uniqueName(baseName, !takenNames.contains(_))
