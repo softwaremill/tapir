@@ -130,9 +130,9 @@ val paging: EndpointInput[Paging] =
 Mapping methods can also be called on an endpoint (which is useful if inputs/outputs are accumulated, for example).
 The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the ones above.
 
-## Describing input values using annotations
+## Describing input/output values using annotations
 
-Inputs can also be built for case classes using annotations. For example, for the case class `User`
+Inputs and outputs can also be built for case classes using annotations. For example, for the case class `User`
 ```scala
 import sttp.tapir.annotations._
 
@@ -151,17 +151,23 @@ val userInput: EndpointInput[User] =
   query[String]("user").and(cookie[Long]("sessionId")).mapTo(User)
 ```
 
-Following annotations are available in package `sttp.tapir.annotations` for describing input values:
-* `@query` captures a query parameter with the same name as name of annotated field in a case class. This annotation
-can also be used with optional parameter `@query("paramName")` in order to capture a query parameter with name `"paramName"`
-if a name of query parameter is different from name of annotated field in a case class
-* `@params` captures all query parameters. Can only be applied to fields represented as `QueryParams`
-* `@header` captures a header with the same name as name of annotated field in a case class. The same as annotation
-`@query` it has optional parameter to specify alternative name for header
+Following annotations are available in package `sttp.tapir.annotations` for describing both input and output values:
+* `@header` captures a header with the same name as name of annotated field in a case class. This annotation
+can also be used with optional parameter `@header("headerName")` in order to capture a header with name `"headerName"`
+if a name of header is different from name of annotated field in a case class
 * `@headers` captures all headers. Can only be applied to fields represented as `List[Header]`
-* `@cookie` captures a cookie with the same name as name of annotated field in a case class. The same as annotation
-`@query` it has optional parameter to specify alternative name for cookie
 * `@cookies` captures all cookies. Can only be applied to fields represented as `List[Cookie]`
+* `@jsonbody` captures JSON body of request or response. Can only be applied to field if there is implicit JSON `Codec`
+instance from `String` to target type
+* `@xmlbody` captures XML body of request or response. Also requires implicit XML `Codec` instance from `String` to
+target type
+
+Following annotations are only available for describing input values:
+* `@query` captures a query parameter with the same name as name of annotated field in a case class. The same as
+annotation `@header` it has optional parameter to specify alternative name for query parameter
+* `@params` captures all query parameters. Can only be applied to fields represented as `QueryParams`
+* `@cookie` captures a cookie with the same name as name of annotated field in a case class. The same as annotation
+`@header` it has optional parameter to specify alternative name for cookie
 * `@path` captures a path segment. Can only be applied to field of a case class if this case class is annotated
 by annotation `@endpointInput`. For example,
 ```scala
@@ -179,12 +185,15 @@ case class Book(
 ```
 Annotation `@endpointInput` specifies endpoint path. In order to capture one segment of this path it must be surrounded
 in curly braces
-* `@jsonbody` captures JSON body of request. Can only be applied to field if there is implicit JSON `Codec` instance
-from `String` to target type
-* `@xmlbody` captures XML body of request. Also requires implicit XML `Codec` instance from `String` to target type
 * `@apikey` wraps any other input and designates it as an API key. Can only be used with another annotations
 * `@basic` extracts data from the `Authorization` header. Can only be applied for field represented as `UsernamePassword`
 * `@bearer` extracts data from the `Authorization` header removing the `Bearer` prefix.
+
+Following annotations are only available for describing output values:
+* `@setCookie` sends value in header `Set-Cookie`. The same as annotation `@header` it has optional parameter to specify
+alternative name for cookie. Can only be applied for field represented as `CookieValueWithMeta`
+* `@setCookies` sends several `Set-Cookie` headers. Can only be applied for field represented as `List[Cookie]`
+* `@statusCode` sets status code for response. Can only be applied for field represented as `StatusCode`
 
 ## Path matching
 
