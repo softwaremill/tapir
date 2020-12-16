@@ -331,7 +331,6 @@ package object tests {
     }
 
     val in_valid_query: Endpoint[IntWrapper, Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit def plainCodecForWrapper: PlainCodec[IntWrapper] =
         Codec.int.map(IntWrapper.apply(_))(_.v).validate(Validator.min(1).contramap(_.v))
       endpoint.in(query[IntWrapper]("amount"))
@@ -364,7 +363,6 @@ package object tests {
     }
 
     val in_enum_class: Endpoint[Color, Unit, Unit, Any] = {
-      implicit def schemaForColor: Schema[Color] = Schema.string
       implicit def plainCodecForColor: PlainCodec[Color] = {
         Codec.string
           .map[Color]((_: String) match {
@@ -377,7 +375,6 @@ package object tests {
     }
 
     val in_optional_enum_class: Endpoint[Option[Color], Unit, Unit, Any] = {
-      implicit def schemaForColor: Schema[Color] = Schema.string
       implicit def plainCodecForColor: PlainCodec[Color] = {
         Codec.string
           .map[Color]((_: String) match {
@@ -391,19 +388,19 @@ package object tests {
 
     val out_enum_object: Endpoint[Unit, Unit, ColorValue, Any] = {
       implicit def schemaForColor: Schema[Color] =
-        Schema.string.validate(Validator.enum(List(Blue, Red), { c => Some(plainCodecForColor.encode(c)) }))
-      implicit def plainCodecForColor: PlainCodec[Color] = {
-        Codec.string
-          .map[Color]((_: String) match {
-            case "red"  => Red
-            case "blue" => Blue
-          })(_.toString.toLowerCase)
-      }
+        Schema.string.validate(
+          Validator.enum(
+            List(Blue, Red),
+            {
+              case Red  => Some("red")
+              case Blue => Some("blue")
+            }
+          )
+        )
       endpoint.out(jsonBody[ColorValue])
     }
 
     val in_enum_values: Endpoint[IntWrapper, Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger)
       implicit def plainCodecForWrapper: PlainCodec[IntWrapper] =
         Codec.int.map(IntWrapper.apply(_))(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
       endpoint.in(query[IntWrapper]("amount"))
