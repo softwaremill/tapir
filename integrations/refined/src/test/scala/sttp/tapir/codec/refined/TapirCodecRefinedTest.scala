@@ -8,7 +8,7 @@ import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.{W, refineMV, refineV}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.generic.auto._
-import sttp.tapir.{DecodeResult, ValidationError, Validator}
+import sttp.tapir.{DecodeResult, Schema, ValidationError, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -96,7 +96,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     type IntConstraint = Greater[W.`3`.T]
     type LimitedInt = Int Refined IntConstraint
 
-    implicitly[Validator[LimitedInt]] should matchPattern { case Validator.Mapped(Validator.Min(3, true), _) =>
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Min(3, true), _) =>
     }
   }
 

@@ -62,12 +62,11 @@ class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestEx
     val codec = implicitly[Codec[String, Test6, CodecFormat.XWwwFormUrlencoded]]
 
     // when
-    codec.schema.map(_.schemaType) shouldBe Some(
+    codec.schema.schemaType shouldBe
       SProduct(
         SObjectInfo("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
         List((FieldName("f1"), implicitly[Schema[String]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
-    )
   }
 
   it should "generate a codec for a one-arg case class using snake-case naming transformation" in {
@@ -136,10 +135,10 @@ class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestEx
     codec.decode("f1=10&f1=12") shouldBe DecodeResult.Value(Test1(Vector(10, 12)))
   }
 
-  it should "generate a codec for a one-arg case class using implicit validator" in {
+  it should "generate a codec for a one-arg case class using implicit schema" in {
     // given
     case class Test1(f1: Int)
-    implicit val v: Validator[Int] = Validator.min(5)
+    implicit val s: Schema[Int] = Schema.schemaForInt.validate(Validator.min(5))
     val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
 
     // when

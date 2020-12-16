@@ -6,7 +6,7 @@ The `tapir-cats` module contains additional instances for some [cats](https://ty
 datatypes as well as additional syntax:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.17.0-M11"
+"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.17.0-M11+25-8d0263ff+20201216-0826-SNAPSHOT"
 ```
 
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
@@ -19,7 +19,7 @@ If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` mo
 validators for `T Refined P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.17.0-M11"
+"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.17.0-M11+25-8d0263ff+20201216-0826-SNAPSHOT"
 ```
 
 You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
@@ -40,7 +40,7 @@ The `tapir-enumeratum` module provides schemas, validators and codecs for [Enume
 enumerations. To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.17.0-M11"
+"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.17.0-M11+25-8d0263ff+20201216-0826-SNAPSHOT"
 ```
 
 Then, `import sttp.tapir.codec.enumeratum`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
@@ -64,7 +64,7 @@ trait EnumHelper { e: Enumeration =>
     implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
     implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
 
-    implicit val schemaForEnum: Schema[e.Value] = Schema(SchemaType.SString)
+    implicit val schemaForEnum: Schema[e.Value] = Schema.string
     implicit def validatorForEnum: Validator[e.Value] = Validator.`enum`(e.values.toList, v => Option(v))
 }
 object Color extends Enumeration with EnumHelper {

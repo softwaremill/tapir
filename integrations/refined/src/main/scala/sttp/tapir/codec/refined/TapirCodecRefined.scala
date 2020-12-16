@@ -7,12 +7,12 @@ import eu.timepit.refined.refineV
 import eu.timepit.refined.string.MatchesRegex
 import shapeless.Witness
 import sttp.tapir._
-import sttp.tapir.internal.RichSchema
 
 import scala.reflect.ClassTag
 
 trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
-  implicit def refinedTapirSchema[V, P](implicit vSchema: Schema[V]): Schema[V Refined P] = vSchema.as[V Refined P]
+  implicit def refinedTapirSchema[V, P](implicit vSchema: Schema[V], vfp: ValidatorForPredicate[V, P]): Schema[V Refined P] =
+    vSchema.validate(vfp.validator).contramap[V Refined P](_.value)
 
   implicit def codecForRefined[R, V, P, CF <: CodecFormat](implicit
       tm: Codec[R, V, CF],
@@ -31,11 +31,6 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
         }
       }(_.value)
   }
-
-  //
-
-  implicit def validatorFromPredicate[V, P](implicit vfp: ValidatorForPredicate[V, P]): Validator[V Refined P] =
-    vfp.validator.contramap(_.value)
 
   //
 

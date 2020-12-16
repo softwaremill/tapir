@@ -21,7 +21,7 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
   val customerDecoder: JsonCodec[Customer] = TapirJsonSprayCodec.jsonFormatCodec[Customer]
 
   // Helper to test encoding then decoding an object is the same as the original
-  def testEncodeDecode[T: JsonFormat: Schema: Validator](original: T): Assertion = {
+  def testEncodeDecode[T: JsonFormat: Schema](original: T): Assertion = {
     val codec = TapirJsonSprayCodec.jsonFormatCodec[T]
 
     val encoded = codec.encode(original)

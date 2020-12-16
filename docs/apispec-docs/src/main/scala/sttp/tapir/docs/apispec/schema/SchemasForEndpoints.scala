@@ -1,7 +1,7 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.apispec.{Schema => ASchema, _}
-import sttp.tapir.{Schema => TSchema, SchemaType => TSchemaType, _}
+import sttp.tapir._
 
 import scala.collection.immutable.ListMap
 
@@ -55,7 +55,7 @@ object SchemasForEndpoints {
       case EndpointIO.Headers(_, _)           => List.empty
       case EndpointIO.Body(_, codec, _)       => ObjectTypeData(codec)
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) =>
-        ObjectTypeData(TypeData(codec.schema.getOrElse(TSchema(TSchemaType.SBinary)), Validator.pass))
+        ObjectTypeData(TypeData(codec.schema, Validator.pass))
       case EndpointIO.MappedPair(wrapped, _) => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)   => List.empty
       case EndpointIO.Empty(_, _)            => List.empty

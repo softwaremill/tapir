@@ -19,20 +19,20 @@ object JsonCodecs {
 }
 
 final case class TapirRequestTest1(
-  @query
-  field1: Int,
-  @query("another-field-name")
-  field2: String,
-  @cookie
-  cookie: Boolean,
-  @cookie("another-cookie-name")
-  namedCookie: Boolean,
-  @header
-  header: Long,
-  @header("another-header-name")
-  namedHeader: Int,
-  @jsonbody
-  body: String
+    @query
+    field1: Int,
+    @query("another-field-name")
+    field2: String,
+    @cookie
+    cookie: Boolean,
+    @cookie("another-cookie-name")
+    namedCookie: Boolean,
+    @header
+    header: Long,
+    @header("another-header-name")
+    namedHeader: Int,
+    @jsonbody
+    body: String
 )
 
 object TapirRequestTest1 {
@@ -40,8 +40,8 @@ object TapirRequestTest1 {
 }
 
 final case class TapirRequestTest2(
-  @body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
-  body: Boolean
+    @body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
+    body: Boolean
 )
 
 object TapirRequestTest2 {
@@ -49,12 +49,12 @@ object TapirRequestTest2 {
 }
 
 final case class TapirRequestTest3(
-  @params
-  params: ModelQueryParams,
-  @headers
-  headers: List[ModelHeader],
-  @cookies
-  cookies: List[ModelCookie]
+    @params
+    params: ModelQueryParams,
+    @headers
+    headers: List[ModelHeader],
+    @cookies
+    cookies: List[ModelCookie]
 )
 
 final case class TapirRequestTest4(
@@ -67,28 +67,28 @@ final case class TapirRequestTest4(
 )
 
 final case class TapirRequestTest5(
-  @query
-  @description("field-description")
-  field1: Int,
-  @cookie
-  @deprecated
-  cookie: Boolean,
+    @query
+    @description("field-description")
+    field1: Int,
+    @cookie
+    @deprecated
+    cookie: Boolean
 )
 
 @endpointInput("some/{field5}/path/{field2}")
 final case class TapirRequestTest6(
-  @query
-  field1: Int,
-  @path
-  @description("path-description")
-  field2: Boolean,
-  @query
-  field3: Long,
-  @query
-  field4: String,
-  @path
-  @apikey
-  field5: Int
+    @query
+    field1: Int,
+    @path
+    @description("path-description")
+    field2: Boolean,
+    @query
+    field3: Long,
+    @query
+    field4: String,
+    @path
+    @apikey
+    field5: Int
 )
 
 class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
@@ -133,7 +133,8 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
   }
 
   it should "derive input with descriptions" in {
-    val expectedInput = query[Int]("field1").description("field-description")
+    val expectedInput = query[Int]("field1")
+      .description("field-description")
       .and(cookie[Boolean]("cookie").deprecated)
       .mapTo(TapirRequestTest5.apply _)
 
@@ -307,9 +308,7 @@ class JsonCodecMock[T] extends Codec[String, T, CodecFormat.Json] {
 
   override def encode(h: T): String = ???
 
-  override def validator: Validator[T] = ???
-
-  override def schema: Option[Schema[T]] = ???
+  override def schema: Schema[T] = ???
 
   override def format: CodecFormat.Json = ???
 }

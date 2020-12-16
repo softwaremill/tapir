@@ -1,7 +1,7 @@
 package sttp.tapir.examples
 
 import com.typesafe.scalalogging.StrictLogging
-import sttp.tapir.{Schema, Validator}
+import sttp.tapir.Schema
 import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
 object BooksExampleSemiauto extends App with StrictLogging {
@@ -15,14 +15,10 @@ object BooksExampleSemiauto extends App with StrictLogging {
   case class Book(title: String, genre: Genre, year: Int, author: Author)
   case class BooksQuery(genre: Option[String], limit: Limit)
 
-  implicit val sCountry: Schema[Country] = Schema.derive
-  implicit val validateCountry: Validator[Country] = Validator.derive
-  implicit val sAuthor: Schema[Author] = Schema.derive
-  implicit val validateAuthor: Validator[Author] = Validator.derive
-  implicit val sGenre: Schema[Genre] = Schema.derive
-  implicit val validateGenre: Validator[Genre] = Validator.derive
-  implicit val sBook: Schema[Book] = Schema.derive
-  implicit val validateBook: Validator[Book] = Validator.derive
+  implicit val sCountry: Schema[Country] = Schema.derived
+  implicit val sAuthor: Schema[Author] = Schema.derived
+  implicit val sGenre: Schema[Genre] = Schema.derived
+  implicit val sBook: Schema[Book] = Schema.derived
 
   /** Descriptions of endpoints used in the example.
     */
