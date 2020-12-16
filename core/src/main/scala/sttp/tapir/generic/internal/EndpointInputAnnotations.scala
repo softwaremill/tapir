@@ -4,7 +4,6 @@ import sttp.model._
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointInput
-import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.annotations._
 
 import scala.collection.mutable
@@ -74,8 +73,8 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
         .orElse(if (util.annotated(field, paramsType)) Some(makeQueryParamsInput(field)) else None)
         .orElse(if (util.annotated(field, headersType)) Some(makeHeadersIO(field)) else None)
         .orElse(if (util.annotated(field, cookiesType)) Some(makeCookiesIO(field)) else None)
-        .orElse(if (util.annotated(field, bearerType)) Some(makeBearerInput(field)) else None)
-        .orElse(if (util.annotated(field, basicType)) Some(makeBasicInput(field)) else None)
+        .orElse(util.findAnnotation(field, bearerType).map(makeBearerAuthInput(field, _)))
+        .orElse(util.findAnnotation(field, basicType).map(makeBasicAuthInput(field, _)))
         .getOrElse {
           c.abort(
             c.enclosingPosition,
@@ -122,19 +121,15 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
       c.abort(c.enclosingPosition, s"Annotation @params can be applied only for field with type ${typeOf[QueryParams]}")
     }
 
-  private def makeBearerInput(field: c.Symbol): Tree = {
+  private def makeBearerAuthInput(field: c.Symbol, annotation: Annotation): Tree = {
     val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
     q"sttp.tapir.TapirAuth.bearer($challenge)($codec)"
   }
 
-  private def makeBasicInput(field: c.Symbol, annotation: Annotation): Tree = {
+  private def makeBasicAuthInput(field: c.Symbol, annotation: Annotation): Tree = {
     val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
     q"sttp.tapir.TapirAuth.basic($challenge)($codec)"
-  }
-
-  private def authChallenge(annotation: Annotation): Tree = {
-    q"${c.untypecheck(annotation.tree)}.challenge"
   }
 }

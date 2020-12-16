@@ -99,20 +99,25 @@ abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
   }
 
   protected def assignSchemaAnnotations[A](input: Tree, field: Symbol, util: CaseClassUtil[c.type, A]): Tree = {
-    val inputWithDescription = util.extractArgFromAnnotation(field, descriptionType)
+    val inputWithDescription = util
+      .extractArgFromAnnotation(field, descriptionType)
       .fold(input)(desc => q"$input.description($desc)")
     val inputWithDeprecation = if (util.annotated(field, deprecatedType)) {
       q"$inputWithDescription.deprecated"
     } else {
       inputWithDescription
     }
-    if (util.annotated(field, apikeyType)) {
-      q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation)"
-    } else {
-      inputWithDeprecation
+
+    util.findAnnotation(field, apikeyType).fold(inputWithDeprecation) { a =>
+      val challenge = authChallenge(a)
+      q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge)"
     }
   }
 
   protected def info(any: Any): Unit =
     c.info(c.enclosingPosition, any.toString, true)
+
+  protected def authChallenge(annotation: Annotation): Tree = {
+    q"${c.untypecheck(annotation.tree)}.challenge"
+  }
 }

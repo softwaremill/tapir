@@ -151,7 +151,7 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
   it should "derive input with descriptions" in {
     val expectedInput = query[Int]("field1")
       .description("field-description")
-      .and(cookie[Boolean]("cookie").deprecated)
+      .and(cookie[Boolean]("cookie").deprecated())
       .mapTo(TapirRequestTest5.apply _)
 
     compareTransputs(deriveEndpointInput[TapirRequestTest5], expectedInput) shouldBe true
