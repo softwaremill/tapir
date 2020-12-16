@@ -5,8 +5,10 @@ import java.nio.charset.StandardCharsets
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Cookie => ModelCookie, Header => ModelHeader, QueryParams => ModelQueryParams}
+import sttp.model.CookieValueWithMeta
+import sttp.model.CookieWithMeta
+import sttp.model.StatusCode
 import sttp.tapir._
-import sttp.tapir.annotations._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.EndpointIO._
 import sttp.tapir.EndpointInput._
@@ -35,18 +37,10 @@ final case class TapirRequestTest1(
     body: String
 )
 
-object TapirRequestTest1 {
-  import JsonCodecs._
-}
-
 final case class TapirRequestTest2(
     @body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
     body: Boolean
 )
-
-object TapirRequestTest2 {
-  import JsonCodecs._
-}
 
 final case class TapirRequestTest3(
     @params
@@ -91,7 +85,29 @@ final case class TapirRequestTest6(
     field5: Int
 )
 
-class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
+final case class TapirResponseTest1(
+    @header
+    header1: Int,
+    @header("another-header-name")
+    header2: Boolean,
+    @setCookie("cookie-name")
+    setCookie: CookieValueWithMeta,
+    @jsonbody
+    body: String,
+    @statusCode
+    status: StatusCode
+)
+
+final case class TapirResponseTest2(
+    @headers
+    headers: List[ModelHeader],
+    @cookies
+    cookies: List[ModelCookie],
+    @setCookies
+    setCookies: List[CookieWithMeta]
+)
+
+class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
 
   "@endpointInput" should "derive correct input for @query, @cookie, @header" in {
     import JsonCodecs._
@@ -105,7 +121,7 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
       .and(anyJsonBody[String])
       .mapTo(TapirRequestTest1.apply _)
 
-    compareInputs(deriveEndpointInput[TapirRequestTest1], expectedInput) shouldBe true
+    compareTransputs(deriveEndpointInput[TapirRequestTest1], expectedInput) shouldBe true
   }
 
   it should "derive correct input for dealised bodies" in {
@@ -113,13 +129,13 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
 
     val expectedInput = anyJsonBody[Boolean].mapTo(TapirRequestTest2.apply _)
 
-    compareInputs(deriveEndpointInput[TapirRequestTest2], expectedInput) shouldBe true
+    compareTransputs(deriveEndpointInput[TapirRequestTest2], expectedInput) shouldBe true
   }
 
   it should "derive correct input for @queries, @headers, @cookies" in {
     val expectedInput = queryParams.and(headers).and(cookies).mapTo(TapirRequestTest3.apply _)
 
-    compareInputs(deriveEndpointInput[TapirRequestTest3], expectedInput) shouldBe true
+    compareTransputs(deriveEndpointInput[TapirRequestTest3], expectedInput) shouldBe true
   }
 
   it should "derive correct input for auth annotations" in {
@@ -129,16 +145,16 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
       .and(TapirAuth.bearer[String](challenge = WWWAuthenticate.bearer("bearer realm")))
       .mapTo(TapirRequestTest4.apply _)
 
-    compareInputs(deriveEndpointInput[TapirRequestTest4], expectedInput) shouldBe true
+    compareTransputs(deriveEndpointInput[TapirRequestTest4], expectedInput) shouldBe true
   }
 
   it should "derive input with descriptions" in {
     val expectedInput = query[Int]("field1")
       .description("field-description")
-      .and(cookie[Boolean]("cookie").deprecated)
+      .and(cookie[Boolean]("cookie").deprecated())
       .mapTo(TapirRequestTest5.apply _)
 
-    compareInputs(deriveEndpointInput[TapirRequestTest5], expectedInput) shouldBe true
+    compareTransputs(deriveEndpointInput[TapirRequestTest5], expectedInput) shouldBe true
   }
 
   it should "derive input with paths" in {
@@ -155,7 +171,7 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
         TapirRequestTest6(field1, field2, field3, field4, field5)
       }
 
-    compareInputs(derivedInput, expectedInput) shouldBe true
+    compareTransputs(derivedInput, expectedInput) shouldBe true
   }
 
   it should "not compile if there is field without annotation" in {
@@ -259,12 +275,75 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
     """)
   }
 
-  def compareInputs(left: EndpointInput[_], right: EndpointInput[_]): Boolean =
+  "@endpointOutput" should "devive correct output for @header, @setCookie, @statusCode" in {
+    import JsonCodecs._
+
+    val expectedOutput = header[Int]("header1")
+      .and(header[Boolean]("another-header-name"))
+      .and(setCookie("cookie-name"))
+      .and(anyJsonBody[String])
+      .and(statusCode)
+      .mapTo(TapirResponseTest1)
+
+    compareTransputs(deriveEndpointOutput[TapirResponseTest1], expectedOutput) shouldBe true
+  }
+
+  it should "derive correct output for @headers, @cookies, @setCookies" in {
+    val expectedOutput = headers.and(cookies).and(setCookies).mapTo(TapirResponseTest2)
+
+    compareTransputs(deriveEndpointOutput[TapirResponseTest2], expectedOutput) shouldBe true
+  }
+
+  it should "not compile if there is field without annotation" in {
+    assertDoesNotCompile("""
+      final case class Test(
+        @header
+        h: Int,
+        @cookie
+        q: Boolean,
+        i: Long
+      )
+
+      object Test {
+        deriveEndpointOutput[Test]
+      }
+    """)
+  }
+
+  it should "not compile if there are two body annotations" in {
+    assertDoesNotCompile("""
+      final case class Test(
+        @jsonbody
+        body1: Int,
+        @xmlbody
+        body2: Long
+      )
+
+      object Test {
+        deriveEndpointOutput[Test]
+      }
+    """)
+  }
+
+  it should "not compile for wrong field type" in {
+    assertDoesNotCompile("""
+      final case class Test(
+        @setCookies
+        cookies: List[Int]
+      )
+
+      object Test {
+        deriveEndpointOutput[Test]
+      }
+    """)
+  }
+
+  def compareTransputs(left: EndpointTransput[_], right: EndpointTransput[_]): Boolean =
     (left, right) match {
       case (EndpointInput.Pair(left1, right1, _, _), EndpointInput.Pair(left2, right2, _, _)) =>
-        compareInputs(left1, left2) && compareInputs(right1, right2)
+        compareTransputs(left1, left2) && compareTransputs(right1, right2)
       case (EndpointInput.MappedPair(input1, _), EndpointInput.MappedPair(input2, _)) =>
-        compareInputs(input1, input2)
+        compareTransputs(input1, input2)
       case (FixedMethod(m1, _, info1), FixedMethod(m2, _, info2)) =>
         m1 == m2 && info1 == info2
       case (FixedPath(s1, _, info1), FixedPath(s2, _, info2)) =>
@@ -282,9 +361,9 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
       case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
         info1 == info2
       case (ApiKey(input1, challenge1), ApiKey(input2, challenge2)) =>
-        challenge1 == challenge2 && compareInputs(input1, input2)
+        challenge1 == challenge2 && compareTransputs(input1, input2)
       case (Http(scheme1, input1, challenge1), Http(scheme2, input2, challenge2)) =>
-        challenge1 == challenge2 && scheme1 == scheme2 && compareInputs(input1, input2)
+        challenge1 == challenge2 && scheme1 == scheme2 && compareTransputs(input1, input2)
       case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
         bodyType1 == bodyType2 && info1 == info2
       case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>
@@ -293,10 +372,16 @@ class EndpointInputMacroTest extends AnyFlatSpec with Matchers with Tapir {
         name1 == name2 && info1 == info2
       case (Headers(_, info1), Headers(_, info2)) =>
         info1 == info2
+      case (EndpointOutput.StatusCode(codes1, _, info1), EndpointOutput.StatusCode(codes2, _, info2)) =>
+        codes1 == codes2 && info1 == info2
       case (EndpointIO.MappedPair(io1, _), EndpointIO.MappedPair(io2, _)) =>
-        io1 == io2
+        compareTransputs(io1, io2)
+      case (EndpointOutput.MappedPair(io1, _), EndpointOutput.MappedPair(io2, _)) =>
+        compareTransputs(io1, io2)
       case (EndpointIO.Pair(left1, right1, _, _), EndpointIO.Pair(left2, right2, _, _)) =>
-        compareInputs(left1, left2) && compareInputs(right1, right2)
+        compareTransputs(left1, left2) && compareTransputs(right1, right2)
+      case (EndpointOutput.Pair(left1, right1, _, _), EndpointOutput.Pair(left2, right2, _, _)) =>
+        compareTransputs(left1, left2) && compareTransputs(right1, right2)
       case (_, _) =>
         false
     }

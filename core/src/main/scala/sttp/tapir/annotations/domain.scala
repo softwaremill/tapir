@@ -8,21 +8,31 @@ import sttp.tapir.RawBodyType.StringBody
 
 import scala.annotation._
 
-class path extends StaticAnnotation
+sealed trait EndpointInputAnnotation extends StaticAnnotation
 
-class query(val name: String = "") extends StaticAnnotation
+sealed trait EndpointOutputAnnotation extends StaticAnnotation
 
-class params extends StaticAnnotation
+class path extends EndpointInputAnnotation
 
-class header(val name: String = "") extends StaticAnnotation
+class query(val name: String = "") extends EndpointInputAnnotation
 
-class headers extends StaticAnnotation
+class params extends EndpointInputAnnotation
 
-class cookie(val name: String = "") extends StaticAnnotation
+class header(val name: String = "") extends EndpointInputAnnotation with EndpointOutputAnnotation
 
-class cookies extends StaticAnnotation
+class headers extends EndpointInputAnnotation with EndpointOutputAnnotation
 
-class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends StaticAnnotation
+class cookie(val name: String = "") extends EndpointInputAnnotation
+
+class cookies extends EndpointInputAnnotation with EndpointOutputAnnotation
+
+class setCookie(val name: String = "") extends EndpointOutputAnnotation
+
+class setCookies extends EndpointOutputAnnotation
+
+class statusCode extends EndpointOutputAnnotation
+
+class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends EndpointInputAnnotation with EndpointOutputAnnotation
 
 class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
 
@@ -34,4 +44,4 @@ class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends St
 
 class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
 
-class endpointInput(val path: String = "") extends StaticAnnotation
+class endpointInput(val path: String = "") extends EndpointInputAnnotation
