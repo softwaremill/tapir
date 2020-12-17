@@ -32,11 +32,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   }.value,
   ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
-  Test / parallelExecution := false,
-  scalacOptions := {
-    if (scalaVersion.value == scala2_13) scalacOptions.value :+ "-Wconf:cat=other-match-analysis:error"
-    else scalacOptions.value
-  }
+  Test / parallelExecution := false
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
