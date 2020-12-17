@@ -14,7 +14,7 @@ object TapirAuth {
   def apiKey[T](
       input: EndpointInput.Single[T],
       challenge: WWWAuthenticate = WWWAuthenticate.apiKey()
-  ): EndpointInput.Auth.ApiKey[T] = EndpointInput.Auth.ApiKey[T](input, challenge)
+  ): EndpointInput.Auth.ApiKey[T] = EndpointInput.Auth.ApiKey[T](input, challenge, None)
 
   /** Reads authorization data from the `Authorization` header, removing the `Basic ` prefix.
     * To parse the data as a base64-encoded username/password combination, use: `basic[UsernamePassword]`
@@ -44,7 +44,8 @@ object TapirAuth {
         scopes,
         refreshUrl,
         header[String]("Authorization").map(stringPrefixWithSpace(BearerAuthType)),
-        challenge
+        challenge,
+        None
       )
   }
 
@@ -54,7 +55,7 @@ object TapirAuth {
   ): EndpointInput.Auth.Http[T] = {
     val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
     val authCodec = Codec.list(Codec.string.map(stringPrefixWithSpace(authType))).map(codec).schema(codec.schema)
-    EndpointInput.Auth.Http(authType, header[T]("Authorization")(authCodec), challenge)
+    EndpointInput.Auth.Http(authType, header[T]("Authorization")(authCodec), challenge, None)
   }
 
   private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefix(prefix + " ")

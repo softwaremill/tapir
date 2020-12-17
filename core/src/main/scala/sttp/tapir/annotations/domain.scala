@@ -44,4 +44,6 @@ class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends St
 
 class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
 
+class securitySchemeName(val name: String) extends StaticAnnotation
+
 class endpointInput(val path: String = "") extends EndpointInputAnnotation
