@@ -38,10 +38,12 @@ class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json
 
 class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
 
-class apikey(val challenge: WWWAuthenticate = WWWAuthenticate.apiKey(), val securitySchemeName: Option[String] = None) extends StaticAnnotation
+class apikey(val challenge: WWWAuthenticate = WWWAuthenticate.apiKey()) extends StaticAnnotation
 
-class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic(), val securitySchemeName: Option[String] = None) extends StaticAnnotation
+class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends StaticAnnotation
 
-class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer(), val securitySchemeName: Option[String] = None) extends StaticAnnotation
+class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
+
+class securitySchemeName(val name: String) extends StaticAnnotation
 
 class endpointInput(val path: String = "") extends EndpointInputAnnotation

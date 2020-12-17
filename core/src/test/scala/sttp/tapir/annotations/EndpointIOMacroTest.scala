@@ -86,11 +86,14 @@ final case class TapirRequestTest6(
 )
 
 final case class TapirRequestTest7(
-    @apikey(securitySchemeName = Some("secapi")) @query
+    @apikey @query
+    @securitySchemeName(name = "secapi")
     param1: Int,
-    @basic(securitySchemeName = Some("secbearer"))
+    @basic
+    @securitySchemeName(name = "secbasic")
     basicAuth: UsernamePassword,
-    @bearer(securitySchemeName = Some("secbasic"))
+    @securitySchemeName(name = "secbearer")
+    @bearer
     token: String
 )
 
@@ -159,10 +162,13 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
 
   it should "derive correct input for auth annotations with named security schemes" in {
     val expectedInput = TapirAuth
-      .apiKey(query[Int]("param1")).securitySchemeName("secapi")
+      .apiKey(query[Int]("param1"))
+      .securitySchemeName("secapi")
       .and(TapirAuth.basic[UsernamePassword]().securitySchemeName("secbasic"))
       .and(TapirAuth.bearer[String]().securitySchemeName("secbearer"))
       .mapTo(TapirRequestTest7.apply _)
+
+    compareTransputs(deriveEndpointInput[TapirRequestTest7], expectedInput) shouldBe true
   }
 
   it should "derive input with descriptions" in {

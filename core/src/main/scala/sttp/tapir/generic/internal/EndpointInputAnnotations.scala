@@ -73,8 +73,10 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
         .orElse(if (util.annotated(field, paramsType)) Some(makeQueryParamsInput(field)) else None)
         .orElse(if (util.annotated(field, headersType)) Some(makeHeadersIO(field)) else None)
         .orElse(if (util.annotated(field, cookiesType)) Some(makeCookiesIO(field)) else None)
-        .orElse(util.findAnnotation(field, bearerType).map(makeBearerAuthInput(field, _)))
-        .orElse(util.findAnnotation(field, basicType).map(makeBasicAuthInput(field, _)))
+        .orElse(
+          util.findAnnotation(field, bearerType).map(makeBearerAuthInput(field, util.findAnnotation(field, securitySchemeNameType), _))
+        )
+        .orElse(util.findAnnotation(field, basicType).map(makeBasicAuthInput(field, util.findAnnotation(field, securitySchemeNameType), _)))
         .getOrElse {
           c.abort(
             c.enclosingPosition,
@@ -121,16 +123,16 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
       c.abort(c.enclosingPosition, s"Annotation @params can be applied only for field with type ${typeOf[QueryParams]}")
     }
 
-  private def makeBearerAuthInput(field: c.Symbol, annotation: Annotation): Tree = {
-    val challenge = authChallenge(annotation)
+  private def makeBearerAuthInput(field: c.Symbol, schemeName: Option[Annotation], auth: Annotation): Tree = {
+    val challenge = authChallenge(auth)
     val codec = summonCodec(field, stringListConstructor)
-    setSecuritySchemeName(annotation, q"sttp.tapir.TapirAuth.bearer($challenge)($codec)")
+    setSecuritySchemeName(q"sttp.tapir.TapirAuth.bearer($challenge)($codec)", schemeName)
   }
 
-  private def makeBasicAuthInput(field: c.Symbol, annotation: Annotation): Tree = {
+  private def makeBasicAuthInput(field: c.Symbol, schemeName: Option[Annotation], annotation: Annotation): Tree = {
     val challenge = authChallenge(annotation)
     val codec = summonCodec(field, stringListConstructor)
-    setSecuritySchemeName(annotation, q"sttp.tapir.TapirAuth.basic($challenge)($codec)")
+    setSecuritySchemeName(q"sttp.tapir.TapirAuth.basic($challenge)($codec)", schemeName)
   }
 
 }

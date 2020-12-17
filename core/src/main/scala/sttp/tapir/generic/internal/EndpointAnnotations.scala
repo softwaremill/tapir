@@ -7,6 +7,7 @@ import sttp.tapir.annotations.body
 import sttp.tapir.annotations.cookies
 import sttp.tapir.annotations.header
 import sttp.tapir.annotations.headers
+import sttp.tapir.annotations.securitySchemeName
 import sttp.tapir.deprecated
 import sttp.tapir.description
 import sttp.tapir.Codec
@@ -26,6 +27,7 @@ abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
   private val descriptionType = c.weakTypeOf[description]
   private val deprecatedType = c.weakTypeOf[deprecated]
   private val apikeyType = c.weakTypeOf[apikey]
+  protected val securitySchemeNameType = c.weakTypeOf[securitySchemeName]
 
   protected def validateCaseClass[A](util: CaseClassUtil[c.type, A]): Unit = {
     if (util.fields.isEmpty) {
@@ -110,7 +112,10 @@ abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
 
     util.findAnnotation(field, apikeyType).fold(inputWithDeprecation) { a =>
       val challenge = authChallenge(a)
-      q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge, None)"
+      setSecuritySchemeName(
+        q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge, None)",
+        util.findAnnotation(field, securitySchemeNameType)
+      )
     }
   }
 
@@ -121,10 +126,9 @@ abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
     q"${c.untypecheck(annotation.tree)}.challenge"
   }
 
-  protected def setSecuritySchemeName(annotation: Annotation, auth: Tree): Tree = {
-    q"""
-       val schemeName = ${c.untypecheck(annotation.tree)}.securitySchemeName
-       schemeName.fold($auth)(name => ${c.untypecheck(auth)}.securitySchemeName(name))
-    """
+  protected def setSecuritySchemeName[A](auth: Tree, schemeName: Option[Annotation]): Tree = {
+    schemeName.fold(auth) { name =>
+      q"${c.untypecheck(auth)}.securitySchemeName(${c.untypecheck(name.tree)}.name)"
+    }
   }
 }
