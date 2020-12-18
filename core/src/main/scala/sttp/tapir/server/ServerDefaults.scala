@@ -1,7 +1,8 @@
 package sttp.tapir.server
 
 import sttp.model.StatusCode
-import sttp.tapir.DecodeResult.InvalidValue
+import sttp.tapir.DecodeResult.Error.JsonDecodeException
+import sttp.tapir.DecodeResult.{Error, InvalidValue}
 import sttp.tapir._
 
 import scala.annotation.tailrec
@@ -124,6 +125,7 @@ object ServerDefaults {
 
       val detail = ctx.failure match {
         case InvalidValue(errors) if errors.nonEmpty => Some(ValidationMessages.validationErrorsMessage(errors))
+        case Error(_, error: JsonDecodeException)    => Some(error.getMessage)
         case _                                       => None
       }
 

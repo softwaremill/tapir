@@ -25,7 +25,7 @@ object DecodeResult {
         )
     case class JsonError(msg: String, path: List[FieldName]) {
       def message: String = {
-        val at = if (path.nonEmpty) s" at '${path.mkString(".")}'" else ""
+        val at = if (path.nonEmpty) s" at '${path.map(_.encodedName).mkString(".")}'" else ""
         msg + at
       }
     }
