@@ -8,6 +8,7 @@ import spray.json._
 import sttp.tapir.Codec.JsonCodec
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 
 object TapirJsonSprayCodec extends TapirJsonSpray
 
@@ -54,12 +55,13 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
   it should "return a JSON specific decode error on failure" in {
     val codec = TapirJsonSprayCodec.jsonFormatCodec[Customer]
     val actual = codec.decode("{}")
-    actual shouldBe a[DecodeResult.InvalidJson]
-    val invalidJsonFailure = actual.asInstanceOf[InvalidJson]
-    invalidJsonFailure.json shouldEqual "{}"
-    invalidJsonFailure.errors shouldEqual List(
-      InvalidJson.Error("Object is missing required member 'name'", Some("name"))
-    )
-    invalidJsonFailure.underlying shouldBe a[DeserializationException]
+    actual shouldBe a[DecodeResult.Error]
+    val failure = actual.asInstanceOf[Error]
+    failure.original shouldEqual "{}"
+    failure.error shouldBe a[JsonDecodeException]
+    val error = failure.error.asInstanceOf[JsonDecodeException]
+    error.errors shouldEqual
+      List(JsonError("Object is missing required member 'name'", Some("name")))
+    error.underlying shouldBe a[DeserializationException]
   }
 }

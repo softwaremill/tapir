@@ -10,6 +10,7 @@ import sttp.tapir._
 import sttp.tapir.DecodeResult._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import upickle.core.AbortException
 
 object TapirJsonuPickleCodec extends TapirJsonuPickle
@@ -57,10 +58,12 @@ class TapirJsonuPickleTests extends AnyFlatSpec with TapirJsonuPickleTestExtensi
   it should "return a JSON specific decode error on failure" in {
     val codec = TapirJsonuPickleCodec.readWriterCodec[Customer]
     val actual = codec.decode("{}")
-    actual shouldBe a[DecodeResult.InvalidJson]
-    val failure = actual.asInstanceOf[InvalidJson]
-    failure.json shouldEqual "{}"
-    failure.errors shouldEqual List.empty
-    failure.underlying shouldBe an[AbortException]
+    actual shouldBe a[DecodeResult.Error]
+    val failure = actual.asInstanceOf[DecodeResult.Error]
+    failure.original shouldEqual "{}"
+    failure.error shouldBe a[JsonDecodeException]
+    val error = failure.error.asInstanceOf[JsonDecodeException]
+    error.errors shouldEqual List.empty
+    error.underlying shouldBe an[AbortException]
   }
 }

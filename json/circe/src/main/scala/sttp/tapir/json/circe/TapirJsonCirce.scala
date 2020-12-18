@@ -3,7 +3,8 @@ package sttp.tapir.json.circe
 import io.circe._
 import io.circe.syntax._
 import sttp.tapir.Codec.JsonCodec
-import sttp.tapir.DecodeResult.{InvalidJson, Value}
+import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
+import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.SchemaType._
 import sttp.tapir._
 
@@ -14,10 +15,10 @@ trait TapirJsonCirce {
     sttp.tapir.Codec.json[T] { s =>
       io.circe.parser.decode[T](s) match {
         case Left(failure @ ParsingFailure(msg, _)) =>
-          InvalidJson(s, List(InvalidJson.Error(msg, atPath = None)), failure)
+          Error(s, JsonDecodeException(List(JsonError(msg, atPath = None)), failure))
         case Left(failure: DecodingFailure) =>
           val path = CursorOp.opsToPath(failure.history)
-          InvalidJson(s, List(InvalidJson.Error(failure.message, Some(path))), failure)
+          Error(s, JsonDecodeException(List(JsonError(failure.message, Some(path))), failure))
         case Right(v) => Value(v)
       }
     } { t => jsonPrinter.print(t.asJson) }

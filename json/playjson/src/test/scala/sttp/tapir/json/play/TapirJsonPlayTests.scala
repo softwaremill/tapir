@@ -5,9 +5,9 @@ import play.api.libs.json._
 import sttp.tapir._
 import sttp.tapir.DecodeResult._
 import sttp.tapir.generic.auto._
-
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 
 object TapirJsonPlayCodec extends TapirJsonPlay
 
@@ -61,13 +61,15 @@ class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions wi
   it should "return a JSON specific decode error on failure" in {
     val codec = TapirJsonPlayCodec.readsWritesCodec[Customer]
     val actual = codec.decode("{}")
-    actual shouldBe a[DecodeResult.InvalidJson]
-    val failure = actual.asInstanceOf[InvalidJson]
-    failure.json shouldEqual "{}"
-    failure.errors shouldEqual List(
-      InvalidJson.Error("error.path.missing", Some("obj.yearOfBirth")),
-      InvalidJson.Error("error.path.missing", Some("obj.name"))
+    actual shouldBe a[DecodeResult.Error]
+    val failure = actual.asInstanceOf[DecodeResult.Error]
+    failure.original shouldEqual "{}"
+    failure.error shouldBe a[JsonDecodeException]
+    val error = failure.error.asInstanceOf[JsonDecodeException]
+    error.errors shouldEqual List(
+      JsonError("error.path.missing", Some("obj.yearOfBirth")),
+      JsonError("error.path.missing", Some("obj.name"))
     )
-    failure.underlying shouldBe a[JsResultException]
+    error.underlying shouldBe a[JsResultException]
   }
 }
