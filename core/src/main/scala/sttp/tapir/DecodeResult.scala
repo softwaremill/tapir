@@ -23,8 +23,11 @@ object DecodeResult {
           if (errors.isEmpty) underlying.getMessage else errors.map(_.message).mkString(", "),
           underlying
         )
-    case class JsonError(msg: String, atPath: Option[String]) {
-      def message: String = msg + atPath.map(path => s" at '$path'")
+    case class JsonError(msg: String, path: List[FieldName]) {
+      def message: String = {
+        val at = if (path.nonEmpty) s" at '${path.mkString(".")}'" else ""
+        msg + at
+      }
     }
   }
   case class Mismatch(expected: String, actual: String) extends Failure

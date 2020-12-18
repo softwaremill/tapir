@@ -16,10 +16,11 @@ trait TapirJsonPlay {
         case JsError(errors) =>
           val jsonErrors = errors
             .flatMap { case (path, validationErrors) =>
-              validationErrors.map(error => path -> error)
+              val fields = path.toJsonString.split("\\.").toList.map(FieldName.apply)
+              validationErrors.map(error => fields -> error)
             }
-            .map { case (path, validationError) =>
-              JsonError(validationError.message, Some(path.toJsonString))
+            .map { case (fields, validationError) =>
+              JsonError(validationError.message, fields)
             }
             .toList
           Error(s, JsonDecodeException(jsonErrors, JsResultException(errors)))

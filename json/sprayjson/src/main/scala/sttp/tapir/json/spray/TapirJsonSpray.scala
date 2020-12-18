@@ -17,8 +17,8 @@ trait TapirJsonSpray {
       Try(s.parseJson.convertTo[T]) match {
         case Success(v) => Value(v)
         case Failure(e @ DeserializationException(msg, _, fieldNames)) =>
-          val errors = fieldNames.map(field => JsonError(msg, Some(field)))
-          Error(s, JsonDecodeException(errors, e))
+          val path = fieldNames.map(FieldName.apply)
+          Error(s, JsonDecodeException(List(JsonError(msg, path)), e))
         case Failure(e) =>
           Error(s, JsonDecodeException(errors = List.empty, e))
       }

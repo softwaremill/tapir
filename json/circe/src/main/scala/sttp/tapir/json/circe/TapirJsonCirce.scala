@@ -15,10 +15,11 @@ trait TapirJsonCirce {
     sttp.tapir.Codec.json[T] { s =>
       io.circe.parser.decode[T](s) match {
         case Left(failure @ ParsingFailure(msg, _)) =>
-          Error(s, JsonDecodeException(List(JsonError(msg, atPath = None)), failure))
+          Error(s, JsonDecodeException(List(JsonError(msg, path = List.empty)), failure))
         case Left(failure: DecodingFailure) =>
           val path = CursorOp.opsToPath(failure.history)
-          Error(s, JsonDecodeException(List(JsonError(failure.message, Some(path))), failure))
+          val fields = path.split("\\.").toList.filter(_.nonEmpty).map(FieldName.apply)
+          Error(s, JsonDecodeException(List(JsonError(failure.message, fields)), failure))
         case Right(v) => Value(v)
       }
     } { t => jsonPrinter.print(t.asJson) }
