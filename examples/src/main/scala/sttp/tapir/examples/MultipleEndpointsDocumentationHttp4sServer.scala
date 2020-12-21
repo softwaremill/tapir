@@ -61,7 +61,7 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes
 
   // generating the documentation in yml; extension methods come from imported packages
-  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter.endpoints(List(booksListing, addBook), "The tapir library", "1.0.0")
+  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter.fromEndpoints(List(booksListing, addBook), "The tapir library", "1.0.0")
   val openApiYml: String = openApiDocs.toYaml
 
   // starting the server

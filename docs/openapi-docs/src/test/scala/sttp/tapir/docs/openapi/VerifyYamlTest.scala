@@ -34,7 +34,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected.yml")
 
     val actualYaml =
-      OpenAPIDocsInterpreter.endpoints(List(in_query_query_out_string, all_the_way, delete_endpoint), Info("Fruits", "1.0")).toYaml
+      OpenAPIDocsInterpreter.fromEndpoints(List(in_query_query_out_string, all_the_way, delete_endpoint), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -46,7 +46,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml when schema is recursive") {
     val expectedYaml = loadYaml("expected_recursive.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint_wit_recursive_structure, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint_wit_recursive_structure, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -57,7 +57,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val options = OpenAPIDocsOptions.default.copy(customOperationIdGenerator)
     val expectedYaml = loadYaml("expected_custom_operation_id.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(in_query_query_out_string.in("add").in("path"), Info("Fruits", "1.0"))(options).toYaml
+    val actualYaml =
+      OpenAPIDocsInterpreter.fromEndpoint(in_query_query_out_string.in("add").in("path"), Info("Fruits", "1.0"))(options).toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
@@ -74,7 +75,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = loadYaml("expected_streaming.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(streaming_endpoint, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(streaming_endpoint, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -88,7 +89,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_tags.yml")
 
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoints(List(userTaggedEndpointShow, userTaggedEdnpointSearch, adminTaggedEndpointAdd), Info("Fruits", "1.0"))
+      .fromEndpoints(List(userTaggedEndpointShow, userTaggedEdnpointSearch, adminTaggedEndpointAdd), Info("Fruits", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
@@ -107,7 +108,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       license = Some(License("MIT", Some("mit.license")))
     )
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(in_query_query_out_string, api).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(in_query_query_out_string, api).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -116,7 +117,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support multipart") {
     val expectedYaml = loadYaml("expected_multipart.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(in_file_multipart_out_multipart, "Fruits", "1.0").toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(in_file_multipart_out_multipart, "Fruits", "1.0").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -129,7 +130,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val e2 = endpoint.in(auth.bearer[String]()).in("api2" / path[String]).out(stringBody)
     val e3 = endpoint.in(auth.apiKey(header[String]("apikey"))).in("api3" / path[String]).out(stringBody)
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoints(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoints(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -142,7 +143,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val e2 = endpoint.in(auth.bearer[Option[String]]()).in("api2" / path[String]).out(stringBody)
     val e3 = endpoint.in(auth.apiKey(header[Option[String]]("apikey"))).in("api3" / path[String]).out(stringBody)
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoints(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoints(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -157,7 +158,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val e3 =
       endpoint.in(auth.apiKey(header[String]("apikey")).securitySchemeName("secApiKeyHeader")).in("secure" / "apiKeyHeader").out(stringBody)
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoints(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoints(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -189,7 +190,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
         .in("api3" / path[String])
         .out(stringBody)
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoints(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoints(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -197,7 +198,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support empty bodies") {
     val expectedYaml = loadYaml("expected_empty.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -219,7 +220,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     )
 
     // when
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(e, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     // then
@@ -230,7 +231,10 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_multiple.yml")
 
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoints(List(endpoint.in("p1"), endpoint.in("p3"), endpoint.in("p2"), endpoint.in("p5"), endpoint.in("p4")), Info("Fruits", "1.0"))
+      .fromEndpoints(
+        List(endpoint.in("p1"), endpoint.in("p3"), endpoint.in("p2"), endpoint.in("p5"), endpoint.in("p4")),
+        Info("Fruits", "1.0")
+      )
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
@@ -243,7 +247,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
       .out(jsonBody[Entity])
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -258,7 +262,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_coproduct_discriminator.yml")
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
       .out(jsonBody[Entity])
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -270,7 +274,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
       .out(jsonBody[NestedEntity])
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -285,7 +289,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_coproduct_discriminator_nested.yml")
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
       .out(jsonBody[NestedEntity])
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -297,7 +301,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       .out(jsonBody[BPet])
     val expectedYaml = loadYaml("expected_same_fullnames.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(e, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -309,7 +313,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       .out(stringBody)
     val expectedYaml = loadYaml("expected_unfolded_hierarchy.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(e, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -319,7 +323,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val e = endpoint.in(jsonBody[List[FruitAmount]]).out(stringBody)
     val expectedYaml = loadYaml("expected_unfolded_array.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(e, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -329,7 +333,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_generic.yml")
 
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoints(List(endpoint.in("p1" and jsonBody[G[String]]), endpoint.in("p2" and jsonBody[G[Int]])), Info("Fruits", "1.0"))
+      .fromEndpoints(List(endpoint.in("p1" and jsonBody[G[String]]), endpoint.in("p2" and jsonBody[G[Int]])), Info("Fruits", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
@@ -339,7 +343,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should unfold objects from unfolded arrays") {
     val expectedYaml = loadYaml("expected_unfolded_object_unfolded_array.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -356,7 +360,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       )
     ).description("Amount of fruits")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.post.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.post.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -369,7 +373,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       .description("Amount of fruits")
       .modifyUnsafe[Nothing]("amount")(_.format("int32"))
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.post.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.post.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -378,7 +382,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should unfold coproducts from unfolded arrays") {
     val expectedYaml = loadYaml("expected_unfolded_coproduct_unfolded_array.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.out(jsonBody[List[Entity]]), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.out(jsonBody[List[Entity]]), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -387,7 +391,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_generic_coproduct.yml")
 
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoints(
+      .fromEndpoints(
         List(endpoint.in("p1" and jsonBody[GenericEntity[String]]), endpoint.in("p2" and jsonBody[GenericEntity[Int]])),
         Info("Fruits", "1.0")
       )
@@ -400,7 +404,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should unfold arrays from object") {
     val expectedYaml = loadYaml("expected_unfolded_array_unfolded_object.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.out(jsonBody[ObjectWithList]), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.out(jsonBody[ObjectWithList]), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -410,7 +414,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_fixed_status_code.yml")
 
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location")), Info("Entities", "1.0"))
+      .fromEndpoint(endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location")), Info("Entities", "1.0"))
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
@@ -421,7 +425,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_one_of_status_codes.yml")
 
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint
           .out(header[String]("Location"))
           .errorOut(statusCode.description(StatusCode.NotFound, "entity not found").description(StatusCode.BadRequest, "")),
@@ -436,7 +440,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("render additional properties for map") {
     val expectedYaml = loadYaml("expected_additional_properties.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.out(jsonBody[Map[String, Person]]), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.out(jsonBody[Map[String, Person]]), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -445,7 +449,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("render map with plain values") {
     val expectedYaml = loadYaml("expected_map_with_plain_values.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.out(jsonBody[Map[String, String]]), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.out(jsonBody[Map[String, String]]), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -454,7 +458,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("use fixed status code output in response if it's the only output") {
     val expectedYaml = loadYaml("expected_fixed_status_code_2.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.out(statusCode(StatusCode.NoContent)), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.out(statusCode(StatusCode.NoContent)), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -463,14 +467,15 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should support prepending inputs") {
     val expectedYaml = loadYaml("expected_prepended_input.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(in_query_query_out_string.in("add").prependIn("path"), Info("Fruits", "1.0")).toYaml
+    val actualYaml =
+      OpenAPIDocsInterpreter.fromEndpoint(in_query_query_out_string.in("add").prependIn("path"), Info("Fruits", "1.0")).toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
   test("use fixed header output in response") {
     val expectedYaml = loadYaml("expected_fixed_header_output_response.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.out(header("Location", "Poland")), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.out(header("Location", "Poland")), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -479,7 +484,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("use fixed header input in request") {
     val expectedYaml = loadYaml("expected_fixed_header_input_request.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.in(header("Location", "Poland")), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.in(header("Location", "Poland")), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -488,28 +493,29 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("validator with tagged type in query") {
     val expectedYaml = loadYaml("expected_valid_query_tagged.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_query_tagged.in("add").in("path"), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_query_tagged.in("add").in("path"), Info("Fruits", "1.0")).toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
   test("validator with wrapper type in body") {
     val expectedYaml = loadYaml("expected_valid_body_wrapped.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_valid_json.in("add").in("path"), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_valid_json.in("add").in("path"), Info("Fruits", "1.0")).toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
   test("validator with optional wrapper type in body") {
     val expectedYaml = loadYaml("expected_valid_optional_body_wrapped.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_valid_optional_json.in("add").in("path"), Info("Fruits", "1.0")).toYaml
+    val actualYaml =
+      OpenAPIDocsInterpreter.fromEndpoint(Validation.in_valid_optional_json.in("add").in("path"), Info("Fruits", "1.0")).toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
   test("validator with enum type in body") {
     val expectedYaml = loadYaml("expected_valid_body_enum.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_json_wrapper_enum.in("add").in("path"), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_json_wrapper_enum.in("add").in("path"), Info("Fruits", "1.0")).toYaml
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
@@ -517,7 +523,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("validator with wrappers type in query") {
     val expectedYaml = loadYaml("expected_valid_query_wrapped.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_valid_query.in("add").in("path"), Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_valid_query.in("add").in("path"), Info("Fruits", "1.0")).toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
@@ -525,14 +531,14 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_valid_body_collection.yml")
 
     val actualYaml =
-      OpenAPIDocsInterpreter.endpoint(Validation.in_valid_json_collection.in("add").in("path"), Info("Fruits", "1.0")).toYaml
+      OpenAPIDocsInterpreter.fromEndpoint(Validation.in_valid_json_collection.in("add").in("path"), Info("Fruits", "1.0")).toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
   test("render validator for additional properties of map") {
     val expectedYaml = loadYaml("expected_valid_additional_properties.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_valid_map, Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_valid_map, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -540,7 +546,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("render validator for additional properties of array elements") {
     val expectedYaml = loadYaml("expected_valid_int_array.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_valid_int_array, Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_valid_int_array, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -548,7 +554,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("render enum validator for classes") {
     val expectedYaml = loadYaml("expected_valid_enum_class.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_enum_class, Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_enum_class, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -556,7 +562,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("render enum validator for classes wrapped in option") {
     val expectedYaml = loadYaml("expected_valid_enum_class_wrapped_in_option.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_optional_enum_class, Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_optional_enum_class, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -564,7 +570,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("render enum validator for values") {
     val expectedYaml = loadYaml("expected_valid_enum_values.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.in_enum_values, Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.in_enum_values, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -572,7 +578,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("use enum in object in output response") {
     val expectedYaml = loadYaml("expected_valid_enum_object.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(Validation.out_enum_object, Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(Validation.out_enum_object, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -583,7 +589,9 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_valid_enumeratum.yml")
 
     val actualYaml =
-      OpenAPIDocsInterpreter.endpoints(List(endpoint.in("enum-test").out(jsonBody[Enumeratum.FruitWithEnum])), Info("Fruits", "1.0")).toYaml
+      OpenAPIDocsInterpreter
+        .fromEndpoints(List(endpoint.in("enum-test").out(jsonBody[Enumeratum.FruitWithEnum])), Info("Fruits", "1.0"))
+        .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -597,7 +605,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_valid_enum_cats_nel.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.in(jsonBody[NonEmptyList[Color]]), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.in(jsonBody[NonEmptyList[Color]]), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -605,7 +613,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("support example of list and not-list types") {
     val expectedYaml = loadYaml("expected_examples_of_list_and_not_list_types.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.post
           .in(query[List[String]]("friends").example(List("bob", "alice")))
           .in(query[String]("current-person").example("alan"))
@@ -621,7 +629,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("support multiple examples with explicit names") {
     val expectedYaml = loadYaml("expected_multiple_examples_with_names.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.post
           .out(
             jsonBody[Entity].examples(
@@ -642,7 +650,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("support multiple examples with default names") {
     val expectedYaml = loadYaml("expected_multiple_examples_with_default_names.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.post
           .in(jsonBody[Person].example(Person("bob", 23)).example(Person("matt", 30))),
         Info("Entities", "1.0")
@@ -656,7 +664,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("support example name even if there is a single example") {
     val expectedYaml = loadYaml("expected_single_example_with_name.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.post
           .out(
             jsonBody[Entity].example(
@@ -674,7 +682,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("support multiple examples with both explicit and default names ") {
     val expectedYaml = loadYaml("expected_multiple_examples_with_explicit_and_default_names.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.post
           .in(jsonBody[Person].examples(List(Example.of(Person("bob", 23), name = Some("Bob")), Example.of(Person("matt", 30))))),
         Info("Entities", "1.0")
@@ -688,7 +696,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("support examples in different IO params") {
     val expectedYaml = loadYaml("expected_multiple_examples.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.post
           .in(path[String]("country").example("Poland").example("UK"))
           .in(query[String]("current-person").example("alan").example("bob"))
@@ -707,7 +715,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("support recursive coproducts") {
     val expectedYaml = loadYaml("expected_recursive_coproducts.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.post.in(jsonBody[Clause]),
         Info("Entities", "1.0")
       )
@@ -721,7 +729,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(11))
     val expectedYaml = loadYaml("expected_valid_coproduct.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.get.out(jsonBody[Entity]),
         Info("Entities", "1.0")
       )
@@ -734,7 +742,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("render field validator when used inside of optional coproduct") {
     implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(11))
     val expectedYaml = loadYaml("expected_valid_optional_coproduct.yml")
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(endpoint.get.in(jsonBody[Option[Entity]]), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(endpoint.get.in(jsonBody[Option[Entity]]), Info("Entities", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
@@ -743,7 +751,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("arbitrary json output") {
     val expectedYaml = loadYaml("expected_arbitrary_json_output.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint
           .out(jsonBody[Json]),
         Info("Entities", "1.0")
@@ -757,7 +765,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("deprecated endpoint") {
     val expectedYaml = loadYaml("expected_deprecated.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint.in("api").deprecated(),
         Info("Entities", "1.0")
       )
@@ -770,7 +778,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should not set format for array types ") {
     val expectedYaml = loadYaml("expected_array_no_format.yml")
     val actualYaml = OpenAPIDocsInterpreter
-      .endpoint(
+      .fromEndpoint(
         endpoint
           .in(query[List[String]]("foo"))
           .in(query[List[Long]]("bar")),
@@ -799,7 +807,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
         )
     )
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(in_query_query_out_string, api).servers(servers).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(in_query_query_out_string, api).servers(servers).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -818,7 +826,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       Server("https://api.example.com/v1", Some("Production server"), None)
     )
 
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(in_query_query_out_string, api).servers(servers).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(in_query_query_out_string, api).servers(servers).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -829,7 +837,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     implicit val customConfiguration: Configuration = Configuration.default.withSnakeCaseMemberNames
     val baseEndpoint = endpoint.post.in(jsonBody[MyClass])
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(baseEndpoint, Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(baseEndpoint, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -839,7 +847,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_fixed_header_example.yml")
 
     val e = endpoint.in(header("Content-Type", "application/json"))
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(e, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(e, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -849,7 +857,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_date_time.yml")
 
     val e = endpoint.in(query[Instant]("instant"))
-    val actualYaml = OpenAPIDocsInterpreter.endpoint(e, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.fromEndpoint(e, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
