@@ -15,7 +15,7 @@ class VertxServerTests extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     vertxResource.map { implicit vertx =>
       implicit val m: FutureMonad = new FutureMonad()(ExecutionContext.global)
-      val interpreter = new VertxServerInterpreter(vertx)
+      val interpreter = new VertxTestServerInterpreter(vertx)
       val serverTests = new ServerTests(interpreter)
 
       new ServerBasicTests(

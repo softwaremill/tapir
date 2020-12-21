@@ -10,7 +10,7 @@ Use the following dependency
 Then import the package:
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.vertx._
+import sttp.tapir.server.vertx.VertxServerInterpreter
 ```
 
 This adds extension methods to the `Endpoint` type: 
@@ -26,14 +26,14 @@ arguments need to be converted to a function using a single argument using `.tup
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.vertx._
+import sttp.tapir.server.vertx.VertxServerInterpreter
 import io.vertx.scala.ext.web._
 import scala.concurrent.Future
 
 implicit val options: VertxEndpointOptions = ???
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val aRoute: Router => Route = anEndpoint.route((logic _).tupled)
+val aRoute: Router => Route = VertxServerInterpreter.route(anEndpoint)((logic _).tupled)
 ```
 
 In practice, routes will be mounted on a router, this router can then be used as a request handler for your http server. 
@@ -41,7 +41,7 @@ An HTTP server can then be started as in the following example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.vertx._
+import sttp.tapir.server.vertx.VertxServerInterpreter
 import io.vertx.scala.core.Vertx
 import io.vertx.scala.ext.web._
 import scala.concurrent.Future
@@ -55,7 +55,7 @@ object Main {
     val router = Router.router(vertx)
     val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? // your definition here
     def logic(s: String, i: Int): Future[Either[Unit, String]] = ??? // your logic here 
-    val attach = anEndpoint.route((logic _).tupled)
+    val attach = VertxServerInterpreter.route(anEndpoint)((logic _).tupled)
     attach(router) // your endpoint is now attached to the router, and the route has been created
     server.requestHandler(router).listenFuture(9000)
   }

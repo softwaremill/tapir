@@ -3,7 +3,6 @@ package sttp.tapir.server.vertx.decoders
 import java.io.{ByteArrayInputStream, File}
 import java.nio.ByteBuffer
 import java.util.Date
-import io.vertx.lang.scala.VertxExecutionContext
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.Part
 import sttp.tapir.internal.Params
@@ -12,7 +11,7 @@ import sttp.tapir.server.vertx.VertxEndpointOptions
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers.tryEncodeError
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling}
-import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyType}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, RawBodyType}
 
 import java.nio.charset.Charset
 import java.nio.file.{Files, Paths}
