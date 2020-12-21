@@ -38,7 +38,7 @@ a subclass of `Throwable` (an exception); it expects a function of type `I => Fu
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.play._
+import sttp.tapir.server.play.PlayServerInterpreter
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import akka.stream.Materializer
@@ -52,7 +52,7 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: Routes = 
-  countCharactersEndpoint.toRoute(countCharacters _)
+  PlayServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters _)
 ```
 
 Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
@@ -70,7 +70,7 @@ implicit val materializer: Materializer = ???
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val aRoute: Routes = anEndpoint.toRoute((logic _).tupled)
+val aRoute: Routes = PlayServerInterpreter.toRoute(anEndpoint)((logic _).tupled)
 ```
 
 ## Bind the routes

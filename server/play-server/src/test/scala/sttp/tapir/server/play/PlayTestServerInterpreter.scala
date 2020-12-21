@@ -9,14 +9,14 @@ import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.tapir.Endpoint
-import sttp.tapir.server.tests.ServerInterpreter
+import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class PlayServerInterpreter(implicit actorSystem: ActorSystem) extends ServerInterpreter[Future, Any, Router.Routes] {
+class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestServerInterpreter[Future, Any, Router.Routes] {
   import actorSystem.dispatcher
 
   override def route[I, E, O](
@@ -25,20 +25,20 @@ class PlayServerInterpreter(implicit actorSystem: ActorSystem) extends ServerInt
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =
       PlayServerOptions.default.copy(decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler))
-    e.toRoute
+    PlayServerInterpreter.toRoute(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Routes = {
-    e.toRouteRecoverErrors(fn)
+    PlayServerInterpreter.toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
     val components = new DefaultAkkaHttpServerComponents {
       override lazy val serverConfig: ServerConfig = ServerConfig(port = Some(0), address = "127.0.0.1", mode = Mode.Test)
       override lazy val actorSystem: ActorSystem =
-        ActorSystem("tapir", defaultExecutionContext = Some(PlayServerInterpreter.this.actorSystem.dispatcher))
+        ActorSystem("tapir", defaultExecutionContext = Some(PlayTestServerInterpreter.this.actorSystem.dispatcher))
       override def router: Router =
         Router.from(
           routes.reduce((a: Routes, b: Routes) => {
