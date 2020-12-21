@@ -25,8 +25,8 @@ object WebSocketAkkaClient extends App {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
   val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
-  val result = jsonEchoWsEndpoint
-    .toSttpRequestUnsafe(uri"wss://echo.websocket.org")
+  val result = SttpClientInterpreter
+    .toRequestUnsafe(jsonEchoWsEndpoint)(uri"wss://echo.websocket.org")
     .apply(())
     .send(backend)
     .map(_.body)

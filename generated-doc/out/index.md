@@ -75,11 +75,11 @@ val booksListingRoute: Route = booksListing.toRoute((bookListingLogic _).tupled)
 
 // Convert to sttp Request
 
-import sttp.tapir.client.sttp._
+import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = booksListing
-  .toSttpRequest(uri"http://localhost:8080")
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = SttpClientInterpreter
+  .toRequest(booksListing)(uri"http://localhost:8080")
   .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
 
