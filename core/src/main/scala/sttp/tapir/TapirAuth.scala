@@ -58,5 +58,5 @@ object TapirAuth {
     EndpointInput.Auth.Http(authType, header[T]("Authorization")(authCodec), challenge, None)
   }
 
-  private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefix(prefix + " ")
+  private def stringPrefixWithSpace(prefix: String) = Mapping.stringPrefixCaseInsensitive(prefix + " ")
 }
