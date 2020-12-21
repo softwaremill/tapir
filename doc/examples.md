@@ -37,6 +37,7 @@ A new project can be created using: `sbt new https://codeberg.org/wegtam/http4s-
 * [Three easy endpoints](https://blog.softwaremill.com/three-easy-endpoints-a6cbd52b0a6e)
 * [tAPIr’s Endpoint meets ZIO’s IO](https://blog.softwaremill.com/tapirs-endpoint-meets-zio-s-io-3278099c5e10)
 * [Describe, then interpret: HTTP endpoints using tapir](https://blog.softwaremill.com/describe-then-interpret-http-endpoints-using-tapir-ac139ba565b0)
+* [Functional pancakes](https://blog.softwaremill.com/functional-pancakes-cf70023f0dcb)
 
 ## Videos
 
