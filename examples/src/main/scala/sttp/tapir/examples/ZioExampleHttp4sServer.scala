@@ -22,13 +22,15 @@ object ZioExampleHttp4sServer extends App {
   val petEndpoint: ZEndpoint[Int, String, Pet] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter.toRoutes(petEndpoint) { petId =>
-    if (petId == 35) {
-      UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
-    } else {
-      IO.fail("Unknown pet id")
+  val petRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter
+    .from(petEndpoint) { petId =>
+      if (petId == 35) {
+        UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+      } else {
+        IO.fail("Unknown pet id")
+      }
     }
-  }
+    .toRoutes
 
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[Any, Int, String, Pet] = petEndpoint.zServerLogic { petId =>
@@ -38,7 +40,7 @@ object ZioExampleHttp4sServer extends App {
       IO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter.toRoutes(petServerEndpoint)
+  val petServerRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter.from(petServerEndpoint).toRoutes
 
   //
 
