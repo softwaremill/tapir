@@ -94,11 +94,11 @@ object BooksExampleSemiauto extends App with StrictLogging {
   import akka.http.scaladsl.server.Route
 
   def openapiYamlDocumentation: String = {
-    import sttp.tapir.docs.openapi._
+    import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
     import sttp.tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI("The Tapir Library", "1.0")
+    val docs = OpenAPIDocsInterpreter.endpoints(List(addBook, booksListing, booksListingByGenre), ("The Tapir Library", "1.0"))
     docs.toYaml
   }
 

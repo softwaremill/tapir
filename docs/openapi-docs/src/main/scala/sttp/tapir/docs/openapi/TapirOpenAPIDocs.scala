@@ -4,25 +4,35 @@ import sttp.tapir.Endpoint
 import sttp.tapir.openapi.{Info, OpenAPI}
 import sttp.tapir.server.ServerEndpoint
 
+@deprecated("Use OpenAPIDocsInterpreter", since = "0.17.1")
 trait TapirOpenAPIDocs {
   implicit class RichOpenAPIEndpoint[I, E, O, S](e: Endpoint[I, E, O, S]) {
-    def toOpenAPI(title: String, version: String)(implicit options: OpenAPIDocsOptions): OpenAPI = toOpenAPI(Info(title, version))
+    @deprecated("Use OpenAPIDocsInterpreter.endpoint", since = "0.17.1")
+    def toOpenAPI(title: String, version: String)(implicit options: OpenAPIDocsOptions): OpenAPI =
+      OpenAPIDocsInterpreter.endpoint(e, Info(title, version))
 
+    @deprecated("Use OpenAPIDocsInterpreter.endpoint", since = "0.17.1")
     def toOpenAPI(info: Info)(implicit options: OpenAPIDocsOptions): OpenAPI =
-      EndpointToOpenAPIDocs.toOpenAPI(info, Seq(e), options)
+      OpenAPIDocsInterpreter.endpoint(e, info)
   }
 
   implicit class RichOpenAPIEndpoints(es: Iterable[Endpoint[_, _, _, _]]) {
-    def toOpenAPI(title: String, version: String)(implicit options: OpenAPIDocsOptions): OpenAPI = toOpenAPI(Info(title, version))
+    @deprecated("Use OpenAPIDocsInterpreter.endpoints", since = "0.17.1")
+    def toOpenAPI(title: String, version: String)(implicit options: OpenAPIDocsOptions): OpenAPI =
+      OpenAPIDocsInterpreter.endpoints(es, Info(title, version))
 
+    @deprecated("Use OpenAPIDocsInterpreter.endpoints", since = "0.17.1")
     def toOpenAPI(info: Info)(implicit options: OpenAPIDocsOptions): OpenAPI =
-      EndpointToOpenAPIDocs.toOpenAPI(info, es, options)
+      OpenAPIDocsInterpreter.endpoints(es, info)
   }
 
   implicit class RichOpenAPIServerEndpoints[F[_]](serverEndpoints: Iterable[ServerEndpoint[_, _, _, _, F]]) {
-    def toOpenAPI(title: String, version: String)(implicit options: OpenAPIDocsOptions): OpenAPI = toOpenAPI(Info(title, version))
+    @deprecated("Use OpenAPIDocsInterpreter.serverEndpoints", since = "0.17.1")
+    def toOpenAPI(title: String, version: String)(implicit options: OpenAPIDocsOptions): OpenAPI =
+      OpenAPIDocsInterpreter.serverEndpoints(serverEndpoints, Info(title, version))
 
+    @deprecated("Use OpenAPIDocsInterpreter.serverEndpoints", since = "0.17.1")
     def toOpenAPI(info: Info)(implicit options: OpenAPIDocsOptions): OpenAPI =
-      EndpointToOpenAPIDocs.toOpenAPI(info, serverEndpoints.map(_.endpoint), options)
+      OpenAPIDocsInterpreter.serverEndpoints(serverEndpoints, info)
   }
 }
