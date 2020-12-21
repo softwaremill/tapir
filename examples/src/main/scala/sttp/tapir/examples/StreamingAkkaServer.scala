@@ -22,7 +22,7 @@ object StreamingAkkaServer extends App {
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
   val testStream: Source[ByteString, Any] = Source.repeat("Hello!").take(10).map(s => ByteString(s))
-  val streamingRoute: Route = streamingEndpoint.toRoute(_ => Future.successful(Right(testStream)))
+  val streamingRoute: Route = AkkaHttpServerInterpreter.toRoute(streamingEndpoint)(_ => Future.successful(Right(testStream)))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

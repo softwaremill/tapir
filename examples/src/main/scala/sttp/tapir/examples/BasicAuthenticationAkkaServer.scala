@@ -17,7 +17,8 @@ object BasicAuthenticationAkkaServer extends App {
   val secret: Endpoint[UsernamePassword, Unit, String, Any] =
     endpoint.get.in("secret").in(auth.basic[UsernamePassword](WWWAuthenticate.basic("example"))).out(stringBody)
 
-  val secretRoute: Route = secret.toRoute(credentials => Future.successful(Right(s"Hello, ${credentials.username}!")))
+  val secretRoute: Route =
+    AkkaHttpServerInterpreter.toRoute(secret)(credentials => Future.successful(Right(s"Hello, ${credentials.username}!")))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

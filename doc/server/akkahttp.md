@@ -47,7 +47,7 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: Route = countCharactersEndpoint.toRoute(countCharacters)
+val countCharactersRoute: Route = AkkaHttpServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
 Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
@@ -61,7 +61,7 @@ import akka.http.scaladsl.server.Route
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val aRoute: Route = anEndpoint.toRoute((logic _).tupled)
+val aRoute: Route = AkkaHttpServerInterpreter.toRoute(anEndpoint)((logic _).tupled)
 ```
 
 ## Using `toDirective`
@@ -111,7 +111,7 @@ val tapirEndpoint: Endpoint[String, Unit, Unit, Any] = endpoint.in(path[String](
 
 val myRoute: Route = metricsDirective {
   securityDirective { user =>
-    tapirEndpoint.toRoute(input => ??? /* here we can use both `user` and `input` values */)
+    AkkaHttpServerInterpreter.toRoute(tapirEndpoint)(input => ??? /* here we can use both `user` and `input` values */)
   }
 }
 ```

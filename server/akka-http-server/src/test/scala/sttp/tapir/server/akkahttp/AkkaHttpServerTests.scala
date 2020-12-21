@@ -36,7 +36,7 @@ class AkkaHttpServerTests extends TestSuite {
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val route = Directives.pathPrefix("api")(e.toRoute)
+          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter.toRoute(e))
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>

@@ -31,7 +31,8 @@ object WebSocketAkkaServer extends App {
     endpoint.get.in("ping").out(webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
   // Implementation of the web socket: a flow which echoes incoming messages
-  val wsRoute: Route = wsEndpoint.toRoute(_ => Future.successful(Right(Flow.fromFunction((in: String) => Response(in)))))
+  val wsRoute: Route =
+    AkkaHttpServerInterpreter.toRoute(wsEndpoint)(_ => Future.successful(Right(Flow.fromFunction((in: String) => Response(in)))))
 
   // Documentation
   val apiDocs = wsEndpoint.toAsyncAPI("JSON echo", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml

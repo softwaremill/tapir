@@ -30,7 +30,7 @@ object MultipartFormUploadAkkaServer extends App {
     endpoint.post.in("user" / "profile").in(multipartBody[UserProfile]).out(stringBody)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val setProfileRoute: Route = setProfile.toRoute { data =>
+  val setProfileRoute: Route = AkkaHttpServerInterpreter.toRoute(setProfile) { data =>
     Future {
       val response = s"Received: ${data.name} / ${data.hobby} / ${data.age} / ${data.photo.fileName} (${data.photo.body.length()})"
       data.photo.body.delete()
