@@ -42,7 +42,7 @@ def countCharacters(s: String): IO[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: HttpRoutes[IO] = 
-  countCharactersEndpoint.toRoutes(countCharacters _)
+  Http4sServerInterpreter.toRoutes(countCharactersEndpoint)(countCharacters _)
 ```
 
 Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
@@ -63,7 +63,7 @@ implicit val t: Timer[IO] =
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val routes: HttpRoutes[IO] = anEndpoint.toRoutes((logic _).tupled)
+val routes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(anEndpoint)((logic _).tupled)
 ```
 
 The created `HttpRoutes` are the usual http4s `Kleisli`-based transformation of a `Request` to a `Response`, and can 

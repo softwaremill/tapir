@@ -24,7 +24,7 @@ object HelloWorldHttp4sServer extends App {
   implicit val timer: Timer[IO] = IO.timer(ec)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val helloWorldRoutes: HttpRoutes[IO] = helloWorld.toRoutes(name => IO(s"Hello, $name!".asRight[Unit]))
+  val helloWorldRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(helloWorld)(name => IO(s"Hello, $name!".asRight[Unit]))
 
   // starting the server
 

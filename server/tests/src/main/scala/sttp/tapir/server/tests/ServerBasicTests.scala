@@ -24,7 +24,7 @@ import scala.concurrent.duration.DurationInt
 class ServerBasicTests[F[_], ROUTE](
     backend: SttpBackend[IO, Any],
     serverTests: ServerTests[F, Any, ROUTE],
-    serverInterpreter: ServerInterpreter[F, Any, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
     multipleValueHeaderSupport: Boolean = true,
     multipartInlineHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true

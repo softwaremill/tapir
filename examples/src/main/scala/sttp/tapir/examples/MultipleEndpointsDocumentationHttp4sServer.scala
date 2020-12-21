@@ -55,8 +55,9 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
     )
   )
 
-  val booksListingRoutes: HttpRoutes[IO] = booksListing.toRoutes(_ => IO(books.get().asRight[Unit]))
-  val addBookRoutes: HttpRoutes[IO] = addBook.toRoutes(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
+  val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
+  val addBookRoutes: HttpRoutes[IO] =
+    Http4sServerInterpreter.toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes
 
   // generating the documentation in yml; extension methods come from imported packages

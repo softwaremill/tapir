@@ -10,13 +10,14 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
-import sttp.tapir.server.tests.ServerInterpreter
+import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class AkkaServerInterpreter(implicit actorSystem: ActorSystem) extends ServerInterpreter[Future, AkkaStreams with WebSockets, Route] {
+class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
+    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route] {
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None

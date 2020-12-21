@@ -30,7 +30,7 @@ class AkkaHttpServerTests extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     actorSystemResource.map { implicit actorSystem =>
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
-      val interpreter = new AkkaServerInterpreter()(actorSystem)
+      val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
       val serverTests = new ServerTests(interpreter)
 
       def additionalTests(): List[Test] = List(

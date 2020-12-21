@@ -34,7 +34,7 @@ object StreamingHttp4sFs2Server extends App {
   implicit val timer: Timer[IO] = IO.timer(ec)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val streamingRoutes: HttpRoutes[IO] = streamingEndpoint.toRoutes { _ =>
+  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(streamingEndpoint) { _ =>
     val size = 100L
     Stream
       .emit(List[Char]('a', 'b', 'c', 'd'))

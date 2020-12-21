@@ -28,7 +28,7 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
-    val interpreter = new Http4sServerInterpreter()
+    val interpreter = new Http4sTestServerInterpreter()
     val serverTests = new ServerTests(interpreter)
 
     import interpreter.timer
@@ -36,7 +36,7 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
     def additionalTests(): List[Test] = List(
       Test("should work with a router and routes in a context") {
         val e = endpoint.get.in("test" / "router").out(stringBody).serverLogic(_ => IO.pure("ok".asRight[Unit]))
-        val routes = e.toRoutes
+        val routes = Http4sServerInterpreter.toRoutes(e)
 
         BlazeServerBuilder[IO](ExecutionContext.global)
           .bindHttp(0, "localhost")
