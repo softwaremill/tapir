@@ -14,7 +14,6 @@ object TapirJsonSprayCodec extends TapirJsonSpray
 
 class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProtocol {
   case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
-
   object Customer {
     implicit val rw: JsonFormat[Customer] = jsonFormat3(Customer.apply)
   }
@@ -29,8 +28,8 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
     implicit val orderFmt: JsonFormat[Order] = jsonFormat2(Order.apply)
   }
 
-  val customerDecoder: JsonCodec[Customer] = TapirJsonSprayCodec.jsonFormatCodec[Customer]
-  val orderCodec = TapirJsonSprayCodec.jsonFormatCodec[Order]
+  val customerCodec: JsonCodec[Customer] = TapirJsonSprayCodec.jsonFormatCodec[Customer]
+  val orderCodec: JsonCodec[Order] = TapirJsonSprayCodec.jsonFormatCodec[Order]
 
   // Helper to test encoding then decoding an object is the same as the original
   def testEncodeDecode[T: JsonFormat: Schema](original: T): Assertion = {
@@ -65,12 +64,14 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
 
   it should "return a JSON specific decode error on failure" in {
     val input = """{"items":[], "customer":{}}"""
-    val actual = orderCodec.decode(input)
 
+    val actual = orderCodec.decode(input)
     actual shouldBe a[DecodeResult.Error]
+
     val failure = actual.asInstanceOf[Error]
     failure.original shouldEqual input
     failure.error shouldBe a[JsonDecodeException]
+
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual List(
       JsonError(
@@ -83,19 +84,19 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
 
   it should "return a JSON specific error on array decode failure" in {
     val itemsCodec = TapirJsonSprayCodec.jsonFormatCodec[Seq[Item]]
-
     val input = """[{"serialNumber":1}]"""
-    val actual = itemsCodec.decode(input)
 
+    val actual = itemsCodec.decode(input)
     actual shouldBe a[DecodeResult.Error]
+
     val failure = actual.asInstanceOf[DecodeResult.Error]
     failure.original shouldEqual input
     failure.error shouldBe a[JsonDecodeException]
+
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual List(
       JsonError("Object is missing required member 'price'", List(FieldName("price")))
     )
     error.underlying shouldBe a[DeserializationException]
   }
-
 }

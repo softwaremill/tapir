@@ -57,11 +57,14 @@ class TapirJsonuPickleTests extends AnyFlatSpec with TapirJsonuPickleTestExtensi
 
   it should "return a JSON specific decode error on failure" in {
     val codec = TapirJsonuPickleCodec.readWriterCodec[Customer]
+
     val actual = codec.decode("{}")
     actual shouldBe a[DecodeResult.Error]
+
     val failure = actual.asInstanceOf[DecodeResult.Error]
     failure.original shouldEqual "{}"
     failure.error shouldBe a[JsonDecodeException]
+
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual List.empty
     error.underlying shouldBe an[AbortException]

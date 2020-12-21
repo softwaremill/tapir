@@ -7,13 +7,13 @@ import sttp.tapir.DecodeResult._
 import sttp.tapir.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 
 object TapirJsonPlayCodec extends TapirJsonPlay
 
 class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions with Matchers {
   case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
-
   object Customer {
     implicit val rw: Format[Customer] = Json.format
   }
@@ -28,8 +28,8 @@ class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions wi
     implicit val orderFmt: Format[Order] = Json.format
   }
 
-  val customerDecoder = TapirJsonPlayCodec.readsWritesCodec[Customer]
-  val orderCodec = TapirJsonPlayCodec.readsWritesCodec[Order]
+  val customerCodec: JsonCodec[Customer] = TapirJsonPlayCodec.readsWritesCodec[Customer]
+  val orderCodec: JsonCodec[Order] = TapirJsonPlayCodec.readsWritesCodec[Order]
 
   // Helper to test encoding then decoding an object is the same as the original
   def testEncodeDecode[T: Format: Schema](original: T): Assertion = {
@@ -71,12 +71,14 @@ class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions wi
 
   it should "return a JSON specific error on object decode failure" in {
     val input = """{"items":[{"serialNumber":1}], "customer":{"name":"Alita"}}"""
-    val actual = orderCodec.decode(input)
 
+    val actual = orderCodec.decode(input)
     actual shouldBe a[DecodeResult.Error]
+
     val failure = actual.asInstanceOf[DecodeResult.Error]
     failure.original shouldEqual input
     failure.error shouldBe a[JsonDecodeException]
+
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors should contain theSameElementsAs List(
       JsonError("error.path.missing", List(FieldName("obj"), FieldName("customer"), FieldName("yearOfBirth"))),
@@ -87,14 +89,15 @@ class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions wi
 
   it should "return a JSON specific error on array decode failure" in {
     val itemsCodec = TapirJsonPlayCodec.readsWritesCodec[Seq[Item]]
-
     val input = """[{"serialNumber":1}]"""
-    val actual = itemsCodec.decode(input)
 
+    val actual = itemsCodec.decode(input)
     actual shouldBe a[DecodeResult.Error]
+
     val failure = actual.asInstanceOf[DecodeResult.Error]
     failure.original shouldEqual input
     failure.error shouldBe a[JsonDecodeException]
+
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual List(
       JsonError("error.path.missing", List(FieldName("obj[0]"), FieldName("price")))

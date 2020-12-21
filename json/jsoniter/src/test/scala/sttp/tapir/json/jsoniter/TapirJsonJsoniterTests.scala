@@ -17,11 +17,14 @@ class TapirJsonJsoniterTests extends AnyFlatSpecLike with Matchers {
   it should "return a JSON specific decode error on failure" in {
     implicit val codec: JsonValueCodec[Customer] = JsonCodecMaker.make
     val tapirCodec = TapirJsoniterCodec.jsoniterCodec[Customer]
+
     val actual = tapirCodec.decode("{}")
     actual shouldBe a[DecodeResult.Error]
+
     val failure = actual.asInstanceOf[DecodeResult.Error]
     failure.original shouldEqual "{}"
     failure.error shouldBe a[JsonDecodeException]
+
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.errors shouldEqual List.empty
     error.underlying shouldBe a[JsonReaderException]
