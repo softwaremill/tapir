@@ -47,11 +47,11 @@ object ZioEnvExampleHttp4sServer extends App {
   val petEndpoint: ZEndpoint[Int, String, Pet] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[PetService with Clock, *]] = petEndpoint.toRoutes(petId => PetService.find(petId))
+  val petRoutes: HttpRoutes[RIO[PetService with Clock, *]] = ZHttp4sServerInterpreter.toRoutes(petEndpoint)(petId => PetService.find(petId))
 
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[PetService, Int, String, Pet] = petEndpoint.zServerLogic(petId => PetService.find(petId))
-  val petServerRoutes: HttpRoutes[RIO[PetService with Clock, *]] = petServerEndpoint.toRoutes
+  val petServerRoutes: HttpRoutes[RIO[PetService with Clock, *]] = ZHttp4sServerInterpreter.toRoutes(petServerEndpoint)
 
   // Documentation
   val yaml: String = {

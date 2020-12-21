@@ -22,7 +22,7 @@ object ZioExampleHttp4sServer extends App {
   val petEndpoint: ZEndpoint[Int, String, Pet] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[Clock, *]] = petEndpoint.toRoutes { petId =>
+  val petRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter.toRoutes(petEndpoint) { petId =>
     if (petId == 35) {
       UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
     } else {
@@ -38,7 +38,7 @@ object ZioExampleHttp4sServer extends App {
       IO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpRoutes[RIO[Clock, *]] = petServerEndpoint.toRoutes
+  val petServerRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter.toRoutes(petServerEndpoint)
 
   //
 
