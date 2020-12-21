@@ -3,6 +3,7 @@ package sttp.tapir.client.play
 import play.api.libs.ws.{StandaloneWSClient, StandaloneWSRequest, StandaloneWSResponse}
 import sttp.tapir.{DecodeResult, Endpoint}
 
+@deprecated("Use PlayClientInterpreter", since = "0.17.1")
 trait TapirPlayClient {
 
   implicit class RichPlayClientEndpoint[I, E, O, R](e: Endpoint[I, E, O, R]) {
@@ -16,6 +17,7 @@ trait TapirPlayClient {
       * which can be sent using the `execute()` method.
       * - a response parser to use on the `StandaloneWSResponse` obtained after executing the request.
       */
+    @deprecated("Use PlayClientInterpreter.toPlayRequest", since = "0.17.1")
     def toPlayRequest(baseUri: String)(implicit
         clientOptions: PlayClientOptions,
         ws: StandaloneWSClient
@@ -33,6 +35,7 @@ trait TapirPlayClient {
       *
       * @throws IllegalArgumentException when response parsing fails
       */
+    @deprecated("Use PlayClientInterpreter.toPlayRequestUnsafe", since = "0.17.1")
     def toPlayRequestUnsafe(
         baseUri: String
     )(implicit clientOptions: PlayClientOptions, ws: StandaloneWSClient): I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) =

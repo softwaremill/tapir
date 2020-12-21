@@ -59,18 +59,17 @@ class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSCli
     (req, unsafeResponseParser)
   }
 
-  private def parsePlayResponse[I, E, O, Nothing](e: Endpoint[I, E, O, Nothing]): StandaloneWSResponse => DecodeResult[Either[E, O]] = {
-    response =>
-      val code = sttp.model.StatusCode(response.status)
+  private def parsePlayResponse[I, E, O, R](e: Endpoint[I, E, O, R]): StandaloneWSResponse => DecodeResult[Either[E, O]] = { response =>
+    val code = sttp.model.StatusCode(response.status)
 
-      val parser = if (code.isSuccess) responseFromOutput(e.output) else responseFromOutput(e.errorOutput)
-      val output = if (code.isSuccess) e.output else e.errorOutput
+    val parser = if (code.isSuccess) responseFromOutput(e.output) else responseFromOutput(e.errorOutput)
+    val output = if (code.isSuccess) e.output else e.errorOutput
 
-      val headers = cookiesAsHeaders(response.cookies) ++ response.headers
+    val headers = cookiesAsHeaders(response.cookies) ++ response.headers
 
-      val params = getOutputParams(output, parser(response), headers, code, response.statusText)
+    val params = getOutputParams(output, parser(response), headers, code, response.statusText)
 
-      params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
+    params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
   }
 
   private def getOutputParams(
