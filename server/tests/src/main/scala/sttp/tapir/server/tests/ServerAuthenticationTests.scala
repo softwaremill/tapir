@@ -37,6 +37,7 @@ class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], s
     List(
       ("basic", basic, (r: Request[_, Any]) => r.header("Authorization", "Basic dXNlcjpzZWNyZXQ=")),
       ("bearer", bearer, (r: Request[_, Any]) => r.header("Authorization", "Bearer kajsdhf[")),
+      ("lower case bearer", bearer, (r: Request[_, Any]) => r.header("Authorization", "bearer kajsdhf[")),
       (
         "apiKey in query param",
         apiKeyInQuery,
@@ -59,7 +60,7 @@ class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], s
 
   private def expectedChallenge(authType: String) = authType match {
     case "basic"                                      => s"""Basic realm="$Realm""""
-    case "bearer"                                     => s"""Bearer realm="$Realm""""
+    case "bearer" | "lower case bearer"               => s"""Bearer realm="$Realm""""
     case "apiKey in query param" | "apiKey in header" => s"""ApiKey realm="$Realm""""
   }
 
