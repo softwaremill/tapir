@@ -8,7 +8,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 class FinatraServerCatsTests extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadAsyncError[IO] = new CatsMonadAsyncError[IO]()
-    val interpreter = new FinatraServerCatsInterpreter()
+    val interpreter = new FinatraCatsTestServerInterpreter()
     val serverTests = new ServerTests(interpreter)
 
     new ServerBasicTests(backend, serverTests, interpreter).tests() ++ new ServerAuthenticationTests(backend, serverTests).tests()

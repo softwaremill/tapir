@@ -47,7 +47,7 @@ For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.finatra._
+import sttp.tapir.server.finatra.FinatraServerInterpreter
 import com.twitter.util.Future
 
 def countCharacters(s: String): Future[Either[Unit, Int]] =
@@ -56,7 +56,7 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: FinatraRoute = countCharactersEndpoint.toRoute(countCharacters)
+val countCharactersRoute: FinatraRoute = FinatraServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
 or a cats-effect's example:
@@ -65,7 +65,7 @@ or a cats-effect's example:
 import cats.effect.IO
 import sttp.tapir._
 import sttp.tapir.server.finatra.FinatraRoute
-import sttp.tapir.server.finatra.cats._
+import sttp.tapir.server.finatra.cats.FinatraCatsServerInterpreter
 
 def countCharacters(s: String): IO[Either[Unit, Int]] =
   IO.pure(Right[Unit, Int](s.length))
@@ -73,7 +73,7 @@ def countCharacters(s: String): IO[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: FinatraRoute = countCharactersEndpoint.toRoute(countCharacters)
+val countCharactersRoute: FinatraRoute = FinatraCatsServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
 Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
@@ -81,12 +81,12 @@ arguments need to be converted to a function using a single argument using `.tup
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.finatra._
+import sttp.tapir.server.finatra.FinatraServerInterpreter
 import com.twitter.util.Future
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
-val aRoute: FinatraRoute = anEndpoint.toRoute((logic _).tupled)
+val aRoute: FinatraRoute = FinatraServerInterpreter.toRoute(anEndpoint)((logic _).tupled)
 ```
 
 Now that you've created the `FinatraRoute`, add `TapirController` as a trait to your `Controller`. You can then
