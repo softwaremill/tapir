@@ -7,10 +7,10 @@ dependency:
 "com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "@VERSION@"
 ```
 
-and import the package:
+and import the object:
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.finatra._
+import sttp.tapir.server.finatra.FinatraServerInterpreter
 ```
 
 or if you would like to use cats-effect project, you can add the following dependency:
@@ -19,22 +19,21 @@ or if you would like to use cats-effect project, you can add the following depen
 "com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "@VERSION@"
 ```
 
-and import the packate:
+and import the object:
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.finatra.cats._
+import sttp.tapir.server.finatra.cats.FinatraCatsServerInterpreter
 ```
 
-This adds extension methods to the `Endpoint` type: `toRoute` and `toRouteRecoverErrors`. The first one
+The interpreter objects contain the `toRoute` and `toRouteRecoverErrors` method. The first one
 requires the logic of the endpoint to be given as a function of type (note this is a Twitter `Future` or a cats-effect project's `Effect` type):
 
 ```scala
 I => Future[Either[E, O]]
 ```
 
-or
-
-An effect type that supports cats-effect's `Effect[F]` type, for example, project [Catbird's](https://github.com/travisbrown/catbird) `Rerunnbale`.
+or giben an effect type that supports cats-effect's `Effect[F]` type, for example, project 
+[Catbird's](https://github.com/travisbrown/catbird) `Rerunnbale`:
 
 ```scala
 I => Rerunnable[Either[E, O]]
@@ -47,7 +46,7 @@ For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.finatra.FinatraServerInterpreter
+import sttp.tapir.server.finatra.{ FinatraServerInterpreter, FinatraRoute }
 import com.twitter.util.Future
 
 def countCharacters(s: String): Future[Either[Unit, Int]] =
@@ -76,12 +75,12 @@ val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
 val countCharactersRoute: FinatraRoute = FinatraCatsServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
-Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
-arguments need to be converted to a function using a single argument using `.tupled`:
+Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`.  This means that 
+functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.finatra.FinatraServerInterpreter
+import sttp.tapir.server.finatra.{ FinatraServerInterpreter, FinatraRoute }
 import com.twitter.util.Future
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???

@@ -10,14 +10,14 @@ To use, add the following dependencies:
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
 model is independent from all other tapir modules and can be used stand-alone).
  
-An endpoint can be converted to an instance of the model by importing the `sttp.tapir.docs.asyncapi._` package and calling
-the provided extension method:
+An endpoint can be converted to an instance of the model by importing the `sttp.tapir.docs.asyncapi.AsyncAPIInterpreter` 
+object and calling the provided extension method:
 
 ```scala
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir._
 import sttp.tapir.asyncapi.AsyncAPI
-import sttp.tapir.docs.asyncapi._
+import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
@@ -26,7 +26,7 @@ case class Response(msg: String, count: Int)
 val echoWS = endpoint.out(
   webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
-val docs: AsyncAPI = echoWS.toAsyncAPI("Echo web socket", "1.0")
+val docs: AsyncAPI = AsyncAPIInterpreter.fromEndpoint(echoWS, "Echo web socket", "1.0")
 ```
 
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
@@ -41,7 +41,8 @@ Quite often, you'll need to define the servers, through which the API can be rea
 ```scala
 import sttp.tapir.asyncapi.Server
 
-val docsWithServers: AsyncAPI = echoWS.toAsyncAPI(
+val docsWithServers: AsyncAPI = AsyncAPIInterpreter.fromEndpoint(
+  echoWS, 
   "Echo web socket", 
   "1.0",
   List("production" -> Server("api.example.com", "wss"))

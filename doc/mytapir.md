@@ -9,8 +9,9 @@ a single-import whenever you want to use tapir. For example:
 
 ```scala
 object MyTapir extends Tapir
-  with TapirAkkaHttpServer
-  with TapirSttpClient
+  with AkkaHttpServerInterpreter
+  with SttpClientInterpreter
+  with OpenAPIDocsInterpreter
   with ValidatorDerivation
   with SchemaDerivation
   with TapirJsonCirce

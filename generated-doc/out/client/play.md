@@ -9,24 +9,24 @@ Add the dependency:
 To make requests using an endpoint definition using the [play client](https://github.com/playframework/play-ws), import:
 
 ```scala
-import sttp.tapir.client.play._
+import sttp.tapir.client.play.PlayClientInterpreter
 ```
 
-This adds the two extension methods to any `Endpoint`:
- - `toPlayRequestUnsafe(String)`: given the base URI returns a function,
+This objects contains two methods:
+ - `toRequestUnsafe(Endpoint, String)`: given the base URI returns a function,
    which will generate a request and a response parser which might throw
    an exception when decoding of the result fails
    ```scala
    I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O])
    ```
- - `toPlayRequest(String)`: given the base URI returns a function,
+ - `toRequest(Endpoint, String)`: given the base URI returns a function,
    which will generate a request and a response parser which represents
    decoding errors as the `DecodeResult` class
    ```scala
    I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]])
    ```
 
-Note that these are a one-argument functions, where the single argument is the input of end endpoint. This might be a 
+Note that the returned functions have one-argument: the input values of end endpoint. This might be a 
 single type, a tuple, or a case class, depending on the endpoint description. 
 
 After providing the input parameters, the two following are returned:
@@ -41,7 +41,7 @@ Example:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.client.play._
+import sttp.tapir.client.play.PlayClientInterpreter
 import sttp.capabilities.akka.AkkaStreams
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -53,8 +53,8 @@ def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
   val e: Endpoint[I, E, O, R] = ???
   val inputArgs: I = ???
   
-  val (req, responseParser) = e
-      .toPlayRequestUnsafe(s"http://localhost:9000")
+  val (req, responseParser) = PlayClientInterpreter
+      .toRequestUnsafe(e, s"http://localhost:9000")
       .apply(inputArgs)
   
   val result: Future[Either[E, O]] = req

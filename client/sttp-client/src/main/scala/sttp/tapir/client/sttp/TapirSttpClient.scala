@@ -22,7 +22,7 @@ trait TapirSttpClient {
     def toSttpRequestUnsafe(
         baseUri: Uri
     )(implicit clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]): I => Request[Either[E, O], R] =
-      SttpClientInterpreter.toRequestUnsafe(e)(baseUri)
+      SttpClientInterpreter.toRequestUnsafe(e, baseUri)
 
     /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
       * uri.
@@ -36,6 +36,6 @@ trait TapirSttpClient {
     def toSttpRequest(
         baseUri: Uri
     )(implicit clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]): I => Request[DecodeResult[Either[E, O]], R] =
-      SttpClientInterpreter.toRequest(e)(baseUri)
+      SttpClientInterpreter.toRequest(e, baseUri)
   }
 }

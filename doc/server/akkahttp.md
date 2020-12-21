@@ -14,30 +14,30 @@ your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala vers
 "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "@VERSION@" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
-Now import the package:
+Now import the object:
 
 ```scala
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 ```
 
-This adds extension methods to the `Endpoint` type: `toRoute`, `toRouteRecoverErrors` and `toDirective`.
+The `AkkaHttpServerInterpreter` objects contains methods such as: `toRoute`, `toRouteRecoverErrors` and `toDirective`.
 
 ## Using `toRoute` and `toRouteRecoverErrors`
 
-Method `toRoute` requires the logic of the endpoint to be given as a function of type:
+The `toRoute` method requires the logic of the endpoint to be given as a function of type:
 
 ```scala
 I => Future[Either[E, O]]
 ```
 
-Method `toRouteRecoverErrors` recovers errors from failed futures, and hence requires that `E` is a subclass of
+The `toRouteRecoverErrors` method recovers errors from failed futures, and hence requires that `E` is a subclass of
 `Throwable` (an exception); it expects a function of type `I => Future[O]`.
 
 For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
@@ -50,8 +50,8 @@ val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
 val countCharactersRoute: Route = AkkaHttpServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
-Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
-arguments need to be converted to a function using a single argument using `.tupled`:
+Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
+functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
@@ -66,14 +66,14 @@ val aRoute: Route = AkkaHttpServerInterpreter.toRoute(anEndpoint)((logic _).tupl
 
 ## Using `toDirective`
 
-Method `toDirective` splits parsing the input and encoding the output. The directive provides the
+The `toDirective` method splits parsing the input and encoding the output. The directive provides the
 input parameters, type `I`, and a function that can be used to encode the output.
 
 For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
@@ -83,8 +83,8 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: Route = countCharactersEndpoint.toDirective { (input, completion) =>
-  completion(countCharacters(input))
+val countCharactersRoute: Route = AkkaHttpServerInterpreter.toDirective(countCharactersEndpoint).tapply { 
+  case (input, completion) => completion(countCharacters(input))
 }
 ```
 
@@ -101,7 +101,7 @@ using akka-http. For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server._
 
 case class User(email: String)
@@ -111,7 +111,10 @@ val tapirEndpoint: Endpoint[String, Unit, Unit, Any] = endpoint.in(path[String](
 
 val myRoute: Route = metricsDirective {
   securityDirective { user =>
-    AkkaHttpServerInterpreter.toRoute(tapirEndpoint)(input => ??? /* here we can use both `user` and `input` values */)
+    AkkaHttpServerInterpreter.toRoute(tapirEndpoint) { input => 
+      ??? 
+      /* here we can use both `user` and `input` values */
+    }
   }
 }
 ```
@@ -125,7 +128,7 @@ import akka.http.scaladsl.server.Directives.Authenticator
 import akka.http.scaladsl.server.Directives.authenticateBasic
 import akka.http.scaladsl.server.Route
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.Future
 
@@ -141,10 +144,11 @@ def authorizationDirective(user: User, input: String): Directive0 = ???
 
 val countCharactersRoute: Route =
   authenticateBasic("realm", authenticator) { user =>
-    countCharactersEndpoint.toDirective { (input, completion) =>
-      authorizationDirective(user, input) {
-        completion(countCharacters(input))
-      }
+    AkkaHttpServerInterpreter.toDirective(countCharactersEndpoint).tapply { 
+      case (input, completion) =>
+        authorizationDirective(user, input) {
+          completion(countCharacters(input))
+        }
     }
   }
 ```

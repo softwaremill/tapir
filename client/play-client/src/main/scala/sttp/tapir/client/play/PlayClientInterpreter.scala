@@ -14,7 +14,7 @@ trait PlayClientInterpreter {
     * which can be sent using the `execute()` method.
     * - a response parser to use on the `StandaloneWSResponse` obtained after executing the request.
     */
-  def toPlayRequest[I, E, O, R](e: Endpoint[I, E, O, R])(baseUri: String)(implicit
+  def toRequest[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: String)(implicit
       clientOptions: PlayClientOptions,
       ws: StandaloneWSClient
   ): I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]]) =
@@ -31,9 +31,10 @@ trait PlayClientInterpreter {
     *
     * @throws IllegalArgumentException when response parsing fails
     */
-  def toPlayRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R])(
-      baseUri: String
-  )(implicit clientOptions: PlayClientOptions, ws: StandaloneWSClient): I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) =
+  def toRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: String)(implicit
+      clientOptions: PlayClientOptions,
+      ws: StandaloneWSClient
+  ): I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) =
     new EndpointToPlayClient(clientOptions, ws).toPlayRequestUnsafe(e, baseUri)
 
 }

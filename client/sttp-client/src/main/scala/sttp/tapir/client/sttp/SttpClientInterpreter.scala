@@ -16,9 +16,10 @@ trait SttpClientInterpreter {
     *
     * @throws IllegalArgumentException when response parsing fails
     */
-  def toRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R])(
-      baseUri: Uri
-  )(implicit clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]): I => Request[Either[E, O], R] =
+  def toRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Uri)(implicit
+      clientOptions: SttpClientOptions,
+      wsToPipe: WebSocketToPipe[R]
+  ): I => Request[Either[E, O], R] =
     new EndpointToSttpClient(clientOptions, wsToPipe).toSttpRequestUnsafe(e, baseUri)
 
   /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
@@ -29,9 +30,10 @@ trait SttpClientInterpreter {
     * which can be sent using any sttp backend. The response will then contain the decoded error or success values
     * (note that this can be the body enriched with data from headers/status code).
     */
-  def toRequest[I, E, O, R](e: Endpoint[I, E, O, R])(
-      baseUri: Uri
-  )(implicit clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]): I => Request[DecodeResult[Either[E, O]], R] =
+  def toRequest[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Uri)(implicit
+      clientOptions: SttpClientOptions,
+      wsToPipe: WebSocketToPipe[R]
+  ): I => Request[DecodeResult[Either[E, O]], R] =
     new EndpointToSttpClient(clientOptions, wsToPipe).toSttpRequest(e, baseUri)
 }
 

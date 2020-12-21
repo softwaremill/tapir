@@ -9,23 +9,23 @@ Add the dependency:
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
 
 ```scala
-import sttp.tapir.client.sttp._
+import sttp.tapir.client.sttp.SttpClientInterpreter
 ```
 
-This adds the two extension methods to any `Endpoint`:
- - `toSttpRequestUnsafe(Uri)`: given the base URI returns a function, which might throw an exception if 
+This objects contains two methods:
+ - `toRequestUnsafe(Endpoint, Uri)`: given the base URI returns a function, which might throw an exception if 
    decoding of the result fails
    ```scala
    I => Request[Either[E, O], Any]
    ```
- - `toSttpRequest(Uri)`: given the base URI returns a function, which represents decoding errors as the `DecodeResult` 
+ - `toRequest(Endpoint, Uri)`: given the base URI returns a function, which represents decoding errors as the `DecodeResult` 
    class
    ```scala
    I => Request[DecodeResult[Either[E, O]], Any]
    ```
 
-Note that these are a one-argument functions, where the single argument is the input of end endpoint. This might be a 
-single type, a tuple, or a case class, depending on the endpoint description. 
+Note that the returned functions have one-argument: the input values of end endpoint. This might be a
+single type, a tuple, or a case class, depending on the endpoint description.
 
 After providing the input parameters, a description of the request to be made is returned, with the input value
 encoded as appropriate request parameters: path, query, headers and body. This can be further 

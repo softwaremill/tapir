@@ -53,16 +53,16 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 
 // Generate OpenAPI documentation
 
-import sttp.tapir.docs.openapi.OpenAPIInterpreter
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.openapi.circe.yaml._
 
-val docs = OpenAPIInterpreter.toOpenAPI(booksListing)("My Bookshop", "1.0")
+val docs = OpenAPIDocsInterpreter.fromEndpoint(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 
 // Convert to akka-http Route
 
-import sttp.tapir.server.akkahttp.AkkaHttpInterpreter
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
@@ -70,7 +70,8 @@ def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-val booksListingRoute: Route = AkkaHttpInterpreter.toRoute(booksListing)((bookListingLogic _).tupled)
+val booksListingRoute: Route = AkkaHttpServerInterpreter
+  .toRoute(booksListing)((bookListingLogic _).tupled)
 
 
 // Convert to sttp Request
@@ -79,7 +80,7 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = SttpClientInterpreter
-  .toRequest(booksListing)(uri"http://localhost:8080")
+  .toRequest(booksListing, uri"http://localhost:8080")
   .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
 

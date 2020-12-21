@@ -20,13 +20,13 @@ or
 
 depending on whether you want to use netty or akka based http-server under the hood.
 
-Then import the package:
+Then import the object:
 
 ```scala mdoc:compile-only
-import sttp.tapir.server.play._
+import sttp.tapir.server.play.PlayServerInterpreter
 ```
 
-This adds two extension methods to the `Endpoint` type: `toRoute` and `toRoutesRecoverError`. This first requires the
+This object contains the `toRoute` and `toRoutesRecoverError` methods. This first requires the
 logic of the endpoint to be given as a function of type:
 
 ```scala
@@ -55,8 +55,8 @@ val countCharactersRoutes: Routes =
   PlayServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters _)
 ```
 
-Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
-arguments need to be converted to a function using a single argument using `.tupled`:
+Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
+functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
 
 ```scala mdoc:compile-only
 import sttp.tapir._

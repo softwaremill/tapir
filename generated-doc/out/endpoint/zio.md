@@ -78,11 +78,10 @@ val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit] = ???
 
 type Env = Service1 with Service2
 val routes: HttpRoutes[RIO[Env with Clock, *]] = 
-  List(
+  ZHttp4sServerInterpreter.from(List(
     serverEndpoint1.widen[Env], 
     serverEndpoint2.widen[Env]
-  )
-  .toRoutes // this is where zio-cats interop is needed
+  )).toRoutes // this is where zio-cats interop is needed
 ```
 
 ## Example

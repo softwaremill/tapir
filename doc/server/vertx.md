@@ -7,26 +7,27 @@ Use the following dependency
 "com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "@VERSION@"
 ```
 
-Then import the package:
+Then import the object:
 
 ```scala mdoc:compile-only
 import sttp.tapir.server.vertx.VertxServerInterpreter
 ```
 
-This adds extension methods to the `Endpoint` type: 
-* `route(logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. Errors will be recovered automatically (but generically)
-* `routeRecoverErrors(logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. You're providing your own way to deal with errors happening in the `logic` function.
-* `blockingRoute(logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an blocking handler. Errors will be recovered automatically (but generically)
-* `blockingRouteRecoverErrors(logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as a blocking handler. You're providing your own way to deal with errors happening in the `logic` function.
+This object contains the following methods: 
+
+* `route(e: Endpoint[I, E, O, Any], logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. Errors will be recovered automatically (but generically)
+* `routeRecoverErrors(e: Endpoint[I, E, O, Any], logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an handler. You're providing your own way to deal with errors happening in the `logic` function.
+* `blockingRoute(e: Endpoint[I, E, O, Any], logic: I => Future[Either[E, O]])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as an blocking handler. Errors will be recovered automatically (but generically)
+* `blockingRouteRecoverErrors(e: Endpoint[I, E, O, Any], logic: I => Future[O])`: returns a function `Router => Route` that will create a route matching the endpoint definition, and attach your `logic` as a blocking handler. You're providing your own way to deal with errors happening in the `logic` function.
 
 The methods recovering errors from failed effects, require `E` to be a subclass of `Throwable` (an exception); and expect a function of type `I => Future[O]`. For example:
 
-Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
-arguments need to be converted to a function using a single argument using `.tupled`:
+Note that the second argument to `route` etc. is a function with one argument, a tuple of type `I`. This means that 
+functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.vertx.VertxServerInterpreter
+import sttp.tapir.server.vertx.{ VertxServerInterpreter, VertxEndpointOptions }
 import io.vertx.scala.ext.web._
 import scala.concurrent.Future
 
@@ -41,7 +42,7 @@ An HTTP server can then be started as in the following example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.vertx.VertxServerInterpreter
+import sttp.tapir.server.vertx.{ VertxServerInterpreter, VertxEndpointOptions }
 import io.vertx.scala.core.Vertx
 import io.vertx.scala.ext.web._
 import scala.concurrent.Future
