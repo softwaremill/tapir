@@ -17,6 +17,19 @@ object DecodeResult {
   case object Missing extends Failure
   case class Multiple[R](vs: Seq[R]) extends Failure
   case class Error(original: String, error: Throwable) extends Failure
+  object Error {
+    case class JsonDecodeException(errors: List[JsonError], underlying: Throwable)
+        extends Exception(
+          if (errors.isEmpty) underlying.getMessage else errors.map(_.message).mkString(", "),
+          underlying
+        )
+    case class JsonError(msg: String, path: List[FieldName]) {
+      def message: String = {
+        val at = if (path.nonEmpty) s" at '${path.map(_.encodedName).mkString(".")}'" else ""
+        msg + at
+      }
+    }
+  }
   case class Mismatch(expected: String, actual: String) extends Failure
   case class InvalidValue(errors: List[ValidationError[_]]) extends Failure
 

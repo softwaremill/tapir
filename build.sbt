@@ -303,7 +303,9 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     name := "tapir-json-circe",
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-core" % Versions.circe,
-      "io.circe" %%% "circe-parser" % Versions.circe
+      "io.circe" %%% "circe-parser" % Versions.circe,
+      scalaTest.value % Test,
+      "io.circe" %%% "circe-generic" % Versions.circe % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -371,7 +373,9 @@ lazy val tethysJson: ProjectMatrix = (projectMatrix in file("json/tethys"))
     name := "tapir-json-tethys",
     libraryDependencies ++= Seq(
       "com.tethys-json" %% "tethys-core" % Versions.tethys,
-      "com.tethys-json" %% "tethys-jackson" % Versions.tethys
+      "com.tethys-json" %% "tethys-jackson" % Versions.tethys,
+      scalaTest.value % Test,
+      "com.tethys-json" %% "tethys-derivation" % Versions.tethys % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -383,6 +387,7 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
       "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.6.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.6.2" % Test,
       scalaTest.value % Test
     )
   )
