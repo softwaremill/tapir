@@ -13,4 +13,5 @@ class SttpStubServerRequest[_, S](req: Request[_, S]) extends ServerRequest {
   override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
   override def headers: Seq[(String, String)] = req.headers.toList.map(h => (h.name, h.value))
   override def header(name: String): Option[String] = req.headers.find(h => h.name.toUpperCase() == name.toUpperCase).map(_.value)
+  override def underlying: Any = req
 }

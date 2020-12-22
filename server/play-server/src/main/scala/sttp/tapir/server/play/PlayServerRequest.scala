@@ -13,4 +13,5 @@ private[play] class PlayServerRequest(request: RequestHeader) extends ServerRequ
   override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
   override def headers: Seq[(String, String)] = request.headers.headers
   override def header(name: String): Option[String] = request.headers.get(name)
+  override def underlying: Any = request
 }
