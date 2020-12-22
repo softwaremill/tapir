@@ -56,7 +56,7 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.openapi.circe.yaml._
 
-val docs = OpenAPIDocsInterpreter.fromEndpoint(booksListing, "My Bookshop", "1.0")
+val docs = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 

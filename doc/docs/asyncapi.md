@@ -26,7 +26,7 @@ case class Response(msg: String, count: Int)
 val echoWS = endpoint.out(
   webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
-val docs: AsyncAPI = AsyncAPIInterpreter.fromEndpoint(echoWS, "Echo web socket", "1.0")
+val docs: AsyncAPI = AsyncAPIInterpreter.toAsyncAPI(echoWS, "Echo web socket", "1.0")
 ```
 
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
@@ -41,7 +41,7 @@ Quite often, you'll need to define the servers, through which the API can be rea
 ```scala mdoc:silent
 import sttp.tapir.asyncapi.Server
 
-val docsWithServers: AsyncAPI = AsyncAPIInterpreter.fromEndpoint(
+val docsWithServers: AsyncAPI = AsyncAPIInterpreter.toAsyncAPI(
   echoWS, 
   "Echo web socket", 
   "1.0",
