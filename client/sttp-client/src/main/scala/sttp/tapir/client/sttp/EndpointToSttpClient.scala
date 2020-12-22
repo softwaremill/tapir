@@ -12,7 +12,7 @@ import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
 
-class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
+private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
   def toSttpRequestUnsafe[I, E, O](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[Either[E, O], R] = { params =>
     toSttpRequest(e, baseUri)(params).mapResponse(getOrThrow)
   }

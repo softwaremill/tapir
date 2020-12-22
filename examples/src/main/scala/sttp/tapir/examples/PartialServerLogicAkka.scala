@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Route
 import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.PartialServerEndpoint
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}

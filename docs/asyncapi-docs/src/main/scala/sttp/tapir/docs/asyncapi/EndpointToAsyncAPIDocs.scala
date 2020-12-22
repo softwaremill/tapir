@@ -9,7 +9,7 @@ import sttp.tapir.{EndpointInput, _}
 
 import scala.collection.immutable.{ListMap, ListSet}
 
-object EndpointToAsyncAPIDocs {
+private[asyncapi] object EndpointToAsyncAPIDocs {
   def toAsyncAPI(
       info: Info,
       servers: Iterable[(String, Server)],

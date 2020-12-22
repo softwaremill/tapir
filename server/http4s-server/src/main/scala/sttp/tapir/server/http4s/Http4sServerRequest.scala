@@ -7,7 +7,7 @@ import org.http4s.util.CaseInsensitiveString
 import sttp.model.Method
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
-class Http4sServerRequest[F[_]](req: Request[F]) extends ServerRequest {
+private[http4s] class Http4sServerRequest[F[_]](req: Request[F]) extends ServerRequest {
   override def method: Method = Method(req.method.name.toUpperCase)
   override def protocol: String = req.httpVersion.toString()
   override def uri: URI = new URI(req.uri.toString())

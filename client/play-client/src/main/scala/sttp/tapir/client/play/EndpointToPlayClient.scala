@@ -28,7 +28,7 @@ import sttp.tapir.{
 
 import scala.collection.Seq
 
-class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient) {
+private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient) {
 
   def toPlayRequest[I, E, O, R](
       e: Endpoint[I, E, O, R],

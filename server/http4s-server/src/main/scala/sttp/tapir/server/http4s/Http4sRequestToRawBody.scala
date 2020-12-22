@@ -10,7 +10,7 @@ import org.http4s.{Charset, EntityDecoder, Request, multipart}
 import sttp.model.{Header, Part}
 import sttp.tapir.{RawPart, RawBodyType}
 
-class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
+private[http4s] class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   def apply[R](body: fs2.Stream[F, Byte], bodyType: RawBodyType[R], charset: Option[Charset], req: Request[F]): F[R] = {
     def asChunk: F[Chunk[Byte]] = body.compile.to(Chunk)
     def asByteArray: F[Array[Byte]] = body.compile.to(Chunk).map(_.toByteBuffer.array())

@@ -13,11 +13,11 @@ import sttp.tapir.generic.auto._
 import sttp.client3._
 import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 import sttp.tapir._
-import sttp.tapir.docs.asyncapi._
+import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.http4s._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.ws.WebSocket
 
 import scala.concurrent.ExecutionContext

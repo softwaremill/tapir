@@ -16,7 +16,7 @@ import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
-object OutputToPlayResponse {
+private[play] object OutputToPlayResponse {
   def apply[O](
       defaultStatus: StatusCode,
       output: EndpointOutput[O],

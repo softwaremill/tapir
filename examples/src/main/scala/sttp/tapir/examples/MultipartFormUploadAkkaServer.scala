@@ -9,7 +9,7 @@ import sttp.client3._
 import sttp.tapir.generic.auto._
 import sttp.model.Part
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._

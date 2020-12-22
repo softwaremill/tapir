@@ -11,7 +11,7 @@ import sttp.tapir.{Codec, CodecFormat, Endpoint, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
 
-class EndpointToAsyncAPIWebSocketChannel(
+private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     schemas: Schemas,
     codecToMessageKey: Map[Codec[_, _, _ <: CodecFormat], MessageKey],
     options: AsyncAPIDocsOptions

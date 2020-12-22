@@ -104,7 +104,7 @@ object BooksExampleSemiauto extends App with StrictLogging {
 
   def booksRoutes: Route = {
     import akka.http.scaladsl.server.Directives._
-    import sttp.tapir.server.akkahttp._
+    import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent.Future
@@ -156,7 +156,7 @@ object BooksExampleSemiauto extends App with StrictLogging {
 
   def makeClientRequest(): Unit = {
     import sttp.client3._
-    import sttp.tapir.client.sttp._
+    import sttp.tapir.client.sttp.SttpClientInterpreter
 
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 

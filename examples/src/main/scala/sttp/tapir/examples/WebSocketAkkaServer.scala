@@ -11,11 +11,11 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.tapir._
-import sttp.tapir.docs.asyncapi._
+import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import sttp.ws.WebSocket
 
 import scala.concurrent.duration._

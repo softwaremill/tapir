@@ -10,7 +10,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.client3._
 import sttp.tapir._
-import sttp.tapir.server.http4s._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import fs2._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.HeaderNames
