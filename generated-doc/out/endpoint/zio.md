@@ -1,7 +1,7 @@
 # ZIO integration
 
 The `tapir-zio` module defines type aliases and extension methods which make it more ergonomic to work with 
-[ZIO](https://zio.dev) and tapir. Moreover, the `tapir-zio-http4s-server` contains similar extensions useful when
+[ZIO](https://zio.dev) and tapir. Moreover, the `tapir-zio-http4s-server` contains an interpreter useful when
 exposing the endpoints using the [http4s](https://http4s.org) server.
 
 You'll need the following dependencies:
@@ -40,11 +40,10 @@ The first defines complete server logic, while the second and third allow defini
 
 ## Exposing endpoints using the http4s server
 
-To bring into scope the extension methods used to interpret a `ZServerEndpoint` as a http4s server, add the following
-import:
+To interpret a `ZServerEndpoint` as a http4s server, add the following  import:
 
 ```scala
-import sttp.tapir.server.http4s.ztapir._
+import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 ```
 
 This adds the following method on `ZEndpoint`:
@@ -63,7 +62,7 @@ so that it is uniform across all endpoints, using the `.widen` method:
 ```scala
 import org.http4s.HttpRoutes
 import sttp.tapir.ztapir._
-import sttp.tapir.server.http4s.ztapir._
+import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import zio.{Has, RIO, ZIO}
 import zio.clock.Clock
 import zio.interop.catz._

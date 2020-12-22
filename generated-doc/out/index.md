@@ -1,6 +1,6 @@
 # tapir, or Typed API descRiptions
 
-With tapir you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
+With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
 input parameters, error-output parameters, and normal-output parameters. An endpoint specification can be 
 interpreted as:
 

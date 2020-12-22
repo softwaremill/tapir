@@ -8,7 +8,7 @@ dependency:
 ```
 
 This will transitively pull some Akka modules in version 2.6. If you want to force
-your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
+your own Akka version (for example 2.5), use sbt exclusion. Mind the Scala version in artifact name:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.17.0" exclude("com.typesafe.akka", "akka-stream_2.12")

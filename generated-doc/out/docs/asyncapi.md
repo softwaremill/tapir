@@ -10,8 +10,8 @@ To use, add the following dependencies:
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
 model is independent from all other tapir modules and can be used stand-alone).
  
-An endpoint can be converted to an instance of the model by importing the `sttp.tapir.docs.asyncapi.AsyncAPIInterpreter` 
-object and calling the provided extension method:
+An endpoint can be converted to an instance of the model by using the `sttp.tapir.docs.asyncapi.AsyncAPIInterpreter` 
+object:
 
 ```scala
 import sttp.capabilities.akka.AkkaStreams
@@ -51,7 +51,7 @@ val docsWithServers: AsyncAPI = AsyncAPIInterpreter.toAsyncAPI(
 
 Servers can also be later added through methods on the `AsyncAPI` object.
 
-Multiple endpoints can be converted to an `AsyncAPI` instance by calling the extension method on a list of endpoints/
+Multiple endpoints can be converted to an `AsyncAPI` instance by calling the method using a list of endpoints.
 
 The asyncapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 

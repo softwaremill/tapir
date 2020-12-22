@@ -13,6 +13,7 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 ```
 
 This objects contains two methods:
+
  - `toRequestUnsafe(Endpoint, Uri)`: given the base URI returns a function, which might throw an exception if 
    decoding of the result fails
    ```scala

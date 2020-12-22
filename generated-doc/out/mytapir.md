@@ -19,4 +19,4 @@ object MyTapir extends Tapir
   with TapirAliases
 ```
 
-Then, a single `import MyTapir._` and all Tapir data types and extensions methods will be in scope!
+Then, a single `import MyTapir._` and all Tapir data types and interpreter methods will be in scope!

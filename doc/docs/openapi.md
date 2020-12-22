@@ -39,7 +39,7 @@ val docsWithServers: OpenAPI = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "M
   .servers(List(Server("https://api.example.com/v1").description("Production server")))
 ```
 
-Multiple endpoints can be converted to an `OpenAPI` instance by calling the extension method on a list of endpoints:
+Multiple endpoints can be converted to an `OpenAPI` instance by calling the method on a list of endpoints:
 
 ```scala mdoc:invisible
 val addBook = endpoint.in(path[String]("bookId"))
