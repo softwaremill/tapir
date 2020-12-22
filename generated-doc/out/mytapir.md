@@ -12,7 +12,6 @@ object MyTapir extends Tapir
   with AkkaHttpServerInterpreter
   with SttpClientInterpreter
   with OpenAPIDocsInterpreter
-  with ValidatorDerivation
   with SchemaDerivation
   with TapirJsonCirce
   with TapirOpenAPICirceYaml

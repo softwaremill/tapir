@@ -19,7 +19,8 @@ For inputs, these are:
 * `queryParams` captures all query parameters, represented as `QueryParams`
 * `cookie[T](name)` captures a cookie from the `Cookie` header with the given name
 * `extractFromRequest` extracts a value from the request. This input is only used by server interpreters, ignored
-  by documentation interpreters. Client interpreters ignore the provided value.
+  by documentation interpreters. Client interpreters ignore the provided value. It can also be used to access the
+  original request through the `underlying: Any` field.
 
 For both inputs/outputs:
 
