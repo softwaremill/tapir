@@ -8,7 +8,7 @@ import sttp.tapir.openapi._
 
 import scala.collection.immutable.ListMap
 
-object EndpointToOpenAPIDocs {
+private[openapi] object EndpointToOpenAPIDocs {
   def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): OpenAPI = {
     val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
     val (keyToSchema, schemas) = SchemasForEndpoints(es2)

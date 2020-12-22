@@ -18,7 +18,7 @@ import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
-class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
+private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   def apply[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): F[Response[F]] = {
     val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(statusCodeToHttp4sStatus(defaultStatusCode))

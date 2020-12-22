@@ -88,17 +88,17 @@ object BooksExample extends App with StrictLogging {
   import akka.http.scaladsl.server.Route
 
   def openapiYamlDocumentation: String = {
-    import sttp.tapir.docs.openapi._
+    import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
     import sttp.tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = List(addBook, booksListing, booksListingByGenre).toOpenAPI("The Tapir Library", "1.0")
+    val docs = OpenAPIDocsInterpreter.toOpenAPI(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
     docs.toYaml
   }
 
   def booksRoutes: Route = {
     import akka.http.scaladsl.server.Directives._
-    import sttp.tapir.server.akkahttp._
+    import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
     import scala.concurrent.ExecutionContext.Implicits.global
     import scala.concurrent.Future
@@ -128,9 +128,9 @@ object BooksExample extends App with StrictLogging {
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.
     concat(
-      addBook.toRoute((bookAddLogic _).tupled),
-      booksListing.toRoute(bookListingLogic),
-      booksListingByGenre.toRoute(bookListingByGenreLogic)
+      AkkaHttpServerInterpreter.toRoute(addBook)((bookAddLogic _).tupled),
+      AkkaHttpServerInterpreter.toRoute(booksListing)(bookListingLogic),
+      AkkaHttpServerInterpreter.toRoute(booksListingByGenre)(bookListingByGenreLogic)
     )
   }
 
@@ -150,12 +150,12 @@ object BooksExample extends App with StrictLogging {
 
   def makeClientRequest(): Unit = {
     import sttp.client3._
-    import sttp.tapir.client.sttp._
+    import sttp.tapir.client.sttp.SttpClientInterpreter
 
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
-    val booksListingRequest: Request[Either[String, Vector[Book]], Any] = booksListing
-      .toSttpRequestUnsafe(uri"http://localhost:8080")
+    val booksListingRequest: Request[Either[String, Vector[Book]], Any] = SttpClientInterpreter
+      .toRequestUnsafe(booksListing, uri"http://localhost:8080")
       .apply(Option(3))
 
     val result: Either[String, Vector[Book]] = booksListingRequest.send(backend).body

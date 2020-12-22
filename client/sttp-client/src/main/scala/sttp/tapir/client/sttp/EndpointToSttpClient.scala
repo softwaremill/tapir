@@ -12,7 +12,7 @@ import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
 
-class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
+private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
   def toSttpRequestUnsafe[I, E, O](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[Either[E, O], R] = { params =>
     toSttpRequest(e, baseUri)(params).mapResponse(getOrThrow)
   }
@@ -122,14 +122,14 @@ class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSoc
         val ps = codec.encode(value)
         (uri.copy(pathSegments = uri.pathSegments ++ ps.map(PathSegment(_))), req)
       case EndpointInput.Query(name, codec, _) =>
-        val uri2 = codec.encode(value).foldLeft(uri) { case (u, v) => u.param(name, v) }
+        val uri2 = codec.encode(value).foldLeft(uri) { case (u, v) => u.addParam(name, v) }
         (uri2, req)
       case EndpointInput.Cookie(name, codec, _) =>
         val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.cookie(name, v) }
         (uri, req2)
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
-        val uri2 = uri.params(mqp.toSeq: _*)
+        val uri2 = uri.addParams(mqp.toSeq: _*)
         (uri2, req)
       case EndpointIO.Empty(_, _) => (uri, req)
       case EndpointIO.Body(bodyType, codec, _) =>

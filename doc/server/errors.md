@@ -12,7 +12,7 @@ However, any exceptions can be recovered from and mapped to an error value. For 
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
 import scala.util._
 
@@ -28,11 +28,13 @@ def handleErrors[T](f: Future[T]): Future[Either[ErrorInfo, T]] =
       Success(Left(e.getMessage))
   }
 
-endpoint
-  .errorOut(plainBody[ErrorInfo])
-  .out(plainBody[Int])
-  .in(query[String]("name"))
-  .toRoute((logic _).andThen(handleErrors))
+AkkaHttpServerInterpreter.toRoute(
+  endpoint
+    .errorOut(plainBody[ErrorInfo])
+    .out(plainBody[Int])
+    .in(query[String]("name"))) {
+  (logic _).andThen(handleErrors)
+}
 ```
 
 In the above example, errors are represented as `String`s (aliased to `ErrorInfo` for readability). When the
@@ -78,7 +80,7 @@ a different format (other than textual):
 ```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.{ AkkaHttpServerInterpreter, AkkaHttpServerOptions }
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.model.StatusCode

@@ -8,7 +8,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.tapir._
-import sttp.tapir.client.sttp._
+import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
 import sttp.tapir.client.sttp.ws.akkahttp._
@@ -25,8 +25,8 @@ object WebSocketAkkaClient extends App {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
   val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
-  val result = jsonEchoWsEndpoint
-    .toSttpRequestUnsafe(uri"wss://echo.websocket.org")
+  val result = SttpClientInterpreter
+    .toRequestUnsafe(jsonEchoWsEndpoint, uri"wss://echo.websocket.org")
     .apply(())
     .send(backend)
     .map(_.body)

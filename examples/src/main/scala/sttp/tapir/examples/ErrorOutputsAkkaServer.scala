@@ -24,7 +24,7 @@ object ErrorOutputsAkkaServer extends App {
       .errorOut(stringBody)
 
   // converting an endpoint to a route
-  val errorOrJsonRoute: Route = errorOrJson.toRoute {
+  val errorOrJsonRoute: Route = AkkaHttpServerInterpreter.toRoute(errorOrJson) {
     case x if x < 0 => Future.successful(Left("Invalid parameter, smaller than 0!"))
     case x          => Future.successful(Right(Result(x * 2)))
   }

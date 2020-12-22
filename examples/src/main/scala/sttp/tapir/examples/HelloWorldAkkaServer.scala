@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -17,7 +17,7 @@ object HelloWorldAkkaServer extends App {
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val helloWorldRoute: Route = helloWorld.toRoute(name => Future.successful(Right(s"Hello, $name!")))
+  val helloWorldRoute: Route = AkkaHttpServerInterpreter.toRoute(helloWorld)(name => Future.successful(Right(s"Hello, $name!")))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

@@ -10,14 +10,14 @@ To use, add the following dependencies:
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
 model is independent from all other tapir modules and can be used stand-alone).
  
-An endpoint can be converted to an instance of the model by importing the `sttp.tapir.docs.asyncapi._` package and calling
-the provided extension method:
+An endpoint can be converted to an instance of the model by using the `sttp.tapir.docs.asyncapi.AsyncAPIInterpreter` 
+object:
 
 ```scala
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir._
 import sttp.tapir.asyncapi.AsyncAPI
-import sttp.tapir.docs.asyncapi._
+import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
@@ -26,7 +26,7 @@ case class Response(msg: String, count: Int)
 val echoWS = endpoint.out(
   webSocketBody[String, CodecFormat.TextPlain, Response, CodecFormat.Json](AkkaStreams))
 
-val docs: AsyncAPI = echoWS.toAsyncAPI("Echo web socket", "1.0")
+val docs: AsyncAPI = AsyncAPIInterpreter.toAsyncAPI(echoWS, "Echo web socket", "1.0")
 ```
 
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
@@ -41,7 +41,8 @@ Quite often, you'll need to define the servers, through which the API can be rea
 ```scala
 import sttp.tapir.asyncapi.Server
 
-val docsWithServers: AsyncAPI = echoWS.toAsyncAPI(
+val docsWithServers: AsyncAPI = AsyncAPIInterpreter.toAsyncAPI(
+  echoWS, 
   "Echo web socket", 
   "1.0",
   List("production" -> Server("api.example.com", "wss"))
@@ -50,7 +51,7 @@ val docsWithServers: AsyncAPI = echoWS.toAsyncAPI(
 
 Servers can also be later added through methods on the `AsyncAPI` object.
 
-Multiple endpoints can be converted to an `AsyncAPI` instance by calling the extension method on a list of endpoints/
+Multiple endpoints can be converted to an `AsyncAPI` instance by calling the method using a list of endpoints.
 
 The asyncapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 

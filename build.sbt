@@ -743,6 +743,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   .dependsOn(core, clientTests % Test)
 
 lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"))
+  .settings(clientTestServerSettings)
   .settings(commonSettings)
   .settings(
     name := "tapir-play-client",

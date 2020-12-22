@@ -9,7 +9,7 @@ import sttp.client3._
 import sttp.tapir.generic.auto._
 import sttp.model.Part
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -30,7 +30,7 @@ object MultipartFormUploadAkkaServer extends App {
     endpoint.post.in("user" / "profile").in(multipartBody[UserProfile]).out(stringBody)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val setProfileRoute: Route = setProfile.toRoute { data =>
+  val setProfileRoute: Route = AkkaHttpServerInterpreter.toRoute(setProfile) { data =>
     Future {
       val response = s"Received: ${data.name} / ${data.hobby} / ${data.age} / ${data.photo.fileName} (${data.photo.body.length()})"
       data.photo.body.delete()

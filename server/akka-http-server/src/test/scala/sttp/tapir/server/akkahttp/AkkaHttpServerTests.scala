@@ -30,13 +30,13 @@ class AkkaHttpServerTests extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     actorSystemResource.map { implicit actorSystem =>
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
-      val interpreter = new AkkaServerInterpreter()(actorSystem)
+      val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
       val serverTests = new ServerTests(interpreter)
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val route = Directives.pathPrefix("api")(e.toRoute)
+          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter.toRoute(e))
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>

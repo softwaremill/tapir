@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Route
 import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.PartialServerEndpoint
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -57,8 +57,8 @@ object PartialServerLogicAkka extends App {
   // ---
 
   // interpreting as routes
-  val helloWorld1Route: Route = secureHelloWorld1WithLogic.toRoute
-  val helloWorld2Route: Route = secureHelloWorld2WithLogic.toRoute
+  val helloWorld1Route: Route = AkkaHttpServerInterpreter.toRoute(secureHelloWorld1WithLogic)
+  val helloWorld2Route: Route = AkkaHttpServerInterpreter.toRoute(secureHelloWorld2WithLogic)
 
   // starting the server
   val bindAndCheck = Http().newServerAt("localhost", 8080).bind(concat(helloWorld1Route, helloWorld2Route)).map { _ =>

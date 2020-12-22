@@ -11,14 +11,12 @@ import akka.util.ByteString
 import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
-import sttp.capabilities
-import sttp.capabilities.Streams
 import sttp.model.{MediaType, Part, StatusCode}
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
-object OutputToPlayResponse {
+private[play] object OutputToPlayResponse {
   def apply[O](
       defaultStatus: StatusCode,
       output: EndpointOutput[O],

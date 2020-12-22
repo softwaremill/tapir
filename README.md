@@ -24,7 +24,7 @@ interpreted as:
 
 ## Teaser
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -38,7 +38,7 @@ case class Book(title: String)
 
 // Define an endpoint
 
-val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Nothing] =
+val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
@@ -50,16 +50,16 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 
 // Generate OpenAPI documentation
 
-import sttp.tapir.docs.openapi._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.openapi.circe.yaml._
 
-val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
+val docs = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 
 // Convert to akka-http Route
 
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
@@ -67,16 +67,17 @@ def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-val booksListingRoute: Route = booksListing.toRoute((bookListingLogic _).tupled)
+val booksListingRoute: Route = AkkaHttpServerInterpreter
+  .toRoute(booksListing)((bookListingLogic _).tupled)
 
 
 // Convert to sttp Request
 
-import sttp.tapir.client.sttp._
+import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Nothing] = booksListing
-  .toSttpRequest(uri"http://localhost:8080")
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = SttpClientInterpreter
+  .toRequest(booksListing, uri"http://localhost:8080")
   .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
 

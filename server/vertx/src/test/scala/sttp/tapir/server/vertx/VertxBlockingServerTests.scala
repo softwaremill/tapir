@@ -15,7 +15,7 @@ class VertxBlockingServerTests extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     vertxResource.map { implicit vertx =>
       implicit val m: FutureMonad = new FutureMonad()(ExecutionContext.global)
-      val interpreter = new VertxServerBlockingInterpreter(vertx)
+      val interpreter = new VertxTestServerBlockingInterpreter(vertx)
       val serverTests = new ServerTests(interpreter)
 
       new ServerBasicTests(

@@ -5,7 +5,7 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import sttp.client3._
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -17,7 +17,7 @@ object MultipleServerEndpointsAkkaServer extends App {
     endpoint.get.in("endpoint2").in(path[String]).out(stringBody).serverLogic[Future] { path => Future.successful(Right(s"ok2: $path")) }
 
   // converting the endpoints to a (single) route
-  val route: Route = List(endpoint1, endpoint2).toRoute
+  val route: Route = AkkaHttpServerInterpreter.toRoute(List(endpoint1, endpoint2))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

@@ -6,7 +6,7 @@ import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 
-class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsContext {
+private[http4s] class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends DecodeInputsContext {
   override def method: Method = Method(req.method.name.toUpperCase)
   override def nextPathSegment: (Option[String], DecodeInputsContext) = {
     val nextStart = req.pathInfo.dropWhile(_ == '/')

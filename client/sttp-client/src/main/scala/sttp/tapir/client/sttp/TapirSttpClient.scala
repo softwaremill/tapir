@@ -4,6 +4,7 @@ import sttp.client3.Request
 import sttp.model.Uri
 import sttp.tapir.{DecodeResult, Endpoint}
 
+@deprecated("Use SttpClientInterpreter", since = "0.17.1")
 trait TapirSttpClient {
   implicit class RichEndpoint[I, E, O, R](e: Endpoint[I, E, O, R]) {
 
@@ -17,10 +18,11 @@ trait TapirSttpClient {
       *
       * @throws IllegalArgumentException when response parsing fails
       */
+    @deprecated("Use SttpClientInterpreter.toRequestUnsafe", since = "0.17.1")
     def toSttpRequestUnsafe(
         baseUri: Uri
     )(implicit clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]): I => Request[Either[E, O], R] =
-      new EndpointToSttpClient(clientOptions, wsToPipe).toSttpRequestUnsafe(e, baseUri)
+      SttpClientInterpreter.toRequestUnsafe(e, baseUri)
 
     /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
       * uri.
@@ -30,9 +32,10 @@ trait TapirSttpClient {
       * which can be sent using any sttp backend. The response will then contain the decoded error or success values
       * (note that this can be the body enriched with data from headers/status code).
       */
+    @deprecated("Use SttpClientInterpreter.toRequest", since = "0.17.1")
     def toSttpRequest(
         baseUri: Uri
     )(implicit clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]): I => Request[DecodeResult[Either[E, O]], R] =
-      new EndpointToSttpClient(clientOptions, wsToPipe).toSttpRequest(e, baseUri)
+      SttpClientInterpreter.toRequest(e, baseUri)
   }
 }
