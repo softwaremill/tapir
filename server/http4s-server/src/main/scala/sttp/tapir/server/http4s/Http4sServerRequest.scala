@@ -14,4 +14,5 @@ private[http4s] class Http4sServerRequest[F[_]](req: Request[F]) extends ServerR
   override def connectionInfo: ConnectionInfo = ConnectionInfo(req.server, req.remote, req.isSecure)
   override def headers: Seq[(String, String)] = req.headers.toList.map(h => (h.name.value, h.value))
   override def header(name: String): Option[String] = req.headers.get(CaseInsensitiveString(name)).map(_.value)
+  override def underlying: Any = req
 }
