@@ -221,12 +221,12 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.3.0",
+      "org.typelevel" %%% "cats-core" % "2.3.1",
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.1.0" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.3.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.3.1" % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
