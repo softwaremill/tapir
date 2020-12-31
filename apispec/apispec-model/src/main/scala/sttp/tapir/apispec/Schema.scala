@@ -25,9 +25,9 @@ case class Schema(
     minLength: Option[Int] = None,
     maxLength: Option[Int] = None,
     minimum: Option[BigDecimal] = None,
-    exclusiveMinimum: Option[BigDecimal] = None,
+    exclusiveMinimum: Option[Boolean] = None,
     maximum: Option[BigDecimal] = None,
-    exclusiveMaximum: Option[BigDecimal] = None,
+    exclusiveMaximum: Option[Boolean] = None,
     minItems: Option[Int] = None,
     maxItems: Option[Int] = None,
     enum: Option[List[String]] = None

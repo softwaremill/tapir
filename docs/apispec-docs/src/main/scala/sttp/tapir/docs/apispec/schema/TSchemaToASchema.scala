@@ -86,17 +86,15 @@ private[schema] class TSchemaToASchema(
   private def addConstraints(oschema: ASchema, v: Validator.Primitive[_], wholeNumbers: Boolean): ASchema = {
     v match {
       case m @ Validator.Min(v, exclusive) =>
-        if (exclusive) {
-          oschema.copy(exclusiveMinimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
-        } else {
-          oschema.copy(minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
-        }
+        oschema.copy(
+          minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
+          exclusiveMinimum = Option(exclusive).filter(identity)
+        )
       case m @ Validator.Max(v, exclusive) =>
-        if (exclusive) {
-          oschema.copy(exclusiveMaximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
-        } else {
-          oschema.copy(maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)))
-        }
+        oschema.copy(
+          maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
+          exclusiveMaximum = Option(exclusive).filter(identity)
+        )
       case Validator.Pattern(value)   => oschema.copy(pattern = Some(value))
       case Validator.MinLength(value) => oschema.copy(minLength = Some(value))
       case Validator.MaxLength(value) => oschema.copy(maxLength = Some(value))
