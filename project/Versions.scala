@@ -25,5 +25,5 @@ object Versions {
   val playServer = "2.8.7"
   val tethys = "0.11.0"
   val vertx = "3.9.1"
-  val jsScalaJavaTime = "2.0.0"
+  val jsScalaJavaTime = "2.1.0"
 }
