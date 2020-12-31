@@ -1,14 +1,13 @@
 package sttp.tapir.server.http4s
 
 import java.io.ByteArrayInputStream
-
-import cats.effect.{Blocker, ContextShift, Sync}
+import cats.effect.{Blocker, ContextShift, IO, Sync}
 import cats.syntax.all._
 import fs2.Chunk
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.{Charset, EntityDecoder, Request, multipart}
 import sttp.model.{Header, Part}
-import sttp.tapir.{RawPart, RawBodyType}
+import sttp.tapir.{RawBodyType, RawPart}
 
 private[http4s] class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   def apply[R](body: fs2.Stream[F, Byte], bodyType: RawBodyType[R], charset: Option[Charset], req: Request[F]): F[R] = {
@@ -29,7 +28,7 @@ private[http4s] class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOpt
         // TODO: use MultipartDecoder.mixedMultipart once available?
         implicitly[EntityDecoder[F, multipart.Multipart[F]]].decode(req, strict = false).value.flatMap {
           case Left(failure) =>
-            throw new IllegalArgumentException("Cannot decode multipart body: " + failure) // TODO
+            IO(failure).asInstanceOf[F[R]]
           case Right(mp) =>
             val rawPartsF: Vector[F[RawPart]] = mp.parts
               .flatMap(part => part.name.flatMap(name => m.partType(name)).map((part, _)).toList)

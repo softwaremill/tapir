@@ -261,6 +261,15 @@ class ServerBasicTests[F[_], ROUTE](
           r.body should include("file2:daisy luigi")
         }
     },
+    testServer(in_raw_multipart_out_string, "with error")((_: Seq[Part[Array[Byte]]]) => pureResult(Left(()))) { baseUri =>
+      val file1 = writeToFile("peach mario")
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .header(HeaderNames.ContentType, sttp.model.MediaType.ApplicationJson.toString)
+        .multipartBody(multipartFile("file1", file1).fileName("file1.txt"))
+        .send(backend)
+        .map(r => r.code shouldBe StatusCode.BadRequest)
+    },
     testServer(in_query_out_string, "invalid query parameter")((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
       basicRequest.get(uri"$baseUri?fruit2=orange").send(backend).map(_.code shouldBe StatusCode.BadRequest)
     },

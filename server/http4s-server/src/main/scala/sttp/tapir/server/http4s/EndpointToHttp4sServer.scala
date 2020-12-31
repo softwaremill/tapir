@@ -4,7 +4,7 @@ import cats.~>
 import cats.data._
 import cats.effect.{Concurrent, ContextShift, Sync, Timer}
 import cats.syntax.all._
-import org.http4s.{Http, HttpRoutes, Request, Response}
+import org.http4s.{Http, HttpRoutes, MessageBodyFailure, Request, Response}
 import org.log4s._
 import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
@@ -23,11 +23,13 @@ private[http4s] class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Tim
         case values: DecodeInputsResult.Values =>
           values.bodyInput match {
             case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
-              t(new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req)).map { v =>
-                codec.decode(v) match {
-                  case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                  case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
-                }
+              t(new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req)).map {
+                case mbf: MessageBodyFailure => DecodeInputsResult.Failure(bodyInput, DecodeResult.Error(mbf.getMessage, mbf))
+                case v =>
+                  codec.decode(v) match {
+                    case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+                    case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                  }
               }
 
             case None => (values: DecodeInputsResult).pure[G]
