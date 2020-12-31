@@ -28,7 +28,7 @@ private[http4s] class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOpt
         // TODO: use MultipartDecoder.mixedMultipart once available?
         implicitly[EntityDecoder[F, multipart.Multipart[F]]].decode(req, strict = false).value.flatMap {
           case Left(failure) =>
-            IO(failure).asInstanceOf[F[R]]
+            Sync[F].pure(failure.asInstanceOf[R])
           case Right(mp) =>
             val rawPartsF: Vector[F[RawPart]] = mp.parts
               .flatMap(part => part.name.flatMap(name => m.partType(name)).map((part, _)).toList)
