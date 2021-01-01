@@ -22,14 +22,21 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
-    val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = output.asBasicOutputsMap.flatMap { case (sc, outputs) =>
-      // there might be no output defined at all
-      outputsToResponse(sc, outputs)
-        .map { response =>
-          // using the "default" response key, if no status code is provided
-          val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
-          responseKey -> Right(response)
-        }
+    val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = {
+      val outputsList = output.asBasicOutputsList
+      val byStatusCode = outputsList.groupBy(_._1)
+      ListMap(
+        outputsList.map(_._1)
+          .distinct
+          .flatMap { sc => byStatusCode.get(sc).map((sc, _)) }
+          .flatMap { case (sc, responses) =>
+            // using the "default" response key, if no status code is provided
+            val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
+            responses.flatMap { case (sc, outputs) => outputsToResponse(sc, outputs) }
+              .reduceOption(_.merge(_))
+              .map(response => (responseKey, Right(response)))
+          }: _*
+      )
     }
 
     if (responses.isEmpty) {

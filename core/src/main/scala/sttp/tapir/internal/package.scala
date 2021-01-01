@@ -134,18 +134,18 @@ package object internal {
     // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
     // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs are skipped.
     type BasicOutputs = Vector[EndpointOutput.Basic[_]]
-    def asBasicOutputsMap: ListMap[Option[StatusCode], BasicOutputs] =
-      asBasicOutputsOrMap match {
-        case Left(outputs) => ListMap(None -> outputs)
-        case Right(map)    => map
+    def asBasicOutputsList: List[(Option[StatusCode], BasicOutputs)] =
+      asBasicOutputsOrList match {
+        case Left(outputs) => (None -> outputs) :: Nil
+        case Right(list)   => list
       }
 
-    private[internal] type BasicOutputsOrMap = Either[BasicOutputs, ListMap[Option[StatusCode], BasicOutputs]]
-    private[internal] def asBasicOutputsOrMap: BasicOutputsOrMap = {
+    private[internal] type BasicOutputsOrList = Either[BasicOutputs, List[(Option[StatusCode], BasicOutputs)]]
+    private[internal] def asBasicOutputsOrList: BasicOutputsOrList = {
       def throwMultipleOneOfMappings = throw new IllegalArgumentException(s"Multiple one-of mappings in output $output")
 
-      def mergeMultiple(v: Vector[BasicOutputsOrMap]): BasicOutputsOrMap =
-        v.foldLeft(Left(Vector.empty): BasicOutputsOrMap) {
+      def mergeMultiple(v: Vector[BasicOutputsOrList]): BasicOutputsOrList =
+        v.foldLeft(Left(Vector.empty): BasicOutputsOrList) {
           case (Left(os1), Left(os2))    => Left(os1 ++ os2)
           case (Left(os1), Right(osMap)) => Right(osMap.map { case (sc, os2) => sc -> (os1 ++ os2) })
           case (Right(osMap), Left(os2)) => Right(osMap.map { case (sc, os1) => sc -> (os1 ++ os2) })
@@ -153,26 +153,25 @@ package object internal {
         }
 
       output match {
-        case EndpointOutput.Pair(left, right, _, _) => mergeMultiple(Vector(left.asBasicOutputsOrMap, right.asBasicOutputsOrMap))
-        case EndpointIO.Pair(left, right, _, _)     => mergeMultiple(Vector(left.asBasicOutputsOrMap, right.asBasicOutputsOrMap))
-        case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsOrMap
-        case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsOrMap
+        case EndpointOutput.Pair(left, right, _, _) => mergeMultiple(Vector(left.asBasicOutputsOrList, right.asBasicOutputsOrList))
+        case EndpointIO.Pair(left, right, _, _)     => mergeMultiple(Vector(left.asBasicOutputsOrList, right.asBasicOutputsOrList))
+        case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsOrList
+        case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsOrList
         case _: EndpointOutput.Void[_]              => Left(Vector.empty)
         case s: EndpointOutput.OneOf[_, _] =>
           Right(
-            ListMap(
-              s.mappings
-                .map(c => (c.output.asBasicOutputsOrMap, c.statusCode))
-                .map {
-                  case (Left(basicOutputs), statusCode) => statusCode -> basicOutputs
-                  case (Right(_), _)                    => throwMultipleOneOfMappings
-                }: _*
-            )
+            s.mappings
+              .map(c => (c.output.asBasicOutputsOrList, c.statusCode))
+              .map {
+                case (Left(basicOutputs), statusCode) => statusCode -> basicOutputs
+                case (Right(_), _)                    => throwMultipleOneOfMappings
+              }
+              .toList
           )
-        case f: EndpointOutput.FixedStatusCode[_] => Right(ListMap(Some(f.statusCode) -> Vector(f)))
+        case f: EndpointOutput.FixedStatusCode[_] => Right((Some(f.statusCode) -> Vector(f)) :: Nil)
         case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
-          val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toSeq
-          Right(ListMap(entries: _*))
+          val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toList
+          Right(entries)
         case _: EndpointIO.Empty[_]     => Left(Vector.empty)
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
       }
