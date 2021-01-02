@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s
 
 import java.io.ByteArrayInputStream
-import cats.effect.{Blocker, ContextShift, IO, Sync}
+import cats.effect.{Blocker, ContextShift, Sync}
 import cats.syntax.all._
 import fs2.Chunk
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
