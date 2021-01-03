@@ -48,7 +48,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         port,
         List("plum", "watermelon", "apple")
       ).unsafeToFuture().map(
-        _.right.get should contain theSameElementsAs (
+        _.toOption.get should contain theSameElementsAs (
           // The fetch API merges multiple header values having the same name into a single comma separated value
           if (platformIsScalaJS)
             List("apple, watermelon, plum")
@@ -62,7 +62,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
           in_cookie_cookie_out_header,
           port,
           (23, "pomegranate")
-        ).unsafeToFuture().map(_.right.get.head.split(" ;") should contain theSameElementsAs "etanargemop=2c ;32=1c".split(" ;"))
+        ).unsafeToFuture().map(_.toOption.get.head.split(" ;") should contain theSameElementsAs "etanargemop=2c ;32=1c".split(" ;"))
       }
     }
     // TODO: test root path
@@ -99,7 +99,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         port,
         List(sttp.model.Header("X-Fruit", "apple"), sttp.model.Header("Y-Fruit", "Orange"))
       ).unsafeToFuture()
-        .map(_.right.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO")))
+        .map(_.toOption.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO")))
     }
 
     // the fetch API doesn't allow bodies in get requests
@@ -107,7 +107,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       test(in_json_out_headers.showDetail) {
         send(in_json_out_headers, port, FruitAmount("apple", 10))
           .unsafeToFuture()
-          .map(_.right.get should contain(sttp.model.Header("Content-Type", "application/json".reverse)))
+          .map(_.toOption.get should contain(sttp.model.Header("Content-Type", "application/json".reverse)))
       }
     }
 

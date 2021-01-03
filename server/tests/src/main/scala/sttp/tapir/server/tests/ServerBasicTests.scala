@@ -701,7 +701,7 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_input_stream_out_input_stream)((is: InputStream) =>
       pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
     ) { baseUri => basicRequest.post(uri"$baseUri/api/echo").body("mango").send(backend).map(_.body shouldBe Right("mango")) },
-    testServer(in_string_out_stream_with_header)((input: String) =>
+    testServer(in_string_out_stream_with_header)(_ =>
       pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))
     ) { baseUri =>
       basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send(backend).map { r =>

@@ -127,7 +127,7 @@ private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Ma
   }
 
   private def parseContentType(ct: String): ContentType =
-    ContentType.parse(ct).right.getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $ct"))
+    ContentType.parse(ct).getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $ct"))
 
   private def charsetToHttpCharset(charset: Charset): HttpCharset = HttpCharset.custom(charset.name())
 
