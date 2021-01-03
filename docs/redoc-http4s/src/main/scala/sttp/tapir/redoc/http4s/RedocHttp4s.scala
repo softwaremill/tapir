@@ -21,7 +21,7 @@ class RedocHttp4s(title: String, yaml: String, yamlName: String = "docs.yaml") {
     assert(Option(is).nonEmpty, s"Could not find file ${fileName} on classpath.")
     val rawHtml = Source.fromInputStream(is).mkString
     // very poor man's templating engine
-    rawHtml.replaceAllLiterally("{{docsPath}}", yamlName).replaceAllLiterally("{{title}}", title)
+    rawHtml.replace("{{docsPath}}", yamlName).replace("{{title}}", title)
   }
 
   def routes[F[_]: ContextShift: Sync]: HttpRoutes[F] = {

@@ -1,11 +1,10 @@
 package sttp.tapir.json.jsoniter
 
-import com.github.plokhotnyuk.jsoniter_scala.core.JsonValueCodec
+import com.github.plokhotnyuk.jsoniter_scala.core.{JsonValueCodec, _}
 import sttp.tapir.Codec.JsonCodec
-import sttp.tapir.DecodeResult.{Error, Value}
-import sttp.tapir.{EndpointIO, Schema, Validator, anyFromUtf8StringBody}
-import com.github.plokhotnyuk.jsoniter_scala.core._
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
+import sttp.tapir.DecodeResult.{Error, Value}
+import sttp.tapir.{EndpointIO, Schema, anyFromUtf8StringBody}
 
 import scala.util.{Failure, Success, Try}
 
