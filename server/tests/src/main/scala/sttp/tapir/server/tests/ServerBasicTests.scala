@@ -62,7 +62,7 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.get(baseUri).send(backend).map(_.body shouldBe Right(""))
     },
     testServer(endpoint.get, "POST a GET endpoint")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
-      basicRequest.post(baseUri).send(backend).map(_.body shouldBe 'left)
+      basicRequest.post(baseUri).send(backend).map(_.body shouldBe Symbol("left"))
     },
     //
     testServer(in_query_out_string)((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
@@ -98,7 +98,7 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.post(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Right("Sweet"))
     },
     testServer(in_string_out_string, "with get method")((b: String) => pureResult(b.asRight[Unit])) { baseUri =>
-      basicRequest.get(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe 'left)
+      basicRequest.get(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Symbol("left"))
     },
     testServer(in_mapped_query_out_string)((fruit: List[Char]) => pureResult(s"fruit length: ${fruit.length}".asRight[Unit])) { baseUri =>
       basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.body shouldBe Right("fruit length: 6"))
@@ -555,7 +555,7 @@ class ServerBasicTests[F[_], ROUTE](
         } >>
         basicRequest.get(uri"$baseUri?name=orange").send(backend).map { r =>
           r.code shouldBe StatusCode.InternalServerError
-          r.body shouldBe 'left
+          r.body shouldBe Symbol("left")
         }
     },
     testServer(Validation.in_query_tagged, "support query validation with tagged type")((_: String) => pureResult(().asRight[Unit])) {

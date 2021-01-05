@@ -1,17 +1,15 @@
 package sttp.tapir.json.upickle
 
-import upickle.default._
 import org.scalatest.Assertion
-import sttp.tapir.generic.auto._
-import java.util.Date
-
-import sttp.tapir.Codec.JsonCodec
-import sttp.tapir._
-import sttp.tapir.DecodeResult._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.JsonDecodeException
+import sttp.tapir.DecodeResult._
+import sttp.tapir._
+import sttp.tapir.generic.auto._
 import upickle.core.AbortException
+import upickle.default._
 
 object TapirJsonuPickleCodec extends TapirJsonuPickle
 

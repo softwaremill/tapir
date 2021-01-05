@@ -1,7 +1,6 @@
 package sttp.tapir.server
 
 import sttp.model.{Header, StatusCode}
-import sttp.tapir.Endpoint
 
 final case class DefaultDecodeFailureResponse(status: StatusCode, headers: List[Header])
 

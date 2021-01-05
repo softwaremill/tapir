@@ -136,7 +136,6 @@ private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Tim
     `Content-Type`(
       http4s.MediaType
         .parse(ct)
-        .right
         .getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $ct"))
     )
 }

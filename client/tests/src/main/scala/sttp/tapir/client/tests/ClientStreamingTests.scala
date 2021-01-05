@@ -15,7 +15,7 @@ trait ClientStreamingTests[S] { this: ClientTests[S] =>
       rmStream(
         send(in_stream_out_stream(streams), port, mkStream("mango cranberry"))
           .unsafeRunSync()
-          .right
+          .toOption
           .get
       ) shouldBe "mango cranberry"
     }
