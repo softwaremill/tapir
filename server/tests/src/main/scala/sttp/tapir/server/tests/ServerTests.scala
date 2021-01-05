@@ -7,12 +7,11 @@ import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.Assertion
 import sttp.client3._
 import sttp.model._
-import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.server.{DecodeFailureHandler, ServerEndpoint}
 import sttp.tapir.tests._
 
-class ServerTests[F[_], +R, ROUTE](interpreter: TestServerInterpreter[F, R, ROUTE])(implicit m: MonadError[F]) extends StrictLogging {
+class ServerTests[F[_], +R, ROUTE](interpreter: TestServerInterpreter[F, R, ROUTE]) extends StrictLogging {
   def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",

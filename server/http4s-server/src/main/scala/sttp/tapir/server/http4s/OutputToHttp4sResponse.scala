@@ -39,7 +39,7 @@ private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Tim
   }
 
   private def statusCodeToHttp4sStatus(code: sttp.model.StatusCode): Status =
-    Status.fromInt(code.code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
+    Status.fromInt(code.code).getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
 
   private type EncodeOutputsWebSocket = F[Pipe[F, WebSocketFrame, WebSocketFrame]]
 

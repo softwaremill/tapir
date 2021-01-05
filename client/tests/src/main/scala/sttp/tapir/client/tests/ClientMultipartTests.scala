@@ -10,7 +10,7 @@ trait ClientMultipartTests { this: ClientTests[Any] =>
     test(in_simple_multipart_out_raw_string.showDetail) {
       send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
         .unsafeToFuture()
-        .map(_.right.get)
+        .map(_.toOption.get)
         .map { result =>
           val indexOfJson = result.indexOf("{\"fruit")
           val beforeJson = result.substring(0, indexOfJson)

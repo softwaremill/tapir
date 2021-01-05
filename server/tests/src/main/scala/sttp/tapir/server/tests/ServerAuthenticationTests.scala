@@ -29,11 +29,11 @@ class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], s
   private val result = m.unit(().asRight[Unit])
 
   private def validRequest(uri: Uri): Request[Either[String, String], Any] =
-    basicRequest.post(uri.addPath("secret", "1234").querySegment(QuerySegment.KeyValue("q", "x")))
+    basicRequest.post(uri.addPath("secret", "1234").addQuerySegment(QuerySegment.KeyValue("q", "x")))
   private def invalidRequest(uri: Uri): Request[Either[String, String], Any] = basicRequest.post(uri.addPath("secret", "1234"))
 
   private val endpoints = {
-    def putSecretInQuery(uri: Uri): Identity[Uri] = uri.querySegment(QuerySegment.KeyValue("token", "supersecret"))
+    def putSecretInQuery(uri: Uri): Identity[Uri] = uri.addQuerySegment(QuerySegment.KeyValue("token", "supersecret"))
     List(
       ("basic", basic, (r: Request[_, Any]) => r.header("Authorization", "Basic dXNlcjpzZWNyZXQ=")),
       ("bearer", bearer, (r: Request[_, Any]) => r.header("Authorization", "Bearer kajsdhf[")),

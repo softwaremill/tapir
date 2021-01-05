@@ -22,7 +22,7 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
         "ws"
       )
         .flatMap { r =>
-          sendAndReceiveLimited(r.right.get, 2, List("test1", "test2"))
+          sendAndReceiveLimited(r.toOption.get, 2, List("test1", "test2"))
         }
         .unsafeRunSync() shouldBe List("echo: test1", "echo: test2")
     }
@@ -35,7 +35,7 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
         "ws"
       )
         .flatMap { r =>
-          sendAndReceiveLimited(r.right.get, 2, List(Fruit("apple"), Fruit("orange")))
+          sendAndReceiveLimited(r.toOption.get, 2, List(Fruit("apple"), Fruit("orange")))
         }
         .unsafeRunSync() shouldBe List(Fruit("echo: apple"), Fruit("echo: orange"))
     }
