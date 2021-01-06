@@ -50,8 +50,7 @@ object VertxOutputEncoders {
       setStatus(outputValues)(resp)
       forwardHeaders(outputValues)(resp)
       outputValues.body match {
-        case Some(Left(responseHandler)) => responseHandler(outputValues.contentLength)(rc)
-        case Some(Right(v))              => v // impossible
+        case Some(responseHandler) => responseHandler.merge(outputValues.contentLength)(rc)
         case None                        => resp.end()
       }
       logWhenHandled(resp.getStatusCode)
