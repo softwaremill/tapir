@@ -94,7 +94,7 @@ object VertxOutputEncoders {
               _
             )
         override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength =
-          contentLength => StreamEncoders(formatToContentType(format, charset), v.asInstanceOf[ReadStream[Buffer]], contentLength)(_)
+          v //impossible
         override def webSocketPipeToBody[REQ, RESP](
             pipe: Nothing,
             o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
