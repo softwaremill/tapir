@@ -9,6 +9,7 @@ import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint, ServerEndpointI
 import sttp.tapir.typelevel.{FnComponents, ParamConcat, ParamSubtract}
 import sttp.tapir.internal._
 
+import scala.collection.immutable.Nil
 import scala.reflect.ClassTag
 
 /** @tparam I Input parameter types.
@@ -177,13 +178,13 @@ trait EndpointMetaOps[I, E, O, -R] {
     */
   def show: String = {
     def showOutputs(o: EndpointOutput[_]): String = {
-      val basicOutputsMap = o.asBasicOutputsMap
+      val basicOutputsMap = o.asBasicOutputsList
 
-      basicOutputsMap.get(None) match {
-        case Some(defaultOutputs) if basicOutputsMap.size == 1 =>
+      basicOutputsMap match {
+        case (None, defaultOutputs) :: Nil =>
           showMultiple(defaultOutputs.sortByType)
-        case _ =>
-          val mappings = basicOutputsMap.map { case (_, os) =>
+        case list =>
+          val mappings = list.map { case (_, os) =>
             showMultiple(os)
           }
           showOneOf(mappings.toSeq)

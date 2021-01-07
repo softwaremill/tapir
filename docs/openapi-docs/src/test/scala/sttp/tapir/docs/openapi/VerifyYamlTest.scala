@@ -227,6 +227,26 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should support multiple the same status codes") {
+    val expectedYaml = loadYaml("expected_the_same_status_codes.yml")
+
+    implicit val unauthorizedTextPlainCodec: Codec[String, Unauthorized, CodecFormat.TextPlain] =
+      Codec.string.map(Unauthorized.apply _)(_.realm)
+
+    val e = endpoint.out(
+      sttp.tapir.oneOf(
+        statusMapping(StatusCode.Ok, jsonBody[NotFound].description("not found")),
+        statusMapping(StatusCode.Ok, plainBody[Unauthorized]),
+        statusMapping(StatusCode.NoContent, jsonBody[Unknown].description("unknown"))
+      )
+    )
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should keep the order of multiple endpoints") {
     val expectedYaml = loadYaml("expected_multiple.yml")
 

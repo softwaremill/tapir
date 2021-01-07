@@ -164,7 +164,15 @@ case object ResponsesDefaultKey extends ResponsesKey
 case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
-case class Response(description: String, headers: ListMap[String, ReferenceOr[Header]], content: ListMap[String, MediaType])
+case class Response(description: String, headers: ListMap[String, ReferenceOr[Header]], content: ListMap[String, MediaType]) {
+
+  def merge(other: Response): Response =
+    Response(
+      description,
+      headers ++ other.headers,
+      content ++ other.content
+    )
+}
 
 case class Example(summary: Option[String], description: Option[String], value: Option[ExampleValue], externalValue: Option[String])
 

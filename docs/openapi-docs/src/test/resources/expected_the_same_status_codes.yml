@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFound'
+            text/plain:
+              schema:
+                type: string
+        '204':
+          description: unknown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unknown'
+components:
+  schemas:
+    NotFound:
+      required:
+        - what
+      type: object
+      properties:
+        what:
+          type: string
+    Unknown:
+      required:
+        - code
+        - msg
+      type: object
+      properties:
+        code:
+          type: integer
+        msg:
+          type: string
