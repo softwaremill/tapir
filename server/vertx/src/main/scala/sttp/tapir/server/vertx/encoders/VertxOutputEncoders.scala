@@ -50,8 +50,7 @@ object VertxOutputEncoders {
       setStatus(outputValues)(resp)
       forwardHeaders(outputValues)(resp)
       outputValues.body match {
-        case Some(Left(responseHandler)) => responseHandler(outputValues.contentLength)(rc)
-        case Some(Right(v))              => v // impossible
+        case Some(responseHandler) => responseHandler.merge(outputValues.contentLength)(rc)
         case None                        => resp.end()
       }
       logWhenHandled(resp.getStatusCode)
@@ -94,7 +93,7 @@ object VertxOutputEncoders {
               _
             )
         override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength =
-          contentLength => StreamEncoders(formatToContentType(format, charset), v.asInstanceOf[ReadStream[Buffer]], contentLength)(_)
+          v //impossible
         override def webSocketPipeToBody[REQ, RESP](
             pipe: Nothing,
             o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
