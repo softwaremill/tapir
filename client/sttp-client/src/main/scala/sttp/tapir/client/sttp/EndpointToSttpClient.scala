@@ -2,11 +2,10 @@ package sttp.tapir.client.sttp
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
-
 import sttp.capabilities.Streams
 import sttp.client3._
 import sttp.model.Uri.PathSegment
-import sttp.model.{HeaderNames, Method, Part, StatusCode, Uri}
+import sttp.model.{HeaderNames, Method, Part, ResponseMetadata, StatusCode, Uri}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.internal._

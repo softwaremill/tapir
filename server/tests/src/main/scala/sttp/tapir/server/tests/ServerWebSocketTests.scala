@@ -45,7 +45,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
         })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(_.body shouldBe Right(List(Right("echo: test1"), Right("echo: test2"))))
+        .map(_.body shouldBe Right(List("echo: test1", "echo: test2")))
     },
     testServer(endpoint.out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](streams)), "json client-terminated echo")(
       (_: Unit) => pureResult(functionToPipe((f: Fruit) => Fruit(s"echo: ${f.f}")).asRight[Unit])
@@ -61,7 +61,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
         })
         .get(baseUri.scheme("ws"))
         .send(backend)
-        .map(_.body shouldBe Right(List(Right("""{"f":"echo: apple"}"""), Right("""{"f":"echo: orange"}"""))))
+        .map(_.body shouldBe Right(List("""{"f":"echo: apple"}""", """{"f":"echo: orange"}""")))
     },
     testServer(
       endpoint.out(webSocketBody[String, CodecFormat.TextPlain, Option[String], CodecFormat.TextPlain](streams)),
@@ -78,9 +78,9 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
             _ <- ws.sendText("test1")
             _ <- ws.sendText("test2")
             _ <- ws.sendText("end")
-            m1 <- ws.receiveText()
-            m2 <- ws.receiveText()
-            m3 <- ws.receiveText()
+            m1 <- ws.eitherClose(ws.receiveText())
+            m2 <- ws.eitherClose(ws.receiveText())
+            m3 <- ws.eitherClose(ws.receiveText())
           } yield List(m1, m2, m3)
         })
         .get(baseUri.scheme("ws"))

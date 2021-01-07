@@ -11,7 +11,8 @@ import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, Part, QueryParams, StatusCode}
+import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model._
 

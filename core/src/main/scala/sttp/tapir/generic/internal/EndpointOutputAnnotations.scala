@@ -1,8 +1,7 @@
 package sttp.tapir.generic.internal
 
-import sttp.model.CookieWithMeta
-import sttp.model.CookieValueWithMeta
 import sttp.model.StatusCode
+import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.EndpointOutput
 import sttp.tapir.annotations.setCookie
 import sttp.tapir.annotations.setCookies

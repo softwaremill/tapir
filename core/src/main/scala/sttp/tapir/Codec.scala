@@ -8,6 +8,7 @@ import java.time._
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 import java.util.{Base64, Date, UUID}
 import sttp.model._
+import sttp.model.headers.{Cookie, CookieWithMeta}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
 import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}

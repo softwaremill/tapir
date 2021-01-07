@@ -4,9 +4,8 @@ import java.nio.charset.StandardCharsets
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.model.{Cookie => ModelCookie, Header => ModelHeader, QueryParams => ModelQueryParams}
-import sttp.model.CookieValueWithMeta
-import sttp.model.CookieWithMeta
+import sttp.model.{Header => ModelHeader, QueryParams => ModelQueryParams}
+import sttp.model.headers.{Cookie => ModelCookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword

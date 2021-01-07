@@ -1,6 +1,7 @@
 package sttp.tapir.server.internal
 
-import sttp.model.{Cookie, HeaderNames, Method, QueryParams}
+import sttp.model.headers.Cookie
+import sttp.model.{HeaderNames, Method, QueryParams}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO}

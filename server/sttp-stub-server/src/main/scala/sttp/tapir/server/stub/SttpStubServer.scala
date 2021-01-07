@@ -1,8 +1,8 @@
 package sttp.tapir.server.stub
 
-import java.nio.charset.Charset
+import sttp.client3.Response
 
-import sttp.client3.RequestMetadata
+import java.nio.charset.Charset
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
@@ -99,7 +99,7 @@ trait SttpStubServer {
             "",
             outputValues.headers.map { case (k, v) => sttp.model.Header.unsafeApply(k, v) },
             Nil,
-            RequestMetadata.ExampleGet
+            Response.ExampleGet
           )
         )
       }

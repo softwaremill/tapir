@@ -1,7 +1,7 @@
 package sttp.tapir.generic.internal
 
-import sttp.model.Cookie
 import sttp.model.Header
+import sttp.model.headers.Cookie
 import sttp.tapir.annotations.apikey
 import sttp.tapir.annotations.body
 import sttp.tapir.annotations.cookies

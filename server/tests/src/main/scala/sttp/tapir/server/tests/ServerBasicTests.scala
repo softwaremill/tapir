@@ -17,6 +17,7 @@ import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 import org.scalatest.matchers.should.Matchers._
+import sttp.model.headers.{CookieWithMeta, CookieValueWithMeta}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -276,18 +277,18 @@ class ServerBasicTests[F[_], ROUTE](
           }
         }
     },
-    testServer(in_cookies_out_cookies)((cs: List[sttp.model.Cookie]) =>
-      pureResult(cs.map(c => sttp.model.CookieWithMeta.unsafeApply(c.name, c.value.reverse)).asRight[Unit])
+    testServer(in_cookies_out_cookies)((cs: List[sttp.model.headers.Cookie]) =>
+      pureResult(cs.map(c => CookieWithMeta.unsafeApply(c.name, c.value.reverse)).asRight[Unit])
     ) { baseUri =>
       basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send(backend).map { r =>
-        r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
+        r.unsafeCookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
       }
     },
     testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) =>
       pureResult(c.copy(value = c.value.reverse).asRight[Unit])
     ) { baseUri =>
       basicRequest.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send(backend).map { r =>
-        r.cookies.toList shouldBe List(
+        r.unsafeCookies.toList shouldBe List(
           CookieWithMeta.unsafeApply("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true)
         )
       }
@@ -701,15 +702,14 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_input_stream_out_input_stream)((is: InputStream) =>
       pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
     ) { baseUri => basicRequest.post(uri"$baseUri/api/echo").body("mango").send(backend).map(_.body shouldBe Right("mango")) },
-    testServer(in_string_out_stream_with_header)(_ =>
-      pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))
-    ) { baseUri =>
-      basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send(backend).map { r =>
-        r.body.map(_.length) shouldBe Right(128)
-        r.body.map(_.foreach(b => b shouldBe 0))
-        r.headers.map(_.name) should contain(HeaderNames.ContentLength)
-        r.header(HeaderNames.ContentLength) shouldBe Some("128")
-      }
+    testServer(in_string_out_stream_with_header)(_ => pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))) {
+      baseUri =>
+        basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send(backend).map { r =>
+          r.body.map(_.length) shouldBe Right(128)
+          r.body.map(_.foreach(b => b shouldBe 0))
+          r.headers.map(_.name) should contain(HeaderNames.ContentLength)
+          r.header(HeaderNames.ContentLength) shouldBe Some("128")
+        }
     }
   )
 
