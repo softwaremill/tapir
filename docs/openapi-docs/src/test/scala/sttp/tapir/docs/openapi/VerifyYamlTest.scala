@@ -863,6 +863,19 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("exclusive bounds") {
+    val expectedYaml = loadYaml("expected_exclusive_bounds.yml")
+
+    val qParam = query[Int]("num")
+      .validate(Validator.min(0, exclusive = true))
+      .validate(Validator.max(42, exclusive = true))
+    val e = endpoint.in(qParam)
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   private def loadYaml(fileName: String): String = {
     noIndentation(Source.fromInputStream(getClass.getResourceAsStream(s"/$fileName")).getLines().mkString("\n"))
   }
