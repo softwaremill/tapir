@@ -1,7 +1,7 @@
 package sttp.tapir.server.vertx
 
 import cats.effect.{IO, Resource}
-import io.vertx.scala.core.Vertx
+import io.vertx.core.Vertx
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{ServerAuthenticationTests, ServerBasicTests, ServerTests, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}

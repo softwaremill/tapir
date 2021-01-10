@@ -695,10 +695,12 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .settings(
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
-      "io.vertx" %% "vertx-web-scala" % Versions.vertx
+      "io.vertx" % "vertx-web" % Versions.vertx,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional
     )
   )
-  .jvmPlatform(scalaVersions = scala2_12Versions)
+  .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, serverTests % Test)
 
 lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))

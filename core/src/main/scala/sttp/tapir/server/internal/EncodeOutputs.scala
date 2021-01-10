@@ -39,7 +39,7 @@ class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value)
       case EndpointIO.Body(rawValueType, codec, _)  => ov.withBody(encodeOutputBody.rawValueToBody(encoded[Any], codec.format, rawValueType))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-        ov.withBody(encodeOutputBody.streamValueToBody(encoded[encodeOutputBody.streams.BinaryStream], codec.format, charset))
+        ov.withBody(encodeOutputBody.streamValueToBody(encoded, codec.format, charset))
       case EndpointIO.Header(name, _, _) =>
         encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
       case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))

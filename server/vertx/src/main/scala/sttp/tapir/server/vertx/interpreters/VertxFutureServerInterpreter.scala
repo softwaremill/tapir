@@ -1,21 +1,21 @@
-package sttp.tapir.server.vertx
+package sttp.tapir.server.vertx.interpreters
 
-import io.vertx.core.Handler
-import io.vertx.scala.ext.web.{Route, Router, RoutingContext}
+import io.vertx.core.{Future => VFuture, Handler}
+import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.monad.{FutureMonad, MonadError}
-import sttp.tapir.Endpoint
-import sttp.tapir.internal.Params
-import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.vertx.handlers.tryEncodeError
 import sttp.tapir.server.vertx.decoders.VertxInputDecoders.decodeBodyAndInputsThen
-import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
-import sttp.tapir.server.vertx.handlers.{attachDefaultHandlers, encodeError, tryEncodeError}
-import sttp.tapir.server.vertx.routing.PathMapping.{RouteDefinition, createRoute, extractRouteDefinition}
+import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
+import sttp.tapir.server.vertx.VertxFutureEndpointOptions
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.internal.Params
+import sttp.tapir.Endpoint
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
-trait VertxServerInterpreter {
+trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
     * @param logic the logic to associate with the endpoint
@@ -23,7 +23,7 @@ trait VertxServerInterpreter {
     * @return A function, that given a router, will attach this endpoint to it
     */
   def route[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]])(implicit
-      endpointOptions: VertxEndpointOptions
+      endpointOptions: VertxFutureEndpointOptions
   ): Router => Route =
     route(e.serverLogic(logic))
 
@@ -34,7 +34,7 @@ trait VertxServerInterpreter {
     * @return A function, that given a router, will attach this endpoint to it
     */
   def blockingRoute[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]])(implicit
-      endpointOptions: VertxEndpointOptions
+      endpointOptions: VertxFutureEndpointOptions
   ): Router => Route =
     blockingRoute(e.serverLogic(logic))
 
@@ -45,7 +45,7 @@ trait VertxServerInterpreter {
     */
   def routeRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
       logic: I => Future[O]
-  )(implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
+  )(implicit endpointOptions: VertxFutureEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
     route(e.serverLogicRecoverErrors(logic))
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
@@ -56,15 +56,16 @@ trait VertxServerInterpreter {
     */
   def blockingRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
       logic: I => Future[O]
-  )(implicit endpointOptions: VertxEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
+  )(implicit endpointOptions: VertxFutureEndpointOptions, eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
     blockingRoute(e.serverLogicRecoverErrors(logic))
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit endpointOptions: VertxEndpointOptions): Router => Route = { router =>
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))(endpointOptions, None)
+  def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit endpointOptions: VertxFutureEndpointOptions): Router => Route = { router =>
+    implicit val ect: Option[ClassTag[E]] = None
+    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .handler(endpointHandler(e)(e.logic, responseHandlerWithError(e))(endpointOptions, None))
   }
 
@@ -73,34 +74,29 @@ trait VertxServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def blockingRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit endpointOptions: VertxEndpointOptions): Router => Route = {
+  def blockingRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit endpointOptions: VertxFutureEndpointOptions): Router => Route = {
     router =>
-      mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))(endpointOptions, None)
+      implicit val ect: Option[ClassTag[E]] = None
+      mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
         .blockingHandler(endpointHandler(e)(e.logic, responseHandlerWithError(e))(endpointOptions, None))
   }
-
-  private def mountWithDefaultHandlers[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(
-      router: Router,
-      routeDef: RouteDefinition
-  )(implicit endpointOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Route =
-    attachDefaultHandlers(e.endpoint, createRoute(router, routeDef))
 
   private def endpointHandler[I, E, O, A](e: ServerEndpoint[I, E, O, Any, Future])(
       logic: MonadError[Future] => I => Future[A],
       responseHandler: (A, RoutingContext) => Unit
-  )(implicit serverOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Handler[RoutingContext] = { rc =>
+  )(implicit serverOptions: VertxFutureEndpointOptions, ect: Option[ClassTag[E]]): Handler[RoutingContext] = { rc =>
     val monad = new FutureMonad()(serverOptions.executionContextOrCurrentCtx(rc))
-    decodeBodyAndInputsThen[E](
+    decodeBodyAndInputsThen(
       e.endpoint,
       rc,
-      { params => logicHandler(e)(logic(monad), responseHandler, rc)(serverOptions, ect)(params) }
+      logicHandler(e)(logic(monad), responseHandler, rc)
     )
   }
 
   private def logicHandler[I, E, O, T](
       e: ServerEndpoint[I, E, O, Any, Future]
   )(logic: I => Future[T], responseHandler: (T, RoutingContext) => Unit, rc: RoutingContext)(implicit
-      serverOptions: VertxEndpointOptions,
+      serverOptions: VertxFutureEndpointOptions,
       ect: Option[ClassTag[E]]
   ): Params => Unit = { params =>
     implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
@@ -118,30 +114,21 @@ trait VertxServerInterpreter {
         tryEncodeError(e.endpoint, rc, cause)
         serverOptions.logRequestHandling.logicException(e.endpoint, cause)(serverOptions.logger): Unit
       }
+    ()
   }
 
-  private def responseHandlerWithError[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future]
-  )(implicit endpointOptions: VertxEndpointOptions): (Either[E, O], RoutingContext) => Unit = { (output, rc) =>
-    output match {
-      case Left(failure) =>
-        encodeError(e.endpoint, rc, failure)
-      case Right(result) =>
-        responseHandlerNoError(e)(endpointOptions)(result, rc)
+  implicit class VertxFutureForScala[A](future: => VFuture[A]) {
+
+    def asScala: Future[A] = {
+      val promise = Promise[A]()
+      future.onComplete { handler =>
+        if (handler.succeeded()) {
+          promise.success(handler.result())
+        } else {
+          promise.failure(handler.cause())
+        }
+      }
+      promise.future
     }
   }
-
-  private def responseHandlerNoError[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future]
-  )(implicit endpointOptions: VertxEndpointOptions): (O, RoutingContext) => Unit = { (result, rc) =>
-    VertxOutputEncoders.apply[O](e.output, result, isError = false, logRequestHandled(e))(endpointOptions)(rc)
-  }
-
-  private def logRequestHandled[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit
-      endpointOptions: VertxEndpointOptions
-  ): Int => Unit =
-    status => endpointOptions.logRequestHandling.requestHandled(e.endpoint, status): Unit
-
 }
-
-object VertxServerInterpreter extends VertxServerInterpreter

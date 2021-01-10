@@ -2,51 +2,50 @@ package sttp.tapir.server.vertx
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import io.vertx.core.{Future => VFuture}
+import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
 import sttp.tapir.tests.Port
 
 import scala.reflect.ClassTag
-import scala.concurrent.Future
 
-class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route] {
-  import VertxTestServerInterpreter._
+class CatsVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[IO, Fs2Streams[IO], Router => Route] {
+  import CatsVertxTestServerInterpreter._
 
-  implicit val options: VertxFutureEndpointOptions = VertxFutureEndpointOptions()
+  implicit val options = VertxEffectfulEndpointOptions()
     .logWhenHandled(true)
     .logAllDecodeFailures(true)
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future],
+      e: ServerEndpoint[I, E, O, Fs2Streams[IO], IO],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route =
-    VertxFutureServerInterpreter.route(e)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
+    VertxCatsServerInterpreter.route(e)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)), implicitly)
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO]], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route =
-    VertxFutureServerInterpreter.routeRecoverErrors(e)(fn)
+    VertxCatsServerInterpreter.routeRecoverErrors(e)(fn)
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
     val listenIO = vertxFutureToIo(server.listen(0))
     routes.toList.foreach(_.apply(router))
-    Resource.make(listenIO)(s => vertxFutureToIo(s.close()).void).map(_.actualPort())
+    Resource.make(listenIO)(s => vertxFutureToIo(s.close).void).map(_.actualPort())
   }
 }
 
-object VertxTestServerInterpreter {
+object CatsVertxTestServerInterpreter {
 
-  def vertxFutureToIo[A](future: => VFuture[A]): IO[A] =
+  def vertxFutureToIo[A](future: => Future[A]): IO[A] =
     IO.async[A] { cb =>
-      future
-        .onFailure { cause => cb(Left(cause)) }
+      future.onFailure { cause => cb(Left(cause)) }
         .onSuccess { result => cb(Right(result)) }
       ()
     }
