@@ -687,7 +687,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .jvmPlatform(scalaVersions = scala2_12Versions)
   .dependsOn(core, serverTests % Test)
 
-lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4-server"))
+lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http4s-server",
