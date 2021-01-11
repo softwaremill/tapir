@@ -1,10 +1,42 @@
 package sttp.tapir.client.sttp
 
-import sttp.client3.Request
+import sttp.client3.{Request, SttpBackend}
 import sttp.model.Uri
+import sttp.monad.MonadError
+import sttp.tapir.client.sttp.internal.Util
 import sttp.tapir.{DecodeResult, Endpoint}
 
-trait SttpClientInterpreter {
+trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
+
+  def toClient[F[_], I, E, O](e: Endpoint[I, E, O, Any], baseUri: Uri, backend: SttpBackend[F, Any])(implicit
+      clientOptions: SttpClientOptions,
+      ev: MonadError[F]
+  ): I => F[DecodeResult[Either[E, O]]] = {
+    val req = new EndpointToSttpClient(clientOptions, WebSocketToPipe.webSocketsNotSupportedForAny).toSttpRequest(e, baseUri)
+    (i: I) => ev.map(backend.send(req(i)))(_.body)
+  }
+
+  def toClientUnsafe[F[_], I, E, O](e: Endpoint[I, E, O, Any], baseUri: Uri, backend: SttpBackend[F, Any])(implicit
+      clientOptions: SttpClientOptions,
+      ev: MonadError[F]
+  ): I => F[Either[E, O]] = {
+    val req = new EndpointToSttpClient(clientOptions, WebSocketToPipe.webSocketsNotSupportedForAny).toSttpRequestUnsafe(e, baseUri)
+    (i: I) => ev.map(backend.send(req(i)))(_.body)
+  }
+
+  def toClientThrowErrors[F[_], I, E, O](e: Endpoint[I, E, O, Any], baseUri: Uri, backend: SttpBackend[F, Any])(implicit
+      clientOptions: SttpClientOptions,
+      ev: MonadError[F]
+  ): I => F[O] = {
+    val req = new EndpointToSttpClient(clientOptions, WebSocketToPipe.webSocketsNotSupportedForAny).toSttpRequestUnsafe(e, baseUri)
+    (i: I) =>
+      ev.map(backend.send(req(i)))(res =>
+        res.body match {
+          case Left(err) => Util.throwError[I, E, O, Any](e, i, err)
+          case Right(v)  => v
+        }
+      )
+  }
 
   /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
     * uri.
