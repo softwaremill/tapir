@@ -12,16 +12,12 @@ import sttp.tapir.internal._
 import sttp.ws.WebSocket
 
 private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
-  def toSttpRequestUnsafe[I, E, O](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[Either[E, O], R] = { params =>
-    toSttpRequest(e, baseUri)(params).mapResponse(getOrThrow)
-  }
-
-  def toSttpRequest[O, E, I](e: Endpoint[I, E, O, R], baseUri: Uri): I => Request[DecodeResult[Either[E, O]], R] = { params =>
+  def toSttpRequest[O, E, I](e: Endpoint[I, E, O, R], baseUri: Option[Uri]): I => Request[DecodeResult[Either[E, O]], R] = { params =>
     val (uri, req1) =
       setInputParams(
         e.input,
         ParamsAsAny(params),
-        baseUri,
+        baseUri.getOrElse(Uri(None, None, Nil, Nil, None)),
         basicRequest.asInstanceOf[PartialAnyRequest]
       )
 
@@ -258,12 +254,5 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       Vector(())
     }.nonEmpty
   }
-
-  private def getOrThrow[T](dr: DecodeResult[T]): T =
-    dr match {
-      case DecodeResult.Value(v)    => v
-      case DecodeResult.Error(_, e) => throw e
-      case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
-    }
 
 }

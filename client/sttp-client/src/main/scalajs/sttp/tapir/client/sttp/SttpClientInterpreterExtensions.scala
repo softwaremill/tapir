@@ -3,36 +3,40 @@ package sttp.tapir.client.sttp
 import sttp.client3.FetchBackend
 import sttp.model.Uri
 import sttp.tapir.Endpoint
-import sttp.tapir.client.sttp.internal.Util
 
 import scala.concurrent.Future
 
 trait SttpClientInterpreterExtensions {
-  def toQuickClient[I, E, O](e: Endpoint[I, E, O, Any], baseUri: Uri)(implicit
+  /** Interprets the endpoint as a synchronous client call, using the given `baseUri` as the starting point to create
+    * the target uri. If `baseUri` is not provided, the request will be a relative one.
+    *
+    * Returns a function which, when applied to the endpoint's input parameters (given as a tuple), will encode them
+    * to appropriate request parameters: path, query, headers and body. The request is sent using an asynchronous
+    * backend, and the result of decoding the response (error or success value) is returned. If decoding the result
+    * fails, a failed future is returned.
+    */
+  def toQuickClient[I, E, O](e: Endpoint[I, E, O, Any], baseUri: Option[Uri])(implicit
       clientOptions: SttpClientOptions
   ): I => Future[Either[E, O]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val backend = FetchBackend()
-    val req = new EndpointToSttpClient(clientOptions, WebSocketToPipe.webSocketsNotSupportedForAny).toSttpRequestUnsafe(e, baseUri)
-    (i: I) => backend.send(req(i)).map(_.body)
+    SttpClientInterpreter.toClientThrowDecodeFailures(e, baseUri, backend)
   }
 
-  def toQuickClientThrowErrors[I, E, O](e: Endpoint[I, E, O, Any], baseUri: Uri)(implicit
+  /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
+    * uri. If `baseUri` is not provided, the request will be a relative one.
+    *
+    * Returns a function which, when applied to the endpoint's input parameters (given as a tuple), will encode them
+    * to appropriate request parameters: path, query, headers and body. The request is sent using an asynchronous
+    * backend, and the result (success value) is returned. If decoding the result fails, or if the response corresponds
+    * to an error value, a failed future is returned.
+    */
+  def toQuickClientThrowErrors[I, E, O](e: Endpoint[I, E, O, Any], baseUri: Option[Uri])(implicit
       clientOptions: SttpClientOptions
   ): I => Future[O] = {
     import scala.concurrent.ExecutionContext.Implicits.global
     val backend = FetchBackend()
-    val req = new EndpointToSttpClient(clientOptions, WebSocketToPipe.webSocketsNotSupportedForAny).toSttpRequestUnsafe(e, baseUri)
-    (i: I) =>
-      backend
-        .send(req(i))
-        .map(resp =>
-          resp.body
-            .fold(
-              err => Util.throwError(e, i, err),
-              identity
-            )
-        )
+    SttpClientInterpreter.toClientThrowErrors(e, baseUri, backend)
   }
 }
 

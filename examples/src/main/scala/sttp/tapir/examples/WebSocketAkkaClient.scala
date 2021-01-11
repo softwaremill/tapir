@@ -26,10 +26,8 @@ object WebSocketAkkaClient extends App {
   implicit val actorSystem: ActorSystem = ActorSystem()
   val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
   val result = SttpClientInterpreter
-    .toRequestUnsafe(jsonEchoWsEndpoint, uri"wss://echo.websocket.org")
+    .toClientThrowDecodeFailures(jsonEchoWsEndpoint, Some(uri"wss://echo.websocket.org"), backend)
     .apply(())
-    .send(backend)
-    .map(_.body)
     .flatMap {
       case Left(msg) => Future(println(s"Cannot establish web socket: $msg"))
       case Right(serverFlow) =>

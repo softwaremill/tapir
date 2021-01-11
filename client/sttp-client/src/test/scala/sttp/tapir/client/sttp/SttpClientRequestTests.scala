@@ -17,7 +17,7 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
 
     // when
     val sttpClientRequest = SttpClientInterpreter
-      .toRequest(testEndpoint, uri"http://localhost")
+      .toRequest(testEndpoint, Some(uri"http://localhost"))
       .apply(FruitData(Part("image", testFile, contentType = Some(MediaType.ImageJpeg))))
 
     // then

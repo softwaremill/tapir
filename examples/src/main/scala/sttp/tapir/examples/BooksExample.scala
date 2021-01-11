@@ -155,7 +155,7 @@ object BooksExample extends App with StrictLogging {
     val backend: SttpBackend[Identity, Any] = HttpURLConnectionBackend()
 
     val booksListingRequest: Request[Either[String, Vector[Book]], Any] = SttpClientInterpreter
-      .toRequestUnsafe(booksListing, uri"http://localhost:8080")
+      .toRequestThrowDecodeFailures(booksListing, Some(uri"http://localhost:8080"))
       .apply(Option(3))
 
     val result: Either[String, Vector[Book]] = booksListingRequest.send(backend).body
