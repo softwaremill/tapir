@@ -7,6 +7,7 @@ import sttp.tapir.Endpoint
 import scala.concurrent.Future
 
 trait SttpClientInterpreterExtensions {
+
   /** Interprets the endpoint as a synchronous client call, using the given `baseUri` as the starting point to create
     * the target uri. If `baseUri` is not provided, the request will be a relative one.
     *
@@ -39,4 +40,3 @@ trait SttpClientInterpreterExtensions {
     SttpClientInterpreter.toClientThrowErrors(e, baseUri, backend)
   }
 }
-

@@ -38,7 +38,7 @@ private[play] object OutputToPlayResponse {
       case Some(entity) =>
         val result = Result(ResponseHeader(status.code, headers), entity.merge)
         headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
-      case None           => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
+      case None => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
     }
   }
 

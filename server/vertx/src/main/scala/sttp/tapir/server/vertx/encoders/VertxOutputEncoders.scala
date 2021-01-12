@@ -51,7 +51,7 @@ object VertxOutputEncoders {
       forwardHeaders(outputValues)(resp)
       outputValues.body match {
         case Some(responseHandler) => responseHandler.merge(outputValues.contentLength)(rc)
-        case None                        => resp.end()
+        case None                  => resp.end()
       }
       logWhenHandled(resp.getStatusCode)
     } catch {

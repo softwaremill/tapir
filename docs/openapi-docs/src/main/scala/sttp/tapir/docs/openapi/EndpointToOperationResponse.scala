@@ -26,13 +26,15 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
       val outputsList = output.asBasicOutputsList
       val byStatusCode = outputsList.groupBy(_._1)
       ListMap(
-        outputsList.map(_._1)
+        outputsList
+          .map(_._1)
           .distinct
           .flatMap { sc => byStatusCode.get(sc).map((sc, _)) }
           .flatMap { case (sc, responses) =>
             // using the "default" response key, if no status code is provided
             val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
-            responses.flatMap { case (sc, outputs) => outputsToResponse(sc, outputs) }
+            responses
+              .flatMap { case (sc, outputs) => outputsToResponse(sc, outputs) }
               .reduceOption(_.merge(_))
               .map(response => (responseKey, Right(response)))
           }: _*
