@@ -18,7 +18,7 @@ trait TapirSttpClient {
       *
       * @throws IllegalArgumentException when response parsing fails
       */
-    @deprecated("Use SttpClientInterpreter.toRequestUnsafe", since = "0.17.1")
+    @deprecated("Use SttpClientInterpreter.toRequestThrowDecodeFailures", since = "0.17.1")
     def toSttpRequestUnsafe(
         baseUri: Uri
     )(implicit clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]): I => Request[Either[E, O], R] =
