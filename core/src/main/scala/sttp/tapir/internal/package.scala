@@ -7,7 +7,6 @@ import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
-import scala.collection.immutable.ListMap
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 

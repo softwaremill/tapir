@@ -4,7 +4,7 @@ import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
 import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, encodedName, format, generic}
-import SchemaMagnoliaDerivation.deriveInProgress
+import SchemaMagnoliaDerivation.deriveCache
 
 import scala.collection.mutable
 
@@ -13,29 +13,15 @@ trait SchemaMagnoliaDerivation {
   type Typeclass[T] = Schema[T]
 
   def combine[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
-    withProgressCache { (cache, validatorRefs) =>
-      val cacheKey = ctx.typeName.full
-      if (cache.contains(cacheKey)) {
-        val validator = Validator.Ref[T]()
-        validatorRefs.put(cacheKey, validator)
-        Schema[T](SRef(typeNameToObjectInfo(ctx.typeName, ctx.annotations)), validator = validator)
-      } else {
-        try {
-          cache.add(cacheKey)
-          val validator = productValidator(ctx)
-          val result =
-            if (ctx.isValueClass) {
-              Schema[T](schemaType = ctx.parameters.head.typeclass.schemaType, validator = validator)
-            } else {
-              Schema[T](schemaType = productSchemaType(ctx), validator = validator)
-            }
-          // filling in recursive validators, if there has been a reference
-          validatorRefs.get(cacheKey).foreach(ref => ref.asInstanceOf[Validator.Ref[T]].set(validator))
-          enrichSchema(result, ctx.annotations)
-        } finally {
-          cache.remove(cacheKey)
+    withCache(ctx.typeName, ctx.annotations) {
+      val validator = productValidator(ctx)
+      val result =
+        if (ctx.isValueClass) {
+          Schema[T](schemaType = ctx.parameters.head.typeclass.schemaType, validator = validator)
+        } else {
+          Schema[T](schemaType = productSchemaType(ctx), validator = validator)
         }
-      }
+      enrichSchema(result, ctx.annotations)
     }
   }
 
@@ -59,28 +45,6 @@ trait SchemaMagnoliaDerivation {
     }
   }
 
-  /** To avoid recursive loops, we keep track of the fully qualified names of types for which derivation is in
-    * progress using a mutable Set.
-    *
-    * We also store all recursive validator references (in a mutable map), which have to be filled in when the top-most
-    * recursive validator is generated.
-    */
-  private def withProgressCache[T](f: (mutable.Set[String], mutable.Map[String, Validator.Ref[_]]) => Schema[T]): Schema[T] = {
-    var cache = deriveInProgress.get()
-    val newCache = cache == null
-    if (newCache) {
-      cache = (mutable.Set[String](), mutable.Map[String, Validator.Ref[_]]())
-      deriveInProgress.set(cache)
-    }
-
-    try f(cache._1, cache._2)
-    finally {
-      if (newCache) {
-        deriveInProgress.remove()
-      }
-    }
-  }
-
   private def getEncodedName(annotations: Seq[Any]): Option[String] =
     annotations.collectFirst { case ann: encodedName => ann.name }
 
@@ -98,12 +62,14 @@ trait SchemaMagnoliaDerivation {
     annotations.collectFirst { case _: deprecated => true } getOrElse false
 
   def dispatch[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
-    val baseCoproduct = SCoproduct(typeNameToObjectInfo(ctx.typeName, ctx.annotations), ctx.subtypes.map(_.typeclass).toList, None)
-    val coproduct = genericDerivationConfig.discriminator match {
-      case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
-      case None    => baseCoproduct
+    withCache(ctx.typeName, ctx.annotations) {
+      val baseCoproduct = SCoproduct(typeNameToObjectInfo(ctx.typeName, ctx.annotations), ctx.subtypes.map(_.typeclass).toList, None)
+      val coproduct = genericDerivationConfig.discriminator match {
+        case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
+        case None    => baseCoproduct
+      }
+      Schema(schemaType = coproduct, validator = coproductValidator(ctx))
     }
-    Schema(schemaType = coproduct, validator = coproductValidator(ctx))
   }
 
   private def productValidator[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
@@ -133,8 +99,45 @@ trait SchemaMagnoliaDerivation {
         ctx.subtypes.map(st => st.typeName.full -> st.typeclass.validator.asInstanceOf[Validator[scala.Any]]).toMap
     })
   }
+
+  /** To avoid recursive loops, we keep track of the fully qualified names of types for which derivation is in
+    * progress using a mutable Set.
+    *
+    * We also store all recursive validator references (in a mutable map), which have to be filled in when the top-most
+    * recursive validator is generated.
+    */
+  private def withCache[T](typeName: TypeName, annotations: Seq[Any])(f: => Schema[T]): Schema[T] = {
+    val cacheKey = typeName.full
+    var cache = deriveCache.get()
+    val newCache = cache == null
+    if (newCache) {
+      cache = (mutable.Set[String](), mutable.Map[String, Validator.Ref[_]]())
+      deriveCache.set(cache)
+    }
+
+    val (inProgress, validatorRefs) = cache
+
+    if (inProgress.contains(cacheKey)) {
+      val validator = Validator.Ref[T]()
+      validatorRefs.put(cacheKey, validator)
+      Schema[T](SRef(typeNameToObjectInfo(typeName, annotations)), validator = validator)
+    } else {
+      try {
+        inProgress.add(cacheKey)
+        val schema = f
+        // filling in recursive validators, if there has been a reference
+        validatorRefs.get(cacheKey).foreach(ref => ref.asInstanceOf[Validator.Ref[T]].set(schema.validator))
+        schema
+      } finally {
+        inProgress.remove(cacheKey)
+        if (newCache) {
+          deriveCache.remove()
+        }
+      }
+    }
+  }
 }
 
 object SchemaMagnoliaDerivation {
-  private[internal] val deriveInProgress: ThreadLocal[(mutable.Set[String], mutable.Map[String, Validator.Ref[_]])] = new ThreadLocal()
+  private[internal] val deriveCache: ThreadLocal[(mutable.Set[String], mutable.Map[String, Validator.Ref[_]])] = new ThreadLocal()
 }
