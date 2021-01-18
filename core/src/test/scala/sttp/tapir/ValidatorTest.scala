@@ -252,6 +252,33 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v.show shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
   }
 
+  // #946: derivation of validator twice in the same derivation
+  it should "validate recursive values with two-level hierarchy" in {
+    import sttp.tapir.generic.auto._
+    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
+    val v: Validator[Animal] = implicitly[Schema[Animal]].validator
+
+    v.validate(Dog("reksio1", Nil)) shouldBe Nil
+    v.validate(Dog("", Nil)) should have length 1
+    v.validate(Dog("reksio1", List(Dog("reksio2", Nil)))) shouldBe Nil
+    v.validate(Dog("reksio1", List(Dog("", Nil)))) should have length 1
+    v.validate(Dog("reksio1", List(Dog("reksio2", List(Dog("reksio3", Nil)))))) shouldBe Nil
+    v.validate(Dog("reksio1", List(Dog("reksio2", List(Dog("", Nil)))))) should have length 1
+
+    v.validate(Cat("tom1", Nil)) shouldBe Nil
+    v.validate(Cat("", Nil)) should have length 1
+    v.validate(Cat("tom1", List(Cat("tom2", Nil)))) shouldBe Nil
+    v.validate(Cat("tom1", List(Cat("", Nil)))) should have length 1
+    v.validate(Cat("tom1", List(Cat("tom2", List(Cat("tom3", Nil)))))) shouldBe Nil
+    v.validate(Cat("tom1", List(Cat("tom2", List(Cat("", Nil)))))) should have length 1
+
+    v.validate(Dog("reksio1", List(Dog("reksio2", List(Cat("tom3", Nil)))))) shouldBe Nil
+    v.validate(Dog("reksio1", List(Dog("reksio2", List(Cat("", Nil)))))) should have length 1
+
+    v.validate(Cat("tom1", List(Cat("tom2", List(Dog("reksio3", Nil)))))) shouldBe Nil
+    v.validate(Cat("tom1", List(Cat("tom2", List(Dog("", Nil)))))) should have length 1
+  }
+
   private def noPath[T](v: ValidationError[T]): ValidationError[T] =
     v match {
       case p: ValidationError.Primitive[T] => p.copy(path = Nil)
@@ -264,3 +291,8 @@ case object Blue extends Color
 case object Red extends Color
 
 final case class RecursiveName(name: String, subNames: Option[Vector[RecursiveName]])
+
+sealed trait Animal
+sealed trait Pet extends Animal {}
+case class Dog(name: String, friends: List[Pet]) extends Pet
+case class Cat(name: String, friends: List[Pet]) extends Pet

@@ -130,6 +130,7 @@ trait SchemaMagnoliaDerivation {
         schema
       } finally {
         inProgress.remove(cacheKey)
+        validatorRefs.remove(cacheKey)
         if (newCache) {
           deriveCache.remove()
         }
