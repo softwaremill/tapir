@@ -44,13 +44,17 @@ object OneOfMacro {
     }
 
     val name = resolveFunctionName(extractor.tree.asInstanceOf[Function])
+
+    // FIXME: Despite the imports, `Discriminator`, `Schema`, `SCoproduct`, `SRef` and `SObject` should be fully qualified from `_root_`.
+    // I think that even with these imports, terms defined in the same scope with the same names will be given priority
+    // over the imported (and intended) ones. Someone will need to find where each of these types lives.
     val schemaForE =
       q"""{
-            import sttp.tapir.Schema._
-            import sttp.tapir.SchemaType._
-            val rawMapping = scala.collection.immutable.Map(..$mapping)
+            import _root_.sttp.tapir.Schema._
+            import _root_.sttp.tapir.SchemaType._
+            val rawMapping = _root_.scala.collection.immutable.Map(..$mapping)
             val discriminator = Discriminator($name, rawMapping.map{case (k, sf)=> $asString.apply(k) -> SRef(sf.schemaType.asInstanceOf[SObject].info)})
-            Schema(SCoproduct(SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)}), rawMapping.values.toList, Some(discriminator)))
+            Schema(SCoproduct(SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)}), rawMapping.values.toList, _root_.scala.Some(discriminator)))
           }"""
 
     Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)

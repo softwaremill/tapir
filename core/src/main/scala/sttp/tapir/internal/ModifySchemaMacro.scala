@@ -24,7 +24,7 @@ object ModifySchemaMacro {
   ): c.Tree = {
     import c.universe._
     q"""{
-      ${c.prefix}.modifyUnsafe($path:_*)((v: sttp.tapir.Schema[${c.weakTypeOf[T]}]) => v.description($description))
+      ${c.prefix}.modifyUnsafe($path:_*)((v: _root_.sttp.tapir.Schema[${c.weakTypeOf[T]}]) => v.description($description))
      }"""
   }
 

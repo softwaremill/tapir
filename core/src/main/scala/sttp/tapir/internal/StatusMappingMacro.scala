@@ -24,6 +24,6 @@ object StatusMappingMacro {
       )
     }
 
-    c.Expr[StatusMapping[O]](q"sttp.tapir.statusMappingClassMatcher($statusCode, $output, $ct.runtimeClass)")
+    c.Expr[StatusMapping[O]](q"_root_.sttp.tapir.statusMappingClassMatcher($statusCode, $output, $ct.runtimeClass)")
   }
 }

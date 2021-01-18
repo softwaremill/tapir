@@ -83,7 +83,7 @@ abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
     if (codec == EmptyTree) {
       c.abort(c.enclosingPosition, s"Unable to resolve implicit value of type ${codecTpe.dealias}")
     }
-    q"sttp.tapir.EndpointIO.Body(${c.untypecheck(ann.tree)}.bodyType, $codec, sttp.tapir.EndpointIO.Info.empty)"
+    q"_root_.sttp.tapir.EndpointIO.Body(${c.untypecheck(ann.tree)}.bodyType, $codec, sttp.tapir.EndpointIO.Info.empty)"
   }
 
   protected def mapToTargetFunc[A](fieldIdxToInputIdx: mutable.Map[Int, Int], util: CaseClassUtil[c.type, A]) = {
@@ -113,7 +113,7 @@ abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
     util.findAnnotation(field, apikeyType).fold(inputWithDeprecation) { a =>
       val challenge = authChallenge(a)
       setSecuritySchemeName(
-        q"sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge, None)",
+        q"_root_.sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge, None)",
         util.findAnnotation(field, securitySchemeNameType)
       )
     }
