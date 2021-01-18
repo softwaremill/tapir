@@ -235,21 +235,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
             List(
               FieldName("id") -> longSchema,
               FieldName("source") ->
-                Schema(
-                  SCoproduct(
-                    SObjectInfo("sttp.tapir.generic.Node", List.empty),
-                    List(
-                      Schema(SRef(SObjectInfo("sttp.tapir.generic.Edge"))),
-                      Schema(
-                        SProduct(
-                          SObjectInfo("sttp.tapir.generic.SimpleNode"),
-                          List(FieldName("id") -> longSchema)
-                        )
-                      )
-                    ),
-                    None
-                  )
-                )
+                Schema(SRef(SObjectInfo("sttp.tapir.generic.Node", List.empty)))
             )
           )
         ),

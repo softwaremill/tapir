@@ -136,9 +136,12 @@ import sttp.tapir.Schema
 case class Parent(child: Child)
 case class Child(value: String)
 
-implicit def sChild: Schema[Child] = Schema.derived
-implicit def sParent: Schema[Parent] = Schema.derived
+implicit lazy val sChild: Schema[Child] = Schema.derived
+implicit lazy val sParent: Schema[Parent] = Schema.derived
 ```
+
+Note that while schemas for regular types can be safely defined as `val`s, in case of recursive values, the schema
+values must be `lazy val`s.
 
 ### Configuring derivation
 
