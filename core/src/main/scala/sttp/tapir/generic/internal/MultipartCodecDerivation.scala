@@ -140,7 +140,7 @@ object MultipartCodecDerivation {
           val values = _root_.scala.List(..$decodeParams)
           ${util.instanceFromValues}
         }
-        def encode(o: $t): _root_.scala.Seq[_root_sttp.tapir.RawPart] = _root_.scala.List(..$encodeParams)
+        def encode(o: $t): _root_.scala.Seq[_root_.sttp.tapir.RawPart] = _root_.scala.List(..$encodeParams)
 
         _root_.sttp.tapir.Codec.multipartCodec($partCodecs, _root_.scala.None)
           .map(decode _)(encode _)

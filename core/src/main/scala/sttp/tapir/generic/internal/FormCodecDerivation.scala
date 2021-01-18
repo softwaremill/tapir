@@ -52,7 +52,7 @@ object FormCodecMacros {
             ${util.instanceFromValues}
           }
         }
-        def encode(o: $t): _root_.scala.Seq[(_root_.java.lang.String, _root.java.lang.String)] = _root_.scala.List(..$encodeParams).flatten
+        def encode(o: $t): _root_.scala.Seq[(_root_.java.lang.String, _root_.java.lang.String)] = _root_.scala.List(..$encodeParams).flatten
 
         _root_.sttp.tapir.Codec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
