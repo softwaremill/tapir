@@ -24,7 +24,7 @@ object FormCodecMacros {
     val fields = util.fields
 
     val fieldsWithCodecs = fields.map { field =>
-      (field, c.typecheck(q"implicitly[sttp.tapir.Codec[List[String], ${field.typeSignature}, sttp.tapir.CodecFormat.TextPlain]]"))
+      (field, c.typecheck(q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[List[String], ${field.typeSignature}, _root_.sttp.tapir.CodecFormat.TextPlain]]"))
     }
 
     val encodedNameType = c.weakTypeOf[encodedName]
@@ -48,13 +48,13 @@ object FormCodecMacros {
         def decode(params: Seq[(String, String)]): sttp.tapir.DecodeResult[$t] = {
           val paramsMap: Map[String, Seq[String]] = params.groupBy(_._1).transform((_, v) => v.map(_._2))
           val decodeResults = List(..$decodeParams)
-          sttp.tapir.DecodeResult.sequence(decodeResults).map { values =>
+          _root_.sttp.tapir.DecodeResult.sequence(decodeResults).map { values =>
             ${util.instanceFromValues}
           }
         }
-        def encode(o: $t): Seq[(String, String)] = List(..$encodeParams).flatten
+        def encode(o: $t): _root_.scala.Seq[(_root_.java.lang.String, _root_.java.lang.String)] = _root_.scala.List(..$encodeParams).flatten
 
-        sttp.tapir.Codec.formSeqCodecUtf8
+        _root_.sttp.tapir.Codec.formSeqCodecUtf8
           .mapDecode(decode _)(encode _)
           .schema(${util.schema})
       }

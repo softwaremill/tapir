@@ -19,7 +19,7 @@ trait ValidatorEnumMacro {
         c.abort(c.enclosingPosition, "All children must be objects.")
       } else {
         val instances = subclasses.map(x => Ident(x.asInstanceOf[scala.reflect.internal.Symbols#Symbol].sourceModule.asInstanceOf[Symbol]))
-        val validatorEnum = q"sttp.tapir.Validator.enum($instances)"
+        val validatorEnum = q"_root_.sttp.tapir.Validator.enum($instances)"
         Debug.logGeneratedCode(c)(t.typeSymbol.fullName, validatorEnum)
         c.Expr[Validator.Enum[E]](validatorEnum)
       }

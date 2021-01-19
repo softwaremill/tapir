@@ -26,7 +26,7 @@ private[generic] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](va
     q"$companion.tupled.asInstanceOf[Any => $t].apply(sttp.tapir.internal.SeqToParams(values))"
   }
 
-  lazy val schema: Tree = c.typecheck(q"implicitly[sttp.tapir.Schema[$t]]")
+  lazy val schema: Tree = c.typecheck(q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Schema[$t]]")
 
   lazy val classSymbol = t.typeSymbol.asClass
 
