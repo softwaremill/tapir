@@ -1,7 +1,7 @@
 package sttp.tapir.client.sttp
 
 import sttp.capabilities.{Effect, Streams}
-import sttp.tapir.WebSocketBodyOutput
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.ws.WebSocket
 
 /** Captures the logic of converting a [[WebSocket]] to a interpreter-specific pipe, which is then returned
@@ -28,7 +28,7 @@ trait WebSocketToPipe[R] {
 
   I have no idea why.
    */
-  def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, S]): Any
+  def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBody[Any, REQ, RESP, _, S]): Any
 }
 
 object WebSocketToPipe {
@@ -36,7 +36,7 @@ object WebSocketToPipe {
     override type S = Nothing
     override type F[X] = X
 
-    override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, Nothing]): Any =
+    override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBody[Any, REQ, RESP, _, Nothing]): Any =
       throw new RuntimeException("WebSockets are not supported")
   }
   implicit def webSocketsNotSupportedForAny: WebSocketToPipe[Any] = notSupported

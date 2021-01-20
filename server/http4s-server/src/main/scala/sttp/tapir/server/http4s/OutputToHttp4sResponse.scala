@@ -1,7 +1,6 @@
 package sttp.tapir.server.http4s
 
 import java.nio.charset.StandardCharsets
-
 import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
 import cats.syntax.all._
 import fs2.concurrent.Queue
@@ -14,9 +13,10 @@ import org.http4s.websocket.WebSocketFrame
 import org.http4s.{Charset, EntityBody, EntityEncoder, Header, Headers, Response, Status, multipart}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Part, Header => SttpHeader}
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
 
 private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   def apply[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O, _], v: O): F[Response[F]] = {
@@ -68,7 +68,7 @@ private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Tim
         }
         override def webSocketPipeToBody[REQ, RESP](
             pipe: Pipe[F, REQ, RESP],
-            o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
+            o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
         ): EncodeOutputsWebSocket = Http4sWebSockets.pipeToBody(pipe, o)
       }
     )

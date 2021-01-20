@@ -2,8 +2,9 @@ package sttp.tapir.client.sttp.ws.akkahttp
 
 import akka.stream.scaladsl.{Flow, Sink, Source}
 import sttp.capabilities.akka.AkkaStreams
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.client.sttp.WebSocketToPipe
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.{DecodeResult, WebSocketFrameDecodeFailure}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -14,7 +15,7 @@ class WebSocketToAkkaPipe[R](implicit ec: ExecutionContext) extends WebSocketToP
 
   override def apply[REQ, RESP](
       s: Any
-  )(ws: WebSocket[Future], o: WebSocketBodyOutput[Any, REQ, RESP, _, AkkaStreams]): Any = {
+  )(ws: WebSocket[Future], o: WebSocketBody[Any, REQ, RESP, _, AkkaStreams]): Any = {
 
     val sink = Flow[REQ]
       .map(o.requests.encode)

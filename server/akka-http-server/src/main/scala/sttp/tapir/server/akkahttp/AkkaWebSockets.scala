@@ -5,7 +5,8 @@ import akka.stream.Materializer
 import akka.stream.scaladsl.Flow
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.EndpointOutput.WebSocketBody
+import sttp.tapir.{DecodeResult, WebSocketFrameDecodeFailure}
 import sttp.ws.{WebSocketClosed, WebSocketFrame}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -13,7 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 private[akkahttp] object AkkaWebSockets {
   def pipeToBody[REQ, RESP](
       pipe: Flow[REQ, RESP, Any],
-      o: WebSocketBodyOutput[Flow[REQ, RESP, Any], REQ, RESP, _, AkkaStreams]
+      o: WebSocketBody[Flow[REQ, RESP, Any], REQ, RESP, _, AkkaStreams]
   )(implicit ec: ExecutionContext, mat: Materializer): Flow[Message, Message, Any] = {
     Flow[Message]
       .mapAsync(1)(messageToFrame(_))

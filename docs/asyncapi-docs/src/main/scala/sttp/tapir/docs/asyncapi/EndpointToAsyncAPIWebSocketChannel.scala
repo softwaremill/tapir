@@ -1,7 +1,7 @@
 package sttp.tapir.docs.asyncapi
 
 import sttp.model.Method
-import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.apispec.{IterableToListMap, Reference, ReferenceOr, Tag, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.asyncapi._
 import sttp.tapir.docs.apispec.namedPathComponents
@@ -18,7 +18,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 ) {
   def apply(
       e: Endpoint[_, _, _, _],
-      ws: WebSocketBodyWrapper[_, _, _]
+      ws: WebSocketBody[_, _, _, _, _]
   ): (String, ChannelItem) = {
     val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
@@ -29,8 +29,8 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 
     val channelItem = ChannelItem(
       e.info.summary.orElse(e.info.description).orElse(ws.info.description),
-      Some(endpointToOperation(options.subscribeOperationId(pathComponents, e), e, ws.wrapped.responses)),
-      Some(endpointToOperation(options.publishOperationId(pathComponents, e), e, ws.wrapped.requests)),
+      Some(endpointToOperation(options.subscribeOperationId(pathComponents, e), e, ws.responses)),
+      Some(endpointToOperation(options.publishOperationId(pathComponents, e), e, ws.requests)),
       parameters(inputs),
       List(WebSocketChannelBinding(method.method, objectSchemaFromFields(queryInputs), objectSchemaFromFields(headerInputs), None))
     )

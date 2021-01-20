@@ -8,7 +8,7 @@ import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointIO.StreamBody
-import sttp.tapir.EndpointOutput.StatusMapping
+import sttp.tapir.EndpointOutput.{StatusMapping, WebSocketBody}
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
@@ -111,8 +111,8 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     )(implicit
         requests: Codec[WebSocketFrame, REQ, REQ_CF],
         responses: Codec[WebSocketFrame, RESP, RESP_CF]
-    ): WebSocketBodyOutput[s.Pipe[REQ, RESP], REQ, RESP, s.Pipe[REQ, RESP], S] =
-      WebSocketBodyOutput(
+    ): WebSocketBody[s.Pipe[REQ, RESP], REQ, RESP, s.Pipe[REQ, RESP], S] =
+      WebSocketBody(
         s,
         requests,
         responses,
@@ -136,7 +136,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     new WebSocketBodyBuilder[REQ, REQ_CF, RESP, RESP_CF]
   def webSocketBodyRaw[S](
       s: Streams[S]
-  ): WebSocketBodyOutput[s.Pipe[WebSocketFrame, WebSocketFrame], WebSocketFrame, WebSocketFrame, s.Pipe[
+  ): WebSocketBody[s.Pipe[WebSocketFrame, WebSocketFrame], WebSocketFrame, WebSocketFrame, s.Pipe[
     WebSocketFrame,
     WebSocketFrame
   ], S] =

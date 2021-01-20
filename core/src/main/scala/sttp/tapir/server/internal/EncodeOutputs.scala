@@ -1,11 +1,11 @@
 package sttp.tapir.server.internal
 
 import java.nio.charset.Charset
-
 import sttp.capabilities.Streams
 import sttp.model.{HeaderNames, StatusCode}
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
-import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType}
 
 import scala.util.Try
 
@@ -45,11 +45,11 @@ class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
       case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
       case EndpointIO.MappedPair(wrapped, _)  => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
       case EndpointOutput.StatusCode(_, _, _) => ov.withStatusCode(encoded[StatusCode])
-      case EndpointOutput.WebSocketBodyWrapper(o) =>
+      case o: EndpointOutput.WebSocketBody[_, _, _, _, _] =>
         ov.withWebSocketBody(
           encodeOutputBody.webSocketPipeToBody(
             encoded[encodeOutputBody.streams.Pipe[Any, Any]],
-            o.asInstanceOf[WebSocketBodyOutput[encodeOutputBody.streams.Pipe[Any, Any], Any, Any, Any, S]]
+            o.asInstanceOf[WebSocketBody[encodeOutputBody.streams.Pipe[Any, Any], Any, Any, Any, S]]
           )
         )
       case EndpointOutput.OneOf(mappings, _) =>
@@ -103,5 +103,5 @@ trait EncodeOutputBody[B, W, S] {
   val streams: Streams[S]
   def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): B
   def streamValueToBody(v: streams.BinaryStream, format: CodecFormat, charset: Option[Charset]): B
-  def webSocketPipeToBody[REQ, RESP](pipe: streams.Pipe[REQ, RESP], o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]): W
+  def webSocketPipeToBody[REQ, RESP](pipe: streams.Pipe[REQ, RESP], o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, S]): W
 }

@@ -120,14 +120,6 @@ trait EndpointOutputsOps[I, E, O, -R] {
   def prependOut[P, PO, R2](i: EndpointOutput[P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R with R2] =
     withOutput(i.and(output))
 
-  def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
-      ts: ParamConcat.Aux[O, P, OP]
-  ): EndpointType[I, E, OP, R with R2 with WebSockets] = withOutput(output.and(i.toEndpointOutput))
-
-  def prependOut[PIPE_REQ_RESP, P, PO, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
-      ts: ParamConcat.Aux[P, O, PO]
-  ): EndpointType[I, E, PO, R with R2 with WebSockets] = withOutput(i.toEndpointOutput.and(output))
-
   def mapOut[OO](m: Mapping[O, OO]): EndpointType[I, E, OO, R] =
     withOutput(output.map(m))
 

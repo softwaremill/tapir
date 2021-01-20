@@ -73,7 +73,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         (s match {
           case EndpointIO.Body(_, codec, _)          => codec.decode(body)
           case EndpointIO.StreamBody(_, codec, _, _) => codec.decode(body)
-          case EndpointOutput.WebSocketBodyWrapper(_) =>
+          case EndpointOutput.WebSocketBody(_, _, _, _, _, _, _, _, _, _, _) =>
             DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
           case EndpointIO.Header(name, codec, _) => codec.decode(headers(name).toList)
           case EndpointIO.Headers(codec, _) =>

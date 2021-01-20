@@ -7,6 +7,7 @@ import sttp.client3._
 import sttp.model.Uri.PathSegment
 import sttp.model.{HeaderNames, Method, Part, ResponseMetadata, StatusCode, Uri}
 import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
@@ -47,13 +48,13 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
         (s match {
           case EndpointIO.Body(_, codec, _)          => codec.decode(body)
           case EndpointIO.StreamBody(_, codec, _, _) => codec.decode(body)
-          case EndpointOutput.WebSocketBodyWrapper(o: WebSocketBodyOutput[_, _, _, _, Any]) =>
-            val streams = o.streams.asInstanceOf[wsToPipe.S]
-            o.codec.decode(
+          case o @ EndpointOutput.WebSocketBody(streams, _, _, codec, _, _, _, _, _, _, _) =>
+            val _streams = streams.asInstanceOf[wsToPipe.S]
+            codec.decode(
               wsToPipe
-                .apply(streams)(
+                .apply(_streams)(
                   body.asInstanceOf[WebSocket[wsToPipe.F]],
-                  o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
+                  o.asInstanceOf[WebSocketBody[Any, _, _, _, wsToPipe.S]]
                 )
             )
           case EndpointIO.Header(name, codec, _)           => codec.decode(meta.headers(name).toList)
@@ -250,7 +251,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   private def bodyIsWebSocket[I](out: EndpointOutput[I, _]): Boolean = {
-    out.traverseOutputs { case EndpointOutput.WebSocketBodyWrapper(_) =>
+    out.traverseOutputs { case _: EndpointOutput.WebSocketBody[_, _, _, _, _] =>
       Vector(())
     }.nonEmpty
   }

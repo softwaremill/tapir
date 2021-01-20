@@ -1,7 +1,7 @@
 package sttp.tapir.docs.asyncapi
 
 import sttp.model.MediaType
-import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.apispec.IterableToListMap
 import sttp.tapir.asyncapi.{Message, SingleMessage}
 import sttp.tapir.docs.apispec.schema.{ObjectTypeData, Schemas, calculateUniqueKeys, objectInfoToName}
@@ -13,10 +13,10 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas) {
   private type CodecData = Either[(TSchemaType.SObjectInfo, MediaType), TSchema[_]]
 
   def apply[P[_, _]](
-      wss: Iterable[WebSocketBodyWrapper[_, _, _]]
+      wss: Iterable[WebSocketBody[_, _, _, _, _]]
   ): (Map[Codec[_, _, _ <: CodecFormat], MessageKey], ListMap[MessageKey, Message]) = {
 
-    val codecs: Iterable[Codec[_, _, _ <: CodecFormat]] = wss.map(ws => ws.wrapped.requests) ++ wss.map(ws => ws.wrapped.responses)
+    val codecs: Iterable[Codec[_, _, _ <: CodecFormat]] = wss.map(ws => ws.requests) ++ wss.map(ws => ws.responses)
     val codecToData: ListMap[Codec[_, _, _ <: CodecFormat], CodecData] = codecs.toList.map(c => c -> toData(c)).toListMap
 
     val dataToKey = calculateUniqueKeys(codecToData.values.toSet, dataToName)

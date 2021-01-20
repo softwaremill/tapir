@@ -6,9 +6,10 @@ import cats.effect.Concurrent
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.sttp.WebSocketToPipe
-import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
+import sttp.tapir.{DecodeResult, WebSocketFrameDecodeFailure}
 import sttp.ws.{WebSocket, WebSocketFrame}
 import cats.syntax.all._
+import sttp.tapir.EndpointOutput.WebSocketBody
 
 class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] with WebSockets] extends WebSocketToPipe[R] {
   override type S = Fs2Streams[F]
@@ -16,7 +17,7 @@ class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] with WebSockets]
 
   override def apply[REQ, RESP](
       s: Any
-  )(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, Fs2Streams[F]]): Any = { in: Stream[F, REQ] =>
+  )(ws: WebSocket[F], o: WebSocketBody[Any, REQ, RESP, _, Fs2Streams[F]]): Any = { in: Stream[F, REQ] =>
     val sends = in
       .map(o.requests.encode)
       .evalMap(ws.send(_, isContinuation = false)) // TODO support fragmented frames

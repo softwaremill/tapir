@@ -3,18 +3,18 @@ package sttp.tapir.server.vertx.encoders
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.scala.core.http.HttpServerResponse
 import io.vertx.scala.core.streams.ReadStream
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.{Header, Part}
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal.{NoStreams, ParamsAsAny, charset}
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.server.vertx.VertxEndpointOptions
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -96,7 +96,7 @@ object VertxOutputEncoders {
           v //impossible
         override def webSocketPipeToBody[REQ, RESP](
             pipe: Nothing,
-            o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+            o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
         ): Nothing =
           pipe
       }

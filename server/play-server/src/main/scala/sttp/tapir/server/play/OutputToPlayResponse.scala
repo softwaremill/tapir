@@ -4,7 +4,6 @@ import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
-
 import akka.NotUsed
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
@@ -12,9 +11,10 @@ import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import sttp.model.{MediaType, Part, StatusCode}
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
 
 private[play] object OutputToPlayResponse {
   def apply[O](
@@ -51,7 +51,7 @@ private[play] object OutputToPlayResponse {
         v
       override def webSocketPipeToBody[REQ, RESP](
           pipe: Nothing,
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+          o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
       ): Nothing =
         pipe
     })

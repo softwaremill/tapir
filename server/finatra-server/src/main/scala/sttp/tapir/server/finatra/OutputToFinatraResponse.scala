@@ -2,15 +2,15 @@ package sttp.tapir.server.finatra
 
 import java.io.InputStream
 import java.nio.charset.Charset
-
 import com.twitter.finagle.http.{Response, Status, Version}
 import com.twitter.io.{Buf, InputStreamReader, Reader}
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import sttp.model.{Header, Part}
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
 import sttp.tapir.internal._
 
 object OutputToFinatraResponse {
@@ -25,7 +25,7 @@ object OutputToFinatraResponse {
         }
         override def webSocketPipeToBody[REQ, RESP](
             pipe: Nothing,
-            o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+            o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
         ): Nothing =
           pipe
       }

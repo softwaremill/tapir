@@ -1,7 +1,6 @@
 package sttp.tapir.server.akkahttp
 
 import java.nio.charset.{Charset, StandardCharsets}
-
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
 import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.model.{StatusCode => AkkaStatusCode, _}
@@ -12,9 +11,10 @@ import akka.stream.scaladsl.{Flow, Source, StreamConverters}
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, HeaderNames, Part}
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
 
 import scala.concurrent.ExecutionContext
 import scala.util.Try
@@ -60,7 +60,7 @@ private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Ma
 
       override def webSocketPipeToBody[REQ, RESP](
           pipe: Flow[REQ, RESP, Any],
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
+          o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
       ): Flow[Message, Message, Any] = AkkaWebSockets.pipeToBody(pipe, o)
     }
   )

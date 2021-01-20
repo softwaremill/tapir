@@ -4,7 +4,6 @@ import java.nio.charset.Charset
 
 import sttp.model.{Method, StatusCode}
 import sttp.monad.MonadError
-import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
 import scala.reflect.ClassTag
@@ -197,15 +196,15 @@ package object internal {
   implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_, _]]) {
     def sortByType: Vector[EndpointOutput.Basic[_, _]] =
       outputs.sortBy {
-        case _: EndpointIO.Empty[_]                          => 0
-        case _: EndpointOutput.StatusCode[_]                 => 0
-        case _: EndpointOutput.FixedStatusCode[_]            => 0
-        case _: EndpointIO.Header[_]                         => 1
-        case _: EndpointIO.Headers[_]                        => 1
-        case _: EndpointIO.FixedHeader[_]                    => 1
-        case _: EndpointIO.Body[_, _]                        => 2
-        case _: EndpointIO.StreamBody[_, _, _]               => 2
-        case _: EndpointOutput.WebSocketBodyWrapper[_, _, _] => 2
+        case _: EndpointIO.Empty[_]                         => 0
+        case _: EndpointOutput.StatusCode[_]                => 0
+        case _: EndpointOutput.FixedStatusCode[_]           => 0
+        case _: EndpointIO.Header[_]                        => 1
+        case _: EndpointIO.Headers[_]                       => 1
+        case _: EndpointIO.FixedHeader[_]                   => 1
+        case _: EndpointIO.Body[_, _]                       => 2
+        case _: EndpointIO.StreamBody[_, _, _]              => 2
+        case _: EndpointOutput.WebSocketBody[_, _, _, _, _] => 2
       }
   }
 
@@ -251,9 +250,9 @@ package object internal {
     }
   }
 
-  def findWebSocket(e: Endpoint[_, _, _, _]): Option[WebSocketBodyWrapper[_, _, _]] =
+  def findWebSocket(e: Endpoint[_, _, _, _]): Option[EndpointOutput.WebSocketBody[_, _, _, _, _]] =
     e.output
-      .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[_, _, _] =>
+      .traverseOutputs[EndpointOutput.WebSocketBody[_, _, _, _, _]] { case ws: EndpointOutput.WebSocketBody[_, _, _, _, _] =>
         Vector(ws)
       }
       .headOption

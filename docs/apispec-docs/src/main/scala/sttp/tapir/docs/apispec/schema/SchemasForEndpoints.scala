@@ -42,8 +42,8 @@ object SchemasForEndpoints {
       case EndpointOutput.MappedPair(wrapped, _)   => forOutput(wrapped)
       case EndpointOutput.Void()                   => List.empty
       case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
-      case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
-        ObjectTypeData(wrapped.codec) ++ ObjectTypeData(wrapped.requests) ++ ObjectTypeData(wrapped.responses)
+      case ws: EndpointOutput.WebSocketBody[_, _, _, _, _] =>
+        ObjectTypeData(ws.codec) ++ ObjectTypeData(ws.requests) ++ ObjectTypeData(ws.responses)
       case op: EndpointIO[_, _] => forIO(op)
     }
   }
