@@ -58,7 +58,7 @@ import java.util.UUID
 
 case class User(name: String)
 
-val paging: EndpointInput[(UUID, Option[Int])] = 
+val paging: EndpointInput[(UUID, Option[Int]), Any] = 
   query[UUID]("start").and(query[Option[Int]]("limit"))
 
 // we can now use the value in multiple endpoints, e.g.:
@@ -108,7 +108,7 @@ import java.util.UUID
 
 case class Paging(from: UUID, limit: Option[Int])
 
-val paging: EndpointInput[Paging] = 
+val paging: EndpointInput[Paging, Any] = 
   query[UUID]("start").and(query[Option[Int]]("limit"))
     .map(input => Paging(input._1, input._2))(paging => (paging.from, paging.limit))
 ```
@@ -123,7 +123,7 @@ Creating a mapping between a tuple and a case class is a common operation, hence
 `mapTo(CaseClassCompanion)` method, which automatically provides the functions to construct/deconstruct the case class:
 
 ```scala mdoc:silent:nest
-val paging: EndpointInput[Paging] = 
+val paging: EndpointInput[Paging, Any] = 
   query[UUID]("start").and(query[Option[Int]]("limit"))
     .mapTo(Paging)
 ```
@@ -148,7 +148,7 @@ endpoint input can be generated using macro `sttp.tapir.annotations.deriveEndpoi
 ```scala mdoc:silent:nest
 import sttp.tapir._
 
-val userInput: EndpointInput[User] =
+val userInput: EndpointInput[User, Any] =
   query[String]("user").and(cookie[Long]("sessionId")).mapTo(User)
 ```
 

@@ -5,6 +5,7 @@ import sttp.client3.Response
 import java.nio.charset.Charset
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
+import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{
   DecodeInputs,
@@ -15,7 +16,7 @@ import sttp.tapir.server.internal.{
   InputValuesResult,
   OutputValues
 }
-import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointOutput, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointOutput, RawBodyType}
 
 trait SttpStubServer {
 
@@ -86,7 +87,7 @@ trait SttpStubServer {
           override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): Any = v
           override def webSocketPipeToBody[REQ, RESP](
               pipe: streams.Pipe[REQ, RESP],
-              o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+              o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
           ): Any = pipe //impossible
         }
         val outputValues =

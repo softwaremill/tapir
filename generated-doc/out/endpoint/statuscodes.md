@@ -74,6 +74,9 @@ val baseEndpoint = endpoint.errorOut(
     statusMapping(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
   )
 )
+// error: wrong number of type parameters for method oneOf: [T, R](firstCase: sttp.tapir.EndpointOutput.StatusMapping[_ <: T, R], otherCases: sttp.tapir.EndpointOutput.StatusMapping[_ <: T, R]*)sttp.tapir.EndpointOutput.OneOf[T,T,R]
+//   oneOf[Either[ServerError, UserError], Any](
+//   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // error: Constructing statusMapping of type scala.util.Right[repl.MdocSession.App.ServerError,repl.MdocSession.App.NotFound] is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify that the input matches the desired class. Please use statusMappingClassMatcher, statusMappingValueMatcher or statusMappingFromMatchType instead
 //     statusMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
 //                              ^
@@ -90,7 +93,7 @@ The solution is therefore to handwrite a function checking that a `val` (of type
 
 ```scala
 val baseEndpoint = endpoint.errorOut(
-  oneOf[Either[ServerError, UserError]](
+  oneOf[Either[ServerError, UserError], Any](
     statusMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
       case Right(NotFound(_)) => true
     },
@@ -113,7 +116,7 @@ To make that more easy, we provide an **experimental** typeclass - `MatchType` -
 import sttp.tapir.typelevel.MatchType
 
 val baseEndpoint = endpoint.errorOut(
-  oneOf[Either[ServerError, UserError]](
+  oneOf[Either[ServerError, UserError], Any](
     statusMappingFromMatchType(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
     statusMappingFromMatchType(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
     statusMappingFromMatchType(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized"))

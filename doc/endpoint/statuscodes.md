@@ -94,7 +94,7 @@ case class NotFound(what: String) extends UserError
 
 ```scala mdoc:silent:nest
 val baseEndpoint = endpoint.errorOut(
-  oneOf[Either[ServerError, UserError]](
+  oneOf[Either[ServerError, UserError], Any](
     statusMappingValueMatcher(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")) {
       case Right(NotFound(_)) => true
     },
@@ -117,7 +117,7 @@ To make that more easy, we provide an **experimental** typeclass - `MatchType` -
 import sttp.tapir.typelevel.MatchType
 
 val baseEndpoint = endpoint.errorOut(
-  oneOf[Either[ServerError, UserError]](
+  oneOf[Either[ServerError, UserError], Any](
     statusMappingFromMatchType(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
     statusMappingFromMatchType(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
     statusMappingFromMatchType(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized"))

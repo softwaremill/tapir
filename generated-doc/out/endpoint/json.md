@@ -47,7 +47,7 @@ import io.circe.generic.auto._
 
 case class Book(author: String, title: String, year: Int)
 
-val bookInput: EndpointIO[Book] = jsonBody[Book]
+val bookInput: EndpointIO[Book, Any] = jsonBody[Book]
 ```
 
 Circe lets you select an instance of `io.circe.Printer` to configure the way JSON objects are rendered. By default 
@@ -116,7 +116,7 @@ object Book {
   implicit val rw: ReadWriter[Book] = macroRW
 }
 
-val bookInput: EndpointIO[Book] = jsonBody[Book]
+val bookInput: EndpointIO[Book, Any] = jsonBody[Book]
 ```
 
 Like Circe, µPickle allows you to control the rendered json output. Please see the [Custom Configuration](http://www.lihaoyi.com/upickle/#CustomConfiguration) of the manual for details.
