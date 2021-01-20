@@ -3,7 +3,7 @@ package sttp.tapir.generic
 import java.math.{BigDecimal => JBigDecimal}
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.auto._
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, encodedName, format}
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, encodedName, format, validate}
 
 import scala.concurrent.Future
 import org.scalatest.flatspec.AsyncFlatSpec
@@ -185,7 +185,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       SProduct(
         SObjectInfo("sttp.tapir.generic.I"),
         List(
-          (FieldName("int"), intSchema.description("some int field").format("int32")),
+          (FieldName("int"), intSchema.description("some int field").format("int32").validate(Validator.max(100))),
           (FieldName("noDesc"), longSchema),
           (FieldName("bool", "alternativeBooleanName"), implicitly[Schema[Option[Boolean]]].description("another optional boolean flag")),
           (
@@ -373,6 +373,7 @@ case class H[T](data: T)
 case class I(
     @description("some int field")
     @format("int32")
+    @validate[Int](Validator.max(100))
     int: Int,
     noDesc: Long,
     @description("another optional boolean flag")

@@ -96,6 +96,8 @@ class deprecated extends StaticAnnotation
 
 class encodedName(val name: String) extends StaticAnnotation
 
+class validate[T](val v: Validator[T]) extends StaticAnnotation
+
 object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPrioritySchema {
   val ModifyCollectionElements = "each"
 
