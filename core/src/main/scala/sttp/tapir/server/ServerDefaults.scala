@@ -8,7 +8,7 @@ import sttp.tapir._
 import scala.annotation.tailrec
 
 object ServerDefaults {
-  def failureOutput[R, T](body: EndpointIO.Body[R, T]): EndpointOutput[(DefaultDecodeFailureResponse, T)] =
+  def failureOutput[RAW, T](body: EndpointIO.Body[RAW, T]): EndpointOutput[(DefaultDecodeFailureResponse, T), Any] =
     statusCode.and(headers).mapTo(DefaultDecodeFailureResponse.apply _).and(body)
 
   /** The default implementation of the [[DecodeFailureHandler]].
@@ -50,13 +50,13 @@ object ServerDefaults {
       import sttp.tapir.server.{DefaultDecodeFailureResponse => fr}
 
       failingInput(ctx) match {
-        case _: EndpointInput.Query[_]             => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointInput.QueryParams[_]       => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointInput.Cookie[_]            => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointIO.Header[_]               => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointIO.Headers[_]              => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointIO.Body[_, _]              => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointIO.StreamBodyWrapper[_, _] => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointInput.Query[_]                => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointInput.QueryParams[_]          => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointInput.Cookie[_]               => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Header[_]                  => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Headers[_]                 => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Body[_, _]                 => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.StreamBodyWrapper[_, _, _] => Some(fr.status(StatusCode.BadRequest))
         // we assume that the only decode failure that might happen during path segment decoding is an error
         // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
         // a path shape mismatch
@@ -64,9 +64,9 @@ object ServerDefaults {
             if (badRequestOnPathErrorIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.Error]) ||
               (badRequestOnPathInvalidIfPathShapeMatches && ctx.failure.isInstanceOf[DecodeResult.InvalidValue]) =>
           Some(fr.status(StatusCode.BadRequest))
-        case a: EndpointInput.Auth[_] => Some(fr(StatusCode.Unauthorized, a.challenge.headers))
+        case a: EndpointInput.Auth[_, _] => Some(fr(StatusCode.Unauthorized, a.challenge.headers))
         // other basic endpoints - the request doesn't match, but not returning a response (trying other endpoints)
-        case _: EndpointInput.Basic[_] => None
+        case _: EndpointInput.Basic[_, _] => None
         // all other inputs (tuples, mapped) - responding with bad request
         case _ => Some(fr.status(StatusCode.BadRequest))
       }
@@ -76,7 +76,7 @@ object ServerDefaults {
       import sttp.tapir.internal.RichEndpointInput
       ctx.failure match {
         case DecodeResult.Missing =>
-          val missingAuth = ctx.endpoint.input.pathTo(ctx.input).collectFirst { case a: EndpointInput.Auth[_] =>
+          val missingAuth = ctx.endpoint.input.pathTo(ctx.input).collectFirst { case a: EndpointInput.Auth[_, _] =>
             a
           }
           missingAuth.getOrElse(ctx.input)
@@ -92,24 +92,24 @@ object ServerDefaults {
     /** Describes the source of the failure: in which part of the request did the failure occur.
       */
     @tailrec
-    def failureSourceMessage(input: EndpointInput[_]): String =
+    def failureSourceMessage(input: EndpointInput[_, _]): String =
       input match {
-        case EndpointInput.FixedMethod(_, _, _)      => s"Invalid value for: method"
-        case EndpointInput.FixedPath(_, _, _)        => s"Invalid value for: path segment"
-        case EndpointInput.PathCapture(name, _, _)   => s"Invalid value for: path parameter ${name.getOrElse("?")}"
-        case EndpointInput.PathsCapture(_, _)        => s"Invalid value for: path"
-        case EndpointInput.Query(name, _, _)         => s"Invalid value for: query parameter $name"
-        case EndpointInput.QueryParams(_, _)         => "Invalid value for: query parameters"
-        case EndpointInput.Cookie(name, _, _)        => s"Invalid value for: cookie $name"
-        case _: EndpointInput.ExtractFromRequest[_]  => "Invalid value"
-        case a: EndpointInput.Auth[_]                => failureSourceMessage(a.input)
-        case _: EndpointInput.MappedPair[_, _, _, _] => "Invalid value"
-        case _: EndpointIO.Body[_, _]                => s"Invalid value for: body"
-        case _: EndpointIO.StreamBodyWrapper[_, _]   => s"Invalid value for: body"
-        case EndpointIO.Header(name, _, _)           => s"Invalid value for: header $name"
-        case EndpointIO.FixedHeader(name, _, _)      => s"Invalid value for: header $name"
-        case EndpointIO.Headers(_, _)                => s"Invalid value for: headers"
-        case _                                       => "Invalid value"
+        case EndpointInput.FixedMethod(_, _, _)         => s"Invalid value for: method"
+        case EndpointInput.FixedPath(_, _, _)           => s"Invalid value for: path segment"
+        case EndpointInput.PathCapture(name, _, _)      => s"Invalid value for: path parameter ${name.getOrElse("?")}"
+        case EndpointInput.PathsCapture(_, _)           => s"Invalid value for: path"
+        case EndpointInput.Query(name, _, _)            => s"Invalid value for: query parameter $name"
+        case EndpointInput.QueryParams(_, _)            => "Invalid value for: query parameters"
+        case EndpointInput.Cookie(name, _, _)           => s"Invalid value for: cookie $name"
+        case _: EndpointInput.ExtractFromRequest[_]     => "Invalid value"
+        case a: EndpointInput.Auth[_, _]                => failureSourceMessage(a.input)
+        case _: EndpointInput.MappedPair[_, _, _, _, _] => "Invalid value"
+        case _: EndpointIO.Body[_, _]                   => s"Invalid value for: body"
+        case _: EndpointIO.StreamBodyWrapper[_, _, _]   => s"Invalid value for: body"
+        case EndpointIO.Header(name, _, _)              => s"Invalid value for: header $name"
+        case EndpointIO.FixedHeader(name, _, _)         => s"Invalid value for: header $name"
+        case EndpointIO.Headers(_, _)                   => s"Invalid value for: headers"
+        case _                                          => "Invalid value"
       }
 
     def combineSourceAndDetail(source: String, detail: Option[String]): String =

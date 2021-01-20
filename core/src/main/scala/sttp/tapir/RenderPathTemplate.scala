@@ -27,7 +27,7 @@ object RenderPathTemplate {
   }
 
   private def renderedPathComponents(
-      inputs: Vector[EndpointInput.Basic[_]],
+      inputs: Vector[EndpointInput.Basic[_, _]],
       pathParamRendering: RenderPathParam
   ): (Vector[String], Int) =
     inputs.foldLeft((Vector.empty[String], 1)) { case ((acc, index), component) =>
@@ -39,7 +39,7 @@ object RenderPathTemplate {
     }
 
   private def renderedQueryComponents(
-      inputs: Vector[EndpointInput.Basic[_]],
+      inputs: Vector[EndpointInput.Basic[_, _]],
       queryParamRendering: RenderQueryParam,
       pathParamCount: Int
   ): Vector[String] =

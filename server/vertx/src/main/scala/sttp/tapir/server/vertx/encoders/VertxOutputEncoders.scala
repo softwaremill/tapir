@@ -37,7 +37,7 @@ object VertxOutputEncoders {
     * @tparam O type of the result to encode
     * @return a function, that given a RoutingContext will write the output to its HTTP response
     */
-  private[vertx] def apply[O](output: EndpointOutput[O], result: O, isError: Boolean = false, logWhenHandled: Int => Unit = { _ => })(
+  private[vertx] def apply[O](output: EndpointOutput[O, _], result: O, isError: Boolean = false, logWhenHandled: Int => Unit = { _ => })(
       implicit endpointOptions: VertxEndpointOptions
   ): RoutingContextHandler = { rc =>
     val resp = rc.response

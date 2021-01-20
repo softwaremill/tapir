@@ -23,8 +23,8 @@ import zio.ZIO
   * @tparam O Output parameter types.
   */
 abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[I, E, O])
-    extends EndpointInfoOps[I, E, O, Nothing]
-    with EndpointMetaOps[I, E, O, Nothing] { outer =>
+    extends EndpointInfoOps[I, E, O, Any]
+    with EndpointMetaOps[I, E, O, Any] { outer =>
 
   /** Part of the input, consumed by `logicFragment`.
     */
@@ -33,9 +33,9 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
   protected def logicFragment: T => ZIO[R, E, U]
 
   override type EndpointType[_I, _E, _O, -_R] = ZServerEndpointInParts[R, U, J, _I, _E, _O]
-  override def input: EndpointInput[I] = endpoint.input
-  override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
-  override def output: EndpointOutput[O] = endpoint.output
+  override def input: EndpointInput[I, Any] = endpoint.input
+  override def errorOutput: EndpointOutput[E, Any] = endpoint.errorOutput
+  override def output: EndpointOutput[O, Any] = endpoint.output
   override def info: EndpointInfo = endpoint.info
 
   override private[tapir] def withInfo(info: EndpointInfo): ZServerEndpointInParts[R, U, J, I, E, O] =

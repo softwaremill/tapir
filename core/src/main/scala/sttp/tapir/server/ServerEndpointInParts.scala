@@ -36,9 +36,9 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
   protected def logicFragment: MonadError[F] => T => F[Either[E, U]]
 
   override type EndpointType[_I, _E, _O, -_R] = ServerEndpointInParts[U, IR, _I, _E, _O, _R, F]
-  override def input: EndpointInput[I] = endpoint.input
-  override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
-  override def output: EndpointOutput[O] = endpoint.output
+  override def input: EndpointInput[I, R] = endpoint.input
+  override def errorOutput: EndpointOutput[E, R] = endpoint.errorOutput
+  override def output: EndpointOutput[O, R] = endpoint.output
   override def info: EndpointInfo = endpoint.info
 
   override private[tapir] def withInfo(info: EndpointInfo): ServerEndpointInParts[U, IR, I, E, O, R, F] =

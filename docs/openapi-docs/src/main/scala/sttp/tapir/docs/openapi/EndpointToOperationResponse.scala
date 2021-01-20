@@ -18,7 +18,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
   }
 
   private def outputToResponses(
-      output: EndpointOutput[_],
+      output: EndpointOutput[_, _],
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
@@ -47,7 +47,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
     } else responses
   }
 
-  private def outputsToResponse(sc: Option[sttp.model.StatusCode], outputs: Vector[EndpointOutput[_]]): Option[Response] = {
+  private def outputsToResponse(sc: Option[sttp.model.StatusCode], outputs: Vector[EndpointOutput[_, _]]): Option[Response] = {
     val headers = outputs.collect {
       case EndpointIO.Header(name, codec, info) =>
         name -> Right(

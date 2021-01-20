@@ -33,7 +33,7 @@ object OutputToFinatraResponse {
 
   def apply[O](
       defaultStatus: Status,
-      output: EndpointOutput[O],
+      output: EndpointOutput[O, _],
       v: Any
   ): Response = {
     outputValuesToResponse(encodeOutputs(output, ParamsAsAny(v), OutputValues.empty), defaultStatus)

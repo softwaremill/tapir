@@ -19,7 +19,7 @@ import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketB
 private[play] object OutputToPlayResponse {
   def apply[O](
       defaultStatus: StatusCode,
-      output: EndpointOutput[O],
+      output: EndpointOutput[O, _],
       v: Any
   ): Result = {
     val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)

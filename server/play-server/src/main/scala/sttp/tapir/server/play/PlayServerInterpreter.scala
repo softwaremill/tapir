@@ -47,7 +47,7 @@ trait PlayServerInterpreter {
     }
     def handleDecodeFailure(
         e: Endpoint[_, _, _, _],
-        input: EndpointInput[_],
+        input: EndpointInput[_, _],
         failure: DecodeResult.Failure
     ): Result = {
       val decodeFailureCtx = DecodeFailureContext(input, failure, e)

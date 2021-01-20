@@ -71,7 +71,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
   private def decodeFailureDirective[I](
       ctx: RequestContext,
       e: Endpoint[_, _, _, _],
-      input: EndpointInput[_],
+      input: EndpointInput[_, _],
       failure: DecodeResult.Failure
   )(implicit ec: ExecutionContext, mat: Materializer): Directive1[I] = {
     val decodeFailureCtx = DecodeFailureContext(input, failure, e)

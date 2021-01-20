@@ -10,10 +10,10 @@ import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType
 import scala.util.Try
 
 class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
-  def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
+  def apply(output: EndpointOutput[_, _], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
     output match {
-      case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
-      case s: EndpointOutput.Single[_]                => applySingle(s, value, ov)
+      case s: EndpointIO.Single[_, _]                 => applySingle(s, value, ov)
+      case s: EndpointOutput.Single[_, _]             => applySingle(s, value, ov)
       case EndpointIO.Pair(left, right, _, split)     => applyPair(left, right, split, value, ov)
       case EndpointOutput.Pair(left, right, _, split) => applyPair(left, right, split, value, ov)
       case EndpointOutput.Void()                      => throw new IllegalArgumentException("Cannot encode a void output!")
@@ -21,8 +21,8 @@ class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
   }
 
   private def applyPair(
-      left: EndpointOutput[_],
-      right: EndpointOutput[_],
+      left: EndpointOutput[_, _],
+      right: EndpointOutput[_, _],
       split: SplitParams,
       params: Params,
       ov: OutputValues[B, W]
@@ -31,7 +31,7 @@ class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
     apply(right, rightParams, apply(left, leftParams, ov))
   }
 
-  private def applySingle(output: EndpointOutput.Single[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
+  private def applySingle(output: EndpointOutput.Single[_, _], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
     def encoded[T]: T = output._mapping.asInstanceOf[Mapping[T, Any]].encode(value.asAny)
     output match {
       case EndpointIO.Empty(_, _)                   => ov

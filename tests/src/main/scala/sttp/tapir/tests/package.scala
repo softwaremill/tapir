@@ -186,7 +186,7 @@ package object tests {
     endpoint
       .in(query[String]("fruit"))
       .out(
-        oneOf[Either[Int, String]](
+        oneOf[Either[Int, String], Any](
           statusMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int) => true },
           statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
@@ -209,7 +209,7 @@ package object tests {
     endpoint
       .in(query[String]("fruit"))
       .out(
-        oneOf[Option[Either[Int, String]]](
+        oneOf[Option[Either[Int, String]], Any](
           statusMapping(StatusCode.NoContent, emptyOutput.map[None.type]((_: Unit) => None)(_ => ())),
           statusMappingValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(
             implicitly[MatchType[Some[Left[Int, String]]]].partial
@@ -224,7 +224,7 @@ package object tests {
     endpoint
       .in(query[String]("fruit"))
       .out(
-        oneOf[Either[Unit, String]](
+        oneOf[Either[Unit, String], Any](
           statusMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit) => true },
           statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )

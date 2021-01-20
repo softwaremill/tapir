@@ -44,8 +44,8 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
 
   private def securityRequirements(securitySchemes: SecuritySchemes, e: Endpoint[_, _, _, _]): List[SecurityRequirement] = {
     val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
-      case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
-      case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
+      case auth: EndpointInput.Auth.ScopedOauth2[_, _] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
+      case auth                                        => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
     val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)

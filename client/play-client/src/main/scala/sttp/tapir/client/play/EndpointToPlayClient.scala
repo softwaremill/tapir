@@ -73,14 +73,14 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
   }
 
   private def getOutputParams(
-      output: EndpointOutput[_],
+      output: EndpointOutput[_, _],
       body: => Any,
       headers: Map[String, Seq[String]],
       code: sttp.model.StatusCode,
       statusText: String
   ): DecodeResult[Params] = {
     output match {
-      case s: EndpointOutput.Single[_] =>
+      case s: EndpointOutput.Single[_, _] =>
         (s match {
           case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
           case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
@@ -120,8 +120,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
   }
 
   private def handleOutputPair(
-      left: EndpointOutput[_],
-      right: EndpointOutput[_],
+      left: EndpointOutput[_, _],
+      right: EndpointOutput[_, _],
       combine: CombineParams,
       body: => Any,
       headers: Map[String, Seq[String]],
@@ -139,7 +139,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
 
   @scala.annotation.tailrec
   private def setInputParams[I](
-      input: EndpointInput[I],
+      input: EndpointInput[I, _],
       params: Params,
       req: StandaloneWSRequest
   ): StandaloneWSRequest = {
@@ -185,7 +185,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         req
-      case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, req)
+      case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
       case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
@@ -194,24 +194,24 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
   }
 
   def handleInputPair(
-      left: EndpointInput[_],
-      right: EndpointInput[_],
+      left: EndpointInput[_, _],
+      right: EndpointInput[_, _],
       params: Params,
       split: SplitParams,
       req: StandaloneWSRequest
   ): StandaloneWSRequest = {
     val (leftParams, rightParams) = split(params)
-    val req2 = setInputParams(left.asInstanceOf[EndpointInput[Any]], leftParams, req)
-    setInputParams(right.asInstanceOf[EndpointInput[Any]], rightParams, req2)
+    val req2 = setInputParams(left.asInstanceOf[EndpointInput[Any, Any]], leftParams, req)
+    setInputParams(right.asInstanceOf[EndpointInput[Any, Any]], rightParams, req2)
   }
 
   private def handleMapped[II, T](
-      tuple: EndpointInput[II],
+      tuple: EndpointInput[II, _],
       codec: Mapping[T, II],
       params: Params,
       req: StandaloneWSRequest
   ): StandaloneWSRequest = {
-    setInputParams(tuple.asInstanceOf[EndpointInput[Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), req)
+    setInputParams(tuple.asInstanceOf[EndpointInput[Any, Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), req)
   }
 
   //        type PlayPart = play.shaded.ahc.org.asynchttpclient.request.body.multipart.Part
@@ -302,7 +302,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case f                        => throw new IllegalArgumentException(s"Cannot decode: $f")
     }
 
-  private def responseFromOutput(out: EndpointOutput[_]): StandaloneWSResponse => Any = { response =>
+  private def responseFromOutput(out: EndpointOutput[_, _]): StandaloneWSResponse => Any = { response =>
     bodyIsStream(out) match {
       case Some(streams) =>
         streams match {
@@ -329,7 +329,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     }
   }
 
-  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
+  private def bodyIsStream[I](out: EndpointOutput[I, _]): Option[Streams[_]] = {
     out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
       Vector(streams)
     }.headOption

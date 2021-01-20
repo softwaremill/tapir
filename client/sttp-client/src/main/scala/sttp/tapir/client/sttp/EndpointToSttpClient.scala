@@ -41,9 +41,9 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], R]]
   }
 
-  private def getOutputParams(output: EndpointOutput[_], body: Any, meta: ResponseMetadata): DecodeResult[Params] = {
+  private def getOutputParams(output: EndpointOutput[_, _], body: Any, meta: ResponseMetadata): DecodeResult[Params] = {
     output match {
-      case s: EndpointOutput.Single[_] =>
+      case s: EndpointOutput.Single[_, _] =>
         (s match {
           case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
           case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
@@ -86,8 +86,8 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   private def handleOutputPair(
-      left: EndpointOutput[_],
-      right: EndpointOutput[_],
+      left: EndpointOutput[_, _],
+      right: EndpointOutput[_, _],
       combine: CombineParams,
       body: Any,
       meta: ResponseMetadata
@@ -101,7 +101,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
 
   @scala.annotation.tailrec
   private def setInputParams[I](
-      input: EndpointInput[I],
+      input: EndpointInput[I, _],
       params: Params,
       uri: Uri,
       req: PartialAnyRequest
@@ -151,7 +151,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
         (uri, req)
-      case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, uri, req)
+      case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, uri, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, uri, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, uri, req)
       case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, uri, req)
@@ -160,26 +160,26 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   def handleInputPair(
-      left: EndpointInput[_],
-      right: EndpointInput[_],
+      left: EndpointInput[_, _],
+      right: EndpointInput[_, _],
       params: Params,
       split: SplitParams,
       uri: Uri,
       req: PartialAnyRequest
   ): (Uri, PartialAnyRequest) = {
     val (leftParams, rightParams) = split(params)
-    val (uri2, req2) = setInputParams(left.asInstanceOf[EndpointInput[Any]], leftParams, uri, req)
-    setInputParams(right.asInstanceOf[EndpointInput[Any]], rightParams, uri2, req2)
+    val (uri2, req2) = setInputParams(left.asInstanceOf[EndpointInput[Any, _]], leftParams, uri, req)
+    setInputParams(right.asInstanceOf[EndpointInput[Any, _]], rightParams, uri2, req2)
   }
 
   private def handleMapped[II, T](
-      tuple: EndpointInput[II],
+      tuple: EndpointInput[II, _],
       codec: Mapping[T, II],
       params: Params,
       uri: Uri,
       req: PartialAnyRequest
   ): (Uri, PartialAnyRequest) = {
-    setInputParams(tuple.asInstanceOf[EndpointInput[Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), uri, req)
+    setInputParams(tuple.asInstanceOf[EndpointInput[Any, _]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), uri, req)
   }
 
   private def setBody[L, H, CF <: CodecFormat](
@@ -225,7 +225,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
     }
 
-  private def responseAsFromOutputs(out: EndpointOutput[_], isWebSocket: Boolean): ResponseAs[Any, Any] = {
+  private def responseAsFromOutputs(out: EndpointOutput[_, _], isWebSocket: Boolean): ResponseAs[Any, Any] = {
     ((bodyIsStream(out), isWebSocket) match {
       case (Some(streams), _) => asStreamAlwaysUnsafe(streams)
       case (_, true)          => asWebSocketAlwaysUnsafe
@@ -243,13 +243,13 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     }).asInstanceOf[ResponseAs[Any, Any]]
   }
 
-  private def bodyIsStream[I](out: EndpointOutput[I]): Option[Streams[_]] = {
+  private def bodyIsStream[I](out: EndpointOutput[I, _]): Option[Streams[_]] = {
     out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
       Vector(streams)
     }.headOption
   }
 
-  private def bodyIsWebSocket[I](out: EndpointOutput[I]): Boolean = {
+  private def bodyIsWebSocket[I](out: EndpointOutput[I, _]): Boolean = {
     out.traverseOutputs { case EndpointOutput.WebSocketBodyWrapper(_) =>
       Vector(())
     }.nonEmpty

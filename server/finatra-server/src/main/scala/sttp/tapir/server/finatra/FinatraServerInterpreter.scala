@@ -68,7 +68,7 @@ trait FinatraServerInterpreter extends Logging {
 
       def handleDecodeFailure(
           e: Endpoint[_, _, _, _],
-          input: EndpointInput[_],
+          input: EndpointInput[_, _],
           failure: DecodeResult.Failure
       ): Response = {
         val decodeFailureCtx = DecodeFailureContext(input, failure, e)
@@ -97,7 +97,7 @@ trait FinatraServerInterpreter extends Logging {
     FinatraRoute(handler, httpMethod(e.endpoint), path(e.input))
   }
 
-  private[finatra] def path(input: EndpointInput[_]): String = {
+  private[finatra] def path(input: EndpointInput[_, _]): String = {
     val p = input
       .asVectorOfBasicInputs()
       .collect {

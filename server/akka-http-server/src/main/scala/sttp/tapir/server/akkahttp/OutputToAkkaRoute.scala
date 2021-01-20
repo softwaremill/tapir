@@ -22,7 +22,7 @@ import scala.util.Try
 private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Materializer) {
   private type EntityFromLength = Option[Long] => ResponseEntity
 
-  def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O], v: O): Route = {
+  def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O, _], v: O): Route = {
     val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
 
     val statusCode = outputValues.statusCode.map(c => AkkaStatusCode.int2StatusCode(c.code)).getOrElse(defaultStatusCode)

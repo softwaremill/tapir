@@ -20,7 +20,7 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
   private val bearerType = c.weakTypeOf[bearer]
   private val basicType = c.weakTypeOf[basic]
 
-  def deriveEndpointInput[A: c.WeakTypeTag]: c.Expr[EndpointInput[A]] = {
+  def deriveEndpointInput[A: c.WeakTypeTag]: c.Expr[EndpointInput[A, Any]] = {
     val util = new CaseClassUtil[c.type, A](c, "request endpoint")
     validateCaseClass(util)
 
@@ -89,7 +89,7 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
 
     val result = (pathInputs ::: nonPathInputs).reduceLeft { (left, right) => q"$left.and($right)" }
     val mapper = mapToTargetFunc(fieldIdxToInputIdx, util)
-    c.Expr[EndpointInput[A]](q"$result.mapTo($mapper)")
+    c.Expr[EndpointInput[A, Any]](q"$result.mapTo($mapper)")
   }
 
   type StringCodec[T] = Codec[String, T, TextPlain]

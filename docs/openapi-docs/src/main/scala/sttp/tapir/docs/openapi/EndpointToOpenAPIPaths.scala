@@ -43,7 +43,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), pathItem)
   }
 
-  private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_]]): Operation = {
+  private def endpointToOperation(defaultId: String, e: Endpoint[_, _, _, _], inputs: Vector[EndpointInput.Basic[_, _]]): Operation = {
     val parameters = operationParameters(inputs)
     val body: Vector[ReferenceOr[RequestBody]] = operationInputBody(inputs)
     val responses: ListMap[ResponsesKey, ReferenceOr[Response]] = endpointToOperationResponse(e)
@@ -64,8 +64,8 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
   private def operationSecurity(e: Endpoint[_, _, _, _]): List[SecurityRequirement] = {
     val securityRequirement: SecurityRequirement = e.input.auths.flatMap {
-      case auth: EndpointInput.Auth.ScopedOauth2[_] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
-      case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
+      case auth: EndpointInput.Auth.ScopedOauth2[_, _] => securitySchemes.get(auth).map(_._1).map((_, auth.requiredScopes.toVector))
+      case auth                                        => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
     val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
@@ -80,7 +80,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     }
   }
 
-  private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
+  private def operationInputBody(inputs: Vector[EndpointInput.Basic[_, _]]) = {
     inputs.collect {
       case EndpointIO.Body(_, codec, info) =>
         Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.isOptional)))
@@ -89,7 +89,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     }
   }
 
-  private def operationParameters(inputs: Vector[EndpointInput.Basic[_]]) = {
+  private def operationParameters(inputs: Vector[EndpointInput.Basic[_, _]]) = {
     inputs.collect {
       case q: EndpointInput.Query[_]       => queryToParameter(q)
       case p: EndpointInput.PathCapture[_] => pathCaptureToParameter(p)

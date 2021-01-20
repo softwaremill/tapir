@@ -360,7 +360,7 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
     """)
   }
 
-  def compareTransputs(left: EndpointTransput[_], right: EndpointTransput[_]): Boolean =
+  def compareTransputs(left: EndpointTransput[_, _], right: EndpointTransput[_, _]): Boolean =
     (left, right) match {
       case (EndpointInput.Pair(left1, right1, _, _), EndpointInput.Pair(left2, right2, _, _)) =>
         compareTransputs(left1, left2) && compareTransputs(right1, right2)

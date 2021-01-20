@@ -75,7 +75,7 @@ private[http4s] class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Tim
 
   private def handleDecodeFailure[I](
       e: Endpoint[_, _, _, _],
-      input: EndpointInput[_],
+      input: EndpointInput[_, _],
       failure: DecodeResult.Failure
   ): F[Option[Response[F]]] = {
     val decodeFailureCtx = DecodeFailureContext(input, failure, e)

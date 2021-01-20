@@ -22,13 +22,13 @@ trait TapirAliases {
   val EndpointInfo = sttp.tapir.EndpointInfo
 
   /** EndpointIO.scala */
-  type EndpointInput[I] = sttp.tapir.EndpointInput[I]
+  type EndpointInput[I, -R] = sttp.tapir.EndpointInput[I, R]
   val EndpointInput = sttp.tapir.EndpointInput
 
-  type EndpointOutput[O] = sttp.tapir.EndpointOutput[O]
+  type EndpointOutput[O, -R] = sttp.tapir.EndpointOutput[O, R]
   val EndpointOutput = sttp.tapir.EndpointOutput
 
-  type EndpointIO[I] = sttp.tapir.EndpointIO[I]
+  type EndpointIO[I, -R] = sttp.tapir.EndpointIO[I, R]
   val EndpointIO = sttp.tapir.EndpointIO
 
   type StreamBody[BS, T, S] = sttp.tapir.StreamBodyIO[BS, T, S]

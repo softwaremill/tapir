@@ -17,7 +17,7 @@ class EndpointOutputAnnotations(override val c: blackbox.Context) extends Endpoi
   private val setCookiesType = c.weakTypeOf[setCookies]
   private val statusCodeType = c.weakTypeOf[statusCode]
 
-  def deriveEndpointOutput[A: c.WeakTypeTag]: c.Expr[EndpointOutput[A]] = {
+  def deriveEndpointOutput[A: c.WeakTypeTag]: c.Expr[EndpointOutput[A, Any]] = {
     val util = new CaseClassUtil[c.type, A](c, "response endpoint")
     validateCaseClass(util)
 
@@ -43,7 +43,7 @@ class EndpointOutputAnnotations(override val c: blackbox.Context) extends Endpoi
 
     val result = outputs.reduceLeft { (left, right) => q"$left.and($right)" }
     val mapper = mapToTargetFunc(mutable.Map((0 until outputs.size).map(i => (i, i)): _*), util)
-    c.Expr[EndpointOutput[A]](q"$result.mapTo($mapper)")
+    c.Expr[EndpointOutput[A, Any]](q"$result.mapTo($mapper)")
   }
 
   def makeSetCookieOutput(field: c.Symbol)(altName: Option[String]): Tree =

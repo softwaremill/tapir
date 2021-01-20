@@ -18,7 +18,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 ) {
   def apply(
       e: Endpoint[_, _, _, _],
-      ws: WebSocketBodyWrapper[_, _]
+      ws: WebSocketBodyWrapper[_, _, _]
   ): (String, ChannelItem) = {
     val inputs = e.input.asVectorOfBasicInputs(includeAuth = false)
     val pathComponents = namedPathComponents(inputs)
@@ -38,7 +38,7 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), channelItem)
   }
 
-  private def parameters(inputs: Vector[EndpointInput.Basic[_]]): ListMap[String, ReferenceOr[Parameter]] = {
+  private def parameters(inputs: Vector[EndpointInput.Basic[_, _]]): ListMap[String, ReferenceOr[Parameter]] = {
     inputs.collect { case EndpointInput.PathCapture(Some(name), codec, info) =>
       name -> Right(Parameter(info.description, schemas(codec).toOption, None))
     }.toListMap

@@ -8,10 +8,10 @@ import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox
 
 object StatusMappingMacro {
-  def classMatcherIfErasedSameAsType[O: c.WeakTypeTag](c: blackbox.Context)(
+  def classMatcherIfErasedSameAsType[O: c.WeakTypeTag, R](c: blackbox.Context)(
       statusCode: c.Expr[StatusCode],
-      output: c.Expr[EndpointOutput[O]]
-  )(ct: c.Expr[ClassTag[O]]): c.Expr[StatusMapping[O]] = {
+      output: c.Expr[EndpointOutput[O, R]]
+  )(ct: c.Expr[ClassTag[O]]): c.Expr[StatusMapping[O, R]] = {
     import c.universe._
 
     val t = implicitly[c.WeakTypeTag[O]].tpe.dealias
@@ -24,6 +24,6 @@ object StatusMappingMacro {
       )
     }
 
-    c.Expr[StatusMapping[O]](q"_root_.sttp.tapir.statusMappingClassMatcher($statusCode, $output, $ct.runtimeClass)")
+    c.Expr[StatusMapping[O, R]](q"_root_.sttp.tapir.statusMappingClassMatcher($statusCode, $output, $ct.runtimeClass)")
   }
 }

@@ -62,26 +62,26 @@ package object internal {
 
   //
 
-  implicit class RichEndpointInput[I](input: EndpointInput[I]) {
-    def traverseInputs[T](handle: PartialFunction[EndpointInput[_], Vector[T]]): Vector[T] =
+  implicit class RichEndpointInput[I](input: EndpointInput[I, _]) {
+    def traverseInputs[T](handle: PartialFunction[EndpointInput[_, _], Vector[T]]): Vector[T] =
       input match {
-        case i: EndpointInput[_] if handle.isDefinedAt(i) => handle(i)
-        case EndpointInput.Pair(left, right, _, _)        => left.traverseInputs(handle) ++ right.traverseInputs(handle)
-        case EndpointIO.Pair(left, right, _, _)           => left.traverseInputs(handle) ++ right.traverseInputs(handle)
-        case EndpointInput.MappedPair(wrapped, _)         => wrapped.traverseInputs(handle)
-        case EndpointIO.MappedPair(wrapped, _)            => wrapped.traverseInputs(handle)
-        case a: EndpointInput.Auth[_]                     => a.input.traverseInputs(handle)
-        case _                                            => Vector.empty
+        case i: EndpointInput[_, _] if handle.isDefinedAt(i) => handle(i)
+        case EndpointInput.Pair(left, right, _, _)           => left.traverseInputs(handle) ++ right.traverseInputs(handle)
+        case EndpointIO.Pair(left, right, _, _)              => left.traverseInputs(handle) ++ right.traverseInputs(handle)
+        case EndpointInput.MappedPair(wrapped, _)            => wrapped.traverseInputs(handle)
+        case EndpointIO.MappedPair(wrapped, _)               => wrapped.traverseInputs(handle)
+        case a: EndpointInput.Auth[_, _]                     => a.input.traverseInputs(handle)
+        case _                                               => Vector.empty
       }
 
-    def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_]] =
+    def asVectorOfBasicInputs(includeAuth: Boolean = true): Vector[EndpointInput.Basic[_, _]] =
       traverseInputs {
-        case b: EndpointInput.Basic[_] => Vector(b)
-        case a: EndpointInput.Auth[_]  => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
+        case b: EndpointInput.Basic[_, _] => Vector(b)
+        case a: EndpointInput.Auth[_, _]  => if (includeAuth) a.input.asVectorOfBasicInputs(includeAuth) else Vector.empty
       }
 
-    def auths: Vector[EndpointInput.Auth[_]] =
-      traverseInputs { case a: EndpointInput.Auth[_] =>
+    def auths: Vector[EndpointInput.Auth[_, _]] =
+      traverseInputs { case a: EndpointInput.Auth[_, _] =>
         Vector(a)
       }
 
@@ -90,8 +90,8 @@ package object internal {
         Vector(i.m)
       }.headOption
 
-    def pathTo(targetInput: EndpointInput[_]): Vector[EndpointInput[_]] = {
-      def findIn(parent: EndpointInput[_], inputs: EndpointInput[_]*) = inputs.foldLeft(Vector.empty[EndpointInput[_]]) {
+    def pathTo(targetInput: EndpointInput[_, _]): Vector[EndpointInput[_, _]] = {
+      def findIn(parent: EndpointInput[_, _], inputs: EndpointInput[_, _]*) = inputs.foldLeft(Vector.empty[EndpointInput[_, _]]) {
         case (v, input) if v.isEmpty =>
           val path = input.pathTo(targetInput)
           if (path.nonEmpty) parent +: path else path
@@ -100,39 +100,39 @@ package object internal {
       if (targetInput == input) Vector(input)
       else
         input match {
-          case _: EndpointInput.Basic[_]                 => Vector.empty
+          case _: EndpointInput.Basic[_, _]              => Vector.empty
           case i @ EndpointInput.Pair(left, right, _, _) => findIn(i, left, right)
           case i @ EndpointIO.Pair(left, right, _, _)    => findIn(i, left, right)
-          case a: EndpointInput.Auth[_]                  => findIn(a, a.input)
+          case a: EndpointInput.Auth[_, _]               => findIn(a, a.input)
           case i @ EndpointInput.MappedPair(p, _)        => findIn(i, p)
           case i @ EndpointIO.MappedPair(p, _)           => findIn(i, p)
         }
     }
   }
 
-  def basicInputSortIndex(i: EndpointInput.Basic[_]): Int =
+  def basicInputSortIndex(i: EndpointInput.Basic[_, _]): Int =
     i match {
-      case _: EndpointInput.FixedMethod[_]        => 0
-      case _: EndpointInput.FixedPath[_]          => 1
-      case _: EndpointInput.PathCapture[_]        => 1
-      case _: EndpointInput.PathsCapture[_]       => 1
-      case _: EndpointInput.Query[_]              => 2
-      case _: EndpointInput.QueryParams[_]        => 2
-      case _: EndpointInput.Cookie[_]             => 3
-      case _: EndpointIO.Header[_]                => 3
-      case _: EndpointIO.Headers[_]               => 3
-      case _: EndpointIO.FixedHeader[_]           => 3
-      case _: EndpointInput.ExtractFromRequest[_] => 4
-      case _: EndpointIO.Body[_, _]               => 6
-      case _: EndpointIO.StreamBodyWrapper[_, _]  => 6
-      case _: EndpointIO.Empty[_]                 => 7
+      case _: EndpointInput.FixedMethod[_]          => 0
+      case _: EndpointInput.FixedPath[_]            => 1
+      case _: EndpointInput.PathCapture[_]          => 1
+      case _: EndpointInput.PathsCapture[_]         => 1
+      case _: EndpointInput.Query[_]                => 2
+      case _: EndpointInput.QueryParams[_]          => 2
+      case _: EndpointInput.Cookie[_]               => 3
+      case _: EndpointIO.Header[_]                  => 3
+      case _: EndpointIO.Headers[_]                 => 3
+      case _: EndpointIO.FixedHeader[_]             => 3
+      case _: EndpointInput.ExtractFromRequest[_]   => 4
+      case _: EndpointIO.Body[_, _]                 => 6
+      case _: EndpointIO.StreamBodyWrapper[_, _, _] => 6
+      case _: EndpointIO.Empty[_]                   => 7
     }
 
-  implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
+  implicit class RichEndpointOutput[I](output: EndpointOutput[I, _]) {
     // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code
     // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
     // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs are skipped.
-    type BasicOutputs = Vector[EndpointOutput.Basic[_]]
+    type BasicOutputs = Vector[EndpointOutput.Basic[_, _]]
     def asBasicOutputsList: List[(Option[StatusCode], BasicOutputs)] =
       asBasicOutputsOrList match {
         case Left(outputs) => (None -> outputs) :: Nil
@@ -157,7 +157,7 @@ package object internal {
         case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsOrList
         case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsOrList
         case _: EndpointOutput.Void[_]              => Left(Vector.empty)
-        case s: EndpointOutput.OneOf[_, _] =>
+        case s: EndpointOutput.OneOf[_, _, _] =>
           Right(
             s.mappings
               .map(c => (c.output.asBasicOutputsOrList, c.statusCode))
@@ -171,20 +171,20 @@ package object internal {
         case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
           val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toList
           Right(entries)
-        case _: EndpointIO.Empty[_]     => Left(Vector.empty)
-        case b: EndpointOutput.Basic[_] => Left(Vector(b))
+        case _: EndpointIO.Empty[_]        => Left(Vector.empty)
+        case b: EndpointOutput.Basic[_, _] => Left(Vector(b))
       }
     }
 
-    def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
+    def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_, _], Vector[T]]): Vector[T] =
       output match {
-        case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
-        case EndpointOutput.Pair(left, right, _, _)        => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
-        case EndpointIO.Pair(left, right, _, _)            => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
-        case EndpointOutput.MappedPair(wrapped, _)         => wrapped.traverseOutputs(handle)
-        case EndpointIO.MappedPair(wrapped, _)             => wrapped.traverseOutputs(handle)
-        case s: EndpointOutput.OneOf[_, _]                 => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
-        case _                                             => Vector.empty
+        case o: EndpointOutput[_, _] if handle.isDefinedAt(o) => handle(o)
+        case EndpointOutput.Pair(left, right, _, _)           => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
+        case EndpointIO.Pair(left, right, _, _)               => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
+        case EndpointOutput.MappedPair(wrapped, _)            => wrapped.traverseOutputs(handle)
+        case EndpointIO.MappedPair(wrapped, _)                => wrapped.traverseOutputs(handle)
+        case s: EndpointOutput.OneOf[_, _, _]                 => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
+        case _                                                => Vector.empty
       }
 
     def bodyType: Option[RawBodyType[_]] = {
@@ -194,18 +194,18 @@ package object internal {
     }
   }
 
-  implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
-    def sortByType: Vector[EndpointOutput.Basic[_]] =
+  implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_, _]]) {
+    def sortByType: Vector[EndpointOutput.Basic[_, _]] =
       outputs.sortBy {
-        case _: EndpointIO.Empty[_]                       => 0
-        case _: EndpointOutput.StatusCode[_]              => 0
-        case _: EndpointOutput.FixedStatusCode[_]         => 0
-        case _: EndpointIO.Header[_]                      => 1
-        case _: EndpointIO.Headers[_]                     => 1
-        case _: EndpointIO.FixedHeader[_]                 => 1
-        case _: EndpointIO.Body[_, _]                     => 2
-        case _: EndpointIO.StreamBodyWrapper[_, _]        => 2
-        case _: EndpointOutput.WebSocketBodyWrapper[_, _] => 2
+        case _: EndpointIO.Empty[_]                          => 0
+        case _: EndpointOutput.StatusCode[_]                 => 0
+        case _: EndpointOutput.FixedStatusCode[_]            => 0
+        case _: EndpointIO.Header[_]                         => 1
+        case _: EndpointIO.Headers[_]                        => 1
+        case _: EndpointIO.FixedHeader[_]                    => 1
+        case _: EndpointIO.Body[_, _]                        => 2
+        case _: EndpointIO.StreamBodyWrapper[_, _, _]        => 2
+        case _: EndpointOutput.WebSocketBodyWrapper[_, _, _] => 2
       }
   }
 
@@ -216,7 +216,7 @@ package object internal {
     }
   }
 
-  def showMultiple(et: Vector[EndpointTransput[_]]): String = {
+  def showMultiple(et: Vector[EndpointTransput[_, _]]): String = {
     val et2 = et.filter {
       case _: EndpointIO.Empty[_] => false
       case _                      => true
@@ -251,9 +251,9 @@ package object internal {
     }
   }
 
-  def findWebSocket(e: Endpoint[_, _, _, _]): Option[WebSocketBodyWrapper[_, _]] =
+  def findWebSocket(e: Endpoint[_, _, _, _]): Option[WebSocketBodyWrapper[_, _, _]] =
     e.output
-      .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[_, _] =>
+      .traverseOutputs[EndpointOutput.WebSocketBodyWrapper[_, _, _]] { case ws: EndpointOutput.WebSocketBodyWrapper[_, _, _] =>
         Vector(ws)
       }
       .headOption

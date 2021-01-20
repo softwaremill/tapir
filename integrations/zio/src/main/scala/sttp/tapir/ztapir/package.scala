@@ -64,7 +64,7 @@ package object ztapir extends Tapir {
     def zServerLogicForCurrent[R, U](f: I => ZIO[R, E, U]): ZPartialServerEndpoint[R, U, Unit, E, O] =
       new ZPartialServerEndpoint[R, U, Unit, E, O](e.copy(input = emptyInput)) {
         override type T = I
-        override def tInput: EndpointInput[T] = e.input
+        override def tInput: EndpointInput[T, Any] = e.input
         override def partialLogic: T => ZIO[R, E, U] = f
       }
   }

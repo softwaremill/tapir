@@ -18,7 +18,7 @@ object SchemasForEndpoints {
     (schemaKeys.values.toListMap, schemas)
   }
 
-  private def forInput(input: EndpointInput[_]): List[ObjectTypeData] = {
+  private def forInput(input: EndpointInput[_, _]): List[ObjectTypeData] = {
     input match {
       case EndpointInput.FixedMethod(_, _, _)     => List.empty
       case EndpointInput.FixedPath(_, _, _)       => List.empty
@@ -27,14 +27,14 @@ object SchemasForEndpoints {
       case EndpointInput.Query(_, codec, _)       => ObjectTypeData(codec)
       case EndpointInput.Cookie(_, codec, _)      => ObjectTypeData(codec)
       case EndpointInput.QueryParams(_, _)        => List.empty
-      case _: EndpointInput.Auth[_]               => List.empty
+      case _: EndpointInput.Auth[_, _]            => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
       case EndpointInput.MappedPair(wrapped, _)   => forInput(wrapped)
       case EndpointInput.Pair(left, right, _, _)  => forInput(left) ++ forInput(right)
-      case op: EndpointIO[_]                      => forIO(op)
+      case op: EndpointIO[_, _]                   => forIO(op)
     }
   }
-  private def forOutput(output: EndpointOutput[_]): List[ObjectTypeData] = {
+  private def forOutput(output: EndpointOutput[_, _]): List[ObjectTypeData] = {
     output match {
       case EndpointOutput.OneOf(mappings, _)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
       case EndpointOutput.StatusCode(_, _, _)      => List.empty
@@ -44,11 +44,11 @@ object SchemasForEndpoints {
       case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
       case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
         ObjectTypeData(wrapped.codec) ++ ObjectTypeData(wrapped.requests) ++ ObjectTypeData(wrapped.responses)
-      case op: EndpointIO[_] => forIO(op)
+      case op: EndpointIO[_, _] => forIO(op)
     }
   }
 
-  private def forIO(io: EndpointIO[_]): List[ObjectTypeData] = {
+  private def forIO(io: EndpointIO[_, _]): List[ObjectTypeData] = {
     io match {
       case EndpointIO.Pair(left, right, _, _) => forIO(left) ++ forIO(right)
       case EndpointIO.Header(_, codec, _)     => ObjectTypeData(codec)

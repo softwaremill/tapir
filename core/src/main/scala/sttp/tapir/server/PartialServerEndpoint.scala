@@ -34,30 +34,30 @@ abstract class PartialServerEndpoint[U, I, E, O, -R, F[_]](partialEndpoint: Endp
     with EndpointMetaOps[I, E, O, R] { outer =>
   // original type of the partial input (transformed into U)
   type T
-  protected def tInput: EndpointInput[T]
+  protected def tInput: EndpointInput[T, R]
   protected def partialLogic: MonadError[F] => T => F[Either[E, U]]
 
   override type EndpointType[_I, _E, _O, -_R] = PartialServerEndpoint[U, _I, _E, _O, _R, F]
 
   def endpoint: Endpoint[(T, I), E, O, R] = partialEndpoint.prependIn(tInput)
 
-  override def input: EndpointInput[I] = partialEndpoint.input
-  def errorOutput: EndpointOutput[E] = partialEndpoint.errorOutput
-  override def output: EndpointOutput[O] = partialEndpoint.output
+  override def input: EndpointInput[I, R] = partialEndpoint.input
+  def errorOutput: EndpointOutput[E, R] = partialEndpoint.errorOutput
+  override def output: EndpointOutput[O, R] = partialEndpoint.output
   override def info: EndpointInfo = partialEndpoint.info
 
   private def withEndpoint[I2, O2, R2 <: R](e2: Endpoint[I2, E, O2, R2]): PartialServerEndpoint[U, I2, E, O2, R2, F] =
     new PartialServerEndpoint[U, I2, E, O2, R2, F](e2) {
       override type T = outer.T
-      override protected def tInput: EndpointInput[T] = outer.tInput
+      override protected def tInput: EndpointInput[T, R] = outer.tInput
       override protected def partialLogic: MonadError[F] => T => F[Either[E, U]] = outer.partialLogic
     }
-  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): PartialServerEndpoint[U, I2, E, O, R with R2, F] =
+  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2, R2]): PartialServerEndpoint[U, I2, E, O, R with R2, F] =
     withEndpoint(partialEndpoint.withInput(input))
-  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]) = withEndpoint(partialEndpoint.withOutput(output))
+  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2, R2]) = withEndpoint(partialEndpoint.withOutput(output))
   override private[tapir] def withInfo(info: EndpointInfo) = withEndpoint(partialEndpoint.withInfo(info))
 
-  override protected def additionalInputsForShow: Vector[EndpointInput.Basic[_]] = tInput.asVectorOfBasicInputs()
+  override protected def additionalInputsForShow: Vector[EndpointInput.Basic[_, _]] = tInput.asVectorOfBasicInputs()
   override protected def showType: String = "PartialServerEndpoint"
 
   def serverLogicForCurrent[V, UV](
@@ -78,7 +78,7 @@ abstract class PartialServerEndpoint[U, I, E, O, -R, F[_]](partialEndpoint: Endp
   )(implicit concat: ParamConcat.Aux[U, V, UV]): PartialServerEndpoint[UV, Unit, E, O, R, F] =
     new PartialServerEndpoint[UV, Unit, E, O, R, F](partialEndpoint.copy(input = emptyInput)) {
       override type T = (outer.T, I)
-      override def tInput: EndpointInput[(outer.T, I)] = outer.tInput.and(outer.partialEndpoint.input)
+      override def tInput: EndpointInput[(outer.T, I), R] = outer.tInput.and(outer.partialEndpoint.input)
       override def partialLogic: MonadError[F] => ((outer.T, I)) => F[Either[E, UV]] =
         implicit monad => { case (t, i) =>
           outer.partialLogic(monad)(t).flatMap {

@@ -76,7 +76,7 @@ trait SttpStubServer {
         thenRespondWithOutput(endpoint.errorOutput, errorResponse, statusCode)
 
       private def thenRespondWithOutput(
-          output: EndpointOutput[_],
+          output: EndpointOutput[_, _],
           responseValue: Any,
           statusCode: StatusCode
       ): SttpBackendStub[F, R] = {

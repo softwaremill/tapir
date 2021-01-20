@@ -20,8 +20,12 @@ import scala.reflect.ClassTag
   *           [[sttp.capabilities.Streams]] (the ability to send and receive streaming bodies) or
   *           [[sttp.capabilities.WebSockets]] (the ability to handle websocket requests).
   */
-case class Endpoint[I, E, O, -R](input: EndpointInput[I], errorOutput: EndpointOutput[E], output: EndpointOutput[O], info: EndpointInfo)
-    extends EndpointInputsOps[I, E, O, R]
+case class Endpoint[I, E, O, -R](
+    input: EndpointInput[I, R],
+    errorOutput: EndpointOutput[E, R],
+    output: EndpointOutput[O, R],
+    info: EndpointInfo
+) extends EndpointInputsOps[I, E, O, R]
     with EndpointErrorOutputsOps[I, E, O, R]
     with EndpointOutputsOps[I, E, O, R]
     with EndpointInfoOps[I, E, O, R]
@@ -29,18 +33,18 @@ case class Endpoint[I, E, O, -R](input: EndpointInput[I], errorOutput: EndpointO
     with EndpointServerLogicOps[I, E, O, R] { outer =>
 
   override type EndpointType[_I, _E, _O, -_R] = Endpoint[_I, _E, _O, _R]
-  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): Endpoint[I2, E, O, R with R2] = this.copy(input = input)
-  override private[tapir] def withErrorOutput[E2, R2](errorOutput: EndpointOutput[E2]): Endpoint[I, E2, O, R with R2] =
+  override private[tapir] def withInput[I2, R2](input: EndpointInput[I2, R2]): Endpoint[I2, E, O, R with R2] = this.copy(input = input)
+  override private[tapir] def withErrorOutput[E2, R2](errorOutput: EndpointOutput[E2, R2]): Endpoint[I, E2, O, R with R2] =
     this.copy(errorOutput = errorOutput)
-  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2]): Endpoint[I, E, O2, R with R2] = this.copy(output = output)
+  override private[tapir] def withOutput[O2, R2](output: EndpointOutput[O2, R2]): Endpoint[I, E, O2, R with R2] = this.copy(output = output)
   override private[tapir] def withInfo(info: EndpointInfo): Endpoint[I, E, O, R] = this.copy(info = info)
   override protected def showType: String = "Endpoint"
 }
 
 trait EndpointInputsOps[I, E, O, -R] {
   type EndpointType[_I, _E, _O, -_R]
-  def input: EndpointInput[I]
-  private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): EndpointType[I2, E, O, R with R2]
+  def input: EndpointInput[I, R]
+  private[tapir] def withInput[I2, R2](input: EndpointInput[I2, R2]): EndpointType[I2, E, O, R with R2]
 
   def get: EndpointType[I, E, O, R] = method(Method.GET)
   def post: EndpointType[I, E, O, R] = method(Method.POST)
@@ -53,10 +57,10 @@ trait EndpointInputsOps[I, E, O, -R] {
   def trace: EndpointType[I, E, O, R] = method(Method.TRACE)
   def method(m: sttp.model.Method): EndpointType[I, E, O, R] = in(FixedMethod(m, Codec.idPlain(), EndpointIO.Info.empty))
 
-  def in[J, IJ](i: EndpointInput[J])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[IJ, E, O, R] =
+  def in[J, IJ, R2](i: EndpointInput[J, R2])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[IJ, E, O, R with R2] =
     withInput(input.and(i))
 
-  def prependIn[J, JI](i: EndpointInput[J])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[JI, E, O, R] =
+  def prependIn[J, JI, R2](i: EndpointInput[J, R2])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[JI, E, O, R with R2] =
     withInput(i.and(input))
 
   def in[BS, J, IJ, R2](i: StreamBodyIO[BS, J, R2])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[IJ, E, O, R with R2] =
@@ -87,13 +91,13 @@ trait EndpointInputsOps[I, E, O, -R] {
 
 trait EndpointErrorOutputsOps[I, E, O, -R] {
   type EndpointType[_I, _E, _O, -_R]
-  def errorOutput: EndpointOutput[E]
-  private[tapir] def withErrorOutput[E2, R2](input: EndpointOutput[E2]): EndpointType[I, E2, O, R with R2]
+  def errorOutput: EndpointOutput[E, R]
+  private[tapir] def withErrorOutput[E2, R2](input: EndpointOutput[E2, R2]): EndpointType[I, E2, O, R with R2]
 
-  def errorOut[F, EF](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[E, F, EF]): EndpointType[I, EF, O, R] =
+  def errorOut[F, EF, R2](i: EndpointOutput[F, R2])(implicit ts: ParamConcat.Aux[E, F, EF]): EndpointType[I, EF, O, R with R2] =
     withErrorOutput(errorOutput.and(i))
 
-  def prependErrorOut[F, FE](i: EndpointOutput[F])(implicit ts: ParamConcat.Aux[F, E, FE]): EndpointType[I, FE, O, R] =
+  def prependErrorOut[F, FE, R2](i: EndpointOutput[F, R2])(implicit ts: ParamConcat.Aux[F, E, FE]): EndpointType[I, FE, O, R with R2] =
     withErrorOutput(i.and(errorOutput))
 
   def mapErrorOut[EE](m: Mapping[E, EE]): EndpointType[I, EE, O, R] =
@@ -113,19 +117,19 @@ trait EndpointErrorOutputsOps[I, E, O, -R] {
 
 trait EndpointOutputsOps[I, E, O, -R] {
   type EndpointType[_I, _E, _O, -_R]
-  def output: EndpointOutput[O]
-  private[tapir] def withOutput[O2, R2](input: EndpointOutput[O2]): EndpointType[I, E, O2, R with R2]
+  def output: EndpointOutput[O, R]
+  private[tapir] def withOutput[O2, R2](input: EndpointOutput[O2, R2]): EndpointType[I, E, O2, R with R2]
 
-  def out[P, OP](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R] =
+  def out[P, OP, R2](i: EndpointOutput[P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R with R2] =
     withOutput(output.and(i))
 
-  def prependOut[P, PO](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
+  def prependOut[P, PO, R2](i: EndpointOutput[P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R with R2] =
     withOutput(i.and(output))
 
   def out[BS, P, OP, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R with R2] =
     withOutput(output.and(i.toEndpointIO))
 
-  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
+  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R with R2] =
     withOutput(i.toEndpointIO.and(output))
 
   def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
@@ -168,16 +172,16 @@ trait EndpointInfoOps[I, E, O, -R] {
 
 trait EndpointMetaOps[I, E, O, -R] {
   type EndpointType[_I, _E, _O, -_R]
-  def input: EndpointInput[I]
-  def errorOutput: EndpointOutput[E]
-  def output: EndpointOutput[O]
+  def input: EndpointInput[I, R]
+  def errorOutput: EndpointOutput[E, R]
+  def output: EndpointOutput[O, R]
   def info: EndpointInfo
 
   /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then
     * path, etc.)
     */
   def show: String = {
-    def showOutputs(o: EndpointOutput[_]): String = {
+    def showOutputs(o: EndpointOutput[_, _]): String = {
       val basicOutputsMap = o.asBasicOutputsList
 
       basicOutputsMap match {
@@ -198,7 +202,7 @@ trait EndpointMetaOps[I, E, O, -R] {
 
     s"$namePrefix$showInputs -> $showErrorOutputs/$showSuccessOutputs"
   }
-  protected def additionalInputsForShow: Vector[EndpointInput.Basic[_]] = Vector.empty
+  protected def additionalInputsForShow: Vector[EndpointInput.Basic[_, _]] = Vector.empty
 
   /** Detailed description of the endpoint, with inputs/outputs represented in the same order as originally defined,
     * including mapping information.
@@ -321,7 +325,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
   def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[U, Unit, E, O, R, F] =
     new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
       override type T = I
-      override def tInput: EndpointInput[T] = outer.input
+      override def tInput: EndpointInput[T, R] = outer.input
       override def partialLogic: MonadError[F] => T => F[Either[E, U]] = _ => f
     }
 
@@ -333,7 +337,7 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[U, Unit, E, O, R, F] =
     new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
       override type T = I
-      override def tInput: EndpointInput[T] = outer.input
+      override def tInput: EndpointInput[T, R] = outer.input
       override def partialLogic: MonadError[F] => T => F[Either[E, U]] = recoverErrors(f)
     }
 }

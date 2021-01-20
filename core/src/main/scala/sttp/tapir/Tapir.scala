@@ -176,8 +176,8 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     *
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `T` are covered).
     */
-  def oneOf[T](firstCase: StatusMapping[_ <: T], otherCases: StatusMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
-    EndpointOutput.OneOf[T, T](firstCase +: otherCases, Codec.idPlain())
+  def oneOf[T, R](firstCase: StatusMapping[_ <: T, R], otherCases: StatusMapping[_ <: T, R]*): EndpointOutput.OneOf[T, T, R] =
+    EndpointOutput.OneOf[T, T, R](firstCase +: otherCases, Codec.idPlain())
 
   /** Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the runtime class of `T`.
@@ -188,19 +188,19 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): StatusMapping[T] =
-    macro StatusMappingMacro.classMatcherIfErasedSameAsType[T]
+  def statusMapping[T: ClassTag, R](statusCode: StatusCode, output: EndpointOutput[T, R]): StatusMapping[T, R] =
+    macro StatusMappingMacro.classMatcherIfErasedSameAsType[T, R]
 
   /** Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def statusMappingClassMatcher[T](
+  def statusMappingClassMatcher[T, R](
       statusCode: StatusCode,
-      output: EndpointOutput[T],
+      output: EndpointOutput[T, R],
       runtimeClass: Class[_]
-  ): StatusMapping[T] = {
+  ): StatusMapping[T, R] = {
     StatusMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
   }
 
@@ -209,9 +209,9 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def statusMappingValueMatcher[T](statusCode: StatusCode, output: EndpointOutput[T])(
+  def statusMappingValueMatcher[T, R](statusCode: StatusCode, output: EndpointOutput[T, R])(
       matcher: PartialFunction[Any, Boolean]
-  ): StatusMapping[T] =
+  ): StatusMapping[T, R] =
     StatusMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
 
   /** Create a status mapping which uses `statusCode` and `output` if the provided value exactly matches one
@@ -219,13 +219,13 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def statusMappingExactMatcher[T: ClassTag](
+  def statusMappingExactMatcher[T: ClassTag, R](
       statusCode: StatusCode,
-      output: EndpointOutput[T]
+      output: EndpointOutput[T, R]
   )(
       firstExactValue: T,
       rest: T*
-  ): StatusMapping[T] =
+  ): StatusMapping[T, R] =
     statusMappingValueMatcher(statusCode, output)(exactMatch(rest.toSet + firstExactValue))
 
   /** Experimental!
@@ -236,20 +236,20 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def statusMappingFromMatchType[T: MatchType](statusCode: StatusCode, output: EndpointOutput[T]): StatusMapping[T] =
+  def statusMappingFromMatchType[T: MatchType, R](statusCode: StatusCode, output: EndpointOutput[T, R]): StatusMapping[T, R] =
     statusMappingValueMatcher(statusCode, output)(implicitly[MatchType[T]].partial)
 
   /** Create a fallback mapping to be used in [[oneOf]] output descriptions.
     */
-  def statusDefaultMapping[T](output: EndpointOutput[T]): StatusMapping[T] = {
+  def statusDefaultMapping[T, R](output: EndpointOutput[T, R]): StatusMapping[T, R] = {
     StatusMapping(None, output, _ => true)
   }
 
   /** An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
     */
-  val emptyOutput: EndpointOutput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  val emptyOutput: EndpointOutput[Unit, Any] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
-  private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  private[tapir] val emptyInput: EndpointInput[Unit, Any] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Nothing, Unit, Any](
@@ -263,7 +263,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
 }
 
 trait TapirDerivedInputs { this: Tapir =>
-  def clientIp: EndpointInput[Option[String]] =
+  def clientIp: EndpointInput[Option[String], Any] =
     extractFromRequest(request =>
       request
         .header(HeaderNames.XForwardedFor)
@@ -273,7 +273,7 @@ trait TapirDerivedInputs { this: Tapir =>
         .orElse(request.connectionInfo.remote.flatMap(a => Option(a.getAddress.getHostAddress)))
     )
 
-  def isWebSocket: EndpointInput[Boolean] =
+  def isWebSocket: EndpointInput[Boolean, Any] =
     extractFromRequest(request =>
       (for {
         connection <- request.header(HeaderNames.Connection)

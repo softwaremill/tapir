@@ -33,7 +33,7 @@ object DecodeInputsResult {
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
-  case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeInputsResult
+  case class Failure(input: EndpointInput.Basic[_, _], failure: DecodeResult.Failure) extends DecodeInputsResult
 }
 
 trait DecodeInputsContext {
@@ -53,7 +53,7 @@ trait DecodeInputsContext {
 }
 
 object DecodeInputs {
-  private final case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
+  private final case class IndexedBasicInput(input: EndpointInput.Basic[_, _], index: Int)
 
   /** Decodes values of all inputs defined by the given `input`, and returns a map from the input to the input's value.
     *
@@ -63,7 +63,7 @@ object DecodeInputs {
     *
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
-  def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
+  def apply(input: EndpointInput[_, _], ctx: DecodeInputsContext): DecodeInputsResult = {
     // The first decoding failure is returned.
     // We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
     // An exact-path check is done after method & path matching
@@ -218,7 +218,7 @@ object DecodeInputs {
     }
   }
 
-  private def matchOther(input: EndpointInput.Basic[_], ctx: DecodeInputsContext): (DecodeResult[_], DecodeInputsContext) = {
+  private def matchOther(input: EndpointInput.Basic[_, _], ctx: DecodeInputsContext): (DecodeResult[_], DecodeInputsContext) = {
     input match {
       case EndpointInput.FixedMethod(m, codec, _) =>
         if (m == ctx.method) (codec.decode(()), ctx)
@@ -272,12 +272,12 @@ object DecodeInputs {
     }
   }
 
-  private val isRequestMethod: EndpointInput.Basic[_] => Boolean = {
+  private val isRequestMethod: EndpointInput.Basic[_, _] => Boolean = {
     case _: EndpointInput.FixedMethod[_] => true
     case _                               => false
   }
 
-  private val isPath: EndpointInput.Basic[_] => Boolean = {
+  private val isPath: EndpointInput.Basic[_, _] => Boolean = {
     case _: EndpointInput.FixedPath[_]    => true
     case _: EndpointInput.PathCapture[_]  => true
     case _: EndpointInput.PathsCapture[_] => true

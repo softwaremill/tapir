@@ -5,7 +5,7 @@ import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValu
 
 package object apispec {
   private[docs] type SchemeName = String
-  private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_], (SchemeName, SecurityScheme)]
+  private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_, _], (SchemeName, SecurityScheme)]
 
   private[docs] def uniqueName(base: String, isUnique: String => Boolean): String = {
     var i = 0
@@ -41,7 +41,7 @@ package object apispec {
     e.copy(input = input2)
   }
 
-  private[docs] def namedPathComponents(inputs: Vector[EndpointInput.Basic[_]]): Vector[String] = {
+  private[docs] def namedPathComponents(inputs: Vector[EndpointInput.Basic[_, _]]): Vector[String] = {
     inputs
       .collect {
         case EndpointInput.PathCapture(name, _, _) => Left(name)

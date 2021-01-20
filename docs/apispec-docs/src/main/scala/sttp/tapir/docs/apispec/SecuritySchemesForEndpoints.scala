@@ -34,7 +34,7 @@ private[docs] object SecuritySchemesForEndpoints {
     }
   }
 
-  private def authToSecurityScheme(a: EndpointInput.Auth[_]): SecurityScheme =
+  private def authToSecurityScheme(a: EndpointInput.Auth[_, _]): SecurityScheme =
     a match {
       case EndpointInput.Auth.ApiKey(input, _, _) =>
         val (name, in) = apiKeyInputNameAndIn(input.asVectorOfBasicInputs())
@@ -65,7 +65,7 @@ private[docs] object SecuritySchemesForEndpoints {
         )
     }
 
-  private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_]]) =
+  private def apiKeyInputNameAndIn(input: Vector[EndpointInput.Basic[_, _]]) =
     input match {
       case Vector(EndpointIO.Header(name, _, _))    => (name, "header")
       case Vector(EndpointInput.Query(name, _, _))  => (name, "query")

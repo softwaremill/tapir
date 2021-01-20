@@ -39,9 +39,9 @@ package object handlers {
     inputs
       .foldLeft(List[Handler[RoutingContext]]()) { (handlers, ep) =>
         ep match {
-          case body: EndpointIO.Body[_, _]           => bodyHandlers(body) ++ handlers
-          case _: EndpointIO.StreamBodyWrapper[_, _] => streamPauseHandler :: handlers
-          case _                                     => handlers
+          case body: EndpointIO.Body[_, _]              => bodyHandlers(body) ++ handlers
+          case _: EndpointIO.StreamBodyWrapper[_, _, _] => streamPauseHandler :: handlers
+          case _                                        => handlers
         }
       }
       .foreach(route.handler)

@@ -13,7 +13,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas) {
   private type CodecData = Either[(TSchemaType.SObjectInfo, MediaType), TSchema[_]]
 
   def apply[P[_, _]](
-      wss: Iterable[WebSocketBodyWrapper[_, _]]
+      wss: Iterable[WebSocketBodyWrapper[_, _, _]]
   ): (Map[Codec[_, _, _ <: CodecFormat], MessageKey], ListMap[MessageKey, Message]) = {
 
     val codecs: Iterable[Codec[_, _, _ <: CodecFormat]] = wss.map(ws => ws.wrapped.requests) ++ wss.map(ws => ws.wrapped.responses)

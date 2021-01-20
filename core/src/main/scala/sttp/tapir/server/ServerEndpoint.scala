@@ -14,9 +14,9 @@ case class ServerEndpoint[I, E, O, -R, F[_]](endpoint: Endpoint[I, E, O, R], log
     with EndpointMetaOps[I, E, O, R] {
 
   override type EndpointType[_I, _E, _O, -_R] = ServerEndpoint[_I, _E, _O, _R, F]
-  override def input: EndpointInput[I] = endpoint.input
-  override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
-  override def output: EndpointOutput[O] = endpoint.output
+  override def input: EndpointInput[I, R] = endpoint.input
+  override def errorOutput: EndpointOutput[E, R] = endpoint.errorOutput
+  override def output: EndpointOutput[O, R] = endpoint.output
   override def info: EndpointInfo = endpoint.info
   override private[tapir] def withInfo(info: EndpointInfo): ServerEndpoint[I, E, O, R, F] = copy(endpoint = endpoint.info(info))
 
