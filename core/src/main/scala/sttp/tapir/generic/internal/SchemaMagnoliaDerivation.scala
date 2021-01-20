@@ -3,7 +3,7 @@ package sttp.tapir.generic.internal
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, encodedName, format, generic}
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, encodedName, format, generic, validate}
 import SchemaMagnoliaDerivation.deriveCache
 
 import scala.collection.mutable
@@ -52,9 +52,14 @@ trait SchemaMagnoliaDerivation {
     val schemaWithDesc = annotations
       .collectFirst({ case ann: description => ann.text })
       .fold(schema)(schema.description)
+
+    val schemaWithValidate = annotations
+      .collectFirst({ case ann: validate[X] => ann.v })
+      .fold(schemaWithDesc)(schemaWithDesc.validate)
+
     annotations
       .collectFirst({ case ann: format => ann.format })
-      .fold(schemaWithDesc)(schemaWithDesc.format)
+      .fold(schemaWithValidate)(schemaWithValidate.format)
       .deprecated(isDeprecated(annotations))
   }
 
