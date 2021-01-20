@@ -13,18 +13,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.Method
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
-import sttp.tapir.{
-  Codec,
-  CodecFormat,
-  DecodeResult,
-  Endpoint,
-  EndpointIO,
-  EndpointInput,
-  EndpointOutput,
-  Mapping,
-  RawBodyType,
-  StreamBodyIO
-}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, Mapping, RawBodyType}
 
 import scala.collection.Seq
 
@@ -82,8 +71,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     output match {
       case s: EndpointOutput.Single[_, _] =>
         (s match {
-          case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
+          case EndpointIO.Body(_, codec, _)          => codec.decode(body)
+          case EndpointIO.StreamBody(_, codec, _, _) => codec.decode(body)
           case EndpointOutput.WebSocketBodyWrapper(_) =>
             DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
           case EndpointIO.Header(name, codec, _) => codec.decode(headers(name).toList)
@@ -167,7 +156,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         req2
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+      case EndpointIO.StreamBody(streams, _, _, _) =>
         val req2 = setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
         req2
       case EndpointIO.Header(name, codec, _) =>
@@ -330,7 +319,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
   }
 
   private def bodyIsStream[I](out: EndpointOutput[I, _]): Option[Streams[_]] = {
-    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+    out.traverseOutputs { case EndpointIO.StreamBody(streams, _, _, _) =>
       Vector(streams)
     }.headOption
   }

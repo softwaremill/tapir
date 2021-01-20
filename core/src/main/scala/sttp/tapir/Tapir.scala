@@ -7,6 +7,7 @@ import sttp.capabilities.Streams
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
+import sttp.tapir.EndpointIO.StreamBody
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
 import sttp.tapir.model.ServerRequest
@@ -99,8 +100,8 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     */
   def streamBody[S](
       s: Streams[S]
-  )(schema: Schema[s.BinaryStream], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, schema), EndpointIO.Info.empty, charset)
+  )(schema: Schema[s.BinaryStream], format: CodecFormat, charset: Option[Charset] = None): StreamBody[s.BinaryStream, s.BinaryStream, S] =
+    StreamBody(s, Codec.id(format, schema), EndpointIO.Info.empty, charset)
 
   // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
   // while the third one (S) can be inferred.

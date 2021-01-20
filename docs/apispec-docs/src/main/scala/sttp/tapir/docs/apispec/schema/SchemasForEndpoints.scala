@@ -50,15 +50,14 @@ object SchemasForEndpoints {
 
   private def forIO(io: EndpointIO[_, _]): List[ObjectTypeData] = {
     io match {
-      case EndpointIO.Pair(left, right, _, _) => forIO(left) ++ forIO(right)
-      case EndpointIO.Header(_, codec, _)     => ObjectTypeData(codec)
-      case EndpointIO.Headers(_, _)           => List.empty
-      case EndpointIO.Body(_, codec, _)       => ObjectTypeData(codec)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) =>
-        ObjectTypeData(TypeData(codec.schema, Validator.pass))
-      case EndpointIO.MappedPair(wrapped, _) => forIO(wrapped)
-      case EndpointIO.FixedHeader(_, _, _)   => List.empty
-      case EndpointIO.Empty(_, _)            => List.empty
+      case EndpointIO.Pair(left, right, _, _)    => forIO(left) ++ forIO(right)
+      case EndpointIO.Header(_, codec, _)        => ObjectTypeData(codec)
+      case EndpointIO.Headers(_, _)              => List.empty
+      case EndpointIO.Body(_, codec, _)          => ObjectTypeData(codec)
+      case EndpointIO.StreamBody(_, codec, _, _) => ObjectTypeData(TypeData(codec.schema, Validator.pass))
+      case EndpointIO.MappedPair(wrapped, _)     => forIO(wrapped)
+      case EndpointIO.FixedHeader(_, _, _)       => List.empty
+      case EndpointIO.Empty(_, _)                => List.empty
     }
   }
 }

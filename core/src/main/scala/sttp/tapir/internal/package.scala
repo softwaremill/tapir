@@ -112,20 +112,20 @@ package object internal {
 
   def basicInputSortIndex(i: EndpointInput.Basic[_, _]): Int =
     i match {
-      case _: EndpointInput.FixedMethod[_]          => 0
-      case _: EndpointInput.FixedPath[_]            => 1
-      case _: EndpointInput.PathCapture[_]          => 1
-      case _: EndpointInput.PathsCapture[_]         => 1
-      case _: EndpointInput.Query[_]                => 2
-      case _: EndpointInput.QueryParams[_]          => 2
-      case _: EndpointInput.Cookie[_]               => 3
-      case _: EndpointIO.Header[_]                  => 3
-      case _: EndpointIO.Headers[_]                 => 3
-      case _: EndpointIO.FixedHeader[_]             => 3
-      case _: EndpointInput.ExtractFromRequest[_]   => 4
-      case _: EndpointIO.Body[_, _]                 => 6
-      case _: EndpointIO.StreamBodyWrapper[_, _, _] => 6
-      case _: EndpointIO.Empty[_]                   => 7
+      case _: EndpointInput.FixedMethod[_]        => 0
+      case _: EndpointInput.FixedPath[_]          => 1
+      case _: EndpointInput.PathCapture[_]        => 1
+      case _: EndpointInput.PathsCapture[_]       => 1
+      case _: EndpointInput.Query[_]              => 2
+      case _: EndpointInput.QueryParams[_]        => 2
+      case _: EndpointInput.Cookie[_]             => 3
+      case _: EndpointIO.Header[_]                => 3
+      case _: EndpointIO.Headers[_]               => 3
+      case _: EndpointIO.FixedHeader[_]           => 3
+      case _: EndpointInput.ExtractFromRequest[_] => 4
+      case _: EndpointIO.Body[_, _]               => 6
+      case _: EndpointIO.StreamBody[_, _, _]      => 6
+      case _: EndpointIO.Empty[_]                 => 7
     }
 
   implicit class RichEndpointOutput[I](output: EndpointOutput[I, _]) {
@@ -204,7 +204,7 @@ package object internal {
         case _: EndpointIO.Headers[_]                        => 1
         case _: EndpointIO.FixedHeader[_]                    => 1
         case _: EndpointIO.Body[_, _]                        => 2
-        case _: EndpointIO.StreamBodyWrapper[_, _, _]        => 2
+        case _: EndpointIO.StreamBody[_, _, _]               => 2
         case _: EndpointOutput.WebSocketBodyWrapper[_, _, _] => 2
       }
   }

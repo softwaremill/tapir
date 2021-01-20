@@ -84,7 +84,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
     inputs.collect {
       case EndpointIO.Body(_, codec, info) =>
         Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.isOptional)))
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
+      case EndpointIO.StreamBody(_, codec, info, _) =>
         Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true)))
     }
   }

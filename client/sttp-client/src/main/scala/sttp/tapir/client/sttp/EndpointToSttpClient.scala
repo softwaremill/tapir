@@ -45,8 +45,8 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     output match {
       case s: EndpointOutput.Single[_, _] =>
         (s match {
-          case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
+          case EndpointIO.Body(_, codec, _)          => codec.decode(body)
+          case EndpointIO.StreamBody(_, codec, _, _) => codec.decode(body)
           case EndpointOutput.WebSocketBodyWrapper(o: WebSocketBodyOutput[_, _, _, _, Any]) =>
             val streams = o.streams.asInstanceOf[wsToPipe.S]
             o.codec.decode(
@@ -130,7 +130,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
         (uri, req2)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+      case EndpointIO.StreamBody(streams, _, _, _) =>
         val req2 = req.streamBody(streams)(value.asInstanceOf[streams.BinaryStream])
         (uri, req2)
       case EndpointIO.Header(name, codec, _) =>
@@ -244,7 +244,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   private def bodyIsStream[I](out: EndpointOutput[I, _]): Option[Streams[_]] = {
-    out.traverseOutputs { case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
+    out.traverseOutputs { case EndpointIO.StreamBody(streams, _, _, _) =>
       Vector(streams)
     }.headOption
   }

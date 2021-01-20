@@ -50,13 +50,13 @@ object ServerDefaults {
       import sttp.tapir.server.{DefaultDecodeFailureResponse => fr}
 
       failingInput(ctx) match {
-        case _: EndpointInput.Query[_]                => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointInput.QueryParams[_]          => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointInput.Cookie[_]               => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointIO.Header[_]                  => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointIO.Headers[_]                 => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointIO.Body[_, _]                 => Some(fr.status(StatusCode.BadRequest))
-        case _: EndpointIO.StreamBodyWrapper[_, _, _] => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointInput.Query[_]         => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointInput.QueryParams[_]   => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointInput.Cookie[_]        => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Header[_]           => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Headers[_]          => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.Body[_, _]          => Some(fr.status(StatusCode.BadRequest))
+        case _: EndpointIO.StreamBody[_, _, _] => Some(fr.status(StatusCode.BadRequest))
         // we assume that the only decode failure that might happen during path segment decoding is an error
         // a non-standard path decoder might return Missing/Multiple/Mismatch, but that would be indistinguishable from
         // a path shape mismatch
@@ -105,7 +105,7 @@ object ServerDefaults {
         case a: EndpointInput.Auth[_, _]                => failureSourceMessage(a.input)
         case _: EndpointInput.MappedPair[_, _, _, _, _] => "Invalid value"
         case _: EndpointIO.Body[_, _]                   => s"Invalid value for: body"
-        case _: EndpointIO.StreamBodyWrapper[_, _, _]   => s"Invalid value for: body"
+        case _: EndpointIO.StreamBody[_, _, _]          => s"Invalid value for: body"
         case EndpointIO.Header(name, _, _)              => s"Invalid value for: header $name"
         case EndpointIO.FixedHeader(name, _, _)         => s"Invalid value for: header $name"
         case EndpointIO.Headers(_, _)                   => s"Invalid value for: headers"

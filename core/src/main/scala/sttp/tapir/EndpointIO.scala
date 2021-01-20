@@ -412,18 +412,15 @@ object EndpointIO {
     }
   }
 
-  case class StreamBodyWrapper[BS, T, R](wrapped: StreamBodyIO[BS, T, R]) extends Basic[T, R] {
-    override private[tapir] type ThisType[X] = StreamBodyWrapper[BS, X, R]
+  //BS == streams.BinaryStream, but we can't express this using dependent types here.
+  case class StreamBody[BS, T, S](streams: Streams[S], codec: Codec[BS, T, CodecFormat], info: Info[T], charset: Option[Charset])
+      extends Basic[T, S] {
+    override private[tapir] type ThisType[X] = StreamBody[BS, X, S]
     override private[tapir] type L = BS
     override private[tapir] type CF = CodecFormat
-    override private[tapir] def copyWith[U](c: Codec[BS, U, CodecFormat], i: Info[U]): StreamBodyWrapper[BS, U, R] = copy(
-      wrapped.copyWith(c, i)
-    )
+    override private[tapir] def copyWith[U](c: Codec[BS, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
 
-    override def codec: Codec[BS, T, CodecFormat] = wrapped.codec
-    override def info: Info[T] = wrapped.info
-
-    override def show: String = wrapped.show
+    override def show: String = "{body as stream}"
   }
 
   case class FixedHeader[T](h: sttp.model.Header, codec: Codec[Unit, T, TextPlain], info: Info[T]) extends Basic[T, Any] {
@@ -509,33 +506,6 @@ object EndpointIO {
   object Info {
     def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false)
   }
-}
-
-/*
-Streaming body is a special kind of input, as it influences the 4th type parameter of `Endpoint`. Other inputs
-(`EndpointInput`s and `EndpointIO`s aren't parametrised with the type of streams that they use (to make them simpler),
-so we need to pass the streaming information directly between the streaming body input and the endpoint.
-
-That's why the streaming body input is a separate trait, unrelated to `EndpointInput`: it can't be combined with
-other inputs, and the `Endpoint.in(EndpointInput)` method can't be used to add a streaming body. Instead, there's an
-overloaded variant `Endpoint.in(StreamBody)`, which takes into account the streaming type.
-
-Internally, the streaming body is converted into a wrapper `EndpointIO`, which "forgets" about the streaming
-information. The `EndpointIO.StreamBodyWrapper` should only be used internally, not by the end user: there's no
-factory method in `Tapir` which would directly create an instance of it.
-
-BS == streams.BinaryStream, but we can't express this using dependent types here.
- */
-case class StreamBodyIO[BS, T, S](streams: Streams[S], codec: Codec[BS, T, CodecFormat], info: Info[T], charset: Option[Charset])
-    extends EndpointTransput.Basic[T, S] {
-  override private[tapir] type ThisType[X] = StreamBodyIO[BS, X, S]
-  override private[tapir] type L = BS
-  override private[tapir] type CF = CodecFormat
-  override private[tapir] def copyWith[U](c: Codec[BS, U, CodecFormat], i: Info[U]) = copy(codec = c, info = i)
-
-  private[tapir] def toEndpointIO: EndpointIO.StreamBodyWrapper[BS, T, S] = EndpointIO.StreamBodyWrapper(this)
-
-  override def show: String = "{body as stream}"
 }
 
 /*
