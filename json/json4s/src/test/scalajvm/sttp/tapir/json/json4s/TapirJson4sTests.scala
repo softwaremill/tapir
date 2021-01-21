@@ -4,7 +4,6 @@ import org.json4s._
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.generic.auto._
@@ -14,9 +13,10 @@ case class Customer(name: String, yearOfBirth: Int, lastPurchase: Option[Long])
 case class Item(serialNumber: Long, price: Int)
 case class Order(items: Seq[Item], customer: Customer)
 
-abstract class TapirJson4sTests extends AnyFlatSpecLike with Matchers {
+class TapirJson4sTests extends AnyFlatSpecLike with Matchers {
 
-  def json4sCodec[T: Manifest: Schema]: JsonCodec[T]
+  implicit val serialization: Serialization = org.json4s.jackson.Serialization
+  implicit val formats: Formats = org.json4s.jackson.Serialization.formats(NoTypeHints)
 
   def testEncodeDecode[T: Manifest: Schema](original: T): Assertion = {
     val codec = json4sCodec[T]
