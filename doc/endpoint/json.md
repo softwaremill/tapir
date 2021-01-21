@@ -212,7 +212,7 @@ import sttp.tapir.json.json4s._
 
 Json4s requires `Serialization` and `Formats` implicit values in scope, for example:
 
-```scala mdoc:compile-only
+```scala
 import org.json4s._
 // ...
 implicit val serialization: Serialization = org.json4s.jackson.Serialization
