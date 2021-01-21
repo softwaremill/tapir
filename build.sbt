@@ -317,6 +317,23 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
   )
   .dependsOn(core)
 
+lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-json4s",
+    libraryDependencies ++= Seq(
+      "org.json4s" %%% "json4s-native" % Versions.json4s,
+      "org.json4s" %%% "json4s-jackson" % Versions.json4s,
+      scalaTest.value % Test,
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
 lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
   .settings(commonSettings: _*)
   .settings(
