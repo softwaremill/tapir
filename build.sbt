@@ -62,6 +62,7 @@ lazy val allAggregates = core.projectRefs ++
   zio.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
+  json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
@@ -902,6 +903,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     asyncapiCirceYaml,
     openapiDocs,
     openapiCirceYaml,
+    json4s,
     playJson,
     playServer,
     sprayJson,
