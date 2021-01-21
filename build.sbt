@@ -877,7 +877,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     moduleName := "tapir-doc",
     mdocVariables := Map(
       "VERSION" -> version.value,
-      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer
+      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer,
+      "JSON4S_VERSION" -> Versions.json4s
     ),
     mdocOut := file("generated-doc/out"),
     publishArtifact := false,

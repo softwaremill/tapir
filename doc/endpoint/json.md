@@ -188,6 +188,37 @@ import sttp.tapir.json.jsoniter._
 Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type you want to serialize. 
 
 
+## Json4s
+
+To use [json4s](https://github.com/json4s/json4s) add the following dependencies to your project:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-json4s" % "@VERSION@"
+```
+
+And one of the implementations:
+
+```scala
+"org.json4s" %% "json4s-native" % "@JSON4S_VERSION@"
+// Or
+"org.json4s" %% "json4s-jackson" % "@JSON4S_VERSION@"
+```
+
+Next, import the package (or extend the `TapirJson4s` trait, see [MyTapir](../mytapir.md) and add `TapirJson4s` instead of `TapirCirceJson`):
+
+```scala mdoc:compile-only
+import sttp.tapir.json.json4s._
+```
+
+Json4s requires `Serialization` and `Formats` implicit values in scope, for example:
+
+```scala mdoc:compile-only
+import org.json4s._
+...
+implicit val serialization: Serialization = org.json4s.jackson.Serialization
+implicit val formats: Formats = org.json4s.jackson.Serialization.formats(NoTypeHints)
+```
+
 
 ## Other JSON libraries
 
