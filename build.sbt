@@ -329,10 +329,6 @@ lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .jsPlatform(
-    scalaVersions = allScalaVersions,
-    settings = commonJsSettings
-  )
   .dependsOn(core)
 
 lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
