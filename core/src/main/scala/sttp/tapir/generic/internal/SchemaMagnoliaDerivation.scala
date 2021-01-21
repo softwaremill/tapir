@@ -49,18 +49,13 @@ trait SchemaMagnoliaDerivation {
     annotations.collectFirst { case ann: encodedName => ann.name }
 
   private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
-    val schemaWithDesc = annotations
-      .collectFirst({ case ann: description => ann.text })
-      .fold(schema)(schema.description)
-
-    val schemaWithValidate = annotations
-      .collectFirst({ case ann: validate[X] => ann.v })
-      .fold(schemaWithDesc)(schemaWithDesc.validate)
-
-    annotations
-      .collectFirst({ case ann: format => ann.format })
-      .fold(schemaWithValidate)(schemaWithValidate.format)
-      .deprecated(isDeprecated(annotations))
+    annotations.foldLeft(schema){
+      case (schema, ann: description) => schema.description(ann.text)
+      case (schema, ann: validate[X]) => schema.validate(ann.v)
+      case (schema, ann: format) => schema.format(ann.format)
+      case (schema, _: deprecated) => schema.deprecated(true)
+      case (schema, _) => schema
+    }
   }
 
   private def isDeprecated(annotations: Seq[Any]): Boolean =
