@@ -1,10 +1,10 @@
 package sttp.tapir.json.json4s
 
-import org.json4s.Serialization
-import org.json4s.{Formats, MappingException, NoTypeHints}
+import org.json4s._
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
+import sttp.tapir.SchemaType.{SCoproduct, SObjectInfo}
 import sttp.tapir.{Codec, EndpointIO, Schema, anyFromUtf8StringBody}
 
 trait TapirJson4s {
@@ -22,4 +22,13 @@ trait TapirJson4s {
     } { t =>
       serialization.write(t.asInstanceOf[AnyRef])
     }
+
+  implicit val schemaForJson4s: Schema[JValue] =
+    Schema(
+      SCoproduct(
+        SObjectInfo("org.json4s.JValue"),
+        List.empty,
+        None
+      )
+    )
 }

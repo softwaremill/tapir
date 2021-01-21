@@ -4,7 +4,7 @@ import org.json4s._
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
+import sttp.tapir.DecodeResult.Error.{JsonDecodeException}
 import sttp.tapir.DecodeResult.Value
 import sttp.tapir.generic.auto._
 import sttp.tapir.{DecodeResult, Schema}
