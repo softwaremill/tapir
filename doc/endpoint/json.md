@@ -214,7 +214,7 @@ Json4s requires `Serialization` and `Formats` implicit values in scope, for exam
 
 ```scala mdoc:compile-only
 import org.json4s._
-...
+// ...
 implicit val serialization: Serialization = org.json4s.jackson.Serialization
 implicit val formats: Formats = org.json4s.jackson.Serialization.formats(NoTypeHints)
 ```
