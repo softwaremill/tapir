@@ -62,6 +62,7 @@ lazy val allAggregates = core.projectRefs ++
   zio.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
+  json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
@@ -315,6 +316,19 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     scalaVersions = allScalaVersions,
     settings = commonJsSettings
   )
+  .dependsOn(core)
+
+lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-json4s",
+    libraryDependencies ++= Seq(
+      "org.json4s" %%% "json4s-core" % Versions.json4s,
+      "org.json4s" %%% "json4s-jackson" % Versions.json4s % Test,
+      scalaTest.value % Test,
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
 
 lazy val playJson: ProjectMatrix = (projectMatrix in file("json/playjson"))
@@ -863,7 +877,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     moduleName := "tapir-doc",
     mdocVariables := Map(
       "VERSION" -> version.value,
-      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer
+      "PLAY_HTTP_SERVER_VERSION" -> Versions.playServer,
+      "JSON4S_VERSION" -> Versions.json4s
     ),
     mdocOut := file("generated-doc/out"),
     publishArtifact := false,
@@ -885,6 +900,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     asyncapiCirceYaml,
     openapiDocs,
     openapiCirceYaml,
+    json4s,
     playJson,
     playServer,
     sprayJson,
