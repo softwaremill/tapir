@@ -325,7 +325,7 @@ lazy val json4s: ProjectMatrix = (projectMatrix in file("json/json4s"))
     libraryDependencies ++= Seq(
       "org.json4s" %%% "json4s-core" % Versions.json4s,
       "org.json4s" %%% "json4s-jackson" % Versions.json4s % Test,
-      scalaTest.value % Test,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -740,7 +740,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   .jvmPlatform(
     scalaVersions = allScalaVersions,
     settings = commonJvmSettings ++ Seq(
-      libraryDependencies ++= loggerDependencies ++ Seq(
+      libraryDependencies ++= loggerDependencies.map(_ % Test) ++ Seq(
         "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
         "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
