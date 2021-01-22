@@ -53,7 +53,7 @@ lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
   "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
-).map(_ % Test)
+)
 
 lazy val allAggregates = core.projectRefs ++
   cats.projectRefs ++
@@ -740,7 +740,7 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
   .jvmPlatform(
     scalaVersions = allScalaVersions,
     settings = commonJvmSettings ++ Seq(
-      libraryDependencies ++= loggerDependencies ++ Seq(
+      libraryDependencies ++= loggerDependencies.map(_ % Test) ++ Seq(
         "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp % Test,
         "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
         "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
