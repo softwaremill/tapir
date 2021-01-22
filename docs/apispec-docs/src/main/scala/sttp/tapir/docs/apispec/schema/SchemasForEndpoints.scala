@@ -29,6 +29,7 @@ object SchemasForEndpoints {
       case EndpointInput.QueryParams(_, _)        => List.empty
       case _: EndpointInput.Auth[_, _]            => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
+      case EndpointInput.MapEffect(wrapped, _, _) => forInput(wrapped)
       case EndpointInput.MappedPair(wrapped, _)   => forInput(wrapped)
       case EndpointInput.Pair(left, right, _, _)  => forInput(left) ++ forInput(right)
       case op: EndpointIO[_, _]                   => forIO(op)
@@ -39,6 +40,7 @@ object SchemasForEndpoints {
       case EndpointOutput.OneOf(mappings, _)       => mappings.flatMap(mapping => forOutput(mapping.output)).toList
       case EndpointOutput.StatusCode(_, _, _)      => List.empty
       case EndpointOutput.FixedStatusCode(_, _, _) => List.empty
+      case EndpointOutput.MapEffect(wrapped, _, _) => forOutput(wrapped)
       case EndpointOutput.MappedPair(wrapped, _)   => forOutput(wrapped)
       case EndpointOutput.Void()                   => List.empty
       case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
@@ -55,6 +57,7 @@ object SchemasForEndpoints {
       case EndpointIO.Headers(_, _)              => List.empty
       case EndpointIO.Body(_, codec, _)          => ObjectTypeData(codec)
       case EndpointIO.StreamBody(_, codec, _, _) => ObjectTypeData(TypeData(codec.schema, Validator.pass))
+      case EndpointIO.MapEffect(wrapped, _, _)   => forIO(wrapped)
       case EndpointIO.MappedPair(wrapped, _)     => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)       => List.empty
       case EndpointIO.Empty(_, _)                => List.empty

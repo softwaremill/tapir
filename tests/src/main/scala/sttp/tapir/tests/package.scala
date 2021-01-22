@@ -471,11 +471,14 @@ package object tests {
         )
         .name("f_mapped_body_header")
     }
+
+    val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
   }
 
   //
 
-  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]] ++ Validation.allEndpoints
+  val allTestEndpoints: Set[Endpoint[_, _, _, _]] =
+    wireSet[Endpoint[_, _, _, _]] ++ Validation.allEndpoints ++ EffectfulMappings.allEndpoints
 
   type Port = Int
 }
