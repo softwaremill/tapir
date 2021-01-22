@@ -4,6 +4,7 @@ import java.io.InputStream
 import java.nio.charset.Charset
 import com.twitter.finagle.http.{Response, Status, Version}
 import com.twitter.io.{Buf, InputStreamReader, Reader}
+import com.twitter.util.Future
 import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
@@ -14,8 +15,8 @@ import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType}
 import sttp.tapir.internal._
 
 object OutputToFinatraResponse {
-  private val encodeOutputs: EncodeOutputs[(FinatraContent, String), Nothing, Nothing] =
-    new EncodeOutputs[(FinatraContent, String), Nothing, Nothing](
+  private val encodeOutputs: EncodeOutputs[Future, (FinatraContent, String), Nothing, Nothing] =
+    new EncodeOutputs[Future, (FinatraContent, String), Nothing, Nothing](
       new EncodeOutputBody[(FinatraContent, String), Nothing, Nothing] {
         override val streams: NoStreams = NoStreams
         override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): (FinatraContent, String) =
@@ -29,14 +30,14 @@ object OutputToFinatraResponse {
         ): Nothing =
           pipe
       }
-    )
+    )(FutureMonadError)
 
   def apply[O](
       defaultStatus: Status,
       output: EndpointOutput[O, _],
       v: Any
-  ): Response = {
-    outputValuesToResponse(encodeOutputs(output, ParamsAsAny(v), OutputValues.empty), defaultStatus)
+  ): Future[Response] = {
+    encodeOutputs(output, ParamsAsAny(v), OutputValues.empty).map(outputValuesToResponse(_, defaultStatus))
   }
 
   private def outputValuesToResponse(outputValues: OutputValues[(FinatraContent, String), Nothing], defaultStatus: Status): Response = {

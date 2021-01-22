@@ -5,6 +5,7 @@ import cats.effect.{ContextShift, IO, Resource, Timer}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.util.Future
+import sttp.capabilities.Effect
 import sttp.tapir.Endpoint
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
@@ -14,13 +15,13 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, FinatraRoute] {
+class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Effect[Future], FinatraRoute] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future],
+      e: ServerEndpoint[I, E, O, Effect[Future], Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
@@ -28,7 +29,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
     FinatraServerInterpreter.toRoute(e)
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Effect[Future]], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): FinatraRoute = {
     FinatraServerInterpreter.toRouteRecoverErrors(e)(fn)

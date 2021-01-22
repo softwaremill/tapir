@@ -3,6 +3,7 @@ package sttp.tapir.server.finatra
 import com.twitter.finagle.http.{Method, Request, Response, Status}
 import com.twitter.util.Future
 import com.twitter.util.logging.Logging
+import sttp.capabilities.Effect
 import sttp.monad.MonadError
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.internal._
@@ -15,18 +16,18 @@ import scala.reflect.ClassTag
 import scala.util.control.NonFatal
 
 trait FinatraServerInterpreter extends Logging {
-  def toRoute[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[Either[E, O]])(implicit
+  def toRoute[I, E, O](e: Endpoint[I, E, O, Effect[Future]])(logic: I => Future[Either[E, O]])(implicit
       serverOptions: FinatraServerOptions
   ): FinatraRoute =
     toRoute(e.serverLogic(logic))
 
-  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[O])(implicit
+  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Effect[Future]])(logic: I => Future[O])(implicit
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
   ): FinatraRoute =
     toRoute(e.serverLogicRecoverErrors(logic))
 
-  def toRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
+  def toRoute[I, E, O](e: ServerEndpoint[I, E, O, Effect[Future], Future])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
     val handler = { request: Request =>
       def decodeBody(result: DecodeInputsResult): Future[DecodeInputsResult] = {
         result match {
@@ -52,7 +53,7 @@ trait FinatraServerInterpreter extends Logging {
         val i = value.asInstanceOf[I]
 
         e.logic(FutureMonadError)(i)
-          .map {
+          .flatMap {
             case Right(result) => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.success.code), e.output, result)
             case Left(err)     => OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.error.code), e.errorOutput, err)
           }
@@ -70,14 +71,14 @@ trait FinatraServerInterpreter extends Logging {
           e: Endpoint[_, _, _, _],
           input: EndpointInput[_, _],
           failure: DecodeResult.Failure
-      ): Response = {
+      ): Future[Response] = {
         val decodeFailureCtx = DecodeFailureContext(input, failure, e)
         val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
 
         handling match {
           case DecodeFailureHandling.NoMatch =>
             serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)
-            Response(Status.BadRequest)
+            Future.value(Response(Status.BadRequest))
           case DecodeFailureHandling.RespondWithResponse(output, value) =>
             serverOptions.logRequestHandling.decodeFailureHandled(e, decodeFailureCtx, value)
             OutputToFinatraResponse(Status(ServerDefaults.StatusCodes.error.code), output, value)
@@ -86,11 +87,11 @@ trait FinatraServerInterpreter extends Logging {
 
       decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
         case values: DecodeInputsResult.Values =>
-          InputValues(e.input, values) match {
+          InputValues(e.input, values)(FutureMonadError).flatMap {
             case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
-            case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
+            case InputValuesResult.Failure(input, failure) => handleDecodeFailure(e.endpoint, input, failure)
           }
-        case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
+        case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(e.endpoint, input, failure)
       }
     }
 
@@ -118,15 +119,15 @@ trait FinatraServerInterpreter extends Logging {
       }
       .getOrElse(Method("ANY"))
   }
-
-  private[finatra] object FutureMonadError extends MonadError[Future] {
-    override def unit[T](t: T): Future[T] = Future(t)
-    override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
-    override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)
-    override def error[T](t: Throwable): Future[T] = Future.exception(t)
-    override protected def handleWrappedError[T](rt: Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.rescue(h)
-    override def ensure[T](f: Future[T], e: => Future[Unit]): Future[T] = f.ensure(e.toJavaFuture.get())
-  }
 }
 
 object FinatraServerInterpreter extends FinatraServerInterpreter
+
+private[finatra] object FutureMonadError extends MonadError[Future] {
+  override def unit[T](t: T): Future[T] = Future(t)
+  override def map[T, T2](fa: Future[T])(f: (T) => T2): Future[T2] = fa.map(f)
+  override def flatMap[T, T2](fa: Future[T])(f: (T) => Future[T2]): Future[T2] = fa.flatMap(f)
+  override def error[T](t: Throwable): Future[T] = Future.exception(t)
+  override protected def handleWrappedError[T](rt: Future[T])(h: PartialFunction[Throwable, Future[T]]): Future[T] = rt.rescue(h)
+  override def ensure[T](f: Future[T], e: => Future[Unit]): Future[T] = f.ensure(e.toJavaFuture.get())
+}
