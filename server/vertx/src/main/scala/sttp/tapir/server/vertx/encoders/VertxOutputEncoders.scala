@@ -9,6 +9,7 @@ import io.vertx.scala.core.http.HttpServerResponse
 import io.vertx.scala.core.streams.ReadStream
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.{Header, Part}
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal.{NoStreams, ParamsAsAny, charset}
 import sttp.tapir.server.ServerDefaults
@@ -42,21 +43,24 @@ object VertxOutputEncoders {
   ): RoutingContextHandler = { rc =>
     val resp = rc.response
     val options: OutputValues[RoutingContextHandlerWithLength, Nothing] = OutputValues.empty
-    try {
-      var outputValues = encodeOutputs(endpointOptions)(output, ParamsAsAny(result), options)
-      if (isError && outputValues.statusCode.isEmpty) {
-        outputValues = outputValues.withStatusCode(ServerDefaults.StatusCodes.error)
+    implicit val ec: ExecutionContext = endpointOptions.executionContextOrCurrentCtx(rc)
+    implicit val m: MonadError[Future] = new FutureMonad()
+
+    encodeOutputs(m, endpointOptions)(output, ParamsAsAny(result), options)
+      .map { outputValues =>
+        val ov = if (isError && outputValues.statusCode.isEmpty) {
+          outputValues.withStatusCode(ServerDefaults.StatusCodes.error)
+        } else outputValues
+        setStatus(ov)(resp)
+        forwardHeaders(ov)(resp)
+        ov.body match {
+          case Some(responseHandler) => responseHandler.merge(ov.contentLength)(rc)
+          case None                  => resp.end()
+        }
+        logWhenHandled(resp.getStatusCode)
       }
-      setStatus(outputValues)(resp)
-      forwardHeaders(outputValues)(resp)
-      outputValues.body match {
-        case Some(responseHandler) => responseHandler.merge(outputValues.contentLength)(rc)
-        case None                  => resp.end()
-      }
-      logWhenHandled(resp.getStatusCode)
-    } catch {
-      case e: Throwable => rc.fail(e)
-    }
+      .failed
+      .foreach(e => rc.fail(e))
   }
 
   private def formatToContentType(format: CodecFormat, maybeCharset: Option[Charset]): String = {
@@ -82,9 +86,10 @@ object VertxOutputEncoders {
     outputValues.statusCode.map(_.code).foreach(resp.setStatusCode)
 
   private def encodeOutputs(implicit
+      m: MonadError[Future],
       endpointOptions: VertxEndpointOptions
-  ): EncodeOutputs[RoutingContextHandlerWithLength, Nothing, Nothing] =
-    new EncodeOutputs[RoutingContextHandlerWithLength, Nothing, Nothing](
+  ): EncodeOutputs[Future, RoutingContextHandlerWithLength, Nothing, Nothing] =
+    new EncodeOutputs[Future, RoutingContextHandlerWithLength, Nothing, Nothing](
       new EncodeOutputBody[RoutingContextHandlerWithLength, Nothing, Nothing] {
         override val streams: NoStreams = NoStreams
         override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContextHandlerWithLength =

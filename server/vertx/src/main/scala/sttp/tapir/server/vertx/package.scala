@@ -1,6 +1,7 @@
 package sttp.tapir.server
 
 import io.vertx.scala.ext.web.{Route, Router}
+import sttp.capabilities.Effect
 import sttp.tapir.Endpoint
 
 import scala.concurrent.Future
@@ -8,7 +9,7 @@ import scala.reflect.ClassTag
 
 package object vertx {
 
-  implicit class VertxEndpoint[I, E, O](e: Endpoint[I, E, O, Any]) {
+  implicit class VertxEndpoint[I, E, O](e: Endpoint[I, E, O, Effect[Future]]) {
 
     /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
       * @param logic the logic to associate with the endpoint
@@ -53,7 +54,7 @@ package object vertx {
       VertxServerInterpreter.blockingRouteRecoverErrors(e)(logic)
   }
 
-  implicit class VertxServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]) {
+  implicit class VertxServerEndpoint[I, E, O](e: ServerEndpoint[I, E, O, Effect[Future], Future]) {
 
     /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
       * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context

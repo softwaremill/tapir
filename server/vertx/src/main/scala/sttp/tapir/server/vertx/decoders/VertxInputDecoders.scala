@@ -5,6 +5,7 @@ import java.nio.ByteBuffer
 import java.util.Date
 import io.vertx.scala.ext.web.RoutingContext
 import sttp.model.Part
+import sttp.monad.MonadError
 import sttp.tapir.internal.Params
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.vertx.VertxEndpointOptions
@@ -33,10 +34,11 @@ object VertxInputDecoders {
       endpoint: Endpoint[_, E, _, _],
       rc: RoutingContext,
       logicHandler: Params => Unit
-  )(implicit endpointOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Unit = {
+  )(implicit m: MonadError[Future], endpointOptions: VertxEndpointOptions, ect: Option[ClassTag[E]]): Unit = {
+    implicit val ec: ExecutionContext = endpointOptions.executionContextOrCurrentCtx(rc)
     decodeBodyAndInputs(endpoint, rc).map {
       case values: DecodeInputsResult.Values =>
-        InputValues(endpoint.input, values) match {
+        InputValues(endpoint.input, values).map {
           case InputValuesResult.Value(params, _) =>
             logicHandler(params)
           case InputValuesResult.Failure(_, failure) =>
@@ -52,7 +54,7 @@ object VertxInputDecoders {
             endpointOptions.logRequestHandling.decodeFailureHandled(endpoint, decodeFailureCtx, value)(endpointOptions.logger)
             VertxOutputEncoders.apply(output, value)(endpointOptions)(rc)
         }
-    }(endpointOptions.executionContextOrCurrentCtx(rc)): Unit
+    }: Unit
   }
 
   private def decodeBodyAndInputs(e: Endpoint[_, _, _, _], rc: RoutingContext)(implicit
