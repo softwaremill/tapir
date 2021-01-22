@@ -1,9 +1,5 @@
 package sttp.tapir.server.play
 
-import java.io.{File, InputStream}
-import java.nio.ByteBuffer
-import java.nio.charset.Charset
-import java.nio.file.Files
 import akka.NotUsed
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
@@ -11,39 +7,47 @@ import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import sttp.model.{MediaType, Part, StatusCode}
+import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
 
-private[play] object OutputToPlayResponse {
+import java.io.{File, InputStream}
+import java.nio.ByteBuffer
+import java.nio.charset.Charset
+import java.nio.file.Files
+import scala.concurrent.Future
+
+private[play] class OutputToPlayResponse(implicit mf: MonadError[Future]) {
   def apply[O](
       defaultStatus: StatusCode,
       output: EndpointOutput[O, _],
       v: Any
-  ): Result = {
-    val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
-    val headers: Map[String, String] = outputValues.headers
-      .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
-        if (a.contains(b._1)) a + (b._1 -> (a(b._1) :+ b._2)) else a + (b._1 -> List(b._2))
-      }
-      .map {
-        // See comment in play.api.mvc.CookieHeaderEncoding
-        case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
-        case (key, value)                                  => (key, value.mkString(", "))
-      }
-    val status = outputValues.statusCode.getOrElse(defaultStatus)
+  ): Future[Result] = {
+    mf.map(encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)) { outputValues =>
+      val headers: Map[String, String] = outputValues.headers
+        .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
+          if (a.contains(b._1)) a + (b._1 -> (a(b._1) :+ b._2)) else a + (b._1 -> List(b._2))
+        }
+        .map {
+          // See comment in play.api.mvc.CookieHeaderEncoding
+          case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
+          case (key, value)                                  => (key, value.mkString(", "))
+        }
+      val status = outputValues.statusCode.getOrElse(defaultStatus)
 
-    outputValues.body match {
-      case Some(entity) =>
-        val result = Result(ResponseHeader(status.code, headers), entity.merge)
-        headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
-      case None => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
+      outputValues.body match {
+        case Some(entity) =>
+          val result = Result(ResponseHeader(status.code, headers), entity.merge)
+          headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
+        case None => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
+      }
     }
   }
 
-  private val encodeOutputs: EncodeOutputs[HttpEntity, Nothing, Nothing] =
-    new EncodeOutputs[HttpEntity, Nothing, Nothing](new EncodeOutputBody[HttpEntity, Nothing, Nothing] {
+  private val encodeOutputs: EncodeOutputs[Future, HttpEntity, Nothing, Nothing] =
+    new EncodeOutputs[Future, HttpEntity, Nothing, Nothing](new EncodeOutputBody[HttpEntity, Nothing, Nothing] {
       override val streams: NoStreams = NoStreams
       override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity =
         rawValueToResponseEntity(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format), v)
