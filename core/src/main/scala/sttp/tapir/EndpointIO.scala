@@ -1,14 +1,16 @@
 package sttp.tapir
 
 import java.nio.charset.Charset
-import sttp.capabilities.{Streams, WebSockets}
+import sttp.capabilities.{Effect, Streams, WebSockets}
 import sttp.model.{Header, Method}
+import sttp.monad.MonadError
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.Info
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 import sttp.ws.WebSocketFrame
+import sttp.monad.syntax._
 
 import scala.collection.immutable.ListMap
 import scala.concurrent.duration.FiniteDuration
@@ -92,6 +94,15 @@ sealed trait EndpointInput[T, -R] extends EndpointTransput[T, R] {
   def and[U, TU, R2](other: EndpointInput[U, R2])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU, R with R2] =
     EndpointInput.Pair(this, other, mkCombine(concat), mkSplit(concat))
   def /[U, TU, R2](other: EndpointInput[U, R2])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU, R with R2] = and(other)
+
+  def mapF[F[_], U](f: T => F[U])(g: U => T): EndpointInput[U, R with Effect[F]] =
+    EndpointInput.MapEffect(this, implicit monad => (t: T) => f(t).map(DecodeResult.Value(_)), monad => u => monad.eval(g(u)))
+  def mapDecodeF[F[_], U](f: T => F[DecodeResult[U]])(g: U => T): EndpointInput[U, R with Effect[F]] =
+    EndpointInput.MapEffect(this, _ => (t: T) => f(t), monad => u => monad.eval(g(u)))
+  def mapFF[F[_], U](f: T => F[U])(g: U => F[T]): EndpointInput[U, R with Effect[F]] =
+    EndpointInput.MapEffect(this, implicit monad => (t: T) => f(t).map(DecodeResult.Value(_)), _ => g)
+  def mapDecodeFF[F[_], U](f: T => F[DecodeResult[U]])(g: U => F[T]): EndpointInput[U, R with Effect[F]] =
+    EndpointInput.MapEffect(this, _ => f, _ => g)
 }
 
 object EndpointInput {
@@ -249,6 +260,25 @@ object EndpointInput {
 
   //
 
+  case class MapEffect[T, U, F[_], R](
+      input: EndpointInput[T, R],
+      f: MonadError[F] => T => F[DecodeResult[U]],
+      g: MonadError[F] => U => F[T]
+  ) extends EndpointInput.Single[U, R with Effect[F]] {
+    override private[tapir] type ThisType[X] = MapEffect[T, X, F, R]
+    override def show: String = input.show
+
+    override def map[W](mapping: Mapping[U, W]): MapEffect[T, W, F, R] = {
+      MapEffect(
+        input,
+        implicit monad => t => f(monad)(t).map(du => du.flatMap(mapping.decode)),
+        monad => w => g(monad)(mapping.encode(w))
+      )
+    }
+  }
+
+  //
+
   case class MappedPair[T, U, TU, V, R](input: Pair[T, U, TU, R], mapping: Mapping[TU, V]) extends EndpointInput.Single[V, R] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X, R]
     override def show: String = input.show
@@ -272,16 +302,21 @@ sealed trait EndpointOutput[T, -R] extends EndpointTransput[T, R] {
 
   def and[J, IJ, R2](other: EndpointOutput[J, R2])(implicit concat: ParamConcat.Aux[T, J, IJ]): EndpointOutput[IJ, R with R2] =
     EndpointOutput.Pair(this, other, mkCombine(concat), mkSplit(concat))
+
+  def mapF[F[_], U](f: T => F[U])(g: U => T): EndpointOutput[U, R with Effect[F]] =
+    EndpointOutput.MapEffect(this, implicit monad => (t: T) => f(t).map(DecodeResult.Value(_)), monad => u => monad.eval(g(u)))
+  def mapDecodeF[F[_], U](f: T => F[DecodeResult[U]])(g: U => T): EndpointOutput[U, R with Effect[F]] =
+    EndpointOutput.MapEffect(this, _ => (t: T) => f(t), monad => u => monad.eval(g(u)))
+  def mapFF[F[_], U](f: T => F[U])(g: U => F[T]): EndpointOutput[U, R with Effect[F]] =
+    EndpointOutput.MapEffect(this, implicit monad => (t: T) => f(t).map(DecodeResult.Value(_)), _ => g)
+  def mapDecodeFF[F[_], U](f: T => F[DecodeResult[U]])(g: U => F[T]): EndpointOutput[U, R with Effect[F]] =
+    EndpointOutput.MapEffect(this, _ => f, _ => g)
 }
 
 object EndpointOutput {
-  sealed trait Single[T, -R] extends EndpointOutput[T, R] {
-    private[tapir] def _mapping: Mapping[_, T]
-  }
+  sealed trait Single[T, -R] extends EndpointOutput[T, R]
 
-  sealed trait Basic[T, -R] extends Single[T, R] with EndpointTransput.Basic[T, R] {
-    override private[tapir] def _mapping: Mapping[_, T] = codec
-  }
+  sealed trait Basic[T, -R] extends Single[T, R] with EndpointTransput.Basic[T, R]
 
   //
 
@@ -395,7 +430,6 @@ object EndpointOutput {
 
   case class OneOf[O, T, R](mappings: Seq[StatusMapping[_ <: O, R]], codec: Mapping[O, T]) extends Single[T, R] {
     override private[tapir] type ThisType[X] = OneOf[O, X, R]
-    override private[tapir] def _mapping: Mapping[_, T] = codec
     override def map[U](mapping: Mapping[T, U]): OneOf[O, U, R] = copy[O, U, R](codec = codec.map(mapping))
     override def show: String = showOneOf(mappings.map(_.output.show))
   }
@@ -413,9 +447,27 @@ object EndpointOutput {
 
   //
 
+  case class MapEffect[T, U, F[_], R](
+      output: EndpointOutput[T, R],
+      f: MonadError[F] => T => F[DecodeResult[U]],
+      g: MonadError[F] => U => F[T]
+  ) extends EndpointOutput.Single[U, R with Effect[F]] {
+    override private[tapir] type ThisType[X] = MapEffect[T, X, F, R]
+    override def show: String = output.show
+
+    override def map[W](mapping: Mapping[U, W]): MapEffect[T, W, F, R] = {
+      MapEffect(
+        output,
+        implicit monad => t => f(monad)(t).map(du => du.flatMap(mapping.decode)),
+        monad => w => g(monad)(mapping.encode(w))
+      )
+    }
+  }
+
+  //
+
   case class MappedPair[T, U, TU, V, R](output: Pair[T, U, TU, R], mapping: Mapping[TU, V]) extends EndpointOutput.Single[V, R] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X, R]
-    override private[tapir] def _mapping: Mapping[_, V] = mapping
     override def show: String = output.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W, R] = copy[T, U, TU, W, R](output, mapping.map(m))
   }
@@ -437,6 +489,15 @@ sealed trait EndpointIO[T, -R] extends EndpointInput[T, R] with EndpointOutput[T
 
   def and[J, IJ, R2](other: EndpointIO[J, R2])(implicit concat: ParamConcat.Aux[T, J, IJ]): EndpointIO[IJ, R with R2] =
     EndpointIO.Pair(this, other, mkCombine(concat), mkSplit(concat))
+
+  override def mapF[F[_], U](f: T => F[U])(g: U => T): EndpointIO[U, R with Effect[F]] =
+    EndpointIO.MapEffect(this, implicit monad => (t: T) => f(t).map(DecodeResult.Value(_)), monad => u => monad.eval(g(u)))
+  override def mapDecodeF[F[_], U](f: T => F[DecodeResult[U]])(g: U => T): EndpointIO[U, R with Effect[F]] =
+    EndpointIO.MapEffect(this, _ => (t: T) => f(t), monad => u => monad.eval(g(u)))
+  override def mapFF[F[_], U](f: T => F[U])(g: U => F[T]): EndpointIO[U, R with Effect[F]] =
+    EndpointIO.MapEffect(this, implicit monad => (t: T) => f(t).map(DecodeResult.Value(_)), _ => g)
+  override def mapDecodeFF[F[_], U](f: T => F[DecodeResult[U]])(g: U => F[T]): EndpointIO[U, R with Effect[F]] =
+    EndpointIO.MapEffect(this, _ => f, _ => g)
 }
 
 object EndpointIO {
@@ -507,9 +568,28 @@ object EndpointIO {
 
   //
 
+  case class MapEffect[T, U, F[_], R](
+      io: EndpointIO[T, R],
+      f: MonadError[F] => T => F[DecodeResult[U]],
+      g: MonadError[F] => U => F[T]
+  ) extends EndpointIO.Single[U, R with Effect[F]] {
+    override private[tapir] type ThisType[X] = MapEffect[T, X, F, R]
+
+    override def show: String = io.show
+
+    override def map[W](mapping: Mapping[U, W]): MapEffect[T, W, F, R] = {
+      MapEffect(
+        io,
+        implicit monad => t => f(monad)(t).map(du => du.flatMap(mapping.decode)),
+        monad => w => g(monad)(mapping.encode(w))
+      )
+    }
+  }
+
+  //
+
   case class MappedPair[T, U, TU, V, R](io: Pair[T, U, TU, R], mapping: Mapping[TU, V]) extends EndpointIO.Single[V, R] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X, R]
-    override private[tapir] def _mapping: Mapping[_, V] = mapping
     override def show: String = io.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W, R] = copy[T, U, TU, W, R](io, mapping.map(m))
   }

@@ -1,16 +1,18 @@
 package sttp.tapir.server.internal
 
 import java.nio.charset.Charset
-import sttp.capabilities.Streams
+import sttp.capabilities.{Effect, Streams}
 import sttp.model.{HeaderNames, StatusCode}
+import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
 import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType}
 
 import scala.util.Try
 
-class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
-  def apply(output: EndpointOutput[_, _], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
+class EncodeOutputs[F[_], B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S])(implicit monad: MonadError[F]) {
+  def apply[R](output: EndpointOutput[_, R with Effect[F]], value: Params, ov: OutputValues[B, W]): F[OutputValues[B, W]] = {
     output match {
       case s: EndpointIO.Single[_, _]                 => applySingle(s, value, ov)
       case s: EndpointOutput.Single[_, _]             => applySingle(s, value, ov)
@@ -20,45 +22,55 @@ class EncodeOutputs[B, W, S](encodeOutputBody: EncodeOutputBody[B, W, S]) {
     }
   }
 
-  private def applyPair(
-      left: EndpointOutput[_, _],
-      right: EndpointOutput[_, _],
+  private def applyPair[R](
+      left: EndpointOutput[_, R with Effect[F]],
+      right: EndpointOutput[_, R with Effect[F]],
       split: SplitParams,
       params: Params,
       ov: OutputValues[B, W]
-  ): OutputValues[B, W] = {
+  ): F[OutputValues[B, W]] = {
     val (leftParams, rightParams) = split(params)
-    apply(right, rightParams, apply(left, leftParams, ov))
+    apply(left, leftParams, ov).flatMap(l => apply(right, rightParams, l))
   }
 
-  private def applySingle(output: EndpointOutput.Single[_, _], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
-    def encoded[T]: T = output._mapping.asInstanceOf[Mapping[T, Any]].encode(value.asAny)
+  private def applySingle[R](
+      output: EndpointOutput.Single[_, R with Effect[F]],
+      value: Params,
+      ov: OutputValues[B, W]
+  ): F[OutputValues[B, W]] = {
+    def encoded[T](mapping: Mapping[_, _]): T = mapping.asInstanceOf[Mapping[T, Any]].encode(value.asAny)
     output match {
-      case EndpointIO.Empty(_, _)                   => ov
-      case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
-      case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value)
-      case EndpointIO.Body(rawValueType, codec, _)  => ov.withBody(encodeOutputBody.rawValueToBody(encoded[Any], codec.format, rawValueType))
+      case EndpointIO.Empty(_, _)                   => ov.unit
+      case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc).unit
+      case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value).unit
+      case EndpointIO.Body(rawValueType, codec, _) =>
+        ov.withBody(encodeOutputBody.rawValueToBody(encoded[Any](codec), codec.format, rawValueType)).unit
       case EndpointIO.StreamBody(_, codec, _, charset) =>
-        ov.withBody(encodeOutputBody.streamValueToBody(encoded[encodeOutputBody.streams.BinaryStream], codec.format, charset))
-      case EndpointIO.Header(name, _, _) =>
-        encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
-      case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
-      case EndpointIO.MappedPair(wrapped, _)  => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
-      case EndpointOutput.StatusCode(_, _, _) => ov.withStatusCode(encoded[StatusCode])
+        ov.withBody(encodeOutputBody.streamValueToBody(encoded[encodeOutputBody.streams.BinaryStream](codec), codec.format, charset)).unit
+      case EndpointIO.Header(name, codec, _) =>
+        encoded[List[String]](codec).foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }.unit
+      case EndpointIO.Headers(codec, _) =>
+        encoded[List[sttp.model.Header]](codec).foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value))).unit
+      case EndpointIO.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encoded[Any](mapping)), ov)
+      case EndpointOutput.StatusCode(_, codec, _)  => ov.withStatusCode(encoded[StatusCode](codec)).unit
       case o: EndpointOutput.WebSocketBody[_, _, _, _, _] =>
         ov.withWebSocketBody(
           encodeOutputBody.webSocketPipeToBody(
-            encoded[encodeOutputBody.streams.Pipe[Any, Any]],
+            encoded[encodeOutputBody.streams.Pipe[Any, Any]](o.codec),
             o.asInstanceOf[WebSocketBody[encodeOutputBody.streams.Pipe[Any, Any], Any, Any, Any, S]]
           )
-        )
-      case EndpointOutput.OneOf(mappings, _) =>
-        val enc = encoded[Any]
+        ).unit
+      case EndpointOutput.OneOf(mappings, codec) =>
+        val enc = encoded[Any](codec)
         val mapping = mappings
           .find(mapping => mapping.appliesTo(enc))
           .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $enc, in output: $output"))
         apply(mapping.output, ParamsAsAny(enc), mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
-      case EndpointOutput.MappedPair(wrapped, _) => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
+      case EndpointOutput.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encoded[Any](mapping)), ov)
+      case EndpointOutput.MapEffect(wrapped, _, g) =>
+        g(monad).asInstanceOf[Any => F[Any]].apply(value.asAny).flatMap(v => apply(wrapped, ParamsAsAny(v), ov))
+      case EndpointIO.MapEffect(wrapped, _, g) =>
+        g(monad).asInstanceOf[Any => F[Any]].apply(value.asAny).flatMap(v => apply(wrapped, ParamsAsAny(v), ov))
     }
   }
 }

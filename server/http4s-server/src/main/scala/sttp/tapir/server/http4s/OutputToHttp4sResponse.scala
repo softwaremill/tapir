@@ -20,21 +20,22 @@ import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
 
 private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   def apply[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O, _], v: O): F[Response[F]] = {
-    val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
-    val statusCode = outputValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(statusCodeToHttp4sStatus(defaultStatusCode))
+    encodeOutputs(output, ParamsAsAny(v), OutputValues.empty).flatMap { outputValues =>
+      val statusCode = outputValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(statusCodeToHttp4sStatus(defaultStatusCode))
 
-    val headers = allOutputHeaders(outputValues)
-    outputValues.body match {
-      case Some(Left((entity, _))) => Response(status = statusCode, headers = headers, body = entity).pure[F]
-      case Some(Right(pipeF)) =>
-        Queue.bounded[F, WebSocketFrame](32).flatMap { queue =>
-          pipeF.flatMap { pipe =>
-            val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.enqueue1(f)))
-            WebSocketBuilder[F].build(queue.dequeue, receive, headers = headers, filterPingPongs = false)
+      val headers = allOutputHeaders(outputValues)
+      outputValues.body match {
+        case Some(Left((entity, _))) => Response(status = statusCode, headers = headers, body = entity).pure[F]
+        case Some(Right(pipeF)) =>
+          Queue.bounded[F, WebSocketFrame](32).flatMap { queue =>
+            pipeF.flatMap { pipe =>
+              val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.enqueue1(f)))
+              WebSocketBuilder[F].build(queue.dequeue, receive, headers = headers, filterPingPongs = false)
+            }
           }
-        }
 
-      case None => Response[F](status = statusCode, headers = headers).pure[F]
+        case None => Response[F](status = statusCode, headers = headers).pure[F]
+      }
     }
   }
 
@@ -52,7 +53,7 @@ private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Tim
     }
   }
 
-  private val encodeOutputs: EncodeOutputs[(EntityBody[F], Header), EncodeOutputsWebSocket, Fs2Streams[F]] =
+  private val encodeOutputs: EncodeOutputs[F, (EntityBody[F], Header), EncodeOutputsWebSocket, Fs2Streams[F]] =
     new EncodeOutputs(
       new EncodeOutputBody[(EntityBody[F], Header), EncodeOutputsWebSocket, Fs2Streams[F]] {
         override val streams: Fs2Streams[F] = Fs2Streams[F]
@@ -71,7 +72,7 @@ private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Tim
             o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
         ): EncodeOutputsWebSocket = Http4sWebSockets.pipeToBody(pipe, o)
       }
-    )
+    )(new CatsMonadError[F])
 
   private def rawValueToEntity[CF <: CodecFormat, R](bodyType: RawBodyType[R], ct: `Content-Type`, r: R): (EntityBody[F], Header) = {
     bodyType match {

@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives.concat
 import akka.http.scaladsl.server.Route
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import sttp.capabilities.WebSockets
+import sttp.capabilities.{Effect, WebSockets}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
@@ -17,9 +17,9 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
-    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route] {
+    extends TestServerInterpreter[Future, AkkaStreams with WebSockets with Effect[Future], Route] {
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
+      e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets with Effect[Future], Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): Route = {
     implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
@@ -28,7 +28,10 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     AkkaHttpServerInterpreter.toRoute(e)
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](
+      e: Endpoint[I, E, O, AkkaStreams with WebSockets with Effect[Future]],
+      fn: I => Future[O]
+  )(implicit
       eClassTag: ClassTag[E]
   ): Route = {
     AkkaHttpServerInterpreter.toRouteRecoverErrors(e)(fn)

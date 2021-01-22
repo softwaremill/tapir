@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.{MediaType => _}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server._
 import akka.http.scaladsl.server.directives.RouteDirectives
-import sttp.capabilities.WebSockets
+import sttp.capabilities.{Effect, WebSockets}
 import sttp.capabilities.akka.AkkaStreams
 import sttp.monad.FutureMonad
 import sttp.tapir._
@@ -14,6 +14,7 @@ import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
 private[akkahttp] class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
+  type AkkaServerCapabilities = AkkaStreams with WebSockets with Effect[Future]
 
   /** Converts the endpoint to a directive that -for matching requests- decodes the input parameters
     * and provides those input parameters and a function. The function can be called to complete the request.
@@ -31,7 +32,7 @@ private[akkahttp] class EndpointToAkkaServer(serverOptions: AkkaHttpServerOption
     *
     * If type `I` is a tuple, and `logic` has 1 parameter per tuple member, use {{{completion((logic _).tupled(input))}}}
     */
-  def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets]): Directive[(I, Future[Either[E, O]] => Route)] = {
+  def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaServerCapabilities]): Directive[(I, Future[Either[E, O]] => Route)] = {
     toDirective1(e).flatMap { (values: I) =>
       extractLog.flatMap { log =>
         extractExecutionContext.flatMap { implicit ec =>
@@ -51,7 +52,7 @@ private[akkahttp] class EndpointToAkkaServer(serverOptions: AkkaHttpServerOption
     }
   }
 
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future]): Route = {
+  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaServerCapabilities, Future]): Route = {
     toDirective1(se.endpoint) { values =>
       extractLog { log =>
         mapResponse(resp => { serverOptions.logRequestHandling.requestHandled(se.endpoint, resp.status.intValue())(log); resp }) {
@@ -71,11 +72,11 @@ private[akkahttp] class EndpointToAkkaServer(serverOptions: AkkaHttpServerOption
     }
   }
 
-  def toRoute(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams with WebSockets, Future]]): Route = {
+  def toRoute(serverEndpoints: List[ServerEndpoint[_, _, _, AkkaServerCapabilities, Future]]): Route = {
     serverEndpoints.map(se => toRoute(se)).foldLeft(RouteDirectives.reject: Route)(_ ~ _)
   }
 
-  private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets]): Directive1[I] = new EndpointToAkkaDirective(
+  private def toDirective1[I, E, O](e: Endpoint[I, E, O, AkkaServerCapabilities]): Directive1[I] = new EndpointToAkkaDirective(
     serverOptions
   )(e)
 }

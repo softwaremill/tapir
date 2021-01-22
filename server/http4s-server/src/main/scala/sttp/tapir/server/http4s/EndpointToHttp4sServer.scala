@@ -10,14 +10,17 @@ import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesR
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import cats.arrow.FunctionK
-import sttp.capabilities.WebSockets
+import sttp.capabilities.{Effect, WebSockets}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 
 private[http4s] class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
-  def toHttp[I, E, O, G[_]: Sync](t: F ~> G, se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G]): Http[OptionT[G, *], F] = {
+  def toHttp[I, E, O, G[_]: Sync](
+      t: F ~> G,
+      se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F], G]
+  ): Http[OptionT[G, *], F] = {
     def decodeBody(req: Request[F], result: DecodeInputsResult): G[DecodeInputsResult] = {
       result match {
         case values: DecodeInputsResult.Values =>
@@ -52,7 +55,7 @@ private[http4s] class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Tim
     Kleisli((req: Request[F]) =>
       OptionT(decodeBody(req, internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
         case values: DecodeInputsResult.Values =>
-          InputValues(se.endpoint.input, values) match {
+          t(InputValues(se.endpoint.input, values)(new CatsMonadError[F])).flatMap {
             case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny).map(_.some)
             case InputValuesResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
           }
@@ -61,16 +64,18 @@ private[http4s] class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Tim
     )
   }
 
-  def toHttp[G[_]: Sync](t: F ~> G)(se: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]]): Http[OptionT[G, *], F] =
+  def toHttp[G[_]: Sync](
+      t: F ~> G
+  )(se: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets with Effect[F], G]]): Http[OptionT[G, *], F] =
     NonEmptyList.fromList(se.map(se => toHttp(t, se))) match {
       case Some(routes) => routes.reduceK
       case None         => Kleisli(_ => OptionT.none)
     }
 
-  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]): HttpRoutes[F] =
+  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F], F]): HttpRoutes[F] =
     toHttp(FunctionK.id[F], se)
 
-  def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]]): HttpRoutes[F] =
+  def toRoutes[I, E, O](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets with Effect[F], F]]): HttpRoutes[F] =
     toHttp(FunctionK.id[F])(serverEndpoints)
 
   private def handleDecodeFailure[I](

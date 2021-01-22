@@ -3,16 +3,16 @@ package sttp.tapir
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
-import sttp.capabilities.Streams
+import sttp.capabilities.{Effect, Streams}
 import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.monad.MonadError
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model._
 
@@ -421,6 +421,56 @@ package object tests {
     }
 
     val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
+  }
+
+  //
+
+  object EffectfulMappings {
+    def in_f_query_out_string[F[_]](implicit monad: MonadError[F]): Endpoint[Fruit, Unit, String, Effect[F]] = {
+      endpoint.in(query[String]("fruit").mapF(t => monad.eval(Fruit(t)))(_.f)).out(stringBody).name("f_query")
+    }
+
+    def in_f_query_query_out_string[F[_]](implicit monad: MonadError[F]): Endpoint[(Fruit, Int), Unit, String, Effect[F]] = {
+      endpoint
+        .in(query[String]("fruit").mapF(t => monad.eval(Fruit(t)))(_.f))
+        .in(query[Int]("amount"))
+        .out(stringBody)
+        .name("f_query_query")
+    }
+
+    def in_f_mapped_query_query_out_string[F[_]](implicit monad: MonadError[F]): Endpoint[FruitAmount, Unit, String, Effect[F]] = {
+      endpoint
+        .in(
+          query[String]("fruit")
+            .and(query[Int]("amount"))
+            .mapF { case (fruit, amount) => monad.eval(FruitAmount(fruit, amount)) }(fa => (fa.fruit, fa.amount))
+        )
+        .out(stringBody)
+        .name("f_mapped_query_query")
+    }
+
+    def in_query_out_f_string[F[_]](implicit monad: MonadError[F]): Endpoint[String, Unit, Fruit, Effect[F]] = {
+      endpoint.in(query[String]("fruit")).out(stringBody.mapFF(t => monad.eval(Fruit(t)))(f => monad.eval(f.f))).name("f_body")
+    }
+
+    def in_query_out_f_string_int[F[_]](implicit monad: MonadError[F]): Endpoint[String, Unit, (Fruit, Int), Effect[F]] = {
+      endpoint
+        .in(query[String]("fruit"))
+        .out(stringBody.mapFF(t => monad.eval(Fruit(t)))(f => monad.eval(f.f)))
+        .out(header[Int]("X-Role"))
+        .name("f_body_header")
+    }
+
+    def in_query_out_f_mapped_string_int[F[_]](implicit monad: MonadError[F]): Endpoint[String, Unit, FruitAmount, Effect[F]] = {
+      endpoint
+        .in(query[String]("fruit"))
+        .out(
+          stringBody
+            .and(header[Int]("X-Role"))
+            .mapFF { case (fruit, amount) => monad.eval(FruitAmount(fruit, amount)) }(fa => monad.eval((fa.fruit, fa.amount)))
+        )
+        .name("f_mapped_body_header")
+    }
   }
 
   //

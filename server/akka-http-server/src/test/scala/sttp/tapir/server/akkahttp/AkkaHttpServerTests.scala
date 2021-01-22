@@ -15,6 +15,7 @@ import sttp.tapir._
 import sttp.tapir.server.tests.{
   ServerAuthenticationTests,
   ServerBasicTests,
+  ServerEffectfulMappingsTests,
   ServerStreamingTests,
   ServerTests,
   ServerWebSocketTests,
@@ -37,7 +38,7 @@ class AkkaHttpServerTests extends TestSuite {
         Test("endpoint nested in a path directive") {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
           val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter.toRoute(e))
-          interpreter
+          val _ = interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
@@ -52,6 +53,7 @@ class AkkaHttpServerTests extends TestSuite {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
         new ServerAuthenticationTests(backend, serverTests).tests() ++
+        new ServerEffectfulMappingsTests(backend, serverTests).tests() ++
         additionalTests()
     }
   }

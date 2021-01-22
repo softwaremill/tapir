@@ -69,6 +69,8 @@ package object internal {
         case EndpointIO.Pair(left, right, _, _)              => left.traverseInputs(handle) ++ right.traverseInputs(handle)
         case EndpointInput.MappedPair(wrapped, _)            => wrapped.traverseInputs(handle)
         case EndpointIO.MappedPair(wrapped, _)               => wrapped.traverseInputs(handle)
+        case EndpointInput.MapEffect(wrapped, _, _)          => wrapped.traverseInputs(handle)
+        case EndpointIO.MapEffect(wrapped, _, _)             => wrapped.traverseInputs(handle)
         case a: EndpointInput.Auth[_, _]                     => a.input.traverseInputs(handle)
         case _                                               => Vector.empty
       }
@@ -100,6 +102,8 @@ package object internal {
       else
         input match {
           case _: EndpointInput.Basic[_, _]              => Vector.empty
+          case i @ EndpointInput.MapEffect(input, _, _)  => findIn(i, input)
+          case i @ EndpointIO.MapEffect(io, _, _)        => findIn(i, io)
           case i @ EndpointInput.Pair(left, right, _, _) => findIn(i, left, right)
           case i @ EndpointIO.Pair(left, right, _, _)    => findIn(i, left, right)
           case a: EndpointInput.Auth[_, _]               => findIn(a, a.input)
@@ -151,11 +155,13 @@ package object internal {
         }
 
       output match {
-        case EndpointOutput.Pair(left, right, _, _) => mergeMultiple(Vector(left.asBasicOutputsOrList, right.asBasicOutputsOrList))
-        case EndpointIO.Pair(left, right, _, _)     => mergeMultiple(Vector(left.asBasicOutputsOrList, right.asBasicOutputsOrList))
-        case EndpointOutput.MappedPair(wrapped, _)  => wrapped.asBasicOutputsOrList
-        case EndpointIO.MappedPair(wrapped, _)      => wrapped.asBasicOutputsOrList
-        case _: EndpointOutput.Void[_]              => Left(Vector.empty)
+        case EndpointOutput.MapEffect(wrapped, _, _) => wrapped.asBasicOutputsOrList
+        case EndpointIO.MapEffect(wrapped, _, _)     => wrapped.asBasicOutputsOrList
+        case EndpointOutput.Pair(left, right, _, _)  => mergeMultiple(Vector(left.asBasicOutputsOrList, right.asBasicOutputsOrList))
+        case EndpointIO.Pair(left, right, _, _)      => mergeMultiple(Vector(left.asBasicOutputsOrList, right.asBasicOutputsOrList))
+        case EndpointOutput.MappedPair(wrapped, _)   => wrapped.asBasicOutputsOrList
+        case EndpointIO.MappedPair(wrapped, _)       => wrapped.asBasicOutputsOrList
+        case _: EndpointOutput.Void[_]               => Left(Vector.empty)
         case s: EndpointOutput.OneOf[_, _, _] =>
           Right(
             s.mappings

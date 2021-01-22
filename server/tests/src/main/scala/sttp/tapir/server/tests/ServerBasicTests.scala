@@ -44,7 +44,7 @@ class ServerBasicTests[F[_], ROUTE](
       (if (multipartInlineHeaderSupport) multipartInlineHeaderTests() else Nil) ++
       (if (inputStreamSupport) inputStreamTests() else Nil)
 
-  def basicTests(): List[Test] = List(
+  private def basicTests(): List[Test] = List(
     testServer(in_string_out_status_from_type_erasure_using_partial_matcher)((v: String) =>
       pureResult((if (v == "right") Some(Right("right")) else if (v == "left") Some(Left(42)) else None).asRight[Unit])
     ) { baseUri =>
@@ -678,7 +678,7 @@ class ServerBasicTests[F[_], ROUTE](
     }
   )
 
-  def multipartInlineHeaderTests(): List[Test] = List(
+  private def multipartInlineHeaderTests(): List[Test] = List(
     testServer(in_file_multipart_out_multipart, "with part content type header")((fd: FruitData) =>
       pureResult(
         FruitData(
@@ -698,7 +698,7 @@ class ServerBasicTests[F[_], ROUTE](
     }
   )
 
-  def inputStreamTests(): List[Test] = List(
+  private def inputStreamTests(): List[Test] = List(
     testServer(in_input_stream_out_input_stream)((is: InputStream) =>
       pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
     ) { baseUri => basicRequest.post(uri"$baseUri/api/echo").body("mango").send(backend).map(_.body shouldBe Right("mango")) },

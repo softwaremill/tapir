@@ -11,40 +11,41 @@ import akka.stream.scaladsl.{Flow, Source, StreamConverters}
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, HeaderNames, Part}
+import sttp.monad.FutureMonad
 import sttp.tapir.EndpointOutput.WebSocketBody
 import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Materializer) {
   private type EntityFromLength = Option[Long] => ResponseEntity
 
   def apply[O](defaultStatusCode: AkkaStatusCode, output: EndpointOutput[O, _], v: O): Route = {
-    val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
+    onSuccess(encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)) { outputValues =>
+      val statusCode = outputValues.statusCode.map(c => AkkaStatusCode.int2StatusCode(c.code)).getOrElse(defaultStatusCode)
+      val akkaHeaders = parseHeadersOrThrow(outputValues.headers)
 
-    val statusCode = outputValues.statusCode.map(c => AkkaStatusCode.int2StatusCode(c.code)).getOrElse(defaultStatusCode)
-    val akkaHeaders = parseHeadersOrThrow(outputValues.headers)
-
-    outputValues.body match {
-      case Some(Left(entityFromLength)) =>
-        val entity = entityFromLength(outputValues.contentLength)
-        val entity2 = overrideContentTypeIfDefined(entity, akkaHeaders)
-        complete(HttpResponse(entity = entity2, status = statusCode, headers = akkaHeaders))
-      case Some(Right(flow)) =>
-        respondWithHeaders(akkaHeaders) {
-          handleWebSocketMessages(flow)
-        }
-      case None => complete(HttpResponse(statusCode, headers = akkaHeaders))
+      outputValues.body match {
+        case Some(Left(entityFromLength)) =>
+          val entity = entityFromLength(outputValues.contentLength)
+          val entity2 = overrideContentTypeIfDefined(entity, akkaHeaders)
+          complete(HttpResponse(entity = entity2, status = statusCode, headers = akkaHeaders))
+        case Some(Right(flow)) =>
+          respondWithHeaders(akkaHeaders) {
+            handleWebSocketMessages(flow)
+          }
+        case None => complete(HttpResponse(statusCode, headers = akkaHeaders))
+      }
     }
   }
 
   // We can only create the entity once we know if its size is defined; depending on this, the body might end up
   // as a chunked or normal response. That's why here we return a function creating the entity basing on the length,
   // which might be only known when all other outputs are encoded.
-  private val encodeOutputs: EncodeOutputs[EntityFromLength, Flow[Message, Message, Any], AkkaStreams] = new EncodeOutputs(
+  private val encodeOutputs: EncodeOutputs[Future, EntityFromLength, Flow[Message, Message, Any], AkkaStreams] = new EncodeOutputs(
     new EncodeOutputBody[EntityFromLength, Flow[Message, Message, Any], AkkaStreams] {
       override val streams: AkkaStreams = AkkaStreams
       override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): EntityFromLength =
@@ -63,7 +64,7 @@ private[akkahttp] class OutputToAkkaRoute(implicit ec: ExecutionContext, mat: Ma
           o: WebSocketBody[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
       ): Flow[Message, Message, Any] = AkkaWebSockets.pipeToBody(pipe, o)
     }
-  )
+  )(new FutureMonad)
 
   private def rawValueToResponseEntity[CF <: CodecFormat, R](
       bodyType: RawBodyType[R],

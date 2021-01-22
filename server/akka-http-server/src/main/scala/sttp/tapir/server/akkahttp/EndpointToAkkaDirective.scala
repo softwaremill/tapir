@@ -1,7 +1,5 @@
 package sttp.tapir.server.akkahttp
 
-import java.io.ByteArrayInputStream
-
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Directives.{extractExecutionContext, extractMaterializer, extractRequestContext, onSuccess, reject}
 import akka.http.scaladsl.server.{Directive1, RequestContext, StandardRoute}
@@ -9,17 +7,19 @@ import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
-import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.{Effect, WebSockets}
 import sttp.model.{Header, Part}
+import sttp.monad.FutureMonad
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyType, RawPart}
 
+import java.io.ByteArrayInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
 private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOptions) {
-  def apply[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets]): Directive1[I] = {
+  def apply[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets with Effect[Future]]): Directive1[I] = {
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._
 
@@ -47,7 +47,7 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
         extractMaterializer.flatMap { implicit mat =>
           decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
             case values: DecodeInputsResult.Values =>
-              InputValues(e.input, values) match {
+              onSuccess(InputValues(e.input, values)(new FutureMonad())).flatMap {
                 case InputValuesResult.Value(params, _)        => provide(params.asAny.asInstanceOf[I])
                 case InputValuesResult.Failure(input, failure) => decodeFailureDirective(ctx, e, input, failure)
               }

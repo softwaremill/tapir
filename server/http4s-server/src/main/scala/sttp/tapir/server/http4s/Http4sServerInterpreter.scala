@@ -4,7 +4,7 @@ import cats.data.OptionT
 import cats.effect.{Concurrent, ContextShift, Sync, Timer}
 import cats.~>
 import org.http4s.{Http, HttpRoutes}
-import sttp.capabilities.WebSockets
+import sttp.capabilities.{Effect, WebSockets}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
@@ -12,7 +12,9 @@ import sttp.tapir.server.ServerEndpoint
 import scala.reflect.ClassTag
 
 trait Http4sServerInterpreter {
-  def toHttp[I, E, O, F[_], G[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(t: F ~> G)(logic: I => G[Either[E, O]])(implicit
+  def toHttp[I, E, O, F[_], G[_]](
+      e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F]]
+  )(t: F ~> G)(logic: I => G[Either[E, O]])(implicit
       serverOptions: Http4sServerOptions[F],
       gs: Sync[G],
       fs: Concurrent[F],
@@ -22,7 +24,9 @@ trait Http4sServerInterpreter {
     new EndpointToHttp4sServer(serverOptions).toHttp(t, e.serverLogic(logic))
   }
 
-  def toHttpRecoverErrors[I, E, O, F[_], G[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(t: F ~> G)(logic: I => G[O])(implicit
+  def toHttpRecoverErrors[I, E, O, F[_], G[_]](
+      e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F]]
+  )(t: F ~> G)(logic: I => G[O])(implicit
       serverOptions: Http4sServerOptions[F],
       gs: Sync[G],
       fs: Concurrent[F],
@@ -34,13 +38,13 @@ trait Http4sServerInterpreter {
     new EndpointToHttp4sServer(serverOptions).toHttp(t, e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoutes[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(
+  def toRoutes[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F]])(
       logic: I => F[Either[E, O]]
   )(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = {
     new EndpointToHttp4sServer(serverOptions).toRoutes(e.serverLogic(logic))
   }
 
-  def toRouteRecoverErrors[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(logic: I => F[O])(implicit
+  def toRouteRecoverErrors[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F]])(logic: I => F[O])(implicit
       serverOptions: Http4sServerOptions[F],
       fs: Concurrent[F],
       fcs: ContextShift[F],
@@ -51,7 +55,7 @@ trait Http4sServerInterpreter {
     new EndpointToHttp4sServer(serverOptions).toRoutes(e.serverLogicRecoverErrors(logic))
   }
 
-  def toHttp[I, E, O, F[_], G[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G])(
+  def toHttp[I, E, O, F[_], G[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F], G])(
       t: F ~> G
   )(implicit
       serverOptions: Http4sServerOptions[F],
@@ -63,11 +67,12 @@ trait Http4sServerInterpreter {
     new EndpointToHttp4sServer(serverOptions).toHttp(t, se)
 
   def toRoutes[I, E, O, F[_]](
-      se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]
+      se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F], F]
   )(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] =
     new EndpointToHttp4sServer(serverOptions).toRoutes(se)
 
-  def toHttp[F[_], G[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]])(t: F ~> G)(implicit
+  def toHttp[F[_], G[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets with Effect[F], G]])(t: F ~> G)(
+      implicit
       serverOptions: Http4sServerOptions[F],
       gs: Sync[G],
       fs: Concurrent[F],
@@ -77,7 +82,7 @@ trait Http4sServerInterpreter {
     new EndpointToHttp4sServer[F](serverOptions).toHttp(t)(serverEndpoints)
   }
 
-  def toRoutes[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]])(implicit
+  def toRoutes[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets with Effect[F], F]])(implicit
       serverOptions: Http4sServerOptions[F],
       fs: Concurrent[F],
       fcs: ContextShift[F],

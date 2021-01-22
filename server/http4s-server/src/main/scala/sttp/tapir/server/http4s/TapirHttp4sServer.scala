@@ -4,7 +4,7 @@ import cats.~>
 import cats.data.OptionT
 import cats.effect.{Concurrent, ContextShift, Sync, Timer}
 import org.http4s.{Http, HttpRoutes}
-import sttp.capabilities.WebSockets
+import sttp.capabilities.{Effect, WebSockets}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
@@ -15,7 +15,7 @@ import scala.reflect.ClassTag
 // to revert to Sync[F] after the WS changes in http4s 1.
 @deprecated("Use Http4sServerInterpreter", since = "0.17.1")
 trait TapirHttp4sServer {
-  implicit class RichHttp4sHttpEndpoint[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets]) {
+  implicit class RichHttp4sHttpEndpoint[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F]]) {
     @deprecated("Use Http4sServerInterpreter.toHttp", since = "0.17.1")
     def toHttp[G[_]](t: F ~> G)(logic: I => G[Either[E, O]])(implicit
         serverOptions: Http4sServerOptions[F],
@@ -60,7 +60,9 @@ trait TapirHttp4sServer {
     }
   }
 
-  implicit class RichHttp4sServerEndpoint0[I, E, O, F[_], G[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G]) {
+  implicit class RichHttp4sServerEndpoint0[I, E, O, F[_], G[_]](
+      se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F], G]
+  ) {
     @deprecated("Use Http4sServerInterpreter.toHttp", since = "0.17.1")
     def toHttp(
         t: F ~> G
@@ -74,13 +76,15 @@ trait TapirHttp4sServer {
       new EndpointToHttp4sServer(serverOptions).toHttp(t, se)
   }
 
-  implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]) {
+  implicit class RichHttp4sServerEndpoint[I, E, O, F[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets with Effect[F], F]) {
     @deprecated("Use Http4sServerInterpreter.toRoutes", since = "0.17.1")
     def toRoutes(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] =
       new EndpointToHttp4sServer(serverOptions).toRoutes(se)
   }
 
-  implicit class RichHttp4sServerEndpoints0[F[_], G[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]]) {
+  implicit class RichHttp4sServerEndpoints0[F[_], G[_]](
+      serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets with Effect[F], G]]
+  ) {
     @deprecated("Use Http4sServerInterpreter.toHttp", since = "0.17.1")
     def toHttp(t: F ~> G)(implicit
         serverOptions: Http4sServerOptions[F],
@@ -93,7 +97,9 @@ trait TapirHttp4sServer {
     }
   }
 
-  implicit class RichHttp4sServerEndpoints[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]]) {
+  implicit class RichHttp4sServerEndpoints[F[_]](
+      serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets with Effect[F], F]]
+  ) {
     @deprecated("Use Http4sServerInterpreter.toRoutes", since = "0.17.1")
     def toRoutes(implicit
         serverOptions: Http4sServerOptions[F],

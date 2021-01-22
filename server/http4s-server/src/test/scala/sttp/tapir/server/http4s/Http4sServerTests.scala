@@ -13,6 +13,7 @@ import sttp.tapir._
 import sttp.tapir.server.tests.{
   ServerAuthenticationTests,
   ServerBasicTests,
+  ServerEffectfulMappingsTests,
   ServerStreamingTests,
   ServerTests,
   ServerWebSocketTests,
@@ -72,6 +73,7 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
       new ServerAuthenticationTests(backend, serverTests).tests() ++
+      new ServerEffectfulMappingsTests(backend, serverTests).tests() ++
       additionalTests()
   }
 }
