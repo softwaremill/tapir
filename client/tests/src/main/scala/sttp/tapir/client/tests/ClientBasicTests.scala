@@ -9,7 +9,7 @@ import sttp.tapir.model.UsernamePassword
 import sttp.tapir.tests.TestUtil.writeToFile
 import sttp.tapir.tests._
 
-trait ClientBasicTests { this: ClientTests[Any] =>
+trait ClientBasicTests[F[_]] { this: ClientTests[Any, F] =>
   private val testFile = writeToFile("pen pineapple apple pen")
 
   def basicTests(): Unit = {
@@ -47,13 +47,16 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         in_query_list_out_header_list,
         port,
         List("plum", "watermelon", "apple")
-      ).unsafeToFuture().map(
-        _.toOption.get should contain theSameElementsAs (
-          // The fetch API merges multiple header values having the same name into a single comma separated value
-          if (platformIsScalaJS)
-            List("apple, watermelon, plum")
-          else
-            List("apple", "watermelon", "plum")))
+      ).unsafeToFuture()
+        .map(
+          _.toOption.get should contain theSameElementsAs (
+            // The fetch API merges multiple header values having the same name into a single comma separated value
+            if (platformIsScalaJS)
+              List("apple, watermelon, plum")
+            else
+              List("apple", "watermelon", "plum")
+          )
+        )
     }
     // cookie support in sttp is currently only available on the JVM
     if (!platformIsScalaJS) {
@@ -111,7 +114,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       }
     }
 
-    testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
+    testClient[Unit, Unit, Unit](in_unit_out_json_unit, (), Right(()))
 
     test(in_fixed_header_out_string.showDetail) {
       send(in_fixed_header_out_string, port, ())

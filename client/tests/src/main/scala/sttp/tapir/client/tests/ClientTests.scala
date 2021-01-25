@@ -7,12 +7,13 @@ import cats.implicits._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.capabilities.{Effect => SttpEffect}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.{DecodeResult, _}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAndAfterAll {
+abstract class ClientTests[R, F[_]] extends AsyncFunSuite with Matchers with BeforeAndAfterAll {
   // Using the default ScalaTest execution context seems to cause issues on JS.
   // https://github.com/scalatest/scalatest/issues/1039
   implicit override val executionContext: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -20,10 +21,10 @@ abstract class ClientTests[R] extends AsyncFunSuite with Matchers with BeforeAnd
   type Port = Int
   var port: Port = 51823
 
-  def send[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]]
-  def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
+  def send[I, E, O](e: Endpoint[I, E, O, R with SttpEffect[F]], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]]
+  def safeSend[I, E, O](e: Endpoint[I, E, O, R with SttpEffect[F]], port: Port, args: I): IO[DecodeResult[Either[E, O]]]
 
-  def testClient[I, E, O, FN[_]](e: Endpoint[I, E, O, R], args: I, expectedResult: Either[E, O]): Unit = {
+  def testClient[I, E, O](e: Endpoint[I, E, O, R with SttpEffect[F]], args: I, expectedResult: Either[E, O]): Unit = {
     test(e.showDetail) {
       // adjust test result values to a form that is comparable by scalatest
       def adjust(r: Either[Any, Any]): Future[Either[Any, Any]] = {

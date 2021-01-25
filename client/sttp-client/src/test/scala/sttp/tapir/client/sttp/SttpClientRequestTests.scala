@@ -7,6 +7,8 @@ import sttp.model.{Header, HeaderNames, MediaType, Part}
 import sttp.tapir.tests.FruitData
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.client3.monad.IdMonad
+import sttp.monad.MonadError
 import sttp.tapir.Defaults.createTempFile
 
 class SttpClientRequestTests extends AnyFunSuite with Matchers {
@@ -14,6 +16,7 @@ class SttpClientRequestTests extends AnyFunSuite with Matchers {
     // given
     val testEndpoint = endpoint.post.in(multipartBody[FruitData])
     val testFile = createTempFile()
+    implicit val monad: MonadError[Identity] = IdMonad
 
     // when
     val sttpClientRequest = SttpClientInterpreter

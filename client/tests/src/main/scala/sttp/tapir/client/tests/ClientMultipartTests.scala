@@ -2,7 +2,7 @@ package sttp.tapir.client.tests
 
 import sttp.tapir.tests._
 
-trait ClientMultipartTests { this: ClientTests[Any] =>
+trait ClientMultipartTests[F[_]] { this: ClientTests[Any, F] =>
 
   def multipartTests(): Unit = {
     testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))

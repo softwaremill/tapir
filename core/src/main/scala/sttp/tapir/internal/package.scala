@@ -188,6 +188,8 @@ package object internal {
         case EndpointIO.Pair(left, right, _, _)               => left.traverseOutputs(handle) ++ right.traverseOutputs(handle)
         case EndpointOutput.MappedPair(wrapped, _)            => wrapped.traverseOutputs(handle)
         case EndpointIO.MappedPair(wrapped, _)                => wrapped.traverseOutputs(handle)
+        case EndpointOutput.MapEffect(wrapped, _, _)          => wrapped.traverseOutputs(handle)
+        case EndpointIO.MapEffect(wrapped, _, _)              => wrapped.traverseOutputs(handle)
         case s: EndpointOutput.OneOf[_, _, _]                 => s.mappings.toVector.flatMap(_.output.traverseOutputs(handle))
         case _                                                => Vector.empty
       }

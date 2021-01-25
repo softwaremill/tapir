@@ -1,6 +1,8 @@
 package sttp.tapir.server.stub
 
-import sttp.client3.Response
+import sttp.capabilities.{Effect, Streams, WebSockets}
+import sttp.client3.monad.IdMonad
+import sttp.client3.{Identity, Response}
 
 import java.nio.charset.Charset
 import sttp.client3.testing.SttpBackendStub
@@ -20,6 +22,8 @@ import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointOutput, RawBodyT
 
 trait SttpStubServer {
 
+  private implicit val idMonad = IdMonad
+
   implicit class RichSttpBackendStub[F[_], R](val stub: SttpBackendStub[F, R]) {
     def whenRequestMatchesEndpoint[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[_, E, O] = {
       new TypeAwareWhenRequest(
@@ -33,7 +37,9 @@ trait SttpStubServer {
       )
     }
 
-    def whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[I, E, O] = {
+    def whenInputMatches[I, E, O](
+        endpoint: Endpoint[I, E, O, WebSockets with Streams[_] with Effect[Identity]]
+    )(inputMatcher: I => Boolean): TypeAwareWhenRequest[I, E, O] = {
       new TypeAwareWhenRequest(
         endpoint,
         new stub.WhenRequest(req =>
@@ -91,7 +97,7 @@ trait SttpStubServer {
           ): Any = pipe //impossible
         }
         val outputValues =
-          new EncodeOutputs[Any, Any, Nothing](encodeOutputBody).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
+          new EncodeOutputs[Identity, Any, Any, Nothing](encodeOutputBody).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
 
         whenRequest.thenRespond(
           sttp.client3.Response(

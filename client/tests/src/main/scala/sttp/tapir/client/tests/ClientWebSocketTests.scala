@@ -8,7 +8,7 @@ import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir.tests.Fruit
 
-trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
+trait ClientWebSocketTests[S, F[_]] { this: ClientTests[S with WebSockets, F] =>
   val streams: Streams[S]
 
   def sendAndReceiveLimited[A, B](p: streams.Pipe[A, B], receiveCount: Int, as: List[A]): IO[List[B]]
