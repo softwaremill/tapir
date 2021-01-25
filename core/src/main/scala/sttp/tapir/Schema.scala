@@ -13,6 +13,7 @@ import sttp.tapir.generic.internal.SchemaMapMacro
 import sttp.tapir.internal.ModifySchemaMacro
 
 import scala.annotation.StaticAnnotation
+import scala.annotation.implicitNotFound
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.internal.SchemaMagnoliaDerivation
 import magnolia.Magnolia
@@ -20,6 +21,10 @@ import magnolia.Magnolia
 /** Describes the type `T`: its low-level representation, meta-data and validation rules.
   * @param format The name of the format of the low-level representation of `T`.
   */
+@implicitNotFound( msg = """Could not find Schema for type ${T}
+Since 0.17.0 automatic derivation is enabled by including following import: `import sttp.tapir.generic.auto._`
+Please consult schema derivation documentation for more details: https://tapir.softwaremill.com/en/latest/endpoint/customtypes.html#automatically-deriving-codecs"""
+)
 case class Schema[T](
     schemaType: SchemaType,
     isOptional: Boolean = false,
