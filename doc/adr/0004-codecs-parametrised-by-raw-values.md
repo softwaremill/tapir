@@ -4,7 +4,7 @@ Date: 2019-11-22
 
 ## Context
 
-Currently tapir's `Codec` is parametrised by: the high-level type, the codec format and the raw value (one of the 
+Currently, tapir's `Codec` is parametrised by: the high-level type, the codec format and the raw value (one of the 
 supported ones, as defined by the `RawValueType` family). Can we drop the third parameter and just have
 `Codec[T, CF]`?
 
@@ -22,8 +22,8 @@ Moreover, if somebody wanted to use the codecs directly (to encode/decode), the 
 instead of a specific one. This could make debugging, exploration or codec re-use harder.
 
 User exposure to the `Codec` type should be limited anyway, as usually codecs for custom types are either derived
-automatically, or customised basing on exisiting ones, for usage in headers/query parameters/path. In the latter
-case, the raw type is usually `String` and the format `TextPlain`, in which case the single-paramtere type alias, 
+automatically, or customised basing on existing ones, for usage in headers/query parameters/path. In the latter
+case, the raw type is usually `String` and the format `TextPlain`, in which case the single-parameter type alias, 
 `PlainCodec`, can be used.
 
 That's why we keep the current design as-is.
