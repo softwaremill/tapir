@@ -12,7 +12,6 @@ import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDef
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 
 import java.nio.charset.Charset
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
@@ -35,6 +34,8 @@ trait PlayServerInterpreter {
   def toRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
     def valueToResponse(value: Any): Future[Result] = {
       val i = value.asInstanceOf[I]
+      implicit val ec = mat.executionContext
+
       e.logic(new FutureMonad())(i)
         .map {
           case Right(result) =>
@@ -63,6 +64,8 @@ trait PlayServerInterpreter {
     }
 
     def decodeBody(request: Request[RawBuffer], result: DecodeInputsResult)(implicit mat: Materializer): Future[DecodeInputsResult] = {
+      implicit val ec = mat.executionContext
+
       result match {
         case values: DecodeInputsResult.Values =>
           values.bodyInput match {
@@ -100,6 +103,8 @@ trait PlayServerInterpreter {
       }
 
       override def apply(v1: RequestHeader): Handler = {
+        implicit val ec = mat.executionContext
+
         serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
           decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1, 0, serverOptions))).flatMap {
             case values: DecodeInputsResult.Values =>
