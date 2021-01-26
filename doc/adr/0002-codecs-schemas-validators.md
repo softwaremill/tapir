@@ -42,7 +42,7 @@ I think it's worth keeping the divide. On the "cons" side, we have the duplicate
 validators/schemas/encoders for composite types. On the "pro" side however, we have a clear division of responsibility:
 
 * schemas describe the low-level shape of the value; however, they don't specify the final format of the values, and are not concerned with constructing/deconstructing objects from raw value tuples, or decode failures
-* validators describe the subset of values for potentially higher-level types. They are context-free, that is they only constraint values based on the value itself, without knowing the parent object
+* validators describe the subset of values for potentially higher-level types. They are context-free, that is they only constrain values based on the value itself, without knowing the parent object
 * encoders/decoders translate the value to the low-level format
 
 Hence, a validator can influence the schema; the high-level description of the possible values can narrow down the format of the low-level representation, for example. However, not the other way round - it's not generally possible to derive a validator from a schema. Let's consider the `uuid` format and the `UUID` high-level type. In this case, the format is an intrinsic property of the high-level type, no validation apart from decoding is required.
@@ -50,3 +50,9 @@ Hence, a validator can influence the schema; the high-level description of the p
 ## Why not annotations
 
 Adding `@Description` or `@Format` annotations could also be a viable solution, however it has one major drawback: it requires modifying the target datatype. So while this could be an addition to the mechanism described above, it's not a real alternative; we would need a way to change the schemas "by hand" anyway, to be able to describe existing datatypes, which we cannot annotate.
+
+## Update 12/2020
+
+In the end, we added validators to schemas. The reasoning was that once auto- and semi-auto-derivation has been 
+introduced, having to manually derive two structures was highly impractical. Hence, a schema is now a description
+of the target type `T`, including both the low-level representation, and the high-level validation rules.
