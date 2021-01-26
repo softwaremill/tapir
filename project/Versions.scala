@@ -27,4 +27,5 @@ object Versions {
   val tethys = "0.20.0"
   val vertx = "3.9.1"
   val jsScalaJavaTime = "2.1.0"
+  val jwtScala = "5.0.0"
 }
