@@ -1,7 +1,11 @@
 package sttp.tapir.client.play
 
 import play.api.libs.ws.{StandaloneWSClient, StandaloneWSRequest, StandaloneWSResponse}
+import sttp.capabilities.Effect
+import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.{DecodeResult, Endpoint}
+
+import scala.concurrent.{ExecutionContext, Future}
 
 trait PlayClientInterpreter {
 
@@ -14,10 +18,11 @@ trait PlayClientInterpreter {
     * which can be sent using the `execute()` method.
     * - a response parser to use on the `StandaloneWSResponse` obtained after executing the request.
     */
-  def toRequest[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: String)(implicit
+  def toRequest[I, E, O](e: Endpoint[I, E, O, AkkaStreams with Effect[Future]], baseUri: String)(implicit
       clientOptions: PlayClientOptions,
-      ws: StandaloneWSClient
-  ): I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]]) =
+      ws: StandaloneWSClient,
+      ec: ExecutionContext
+  ): I => Future[(StandaloneWSRequest, StandaloneWSResponse => Future[DecodeResult[Either[E, O]]])] =
     new EndpointToPlayClient(clientOptions, ws).toPlayRequest(e, baseUri)
 
   /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
@@ -31,10 +36,11 @@ trait PlayClientInterpreter {
     *
     * @throws IllegalArgumentException when response parsing fails
     */
-  def toRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: String)(implicit
+  def toRequestUnsafe[I, E, O](e: Endpoint[I, E, O, AkkaStreams with Effect[Future]], baseUri: String)(implicit
       clientOptions: PlayClientOptions,
-      ws: StandaloneWSClient
-  ): I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) =
+      ws: StandaloneWSClient,
+      ec: ExecutionContext
+  ): I => Future[(StandaloneWSRequest, StandaloneWSResponse => Future[Either[E, O]])] =
     new EndpointToPlayClient(clientOptions, ws).toPlayRequestUnsafe(e, baseUri)
 
 }

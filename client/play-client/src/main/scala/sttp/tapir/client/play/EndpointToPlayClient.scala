@@ -1,64 +1,68 @@
 package sttp.tapir.client.play
 
-import java.io.{ByteArrayInputStream, File, InputStream}
-import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.util.function.Supplier
-
 import play.api.libs.ws.DefaultBodyReadables._
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
-import sttp.capabilities.Streams
 import sttp.capabilities.akka.AkkaStreams
+import sttp.capabilities.{Effect, Streams}
 import sttp.model.Method
+import sttp.monad.{FutureMonad, MonadError}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, Mapping, RawBodyType}
 
+import java.io.{ByteArrayInputStream, File, InputStream}
+import java.nio.ByteBuffer
+import java.nio.file.Files
+import java.util.function.Supplier
 import scala.collection.Seq
+import scala.concurrent.{ExecutionContext, Future}
 
-private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient) {
+private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient)(implicit ec: ExecutionContext) {
+  private implicit val monad: FutureMonad = new FutureMonad()
 
-  def toPlayRequest[I, E, O, R](
-      e: Endpoint[I, E, O, R],
+  def toPlayRequest[I, E, O](
+      e: Endpoint[I, E, O, AkkaStreams with Effect[Future]],
       baseUri: String
-  ): I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]]) = { params =>
-    val req = setInputParams(e.input, ParamsAsAny(params), ws.url(baseUri))
-      .withMethod(e.input.method.getOrElse(Method.GET).method)
-
-    def responseParser(response: StandaloneWSResponse): DecodeResult[Either[E, O]] = {
-      parsePlayResponse(e)(response) match {
-        case DecodeResult.Error(o, e) =>
-          DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req.method} ${req.uri}", e))
-        case other => other
+  ): I => Future[(StandaloneWSRequest, StandaloneWSResponse => Future[DecodeResult[Either[E, O]]])] = { params =>
+    setInputParams(e.input, ParamsAsAny(params), ws.url(baseUri)).map { req =>
+      def responseParser(response: StandaloneWSResponse): Future[DecodeResult[Either[E, O]]] = {
+        parsePlayResponse(e)(response).map {
+          case DecodeResult.Error(o, e) =>
+            DecodeResult.Error(o, new IllegalArgumentException(s"Cannot decode from $o of request ${req.method} ${req.uri}", e))
+          case other => other
+        }
       }
-    }
 
-    (req, responseParser)
+      (req.withMethod(e.input.method.getOrElse(Method.GET).method), responseParser)
+    }
   }
 
-  def toPlayRequestUnsafe[I, E, O, R](
-      e: Endpoint[I, E, O, R],
+  def toPlayRequestUnsafe[I, E, O](
+      e: Endpoint[I, E, O, AkkaStreams with Effect[Future]],
       baseUri: String
-  ): I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) = { params =>
-    val (req, responseParser) = toPlayRequest(e, baseUri)(params)
-    def unsafeResponseParser(response: StandaloneWSResponse): Either[E, O] = {
-      getOrThrow(responseParser(response))
+  ): I => Future[(StandaloneWSRequest, StandaloneWSResponse => Future[Either[E, O]])] = { params =>
+    toPlayRequest(e, baseUri)(params).map { case (req, responseParser) =>
+      def unsafeResponseParser(response: StandaloneWSResponse): Future[Either[E, O]] = {
+        responseParser(response).map(getOrThrow)
+      }
+
+      (req, unsafeResponseParser)
     }
-    (req, unsafeResponseParser)
   }
 
-  private def parsePlayResponse[I, E, O, R](e: Endpoint[I, E, O, R]): StandaloneWSResponse => DecodeResult[Either[E, O]] = { response =>
-    val code = sttp.model.StatusCode(response.status)
+  private def parsePlayResponse[I, E, O, R](e: Endpoint[I, E, O, R]): StandaloneWSResponse => Future[DecodeResult[Either[E, O]]] = {
+    response =>
+      val code = sttp.model.StatusCode(response.status)
 
-    val parser = if (code.isSuccess) responseFromOutput(e.output) else responseFromOutput(e.errorOutput)
-    val output = if (code.isSuccess) e.output else e.errorOutput
+      val parser = if (code.isSuccess) responseFromOutput(e.output) else responseFromOutput(e.errorOutput)
+      val output = if (code.isSuccess) e.output else e.errorOutput
 
-    val headers = cookiesAsHeaders(response.cookies) ++ response.headers
+      val headers = cookiesAsHeaders(response.cookies) ++ response.headers
 
-    val params = getOutputParams(output, parser(response), headers, code, response.statusText)
-
-    params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
+      getOutputParams(output, parser(response), headers, code, response.statusText).map { params =>
+        params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
+      }
   }
 
   private def getOutputParams(
@@ -67,42 +71,47 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       headers: Map[String, Seq[String]],
       code: sttp.model.StatusCode,
       statusText: String
-  ): DecodeResult[Params] = {
+  ): Future[DecodeResult[Params]] = {
     output match {
       case s: EndpointOutput.Single[_, _] =>
         (s match {
-          case EndpointIO.Body(_, codec, _)          => codec.decode(body)
-          case EndpointIO.StreamBody(_, codec, _, _) => codec.decode(body)
+          case EndpointIO.Body(_, codec, _)          => Future.successful(codec.decode(body))
+          case EndpointIO.StreamBody(_, codec, _, _) => Future.successful(codec.decode(body))
           case EndpointOutput.WebSocketBody(_, _, _, _, _, _, _, _, _, _, _) =>
-            DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
-          case EndpointIO.Header(name, codec, _) => codec.decode(headers(name).toList)
+            Future.successful(DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet")))
+          case EndpointIO.Header(name, codec, _) => Future.successful(codec.decode(headers(name).toList))
           case EndpointIO.Headers(codec, _) =>
             val h = headers.flatMap { case (k, v) => v.map(sttp.model.Header(k, _)) }.toList
-            codec.decode(h)
-          case EndpointOutput.StatusCode(_, codec, _)      => codec.decode(code)
-          case EndpointOutput.FixedStatusCode(_, codec, _) => codec.decode(())
-          case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
-          case EndpointIO.Empty(codec, _)                  => codec.decode(())
+            Future.successful(codec.decode(h))
+          case EndpointOutput.StatusCode(_, codec, _)      => Future.successful(codec.decode(code))
+          case EndpointOutput.FixedStatusCode(_, codec, _) => Future.successful(codec.decode(()))
+          case EndpointIO.FixedHeader(_, codec, _)         => Future.successful(codec.decode(()))
+          case EndpointIO.Empty(codec, _)                  => Future.successful(codec.decode(()))
           case EndpointOutput.OneOf(mappings, codec) =>
             mappings
               .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(code)) match {
               case Some(mapping) =>
-                getOutputParams(mapping.output, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
+                getOutputParams(mapping.output, body, headers, code, statusText).mapDecode(p => codec.decode(p.asAny))
               case None =>
-                DecodeResult.Error(
-                  statusText,
-                  new IllegalArgumentException(s"Cannot find mapping for status code ${code} in outputs $output")
+                Future.successful(
+                  DecodeResult.Error(
+                    statusText,
+                    new IllegalArgumentException(s"Cannot find mapping for status code ${code} in outputs $output")
+                  )
                 )
             }
 
           case EndpointIO.MappedPair(wrapped, codec) =>
-            getOutputParams(wrapped, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
+            getOutputParams(wrapped, body, headers, code, statusText).mapDecode(p => codec.decode(p.asAny))
           case EndpointOutput.MappedPair(wrapped, codec) =>
-            getOutputParams(wrapped, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
+            getOutputParams(wrapped, body, headers, code, statusText).mapDecode(p => codec.decode(p.asAny))
+          case EndpointOutput.MapEffect(output, f, _) => handleOutputMapEffect(output, f, body, headers, code, statusText)
+          case EndpointIO.MapEffect(output, f, _)     => handleOutputMapEffect(output, f, body, headers, code, statusText)
 
-        }).map(ParamsAsAny)
+        }).mapDecode(a => DecodeResult.Value(ParamsAsAny(a)))
 
-      case EndpointOutput.Void()                        => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
+      case EndpointOutput.Void() =>
+        Future.successful(DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!")))
       case EndpointOutput.Pair(left, right, combine, _) => handleOutputPair(left, right, combine, body, headers, code, statusText)
       case EndpointIO.Pair(left, right, combine, _)     => handleOutputPair(left, right, combine, body, headers, code, statusText)
     }
@@ -116,10 +125,23 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       headers: Map[String, Seq[String]],
       code: sttp.model.StatusCode,
       statusText: String
-  ): DecodeResult[Params] = {
+  ): Future[DecodeResult[Params]] = {
     val l = getOutputParams(left, body, headers, code, statusText)
     val r = getOutputParams(right, body, headers, code, statusText)
-    l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
+    l.flatMapDecode(leftParams => r.mapDecode(rightParams => DecodeResult.Value(combine(leftParams, rightParams))))
+  }
+
+  private def handleOutputMapEffect[T, U](
+      output: EndpointOutput[T, _],
+      f: MonadError[Any] => Any => Any,
+      body: => Any,
+      headers: Map[String, Seq[String]],
+      code: sttp.model.StatusCode,
+      statusText: String
+  ): Future[DecodeResult[U]] = {
+    getOutputParams(output.asInstanceOf[EndpointOutput[T, _]], body, headers, code, statusText).flatMapDecode { params =>
+      f.asInstanceOf[MonadError[Future] => T => Future[DecodeResult[U]]](monad)(params.asAny.asInstanceOf[T])
+    }
   }
 
   private def cookiesAsHeaders(cookies: Seq[WSCookie]): Map[String, Seq[String]] = {
@@ -131,52 +153,54 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       input: EndpointInput[I, _],
       params: Params,
       req: StandaloneWSRequest
-  ): StandaloneWSRequest = {
+  ): Future[StandaloneWSRequest] = {
     def value: I = params.asAny.asInstanceOf[I]
     input match {
-      case EndpointInput.FixedMethod(m, _, _) => req.withMethod(m.method)
+      case EndpointInput.FixedMethod(m, _, _) => Future.successful(req.withMethod(m.method))
       case EndpointInput.FixedPath(p, _, _) =>
-        req.withUrl(req.url + "/" + p)
+        Future.successful(req.withUrl(req.url + "/" + p))
       case EndpointInput.PathCapture(_, codec, _) =>
         val v = codec.asInstanceOf[PlainCodec[Any]].encode(value: Any)
-        req.withUrl(req.url + "/" + v)
+        Future.successful(req.withUrl(req.url + "/" + v))
       case EndpointInput.PathsCapture(codec, _) =>
         val ps = codec.encode(value)
-        req.withUrl(req.url + ps.mkString("/", "/", ""))
+        Future.successful(req.withUrl(req.url + ps.mkString("/", "/", "")))
       case EndpointInput.Query(name, codec, _) =>
         val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.addQueryStringParameters(name -> v) }
-        req2
+        Future.successful(req2)
       case EndpointInput.Cookie(name, codec, _) =>
         val req2 = codec.encode(value).foldLeft(req) { case (r, v) => r.addCookies(DefaultWSCookie(name, v)) }
-        req2
+        Future.successful(req2)
       case EndpointInput.QueryParams(codec, _) =>
         val mqp = codec.encode(value)
-        req.addQueryStringParameters(mqp.toSeq: _*)
-      case EndpointIO.Empty(_, _) => req
+        Future.successful(req.addQueryStringParameters(mqp.toSeq: _*))
+      case EndpointIO.Empty(_, _) => Future.successful(req)
       case EndpointIO.Body(bodyType, codec, _) =>
         val req2 = setBody(value, bodyType, codec, req)
-        req2
+        Future.successful(req2)
       case EndpointIO.StreamBody(streams, _, _, _) =>
         val req2 = setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
-        req2
+        Future.successful(req2)
       case EndpointIO.Header(name, codec, _) =>
         val req2 = codec
           .encode(value)
           .foldLeft(req) { case (r, v) => r.addHttpHeaders(name -> v) }
-        req2
+        Future.successful(req2)
       case EndpointIO.Headers(codec, _) =>
         val headers = codec.encode(value)
         val req2 = headers.foldLeft(req) { case (r, h) => r.addHttpHeaders(h.name -> h.value) }
-        req2
+        Future.successful(req2)
       case EndpointIO.FixedHeader(h, _, _) =>
         val req2 = req.addHttpHeaders(h.name -> h.value)
-        req2
+        Future.successful(req2)
       case EndpointInput.ExtractFromRequest(_, _) =>
         // ignoring
-        req
+        Future.successful(req)
       case a: EndpointInput.Auth[_, _]               => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
+      case EndpointInput.MapEffect(input, _, g)      => handleMapEffect(input, g, params, req)
+      case EndpointIO.MapEffect(input, _, g)         => handleMapEffect(input, g, params, req)
       case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
       case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
     }
@@ -188,10 +212,11 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       params: Params,
       split: SplitParams,
       req: StandaloneWSRequest
-  ): StandaloneWSRequest = {
+  ): Future[StandaloneWSRequest] = {
     val (leftParams, rightParams) = split(params)
-    val req2 = setInputParams(left.asInstanceOf[EndpointInput[Any, Any]], leftParams, req)
-    setInputParams(right.asInstanceOf[EndpointInput[Any, Any]], rightParams, req2)
+    setInputParams(left.asInstanceOf[EndpointInput[Any, Any]], leftParams, req).flatMap { req2 =>
+      setInputParams(right.asInstanceOf[EndpointInput[Any, Any]], rightParams, req2)
+    }
   }
 
   private def handleMapped[II, T](
@@ -199,8 +224,18 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       codec: Mapping[T, II],
       params: Params,
       req: StandaloneWSRequest
-  ): StandaloneWSRequest = {
+  ): Future[StandaloneWSRequest] = {
     setInputParams(tuple.asInstanceOf[EndpointInput[Any, Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), req)
+  }
+
+  private def handleMapEffect[T, U](
+      input: EndpointInput[T, _],
+      g: MonadError[Any] => Any => Any,
+      params: Params,
+      req: StandaloneWSRequest
+  ): Future[StandaloneWSRequest] = {
+    g.asInstanceOf[MonadError[Future] => U => Future[T]](monad)(params.asAny.asInstanceOf[U])
+      .flatMap(t => setInputParams(input, ParamsAsAny(t), req))
   }
 
   //        type PlayPart = play.shaded.ahc.org.asynchttpclient.request.body.multipart.Part
@@ -324,4 +359,14 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     }.headOption
   }
 
+  private implicit class FutureDecodeResultSyntax[T, U](tf: Future[DecodeResult[T]]) {
+    def mapDecode(f: T => DecodeResult[U]): Future[DecodeResult[U]] = tf.map {
+      case DecodeResult.Value(t)         => f(t)
+      case failure: DecodeResult.Failure => failure
+    }
+    def flatMapDecode(f: T => Future[DecodeResult[U]]): Future[DecodeResult[U]] = tf.flatMap {
+      case DecodeResult.Value(t)         => f(t)
+      case failure: DecodeResult.Failure => Future.successful(failure)
+    }
+  }
 }

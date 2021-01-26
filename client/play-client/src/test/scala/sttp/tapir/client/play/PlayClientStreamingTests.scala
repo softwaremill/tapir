@@ -5,10 +5,10 @@ import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.client.tests.ClientStreamingTests
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 
-class PlayClientStreamingTests extends PlayClientTests[AkkaStreams] with ClientStreamingTests[AkkaStreams] {
+class PlayClientStreamingTests extends PlayClientTests[AkkaStreams] with ClientStreamingTests[AkkaStreams, Future] {
 
   override val streams: AkkaStreams = AkkaStreams
 
