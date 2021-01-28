@@ -27,7 +27,7 @@ class CodecTest extends AnyFlatSpec with CodecTestExtensions with Matchers with 
     host <- Gen.identifier.map(_.take(5)) // schemes may not be too long
     port <- Gen.option(Gen.chooseNum(1, Short.MaxValue))
     path <- Gen.listOfN(5, Gen.identifier)
-    query <- Gen.mapOf((Gen.identifier, Gen.identifier))
+    query <- Gen.mapOf(Gen.zip(Gen.identifier, Gen.identifier))
   } yield uri"$scheme://$host:$port/${path.mkString("/")}?$query")
 
   implicit val arbitraryJBigDecimal: Arbitrary[JBigDecimal] = Arbitrary(
