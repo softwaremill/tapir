@@ -4,7 +4,7 @@ import java.nio.charset.Charset
 import sttp.capabilities.Streams
 import sttp.model.{Header, Method}
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.EndpointIO.Info
+import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
@@ -40,8 +40,6 @@ sealed trait EndpointTransput[T] {
 }
 
 object EndpointTransput {
-  import EndpointIO.{Example, Info}
-
   sealed trait Basic[T] extends EndpointTransput[T] {
     private[tapir] type L
     private[tapir] type CF <: CodecFormat
@@ -90,8 +88,6 @@ sealed trait EndpointInput[T] extends EndpointTransput[T] {
 }
 
 object EndpointInput {
-  import EndpointIO.Info
-
   sealed trait Single[T] extends EndpointInput[T] {
     private[tapir] type ThisType[X] <: EndpointInput.Single[X]
   }
@@ -535,6 +531,8 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
     responses: Codec[WebSocketFrame, RESP, CodecFormat],
     codec: Codec[PIPE_REQ_RESP, T, CodecFormat],
     info: Info[T],
+    requestsInfo: Info[REQ],
+    responsesInfo: Info[RESP],
     concatenateFragmentedFrames: Boolean,
     ignorePong: Boolean,
     autoPongOnPing: Boolean,
@@ -556,6 +554,15 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
   def responsesSchema(s: Schema[RESP]): ThisType[T] = copy(responses = responses.schema(s))
   def responsesSchema(s: Option[Schema[RESP]]): ThisType[T] = copy(responses = responses.schema(s))
   def modifyResponsesSchema(modify: Schema[RESP] => Schema[RESP]): ThisType[T] = copy(responses = responses.modifySchema(modify))
+
+  def requestsDescription(d: String): ThisType[T] = copy(requestsInfo = requestsInfo.description(d))
+  def requestsExample(e: REQ): ThisType[T] = copy(requestsInfo = requestsInfo.example(e))
+  def requestsExamples(examples: List[REQ]): ThisType[T] = copy(requestsInfo = requestsInfo.examples(examples.map(Example(_, None, None))))
+
+  def responsesDescription(d: String): ThisType[T] = copy(responsesInfo = responsesInfo.description(d))
+  def responsesExample(e: RESP): ThisType[T] = copy(responsesInfo = responsesInfo.example(e))
+  def responsesExamples(examples: List[RESP]): ThisType[T] =
+    copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None))))
 
   /** @param c If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses`
     *          codecs decode will always have `finalFragment` set to `true`.

@@ -109,7 +109,7 @@ case class SingleMessage(
     tags: List[Tag],
     externalDocs: Option[ExternalDocumentation],
     bindings: List[MessageBinding],
-    examples: ListMap[String, ExampleValue],
+    examples: List[ExampleValue],
     traits: List[ReferenceOr[MessageTrait]]
 ) extends Message
 

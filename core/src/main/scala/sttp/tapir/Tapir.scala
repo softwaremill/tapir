@@ -117,6 +117,8 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
         responses,
         Codec.idPlain(), // any codec format will do
         EndpointIO.Info.empty,
+        EndpointIO.Info.empty,
+        EndpointIO.Info.empty,
         concatenateFragmentedFrames = true,
         ignorePong = true,
         autoPongOnPing = true,
