@@ -4,7 +4,7 @@ import com.softwaremill.UpdateVersionInDocs
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
-val scala2_12 = "2.12.12"
+val scala2_12 = "2.12.13"
 val scala2_13 = "2.13.4"
 
 val allScalaVersions = List(scala2_12, scala2_13)
@@ -815,7 +815,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
-      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
+      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
