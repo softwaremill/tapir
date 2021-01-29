@@ -1,7 +1,7 @@
 package sttp.tapir.server.vertx.routing
 
 import io.vertx.core.http.HttpMethod
-import io.vertx.scala.ext.web.{Route, Router}
+import io.vertx.ext.web.{Route, Router}
 import sttp.tapir.{Endpoint, EndpointInput}
 import sttp.tapir.EndpointInput.PathCapture
 import sttp.tapir.internal._

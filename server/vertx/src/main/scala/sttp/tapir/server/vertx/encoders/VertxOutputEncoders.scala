@@ -6,17 +6,20 @@ import java.nio.charset.{Charset, StandardCharsets}
 
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
-import io.vertx.scala.core.http.HttpServerResponse
-import io.vertx.scala.core.streams.ReadStream
-import io.vertx.scala.ext.web.RoutingContext
+import io.vertx.core.http.HttpServerResponse
+import io.vertx.core.streams.ReadStream
+import io.vertx.core.Future
+import io.vertx.ext.web.RoutingContext
+import sttp.capabilities.Streams
 import sttp.model.{Header, Part}
-import sttp.tapir.internal.{NoStreams, ParamsAsAny, charset}
+import sttp.tapir.internal.{ParamsAsAny, charset}
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 import sttp.tapir.server.vertx.VertxEndpointOptions
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.util.control.NonFatal
 
 /** All the necessary methods to write Endpoint.outputs to Vert.x HttpServerResponse
   * Contains:
@@ -37,13 +40,16 @@ object VertxOutputEncoders {
     * @tparam O type of the result to encode
     * @return a function, that given a RoutingContext will write the output to its HTTP response
     */
-  private[vertx] def apply[O](output: EndpointOutput[O], result: O, isError: Boolean = false, logWhenHandled: Int => Unit = { _ => })(
-      implicit endpointOptions: VertxEndpointOptions
-  ): RoutingContextHandler = { rc =>
+  private[vertx] def apply[O, S: ReadStreamCompatible](
+      output: EndpointOutput[O],
+      result: O,
+      isError: Boolean = false,
+      logWhenHandled: Int => Unit = { _ => }
+  )(implicit endpointOptions: VertxEndpointOptions): RoutingContextHandler = { rc =>
     val resp = rc.response
     val options: OutputValues[RoutingContextHandlerWithLength, Nothing] = OutputValues.empty
     try {
-      var outputValues = encodeOutputs(endpointOptions)(output, ParamsAsAny(result), options)
+      var outputValues = encodeOutputs.apply(output, ParamsAsAny(result), options)
       if (isError && outputValues.statusCode.isEmpty) {
         outputValues = outputValues.withStatusCode(ServerDefaults.StatusCodes.error)
       }
@@ -55,7 +61,9 @@ object VertxOutputEncoders {
       }
       logWhenHandled(resp.getStatusCode)
     } catch {
-      case e: Throwable => rc.fail(e)
+      case NonFatal(e) =>
+        endpointOptions.logger.error("Internal error", e)
+        rc.fail(e)
     }
   }
 
@@ -81,24 +89,32 @@ object VertxOutputEncoders {
   private def setStatus[O](outputValues: OutputValues[O, Nothing])(resp: HttpServerResponse): Unit =
     outputValues.statusCode.map(_.code).foreach(resp.setStatusCode)
 
-  private def encodeOutputs(implicit
-      endpointOptions: VertxEndpointOptions
-  ): EncodeOutputs[RoutingContextHandlerWithLength, Nothing, Nothing] =
-    new EncodeOutputs[RoutingContextHandlerWithLength, Nothing, Nothing](
-      new EncodeOutputBody[RoutingContextHandlerWithLength, Nothing, Nothing] {
-        override val streams: NoStreams = NoStreams
+  private def encodeOutputs[S](implicit
+      endpointOptions: VertxEndpointOptions,
+      vertxCompatiable: ReadStreamCompatible[S]
+  ): EncodeOutputs[RoutingContextHandlerWithLength, Nothing, S] =
+    new EncodeOutputs[RoutingContextHandlerWithLength, Nothing, S](
+      new EncodeOutputBody[RoutingContextHandlerWithLength, Nothing, S] {
+        override val streams: Streams[S] = vertxCompatiable.streams
         override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContextHandlerWithLength =
           _ =>
             BodyEncoders(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), v)(endpointOptions)(
               _
             )
-        override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength =
-          v //impossible
+
+        override def streamValueToBody(v: streams.BinaryStream, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength = {
+          contentLength => StreamEncoders(
+            formatToContentType(format, charset),
+            vertxCompatiable.asReadStream(v.asInstanceOf[vertxCompatiable.streams.BinaryStream]),
+            contentLength
+          )(_)
+        }
+
         override def webSocketPipeToBody[REQ, RESP](
-            pipe: Nothing,
-            o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+            pipe: streams.Pipe[REQ, RESP],
+            o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, S]
         ): Nothing =
-          pipe
+          ???
       }
     )
 
@@ -107,25 +123,23 @@ object VertxOutputEncoders {
         endpointOptions: VertxEndpointOptions
     ): RoutingContextHandler = { rc =>
       val resp = rc.response
-      if (resp.headers.get(HttpHeaders.CONTENT_TYPE.toString).isEmpty) {
+      if (resp.headers.get(HttpHeaders.CONTENT_TYPE.toString) == null) {
         resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, contentType)
       }
-      handleFullBody(bodyType, r)(endpointOptions)(rc)
+      handleFullBody(bodyType, r)(endpointOptions)(rc): Unit
     }
 
     private def handleFullBody[R](bodyType: RawBodyType[R], r: R)(implicit
         endpointOptions: VertxEndpointOptions
-    ): RoutingContext => Future[Unit] = { rc =>
-      implicit val ec: ExecutionContext = endpointOptions.executionContextOrCurrentCtx(rc)
+    ): RoutingContext => Future[Void] = { rc =>
       val resp = rc.response
       bodyType match {
-        case RawBodyType.StringBody(charset) => Future.successful(resp.end(r.toString, charset.toString))
-        case RawBodyType.ByteArrayBody       => Future.successful(resp.end(Buffer.buffer(r.asInstanceOf[Array[Byte]])))
-        case RawBodyType.ByteBufferBody      => Future.successful(resp.end(Buffer.buffer().setBytes(0, r.asInstanceOf[ByteBuffer])))
+        case RawBodyType.StringBody(charset) => resp.end(r.toString, charset.toString)
+        case RawBodyType.ByteArrayBody       => resp.end(Buffer.buffer(r.asInstanceOf[Array[Byte]]))
+        case RawBodyType.ByteBufferBody      => resp.end(Buffer.buffer().setBytes(0, r.asInstanceOf[ByteBuffer]))
         case RawBodyType.InputStreamBody =>
-          inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx)
-            .map(resp.end)
-        case RawBodyType.FileBody         => Future.successful(resp.sendFile(r.asInstanceOf[File].getPath))
+          inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx).flatMap(resp.end)
+        case RawBodyType.FileBody         => resp.sendFile(r.asInstanceOf[File].getPath)
         case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, r)(endpointOptions)(rc)
       }
     }
@@ -133,71 +147,77 @@ object VertxOutputEncoders {
     private def handleMultipleBodyParts[CF <: CodecFormat, R](
         multipart: RawBodyType[R] with RawBodyType.MultipartBody,
         r: R
-    )(implicit endpointOptions: VertxEndpointOptions): RoutingContext => Future[Unit] = { rc =>
-      implicit val ec: ExecutionContext = endpointOptions.executionContextOrCurrentCtx(rc)
+    )(implicit endpointOptions: VertxEndpointOptions): RoutingContext => Future[Void] = { rc =>
       val resp = rc.response
       resp.setChunked(true)
       resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, "multipart/form-data")
-      Future
-        .sequence(r.asInstanceOf[Seq[Part[_]]].map(handleBodyPart(multipart, _)(endpointOptions)(rc)))
-        .map { _ =>
-          if (!resp.ended) resp.end()
+
+      r.asInstanceOf[Seq[Part[_]]].foldLeft(Future.succeededFuture[Void]())({ (acc, part) =>
+        acc.flatMap { _ =>
+          handleBodyPart(multipart, part)(endpointOptions)(rc)
         }
+      }).flatMap { _ =>
+        resp.end()
+      }
     }
 
     private def handleBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T])(implicit
         endpointOptions: VertxEndpointOptions
-    ): RoutingContext => Future[Unit] = { rc =>
+    ): RoutingContext => Future[Void] = { rc =>
       val resp = rc.response
       m.partType(part.name)
         .map { partType =>
-          val partContentType = writePartHeaders(part)(resp)
-          writeBodyPart(partType.asInstanceOf[RawBodyType[Any]], partContentType, part.body)(endpointOptions)(rc)
+          writePartHeaders(part)(resp).flatMap { contentType =>
+            writeBodyPart(partType.asInstanceOf[RawBodyType[Any]], contentType, part.body)(endpointOptions)(rc)
+          }
         }
-        .getOrElse(Future.successful(()))
+        .getOrElse(Future.succeededFuture[Void]())
     }
 
-    private def writePartHeaders(part: Part[_]): HttpServerResponse => String = { resp =>
+    private def writePartHeaders(part: Part[_]): HttpServerResponse => Future[String] = { resp =>
       forwardHeaders(part.headers, resp)
       val partContentType = part.contentType.getOrElse("application/octet-stream")
       val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
       val dispositionsHeaderParts = dispositionParams.map { case (k, v) => s"""$k="$v"""" }
       resp.write(s"${HttpHeaders.CONTENT_DISPOSITION}: form-data; ${dispositionsHeaderParts.mkString(", ")}")
-      resp.write("\n")
-      resp.write(s"${HttpHeaders.CONTENT_TYPE}: $partContentType")
-      resp.write("\n\n")
-      partContentType
+        .flatMap(_ => resp.write("\n"))
+        .flatMap(_ => resp.write(s"${HttpHeaders.CONTENT_TYPE}: $partContentType"))
+        .flatMap(_ => resp.write("\n\n"))
+        .flatMap(_ => Future.succeededFuture(partContentType))
     }
 
     private def writeBodyPart[CF <: CodecFormat, R](bodyType: RawBodyType[R], contentType: String, r: R)(implicit
         endpointOptions: VertxEndpointOptions
-    ): RoutingContext => Future[Unit] = { rc =>
+    ): RoutingContext => Future[Void] = { rc =>
       val resp = rc.response
       resp.write(s"${HttpHeaders.CONTENT_TYPE}: $contentType")
-      resp.write("\n")
-      implicit val ec: ExecutionContext = endpointOptions.executionContextOrCurrentCtx(rc)
-      bodyType match {
-        case RawBodyType.StringBody(charset) => Future.successful(resp.write(r.toString, charset.toString))
-        case RawBodyType.ByteArrayBody       => Future.successful(resp.write(Buffer.buffer(r.asInstanceOf[Array[Byte]])))
-        case RawBodyType.ByteBufferBody      => Future.successful(resp.write(Buffer.buffer.setBytes(0, r.asInstanceOf[ByteBuffer])))
-        case RawBodyType.InputStreamBody =>
-          inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx)
-            .map { buffer => resp.write(buffer) }
-        case RawBodyType.FileBody =>
-          val file = r.asInstanceOf[File]
-          rc.vertx.fileSystem
-            .readFileFuture(file.getAbsolutePath)
-            .map { buf =>
-              resp.write(s"""${HttpHeaders.CONTENT_DISPOSITION.toString}: file; file="${file.getName}"""")
-              resp.write("\n")
-              resp.write(buf)
-              resp.write("\n\n")
-            }
+        .flatMap(_ => resp.write("\n"))
+        .flatMap { _ =>
+          bodyType match {
+            case RawBodyType.StringBody(charset) =>
+              resp.write(r.toString, charset.toString)
+            case RawBodyType.ByteArrayBody =>
+              resp.write(Buffer.buffer(r.asInstanceOf[Array[Byte]]))
+            case RawBodyType.ByteBufferBody =>
+              resp.write(Buffer.buffer.setBytes(0, r.asInstanceOf[ByteBuffer]))
+            case RawBodyType.InputStreamBody =>
+              inputStreamToBuffer(r.asInstanceOf[InputStream], rc.vertx).flatMap(resp.write)
+            case RawBodyType.FileBody =>
+              val file = r.asInstanceOf[File]
+              rc.vertx.fileSystem
+                .readFile(file.getAbsolutePath)
+                .flatMap { buf =>
+                  resp.write(s"""${HttpHeaders.CONTENT_DISPOSITION.toString}: file; file="${file.getName}"""")
+                    .flatMap(_ => resp.write("\n"))
+                    .flatMap(_ => resp.write(buf))
+                    .flatMap(_ => resp.write("\n\n"))
+                }
 
-        case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, r)(endpointOptions)(rc)
-      }
+            case m: RawBodyType.MultipartBody => handleMultipleBodyParts(m, r)(endpointOptions)(rc)
+          }
+
+        }
     }
-
   }
 
   private object StreamEncoders {
@@ -205,10 +225,11 @@ object VertxOutputEncoders {
       val resp = rc.response
 
       resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, contentType)
-      if (contentLength.isDefined) {
-        resp.putHeader(HttpHeaders.CONTENT_LENGTH.toString, contentLength.get.toString)
-      } else {
-        resp.setChunked(true)
+      contentLength match {
+        case Some(length) =>
+          resp.putHeader(HttpHeaders.CONTENT_LENGTH.toString, length.toString)
+        case None =>
+          resp.setChunked(true)
       }
       stream.pipeTo(resp): Unit
     }
