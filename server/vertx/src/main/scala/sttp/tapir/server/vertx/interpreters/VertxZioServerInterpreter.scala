@@ -33,6 +33,16 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
       .handler(endpointHandler(e)(e.logic, responseHandlerWithError(e)))
   }
 
+  def routeRecoverErrors[R, I, E, O](e: Endpoint[I, E, O, ZioStreams])(
+      logic: I => RIO[R, O]
+  )(implicit
+      endpointOptions: VertxEffectfulEndpointOptions,
+      eIsThrowable: E <:< Throwable,
+      eClassTag: ClassTag[E],
+      runtime: Runtime[R]
+  ): Router => Route =
+    route(e.serverLogicRecoverErrors(logic))
+
   private def endpointHandler[R, I, E, O, A](e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]])(
       logic: MonadError[RIO[R, *]] => I => RIO[R, A],
       responseHandler: (A, RoutingContext) => Unit
@@ -71,7 +81,7 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
     ()
   }
 
-  private val monadError = new MonadError[Task] {
+  private[vertx] val monadError = new MonadError[Task] {
     override def unit[T](t: T): Task[T] = Task.succeed(t)
     override def map[T, T2](fa: Task[T])(f: T => T2): Task[T2] = fa.map(f)
     override def flatMap[T, T2](fa: Task[T])(f: T => Task[T2]): Task[T2] = fa.flatMap(f)

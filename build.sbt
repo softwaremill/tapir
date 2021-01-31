@@ -697,7 +697,8 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
       "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
-      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional
+      "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
+      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
