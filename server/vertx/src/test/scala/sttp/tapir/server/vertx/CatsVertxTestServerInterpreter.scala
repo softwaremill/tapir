@@ -2,7 +2,6 @@ package sttp.tapir.server.vertx
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import io.vertx.core.Future
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
@@ -15,7 +14,7 @@ import sttp.tapir.tests.Port
 import scala.reflect.ClassTag
 
 class CatsVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[IO, Fs2Streams[IO], Router => Route] {
-  import CatsVertxTestServerInterpreter._
+  import VertxCatsServerInterpreter._
 
   implicit val options = VertxEffectfulEndpointOptions()
     .logWhenHandled(true)
@@ -35,18 +34,8 @@ class CatsVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
-    val listenIO = vertxFutureToIo(server.listen(0))
+    val listenIO = server.listen(0).liftF[IO]
     routes.toList.foreach(_.apply(router))
-    Resource.make(listenIO)(s => vertxFutureToIo(s.close).void).map(_.actualPort())
+    Resource.make(listenIO)(s => s.close.liftF[IO].void).map(_.actualPort())
   }
-}
-
-object CatsVertxTestServerInterpreter {
-
-  def vertxFutureToIo[A](future: => Future[A]): IO[A] =
-    IO.async[A] { cb =>
-      future.onFailure { cause => cb(Left(cause)) }
-        .onSuccess { result => cb(Right(result)) }
-      ()
-    }
 }
