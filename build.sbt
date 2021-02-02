@@ -178,6 +178,11 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
         case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
         case _                       => sourceDir / "scala-2.13-"
       }
+    },
+    // Until https://youtrack.jetbrains.com/issue/SCL-18636 is fixed and IntelliJ properly imports projects with
+    // generated sources, they are explicitly added to git. See also below: commented out plugin.
+    unmanagedSourceDirectories in Compile += {
+      (sourceDirectory in Compile).value / "boilerplate-gen"
     }
   )
   .jvmPlatform(
@@ -194,7 +199,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       )
     )
   )
-  .enablePlugins(spray.boilerplate.BoilerplatePlugin)
+//.enablePlugins(spray.boilerplate.BoilerplatePlugin)
 
 lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
   .settings(commonSettings)
