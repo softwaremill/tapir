@@ -135,6 +135,15 @@ If you are having doubts on the *why* or *how* something works, don't hesitate t
 [gitter](https://gitter.im/softwaremill/tapir) or via github. This probably means that the documentation, scaladocs or 
 code is unclear and be improved for the benefit of all.
 
+### Testing locally
+
+The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
+causes another problem: out of memory when running JS tests for multiple modules. Work-arounds:
+
+* run only JVM tests using `testJVM`
+* test single JS projects
+* use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
+
 ## Commercial Support
 
 We offer commercial support for tapir and related technologies, as well as development services. [Contact us](https://softwaremill.com) to learn more about our offer!
