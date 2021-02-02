@@ -2,7 +2,6 @@ package sttp.tapir
 
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
-import sttp.tapir.util.CompileUtil
 import sttp.tapir.internal._
 
 import scala.concurrent.Future
@@ -10,7 +9,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 
-class EndpointTest extends AnyFlatSpec with Matchers {
+class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers {
   "endpoint" should "compile inputs" in {
     endpoint.in(query[String]("q1")): Endpoint[String, Unit, Unit, Any]
     endpoint.in(query[String]("q1").and(query[Int]("q2"))): Endpoint[(String, Int), Unit, Unit, Any]
@@ -33,9 +32,9 @@ class EndpointTest extends AnyFlatSpec with Matchers {
   object TestStreams extends TestStreams
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBody(TestStreams, schemaFor[String], CodecFormat.Json())): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
+    endpoint.in(streamBody(TestStreams)(Schema.binary, CodecFormat.Json())): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
     endpoint
-      .in(streamBody(TestStreams, schemaFor[String], CodecFormat.Json()))
+      .in(streamBody(TestStreams)(Schema.binary, CodecFormat.Json()))
       .in(path[Int]): Endpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
   }
 
@@ -48,9 +47,9 @@ class EndpointTest extends AnyFlatSpec with Matchers {
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBody(TestStreams, schemaFor[String], CodecFormat.Json())): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
+    endpoint.out(streamBody(TestStreams)(Schema.binary, CodecFormat.Json())): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
     endpoint
-      .out(streamBody(TestStreams, schemaFor[String], CodecFormat.Json()))
+      .out(streamBody(TestStreams)(Schema.binary, CodecFormat.Json()))
       .out(header[Int]("h1")): Endpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
   }
 
@@ -70,22 +69,6 @@ class EndpointTest extends AnyFlatSpec with Matchers {
           statusMapping(StatusCode.Unauthorized, emptyOutput)
         )
       )
-  }
-
-  it should "not compile invalid outputs with queries" in {
-    val exception = CompileUtil.interceptEval("""import sttp.tapir._
-                                                |endpoint.out(query[String]("q1"))""".stripMargin)
-
-    exception.getMessage contains "found   : tapir.EndpointInput.Query[String]"
-    exception.getMessage contains "required: tapir.EndpointIO[?]"
-  }
-
-  it should "not compile invalid outputs with paths" in {
-    val exception = CompileUtil.interceptEval("""import sttp.tapir._
-                                                |endpoint.out(path[String])""".stripMargin)
-
-    exception.getMessage contains "found   : tapir.EndpointInput.PathCapture[String]"
-    exception.getMessage contains "required: tapir.EndpointIO[?]"
   }
 
   def pairToTuple(input: EndpointInput[_]): Any =

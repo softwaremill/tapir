@@ -48,7 +48,7 @@ private[akkahttp] object AkkaWebSockets {
       case WebSocketFrame.Binary(p, _, _) => Some(BinaryMessage(ByteString(p)))
       case WebSocketFrame.Ping(_)         => None
       case WebSocketFrame.Pong(_)         => None
-      case WebSocketFrame.Close(_, _)     => throw new WebSocketClosed()
+      case WebSocketFrame.Close(_, _)     => throw WebSocketClosed(None)
     }
   }
 }

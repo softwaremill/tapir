@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
@@ -30,7 +30,7 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
     }
   )
 
-  val amountRoute: Route = amountEndpoint.toRoute(_ => Future.successful(Right(())))
+  val amountRoute: Route = AkkaHttpServerInterpreter.toRoute(amountEndpoint)(_ => Future.successful(Right(())))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

@@ -1,46 +1,64 @@
 package sttp.tapir
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
-import java.nio.file.Path
 import java.time._
 import java.util.{Date, UUID}
 
 import sttp.model.Part
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
-import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
-import sttp.tapir.generic.Derived
+import sttp.tapir.generic.internal.SchemaMapMacro
 import sttp.tapir.internal.ModifySchemaMacro
 
 import scala.annotation.StaticAnnotation
+import scala.annotation.implicitNotFound
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.internal.SchemaMagnoliaDerivation
+import magnolia.Magnolia
 
-/** Describes the shape of the low-level, "raw" representation of type `T`.
+/** Describes the type `T`: its low-level representation, meta-data and validation rules.
   * @param format The name of the format of the low-level representation of `T`.
   */
+@implicitNotFound(
+  msg = """Could not find Schema for type ${T}.
+Since 0.17.0 automatic derivation requires the following import: `import sttp.tapir.generic.auto._`
+You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/customtypes.html#schema-derivation"""
+)
 case class Schema[T](
     schemaType: SchemaType,
     isOptional: Boolean = false,
     description: Option[String] = None,
     default: Option[String] = None,
     format: Option[String] = None,
-    deprecated: Boolean = false
+    deprecated: Boolean = false,
+    validator: Validator[T] = Validator.pass[T]
 ) {
+
+  def contramap[TT](g: TT => T): Schema[TT] = copy(validator = validator.contramap(g))
 
   /** Returns an optional version of this schema, with `isOptional` set to true.
     */
-  def asOptional[U]: Schema[U] = copy(isOptional = true)
+  def asOption: Schema[Option[T]] = copy(isOptional = true, validator = validator.asOptionElement)
 
-  /** Returns a required version of this schema, with `isOptional` set to false.
+  /** Returns an array version of this schema, with the schema type wrapped in [[SArray]].
+    * Sets `isOptional` to true as the collection might be empty.
     */
-  def asRequired[U]: Schema[U] = copy(isOptional = false)
+  def asArray: Schema[Array[T]] =
+    Schema(schemaType = SArray(this), isOptional = true, format = None, deprecated = deprecated, validator = validator.asArrayElements)
 
   /** Returns a collection version of this schema, with the schema type wrapped in [[SArray]].
-    * Also, sets `isOptional` to true as the collection might be empty.
-    * Also, sets 'format' to None. Formats are only applicable to the array elements, not to the array as a whole.
+    * Sets `isOptional` to true as the collection might be empty.
     */
-  def asArrayElement[U]: Schema[U] = copy(isOptional = true, schemaType = SArray(this), format = None)
+  def asIterable[C[X] <: Iterable[X]]: Schema[C[T]] =
+    Schema(
+      schemaType = SArray(this),
+      isOptional = true,
+      format = None,
+      deprecated = deprecated,
+      validator = validator.asIterableElements[C]
+    )
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
@@ -77,6 +95,8 @@ case class Schema[T](
         }
         copy(schemaType = schemaType2)
     }
+
+  def validate(v: Validator[T]): Schema[T] = copy(validator = validator.and(v))
 }
 
 class description(val text: String) extends StaticAnnotation
@@ -89,8 +109,18 @@ class deprecated extends StaticAnnotation
 
 class encodedName(val name: String) extends StaticAnnotation
 
-object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
+class validate[T](val v: Validator[T]) extends StaticAnnotation
+
+object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPrioritySchema {
   val ModifyCollectionElements = "each"
+
+  /** Creates a schema for type `T`, where the low-level representation is a `String`.
+    */
+  def string[T]: Schema[T] = Schema(SString)
+
+  /** Creates a schema for type `T`, where the low-level representation is binary.
+    */
+  def binary[T]: Schema[T] = Schema(SBinary)
 
   implicit val schemaForString: Schema[String] = Schema(SString)
   implicit val schemaForByte: Schema[Byte] = Schema(SInteger)
@@ -101,8 +131,7 @@ object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
   implicit val schemaForDouble: Schema[Double] = Schema(SNumber).format("double")
   implicit val schemaForBoolean: Schema[Boolean] = Schema(SBoolean)
   implicit val schemaForUnit: Schema[Unit] = Schema(SProduct.Empty)
-  implicit val schemaForFile: Schema[File] = Schema(SBinary)
-  implicit val schemaForPath: Schema[Path] = Schema(SBinary)
+  implicit val schemaForFile: Schema[TapirFile] = Schema(SBinary)
   implicit val schemaForByteArray: Schema[Array[Byte]] = Schema(SBinary)
   implicit val schemaForByteBuffer: Schema[ByteBuffer] = Schema(SBinary)
   implicit val schemaForInputStream: Schema[InputStream] = Schema(SBinary)
@@ -121,17 +150,14 @@ object Schema extends SchemaMagnoliaDerivation with LowPrioritySchema {
   implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SString)
   implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString)
 
-  implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOptional
-
-  implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArrayElement
-
-  implicit def schemaForIterable[T: Schema, C[_] <: Iterable[_]]: Schema[C[T]] = implicitly[Schema[T]].asArrayElement
-
+  implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
+  implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray
+  implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = Schema[Part[T]](implicitly[Schema[T]].schemaType)
-
   implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro SchemaMapMacro.schemaForMap[Map[String, V], V]
 
   def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*): Schema[E] = macro oneOfMacro[E, V]
+  def derived[T]: Schema[T] = macro Magnolia.gen[T]
 }
 
 trait LowPrioritySchema {

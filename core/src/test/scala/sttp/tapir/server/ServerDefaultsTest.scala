@@ -1,20 +1,17 @@
 package sttp.tapir.server
 
-import com.github.ghik.silencer.silent
-import sttp.tapir.Validator
+import sttp.tapir.{Schema, Validator}
+import sttp.tapir.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class ServerDefaultsTest extends AnyFlatSpec with Matchers {
   it should "create a validation error message for a nested field" in {
     // given
-    @silent("never used")
-    implicit val addressNumberValidator: Validator[Int] = Validator.min(1)
-    @silent("fallback derivation")
-    val personValidator = Validator.validatorForCaseClass[Person]
+    implicit val addressNumberSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(1))
 
     // when
-    val validationErrors = personValidator.validate(Person("John", Address("Lane", 0)))
+    val validationErrors = implicitly[Schema[Person]].validator.validate(Person("John", Address("Lane", 0)))
 
     // then
     ServerDefaults.ValidationMessages.validationErrorsMessage(

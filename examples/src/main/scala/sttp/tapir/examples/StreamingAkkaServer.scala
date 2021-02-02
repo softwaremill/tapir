@@ -8,7 +8,7 @@ import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -18,11 +18,11 @@ object StreamingAkkaServer extends App {
   // We need to provide both the schema of the value (for documentation), as well as the format (media type) of the
   // body. Here, the schema is a `string` and the media type is `text/plain`.
   val streamingEndpoint: Endpoint[Unit, Unit, Source[ByteString, Any], AkkaStreams] =
-    endpoint.get.in("receive").out(streamBody(AkkaStreams, schemaFor[String], CodecFormat.TextPlain()))
+    endpoint.get.in("receive").out(streamBody(AkkaStreams)(Schema.string, CodecFormat.TextPlain()))
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
   val testStream: Source[ByteString, Any] = Source.repeat("Hello!").take(10).map(s => ByteString(s))
-  val streamingRoute: Route = streamingEndpoint.toRoute(_ => Future.successful(Right(testStream)))
+  val streamingRoute: Route = AkkaHttpServerInterpreter.toRoute(streamingEndpoint)(_ => Future.successful(Right(testStream)))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

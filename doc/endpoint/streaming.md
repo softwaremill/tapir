@@ -23,13 +23,15 @@ which is a (presumably large) serialised list of json objects mapping to the `Pe
 
 ```scala mdoc:silent:reset
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import akka.stream.scaladsl._
 import akka.util.ByteString
 
 case class Person(name: String)
 
-endpoint.out(streamBody(AkkaStreams, schemaFor[List[Person]], CodecFormat.Json()))
+// copying the derived json schema type
+endpoint.out(streamBody(AkkaStreams)(Schema(Schema.derived[List[Person]].schemaType), CodecFormat.Json()))
 ```
 
 See also the [runnable streaming example](../examples.md). 

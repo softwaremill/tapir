@@ -21,7 +21,7 @@ object OutputToFinatraResponse {
         override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): (FinatraContent, String) =
           rawValueToFinatraContent(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format, charset(bodyType)), v)
         override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): (FinatraContent, String) = {
-          FinatraContentBuf(v.asInstanceOf[Buf]) -> format.mediaType.toString()
+          v //impossible
         }
         override def webSocketPipeToBody[REQ, RESP](
             pipe: Nothing,
@@ -43,16 +43,17 @@ object OutputToFinatraResponse {
     val status = outputValues.statusCode.map(sc => Status(sc.code)).getOrElse(defaultStatus)
 
     val responseWithContent = outputValues.body match {
-      case Some(Left((FinatraContentBuf(buf), ct))) =>
-        val response = Response(Version.Http11, status)
-        response.content = buf
+      case Some(finatraContentEither) =>
+        val (fContent, ct) = finatraContentEither.merge
+        val response = fContent match {
+          case FinatraContentBuf(buf) =>
+            val r = Response(Version.Http11, status)
+            r.content = buf
+            r
+          case FinatraContentReader(reader) => Response(Version.Http11, status, reader)
+        }
         response.contentType = ct
         response
-      case Some(Left((FinatraContentReader(reader), ct))) =>
-        val response = Response(Version.Http11, status, reader)
-        response.contentType = ct
-        response
-      case Some(Right(v)) => v // impossible
       case None =>
         Response(Version.Http11, status)
     }

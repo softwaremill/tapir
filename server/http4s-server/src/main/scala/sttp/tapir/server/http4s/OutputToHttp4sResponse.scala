@@ -18,7 +18,7 @@ import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
-class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
+private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   def apply[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): F[Response[F]] = {
     val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.map(statusCodeToHttp4sStatus).getOrElse(statusCodeToHttp4sStatus(defaultStatusCode))
@@ -30,7 +30,7 @@ class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOption
         Queue.bounded[F, WebSocketFrame](32).flatMap { queue =>
           pipeF.flatMap { pipe =>
             val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.enqueue1(f)))
-            WebSocketBuilder[F].build(queue.dequeue, receive, headers = headers)
+            WebSocketBuilder[F].build(queue.dequeue, receive, headers = headers, filterPingPongs = false)
           }
         }
 
@@ -39,7 +39,7 @@ class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOption
   }
 
   private def statusCodeToHttp4sStatus(code: sttp.model.StatusCode): Status =
-    Status.fromInt(code.code).right.getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
+    Status.fromInt(code.code).getOrElse(throw new IllegalArgumentException(s"Invalid status code: $code"))
 
   private type EncodeOutputsWebSocket = F[Pipe[F, WebSocketFrame, WebSocketFrame]]
 
@@ -136,7 +136,6 @@ class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOption
     `Content-Type`(
       http4s.MediaType
         .parse(ct)
-        .right
         .getOrElse(throw new IllegalArgumentException(s"Cannot parse content type: $ct"))
     )
 }

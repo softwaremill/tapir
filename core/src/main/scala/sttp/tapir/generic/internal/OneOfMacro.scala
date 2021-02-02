@@ -44,13 +44,14 @@ object OneOfMacro {
     }
 
     val name = resolveFunctionName(extractor.tree.asInstanceOf[Function])
+
     val schemaForE =
       q"""{
-            import sttp.tapir.Schema._
-            import sttp.tapir.SchemaType._
-            val rawMapping = scala.collection.immutable.Map(..$mapping)
-            val discriminator = Discriminator($name, rawMapping.map{case (k, sf)=> $asString.apply(k) -> SRef(sf.schemaType.asInstanceOf[SObject].info)})
-            Schema(SCoproduct(SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)}), rawMapping.values.toList, Some(discriminator)))
+            import _root_.sttp.tapir.Schema._
+            import _root_.sttp.tapir.SchemaType._
+            val rawMapping = _root_.scala.collection.immutable.Map(..$mapping)
+            val discriminator = _root_.sttp.tapir.SchemaType.Discriminator($name, rawMapping.map { case (k, sf) => $asString.apply(k) -> _root_.sttp.tapir.SchemaType.SRef(sf.schemaType.asInstanceOf[_root_.sttp.tapir.SchemaType.SObject].info)})
+            _root_.sttp.tapir.Schema(_root_.sttp.tapir.SchemaType.SCoproduct(_root_.sttp.tapir.SchemaType.SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)}), rawMapping.values.toList, _root_.scala.Some(discriminator)))
           }"""
 
     Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)

@@ -6,6 +6,7 @@ import java.nio.ByteBuffer
 import sttp.model.{QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
+import sttp.tapir.tests.TestUtil.writeToFile
 import sttp.tapir.tests._
 
 trait ClientBasicTests { this: ClientTests[Any] =>
@@ -40,9 +41,30 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       Right("kind=very good&name=apple&weight=42")
     )
     testClient(in_paths_out_string, List("fruit", "apple", "amount", "50"), Right("apple 50 None"))
-    testClient(in_query_list_out_header_list, List("plum", "watermelon", "apple"), Right(List("apple", "watermelon", "plum")))
-    testClient(in_simple_multipart_out_string, FruitAmount("melon", 10), Right("melon=10"))
-    testClient(in_cookie_cookie_out_header, (23, "pomegranate"), Right(List("etanargemop=2c ;32=1c")))
+    test(in_query_list_out_header_list.showDetail) {
+      // Note: some clients do not preserve the order in header values
+      send(
+        in_query_list_out_header_list,
+        port,
+        List("plum", "watermelon", "apple")
+      ).unsafeToFuture().map(
+        _.toOption.get should contain theSameElementsAs (
+          // The fetch API merges multiple header values having the same name into a single comma separated value
+          if (platformIsScalaJS)
+            List("apple, watermelon, plum")
+          else
+            List("apple", "watermelon", "plum")))
+    }
+    // cookie support in sttp is currently only available on the JVM
+    if (!platformIsScalaJS) {
+      test(in_cookie_cookie_out_header.showDetail) {
+        send(
+          in_cookie_cookie_out_header,
+          port,
+          (23, "pomegranate")
+        ).unsafeToFuture().map(_.toOption.get.head.split(" ;") should contain theSameElementsAs "etanargemop=2c ;32=1c".split(" ;"))
+      }
+    }
     // TODO: test root path
     testClient(in_auth_apikey_header_out_string, "1234", Right("Authorization=None; X-Api-Key=Some(1234); Query=None"))
     testClient(in_auth_apikey_query_out_string, "1234", Right("Authorization=None; X-Api-Key=None; Query=Some(1234)"))
@@ -76,40 +98,26 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         in_headers_out_headers,
         port,
         List(sttp.model.Header("X-Fruit", "apple"), sttp.model.Header("Y-Fruit", "Orange"))
-      ).unsafeRunSync().right.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO"))
+      ).unsafeToFuture()
+        .map(_.toOption.get should contain allOf (sttp.model.Header("X-Fruit", "elppa"), sttp.model.Header("Y-Fruit", "egnarO")))
     }
 
-    test(in_json_out_headers.showDetail) {
-      send(in_json_out_headers, port, FruitAmount("apple", 10))
-        .unsafeRunSync()
-        .right
-        .get should contain(sttp.model.Header("Content-Type", "application/json".reverse))
+    // the fetch API doesn't allow bodies in get requests
+    if (!platformIsScalaJS) {
+      test(in_json_out_headers.showDetail) {
+        send(in_json_out_headers, port, FruitAmount("apple", 10))
+          .unsafeToFuture()
+          .map(_.toOption.get should contain(sttp.model.Header("Content-Type", "application/json".reverse)))
+      }
     }
 
     testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
 
-    test(in_simple_multipart_out_raw_string.showDetail) {
-      val result = send(in_simple_multipart_out_raw_string, port, FruitAmountWrapper(FruitAmount("apple", 10), "Now!"))
-        .unsafeRunSync()
-        .right
-        .get
-
-      val indexOfJson = result.indexOf("{\"fruit")
-      val beforeJson = result.substring(0, indexOfJson)
-      val afterJson = result.substring(indexOfJson)
-
-      beforeJson should include("""Content-Disposition: form-data; name="fruitAmount"""")
-      beforeJson should include("Content-Type: application/json")
-      beforeJson should not include ("Content-Type: text/plain")
-
-      afterJson should include("""Content-Disposition: form-data; name="notes"""")
-      afterJson should include("Content-Type: text/plain; charset=UTF-8")
-      afterJson should not include ("Content-Type: application/json")
-    }
-
     test(in_fixed_header_out_string.showDetail) {
       send(in_fixed_header_out_string, port, ())
-        .unsafeRunSync() shouldBe Right("Location: secret")
+        .unsafeToFuture()
+        .map(_ shouldBe Right("Location: secret"))
     }
   }
+
 }

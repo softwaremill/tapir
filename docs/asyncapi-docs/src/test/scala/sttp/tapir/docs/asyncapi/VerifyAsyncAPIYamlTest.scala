@@ -3,8 +3,10 @@ package sttp.tapir.docs.asyncapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
+import sttp.tapir.EndpointIO.Example
 import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
 import sttp.tapir.tests.{Fruit, FruitAmount}
@@ -20,7 +22,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_json_json.yml")
 
-    val actualYaml = e.toAsyncAPI("The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -31,7 +33,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_string_json.yml")
 
-    val actualYaml = e.toAsyncAPI("The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -43,7 +45,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_two_endpoints.yml")
 
-    val actualYaml = List(e1, e2).toAsyncAPI("The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(List(e1, e2), "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -58,7 +60,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_binding.yml")
 
-    val actualYaml = e.toAsyncAPI("The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -72,8 +74,25 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_security.yml")
 
-    val actualYaml = e.toAsyncAPI("The fruit basket", "0.1", List("production" -> Server("example.org", "ws"))).toYaml
-    println(actualYaml)
+    val actualYaml =
+      AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1", List("production" -> Server("example.org", "ws"))).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should include examples") {
+    val e = endpoint
+      .in("fruit")
+      .out(
+        webSocketBody[Fruit, CodecFormat.Json, Int, CodecFormat.Json](AkkaStreams)
+          .requestsExample(Fruit("apple"))
+          .responsesExamples(List(10, 42))
+      )
+
+    val expectedYaml = loadYaml("expected_json_examples.yml")
+
+    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

@@ -33,28 +33,26 @@ val e = endpoint.in(
 
 Validation rules added using the built-in validators are translated to [OpenAPI](../openapi.md) documentation.
 
-### Validation rules and automatic codec derivation
+## Validation rules and automatic codec derivation
 
-When a codec is automatically derived for a type (see [custom types](customtypes.md)), validators for all types 
-(for json this is a recursive process) are looked up through implicit `Validator[T]` values.
+Validator are parts of schemas, validators are looked up as part of the with implicit `Schema[T]` values. 
 
-```eval_rst
-.. note::
+While they can be manually defined, Tapir provides tools to derive automatically schemas for custom types 
+(traits and case classes).
 
-  Implicit ``Validator[T]`` values are used *only* when automatically deriving codecs. They are not used
-  when the codec is defined by hand.
-```
+## Custom type validation
 
 Note that to validate a nested member of a case class, it needs to have a unique type (that is, not an `Int`, as 
-providing an implicit `Validator[Int]` would validate all ints in the hierarchy), as validator lookup is type-driven.
+providing an implicit `Validator[Int]` would validate all ints in the hierarchy), as schema lookup is type-driven.
 
 To introduce unique types for primitive values, you can use value classes or [type tagging](https://github.com/softwaremill/scala-common#tagging).
 
 For example, to support an integer wrapped in a value type in a json body, we need to provide Circe encoders and 
-decoders (if that's the json library that we are using), schema information and a validator:
+decoders (if that's the json library that we are using), schema information with validator:
  
 ```scala
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.{ Encoder, Decoder }
 import io.circe.generic.semiauto._
@@ -62,10 +60,9 @@ import io.circe.generic.semiauto._
 case class Amount(v: Int) extends AnyVal
 case class FruitAmount(fruit: String, amount: Amount)
 
-implicit val amountSchema: Schema[Amount] = Schema(SchemaType.SInteger)
+implicit val amountSchema: Schema[Amount] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
 implicit val amountEncoder: Encoder[Amount] = Encoder.encodeInt.contramap(_.v)
 implicit val amountDecoder: Decoder[Amount] = Decoder.decodeInt.map(Amount.apply)
-implicit val amountValidator: Validator[Amount] = Validator.min(1).contramap(_.v)
 
 implicit val decoder: Decoder[FruitAmount] = deriveDecoder[FruitAmount]
 implicit val encoder: Encoder[FruitAmount] = deriveEncoder[FruitAmount]
@@ -117,11 +114,11 @@ If the enum is nested within an object, regardless of whether the codec for that
 we need to specify the encode function by hand:
 
 ```scala
-implicit def colorValidator: Validator[Color] = Validator.enum.encode(_.toString.toLowerCase)
+implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.enum.encode(_.toString.toLowerCase))
 ```
 
-Like other validators, enum validators need to be added to a codec, or through an implicit value, if the codec and
-validator is automatically derived. 
+Like other validators/schemas, enum schemas need to be added to a codec manually or through an implicit value, if the 
+codec and validator is automatically derived. 
 
 ## Next
 

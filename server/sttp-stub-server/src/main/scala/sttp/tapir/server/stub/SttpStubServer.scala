@@ -1,8 +1,8 @@
 package sttp.tapir.server.stub
 
-import java.nio.charset.Charset
+import sttp.client3.Response
 
-import sttp.client3.RequestMetadata
+import java.nio.charset.Charset
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.StatusCode
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
@@ -25,8 +25,8 @@ trait SttpStubServer {
         endpoint,
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
-            case DecodeInputsResult.Failure(_, _) => false
-            case DecodeInputsResult.Values(_, _)  => true
+            case _: DecodeInputsResult.Failure => false
+            case _: DecodeInputsResult.Values  => true
           }
         )
       )
@@ -37,11 +37,11 @@ trait SttpStubServer {
         endpoint,
         new stub.WhenRequest(req =>
           DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
-            case DecodeInputsResult.Failure(_, _) => false
+            case _: DecodeInputsResult.Failure => false
             case values: DecodeInputsResult.Values =>
               InputValues(endpoint.input, values) match {
                 case InputValuesResult.Value(params, _) => inputMatcher(params.asAny.asInstanceOf[I])
-                case InputValuesResult.Failure(_, _)    => false
+                case _: InputValuesResult.Failure       => false
               }
           }
         )
@@ -87,7 +87,7 @@ trait SttpStubServer {
           override def webSocketPipeToBody[REQ, RESP](
               pipe: streams.Pipe[REQ, RESP],
               o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
-          ): Any = throw new IllegalArgumentException("Web sockets are not supported")
+          ): Any = pipe //impossible
         }
         val outputValues =
           new EncodeOutputs[Any, Any, Nothing](encodeOutputBody).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
@@ -99,7 +99,7 @@ trait SttpStubServer {
             "",
             outputValues.headers.map { case (k, v) => sttp.model.Header.unsafeApply(k, v) },
             Nil,
-            RequestMetadata.ExampleGet
+            Response.ExampleGet
           )
         )
       }

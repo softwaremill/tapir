@@ -8,8 +8,9 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.tapir._
-import sttp.tapir.client.sttp._
+import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import sttp.tapir.client.sttp.ws.akkahttp._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,11 +25,9 @@ object WebSocketAkkaClient extends App {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
   val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
-  val result = jsonEchoWsEndpoint
-    .toSttpRequestUnsafe(uri"wss://echo.websocket.org")
+  val result = SttpClientInterpreter
+    .toClientThrowDecodeFailures(jsonEchoWsEndpoint, Some(uri"wss://echo.websocket.org"), backend)
     .apply(())
-    .send(backend)
-    .map(_.body)
     .flatMap {
       case Left(msg) => Future(println(s"Cannot establish web socket: $msg"))
       case Right(serverFlow) =>

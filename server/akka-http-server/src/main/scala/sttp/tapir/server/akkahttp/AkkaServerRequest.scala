@@ -13,4 +13,5 @@ private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerReq
   override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
   override def headers: Seq[(String, String)] = ctx.request.headers.map(h => (h.name(), h.value()))
   override def header(name: String): Option[String] = ctx.request.headers.filter(_.is(name.toLowerCase)).map(_.value()).headOption
+  override def underlying: Any = ctx
 }

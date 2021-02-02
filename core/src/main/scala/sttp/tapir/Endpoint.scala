@@ -9,6 +9,7 @@ import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint, ServerEndpointI
 import sttp.tapir.typelevel.{FnComponents, ParamConcat, ParamSubtract}
 import sttp.tapir.internal._
 
+import scala.collection.immutable.Nil
 import scala.reflect.ClassTag
 
 /** @tparam I Input parameter types.
@@ -58,10 +59,10 @@ trait EndpointInputsOps[I, E, O, -R] {
   def prependIn[J, JI](i: EndpointInput[J])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[JI, E, O, R] =
     withInput(i.and(input))
 
-  def in[J, IJ, R2](i: StreamBodyIO[_, J, R2])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[IJ, E, O, R with R2] =
+  def in[BS, J, IJ, R2](i: StreamBodyIO[BS, J, R2])(implicit concat: ParamConcat.Aux[I, J, IJ]): EndpointType[IJ, E, O, R with R2] =
     withInput(input.and(i.toEndpointIO))
 
-  def prependIn[J, JI, R2](i: StreamBodyIO[_, J, R2])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[JI, E, O, R with R2] =
+  def prependIn[BS, J, JI, R2](i: StreamBodyIO[BS, J, R2])(implicit concat: ParamConcat.Aux[J, I, JI]): EndpointType[JI, E, O, R with R2] =
     withInput(i.toEndpointIO.and(input))
 
   def mapIn[II](m: Mapping[I, II]): EndpointType[II, E, O, R] =
@@ -121,10 +122,10 @@ trait EndpointOutputsOps[I, E, O, -R] {
   def prependOut[P, PO](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
     withOutput(i.and(output))
 
-  def out[P, OP, R2](i: StreamBodyIO[_, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R with R2] =
+  def out[BS, P, OP, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R with R2] =
     withOutput(output.and(i.toEndpointIO))
 
-  def prependOut[P, PO, R2](i: StreamBodyIO[_, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
+  def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
     withOutput(i.toEndpointIO.and(output))
 
   def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
@@ -177,13 +178,13 @@ trait EndpointMetaOps[I, E, O, -R] {
     */
   def show: String = {
     def showOutputs(o: EndpointOutput[_]): String = {
-      val basicOutputsMap = o.asBasicOutputsMap
+      val basicOutputsMap = o.asBasicOutputsList
 
-      basicOutputsMap.get(None) match {
-        case Some(defaultOutputs) if basicOutputsMap.size == 1 =>
+      basicOutputsMap match {
+        case (None, defaultOutputs) :: Nil =>
           showMultiple(defaultOutputs.sortByType)
-        case _ =>
-          val mappings = basicOutputsMap.map { case (_, os) =>
+        case list =>
+          val mappings = list.map { case (_, os) =>
             showMultiple(os)
           }
           showOneOf(mappings.toSeq)

@@ -2,10 +2,10 @@ package sttp.tapir.server.tests
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
-
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
+import sttp.tapir.generic.auto._
 import io.circe.generic.auto._
 import sttp.client3._
 import sttp.model._
@@ -17,11 +17,15 @@ import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 import org.scalatest.matchers.should.Matchers._
+import sttp.model.headers.{CookieWithMeta, CookieValueWithMeta}
+
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
 
 class ServerBasicTests[F[_], ROUTE](
     backend: SttpBackend[IO, Any],
     serverTests: ServerTests[F, Any, ROUTE],
-    serverInterpreter: ServerInterpreter[F, Any, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
     multipleValueHeaderSupport: Boolean = true,
     multipartInlineHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true
@@ -59,7 +63,7 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.get(baseUri).send(backend).map(_.body shouldBe Right(""))
     },
     testServer(endpoint.get, "POST a GET endpoint")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
-      basicRequest.post(baseUri).send(backend).map(_.body shouldBe 'left)
+      basicRequest.post(baseUri).send(backend).map(_.body shouldBe Symbol("left"))
     },
     //
     testServer(in_query_out_string)((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
@@ -95,7 +99,7 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.post(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Right("Sweet"))
     },
     testServer(in_string_out_string, "with get method")((b: String) => pureResult(b.asRight[Unit])) { baseUri =>
-      basicRequest.get(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe 'left)
+      basicRequest.get(uri"$baseUri/api/echo").body("Sweet").send(backend).map(_.body shouldBe Symbol("left"))
     },
     testServer(in_mapped_query_out_string)((fruit: List[Char]) => pureResult(s"fruit length: ${fruit.length}".asRight[Unit])) { baseUri =>
       basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.body shouldBe Right("fruit length: 6"))
@@ -222,7 +226,7 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_file_multipart_out_multipart)((fd: FruitData) =>
       pureResult(
         FruitData(
-          Part("", writeToFile(readFromFile(fd.data.body).reverse), fd.data.otherDispositionParams, Nil)
+          Part("", writeToFile(Await.result(readFromFile(fd.data.body), 3.seconds).reverse), fd.data.otherDispositionParams, Nil)
             .header("X-Auth", fd.data.headers.find(_.is("X-Auth")).map(_.value).toString)
         ).asRight[Unit]
       )
@@ -236,6 +240,26 @@ class ServerBasicTests[F[_], ROUTE](
           r.code shouldBe StatusCode.Ok
           if (multipartInlineHeaderSupport) r.body should include regex "X-Auth: Some\\(12Aa\\)"
           r.body should include regex "name=\"data\"[\\s\\S]*oiram hcaep"
+        }
+    },
+    testServer(in_raw_multipart_out_string)((parts: Seq[Part[Array[Byte]]]) =>
+      pureResult(
+        parts.map(part => s"${part.name}:${new String(part.body)}").mkString("\n").asRight[Unit]
+      )
+    ) { baseUri =>
+      val file1 = writeToFile("peach mario")
+      val file2 = writeToFile("daisy luigi")
+      basicStringRequest
+        .post(uri"$baseUri/api/echo/multipart")
+        .multipartBody(
+          multipartFile("file1", file1).fileName("file1.txt"),
+          multipartFile("file2", file2).fileName("file2.txt")
+        )
+        .send(backend)
+        .map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body should include("file1:peach mario")
+          r.body should include("file2:daisy luigi")
         }
     },
     testServer(in_query_out_string, "invalid query parameter")((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
@@ -253,18 +277,18 @@ class ServerBasicTests[F[_], ROUTE](
           }
         }
     },
-    testServer(in_cookies_out_cookies)((cs: List[sttp.model.Cookie]) =>
-      pureResult(cs.map(c => sttp.model.CookieWithMeta.unsafeApply(c.name, c.value.reverse)).asRight[Unit])
+    testServer(in_cookies_out_cookies)((cs: List[sttp.model.headers.Cookie]) =>
+      pureResult(cs.map(c => CookieWithMeta.unsafeApply(c.name, c.value.reverse)).asRight[Unit])
     ) { baseUri =>
       basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send(backend).map { r =>
-        r.cookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
+        r.unsafeCookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
       }
     },
     testServer(in_set_cookie_value_out_set_cookie_value)((c: CookieValueWithMeta) =>
       pureResult(c.copy(value = c.value.reverse).asRight[Unit])
     ) { baseUri =>
       basicRequest.get(uri"$baseUri/api/echo/headers").header("Set-Cookie", "c1=xy; HttpOnly; Path=/").send(backend).map { r =>
-        r.cookies.toList shouldBe List(
+        r.unsafeCookies.toList shouldBe List(
           CookieWithMeta.unsafeApply("c1", "yx", None, None, None, Some("/"), secure = false, httpOnly = true)
         )
       }
@@ -532,7 +556,7 @@ class ServerBasicTests[F[_], ROUTE](
         } >>
         basicRequest.get(uri"$baseUri?name=orange").send(backend).map { r =>
           r.code shouldBe StatusCode.InternalServerError
-          r.body shouldBe 'left
+          r.body shouldBe Symbol("left")
         }
     },
     testServer(Validation.in_query_tagged, "support query validation with tagged type")((_: String) => pureResult(().asRight[Unit])) {
@@ -678,22 +702,21 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_input_stream_out_input_stream)((is: InputStream) =>
       pureResult((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
     ) { baseUri => basicRequest.post(uri"$baseUri/api/echo").body("mango").send(backend).map(_.body shouldBe Right("mango")) },
-    testServer(in_string_out_stream_with_header)((input: String) =>
-      pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))
-    ) { baseUri =>
-      basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send(backend).map { r =>
-        r.body.map(_.length) shouldBe Right(128)
-        r.body.map(_.foreach(b => b shouldBe 0))
-        r.headers.map(_.name) should contain(HeaderNames.ContentLength)
-        r.header(HeaderNames.ContentLength) shouldBe Some("128")
-      }
+    testServer(in_string_out_stream_with_header)(_ => pureResult(Right((new ByteArrayInputStream(Array.fill[Byte](128)(0)), Some(128))))) {
+      baseUri =>
+        basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send(backend).map { r =>
+          r.body.map(_.length) shouldBe Right(128)
+          r.body.map(_.foreach(b => b shouldBe 0))
+          r.headers.map(_.name) should contain(HeaderNames.ContentLength)
+          r.header(HeaderNames.ContentLength) shouldBe Some("128")
+        }
     }
   )
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
     ServerDefaults.decodeFailureHandler.copy(
-      respondWithStatusCode = ServerDefaults.FailureHandling
-        .respondWithStatusCode(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
+      respond = ServerDefaults.FailureHandling
+        .respond(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
     )
 
   def throwFruits(name: String): F[String] =

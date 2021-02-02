@@ -10,7 +10,7 @@ import org.http4s.{Charset, EntityDecoder, Request, multipart}
 import sttp.model.{Header, Part}
 import sttp.tapir.{RawPart, RawBodyType}
 
-class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
+private[http4s] class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServerOptions[F]) {
   def apply[R](body: fs2.Stream[F, Byte], bodyType: RawBodyType[R], charset: Option[Charset], req: Request[F]): F[R] = {
     def asChunk: F[Chunk[Byte]] = body.compile.to(Chunk)
     def asByteArray: F[Array[Byte]] = body.compile.to(Chunk).map(_.toByteBuffer.array())
@@ -28,8 +28,7 @@ class Http4sRequestToRawBody[F[_]: Sync: ContextShift](serverOptions: Http4sServ
       case m: RawBodyType.MultipartBody =>
         // TODO: use MultipartDecoder.mixedMultipart once available?
         implicitly[EntityDecoder[F, multipart.Multipart[F]]].decode(req, strict = false).value.flatMap {
-          case Left(failure) =>
-            throw new IllegalArgumentException("Cannot decode multipart body: " + failure) // TODO
+          case Left(failure) => Sync[F].raiseError(failure)
           case Right(mp) =>
             val rawPartsF: Vector[F[RawPart]] = mp.parts
               .flatMap(part => part.name.flatMap(name => m.partType(name)).map((part, _)).toList)

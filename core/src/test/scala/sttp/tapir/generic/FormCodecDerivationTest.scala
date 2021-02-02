@@ -2,15 +2,13 @@ package sttp.tapir.generic
 
 import java.math.{BigDecimal => JBigDecimal}
 
-import com.github.ghik.silencer.silent
 import sttp.tapir.SchemaType.{SObjectInfo, SProduct}
-import sttp.tapir.util.CompileUtil
+import sttp.tapir.generic.auto._
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, FieldName, Schema, Validator, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-@silent("never used")
-class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
+class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestExtensions with Matchers {
   it should "generate a codec for a one-arg case class" in {
     // given
     case class Test1(f1: Int)
@@ -58,29 +56,17 @@ class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
     codec.decode("f2=10") shouldBe DecodeResult.Value(Test4(None, 10))
   }
 
-  it should "report a user-friendly error when a codec for a parameter cannot be found" in {
-    val error = CompileUtil.interceptEval("""
-        |import sttp.tapir._
-        |trait NoCodecForThisTrait
-        |case class Test5(f1: String, f2: NoCodecForThisTrait)
-        |implicitly[Codec[String, Test5, CodecFormat.XWwwFormUrlencoded]]
-        |""".stripMargin)
-
-    error.message should include("Cannot find a codec between types: List[String] and NoCodecForThisTrait")
-  }
-
   it should "use the right schema for a two-arg case class" in {
     // given
     case class Test6(f1: String, f2: Int)
     val codec = implicitly[Codec[String, Test6, CodecFormat.XWwwFormUrlencoded]]
 
     // when
-    codec.schema.map(_.schemaType) shouldBe Some(
+    codec.schema.schemaType shouldBe
       SProduct(
         SObjectInfo("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
         List((FieldName("f1"), implicitly[Schema[String]]), (FieldName("f2"), implicitly[Schema[Int]]))
       )
-    )
   }
 
   it should "generate a codec for a one-arg case class using snake-case naming transformation" in {
@@ -149,10 +135,10 @@ class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
     codec.decode("f1=10&f1=12") shouldBe DecodeResult.Value(Test1(Vector(10, 12)))
   }
 
-  it should "generate a codec for a one-arg case class using implicit validator" in {
+  it should "generate a codec for a one-arg case class using implicit schema" in {
     // given
     case class Test1(f1: Int)
-    implicit val v: Validator[Int] = Validator.min(5)
+    implicit val s: Schema[Int] = Schema.schemaForInt.validate(Validator.min(5))
     val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
 
     // when
@@ -190,7 +176,17 @@ class FormCodecDerivationTest extends AnyFlatSpec with Matchers {
     val codec = implicitly[Codec[String, Test1, CodecFormat.XWwwFormUrlencoded]]
 
     // when
-    codec.encode(test1) shouldBe "f1=str&f2=42&f3=228&f4=322&f5=69&f6=27.0&f7=33.0&f8=true&f9=1337.7331&f10=31337.73313"
+    codec
+      .encode(test1)
+      .shouldBe(
+        // In Scala.js in general, a trailing .0 is omitted i.e. 1.0.toString == "1", instead of "1.0"
+        // See https://www.scala-js.org/doc/semantics.html
+        if (System.getProperty("java.vm.name") == "Scala.js")
+          "f1=str&f2=42&f3=228&f4=322&f5=69&f6=27&f7=33&f8=true&f9=1337.7331&f10=31337.73313"
+        else
+          "f1=str&f2=42&f3=228&f4=322&f5=69&f6=27.0&f7=33.0&f8=true&f9=1337.7331&f10=31337.73313"
+      )
+
     codec.decode("f1=str&f2=42&f3=228&f4=322&f5=69&f6=27.0&f7=33.0&f8=true&f9=1337.7331&f10=31337.73313") shouldBe DecodeResult.Value(test1)
   }
 

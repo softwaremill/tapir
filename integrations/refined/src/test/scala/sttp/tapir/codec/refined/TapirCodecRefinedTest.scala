@@ -7,7 +7,7 @@ import eu.timepit.refined.string.{IPv4, MatchesRegex}
 import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.{W, refineMV, refineV}
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.{DecodeResult, ValidationError, Validator}
+import sttp.tapir.{DecodeResult, Schema, ValidationError, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -95,7 +95,7 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     type IntConstraint = Greater[W.`3`.T]
     type LimitedInt = Int Refined IntConstraint
 
-    implicitly[Validator[LimitedInt]] should matchPattern { case Validator.Mapped(Validator.Min(3, true), _) =>
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Min(3, true), _) =>
     }
   }
 
@@ -114,5 +114,16 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
           .in(path[LimitedString]("ls") / jsonBody[List[LimitedString]])
           .out(jsonBody[List[Option[LimitedString]]])
     }
+  }
+
+  "Using refined" should "compile when using tapir endpoints" in {
+    // this used to cause a:
+    // [error] java.lang.StackOverflowError
+    // [error] scala.reflect.internal.Types$TypeRef.foldOver(Types.scala:2376)
+    // [error] scala.reflect.internal.tpe.TypeMaps$IsRelatableCollector$.apply(TypeMaps.scala:1272)
+    // [error] scala.reflect.internal.tpe.TypeMaps$IsRelatableCollector$.apply(TypeMaps.scala:1267)
+    import eu.timepit.refined.auto._
+    import sttp.tapir._
+    endpoint.in("x")
   }
 }

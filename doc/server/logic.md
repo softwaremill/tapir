@@ -16,7 +16,7 @@ The book example can be more concisely written as follows:
 ```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
@@ -25,7 +25,7 @@ val countCharactersServerEndpoint: ServerEndpoint[String, Unit, Int, Any, Future
     Future.successful[Either[Unit, Int]](Right(s.length))
   }
 
-val countCharactersRoute: Route = countCharactersServerEndpoint.toRoute
+val countCharactersRoute: Route = AkkaHttpServerInterpreter.toRoute(countCharactersServerEndpoint)
 ```
 
 A `ServerEndpoint` can then be converted to a route using `.toRoute`/`.toRoutes` methods (without any additional
@@ -35,7 +35,7 @@ Moreover, a list of server endpoints can be converted to routes or documentation
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
@@ -45,7 +45,7 @@ val endpoint1 = endpoint.in("hello").out(stringBody)
 val endpoint2 = endpoint.in("ping").out(stringBody)
   .serverLogic { _ => Future.successful[Either[Unit, String]](Right("pong")) }
 
-val route: Route = List(endpoint1, endpoint2).toRoute
+val route: Route = AkkaHttpServerInterpreter.toRoute(List(endpoint1, endpoint2))
 ```
 
 Note that when dealing with endpoints which have multiple input parameters, the server logic function is a function

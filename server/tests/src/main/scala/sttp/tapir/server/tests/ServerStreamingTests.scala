@@ -27,9 +27,10 @@ class ServerStreamingTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], server
         in_stream_out_stream_with_content_length(streams)
       )((in: (Long, streams.BinaryStream)) => pureResult(in.asRight[Unit])) { baseUri =>
         {
-          basicRequest.post(uri"$baseUri/api/echo").contentLength(penPineapple.length).body(penPineapple).send(backend).map { response =>
-            response.body shouldBe Right(penPineapple)
-            response.contentLength shouldBe Some(penPineapple.length)
+          basicRequest.post(uri"$baseUri/api/echo").contentLength(penPineapple.length.toLong).body(penPineapple).send(backend).map {
+            response =>
+              response.body shouldBe Right(penPineapple)
+              response.contentLength shouldBe Some(penPineapple.length)
           }
         }
       }

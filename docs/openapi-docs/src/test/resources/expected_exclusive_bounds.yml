@@ -1,0 +1,21 @@
+openapi: 3.0.3
+info:
+  title: Examples
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: num
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+            exclusiveMinimum: true
+            maximum: 42
+            exclusiveMaximum: true
+      responses:
+        '200':
+          description: ''

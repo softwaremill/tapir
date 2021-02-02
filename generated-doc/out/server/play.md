@@ -3,30 +3,30 @@
 To expose endpoint as a [play-server](https://www.playframework.com/) first add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "0.17.0-M5"
+"com.softwaremill.sttp.tapir" %% "tapir-play-server" % "0.17.8"
 ```
 
 and (if you don't already depend on Play) 
 
 ```scala
-"com.typesafe.play" %% "play-akka-http-server" % "2.8.2"
+"com.typesafe.play" %% "play-akka-http-server" % "2.8.7"
 ```
 
 or
 
 ```scala
-"com.typesafe.play" %% "play-netty-server" % "2.8.2"
+"com.typesafe.play" %% "play-netty-server" % "2.8.7"
 ```
 
 depending on whether you want to use netty or akka based http-server under the hood.
 
-Then import the package:
+Then import the object:
 
 ```scala
-import sttp.tapir.server.play._
+import sttp.tapir.server.play.PlayServerInterpreter
 ```
 
-This adds two extension methods to the `Endpoint` type: `toRoute` and `toRoutesRecoverError`. This first requires the
+This object contains the `toRoute` and `toRoutesRecoverError` methods. This first requires the
 logic of the endpoint to be given as a function of type:
 
 ```scala
@@ -38,7 +38,7 @@ a subclass of `Throwable` (an exception); it expects a function of type `I => Fu
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.play._
+import sttp.tapir.server.play.PlayServerInterpreter
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import akka.stream.Materializer
@@ -52,11 +52,11 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: Routes = 
-  countCharactersEndpoint.toRoute(countCharacters _)
+  PlayServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters _)
 ```
 
-Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
-arguments need to be converted to a function using a single argument using `.tupled`:
+Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
+functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
 
 ```scala
 import sttp.tapir._
@@ -70,7 +70,7 @@ implicit val materializer: Materializer = ???
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
-val aRoute: Routes = anEndpoint.toRoute((logic _).tupled)
+val aRoute: Routes = PlayServerInterpreter.toRoute(anEndpoint)((logic _).tupled)
 ```
 
 ## Bind the routes

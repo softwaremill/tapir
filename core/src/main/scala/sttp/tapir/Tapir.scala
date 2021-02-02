@@ -1,12 +1,11 @@
 package sttp.tapir
 
-import java.io.{File, InputStream}
+import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-import java.nio.file.Path
-
 import sttp.capabilities.Streams
-import sttp.model.{Cookie, CookieValueWithMeta, CookieWithMeta, Header, HeaderNames, Part, QueryParams, StatusCode}
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
@@ -18,7 +17,7 @@ import sttp.ws.WebSocketFrame
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
+trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -37,6 +36,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def header(name: String, value: String): EndpointIO.FixedHeader[Unit] = header(sttp.model.Header(name, value))
   def headers: EndpointIO.Headers[List[sttp.model.Header]] = EndpointIO.Headers(Codec.idPlain(), EndpointIO.Info.empty)
 
+  // TODO: cache directives
   def cookie[T: Codec[Option[String], *, TextPlain]](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly, EndpointIO.Info.empty)
   def cookies: EndpointIO.Header[List[Cookie]] = header[List[String]](HeaderNames.Cookie).map(Codec.cookiesCodec)
@@ -82,8 +82,7 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   def byteArrayBody: EndpointIO.Body[Array[Byte], Array[Byte]] = rawBinaryBody[Array[Byte]]
   def byteBufferBody: EndpointIO.Body[ByteBuffer, ByteBuffer] = rawBinaryBody[ByteBuffer]
   def inputStreamBody: EndpointIO.Body[InputStream, InputStream] = rawBinaryBody[InputStream]
-  def fileBody: EndpointIO.Body[File, File] = rawBinaryBody[File]
-  def pathBody: EndpointIO.Body[File, Path] = binaryBody[File, Path]
+  def fileBody: EndpointIO.Body[TapirFile, TapirFile] = rawBinaryBody[TapirFile]
 
   def formBody[T: Codec[String, *, CodecFormat.XWwwFormUrlencoded]]: EndpointIO.Body[String, T] =
     anyFromUtf8StringBody[T, CodecFormat.XWwwFormUrlencoded](implicitly)
@@ -95,17 +94,13 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
   /** @param s A supported streams implementation.
-    * @param schema Schema of the body. Note that any schema can be passed here, usually this will be a schema for the
-    *               "deserialized" stream.
+    * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
     * @param charset An optional charset of the resulting stream's data, to be used in the content type.
     */
   def streamBody[S](
-      s: Streams[S],
-      schema: Schema[_],
-      format: CodecFormat,
-      charset: Option[Charset] = None
-  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, Some(schema.as[s.BinaryStream])), EndpointIO.Info.empty, charset)
+      s: Streams[S]
+  )(schema: Schema[s.BinaryStream], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, schema), EndpointIO.Info.empty, charset)
 
   // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
   // while the third one (S) can be inferred.
@@ -122,11 +117,13 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
         responses,
         Codec.idPlain(), // any codec format will do
         EndpointIO.Info.empty,
+        EndpointIO.Info.empty,
+        EndpointIO.Info.empty,
         concatenateFragmentedFrames = true,
         ignorePong = true,
         autoPongOnPing = true,
-        decodeCloseRequests = requests.schema.exists(_.isOptional),
-        decodeCloseResponses = responses.schema.exists(_.isOptional),
+        decodeCloseRequests = requests.schema.isOptional,
+        decodeCloseResponses = responses.schema.isOptional,
         autoPing = Some((13.seconds, WebSocketFrame.ping))
       )
   }
@@ -255,8 +252,6 @@ trait Tapir extends TapirDerivedInputs with ModifyMacroSupport {
   val emptyOutput: EndpointOutput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
-
-  def schemaFor[T: Schema]: Schema[T] = implicitly[Schema[T]]
 
   val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Any] =
     Endpoint[Unit, Nothing, Unit, Any](

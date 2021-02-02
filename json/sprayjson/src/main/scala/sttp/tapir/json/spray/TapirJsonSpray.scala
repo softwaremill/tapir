@@ -2,6 +2,7 @@ package sttp.tapir.json.spray
 
 import spray.json._
 import sttp.tapir.Codec.JsonCodec
+import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.SchemaType._
 import sttp.tapir._
@@ -9,13 +10,17 @@ import sttp.tapir._
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonSpray {
-  def jsonBody[T: JsonFormat: Schema: Validator]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(jsonFormatCodec[T])
+  def jsonBody[T: JsonFormat: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(jsonFormatCodec[T])
 
-  implicit def jsonFormatCodec[T: JsonFormat: Schema: Validator]: JsonCodec[T] =
+  implicit def jsonFormatCodec[T: JsonFormat: Schema]: JsonCodec[T] =
     Codec.json { s =>
       Try(s.parseJson.convertTo[T]) match {
         case Success(v) => Value(v)
-        case Failure(e) => Error("spray json decoder failed", e)
+        case Failure(e @ DeserializationException(msg, _, fieldNames)) =>
+          val path = fieldNames.map(FieldName.apply)
+          Error(s, JsonDecodeException(List(JsonError(msg, path)), e))
+        case Failure(e) =>
+          Error(s, JsonDecodeException(errors = List.empty, e))
       }
     } { t => t.toJson.toString() }
 
@@ -25,6 +30,4 @@ trait TapirJsonSpray {
       List.empty
     )
   )
-
-  implicit val validatorForSprayJsValue: Validator[JsValue] = Validator.pass
 }

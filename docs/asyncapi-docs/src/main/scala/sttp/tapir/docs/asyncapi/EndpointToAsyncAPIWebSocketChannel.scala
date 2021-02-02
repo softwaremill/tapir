@@ -11,7 +11,7 @@ import sttp.tapir.{Codec, CodecFormat, Endpoint, EndpointIO, EndpointInput}
 
 import scala.collection.immutable.ListMap
 
-class EndpointToAsyncAPIWebSocketChannel(
+private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
     schemas: Schemas,
     codecToMessageKey: Map[Codec[_, _, _ <: CodecFormat], MessageKey],
     options: AsyncAPIDocsOptions
@@ -40,7 +40,7 @@ class EndpointToAsyncAPIWebSocketChannel(
 
   private def parameters(inputs: Vector[EndpointInput.Basic[_]]): ListMap[String, ReferenceOr[Parameter]] = {
     inputs.collect { case EndpointInput.PathCapture(Some(name), codec, info) =>
-      name -> Right(Parameter(info.description, schemas(codec).right.toOption, None))
+      name -> Right(Parameter(info.description, schemas(codec).toOption, None))
     }.toListMap
   }
 

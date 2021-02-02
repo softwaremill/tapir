@@ -3,6 +3,7 @@ package sttp.tapir.examples
 import io.circe.{Decoder, Encoder}
 import sttp.tapir._
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import io.circe.generic.auto._
 
 object EndpointWithCustomTypes {
@@ -22,7 +23,7 @@ object EndpointWithCustomTypes {
   // circe Encoder and Decoder. We also need the schema (through the SchemaFor implicit) for documentation.
   case class Person(id: MyId, name: String)
 
-  implicit val myIdSchema: Schema[MyId] = Schema(SchemaType.SString)
+  implicit val myIdSchema: Schema[MyId] = Schema.string
   // custom circe encoders and decoders need to be in-scope as well
   implicit val myIdEncoder: Encoder[MyId] = Encoder.encodeString.contramap(_.id)
   implicit val myIdDecoder: Decoder[MyId] = Decoder.decodeString.map(s => new MyIdImpl(s))

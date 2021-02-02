@@ -1,6 +1,6 @@
 package sttp.tapir.generic.internal
 
-import sttp.tapir.MultipartCodec
+import sttp.tapir.{MultipartCodec, encodedName}
 import sttp.tapir.generic.Configuration
 
 import scala.annotation.tailrec
@@ -30,7 +30,7 @@ object MultipartCodecDerivation {
       }
 
     val t = weakTypeOf[T]
-    val util = new CaseClassUtil[c.type, T](c)
+    val util = new CaseClassUtil[c.type, T](c, "multipart code")
     val fields = util.fields
 
     def fieldIsPart(field: Symbol): Boolean = field.typeSignature.typeSymbol.fullName.startsWith("sttp.model.Part")
@@ -42,31 +42,39 @@ object MultipartCodecDerivation {
       val codecsToCheck = List(
         () =>
           (
-            q"sttp.tapir.RawBodyType.StringBody(java.nio.charset.StandardCharsets.UTF_8)",
-            q"implicitly[sttp.tapir.Codec[List[String], $codecType, sttp.tapir.CodecFormat.TextPlain]]"
+            q"_root_.sttp.tapir.RawBodyType.StringBody(_root_.java.nio.charset.StandardCharsets.UTF_8)",
+            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.java.lang.String], $codecType, _root_.sttp.tapir.CodecFormat.TextPlain]]"
           ),
         () =>
           (
-            q"sttp.tapir.RawBodyType.StringBody(java.nio.charset.StandardCharsets.UTF_8)",
-            q"implicitly[sttp.tapir.Codec[List[String], $codecType, _ <: sttp.tapir.CodecFormat]]"
+            q"_root_.sttp.tapir.RawBodyType.StringBody(_root_.java.nio.charset.StandardCharsets.UTF_8)",
+            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.java.lang.String], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
           ),
         () =>
           (
-            q"sttp.tapir.RawBodyType.ByteArrayBody",
-            q"implicitly[sttp.tapir.Codec[List[Array[Byte]], $codecType, _ <: sttp.tapir.CodecFormat]]"
+            q"_root_.sttp.tapir.RawBodyType.ByteArrayBody",
+            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.scala.Array[_root_.scala.Byte]], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
           ),
         () =>
           (
-            q"sttp.tapir.RawBodyType.InputStreamBody",
-            q"implicitly[sttp.tapir.Codec[List[java.io.InputStream], $codecType, _ <: sttp.tapir.CodecFormat]]"
+            q"_root_.sttp.tapir.RawBodyType.InputStreamBody",
+            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.java.io.InputStream], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
           ),
         () =>
           (
-            q"sttp.tapir.RawBodyType.ByteBufferBody",
-            q"implicitly[sttp.tapir.Codec[List[java.nio.ByteBuffer], $codecType, _ <: sttp.tapir.CodecFormat]]"
+            q"_root_.sttp.tapir.RawBodyType.ByteBufferBody",
+            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.java.nio.ByteBuffer], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
           ),
         () =>
-          (q"sttp.tapir.RawBodyType.FileBody", q"implicitly[sttp.tapir.Codec[List[java.io.File], $codecType, _ <: sttp.tapir.CodecFormat]]")
+          (
+            q"_root_.sttp.tapir.RawBodyType.FileBody",
+            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.java.io.File], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
+          ),
+        () =>
+          (
+            q"_root_.sttp.tapir.RawBodyType.FileBody",
+            q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[_root_.scala.List[_root_.org.scalajs.dom.raw.File], $codecType, _ <: _root_.sttp.tapir.CodecFormat]]"
+          )
       )
 
       val codec = firstNotEmpty(codecsToCheck)
@@ -77,18 +85,19 @@ object MultipartCodecDerivation {
       (field, codec)
     }
 
+    val encodedNameType = c.weakTypeOf[encodedName]
     val partCodecPairs = fieldsWithCodecs.map { case (field, (bodyType, codec)) =>
       val fieldName = field.name.decodedName.toString
-      val encodedName = util.getEncodedName(field)
-      q"""$encodedName.getOrElse($conf.toEncodedName($fieldName)) -> sttp.tapir.PartCodec($bodyType, $codec)"""
+      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
+      q"""($encodedName.getOrElse($conf.toEncodedName($fieldName)), _root_.sttp.tapir.PartCodec($bodyType, $codec))"""
     }
 
-    val partCodecs = q"""Map(..$partCodecPairs)"""
+    val partCodecs = q"""_root_.scala.collection.immutable.Map(..$partCodecPairs)"""
 
     val encodeParams: Iterable[Tree] = fields.map { field =>
       val fieldName = field.name.asInstanceOf[TermName]
       val fieldNameAsString = fieldName.decodedName.toString
-      val encodedName = util.getEncodedName(field)
+      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
       val transformedName = q"val transformedName = $encodedName.getOrElse($conf.toEncodedName($fieldNameAsString))"
 
       if (fieldIsPart(field)) {
@@ -96,7 +105,7 @@ object MultipartCodecDerivation {
             o.$fieldName.copy(name = transformedName)"""
       } else {
         val base = q"""$transformedName
-                       sttp.model.Part(transformedName, o.$fieldName)"""
+                       _root_.sttp.model.Part(transformedName, o.$fieldName)"""
 
         // if the field is a File/Path, and is not wrapped in a Part, during encoding adding the file's name
         val fieldTypeName = field.typeSignature.typeSymbol.fullName
@@ -104,6 +113,8 @@ object MultipartCodecDerivation {
           q"$base.fileName(o.$fieldName.getName)"
         } else if (fieldTypeName.startsWith("java.io.File")) {
           q"$base.fileName(o.$fieldName.toFile.getName)"
+        } else if (fieldTypeName.startsWith("org.scalajs.dom.raw.File")) {
+          q"$base.fileName(o.$fieldName.name)"
         } else {
           base
         }
@@ -112,7 +123,7 @@ object MultipartCodecDerivation {
 
     val decodeParams = fields.map { field =>
       val fieldName = field.name.decodedName.toString
-      val encodedName = util.getEncodedName(field)
+      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
       if (fieldIsPart(field)) {
         q"""val transformedName = $encodedName.getOrElse($conf.toEncodedName($fieldName))
             partsByName(transformedName)"""
@@ -124,17 +135,16 @@ object MultipartCodecDerivation {
 
     val codecTree = q"""
       {
-        def decode(parts: Seq[sttp.tapir.RawPart]): $t = {
-          val partsByName: Map[String, sttp.tapir.RawPart] = parts.map(p => p.name -> p).toMap
-          val values = List(..$decodeParams)
+        def decode(parts: _root_.scala.Seq[_root_.sttp.tapir.RawPart]): $t = {
+          val partsByName: _root_.scala.collection.immutable.Map[_root_.java.lang.String, _root_.sttp.tapir.RawPart] = parts.map(p => p.name -> p).toMap
+          val values = _root_.scala.List(..$decodeParams)
           ${util.instanceFromValues}
         }
-        def encode(o: $t): Seq[sttp.tapir.RawPart] = List(..$encodeParams)
+        def encode(o: $t): _root_.scala.Seq[_root_.sttp.tapir.RawPart] = _root_.scala.List(..$encodeParams)
 
-        sttp.tapir.Codec.multipartCodec($partCodecs, None)
+        _root_.sttp.tapir.Codec.multipartCodec($partCodecs, _root_.scala.None)
           .map(decode _)(encode _)
           .schema(${util.schema})
-          .validate(implicitly[sttp.tapir.Validator[$t]])
       }
      """
     Debug.logGeneratedCode(c)(t.typeSymbol.fullName, codecTree)

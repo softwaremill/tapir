@@ -13,7 +13,7 @@ More power is given to `ServerEndpoint`. There are now three variants of the cla
 
 1. where the entire server logic is provided
 2. where the server logic for the entire inputs defined so far is provided
-3. where the server logic for some of the inputs defined so far is provided
+3. where the server logic for some inputs defined so far is provided
 
 In case of 2., the endpoint can be extended with further inputs/outputs, and further logic fragments (again for
 the entire input defined so far) can be given.

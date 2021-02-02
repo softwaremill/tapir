@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import sttp.tapir.generic.SealedTrait
-import sttp.tapir.generic.internal.{ValidatorEnumMacro, ValidatorMagnoliaDerivation}
+import sttp.tapir.generic.internal.ValidatorEnumMacro
 
 import scala.collection.immutable
 
@@ -20,7 +20,7 @@ sealed trait Validator[T] {
   def show: Option[String] = Validator.show(this)
 }
 
-object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
+object Validator extends ValidatorEnumMacro {
   type EncodeToRaw[T] = T => Option[scala.Any]
 
   private val _pass: Validator[Nothing] = all()
@@ -58,6 +58,10 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     *               This will be automatically inferred if the validator is directly added to a codec.
     */
   def enum[T](possibleValues: List[T], encode: EncodeToRaw[T]): Validator.Enum[T] = Enum(possibleValues, Some(encode))
+
+  def openProduct[V](elemValidator: Validator[V]): Validator[Map[String, V]] =
+    if (elemValidator == pass) pass else OpenProduct(elemValidator)
+
   //
 
   sealed trait Single[T] extends Validator[T]
@@ -196,6 +200,7 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
     override def contramap[TT](g: TT => T): Validator[TT] = if (validators.isEmpty) All(Nil) else super.contramap(g)
     override def and(other: Validator[T]): Validator[T] = if (validators.isEmpty) other else All(validators :+ other)
 
+    override def asOptionElement: Validator[Option[T]] = if (validators.isEmpty) All(Nil) else super.asOptionElement
     override def asArrayElements: Validator[Array[T]] = if (validators.isEmpty) All(Nil) else super.asArrayElements
     override def asIterableElements[C[X] <: Iterable[X]]: Validator[C[T]] =
       if (validators.isEmpty) All(Nil) else super.asIterableElements[C]
@@ -216,59 +221,68 @@ object Validator extends ValidatorMagnoliaDerivation with ValidatorEnumMacro {
 
   //
 
-  def show[T](v: Validator[T], visited: Set[Validator[_]] = Set.empty): Option[String] = {
-    def recurse[U](vv: Validator[U]) = show(vv, visited + v)
-    if (visited.contains(v)) Some("recursive")
-    else {
-      v match {
-        case Min(value, exclusive)     => Some(s"${if (exclusive) ">" else ">="}$value")
-        case Max(value, exclusive)     => Some(s"${if (exclusive) "<" else "<="}$value")
-        case Pattern(value)            => Some(s"~$value")
-        case MinLength(value)          => Some(s"length>=$value")
-        case MaxLength(value)          => Some(s"length<=$value")
-        case MinSize(value)            => Some(s"size>=$value")
-        case MaxSize(value)            => Some(s"size<=$value")
-        case Custom(_, showMessage)    => showMessage.orElse(Some("custom"))
-        case Enum(possibleValues, _)   => Some(s"in(${possibleValues.mkString(",")}")
-        case CollectionElements(el, _) => recurse(el).map(se => s"elements($se)")
-        case Product(fields) =>
-          fields.flatMap { case (n, f) =>
-            recurse(f.validator).map(n -> _)
-          }.toList match {
-            case Nil => None
-            case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
-          }
-        case c @ Coproduct(_) =>
-          c.subtypes.flatMap { case (n, v) =>
-            recurse(v).map(n -> _)
-          }.toList match {
-            case Nil => None
-            case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
-          }
-        case OpenProduct(el)    => recurse(el).map(se => s"elements($se)")
-        case Mapped(wrapped, _) => recurse(wrapped)
-        case All(validators) =>
-          validators.flatMap(recurse(_)) match {
-            case immutable.Seq()  => None
-            case immutable.Seq(s) => Some(s)
-            case ss               => Some(s"all(${ss.mkString(",")})")
-          }
-        case Any(validators) =>
-          validators.flatMap(recurse(_)) match {
-            case immutable.Seq()  => Some("reject")
-            case immutable.Seq(s) => Some(s)
-            case ss               => Some(s"any(${ss.mkString(",")})")
-          }
-      }
+  /** A reference to a recursive validator. Should be set once during construction of the validator tree.
+    */
+  case class Ref[T](private var _wrapped: Validator[T]) extends Validator[T] {
+    def set(w: Validator[T]): this.type = {
+      if (_wrapped == null) _wrapped = w else throw new IllegalArgumentException(s"Validator reference is already set to ${_wrapped}!")
+      this
     }
+    def wrapped: Validator[T] = {
+      if (_wrapped == null) throw new IllegalStateException("No recursive validator reference set!")
+      _wrapped
+    }
+    override def validate(t: T): List[ValidationError[_]] = wrapped.validate(t)
+  }
+  object Ref {
+    def apply[T](): Ref[T] = Ref(null)
   }
 
   //
 
-  implicit def optionElement[T: Validator]: Validator[Option[T]] = implicitly[Validator[T]].asOptionElement
-  implicit def arrayElements[T: Validator]: Validator[Array[T]] = implicitly[Validator[T]].asArrayElements
-  implicit def iterableElements[T: Validator, C[X] <: Iterable[X]]: Validator[C[T]] = implicitly[Validator[T]].asIterableElements[C]
-  implicit def openProduct[T: Validator]: Validator[Map[String, T]] = OpenProduct(implicitly[Validator[T]])
+  def show[T](v: Validator[T]): Option[String] = {
+    v match {
+      case Min(value, exclusive)     => Some(s"${if (exclusive) ">" else ">="}$value")
+      case Max(value, exclusive)     => Some(s"${if (exclusive) "<" else "<="}$value")
+      case Pattern(value)            => Some(s"~$value")
+      case MinLength(value)          => Some(s"length>=$value")
+      case MaxLength(value)          => Some(s"length<=$value")
+      case MinSize(value)            => Some(s"size>=$value")
+      case MaxSize(value)            => Some(s"size<=$value")
+      case Custom(_, showMessage)    => showMessage.orElse(Some("custom"))
+      case Enum(possibleValues, _)   => Some(s"in(${possibleValues.mkString(",")}")
+      case CollectionElements(el, _) => show(el).map(se => s"elements($se)")
+      case Product(fields) =>
+        fields.flatMap { case (n, f) =>
+          show(f.validator).map(n -> _)
+        }.toList match {
+          case Nil => None
+          case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
+        }
+      case c @ Coproduct(_) =>
+        c.subtypes.flatMap { case (n, v) =>
+          show(v).map(n -> _)
+        }.toList match {
+          case Nil => None
+          case l   => Some(l.map { case (n, s) => s"$n->($s)" }.mkString(","))
+        }
+      case OpenProduct(el)    => show(el).map(se => s"elements($se)")
+      case Mapped(wrapped, _) => show(wrapped)
+      case All(validators) =>
+        validators.flatMap(show(_)) match {
+          case immutable.Seq()  => None
+          case immutable.Seq(s) => Some(s)
+          case ss               => Some(s"all(${ss.mkString(",")})")
+        }
+      case Any(validators) =>
+        validators.flatMap(show(_)) match {
+          case immutable.Seq()  => Some("reject")
+          case immutable.Seq(s) => Some(s)
+          case ss               => Some(s"any(${ss.mkString(",")})")
+        }
+      case Ref(_) => Some("recursive")
+    }
+  }
 }
 
 sealed trait ValidationError[T] {

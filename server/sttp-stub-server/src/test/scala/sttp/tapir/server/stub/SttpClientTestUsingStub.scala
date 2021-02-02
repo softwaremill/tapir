@@ -45,7 +45,7 @@ class SttpClientTestUsingStub extends AnyFunSuite with Matchers {
             .thenSuccess(o)
       }
       val response: Identity[Response[Either[E, O]]] =
-        endpoint.toSttpRequestUnsafe(uri"http://test.com").apply(inputValue).send(backend)
+        SttpClientInterpreter.toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(inputValue).send(backend)
       verifyResponse(response)
     }
   }

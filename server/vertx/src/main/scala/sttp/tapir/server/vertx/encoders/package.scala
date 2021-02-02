@@ -3,9 +3,8 @@ package sttp.tapir.server.vertx
 import java.io.{ByteArrayInputStream, InputStream}
 
 import io.vertx.core.buffer.Buffer
-import io.vertx.scala.core.Vertx
-
-import scala.concurrent.Future
+import io.vertx.core.Future
+import io.vertx.core.Vertx
 
 package object encoders {
 
@@ -16,8 +15,10 @@ package object encoders {
     */
   private[vertx] def inputStreamToBuffer(is: InputStream, vertx: Vertx): Future[Buffer] = {
     is match {
-      case _: ByteArrayInputStream => Future.successful(inputStreamToBufferUnsafe(is))
-      case _                       => vertx.executeBlocking(() => inputStreamToBufferUnsafe(is))
+      case _: ByteArrayInputStream =>
+        Future.succeededFuture(inputStreamToBufferUnsafe(is))
+      case _ =>
+        vertx.executeBlocking { promise => promise.complete(inputStreamToBufferUnsafe(is)) }
     }
   }
 

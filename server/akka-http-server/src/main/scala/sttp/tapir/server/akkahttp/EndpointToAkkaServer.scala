@@ -13,7 +13,7 @@ import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
+private[akkahttp] class EndpointToAkkaServer(serverOptions: AkkaHttpServerOptions) {
 
   /** Converts the endpoint to a directive that -for matching requests- decodes the input parameters
     * and provides those input parameters and a function. The function can be called to complete the request.

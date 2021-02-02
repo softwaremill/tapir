@@ -21,7 +21,13 @@ object SchemaMapMacro {
     val weakTypeV = weakTypeOf[V]
     val genericTypeParametersM = List(weakTypeV.typeSymbol.name.decodedName.toString) ++ extractTypeArguments(weakTypeV)
     val schemaForMap =
-      q"""sttp.tapir.Schema(sttp.tapir.SchemaType.SOpenProduct(sttp.tapir.SchemaType.SObjectInfo("Map", ${genericTypeParametersM}), ${schemaForV}))"""
+      q"""{
+          val s = $schemaForV
+          val v = _root_.sttp.tapir.Validator.openProduct(s.validator)
+          _root_.sttp.tapir.Schema(
+            _root_.sttp.tapir.SchemaType.SOpenProduct(_root_.sttp.tapir.SchemaType.SObjectInfo("Map", $genericTypeParametersM), s),
+            validator = v)
+         }"""
     Debug.logGeneratedCode(c)(weakTypeV.typeSymbol.fullName, schemaForMap)
     c.Expr[Schema[Map[String, V]]](schemaForMap)
   }

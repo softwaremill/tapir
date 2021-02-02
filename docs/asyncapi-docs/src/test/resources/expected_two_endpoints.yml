@@ -51,14 +51,14 @@ components:
       payload:
         type: integer
       contentType: text/plain
-    Fruit:
-      payload:
-        $ref: '#/components/schemas/Fruit'
-      contentType: application/json
     string:
       payload:
         type: string
       contentType: text/plain
+    Fruit:
+      payload:
+        $ref: '#/components/schemas/Fruit'
+      contentType: application/json
     FruitAmount:
       payload:
         $ref: '#/components/schemas/FruitAmount'

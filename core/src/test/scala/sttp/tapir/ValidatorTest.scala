@@ -2,13 +2,10 @@ package sttp.tapir
 
 import java.util.concurrent.TimeUnit
 
-import com.github.ghik.silencer.silent
-
 import scala.concurrent.duration.Duration
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-@silent("never used")
 class ValidatorTest extends AnyFlatSpec with Matchers {
   it should "validate for min value" in {
     val min = 1
@@ -117,21 +114,21 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
   }
 
   it should "validate option" in {
-    val validator = Validator.optionElement(Validator.min(10))
+    val validator = Validator.min(10).asOptionElement
     validator.validate(None) shouldBe empty
     validator.validate(Some(12)) shouldBe empty
     validator.validate(Some(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
   }
 
   it should "validate iterable" in {
-    val validator = Validator.iterableElements[Int, List](Validator.min(10))
+    val validator = Validator.min(10).asIterableElements[List]
     validator.validate(List.empty[Int]) shouldBe empty
     validator.validate(List(11)) shouldBe empty
     validator.validate(List(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
   }
 
   it should "validate array" in {
-    val validator = Validator.arrayElements[Int](Validator.min(10))
+    val validator = Validator.min(10).asArrayElements
     validator.validate(Array.empty[Int]) shouldBe empty
     validator.validate(Array(11)) shouldBe empty
     validator.validate(Array(5)) shouldBe List(ValidationError.Primitive(Validator.min(10), 5))
@@ -139,9 +136,9 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
 
   it should "validate product" in {
     case class Person(name: String, age: Int)
-    implicit val nameValidator: Validator[String] = Validator.pattern("^[A-Z].*")
-    implicit val ageValidator: Validator[Int] = Validator.min(18)
-    val validator = Validator.validatorForCaseClass[Person]
+    implicit val nameSchema: Schema[String] = Schema.schemaForString.validate(Validator.pattern("^[A-Z].*"))
+    implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(18))
+    val validator = Schema.derived[Person].validator
     validator.validate(Person("notImportantButOld", 21)).map(noPath(_)) shouldBe List(
       ValidationError.Primitive(Validator.pattern("^[A-Z].*"), "notImportantButOld")
     )
@@ -231,9 +228,55 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     Duration(summaryTime, TimeUnit.NANOSECONDS).toSeconds should be <= 1L
   }
 
+  it should "validate recursive values" in {
+    import sttp.tapir.generic.auto._
+    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
+    val v: Validator[RecursiveName] = implicitly[Schema[RecursiveName]].validator
+
+    v.validate(RecursiveName("x", None)) shouldBe Nil
+    v.validate(RecursiveName("", None)) shouldBe List(ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("name"))))
+    v.validate(RecursiveName("x", Some(Vector(RecursiveName("x", None))))) shouldBe Nil
+    v.validate(RecursiveName("x", Some(Vector(RecursiveName("", None))))) shouldBe List(
+      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("name")))
+    )
+    v.validate(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("x", None)))))))) shouldBe Nil
+    v.validate(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("", None)))))))) shouldBe List(
+      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("subNames"), FieldName("name")))
+    )
+  }
+
   it should "show recursive validators" in {
-    val v: Validator[RecursiveName] = implicitly[Validator[RecursiveName]]
-    v.show shouldBe Some("subNames->(elements(elements(recursive)))")
+    import sttp.tapir.generic.auto._
+    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
+    val v: Validator[RecursiveName] = implicitly[Schema[RecursiveName]].validator
+    v.show shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
+  }
+
+  // #946: derivation of validator twice in the same derivation
+  it should "validate recursive values with two-level hierarchy" in {
+    import sttp.tapir.generic.auto._
+    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
+    val v: Validator[Animal] = implicitly[Schema[Animal]].validator
+
+    v.validate(Dog("reksio1", Nil)) shouldBe Nil
+    v.validate(Dog("", Nil)) should have length 1
+    v.validate(Dog("reksio1", List(Dog("reksio2", Nil)))) shouldBe Nil
+    v.validate(Dog("reksio1", List(Dog("", Nil)))) should have length 1
+    v.validate(Dog("reksio1", List(Dog("reksio2", List(Dog("reksio3", Nil)))))) shouldBe Nil
+    v.validate(Dog("reksio1", List(Dog("reksio2", List(Dog("", Nil)))))) should have length 1
+
+    v.validate(Cat("tom1", Nil)) shouldBe Nil
+    v.validate(Cat("", Nil)) should have length 1
+    v.validate(Cat("tom1", List(Cat("tom2", Nil)))) shouldBe Nil
+    v.validate(Cat("tom1", List(Cat("", Nil)))) should have length 1
+    v.validate(Cat("tom1", List(Cat("tom2", List(Cat("tom3", Nil)))))) shouldBe Nil
+    v.validate(Cat("tom1", List(Cat("tom2", List(Cat("", Nil)))))) should have length 1
+
+    v.validate(Dog("reksio1", List(Dog("reksio2", List(Cat("tom3", Nil)))))) shouldBe Nil
+    v.validate(Dog("reksio1", List(Dog("reksio2", List(Cat("", Nil)))))) should have length 1
+
+    v.validate(Cat("tom1", List(Cat("tom2", List(Dog("reksio3", Nil)))))) shouldBe Nil
+    v.validate(Cat("tom1", List(Cat("tom2", List(Dog("", Nil)))))) should have length 1
   }
 
   private def noPath[T](v: ValidationError[T]): ValidationError[T] =
@@ -248,3 +291,8 @@ case object Blue extends Color
 case object Red extends Color
 
 final case class RecursiveName(name: String, subNames: Option[Vector[RecursiveName]])
+
+sealed trait Animal
+sealed trait Pet extends Animal {}
+case class Dog(name: String, friends: List[Pet]) extends Pet
+case class Cat(name: String, friends: List[Pet]) extends Pet

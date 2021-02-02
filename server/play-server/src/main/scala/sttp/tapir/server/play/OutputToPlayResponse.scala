@@ -11,14 +11,12 @@ import akka.util.ByteString
 import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
-import sttp.capabilities
-import sttp.capabilities.Streams
 import sttp.model.{MediaType, Part, StatusCode}
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
-object OutputToPlayResponse {
+private[play] object OutputToPlayResponse {
   def apply[O](
       defaultStatus: StatusCode,
       output: EndpointOutput[O],
@@ -37,11 +35,10 @@ object OutputToPlayResponse {
     val status = outputValues.statusCode.getOrElse(defaultStatus)
 
     outputValues.body match {
-      case Some(Left(entity)) =>
-        val result = Result(ResponseHeader(status.code, headers), entity)
+      case Some(entity) =>
+        val result = Result(ResponseHeader(status.code, headers), entity.merge)
         headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
-      case Some(Right(v)) => v // impossible
-      case None           => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
+      case None => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
     }
   }
 
@@ -51,7 +48,7 @@ object OutputToPlayResponse {
       override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity =
         rawValueToResponseEntity(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format), v)
       override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): HttpEntity =
-        HttpEntity.Streamed(v, None, formatToContentType(format))
+        v
       override def webSocketPipeToBody[REQ, RESP](
           pipe: Nothing,
           o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]

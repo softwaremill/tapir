@@ -14,7 +14,7 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 
-class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
+private[http4s] class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
   def toHttp[I, E, O, G[_]: Sync](t: F ~> G, se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G]): Http[OptionT[G, *], F] = {
@@ -78,7 +78,7 @@ class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Timer](serverOption
       input: EndpointInput[_],
       failure: DecodeResult.Failure
   ): F[Option[Response[F]]] = {
-    val decodeFailureCtx = DecodeFailureContext(input, failure)
+    val decodeFailureCtx = DecodeFailureContext(input, failure, e)
     val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
     handling match {
       case DecodeFailureHandling.NoMatch =>

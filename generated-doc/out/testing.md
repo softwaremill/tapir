@@ -12,7 +12,7 @@ details on how the stub works).
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.17.0-M5"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.17.8"
 ```
 
 And the following imports:
@@ -26,6 +26,7 @@ Given the following endpoint:
 
 ```scala
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 

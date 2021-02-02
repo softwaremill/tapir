@@ -4,18 +4,18 @@ import java.util.concurrent.atomic.AtomicReference
 
 import cats.effect._
 import cats.syntax.all._
-import com.github.ghik.silencer.silent
 import io.circe.generic.auto._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.tapir._
-import sttp.tapir.docs.openapi._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
 import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.server.http4s._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.tapir.swagger.http4s.SwaggerHttp4s
 
 import scala.concurrent.ExecutionContext
@@ -55,13 +55,13 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
     )
   )
 
-  val booksListingRoutes: HttpRoutes[IO] = booksListing.toRoutes(_ => IO(books.get().asRight[Unit]))
-  @silent("discarded")
-  val addBookRoutes: HttpRoutes[IO] = addBook.toRoutes(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
+  val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
+  val addBookRoutes: HttpRoutes[IO] =
+    Http4sServerInterpreter.toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes
 
   // generating the documentation in yml; extension methods come from imported packages
-  val openApiDocs: OpenAPI = List(booksListing, addBook).toOpenAPI("The tapir library", "1.0.0")
+  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter.toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
   val openApiYml: String = openApiDocs.toYaml
 
   // starting the server

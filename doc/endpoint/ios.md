@@ -19,7 +19,8 @@ For inputs, these are:
 * `queryParams` captures all query parameters, represented as `QueryParams`
 * `cookie[T](name)` captures a cookie from the `Cookie` header with the given name
 * `extractFromRequest` extracts a value from the request. This input is only used by server interpreters, ignored
-  by documentation interpreters. Client interpreters ignore the provided value.
+  by documentation interpreters. Client interpreters ignore the provided value. It can also be used to access the
+  original request through the `underlying: Any` field.
 
 For both inputs/outputs:
 
@@ -50,6 +51,7 @@ parameters, `start` (mandatory) and `limit` (optional) can be written down as:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 import java.util.UUID
@@ -71,6 +73,7 @@ base endpoint for our API, where all paths always start with `/api/v1.0`, and er
 
 ```scala mdoc:silent
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
@@ -127,6 +130,71 @@ val paging: EndpointInput[Paging] =
 
 Mapping methods can also be called on an endpoint (which is useful if inputs/outputs are accumulated, for example).
 The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the ones above.
+
+## Describing input/output values using annotations
+
+Inputs and outputs can also be built for case classes using annotations. For example, for the case class `User`
+```scala mdoc:silent:reset
+import sttp.tapir.annotations._
+
+case class User(
+  @query
+  name: String,
+  @cookie
+  sessionId: Long
+)
+```
+endpoint input can be generated using macro `sttp.tapir.annotations.deriveEndpointInput[User]` which is equivalent to
+```scala mdoc:silent:nest
+import sttp.tapir._
+
+val userInput: EndpointInput[User] =
+  query[String]("user").and(cookie[Long]("sessionId")).mapTo(User)
+```
+
+Following annotations are available in package `sttp.tapir.annotations` for describing both input and output values:
+* `@header` captures a header with the same name as name of annotated field in a case class. This annotation
+can also be used with optional parameter `@header("headerName")` in order to capture a header with name `"headerName"`
+if a name of header is different from name of annotated field in a case class
+* `@headers` captures all headers. Can only be applied to fields represented as `List[Header]`
+* `@cookies` captures all cookies. Can only be applied to fields represented as `List[Cookie]`
+* `@jsonbody` captures JSON body of request or response. Can only be applied to field if there is implicit JSON `Codec`
+instance from `String` to target type
+* `@xmlbody` captures XML body of request or response. Also requires implicit XML `Codec` instance from `String` to
+target type
+
+Following annotations are only available for describing input values:
+* `@query` captures a query parameter with the same name as name of annotated field in a case class. The same as
+annotation `@header` it has optional parameter to specify alternative name for query parameter
+* `@params` captures all query parameters. Can only be applied to fields represented as `QueryParams`
+* `@cookie` captures a cookie with the same name as name of annotated field in a case class. The same as annotation
+`@header` it has optional parameter to specify alternative name for cookie
+* `@path` captures a path segment. Can only be applied to field of a case class if this case class is annotated
+by annotation `@endpointInput`. For example,
+```scala mdoc:silent:reset
+import sttp.tapir.annotations._
+
+@endpointInput("books/{year}/{genre}")
+case class Book(
+  @path
+  genre: String,
+  @path
+  year: Int,
+  @query
+  name: String
+)
+```
+Annotation `@endpointInput` specifies endpoint path. In order to capture one segment of this path it must be surrounded
+in curly braces
+* `@apikey` wraps any other input and designates it as an API key. Can only be used with another annotations
+* `@basic` extracts data from the `Authorization` header. Can only be applied for field represented as `UsernamePassword`
+* `@bearer` extracts data from the `Authorization` header removing the `Bearer` prefix.
+
+Following annotations are only available for describing output values:
+* `@setCookie` sends value in header `Set-Cookie`. The same as annotation `@header` it has optional parameter to specify
+alternative name for cookie. Can only be applied for field represented as `CookieValueWithMeta`
+* `@setCookies` sends several `Set-Cookie` headers. Can only be applied for field represented as `List[Cookie]`
+* `@statusCode` sets status code for response. Can only be applied for field represented as `StatusCode`
 
 ## Path matching
 

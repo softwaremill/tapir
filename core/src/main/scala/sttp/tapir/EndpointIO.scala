@@ -1,11 +1,10 @@
 package sttp.tapir
 
 import java.nio.charset.Charset
-
 import sttp.capabilities.Streams
-import sttp.model.Method
+import sttp.model.{Header, Method}
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.EndpointIO.Info
+import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
@@ -41,8 +40,6 @@ sealed trait EndpointTransput[T] {
 }
 
 object EndpointTransput {
-  import EndpointIO.{Example, Info}
-
   sealed trait Basic[T] extends EndpointTransput[T] {
     private[tapir] type L
     private[tapir] type CF <: CodecFormat
@@ -92,8 +89,6 @@ sealed trait EndpointInput[T] extends EndpointTransput[T] {
 }
 
 object EndpointInput {
-  import EndpointIO.Info
-
   sealed trait Single[T] extends EndpointInput[T] {
     private[tapir] type ThisType[X] <: EndpointInput.Single[X]
   }
@@ -170,33 +165,57 @@ object EndpointInput {
 
   //
 
+  case class WWWAuthenticate(values: List[String]) {
+    def headers: List[Header] = values.map(Header("WWW-Authenticate", _))
+  }
+
+  object WWWAuthenticate {
+    val DefaultRealm = "default realm"
+    def basic(realm: String = DefaultRealm): WWWAuthenticate = single("Basic", realm)
+    def bearer(realm: String = DefaultRealm): WWWAuthenticate = single("Bearer", realm)
+    def apiKey(realm: String = DefaultRealm): WWWAuthenticate = single("ApiKey", realm)
+    def single(scheme: String, realm: String = DefaultRealm): WWWAuthenticate = WWWAuthenticate(List(s"""$scheme realm="$realm""""))
+  }
+
   trait Auth[T] extends EndpointInput.Single[T] {
     def input: EndpointInput.Single[T]
+    def challenge: WWWAuthenticate
+    def securitySchemeName: Option[String]
+    def securitySchemeName(name: String): ThisType[T]
   }
 
   object Auth {
-    case class ApiKey[T](input: EndpointInput.Single[T]) extends Auth[T] {
+    case class ApiKey[T](input: EndpointInput.Single[T], challenge: WWWAuthenticate, securitySchemeName: Option[String]) extends Auth[T] {
       override private[tapir] type ThisType[X] = ApiKey[X]
       override def show: String = s"auth(api key, via ${input.show})"
       override def map[U](mapping: Mapping[T, U]): ApiKey[U] = copy(input = input.map(mapping))
+
+      override def securitySchemeName(name: String): ApiKey[T] = copy(securitySchemeName = Some(name))
     }
-    case class Http[T](scheme: String, input: EndpointInput.Single[T]) extends Auth[T] {
+    case class Http[T](scheme: String, input: EndpointInput.Single[T], challenge: WWWAuthenticate, securitySchemeName: Option[String])
+        extends Auth[T] {
       override private[tapir] type ThisType[X] = Http[X]
       override def show: String = s"auth($scheme http, via ${input.show})"
       override def map[U](mapping: Mapping[T, U]): Http[U] = copy(input = input.map(mapping))
+
+      override def securitySchemeName(name: String): Http[T] = copy(securitySchemeName = Some(name))
     }
     case class Oauth2[T](
         authorizationUrl: String,
         tokenUrl: String,
         scopes: ListMap[String, String],
         refreshUrl: Option[String] = None,
-        input: EndpointInput.Single[T]
+        input: EndpointInput.Single[T],
+        challenge: WWWAuthenticate,
+        securitySchemeName: Option[String]
     ) extends Auth[T] {
       override private[tapir] type ThisType[X] = Oauth2[X]
       override def show: String = s"auth(oauth2, via ${input.show})"
       override def map[U](mapping: Mapping[T, U]): Oauth2[U] = copy(input = input.map(mapping))
 
       def requiredScopes(requiredScopes: Seq[String]): ScopedOauth2[T] = ScopedOauth2(this, requiredScopes)
+
+      override def securitySchemeName(name: String): Oauth2[T] = copy(securitySchemeName = Some(name))
     }
 
     case class ScopedOauth2[T](oauth2: Oauth2[T], requiredScopes: Seq[String]) extends Auth[T] {
@@ -207,6 +226,11 @@ object EndpointInput {
       override def map[U](mapping: Mapping[T, U]): ScopedOauth2[U] = copy(oauth2 = oauth2.map(mapping))
 
       override def input: Single[T] = oauth2.input
+
+      override def challenge: WWWAuthenticate = oauth2.challenge
+      override def securitySchemeName: Option[String] = oauth2.securitySchemeName
+
+      override def securitySchemeName(name: String): ScopedOauth2[T] = copy(oauth2 = oauth2.securitySchemeName(name))
     }
   }
 
@@ -508,6 +532,8 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
     responses: Codec[WebSocketFrame, RESP, CodecFormat],
     codec: Codec[PIPE_REQ_RESP, T, CodecFormat],
     info: Info[T],
+    requestsInfo: Info[REQ],
+    responsesInfo: Info[RESP],
     concatenateFragmentedFrames: Boolean,
     ignorePong: Boolean,
     autoPongOnPing: Boolean,
@@ -529,6 +555,15 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
   def responsesSchema(s: Schema[RESP]): ThisType[T] = copy(responses = responses.schema(s))
   def responsesSchema(s: Option[Schema[RESP]]): ThisType[T] = copy(responses = responses.schema(s))
   def modifyResponsesSchema(modify: Schema[RESP] => Schema[RESP]): ThisType[T] = copy(responses = responses.modifySchema(modify))
+
+  def requestsDescription(d: String): ThisType[T] = copy(requestsInfo = requestsInfo.description(d))
+  def requestsExample(e: REQ): ThisType[T] = copy(requestsInfo = requestsInfo.example(e))
+  def requestsExamples(examples: List[REQ]): ThisType[T] = copy(requestsInfo = requestsInfo.examples(examples.map(Example(_, None, None))))
+
+  def responsesDescription(d: String): ThisType[T] = copy(responsesInfo = responsesInfo.description(d))
+  def responsesExample(e: RESP): ThisType[T] = copy(responsesInfo = responsesInfo.example(e))
+  def responsesExamples(examples: List[RESP]): ThisType[T] =
+    copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None))))
 
   /** @param c If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses`
     *          codecs decode will always have `finalFragment` set to `true`.

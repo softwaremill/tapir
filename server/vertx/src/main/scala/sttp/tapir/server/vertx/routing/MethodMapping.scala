@@ -1,7 +1,7 @@
 package sttp.tapir.server.vertx.routing
 
 import io.vertx.core.http.HttpMethod
-import io.vertx.scala.core.http.HttpServerRequest
+import io.vertx.core.http.HttpServerRequest
 import sttp.model.Method
 
 /** Utility object to convert HTTP methods between Vert.x and Tapir
@@ -24,6 +24,6 @@ private[vertx] object MethodMapping {
     method.flatMap(conversions.get)
 
   def vertxToSttp(request: HttpServerRequest): Method =
-    Method(request.rawMethod.toUpperCase)
+    Method.unsafeApply(request.method.name.toUpperCase)
 
 }

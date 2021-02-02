@@ -10,7 +10,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.client3._
 import sttp.tapir._
-import sttp.tapir.server.http4s._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import fs2._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.HeaderNames
@@ -26,7 +26,7 @@ object StreamingHttp4sFs2Server extends App {
   val streamingEndpoint = endpoint.get
     .in("receive")
     .out(header[Long](HeaderNames.ContentLength))
-    .out(streamBody(Fs2Streams[IO], schemaFor[String], CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
+    .out(streamBody(Fs2Streams[IO])(Schema.string, CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8)))
 
   // mandatory implicits
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
@@ -34,7 +34,7 @@ object StreamingHttp4sFs2Server extends App {
   implicit val timer: Timer[IO] = IO.timer(ec)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val streamingRoutes: HttpRoutes[IO] = streamingEndpoint.toRoutes { _ =>
+  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(streamingEndpoint) { _ =>
     val size = 100L
     Stream
       .emit(List[Char]('a', 'b', 'c', 'd'))

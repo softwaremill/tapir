@@ -12,8 +12,15 @@ import sttp.client3._
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
-import sttp.tapir.server.tests.{ServerBasicTests, ServerStreamingTests, ServerTests, ServerWebSocketTests, backendResource}
-import sttp.tapir.tests.{PortCounter, Test, TestSuite}
+import sttp.tapir.server.tests.{
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerStreamingTests,
+  ServerTests,
+  ServerWebSocketTests,
+  backendResource
+}
+import sttp.tapir.tests.{Test, TestSuite}
 
 class AkkaHttpServerTests extends TestSuite {
 
@@ -23,17 +30,16 @@ class AkkaHttpServerTests extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     actorSystemResource.map { implicit actorSystem =>
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
-      val interpreter = new AkkaServerInterpreter()(actorSystem)
+      val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
       val serverTests = new ServerTests(interpreter)
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val port = PortCounter.next()
-          val route = Directives.pathPrefix("api")(e.toRoute)
+          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter.toRoute(e))
           interpreter
-            .server(NonEmptyList.of(route), port)
-            .use { _ =>
+            .server(NonEmptyList.of(route))
+            .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
             }
             .unsafeRunSync()
@@ -45,6 +51,7 @@ class AkkaHttpServerTests extends TestSuite {
         new ServerWebSocketTests(backend, serverTests, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
+        new ServerAuthenticationTests(backend, serverTests).tests() ++
         additionalTests()
     }
   }

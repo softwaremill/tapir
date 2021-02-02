@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Route
 import sttp.client3._
+import sttp.tapir.generic.auto._
 import sttp.tapir._
 import sttp.tapir.server.akkahttp._
 import sttp.tapir.json.circe._
@@ -23,7 +24,7 @@ object ErrorOutputsAkkaServer extends App {
       .errorOut(stringBody)
 
   // converting an endpoint to a route
-  val errorOrJsonRoute: Route = errorOrJson.toRoute {
+  val errorOrJsonRoute: Route = AkkaHttpServerInterpreter.toRoute(errorOrJson) {
     case x if x < 0 => Future.successful(Left("Invalid parameter, smaller than 0!"))
     case x          => Future.successful(Right(Result(x * 2)))
   }

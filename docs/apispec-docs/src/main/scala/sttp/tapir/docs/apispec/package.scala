@@ -22,11 +22,11 @@ package object apispec {
 
   private[docs] def exampleValue[T](v: String): ExampleValue = ExampleSingleValue(v)
   private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = {
-    (codec.encode(e), codec.schema.map(_.schemaType)) match {
-      case (it: Iterable[_], Some(_: SchemaType.SArray)) => Some(ExampleMultipleValue(it.map(rawToString).toList))
-      case (it: Iterable[_], _)                          => it.headOption.map(v => ExampleSingleValue(rawToString(v)))
-      case (it: Option[_], _)                            => it.map(v => ExampleSingleValue(rawToString(v)))
-      case (v, _)                                        => Some(ExampleSingleValue(rawToString(v)))
+    (codec.encode(e), codec.schema.schemaType) match {
+      case (it: Iterable[_], _: SchemaType.SArray) => Some(ExampleMultipleValue(it.map(rawToString).toList))
+      case (it: Iterable[_], _)                    => it.headOption.map(v => ExampleSingleValue(rawToString(v)))
+      case (it: Option[_], _)                      => it.map(v => ExampleSingleValue(rawToString(v)))
+      case (v, _)                                  => Some(ExampleSingleValue(rawToString(v)))
     }
   }
 

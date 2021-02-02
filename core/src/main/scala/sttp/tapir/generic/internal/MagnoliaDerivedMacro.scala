@@ -8,6 +8,6 @@ object MagnoliaDerivedMacro {
 
   def derivedGen[T: c.WeakTypeTag](c: whitebox.Context): c.Expr[Derived[T]] = {
     import c.universe._
-    c.Expr[Derived[T]](q"sttp.tapir.generic.Derived(${Magnolia.gen[T](c)(implicitly[c.WeakTypeTag[T]])})")
+    c.Expr[Derived[T]](q"_root_.sttp.tapir.generic.Derived(${Magnolia.gen[T](c)(implicitly[c.WeakTypeTag[T]])})")
   }
 }

@@ -9,14 +9,15 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
+import sttp.tapir.generic.auto._
 import sttp.client3._
 import sttp.client3.asynchttpclient.fs2.AsyncHttpClientFs2Backend
 import sttp.tapir._
-import sttp.tapir.docs.asyncapi._
+import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.http4s._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.ws.WebSocket
 
 import scala.concurrent.ExecutionContext
@@ -66,10 +67,10 @@ object WebSocketHttp4sServer extends App {
   }
 
   // Implementing the endpoint's logic, by providing the web socket pipe
-  val wsRoutes: HttpRoutes[IO] = wsEndpoint.toRoutes(_ => IO.pure(Right(countBytes)))
+  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
 
   // Documentation
-  val apiDocs = wsEndpoint.toAsyncAPI("Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
+  val apiDocs = AsyncAPIInterpreter.toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
   println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
   // Starting the server

@@ -1,6 +1,6 @@
 package sttp.tapir.server.internal
 
-import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny}
+import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichVector}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, Mapping}
 
 sealed trait InputValuesResult
@@ -25,9 +25,9 @@ object InputValues {
       case EndpointIO.MappedPair(wrapped, codec)       => handleMappedPair(wrapped, codec, remainingBasicValues)
       case auth: EndpointInput.Auth[_]                 => apply(auth.input, remainingBasicValues)
       case _: EndpointInput.Basic[_] =>
-        remainingBasicValues match {
-          case v +: valuesTail => InputValuesResult.Value(ParamsAsAny(v), valuesTail)
-          case Vector() =>
+        remainingBasicValues.headAndTail match {
+          case Some((v, valuesTail)) => InputValuesResult.Value(ParamsAsAny(v), valuesTail)
+          case None =>
             throw new IllegalStateException(s"Mismatch between basic input values: $remainingBasicValues, and basic inputs in: $input")
         }
     }

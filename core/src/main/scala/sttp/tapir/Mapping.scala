@@ -86,13 +86,14 @@ object Mapping {
       override def validator: Validator[H] = Validator.pass
     }
 
-  /** A mapping which, during encoding, adds the given `prefix`. When decoding, the prefix is removed (if present),
-    * otherwise an error is reported.
+  /** A mapping which, during encoding, adds the given `prefix`. When decoding, the prefix is removed (case
+    * insensitive,if present), otherwise an error is reported.
     */
-  def stringPrefix(prefix: String): Mapping[String, String] = {
+  def stringPrefixCaseInsensitive(prefix: String): Mapping[String, String] = {
     val prefixLength = prefix.length
+    val prefixLower = prefix.toLowerCase
     def removePrefix(v: String): DecodeResult[String] =
-      if (v.startsWith(prefix)) DecodeResult.Value(v.substring(prefixLength))
+      if (v.toLowerCase.startsWith(prefixLower)) DecodeResult.Value(v.substring(prefixLength))
       else DecodeResult.Error(v, new IllegalArgumentException(s"The given value doesn't start with $prefix"))
     Mapping.fromDecode(removePrefix)(v => s"$prefix$v")
   }

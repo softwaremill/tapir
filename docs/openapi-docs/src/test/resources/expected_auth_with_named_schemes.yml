@@ -1,0 +1,53 @@
+openapi: 3.0.3
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /secure/bearer:
+    get:
+      operationId: getSecureBearer
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+      security:
+        - secBearer: []
+  /secure/basic:
+    get:
+      operationId: getSecureBasic
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+      security:
+        - secBasic: []
+  /secure/apiKeyHeader:
+    get:
+      operationId: getSecureApikeyheader
+      responses:
+        '200':
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+      security:
+        - secApiKeyHeader: []
+components:
+  securitySchemes:
+    secBearer:
+      type: http
+      scheme: bearer
+    secBasic:
+      type: http
+      scheme: basic
+    secApiKeyHeader:
+      type: apiKey
+      name: apikey
+      in: header

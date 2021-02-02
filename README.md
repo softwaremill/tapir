@@ -1,10 +1,10 @@
 ![tapir, or Typed API descRiptions](https://github.com/softwaremill/tapir/raw/master/banner.png)
 
 [![Join the chat at https://gitter.im/softwaremill/tapir](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/softwaremill/tapir?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-[![Build Status](https://travis-ci.org/softwaremill/tapir.svg?branch=master)](https://travis-ci.org/softwaremill/tapir)
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.12/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.12)
+[![CI](https://github.com/softwaremill/tapir/workflows/CI/badge.svg)](https://github.com/softwaremill/tapir/actions?query=workflow%3A%22CI%22)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13/badge.svg)](https://maven-badges.herokuapp.com/maven-central/com.softwaremill.sttp.tapir/tapir-core_2.13)
 
-With tapir you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
+With tapir, you can describe HTTP API endpoints as immutable Scala values. Each endpoint can contain a number of 
 input parameters, error-output parameters, and normal-output parameters. An endpoint specification can be 
 interpreted as:
 
@@ -14,15 +14,19 @@ interpreted as:
   * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
-* a client, which is a function from input parameters to output parameters. Currently supported: [sttp](https://tapir.softwaremill.com/en/latest/sttp.html).
+* a client, which is a function from input parameters to output parameters.
+  Currently supported:
+  * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html).
+  * [Play](https://tapir.softwaremill.com/en/latest/client/play.html).
 * documentation. Currently supported: 
   * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
 
 ## Teaser
 
-```scala
+```scala mdoc:compile-only
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 
@@ -34,7 +38,7 @@ case class Book(title: String)
 
 // Define an endpoint
 
-val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Nothing] =
+val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
     .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
@@ -46,16 +50,16 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 
 // Generate OpenAPI documentation
 
-import sttp.tapir.docs.openapi._
+import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.openapi.circe.yaml._
 
-val docs = booksListing.toOpenAPI("My Bookshop", "1.0")
+val docs = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 
 // Convert to akka-http Route
 
-import sttp.tapir.server.akkahttp._
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import akka.http.scaladsl.server.Route
 import scala.concurrent.Future
 
@@ -63,16 +67,17 @@ def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-val booksListingRoute: Route = booksListing.toRoute((bookListingLogic _).tupled)
+val booksListingRoute: Route = AkkaHttpServerInterpreter
+  .toRoute(booksListing)((bookListingLogic _).tupled)
 
 
 // Convert to sttp Request
 
-import sttp.tapir.client.sttp._
+import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Nothing] = booksListing
-  .toSttpRequest(uri"http://localhost:8080")
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = SttpClientInterpreter
+  .toRequest(booksListing, Some(uri"http://localhost:8080"))
   .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
 
@@ -85,7 +90,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.0-M5"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.8"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
@@ -129,6 +134,15 @@ See the list of [issues](https://github.com/softwaremill/tapir/issues) and pick 
 If you are having doubts on the *why* or *how* something works, don't hesitate to ask a question on
 [gitter](https://gitter.im/softwaremill/tapir) or via github. This probably means that the documentation, scaladocs or 
 code is unclear and be improved for the benefit of all.
+
+### Testing locally
+
+The JS tests use [Gecko instead of Chrome](https://github.com/scala-js/scala-js-env-selenium/issues/119), although this
+causes another problem: out of memory when running JS tests for multiple modules. Work-arounds:
+
+* run only JVM tests using `testJVM`
+* test single JS projects
+* use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
 
 ## Commercial Support
 

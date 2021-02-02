@@ -13,4 +13,5 @@ class FinatraServerRequest(request: Request) extends ServerRequest {
   override def connectionInfo: ConnectionInfo = ConnectionInfo(None, Some(request.remoteSocketAddress), None)
   override def headers: Seq[(String, String)] = request.headerMap.toList
   override def header(name: String): Option[String] = request.headerMap.get(name)
+  override def underlying: Any = request
 }

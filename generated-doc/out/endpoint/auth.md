@@ -24,6 +24,10 @@ When interpreting a route as a server, it is useful to define the authentication
 authentication logic among multiple endpoints easily. See [server logic](../server/logic.md) for more
 details.
 
+For each `auth` scheme, one can define `WWW-Authenticate` headers that should be returned by the server in case input is not provided. Default behavior is to return `401` status with the headers needed for authentication.
+
+For example if you define `endpoint.get.in("path").in(auth.basic[UsernamePassword]())` then your browser will show you a password prompt.
+
 ## Next
 
 Read on about [streaming support](streaming.md).

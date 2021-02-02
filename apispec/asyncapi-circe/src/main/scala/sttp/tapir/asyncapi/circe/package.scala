@@ -1,6 +1,5 @@
 package sttp.tapir.asyncapi
 
-import com.github.ghik.silencer.silent
 import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
@@ -28,7 +27,6 @@ package object circe extends TapirAsyncAPICirceEncoders
 trait TapirAsyncAPICirceEncoders {
   // note: these are strict val-s, order matters!
 
-  @silent("possible missing interpolator")
   implicit def encoderReferenceOr[T: Encoder]: Encoder[ReferenceOr[T]] = {
     case Left(Reference(ref)) => Json.obj(("$ref", Json.fromString(ref)))
     case Right(t)             => implicitly[Encoder[T]].apply(t)
@@ -38,8 +36,8 @@ trait TapirAsyncAPICirceEncoders {
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveEncoder[OAuthFlows]
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveEncoder[SecurityScheme]
   implicit val encoderExampleValue: Encoder[ExampleValue] = {
-    case ExampleSingleValue(value)    => parse(value).right.getOrElse(Json.fromString(value))
-    case ExampleMultipleValue(values) => Json.arr(values.map(v => parse(v).right.getOrElse(Json.fromString(v))): _*)
+    case ExampleSingleValue(value)    => parse(value).getOrElse(Json.fromString(value))
+    case ExampleMultipleValue(values) => Json.arr(values.map(v => parse(v).getOrElse(Json.fromString(v))): _*)
   }
   implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.encodeEnumeration(SchemaType)
   implicit val encoderSchema: Encoder[Schema] = deriveEncoder[Schema]
@@ -49,7 +47,7 @@ trait TapirAsyncAPICirceEncoders {
   implicit val encoderTag: Encoder[Tag] = deriveEncoder[Tag]
 
   implicit val encoderAnyValue: Encoder[AnyValue] = (av: AnyValue) => {
-    parse(av.value).right.getOrElse(Json.fromString(av.value))
+    parse(av.value).getOrElse(Json.fromString(av.value))
   }
   implicit val encoderCorrelationId: Encoder[CorrelationId] = deriveEncoder[CorrelationId]
   implicit val encoderParameter: Encoder[Parameter] = deriveEncoder[Parameter]

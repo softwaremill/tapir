@@ -9,7 +9,7 @@ import sttp.tapir.{EndpointInput, _}
 
 import scala.collection.immutable.{ListMap, ListSet}
 
-object EndpointToAsyncAPIDocs {
+private[asyncapi] object EndpointToAsyncAPIDocs {
   def toAsyncAPI(
       info: Info,
       servers: Iterable[(String, Server)],
@@ -48,7 +48,7 @@ object EndpointToAsyncAPIDocs {
       case auth                                     => securitySchemes.get(auth).map(_._1).map((_, Vector.empty))
     }.toListMap
 
-    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.exists(_.isOptional))
+    val securityOptional = e.input.auths.flatMap(_.asVectorOfBasicInputs()).forall(_.codec.schema.isOptional)
 
     if (securityRequirement.isEmpty) List.empty
     else {

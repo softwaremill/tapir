@@ -11,6 +11,7 @@ trait ServerRequest {
   def connectionInfo: ConnectionInfo
   def headers: Seq[(String, String)]
   def header(name: String): Option[String]
+  def underlying: Any
 }
 
 case class ConnectionInfo(local: Option[InetSocketAddress], remote: Option[InetSocketAddress], secure: Option[Boolean])

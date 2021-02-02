@@ -14,7 +14,7 @@ import sttp.tapir.internal._
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
+private[play] class PlayRequestToRawBody(serverOptions: PlayServerOptions) {
   def apply[R](bodyType: RawBodyType[R], charset: Option[Charset], request: Request[RawBuffer], body: ByteString)(implicit
       mat: Materializer
   ): Future[R] = {

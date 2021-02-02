@@ -4,16 +4,16 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.17.0-M5"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.17.8"
 ```
 
-and import the package:
+and import the object:
 
 ```scala
-import sttp.tapir.server.http4s._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 ```
 
-This adds two extension methods to the `Endpoint` type: `toRoutes` and `toRoutesRecoverErrors`. This first requires the 
+This objects contains the `toRoutes` and `toRoutesRecoverErrors` methods. This first requires the 
 logic of the endpoint to be given as a function of type:
 
 ```scala
@@ -25,7 +25,7 @@ a subclass of `Throwable` (an exception); it expects a function of type `I => F[
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.http4s._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
 import cats.effect.{ContextShift, Timer}
@@ -42,15 +42,15 @@ def countCharacters(s: String): IO[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: HttpRoutes[IO] = 
-  countCharactersEndpoint.toRoutes(countCharacters _)
+  Http4sServerInterpreter.toRoutes(countCharactersEndpoint)(countCharacters _)
 ```
 
-Note that these functions take one argument, which is a tuple of type `I`. This means that functions which take multiple 
-arguments need to be converted to a function using a single argument using `.tupled`:
+Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
+functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.http4s._
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
 import cats.effect.{ContextShift, Timer}
@@ -63,7 +63,7 @@ implicit val t: Timer[IO] =
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
-val routes: HttpRoutes[IO] = anEndpoint.toRoutes((logic _).tupled)
+val routes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(anEndpoint)((logic _).tupled)
 ```
 
 The created `HttpRoutes` are the usual http4s `Kleisli`-based transformation of a `Request` to a `Response`, and can 
