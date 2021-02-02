@@ -56,7 +56,14 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
     new Codec[L, HH, CF] {
       override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(codec.rawDecode)
       override def encode(hh: HH): L = outer.encode(codec.encode(hh))
-      override def schema: Schema[HH] = outer.schema.contramap(codec.encode).validate(codec.validator)
+      override def schema: Schema[HH] = outer.schema
+        .map(v =>
+          codec.decode(v) match {
+            case _: Failure => None
+            case Value(v)   => Some(v)
+          }
+        )(codec.encode)
+        .validate(codec.validator)
       override def format: CF = outer.format
     }
 

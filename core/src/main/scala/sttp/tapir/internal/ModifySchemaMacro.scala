@@ -13,36 +13,6 @@ object ModifySchemaMacro {
   )(path: c.Expr[T => U])(modification: c.Expr[Schema[U] => Schema[U]]): c.Tree =
     applyModification[T, U](c)(extractPathFromFunctionCall(c)(path), modification)
 
-  def setDescriptionMacro[T: c.WeakTypeTag, U: c.WeakTypeTag](
-      c: blackbox.Context
-  )(path: c.Expr[T => U], description: c.Expr[String]): c.Tree =
-    addDescription[T, U](c)(extractPathFromFunctionCall(c)(path), description)
-
-  def setDefaultMacro[T: c.WeakTypeTag, U: c.WeakTypeTag](
-      c: blackbox.Context
-  )(path: c.Expr[T => U], default: c.Expr[String]): c.Tree =
-    addDefault[T, U](c)(extractPathFromFunctionCall(c)(path), default)
-
-  private def addDescription[T: c.WeakTypeTag, U: c.WeakTypeTag](c: blackbox.Context)(
-      path: c.Expr[List[String]],
-      description: c.Expr[String]
-  ): c.Tree = {
-    import c.universe._
-    q"""{
-      ${c.prefix}.modifyUnsafe($path:_*)((v: _root_.sttp.tapir.Schema[${c.weakTypeOf[T]}]) => v.description($description))
-     }"""
-  }
-
-  private def addDefault[T: c.WeakTypeTag, U: c.WeakTypeTag](c: blackbox.Context)(
-      path: c.Expr[List[String]],
-      default: c.Expr[String]
-  ): c.Tree = {
-    import c.universe._
-    q"""{
-      ${c.prefix}.modifyUnsafe($path:_*)((v: sttp.tapir.Schema[${c.weakTypeOf[T]}]) => v.default($default))
-     }"""
-  }
-
   private def applyModification[T: c.WeakTypeTag, U: c.WeakTypeTag](c: blackbox.Context)(
       path: c.Expr[List[String]],
       modification: c.Expr[Schema[U] => Schema[U]]

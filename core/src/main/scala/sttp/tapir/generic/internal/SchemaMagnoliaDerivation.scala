@@ -51,16 +51,13 @@ trait SchemaMagnoliaDerivation {
   private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
     annotations.foldLeft(schema) {
       case (schema, ann: description) => schema.description(ann.text)
-      case (schema, ann: default)     => schema.default(ann.v)
+      case (schema, ann: default[X])  => schema.default(ann.default)
       case (schema, ann: validate[X]) => schema.validate(ann.v)
       case (schema, ann: format)      => schema.format(ann.format)
       case (schema, _: deprecated)    => schema.deprecated(true)
       case (schema, _)                => schema
     }
   }
-
-  private def isDeprecated(annotations: Seq[Any]): Boolean =
-    annotations.collectFirst { case _: deprecated => true } getOrElse false
 
   def dispatch[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withCache(ctx.typeName, ctx.annotations) {
