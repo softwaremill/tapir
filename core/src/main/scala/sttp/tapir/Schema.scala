@@ -62,7 +62,7 @@ case class Schema[T](
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
-  def default(t: T): Schema[T] = copy(default = Some(t), isOptional = false)
+  def default(t: T): Schema[T] = copy(default = Some(t), isOptional = true)
 
   def format(f: String): Schema[T] = copy(format = Some(f))
 

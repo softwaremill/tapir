@@ -89,6 +89,11 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
     }
 
   override def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(addEncodeToEnumValidator(v)))
+
+  override def decode(l: L): DecodeResult[H] = (super.decode(l), schema.default) match {
+    case (DecodeResult.Missing, Some(d)) => DecodeResult.Value(d)
+    case (r, _)                          => r
+  }
 }
 
 object Codec extends CodecExtensions with FormCodecDerivation {
