@@ -542,6 +542,10 @@ class ServerBasicTests[F[_], ROUTE](
         .send(backend)
         .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("P1" -> "DEFAULT_HEADER", "P2" -> "2"))
     },
+    testServer(in_query_with_default_out_string)(in => pureResult(in.asRight[Unit])) { baseUri =>
+      basicRequest.get(uri"$baseUri?p1=x").send(backend).map(_.body shouldBe Right("x")) >>
+        basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
+    },
     //
     testServer(
       "recover errors from exceptions",

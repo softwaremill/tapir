@@ -293,6 +293,12 @@ package object tests {
       .out(header[String]("P2"))
       .name("mapped to unit")
 
+  val in_query_with_default_out_string: Endpoint[String, Unit, String, Any] =
+    endpoint
+      .in(query[String]("p1").default("DEFAULT"))
+      .out(stringBody)
+      .name("Query with default")
+
   //
 
   object Validation {
