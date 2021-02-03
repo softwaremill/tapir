@@ -63,10 +63,11 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit endpointOptions: VertxFutureEndpointOptions): Router => Route = { router =>
-    implicit val ect: Option[ClassTag[E]] = None
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
-      .handler(endpointHandler(e)(e.logic, responseHandlerWithError(e))(endpointOptions, None))
+  def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit endpointOptions: VertxFutureEndpointOptions): Router => Route = {
+    router =>
+      implicit val ect: Option[ClassTag[E]] = None
+      mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
+        .handler(endpointHandler(e)(e.logic, responseHandlerWithError(e))(endpointOptions, None))
   }
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
@@ -74,11 +75,12 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def blockingRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit endpointOptions: VertxFutureEndpointOptions): Router => Route = {
-    router =>
-      implicit val ect: Option[ClassTag[E]] = None
-      mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
-        .blockingHandler(endpointHandler(e)(e.logic, responseHandlerWithError(e))(endpointOptions, None))
+  def blockingRoute[I, E, O](
+      e: ServerEndpoint[I, E, O, Any, Future]
+  )(implicit endpointOptions: VertxFutureEndpointOptions): Router => Route = { router =>
+    implicit val ect: Option[ClassTag[E]] = None
+    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
+      .blockingHandler(endpointHandler(e)(e.logic, responseHandlerWithError(e))(endpointOptions, None))
   }
 
   private def endpointHandler[I, E, O, A](e: ServerEndpoint[I, E, O, Any, Future])(

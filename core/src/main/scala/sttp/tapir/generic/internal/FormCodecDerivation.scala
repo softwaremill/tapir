@@ -24,7 +24,12 @@ object FormCodecMacros {
     val fields = util.fields
 
     val fieldsWithCodecs = fields.map { field =>
-      (field, c.typecheck(q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[List[String], ${field.typeSignature}, _root_.sttp.tapir.CodecFormat.TextPlain]]"))
+      (
+        field,
+        c.typecheck(
+          q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Codec[List[String], ${field.typeSignature}, _root_.sttp.tapir.CodecFormat.TextPlain]]"
+        )
+      )
     }
 
     val encodedNameType = c.weakTypeOf[encodedName]

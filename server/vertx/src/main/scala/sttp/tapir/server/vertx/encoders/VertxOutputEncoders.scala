@@ -102,8 +102,12 @@ object VertxOutputEncoders {
               _
             )
 
-        override def streamValueToBody(v: streams.BinaryStream, format: CodecFormat, charset: Option[Charset]): RoutingContextHandlerWithLength = {
-          contentLength => StreamEncoders(
+        override def streamValueToBody(
+            v: streams.BinaryStream,
+            format: CodecFormat,
+            charset: Option[Charset]
+        ): RoutingContextHandlerWithLength = { contentLength =>
+          StreamEncoders(
             formatToContentType(format, charset),
             vertxCompatiable.asReadStream(v.asInstanceOf[vertxCompatiable.streams.BinaryStream]),
             contentLength
@@ -152,13 +156,15 @@ object VertxOutputEncoders {
       resp.setChunked(true)
       resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, "multipart/form-data")
 
-      r.asInstanceOf[Seq[Part[_]]].foldLeft(Future.succeededFuture[Void]())({ (acc, part) =>
-        acc.flatMap { _ =>
-          handleBodyPart(multipart, part)(endpointOptions)(rc)
+      r.asInstanceOf[Seq[Part[_]]]
+        .foldLeft(Future.succeededFuture[Void]())({ (acc, part) =>
+          acc.flatMap { _ =>
+            handleBodyPart(multipart, part)(endpointOptions)(rc)
+          }
+        })
+        .flatMap { _ =>
+          resp.end()
         }
-      }).flatMap { _ =>
-        resp.end()
-      }
     }
 
     private def handleBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T])(implicit
@@ -179,7 +185,8 @@ object VertxOutputEncoders {
       val partContentType = part.contentType.getOrElse("application/octet-stream")
       val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
       val dispositionsHeaderParts = dispositionParams.map { case (k, v) => s"""$k="$v"""" }
-      resp.write(s"${HttpHeaders.CONTENT_DISPOSITION}: form-data; ${dispositionsHeaderParts.mkString(", ")}")
+      resp
+        .write(s"${HttpHeaders.CONTENT_DISPOSITION}: form-data; ${dispositionsHeaderParts.mkString(", ")}")
         .flatMap(_ => resp.write("\n"))
         .flatMap(_ => resp.write(s"${HttpHeaders.CONTENT_TYPE}: $partContentType"))
         .flatMap(_ => resp.write("\n\n"))
@@ -190,7 +197,8 @@ object VertxOutputEncoders {
         endpointOptions: VertxEndpointOptions
     ): RoutingContext => Future[Void] = { rc =>
       val resp = rc.response
-      resp.write(s"${HttpHeaders.CONTENT_TYPE}: $contentType")
+      resp
+        .write(s"${HttpHeaders.CONTENT_TYPE}: $contentType")
         .flatMap(_ => resp.write("\n"))
         .flatMap { _ =>
           bodyType match {
@@ -207,7 +215,8 @@ object VertxOutputEncoders {
               rc.vertx.fileSystem
                 .readFile(file.getAbsolutePath)
                 .flatMap { buf =>
-                  resp.write(s"""${HttpHeaders.CONTENT_DISPOSITION.toString}: file; file="${file.getName}"""")
+                  resp
+                    .write(s"""${HttpHeaders.CONTENT_DISPOSITION.toString}: file; file="${file.getName}"""")
                     .flatMap(_ => resp.write("\n"))
                     .flatMap(_ => resp.write(buf))
                     .flatMap(_ => resp.write("\n\n"))

@@ -41,34 +41,38 @@ object fs2 {
         F.toIO(for {
           promise <- Deferred[F, Unit]
           state <- Ref.of(StreamState.empty[F](promise))
-          _ <- stream.chunks.evalMap({ chunk =>
-            val buffer = Buffer.buffer(chunk.toArray)
-            state.get.flatMap {
-              case StreamState(None, handler, _, _) =>
-                F.delay(handler.handle(buffer))
-              case StreamState(Some(promise), handler, _, _) =>
-                promise.get.flatMap { _ =>
+          _ <- stream.chunks
+            .evalMap({ chunk =>
+              val buffer = Buffer.buffer(chunk.toArray)
+              state.get.flatMap {
+                case StreamState(None, handler, _, _) =>
                   F.delay(handler.handle(buffer))
+                case StreamState(Some(promise), handler, _, _) =>
+                  promise.get.flatMap { _ =>
+                    F.delay(handler.handle(buffer))
+                  }
+                case _ =>
+                  F.unit
+              }
+            })
+            .onFinalizeCase({
+              case ExitCase.Completed =>
+                state.get.flatMap { state =>
+                  F.delay(state.endHandler.handle(null))
                 }
-              case _ =>
-                F.unit
-            }
-          }).onFinalizeCase({
-            case ExitCase.Completed =>
-              state.get.flatMap { state =>
-                F.delay(state.endHandler.handle(null))
-              }
-            case ExitCase.Canceled =>
-              state.get.flatMap { state =>
-                F.delay(state.errorHandler.handle(new Exception("Cancelled!")))
-              }
-            case ExitCase.Error(cause) =>
-              state.get.flatMap { state =>
-                F.delay(state.errorHandler.handle(cause))
-              }
-          }).compile.drain.start
+              case ExitCase.Canceled =>
+                state.get.flatMap { state =>
+                  F.delay(state.errorHandler.handle(new Exception("Cancelled!")))
+                }
+              case ExitCase.Error(cause) =>
+                state.get.flatMap { state =>
+                  F.delay(state.errorHandler.handle(cause))
+                }
+            })
+            .compile
+            .drain
+            .start
         } yield new ReadStream[Buffer] { self =>
-
           override def handler(handler: Handler[Buffer]): ReadStream[Buffer] =
             F.toIO(state.update(_.copy(handler = handler)).as(self))
               .unsafeRunSync()
@@ -90,13 +94,15 @@ object fs2 {
                 case cur @ StreamState(None, _, _, _) =>
                   cur.copy(paused = Some(deferred))
               }
-            } yield self).unsafeRunSync()
+            } yield self)
+              .unsafeRunSync()
 
           override def resume(): ReadStream[Buffer] =
             F.toIO(for {
               oldState <- state.getAndUpdate(_.copy(paused = None))
               _ <- oldState.paused.fold(F.unit)(_.complete(()))
-            } yield self).unsafeRunSync()
+            } yield self)
+              .unsafeRunSync()
 
           override def fetch(n: Long): ReadStream[Buffer] =
             self
@@ -118,30 +124,35 @@ object fs2 {
                   buffer.pure[F]
               }
               result <- wrappedBuffer match {
-                case Right(buffer) => Some((buffer, ())).pure[F]
-                case Left(None) => None.pure[F]
+                case Right(buffer)     => Some((buffer, ())).pure[F]
+                case Left(None)        => None.pure[F]
                 case Left(Some(cause)) => ConcurrentEffect[F].raiseError(cause)
               }
             } yield result
           }
 
-          _ <- Stream.unfoldEval[F, Unit, ActivationEvent](())({ _ =>
-            for {
-              dfd <- Deferred[F, WrappedEvent]
-              mbEvent <- stateRef.modify(_.dequeueActivationEvent(dfd))
-              result <- mbEvent match {
-                case Left(deferred) =>
-                  deferred.get
-                case Right(event) =>
-                  event.pure[F]
-              }
-            } yield result.map((_, ()))
-          }).evalMap({
-            case Pause =>
-              ConcurrentEffect[F].delay(readStream.pause())
-            case Resume =>
-              ConcurrentEffect[F].delay(readStream.resume())
-          }).compile.drain.start
+          _ <- Stream
+            .unfoldEval[F, Unit, ActivationEvent](())({ _ =>
+              for {
+                dfd <- Deferred[F, WrappedEvent]
+                mbEvent <- stateRef.modify(_.dequeueActivationEvent(dfd))
+                result <- mbEvent match {
+                  case Left(deferred) =>
+                    deferred.get
+                  case Right(event) =>
+                    event.pure[F]
+                }
+              } yield result.map((_, ()))
+            })
+            .evalMap({
+              case Pause =>
+                ConcurrentEffect[F].delay(readStream.pause())
+              case Resume =>
+                ConcurrentEffect[F].delay(readStream.resume())
+            })
+            .compile
+            .drain
+            .start
         } yield {
           readStream.endHandler { _ =>
             F.toIO(stateRef.modify(_.halt(None)).flatMap(_.sequence_)).unsafeRunSync()

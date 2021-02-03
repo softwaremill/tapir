@@ -20,13 +20,15 @@ class SwaggerVertx(yaml: String, contextPath: String = "docs", yamlName: String 
   }
 
   def route(router: Router): Route = {
-    router.route(HttpMethod.GET, s"/$contextPath")
+    router
+      .route(HttpMethod.GET, s"/$contextPath")
       .handler { ctx =>
         ctx.redirect(s"/$contextPath/index.html?url=/$contextPath/$yamlName")
         ()
       }
 
-    router.route(HttpMethod.GET, s"/$contextPath/$yamlName")
+    router
+      .route(HttpMethod.GET, s"/$contextPath/$yamlName")
       .handler { ctx =>
         ctx.response().putHeader("Content-Type", "application/yaml").end(yaml)
         ()

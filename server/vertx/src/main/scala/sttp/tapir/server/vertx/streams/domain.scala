@@ -59,8 +59,8 @@ private[streams] object ReadStreamState {
 import ReadStreamState._
 
 private[streams] final case class ReadStreamState[F[_], C](
-  buffers: Queue[F, WrappedBuffer[C]],
-  activationEvents: Queue[F, WrappedEvent]
+    buffers: Queue[F, WrappedBuffer[C]],
+    activationEvents: Queue[F, WrappedEvent]
 ) { self =>
 
   def enqueue(chunk: C, maxSize: Int): (ReadStreamState[F, C], List[F[Unit]]) = {
@@ -79,8 +79,9 @@ private[streams] final case class ReadStreamState[F[_], C](
     (ReadStreamState(newBuffers, newActivationEvents), mbAction1.toList ::: mbAction2.toList)
   }
 
-  def dequeueBuffer(dfd: DeferredLike[F, WrappedBuffer[C]]):
-      (ReadStreamState[F, C], (Either[DeferredLike[F, WrappedBuffer[C]], WrappedBuffer[C]], Option[F[Unit]])) = {
+  def dequeueBuffer(
+      dfd: DeferredLike[F, WrappedBuffer[C]]
+  ): (ReadStreamState[F, C], (Either[DeferredLike[F, WrappedBuffer[C]], WrappedBuffer[C]], Option[F[Unit]])) = {
     val (newBuffers, mbA) = buffers.dequeue(dfd)
     mbA match {
       case left @ Left(_) =>
@@ -95,18 +96,19 @@ private[streams] final case class ReadStreamState[F[_], C](
     }
   }
 
-  def dequeueActivationEvent(dfd: DeferredLike[F, WrappedEvent]):
-      (ReadStreamState[F, C], Either[DeferredLike[F, WrappedEvent], WrappedEvent]) = {
+  def dequeueActivationEvent(
+      dfd: DeferredLike[F, WrappedEvent]
+  ): (ReadStreamState[F, C], Either[DeferredLike[F, WrappedEvent], WrappedEvent]) = {
     val (newActivationEvents, mbEvent) = activationEvents.dequeue(dfd)
     (ReadStreamState(buffers, newActivationEvents), mbEvent)
   }
 }
 
 private[streams] final case class StreamState[F[_]](
-  paused: Option[DeferredLike[F, Unit]],
-  handler: Handler[Buffer],
-  errorHandler: Handler[Throwable],
-  endHandler: Handler[Void]
+    paused: Option[DeferredLike[F, Unit]],
+    handler: Handler[Buffer],
+    errorHandler: Handler[Throwable],
+    endHandler: Handler[Void]
 )
 
 private[streams] object StreamState {

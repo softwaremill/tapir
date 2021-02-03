@@ -20,7 +20,7 @@ trait CommonServerInterpreter {
     attachDefaultHandlers(e.endpoint, createRoute(router, routeDef))
 
   protected def responseHandlerWithError[F[_], I, E, O, S: ReadStreamCompatible, C <: Streams[S]](
-      e: ServerEndpoint[I, E, O, C, F],
+      e: ServerEndpoint[I, E, O, C, F]
   )(implicit
       endpointOptions: VertxEndpointOptions
   ): (Either[E, O], RoutingContext) => Unit = {

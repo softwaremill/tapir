@@ -4,30 +4,38 @@ package sttp.tapir.internal;
 object SeqToParams {
   def apply[T](seq: Seq[T]): Any = {
     seq match {
-      case Seq() => ()
-      case Seq(v1) => v1
-      case Seq(v1, v2) => (v1, v2)
-      case Seq(v1, v2, v3) => (v1, v2, v3)
-      case Seq(v1, v2, v3, v4) => (v1, v2, v3, v4)
-      case Seq(v1, v2, v3, v4, v5) => (v1, v2, v3, v4, v5)
-      case Seq(v1, v2, v3, v4, v5, v6) => (v1, v2, v3, v4, v5, v6)
-      case Seq(v1, v2, v3, v4, v5, v6, v7) => (v1, v2, v3, v4, v5, v6, v7)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8) => (v1, v2, v3, v4, v5, v6, v7, v8)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9) => (v1, v2, v3, v4, v5, v6, v7, v8, v9)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13)
+      case Seq()                                                            => ()
+      case Seq(v1)                                                          => v1
+      case Seq(v1, v2)                                                      => (v1, v2)
+      case Seq(v1, v2, v3)                                                  => (v1, v2, v3)
+      case Seq(v1, v2, v3, v4)                                              => (v1, v2, v3, v4)
+      case Seq(v1, v2, v3, v4, v5)                                          => (v1, v2, v3, v4, v5)
+      case Seq(v1, v2, v3, v4, v5, v6)                                      => (v1, v2, v3, v4, v5, v6)
+      case Seq(v1, v2, v3, v4, v5, v6, v7)                                  => (v1, v2, v3, v4, v5, v6, v7)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8)                              => (v1, v2, v3, v4, v5, v6, v7, v8)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9)                          => (v1, v2, v3, v4, v5, v6, v7, v8, v9)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10)                     => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11)                => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12)           => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13)      => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13)
       case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21)
-      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22) => (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22)
-      case _                           => throw new IllegalArgumentException(s"Cannot convert $seq to params!")
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15) =>
+        (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16) =>
+        (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17) =>
+        (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18) =>
+        (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19) =>
+        (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20) =>
+        (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21) =>
+        (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21)
+      case Seq(v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22) =>
+        (v1, v2, v3, v4, v5, v6, v7, v8, v9, v10, v11, v12, v13, v14, v15, v16, v17, v18, v19, v20, v21, v22)
+      case _ => throw new IllegalArgumentException(s"Cannot convert $seq to params!")
     }
   }
 }

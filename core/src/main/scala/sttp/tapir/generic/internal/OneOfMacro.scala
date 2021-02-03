@@ -51,7 +51,9 @@ object OneOfMacro {
             import _root_.sttp.tapir.SchemaType._
             val rawMapping = _root_.scala.collection.immutable.Map(..$mapping)
             val discriminator = _root_.sttp.tapir.SchemaType.Discriminator($name, rawMapping.map { case (k, sf) => $asString.apply(k) -> _root_.sttp.tapir.SchemaType.SRef(sf.schemaType.asInstanceOf[_root_.sttp.tapir.SchemaType.SObject].info)})
-            _root_.sttp.tapir.Schema(_root_.sttp.tapir.SchemaType.SCoproduct(_root_.sttp.tapir.SchemaType.SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)}), rawMapping.values.toList, _root_.scala.Some(discriminator)))
+            _root_.sttp.tapir.Schema(_root_.sttp.tapir.SchemaType.SCoproduct(_root_.sttp.tapir.SchemaType.SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(
+        weakTypeE
+      )}), rawMapping.values.toList, _root_.scala.Some(discriminator)))
           }"""
 
     Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)

@@ -20,84 +20,210 @@ object FnComponents {
     override def tupled(f: (T1, T2) => R): Tuple2[T1, T2] => R = f.tupled
     override def arity: Int = 2
   }
-  implicit def fn3[T1, T2, T3, R]: FnComponents[(T1, T2, T3) => R, Tuple3[T1, T2, T3], R] = new FnComponents[(T1, T2, T3) => R, Tuple3[T1, T2, T3], R] {
-    override def tupled(f: (T1, T2, T3) => R): Tuple3[T1, T2, T3] => R = f.tupled
-    override def arity: Int = 3
-  }
-  implicit def fn4[T1, T2, T3, T4, R]: FnComponents[(T1, T2, T3, T4) => R, Tuple4[T1, T2, T3, T4], R] = new FnComponents[(T1, T2, T3, T4) => R, Tuple4[T1, T2, T3, T4], R] {
-    override def tupled(f: (T1, T2, T3, T4) => R): Tuple4[T1, T2, T3, T4] => R = f.tupled
-    override def arity: Int = 4
-  }
-  implicit def fn5[T1, T2, T3, T4, T5, R]: FnComponents[(T1, T2, T3, T4, T5) => R, Tuple5[T1, T2, T3, T4, T5], R] = new FnComponents[(T1, T2, T3, T4, T5) => R, Tuple5[T1, T2, T3, T4, T5], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5) => R): Tuple5[T1, T2, T3, T4, T5] => R = f.tupled
-    override def arity: Int = 5
-  }
-  implicit def fn6[T1, T2, T3, T4, T5, T6, R]: FnComponents[(T1, T2, T3, T4, T5, T6) => R, Tuple6[T1, T2, T3, T4, T5, T6], R] = new FnComponents[(T1, T2, T3, T4, T5, T6) => R, Tuple6[T1, T2, T3, T4, T5, T6], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6) => R): Tuple6[T1, T2, T3, T4, T5, T6] => R = f.tupled
-    override def arity: Int = 6
-  }
-  implicit def fn7[T1, T2, T3, T4, T5, T6, T7, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7) => R, Tuple7[T1, T2, T3, T4, T5, T6, T7], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7) => R, Tuple7[T1, T2, T3, T4, T5, T6, T7], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7) => R): Tuple7[T1, T2, T3, T4, T5, T6, T7] => R = f.tupled
-    override def arity: Int = 7
-  }
-  implicit def fn8[T1, T2, T3, T4, T5, T6, T7, T8, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8) => R, Tuple8[T1, T2, T3, T4, T5, T6, T7, T8], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8) => R, Tuple8[T1, T2, T3, T4, T5, T6, T7, T8], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8) => R): Tuple8[T1, T2, T3, T4, T5, T6, T7, T8] => R = f.tupled
-    override def arity: Int = 8
-  }
-  implicit def fn9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9) => R, Tuple9[T1, T2, T3, T4, T5, T6, T7, T8, T9], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9) => R, Tuple9[T1, T2, T3, T4, T5, T6, T7, T8, T9], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => R): Tuple9[T1, T2, T3, T4, T5, T6, T7, T8, T9] => R = f.tupled
-    override def arity: Int = 9
-  }
-  implicit def fn10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R, Tuple10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R, Tuple10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R): Tuple10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10] => R = f.tupled
-    override def arity: Int = 10
-  }
-  implicit def fn11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R, Tuple11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R, Tuple11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R): Tuple11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11] => R = f.tupled
-    override def arity: Int = 11
-  }
-  implicit def fn12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R, Tuple12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R, Tuple12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R): Tuple12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12] => R = f.tupled
+  implicit def fn3[T1, T2, T3, R]: FnComponents[(T1, T2, T3) => R, Tuple3[T1, T2, T3], R] =
+    new FnComponents[(T1, T2, T3) => R, Tuple3[T1, T2, T3], R] {
+      override def tupled(f: (T1, T2, T3) => R): Tuple3[T1, T2, T3] => R = f.tupled
+      override def arity: Int = 3
+    }
+  implicit def fn4[T1, T2, T3, T4, R]: FnComponents[(T1, T2, T3, T4) => R, Tuple4[T1, T2, T3, T4], R] =
+    new FnComponents[(T1, T2, T3, T4) => R, Tuple4[T1, T2, T3, T4], R] {
+      override def tupled(f: (T1, T2, T3, T4) => R): Tuple4[T1, T2, T3, T4] => R = f.tupled
+      override def arity: Int = 4
+    }
+  implicit def fn5[T1, T2, T3, T4, T5, R]: FnComponents[(T1, T2, T3, T4, T5) => R, Tuple5[T1, T2, T3, T4, T5], R] =
+    new FnComponents[(T1, T2, T3, T4, T5) => R, Tuple5[T1, T2, T3, T4, T5], R] {
+      override def tupled(f: (T1, T2, T3, T4, T5) => R): Tuple5[T1, T2, T3, T4, T5] => R = f.tupled
+      override def arity: Int = 5
+    }
+  implicit def fn6[T1, T2, T3, T4, T5, T6, R]: FnComponents[(T1, T2, T3, T4, T5, T6) => R, Tuple6[T1, T2, T3, T4, T5, T6], R] =
+    new FnComponents[(T1, T2, T3, T4, T5, T6) => R, Tuple6[T1, T2, T3, T4, T5, T6], R] {
+      override def tupled(f: (T1, T2, T3, T4, T5, T6) => R): Tuple6[T1, T2, T3, T4, T5, T6] => R = f.tupled
+      override def arity: Int = 6
+    }
+  implicit def fn7[T1, T2, T3, T4, T5, T6, T7, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7) => R, Tuple7[T1, T2, T3, T4, T5, T6, T7], R] =
+    new FnComponents[(T1, T2, T3, T4, T5, T6, T7) => R, Tuple7[T1, T2, T3, T4, T5, T6, T7], R] {
+      override def tupled(f: (T1, T2, T3, T4, T5, T6, T7) => R): Tuple7[T1, T2, T3, T4, T5, T6, T7] => R = f.tupled
+      override def arity: Int = 7
+    }
+  implicit def fn8[T1, T2, T3, T4, T5, T6, T7, T8, R]
+      : FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8) => R, Tuple8[T1, T2, T3, T4, T5, T6, T7, T8], R] =
+    new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8) => R, Tuple8[T1, T2, T3, T4, T5, T6, T7, T8], R] {
+      override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8) => R): Tuple8[T1, T2, T3, T4, T5, T6, T7, T8] => R = f.tupled
+      override def arity: Int = 8
+    }
+  implicit def fn9[T1, T2, T3, T4, T5, T6, T7, T8, T9, R]
+      : FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9) => R, Tuple9[T1, T2, T3, T4, T5, T6, T7, T8, T9], R] =
+    new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9) => R, Tuple9[T1, T2, T3, T4, T5, T6, T7, T8, T9], R] {
+      override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9) => R): Tuple9[T1, T2, T3, T4, T5, T6, T7, T8, T9] => R = f.tupled
+      override def arity: Int = 9
+    }
+  implicit def fn10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, R]
+      : FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R, Tuple10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10], R] =
+    new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R, Tuple10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10], R] {
+      override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10) => R): Tuple10[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10] => R =
+        f.tupled
+      override def arity: Int = 10
+    }
+  implicit def fn11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, R]
+      : FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R, Tuple11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11], R] =
+    new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R, Tuple11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11], R] {
+      override def tupled(
+          f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11) => R
+      ): Tuple11[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11] => R = f.tupled
+      override def arity: Int = 11
+    }
+  implicit def fn12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R,
+    Tuple12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R,
+    Tuple12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12) => R
+    ): Tuple12[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12] => R = f.tupled
     override def arity: Int = 12
   }
-  implicit def fn13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R, Tuple13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R, Tuple13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R): Tuple13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13] => R = f.tupled
+  implicit def fn13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R,
+    Tuple13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R,
+    Tuple13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13) => R
+    ): Tuple13[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13] => R = f.tupled
     override def arity: Int = 13
   }
-  implicit def fn14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R, Tuple14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R, Tuple14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R): Tuple14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14] => R = f.tupled
+  implicit def fn14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R,
+    Tuple14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R,
+    Tuple14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14) => R
+    ): Tuple14[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14] => R = f.tupled
     override def arity: Int = 14
   }
-  implicit def fn15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R, Tuple15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R, Tuple15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R): Tuple15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15] => R = f.tupled
+  implicit def fn15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R,
+    Tuple15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R,
+    Tuple15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15) => R
+    ): Tuple15[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15] => R = f.tupled
     override def arity: Int = 15
   }
-  implicit def fn16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R, Tuple16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R, Tuple16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R): Tuple16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16] => R = f.tupled
+  implicit def fn16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R,
+    Tuple16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R,
+    Tuple16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16) => R
+    ): Tuple16[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16] => R = f.tupled
     override def arity: Int = 16
   }
-  implicit def fn17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R, Tuple17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R, Tuple17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R): Tuple17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17] => R = f.tupled
+  implicit def fn17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R,
+    Tuple17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R,
+    Tuple17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17) => R
+    ): Tuple17[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17] => R = f.tupled
     override def arity: Int = 17
   }
-  implicit def fn18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R, Tuple18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R, Tuple18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R): Tuple18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18] => R = f.tupled
+  implicit def fn18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R,
+    Tuple18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R,
+    Tuple18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18) => R
+    ): Tuple18[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18] => R = f.tupled
     override def arity: Int = 18
   }
-  implicit def fn19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R, Tuple19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R, Tuple19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R): Tuple19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19] => R = f.tupled
+  implicit def fn19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R,
+    Tuple19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R,
+    Tuple19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19) => R
+    ): Tuple19[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19] => R = f.tupled
     override def arity: Int = 19
   }
-  implicit def fn20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R, Tuple20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R, Tuple20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R): Tuple20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20] => R = f.tupled
+  implicit def fn20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R,
+    Tuple20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R,
+    Tuple20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20) => R
+    ): Tuple20[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20] => R = f.tupled
     override def arity: Int = 20
   }
-  implicit def fn21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R, Tuple21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R, Tuple21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R): Tuple21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21] => R = f.tupled
+  implicit def fn21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R,
+    Tuple21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R,
+    Tuple21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21) => R
+    ): Tuple21[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21] => R = f.tupled
     override def arity: Int = 21
   }
-  implicit def fn22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R]: FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R, Tuple22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22], R] = new FnComponents[(T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R, Tuple22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22], R] {
-    override def tupled(f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R): Tuple22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22] => R = f.tupled
+  implicit def fn22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22, R]: FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R,
+    Tuple22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22],
+    R
+  ] = new FnComponents[
+    (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R,
+    Tuple22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22],
+    R
+  ] {
+    override def tupled(
+        f: (T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22) => R
+    ): Tuple22[T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13, T14, T15, T16, T17, T18, T19, T20, T21, T22] => R = f.tupled
     override def arity: Int = 22
   }
 }

@@ -107,7 +107,8 @@ object VertxInputDecoders {
           case None if rc.getBody != null =>
             val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
             val fs = rc.vertx.fileSystem
-            val result = fs.createFile(filePath)
+            val result = fs
+              .createFile(filePath)
               .flatMap(_ => fs.writeFile(filePath, rc.getBody))
               .flatMap(_ => Future.succeededFuture(new File(filePath)))
             result
