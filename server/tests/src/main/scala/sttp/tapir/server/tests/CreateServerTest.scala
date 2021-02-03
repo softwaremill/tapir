@@ -11,7 +11,7 @@ import sttp.tapir._
 import sttp.tapir.server.{DecodeFailureHandler, ServerEndpoint}
 import sttp.tapir.tests._
 
-class ServerTests[F[_], +R, ROUTE](interpreter: TestServerInterpreter[F, R, ROUTE]) extends StrictLogging {
+class CreateServerTest[F[_], +R, ROUTE](interpreter: TestServerInterpreter[F, R, ROUTE]) extends StrictLogging {
   def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",

@@ -16,13 +16,13 @@ import sttp.tapir.server.tests.{
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerStreamingTests,
-  ServerTests,
+  CreateServerTest,
   ServerWebSocketTests,
   backendResource
 }
 import sttp.tapir.tests.{Test, TestSuite}
 
-class AkkaHttpServerTests extends TestSuite {
+class AkkaHttpCreateServerTest extends TestSuite {
 
   def actorSystemResource: Resource[IO, ActorSystem] =
     Resource.make(IO.delay(ActorSystem()))(actorSystem => IO.fromFuture(IO.delay(actorSystem.terminate())).void)
@@ -31,7 +31,7 @@ class AkkaHttpServerTests extends TestSuite {
     actorSystemResource.map { implicit actorSystem =>
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
       val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
-      val serverTests = new ServerTests(interpreter)
+      val createServerTest = new CreateServerTest(interpreter)
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
@@ -46,12 +46,12 @@ class AkkaHttpServerTests extends TestSuite {
         }
       )
 
-      new ServerBasicTests(backend, serverTests, interpreter).tests() ++
-        new ServerStreamingTests(backend, serverTests, AkkaStreams).tests() ++
-        new ServerWebSocketTests(backend, serverTests, AkkaStreams) {
+      new ServerBasicTests(backend, createServerTest, interpreter).tests() ++
+        new ServerStreamingTests(backend, createServerTest, AkkaStreams).tests() ++
+        new ServerWebSocketTests(backend, createServerTest, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
-        new ServerAuthenticationTests(backend, serverTests).tests() ++
+        new ServerAuthenticationTests(backend, createServerTest).tests() ++
         additionalTests()
     }
   }

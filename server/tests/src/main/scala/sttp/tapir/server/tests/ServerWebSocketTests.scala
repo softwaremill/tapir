@@ -16,12 +16,12 @@ import sttp.capabilities.fs2.Fs2Streams
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
-    serverTests: ServerTests[F, S with WebSockets, ROUTE],
+    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE],
     val streams: S
 )(implicit
     m: MonadError[F]
 ) {
-  import serverTests._
+  import createServerTest._
 
   private def pureResult[T](t: T): F[T] = m.unit(t)
   def functionToPipe[A, B](f: A => B): streams.Pipe[A, B]

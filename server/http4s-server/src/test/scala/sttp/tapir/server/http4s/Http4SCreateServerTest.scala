@@ -14,7 +14,7 @@ import sttp.tapir.server.tests.{
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerStreamingTests,
-  ServerTests,
+  CreateServerTest,
   ServerWebSocketTests,
   backendResource
 }
@@ -24,12 +24,12 @@ import sttp.ws.{WebSocket, WebSocketFrame}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
+class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
     val interpreter = new Http4sTestServerInterpreter()
-    val serverTests = new ServerTests(interpreter)
+    val createServerTest = new CreateServerTest(interpreter)
 
     import interpreter.timer
 
@@ -48,7 +48,7 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
           }
           .unsafeRunSync()
       },
-      serverTests.testServer(
+      createServerTest.testServer(
         endpoint.out(
           webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain]
             .apply(Fs2Streams[IO])
@@ -66,12 +66,12 @@ class Http4sServerTests[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
       }
     )
 
-    new ServerBasicTests(backend, serverTests, interpreter).tests() ++
-      new ServerStreamingTests(backend, serverTests, Fs2Streams[IO]).tests() ++
-      new ServerWebSocketTests(backend, serverTests, Fs2Streams[IO]) {
+    new ServerBasicTests(backend, createServerTest, interpreter).tests() ++
+      new ServerStreamingTests(backend, createServerTest, Fs2Streams[IO]).tests() ++
+      new ServerWebSocketTests(backend, createServerTest, Fs2Streams[IO]) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
-      new ServerAuthenticationTests(backend, serverTests).tests() ++
+      new ServerAuthenticationTests(backend, createServerTest).tests() ++
       additionalTests()
   }
 }

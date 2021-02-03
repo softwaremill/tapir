@@ -24,7 +24,7 @@ import scala.concurrent.duration.DurationInt
 
 class ServerBasicTests[F[_], ROUTE](
     backend: SttpBackend[IO, Any],
-    serverTests: ServerTests[F, Any, ROUTE],
+    createServerTest: CreateServerTest[F, Any, ROUTE],
     serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
     multipleValueHeaderSupport: Boolean = true,
     multipartInlineHeaderSupport: Boolean = true,
@@ -32,7 +32,7 @@ class ServerBasicTests[F[_], ROUTE](
 )(implicit
     m: MonadError[F]
 ) {
-  import serverTests._
+  import createServerTest._
   import serverInterpreter._
 
   private val basicStringRequest = basicRequest.response(asStringAlways)

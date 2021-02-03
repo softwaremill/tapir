@@ -8,7 +8,7 @@ import cats.syntax.all._
 import sttp.monad.MonadError
 import org.scalatest.matchers.should.Matchers._
 
-class ServerStreamingTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], serverTests: ServerTests[F, S, ROUTE], streams: Streams[S])(
+class ServerStreamingTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], serverTests: CreateServerTest[F, S, ROUTE], streams: Streams[S])(
     implicit m: MonadError[F]
 ) {
 
