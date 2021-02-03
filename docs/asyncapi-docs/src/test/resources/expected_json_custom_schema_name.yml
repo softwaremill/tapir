@@ -1,0 +1,31 @@
+asyncapi: 2.0.0
+info:
+  title: The fruit basket
+  version: '0.1'
+channels:
+  /fruit:
+    subscribe:
+      operationId: onFruit
+      message:
+        $ref: '#/components/messages/sttp.tapir.tests.Fruit'
+    publish:
+      operationId: sendFruit
+      message:
+        $ref: '#/components/messages/sttp.tapir.tests.Fruit'
+    bindings:
+      ws:
+        method: GET
+components:
+  schemas:
+    sttp.tapir.tests.Fruit:
+      required:
+        - f
+      type: object
+      properties:
+        f:
+          type: string
+  messages:
+    sttp.tapir.tests.Fruit:
+      payload:
+        $ref: '#/components/schemas/sttp.tapir.tests.Fruit'
+      contentType: application/json

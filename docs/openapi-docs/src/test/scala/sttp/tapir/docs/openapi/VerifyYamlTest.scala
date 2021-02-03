@@ -21,6 +21,7 @@ import scala.io.Source
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.model.UsernamePassword
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
@@ -47,6 +48,18 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_recursive.yml")
 
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_recursive_structure, Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support providing custom schema name") {
+    def customSchemaName(info: SObjectInfo) = (info.fullName +: info.typeParameterShortNames).mkString("_")
+    val options = OpenAPIDocsOptions.default.copy(OpenAPIDocsOptions.defaultOperationIdGenerator, customSchemaName)
+    val expectedYaml = loadYaml("expected_custom_schema_name.yml")
+
+    val actualYaml =
+      OpenAPIDocsInterpreter.toOpenAPI(List(in_query_query_out_string, all_the_way, delete_endpoint), Info("Fruits", "1.0"))(options).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

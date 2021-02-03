@@ -7,8 +7,10 @@ import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
 import sttp.tapir.EndpointIO.Example
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
+import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
 import sttp.tapir.tests.{Fruit, FruitAmount}
 import sttp.tapir.{CodecFormat, auth, endpoint, header, query, webSocketBody}
 import sttp.tapir.json.circe._
@@ -23,6 +25,19 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_json_json.yml")
 
     val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should support providing custom schema name") {
+    val e = endpoint.in("fruit").out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](AkkaStreams))
+
+    def customSchemaName(info: SObjectInfo) = (info.fullName +: info.typeParameterShortNames).mkString("_")
+    val options = AsyncAPIDocsOptions.default.copy(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"), customSchemaName)
+    val expectedYaml = loadYaml("expected_json_custom_schema_name.yml")
+
+    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1")(options).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

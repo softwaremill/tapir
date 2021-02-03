@@ -19,9 +19,4 @@ package object schema {
       }
       .tToKey
   }
-
-  private[docs] def objectInfoToName(info: TSchemaType.SObjectInfo): String = {
-    val shortName = info.fullName.split('.').last
-    (shortName +: info.typeParameterShortNames).mkString("_")
-  }
 }
