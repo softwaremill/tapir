@@ -84,6 +84,7 @@ lazy val allAggregates = core.projectRefs ++
   swaggerUiFinatra.projectRefs ++
   swaggerUiPlay.projectRefs ++
   redocPlay.projectRefs ++
+  swaggerUiVertx.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
@@ -595,6 +596,17 @@ lazy val redocPlay: ProjectMatrix = (projectMatrix in file("docs/redoc-play"))
   .settings(
     name := "tapir-redoc-play",
     libraryDependencies += "com.typesafe.play" %% "play" % Versions.playServer
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+
+lazy val swaggerUiVertx: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-vertx"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-swagger-ui-vertx",
+    libraryDependencies ++= Seq(
+      "io.vertx" % "vertx-web" % Versions.vertx,
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
 

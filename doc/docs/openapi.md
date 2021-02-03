@@ -87,6 +87,9 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 // Play
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "@VERSION@"
 "com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "@VERSION@"
+
+// Vert.x
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-vertx" % "@VERSION@"
 ```
 
 Note: `tapir-swagger-ui-akka-http` transitively pulls some Akka modules in version 2.6. If you want to force
@@ -115,6 +118,8 @@ For redoc, use `RedocAkkaHttp`.
 For http4s, use the `SwaggerHttp4s` or `RedocHttp4s` classes.
 
 For Play, use `SwaggerPlay` or `RedocPlay` classes.
+
+For Vert.x, use `SwaggerVertx` class.
 
 ### Using with sbt-assembly
 
