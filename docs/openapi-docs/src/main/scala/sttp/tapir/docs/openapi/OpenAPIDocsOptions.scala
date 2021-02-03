@@ -1,8 +1,13 @@
 package sttp.tapir.docs.openapi
 
 import sttp.model.Method
+import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.docs.apispec.defaultSchemaName
 
-case class OpenAPIDocsOptions(operationIdGenerator: (Vector[String], Method) => String)
+case class OpenAPIDocsOptions(
+    operationIdGenerator: (Vector[String], Method) => String,
+    schemaName: SObjectInfo => String = defaultSchemaName
+)
 
 object OpenAPIDocsOptions {
   val defaultOperationIdGenerator: (Vector[String], Method) => String = { (pathComponents, method) =>
