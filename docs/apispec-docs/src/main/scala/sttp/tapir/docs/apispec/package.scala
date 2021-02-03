@@ -1,9 +1,8 @@
 package sttp.tapir.docs
 
-import sttp.tapir.{Codec, Endpoint, EndpointInput, Schema, SchemaType}
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
-import sttp.tapir.{Codec, Endpoint, EndpointInput, SchemaType}
+import sttp.tapir.{Codec, Endpoint, EndpointInput, Schema, SchemaType}
 
 package object apispec {
   private[docs] type SchemeName = String
