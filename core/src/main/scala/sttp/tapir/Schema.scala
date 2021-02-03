@@ -30,13 +30,20 @@ case class Schema[T](
     schemaType: SchemaType,
     isOptional: Boolean = false,
     description: Option[String] = None,
-    default: Option[T] = None,
+    // The default value together with the value encoded to a raw format, which will then be directly rendered as a
+    // string in documentation. This is needed as codecs for nested types aren't available. Similar to Validator.EncodeToRaw
+    default: Option[(T, Option[Any])] = None,
     format: Option[String] = None,
     deprecated: Boolean = false,
     validator: Validator[T] = Validator.pass[T]
 ) {
 
-  def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = copy(default = default.flatMap(f), validator = validator.contramap(g))
+  def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = copy(
+    default = default.flatMap { case (t, raw) =>
+      f(t).map(tt => (tt, raw))
+    },
+    validator = validator.contramap(g)
+  )
 
   /** Returns an optional version of this schema, with `isOptional` set to true.
     */
@@ -62,7 +69,7 @@ case class Schema[T](
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
-  def default(t: T): Schema[T] = copy(default = Some(t), isOptional = true)
+  def default(t: T, raw: Option[Any] = None): Schema[T] = copy(default = Some((t, raw)), isOptional = true)
 
   def format(f: String): Schema[T] = copy(format = Some(f))
 

@@ -21,6 +21,8 @@ sealed trait Validator[T] {
 }
 
 object Validator extends ValidatorEnumMacro {
+  // Used to capture encoding of a value to a raw format, which will then be directly rendered as a string in
+  // documentation. This is needed as codecs for nested types aren't available.
   type EncodeToRaw[T] = T => Option[scala.Any]
 
   private val _pass: Validator[Nothing] = all()
