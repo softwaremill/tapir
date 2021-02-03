@@ -1,0 +1,19 @@
+openapi: 3.0.3
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+            default: tom
+          example: alan
+      responses:
+        '200':
+          description: ''

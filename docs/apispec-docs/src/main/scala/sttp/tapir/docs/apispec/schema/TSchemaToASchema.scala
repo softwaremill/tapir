@@ -2,7 +2,7 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
 import sttp.tapir.docs.apispec.ValidatorUtil.{asPrimitiveValidators, elementValidator, fieldValidator}
-import sttp.tapir.docs.apispec.rawToString
+import sttp.tapir.docs.apispec.{exampleValue, rawToString}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve references.
@@ -21,14 +21,14 @@ private[schema] class TSchemaToASchema(
           ASchema(SchemaType.Object).copy(
             required = p.required.map(_.encodedName).toList,
             properties = fields.map {
-              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _)) =>
+              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _, _)) =>
                 fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
               case (fieldName, fieldSchema) =>
                 fieldName.encodedName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name)))
             }.toListMap
           )
         )
-      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
@@ -39,7 +39,7 @@ private[schema] class TSchemaToASchema(
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           ASchema.apply(
-            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _, _) => Left(objectToSchemaReference.map(s.info)) },
+            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _, _, _) => Left(objectToSchemaReference.map(s.info)) },
             d.map(tDiscriminatorToADiscriminator)
           )
         )
@@ -72,6 +72,7 @@ private[schema] class TSchemaToASchema(
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
     oschema.copy(
       description = tschema.description.orElse(oschema.description),
+      default = tschema.default.flatMap { case (_, raw) => raw.flatMap(r => exampleValue(tschema, r)) }.orElse(oschema.default),
       format = tschema.format.orElse(oschema.format),
       deprecated = (if (tschema.deprecated) Some(true) else None).orElse(oschema.deprecated)
     )

@@ -11,8 +11,12 @@ import sttp.tapir._
 import scala.reflect.ClassTag
 
 trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
-  implicit def refinedTapirSchema[V, P](implicit vSchema: Schema[V], vfp: ValidatorForPredicate[V, P]): Schema[V Refined P] =
-    vSchema.validate(vfp.validator).contramap[V Refined P](_.value)
+  implicit def refinedTapirSchema[V, P](implicit
+      vSchema: Schema[V],
+      refinedValidator: Validate[V, P],
+      refinedValidatorTranslation: ValidatorForPredicate[V, P]
+  ): Schema[V Refined P] =
+    vSchema.validate(refinedValidatorTranslation.validator).map[V Refined P](v => refineV[P](v).toOption)(_.value)
 
   implicit def codecForRefined[R, V, P, CF <: CodecFormat](implicit
       tm: Codec[R, V, CF],

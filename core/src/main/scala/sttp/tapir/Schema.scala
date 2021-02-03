@@ -30,16 +30,24 @@ case class Schema[T](
     schemaType: SchemaType,
     isOptional: Boolean = false,
     description: Option[String] = None,
+    // The default value together with the value encoded to a raw format, which will then be directly rendered as a
+    // string in documentation. This is needed as codecs for nested types aren't available. Similar to Validator.EncodeToRaw
+    default: Option[(T, Option[Any])] = None,
     format: Option[String] = None,
     deprecated: Boolean = false,
     validator: Validator[T] = Validator.pass[T]
 ) {
 
-  def contramap[TT](g: TT => T): Schema[TT] = copy(validator = validator.contramap(g))
+  def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = copy(
+    default = default.flatMap { case (t, raw) =>
+      f(t).map(tt => (tt, raw))
+    },
+    validator = validator.contramap(g)
+  )
 
   /** Returns an optional version of this schema, with `isOptional` set to true.
     */
-  def asOption: Schema[Option[T]] = copy(isOptional = true, validator = validator.asOptionElement)
+  def asOption: Schema[Option[T]] = copy(isOptional = true, default = None, validator = validator.asOptionElement)
 
   /** Returns an array version of this schema, with the schema type wrapped in [[SArray]].
     * Sets `isOptional` to true as the collection might be empty.
@@ -61,13 +69,13 @@ case class Schema[T](
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
+  def default(t: T, raw: Option[Any] = None): Schema[T] = copy(default = Some((t, raw)), isOptional = true)
+
   def format(f: String): Schema[T] = copy(format = Some(f))
 
   def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
-
-  def setDescription[U](path: T => U, description: String): Schema[T] = macro ModifySchemaMacro.setDescriptionMacro[T, U]
 
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
@@ -95,6 +103,8 @@ case class Schema[T](
 }
 
 class description(val text: String) extends StaticAnnotation
+
+class default[T](val default: T) extends StaticAnnotation
 
 class format(val format: String) extends StaticAnnotation
 

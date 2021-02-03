@@ -13,8 +13,8 @@ class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify product schema" in {
     val info1 = SObjectInfo("X")
     Schema(SProduct(info1, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger)))))
-      .modifyUnsafe[String]("f2")(_.description("test")) shouldBe Schema(
-      SProduct(info1, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger).description("test"))))
+      .modifyUnsafe[String]("f2")(_.description("test").default("f2")) shouldBe Schema(
+      SProduct(info1, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger).description("test").default("f2"))))
     )
   }
 
@@ -24,10 +24,12 @@ class SchemaTest extends AnyFlatSpec with Matchers {
 
     val nestedProduct = Schema(SProduct(info2, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger)))))
     val expectedNestedProduct =
-      Schema(SProduct(info2, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger).description("test")))))
+      Schema(
+        SProduct(info2, List((FieldName("f1"), Schema(SString)), (FieldName("f2"), Schema(SInteger).description("test").default("f2"))))
+      )
 
     Schema(SProduct(info1, List((FieldName("f3"), Schema(SString)), (FieldName("f4"), nestedProduct), (FieldName("f5"), Schema(SBoolean)))))
-      .modifyUnsafe[String]("f4", "f2")(_.description("test")) shouldBe
+      .modifyUnsafe[String]("f4", "f2")(_.description("test").default("f2")) shouldBe
       Schema(
         SProduct(
           info1,

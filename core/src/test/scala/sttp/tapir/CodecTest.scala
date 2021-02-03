@@ -175,6 +175,17 @@ class CodecTest extends AnyFlatSpec with CodecTestExtensions with Matchers with 
     }
   }
 
+  it should "use default, when available" in {
+    val codec = implicitly[Codec[List[String], String, TextPlain]]
+    val codecWithDefault = codec.modifySchema(_.default("X"))
+
+    codec.decode(Nil) shouldBe DecodeResult.Missing
+    codecWithDefault.decode(Nil) shouldBe DecodeResult.Value("X")
+
+    codec.decode(List("y")) shouldBe DecodeResult.Value("y")
+    codec.decode(List("y", "z")) shouldBe DecodeResult.Multiple(List("y", "z"))
+  }
+
   def checkEncodeDecodeToString[T: Arbitrary](implicit c: Codec[String, T, TextPlain], ct: ClassTag[T]): Assertion =
     withClue(s"Test for ${ct.runtimeClass.getName}") {
       check((a: T) => {

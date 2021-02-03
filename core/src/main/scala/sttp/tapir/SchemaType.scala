@@ -54,7 +54,7 @@ object SchemaType {
       SCoproduct(
         info,
         schemas.map {
-          case s @ Schema(st: SchemaType.SProduct, _, _, _, _, _) =>
+          case s @ Schema(st: SchemaType.SProduct, _, _, _, _, _, _) =>
             s.copy(schemaType = st.copy(fields = st.fields.toSeq :+ (discriminatorName -> discriminatorSchema)))
           case s => s
         },

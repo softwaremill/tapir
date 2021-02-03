@@ -2,7 +2,7 @@ package sttp.tapir.docs
 
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
-import sttp.tapir.{Codec, Endpoint, EndpointInput, SchemaType}
+import sttp.tapir.{Codec, Endpoint, EndpointInput, Schema, SchemaType}
 
 package object apispec {
   private[docs] type SchemeName = String
@@ -27,8 +27,9 @@ package object apispec {
   private[docs] def encodeToString[T](codec: Codec[_, T, _]): T => Option[String] = e => Some(rawToString(codec.encode(e)))
 
   private[docs] def exampleValue[T](v: String): ExampleValue = ExampleSingleValue(v)
-  private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = {
-    (codec.encode(e), codec.schema.schemaType) match {
+  private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
+  private[docs] def exampleValue[T](schema: Schema[_], raw: Any): Option[ExampleValue] = {
+    (raw, schema.schemaType) match {
       case (it: Iterable[_], _: SchemaType.SArray) => Some(ExampleMultipleValue(it.map(rawToString).toList))
       case (it: Iterable[_], _)                    => it.headOption.map(v => ExampleSingleValue(rawToString(v)))
       case (it: Option[_], _)                      => it.map(v => ExampleSingleValue(rawToString(v)))
