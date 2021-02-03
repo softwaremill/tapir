@@ -1,10 +1,12 @@
 package sttp.tapir.docs.asyncapi
 
 import sttp.tapir.Endpoint
+import sttp.tapir.SchemaType.SObjectInfo
 
 case class AsyncAPIDocsOptions(
-    subscribeOperationId: (Vector[String], Endpoint[_, _, _, _]) => String,
-    publishOperationId: (Vector[String], Endpoint[_, _, _, _]) => String
+                                subscribeOperationId: (Vector[String], Endpoint[_, _, _, _]) => String,
+                                publishOperationId: (Vector[String], Endpoint[_, _, _, _]) => String,
+                                schemaObjectInfoToNameMapper: SObjectInfo => String = SObjectInfo.defaultToNameMapper
 )
 
 object AsyncAPIDocsOptions {

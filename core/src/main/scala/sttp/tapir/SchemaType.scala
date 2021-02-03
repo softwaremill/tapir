@@ -73,6 +73,10 @@ object SchemaType {
   case class SObjectInfo(fullName: String, typeParameterShortNames: List[String] = Nil)
   object SObjectInfo {
     val Unit: SObjectInfo = SObjectInfo(fullName = "Unit")
+    val defaultToNameMapper: SObjectInfo => String = info => {
+      val shortName = info.fullName.split('.').last
+      (shortName +: info.typeParameterShortNames).mkString("_")
+    }
   }
 
   case class Discriminator(propertyName: String, mappingOverride: Map[String, SRef])
