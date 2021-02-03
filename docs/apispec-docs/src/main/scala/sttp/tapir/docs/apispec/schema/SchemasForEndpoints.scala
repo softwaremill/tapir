@@ -7,9 +7,9 @@ import sttp.tapir._
 import scala.collection.immutable.ListMap
 
 object SchemasForEndpoints {
-  def apply(es: Iterable[Endpoint[_, _, _, _]], schemaObjectInfoToNameMapper: SObjectInfo => String): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
+  def apply(es: Iterable[Endpoint[_, _, _, _]], schemaName: SObjectInfo => String): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
     val sObjects = ObjectTypeData.unique(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
-    val infoToKey = calculateUniqueKeys(sObjects.map(_._1), schemaObjectInfoToNameMapper)
+    val infoToKey = calculateUniqueKeys(sObjects.map(_._1), schemaName)
 
     val objectToSchemaReference = new ObjectToSchemaReference(infoToKey)
     val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference)

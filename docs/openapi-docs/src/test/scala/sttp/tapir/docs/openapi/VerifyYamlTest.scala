@@ -53,10 +53,10 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should use custom schema object to name mapper") {
-    def customSchemaObjectInfoToNameMapper(info: SObjectInfo) = (info.fullName +: info.typeParameterShortNames).mkString("_")
-    val options = OpenAPIDocsOptions.default.copy(OpenAPIDocsOptions.defaultOperationIdGenerator, customSchemaObjectInfoToNameMapper)
-    val expectedYaml = loadYaml("expected_custom_schema_object_name.yml")
+  test("should support providing custom schema name") {
+    def customSchemaName(info: SObjectInfo) = (info.fullName +: info.typeParameterShortNames).mkString("_")
+    val options = OpenAPIDocsOptions.default.copy(OpenAPIDocsOptions.defaultOperationIdGenerator, customSchemaName)
+    val expectedYaml = loadYaml("expected_custom_schema_name.yml")
 
     val actualYaml =
       OpenAPIDocsInterpreter.toOpenAPI(List(in_query_query_out_string, all_the_way, delete_endpoint), Info("Fruits", "1.0"))(options).toYaml

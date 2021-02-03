@@ -30,12 +30,12 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should use custom schema object to name mapper") {
+  test("should support providing custom schema name") {
     val e = endpoint.in("fruit").out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](AkkaStreams))
 
-    def customSchemaObjectInfoToNameMapper(info: SObjectInfo) = (info.fullName +: info.typeParameterShortNames).mkString("_")
-    val options = AsyncAPIDocsOptions.default.copy(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"), customSchemaObjectInfoToNameMapper)
-    val expectedYaml = loadYaml("expected_json_custom_schema_object_name.yml")
+    def customSchemaName(info: SObjectInfo) = (info.fullName +: info.typeParameterShortNames).mkString("_")
+    val options = AsyncAPIDocsOptions.default.copy(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"), customSchemaName)
+    val expectedYaml = loadYaml("expected_json_custom_schema_name.yml")
 
     val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1")(options).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
