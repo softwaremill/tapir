@@ -31,12 +31,10 @@ object Validator extends ValidatorEnumMacro {
   def all[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else All[T](v.toList)
   def any[T](v: Validator[T]*): Validator[T] = if (v.size == 1) v.head else Any[T](v.toList)
 
-  /** A validator instance that always pass.
-    */
+  /** A validator instance that always pass. */
   def pass[T]: Validator[T] = _pass.asInstanceOf[Validator[T]]
 
-  /** A validator instance that always reject.
-    */
+  /** A validator instance that always reject. */
   def reject[T]: Validator[T] = _reject.asInstanceOf[Validator[T]]
 
   def min[T: Numeric](value: T, exclusive: Boolean = false): Validator.Primitive[T] = Min(value, exclusive)
