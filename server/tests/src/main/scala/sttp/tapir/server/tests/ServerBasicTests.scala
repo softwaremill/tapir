@@ -15,9 +15,9 @@ import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.TestUtil._
-import sttp.tapir.tests._
+import sttp.tapir.tests.{in_date_time_json_out_date_time_json, _}
 import org.scalatest.matchers.should.Matchers._
-import sttp.model.headers.{CookieWithMeta, CookieValueWithMeta}
+import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -157,6 +157,14 @@ class ServerBasicTests[F[_], ROUTE](
         .body("""{"fruit":"banana","amount":12}""")
         .send(backend)
         .map(_.contentType shouldBe Some(sttp.model.MediaType.ApplicationJson.toString))
+    },
+    testServer(in_date_time_json_out_date_time_json, "with local date time")((fa: DateTime) => pureResult(fa.asRight[Unit])) {
+      baseUri =>
+        basicRequest
+          .post(uri"$baseUri/api/echo")
+          .body("""{"localDateTime":"2021-02-05T14:59:03.530Z"}""")
+          .send(backend)
+          .map(_.body shouldBe Right("""{"localDateTime":"2021-02-05T14:59:03.530Z"}"""))
     },
     testServer(in_byte_array_out_byte_array)((b: Array[Byte]) => pureResult(b.asRight[Unit])) { baseUri =>
       basicRequest.post(uri"$baseUri/api/echo").body("banana kiwi".getBytes).send(backend).map(_.body shouldBe Right("banana kiwi"))

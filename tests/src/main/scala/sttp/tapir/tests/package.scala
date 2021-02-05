@@ -72,6 +72,10 @@ package object tests {
   val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Any] =
     endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
 
+  val in_date_time_json_out_date_time_json: Endpoint[DateTime, Unit, DateTime, Any] =
+    endpoint.post.in("api" / "echo").in(jsonBody[DateTime]).out(jsonBody[DateTime]).name("echo json")
+
+
   val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte], Any] =
     endpoint.post.in("api" / "echo").in(byteArrayBody).out(byteArrayBody).name("echo byte array")
 

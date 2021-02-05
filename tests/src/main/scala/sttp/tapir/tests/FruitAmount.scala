@@ -2,6 +2,7 @@ package sttp.tapir.tests
 
 import sttp.tapir._
 
+import java.time.LocalDateTime
 import scala.collection.immutable
 
 case class FruitAmount(fruit: String, amount: Int)
@@ -19,6 +20,8 @@ sealed trait Entity {
 }
 case class Person(name: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
+
+case class DateTime(localDateTime: LocalDateTime)
 
 object Enumeratum {
   import enumeratum.EnumEntry
