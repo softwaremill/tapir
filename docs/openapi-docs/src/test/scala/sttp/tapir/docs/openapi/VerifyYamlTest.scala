@@ -1,6 +1,6 @@
 package sttp.tapir.docs.openapi
 
-import java.time.Instant
+import java.time.{Instant, LocalDateTime}
 import io.circe.Json
 import io.circe.generic.auto._
 import sttp.model.{Method, StatusCode}
@@ -890,6 +890,18 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_date_time.yml")
 
     val e = endpoint.in(query[Instant]("instant"))
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should use string format for LocalDateTime fields") {
+
+    val expectedYaml = loadYaml("expected_localDateTime.yml")
+
+    val e = endpoint.in(query[LocalDateTime]("localDateTime"))
+
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
