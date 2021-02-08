@@ -20,4 +20,4 @@ case class OAuthFlows(
     authorizationCode: Option[OAuthFlow] = None
 )
 
-case class OAuthFlow(authorizationUrl: String, tokenUrl: String, refreshUrl: Option[String], scopes: ListMap[String, String])
+case class OAuthFlow(authorizationUrl: String, tokenUrl: Option[String], refreshUrl: Option[String], scopes: ListMap[String, String])
