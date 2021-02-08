@@ -1,0 +1,17 @@
+openapi: 3.0.3
+info:
+  title: Examples
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: localDateTime
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''

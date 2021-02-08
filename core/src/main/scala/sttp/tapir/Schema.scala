@@ -1,22 +1,19 @@
 package sttp.tapir
 
+import magnolia.Magnolia
+import sttp.model.Part
+import sttp.tapir.SchemaType._
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
+import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
+import sttp.tapir.internal.ModifySchemaMacro
+
 import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
 import java.time._
 import java.util.{Date, UUID}
-
-import sttp.model.Part
-import sttp.tapir.SchemaType._
-import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
-import sttp.tapir.generic.internal.SchemaMapMacro
-import sttp.tapir.internal.ModifySchemaMacro
-
-import scala.annotation.StaticAnnotation
-import scala.annotation.implicitNotFound
-import sttp.tapir.generic.Derived
-import sttp.tapir.generic.internal.SchemaMagnoliaDerivation
-import magnolia.Magnolia
+import scala.annotation.{StaticAnnotation, implicitNotFound}
 
 /** Describes the type `T`: its low-level representation, meta-data and validation rules.
   * @param format The name of the format of the low-level representation of `T`.
@@ -142,7 +139,7 @@ object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPri
   implicit val schemaForZonedDateTime: Schema[ZonedDateTime] = Schema(SDateTime)
   implicit val schemaForOffsetDateTime: Schema[OffsetDateTime] = Schema(SDateTime)
   implicit val schemaForDate: Schema[Date] = Schema(SDateTime)
-  implicit val schemaForLocalDateTime: Schema[LocalDateTime] = Schema(SDateTime)
+  implicit val schemaForLocalDateTime: Schema[LocalDateTime] = Schema(SString)
   implicit val schemaForLocalDate: Schema[LocalDate] = Schema(SDate)
   implicit val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString)
   implicit val schemaForJavaDuration: Schema[Duration] = Schema(SString)
