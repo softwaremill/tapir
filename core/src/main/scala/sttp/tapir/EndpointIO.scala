@@ -202,9 +202,9 @@ object EndpointInput {
     }
     case class Oauth2[T](
         authorizationUrl: String,
-        tokenUrl: String,
+        tokenUrl: Option[String],
         scopes: ListMap[String, String],
-        refreshUrl: Option[String] = None,
+        refreshUrl: Option[String],
         input: EndpointInput.Single[T],
         challenge: WWWAuthenticate,
         securitySchemeName: Option[String]

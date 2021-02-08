@@ -183,7 +183,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       auth.oauth2
         .authorizationCode(
           "https://example.com/auth",
-          "https://example.com/token",
           ListMap("client" -> "scope for clients", "admin" -> "administration scope")
         )
 
