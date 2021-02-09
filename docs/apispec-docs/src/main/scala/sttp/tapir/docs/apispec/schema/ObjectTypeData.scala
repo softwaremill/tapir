@@ -28,13 +28,13 @@ object ObjectTypeData {
 
   def apply(typeData: TypeData[_]): List[ObjectTypeData] = {
     typeData match {
-      case TypeData(TSchema(TSchemaType.SArray(o), _, _, _, _, _, _), validator) =>
+      case TypeData(TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _), validator) =>
         apply(TypeData(o, elementValidator(validator)))
-      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _, _, _, _), validator) =>
+      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _, _, _, _, _), validator) =>
         productSchemas(s, st, validator)
-      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _, _, _, _), validator) =>
+      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _, _, _, _, _), validator) =>
         coproductSchemas(s, st, validator)
-      case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _, _, _, _), validator) =>
+      case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _, _, _, _, _), validator) =>
         (st.info -> TypeData(s, validator): ObjectTypeData) +: apply(
           TypeData(st.valueSchema, elementValidator(validator))
         )
@@ -59,7 +59,7 @@ object ObjectTypeData {
   }
 
   private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator[_]): Seq[TypeData[_]] = {
-    st.schemas.collect { case s @ TSchema(st: TSchemaType.SProduct, _, _, _, _, _, _) =>
+    st.schemas.collect { case s @ TSchema(st: TSchemaType.SProduct, _, _, _, _, _, _, _) =>
       TypeData(s, subtypeValidator(v, st.info))
     }
   }

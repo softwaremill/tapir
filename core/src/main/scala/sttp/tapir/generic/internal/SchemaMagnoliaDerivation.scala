@@ -3,7 +3,7 @@ package sttp.tapir.generic.internal
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, default, encodedName, format, generic, validate}
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, default, encodedName, encodedExample, format, generic, validate}
 import SchemaMagnoliaDerivation.deriveCache
 
 import scala.collection.mutable
@@ -51,6 +51,7 @@ trait SchemaMagnoliaDerivation {
   private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
     annotations.foldLeft(schema) {
       case (schema, ann: description) => schema.description(ann.text)
+      case (schema, ann: encodedExample) => schema.encodedExample(ann.example)
       case (schema, ann: default[X])  => schema.default(ann.default)
       case (schema, ann: validate[X]) => schema.validate(ann.v)
       case (schema, ann: format)      => schema.format(ann.format)

@@ -1,13 +1,15 @@
 package sttp.tapir.docs.openapi
 
-import java.time.{Instant, LocalDateTime}
+import java.time.ZoneOffset.UTC
+import java.time.{Instant, LocalDateTime, ZonedDateTime}
 import io.circe.Json
 import io.circe.generic.auto._
 import sttp.model.{Method, StatusCode}
+import sttp.tapir.{Endpoint, endpoint}
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir._
 import sttp.tapir.generic.auto._
-import sttp.tapir.docs.openapi.dtos.Book
+import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.{Configuration, Derived}
@@ -930,6 +932,23 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       .toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml when using schema with custom example") {
+    val expectedYaml = loadYaml("expected_schema_example.yml")
+
+    val expectedDateTime = ZonedDateTime.of(2021, 1, 1, 1, 1, 1, 1,UTC)
+    val expectedBook = Book("title",Genre("name","desc"),2021,Author("name", Country("country")))
+
+    implicit val testSchemaZonedDateTime: Schema[ZonedDateTime] = Schema.schemaForZonedDateTime.encodedExample(expectedDateTime)
+    implicit val testSchemaBook = implicitly[Schema[Book]].encodedExample(circeCodec[Book].encode(expectedBook))
+
+    val endpoint_with_dateTimes = endpoint.post.in(jsonBody[ZonedDateTime]).out(jsonBody[Book])
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_with_dateTimes, Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
     actualYamlNoIndent shouldBe expectedYaml
   }
 

@@ -1,0 +1,78 @@
+openapi: 3.0.3
+info:
+  title: Examples
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: string
+              format: date-time
+              example: '2021-01-01T01:01:01.000000001Z'
+        required: true
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+components:
+  schemas:
+    Book:
+      required:
+        - title
+        - genre
+        - year
+        - author
+      type: object
+      properties:
+        title:
+          type: string
+        genre:
+          $ref: '#/components/schemas/Genre'
+        year:
+          type: integer
+        author:
+          $ref: '#/components/schemas/Author'
+      example:
+        title: title
+        genre:
+          name: name
+          description: desc
+        year: 2021
+        author:
+          name: name
+          country:
+            name: country
+    Genre:
+      required:
+        - name
+        - description
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Author:
+      required:
+        - name
+        - country
+      type: object
+      properties:
+        name:
+          type: string
+        country:
+          $ref: '#/components/schemas/Country'
+    Country:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string

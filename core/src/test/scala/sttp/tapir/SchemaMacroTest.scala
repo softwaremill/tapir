@@ -126,6 +126,19 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     implicitly[Schema[Person]].modify(_.age)(_.default(34)) shouldBe expected
   }
 
+  behavior of "apply example"
+
+  it should "add example to product" in {
+    val expected = Schema(
+      SProduct(
+        SObjectInfo("sttp.tapir.Person"),
+        List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).encodedExample(18)))
+      )
+    )
+
+    implicitly[Schema[Person]].modify(_.age)(_.encodedExample(18)) shouldBe expected
+  }
+
   behavior of "apply description"
 
   it should "add description to product" in {
