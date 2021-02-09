@@ -31,6 +31,7 @@ case class Schema[T](
     // string in documentation. This is needed as codecs for nested types aren't available. Similar to Validator.EncodeToRaw
     default: Option[(T, Option[Any])] = None,
     format: Option[String] = None,
+    encodedExample: Option[Any] = None,
     deprecated: Boolean = false,
     validator: Validator[T] = Validator.pass[T]
 ) {
@@ -66,6 +67,8 @@ case class Schema[T](
 
   def description(d: String): Schema[T] = copy(description = Some(d))
 
+  def encodedExample(e: Any): Schema[T] = copy(encodedExample = Some(e))
+
   def default(t: T, raw: Option[Any] = None): Schema[T] = copy(default = Some((t, raw)), isOptional = true)
 
   def format(f: String): Schema[T] = copy(format = Some(f))
@@ -98,8 +101,9 @@ case class Schema[T](
 
   def validate(v: Validator[T]): Schema[T] = copy(validator = validator.and(v))
 }
-
 class description(val text: String) extends StaticAnnotation
+
+class encodedExample(val example: Any) extends StaticAnnotation
 
 class default[T](val default: T) extends StaticAnnotation
 

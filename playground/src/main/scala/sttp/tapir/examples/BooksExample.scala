@@ -1,7 +1,7 @@
-package sttp.tapir.example
+package sttp.tapir.examples
 
 import com.typesafe.scalalogging.StrictLogging
-import sttp.tapir.example.Endpoints.Limit
+import sttp.tapir.examples.Endpoints.Limit
 import sttp.tapir.generic.auto._
 import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
