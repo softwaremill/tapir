@@ -54,13 +54,12 @@ package object apispec {
         case EndpointInput.PathCapture(name, _, _) => Left(name)
         case EndpointInput.FixedPath(s, _, _)      => Right(s)
       }
-      .foldLeft((Vector.empty[String], 1)) { case ((acc, i), component) =>
+      .foldLeft(Vector.empty[String]) { case (acc, component) =>
         component match {
           case Left(None)    => throw new IllegalStateException("All path captures should be named")
-          case Left(Some(p)) => (acc :+ p, i)
-          case Right(p)      => (acc :+ p, i)
+          case Left(Some(p)) => acc :+ p
+          case Right(p)      => acc :+ p
         }
       }
-      ._1
   }
 }
