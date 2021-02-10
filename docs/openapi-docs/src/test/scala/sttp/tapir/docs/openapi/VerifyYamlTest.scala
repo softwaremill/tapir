@@ -1,30 +1,31 @@
 package sttp.tapir.docs.openapi
 
-import java.time.ZoneOffset.UTC
-import java.time.{Instant, LocalDateTime, ZonedDateTime}
-import io.circe.Json
 import io.circe.generic.auto._
-import sttp.model.{Method, StatusCode}
-import sttp.tapir.{Endpoint, endpoint}
-import sttp.tapir.EndpointIO.Example
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
-import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
-import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
-import sttp.tapir.generic.{Configuration, Derived}
-import sttp.tapir.json.circe._
-import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests._
-
-import scala.collection.immutable.ListMap
-import scala.io.Source
+import io.circe.{Decoder, Encoder, Json}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.model.{Method, StatusCode}
+import sttp.tapir.EndpointIO.Example
 import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
+import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
+import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
+import sttp.tapir.generic.auto._
+import sttp.tapir.generic.{Configuration, Derived}
+import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
+import sttp.tapir.openapi._
+import sttp.tapir.openapi.circe.yaml._
+import sttp.tapir.tests._
+import sttp.tapir.{Endpoint, endpoint, _}
+
+import java.time.ZoneOffset.UTC
+import java.time._
+import java.util.UUID
+import scala.collection.immutable.ListMap
+import scala.io.Source
+import scala.util.Try
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
@@ -632,8 +633,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("use enum validator for a cats non-empty-list of enums") {
-    import sttp.tapir.integ.cats.codec._
     import cats.data.NonEmptyList
+    import sttp.tapir.integ.cats.codec._
     implicit def schemaForColor: Schema[Color] =
       Schema.string.validate(Validator.enum(List(Blue, Red), { c => Some(c.toString.toLowerCase()) }))
 
@@ -938,13 +939,38 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml when using schema with custom example") {
     val expectedYaml = loadYaml("expected_schema_example.yml")
 
-    val expectedDateTime = ZonedDateTime.of(2021, 1, 1, 1, 1, 1, 1,UTC)
-    val expectedBook = Book("title",Genre("name","desc"),2021,Author("name", Country("country")))
+    val expectedDateTime = ZonedDateTime.of(2021, 1, 1, 1, 1, 1, 1, UTC)
+    val expectedBook = Book("title", Genre("name", "desc"), 2021, Author("name", Country("country")))
 
     implicit val testSchemaZonedDateTime: Schema[ZonedDateTime] = Schema.schemaForZonedDateTime.encodedExample(expectedDateTime)
     implicit val testSchemaBook = implicitly[Schema[Book]].encodedExample(circeCodec[Book].encode(expectedBook))
 
     val endpoint_with_dateTimes = endpoint.post.in(jsonBody[ZonedDateTime]).out(jsonBody[Book])
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_with_dateTimes, Info("Examples", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml with default schema examples") {
+    implicit val scalaDurationEncoder: Encoder[scala.concurrent.duration.Duration] =
+      Encoder.encodeString.contramap[scala.concurrent.duration.Duration](_.toString)
+    implicit val scalaDurationDecoder: Decoder[scala.concurrent.duration.Duration] =
+      Decoder.decodeString.emapTry(s => Try(scala.concurrent.duration.Duration(s)))
+    case class DefaultSchemaExamples(
+        localDateTime: LocalDateTime,
+        zoneOffset: ZoneOffset,
+        javaDuration: java.time.Duration,
+        localTime: LocalTime,
+        offsetTime: OffsetTime,
+        scalaDuration: scala.concurrent.duration.Duration,
+        uuid: UUID
+    )
+
+    val expectedYaml = loadYaml("expected_schema_default_examples.yml")
+
+    val endpoint_with_dateTimes = endpoint.post.in(jsonBody[DefaultSchemaExamples])
 
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_with_dateTimes, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

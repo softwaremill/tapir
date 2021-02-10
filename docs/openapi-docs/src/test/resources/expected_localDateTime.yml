@@ -12,6 +12,7 @@ paths:
           required: true
           schema:
             type: string
+            example: 2021-01-01T09:41
       responses:
         '200':
           description: ''
