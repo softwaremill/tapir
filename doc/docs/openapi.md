@@ -1,3 +1,4 @@
+
 # Generating OpenAPI documentation
 
 To use, add the following dependencies:
@@ -53,9 +54,13 @@ OpenAPIDocsInterpreter.toOpenAPI(List(addBook, booksListing, booksListingByGenre
 The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala mdoc:silent
+import io.circe.Printer
+import io.circe.syntax.EncoderOps
+import sttp.tapir.openapi.circe._
 import sttp.tapir.openapi.circe.yaml._
 
 println(docs.toYaml)
+println(Printer.spaces2.print(docs.asJson))
 ```
 
 ## Options
