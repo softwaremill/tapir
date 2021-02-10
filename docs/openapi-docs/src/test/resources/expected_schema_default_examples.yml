@@ -1,0 +1,51 @@
+openapi: 3.0.3
+info:
+  title: Examples
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefaultSchemaExamples'
+        required: true
+      responses:
+        '200':
+          description: ''
+components:
+  schemas:
+    DefaultSchemaExamples:
+      required:
+        - localDateTime
+        - zoneOffset
+        - javaDuration
+        - localTime
+        - offsetTime
+        - scalaDuration
+        - uuid
+      type: object
+      properties:
+        localDateTime:
+          type: string
+          example: 2021-01-01T09:41
+        zoneOffset:
+          type: string
+          example: Z
+        javaDuration:
+          type: string
+          example: PT24H
+        localTime:
+          type: string
+          example: 09:41
+        offsetTime:
+          type: string
+          example: 09:41Z
+        scalaDuration:
+          type: string
+          example: 1 day
+        uuid:
+          type: string
+          example: 130770a3-d156-453e-be8f-9dad82432c15

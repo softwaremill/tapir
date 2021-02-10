@@ -12,6 +12,7 @@ import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal}
 import java.nio.ByteBuffer
 import java.time._
+import java.util.concurrent.TimeUnit
 import java.util.{Date, UUID}
 import scala.annotation.{StaticAnnotation, implicitNotFound}
 
@@ -116,6 +117,14 @@ class encodedName(val name: String) extends StaticAnnotation
 class validate[T](val v: Validator[T]) extends StaticAnnotation
 
 object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPrioritySchema {
+  private val DefaultExampleZoneOffset = ZoneOffset.UTC
+  private val DefaultExampleJavaDuration = Duration.ofDays(1L)
+  private val DefaultExampleScalaDuration = scala.concurrent.duration.Duration(1, TimeUnit.DAYS)
+  private val DefaultExampleUUID = UUID.fromString("130770a3-d156-453e-be8f-9dad82432c15")
+  private val DefaultExampleLocalTime = LocalTime.of(9,41)
+  private val DefaultExampleOffsetTime = OffsetTime.of(DefaultExampleLocalTime, DefaultExampleZoneOffset)
+  private val DefaultExampleLocalDateTime = LocalDateTime.of(2021,1,1,9,41)
+
   val ModifyCollectionElements = "each"
 
   /** Creates a schema for type `T`, where the low-level representation is a `String`.
@@ -143,14 +152,15 @@ object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPri
   implicit val schemaForZonedDateTime: Schema[ZonedDateTime] = Schema(SDateTime)
   implicit val schemaForOffsetDateTime: Schema[OffsetDateTime] = Schema(SDateTime)
   implicit val schemaForDate: Schema[Date] = Schema(SDateTime)
-  implicit val schemaForLocalDateTime: Schema[LocalDateTime] = Schema(SString)
   implicit val schemaForLocalDate: Schema[LocalDate] = Schema(SDate)
-  implicit val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString)
-  implicit val schemaForJavaDuration: Schema[Duration] = Schema(SString)
-  implicit val schemaForLocalTime: Schema[LocalTime] = Schema(SString)
-  implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString)
-  implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString)
-  implicit val schemaForUUID: Schema[UUID] = Schema(SString)
+  implicit val schemaForLocalDateTime: Schema[LocalDateTime] = Schema(SString).encodedExample(DefaultExampleLocalDateTime)
+  implicit val schemaForZoneOffset: Schema[ZoneOffset] = Schema(SString).encodedExample(DefaultExampleZoneOffset)
+  implicit val schemaForJavaDuration: Schema[Duration] = Schema(SString).encodedExample(DefaultExampleJavaDuration)
+  implicit val schemaForLocalTime: Schema[LocalTime] = Schema(SString).encodedExample(DefaultExampleLocalTime)
+  implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString).encodedExample(DefaultExampleOffsetTime)
+  implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] =
+    Schema(SString).encodedExample(DefaultExampleScalaDuration)
+  implicit val schemaForUUID: Schema[UUID] = Schema(SString).encodedExample(DefaultExampleUUID)
   implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SString)
   implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString)
 
