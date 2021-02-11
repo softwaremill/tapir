@@ -171,7 +171,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.4.0" % Test
+      "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.5.0" % Test
     ),
     unmanagedSourceDirectories in Compile += {
       val sourceDir = (sourceDirectory in Compile).value
@@ -813,7 +813,7 @@ lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.4.0" % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.5.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     )
   )
