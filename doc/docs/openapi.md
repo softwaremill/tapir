@@ -51,15 +51,21 @@ val booksListingByGenre = endpoint.in(path[String]("genre"))
 OpenAPIDocsInterpreter.toOpenAPI(List(addBook, booksListing, booksListingByGenre), "My Bookshop", "1.0")
 ```
 
-The openapi case classes can then be serialised, either to JSON or YAML using [Circe](https://circe.github.io/circe/):
+The openapi case classes can then be serialised to YAML using [Circe](https://circe.github.io/circe/):
 
 ```scala mdoc:silent
-import io.circe.Printer
-import io.circe.syntax.EncoderOps
-import sttp.tapir.openapi.circe._
 import sttp.tapir.openapi.circe.yaml._
 
 println(docs.toYaml)
+```
+
+Or to JSON:
+
+```scala mdoc:silent
+import io.circe.Printer
+import io.circe.syntax._
+import sttp.tapir.openapi.circe._
+
 println(Printer.spaces2.print(docs.asJson))
 ```
 
