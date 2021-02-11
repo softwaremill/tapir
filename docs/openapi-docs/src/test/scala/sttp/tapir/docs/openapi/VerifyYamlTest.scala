@@ -19,7 +19,6 @@ import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
 import sttp.tapir.tests._
 
 import scala.collection.immutable.ListMap
-import scala.io.Source
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
@@ -938,8 +937,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml when using schema with custom example") {
     val expectedYaml = load("expected_schema_example.yml")
 
-    val expectedDateTime = ZonedDateTime.of(2021, 1, 1, 1, 1, 1, 1,UTC)
-    val expectedBook = Book("title",Genre("name","desc"),2021,Author("name", Country("country")))
+    val expectedDateTime = ZonedDateTime.of(2021, 1, 1, 1, 1, 1, 1, UTC)
+    val expectedBook = Book("title", Genre("name", "desc"), 2021, Author("name", Country("country")))
 
     implicit val testSchemaZonedDateTime: Schema[ZonedDateTime] = Schema.schemaForZonedDateTime.encodedExample(expectedDateTime)
     implicit val testSchemaBook = implicitly[Schema[Book]].encodedExample(circeCodec[Book].encode(expectedBook))

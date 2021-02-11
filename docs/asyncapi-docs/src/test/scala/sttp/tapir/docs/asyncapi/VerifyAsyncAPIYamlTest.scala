@@ -6,7 +6,6 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
-import sttp.tapir.EndpointIO.Example
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
