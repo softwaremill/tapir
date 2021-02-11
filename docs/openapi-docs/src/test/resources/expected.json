@@ -1,0 +1,54 @@
+{
+  "openapi" : "3.0.3",
+  "info" : {
+    "title" : "Fruits",
+    "version" : "1.0"
+  },
+  "paths" : {
+    "/" : {
+      "get" : {
+        "operationId" : "getRoot",
+        "parameters" : [
+          {
+            "name" : "fruit",
+            "in" : "query",
+            "required" : true,
+            "schema" : {
+              "type" : "string"
+            }
+          },
+          {
+            "name" : "amount",
+            "in" : "query",
+            "required" : false,
+            "schema" : {
+              "type" : "integer"
+            }
+          }
+        ],
+        "responses" : {
+          "200" : {
+            "description" : "",
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/delete" : {
+      "delete" : {
+        "operationId" : "deleteApiDelete",
+        "responses" : {
+          "200" : {
+            "description" : "ok"
+          }
+        }
+      }
+    }
+  }
+}

@@ -75,7 +75,7 @@ trait TapirOpenAPICirceEncoders {
   implicit val encoderInfo: Encoder[Info] = deriveEncoder[Info]
   implicit val encoderContact: Encoder[Contact] = deriveEncoder[Contact]
   implicit val encoderLicense: Encoder[License] = deriveEncoder[License]
-  implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveEncoder[OpenAPI]
+  implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveEncoder[OpenAPI].mapJson(_.deepDropNullValues)
   implicit val encoderDiscriminator: Encoder[Discriminator] = deriveEncoder[Discriminator]
   implicit def encodeList[T: Encoder]: Encoder[List[T]] = {
     case Nil        => Json.Null
