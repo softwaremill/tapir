@@ -1,24 +1,24 @@
 package sttp.tapir.server.tests
 
-import java.io.{ByteArrayInputStream, File, InputStream}
-import java.nio.ByteBuffer
 import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
-import sttp.tapir.generic.auto._
 import io.circe.generic.auto._
+import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model._
+import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
 import sttp.monad.MonadError
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
-import org.scalatest.matchers.should.Matchers._
-import sttp.model.headers.{CookieWithMeta, CookieValueWithMeta}
 
+import java.io.{ByteArrayInputStream, File, InputStream}
+import java.nio.ByteBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
@@ -304,6 +304,34 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.get(uri"$baseUri/api/echo").contentType("application/dicom+json").send(backend).map { r =>
         r.body shouldBe Right("application/dicom+json")
       }
+    },
+    testServer(in_content_type_fixed_header, "mismatch content-type")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
+      basicRequest
+        .post(uri"$baseUri/api/echo")
+        .contentType(MediaType.ApplicationXml)
+        .send(backend)
+        .map(_.code shouldBe StatusCode.UnsupportedMediaType)
+    },
+    testServer(in_content_type_fixed_header, "missing content-type")((_: Unit) => pureResult(().asRight[Unit])) { baseUri =>
+      basicRequest
+        .post(uri"$baseUri/api/echo")
+        .send(backend)
+        .map(_.code shouldBe StatusCode.BadRequest)
+    },
+    testServer(in_content_type_header_with_custom_decode_results, "mismatch content-type")((_: MediaType) => pureResult(Either.right[Unit, Unit](()))) {
+      baseUri =>
+        basicRequest
+          .post(uri"$baseUri/api/echo")
+          .contentType(MediaType.ApplicationXml)
+          .send(backend)
+          .map(_.code shouldBe StatusCode.UnsupportedMediaType)
+    },
+    testServer(in_content_type_header_with_custom_decode_results, "missing content-type")((_: MediaType) => pureResult(Either.right[Unit, Unit](()))) {
+      baseUri =>
+        basicRequest
+          .post(uri"$baseUri/api/echo")
+          .send(backend)
+          .map(_.code shouldBe StatusCode.BadRequest)
     },
     testServer(in_unit_out_html)(_ => pureResult("<html />".asRight[Unit])) { baseUri =>
       basicRequest.get(uri"$baseUri/api/echo").send(backend).map { r =>

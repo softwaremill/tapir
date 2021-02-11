@@ -1,7 +1,5 @@
 package sttp.tapir.server.akkahttp
 
-import java.util.Locale
-
 import akka.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
 import akka.http.scaladsl.model.{HttpHeader, Uri}
 import akka.http.scaladsl.server.RequestContext
@@ -9,7 +7,11 @@ import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
 
+import java.util.Locale
+
 private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends DecodeInputsContext {
+
+  private val EmptyContentType = "none/none"
 
   // Add low-level headers that have been removed by akka-http.
   // https://doc.akka.io/docs/akka-http/current/common/http-model.html?language=scala#http-headers
@@ -30,7 +32,7 @@ private[akkahttp] class AkkaDecodeInputsContext(req: RequestContext) extends Dec
   }
   override def header(name: String): List[String] = {
     val nameInLowerCase = name.toLowerCase(Locale.ROOT)
-    allHeaders.filter(_.is(nameInLowerCase)).map(_.value)
+    allHeaders.filter(_.is(nameInLowerCase)).map(_.value).filterNot(_ == EmptyContentType)
   }
   override def headers: Seq[(String, String)] = allHeaders.map(h => (h.name, h.value))
   override def queryParameter(name: String): Seq[String] = req.request.uri.query().getAll(name).reverse
