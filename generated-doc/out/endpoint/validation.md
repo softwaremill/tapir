@@ -6,8 +6,9 @@ dedicated error output (the `E` in `Endpoint[I, E, O, S]`) to report errors.
 
 ## Single type validation
 
-Validation rules are part of the [codec](codecs.md) for a given type. They can be specified when creating the codec
-(using the `Codec.validate()` method):
+Validation rules are part of the [`Schema`](codecs.md#schemas) for a given type, and can be added either directly
+to the schema, or via the `Codec` or `EndpointInput`/`EndpointOutput`. For example, when defining a codec for a type, 
+we have the `.validate()` method:
  
 ```scala
 import sttp.tapir._
@@ -35,9 +36,9 @@ Validation rules added using the built-in validators are translated to [OpenAPI]
 
 ## Validation rules and automatic codec derivation
 
-Validator are parts of schemas, validators are looked up as part of the with implicit `Schema[T]` values. 
+As validators are parts of schemas, they are looked up as part of the with implicit `Schema[T]` values. 
 
-While they can be manually defined, Tapir provides tools to derive automatically schemas for custom types 
+While they can be manually defined, tapir provides tools to derive automatically schemas for custom types 
 (traits and case classes).
 
 ## Custom type validation
