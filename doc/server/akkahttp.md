@@ -156,7 +156,7 @@ val countCharactersRoute: Route =
 ## Streaming
 
 The akka-http interpreter accepts streaming bodies of type `Source[ByteString, Any]`, as described by the `AkkaStreams`
-capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(AkkaStreams, schema, format)`.
+capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(AkkaStreams)(schema, format)`.
 
 The capability can be added to the classpath independently of the interpreter through the 
 `"com.softwaremill.sttp.shared" %% "akka"` dependency.

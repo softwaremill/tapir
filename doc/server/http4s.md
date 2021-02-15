@@ -77,7 +77,7 @@ using tapir, can be always implemented directly using http4s.
 ## Streaming
 
 The http4s interpreter accepts streaming bodies of type `Stream[F, Byte]`, as described by the `Fs2Streams`
-capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(Fs2Streams[F], schema, format)`.
+capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(Fs2Streams[F])(schema, format)`.
 
 The capability can be added to the classpath independently of the interpreter through the 
 `"com.softwaremill.sttp.shared" %% "http4s"` dependency.
