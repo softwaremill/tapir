@@ -197,6 +197,14 @@ class ServerBasicTests[F[_], ROUTE](
         .send(backend)
         .map(_.body shouldBe Right("kind=very good&name=apple&weight=42"))
     },
+    testServer(in_query_params_out_string, "should support value-less query param")((mqp: QueryParams) =>
+      pureResult(mqp.toMultiMap.map(data => s"${data._1}=${data._2}").mkString("&").asRight[Unit])
+    ) { baseUri =>
+      basicRequest
+        .get(uri"$baseUri/api/echo/params?flag")
+        .send(backend)
+        .map(_.body shouldBe Right("flag=List()"))
+    },
     testServer(in_headers_out_headers)((hs: List[Header]) => pureResult(hs.map(h => Header(h.name, h.value.reverse)).asRight[Unit])) {
       baseUri =>
         basicRequest
