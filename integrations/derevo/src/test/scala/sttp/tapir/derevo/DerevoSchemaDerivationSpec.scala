@@ -20,7 +20,7 @@ class DerevoSchemaDerivationSpec extends AnyFlatSpec with Matchers {
     val generatedSchema: Schema[Adt] = implicitly[Schema[Adt]]
 
     generatedSchema.show shouldBe expectedSchema.show
-    }
+  }
 
   "Generated schema by derevo with custom description" should "be the same as Schema.derived with altered description" in {
 
@@ -37,7 +37,5 @@ class DerevoSchemaDerivationSpec extends AnyFlatSpec with Matchers {
     generatedSchema.description shouldBe Some(testDescription)
     generatedSchema.show shouldBe expectedSchema.show
   }
-
-
 
 }
