@@ -101,7 +101,8 @@ lazy val allAggregates = core.projectRefs ++
   playground.projectRefs ++
   documentation.projectRefs ++
   openapiCodegen.projectRefs ++
-  clientTestServer.projectRefs
+  clientTestServer.projectRefs ++
+  derevo.projectRefs
 
 val testJVM = taskKey[Unit]("Test JVM projects")
 val testJS = taskKey[Unit]("Test JS projects")
@@ -177,7 +178,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       val sourceDir = (sourceDirectory in Compile).value
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
-        case _                       => sourceDir / "scala-2.13-"
+        case _ => sourceDir / "scala-2.13-"
       }
     },
     // Until https://youtrack.jetbrains.com/issue/SCL-18636 is fixed and IntelliJ properly imports projects with
@@ -299,6 +300,34 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
       "dev.zio" %% "zio-streams" % Versions.zio,
       scalaTest.value % Test,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core)
+
+
+lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
+  .settings(commonSettings)
+  .settings(libraryDependencies ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 11 | 12)) => List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
+      case _                  => List()
+    }
+  })
+  .settings(
+    scalacOptions ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, y)) if y == 11 => Seq("-Xexperimental")
+        case Some((2, y)) if y == 13 => Seq("-Ymacro-annotations")
+        case _                       => Seq.empty[String]
+      }
+    }
+  )
+  .settings(
+    name := "tapir-derevo",
+    libraryDependencies ++= Seq(
+      "org.manatki" %% "derevo-core" % Versions.derevo,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -793,6 +822,7 @@ lazy val playClient: ProjectMatrix = (projectMatrix in file("client/play-client"
   .dependsOn(core, clientTests % Test)
 
 import scala.collection.JavaConverters._
+
 lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
   .enablePlugins(SbtPlugin)
   .settings(commonSettings)
