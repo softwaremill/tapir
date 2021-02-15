@@ -964,5 +964,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     uPickleJson,
     vertxServer,
     zio,
-    zioServer
+    zioServer,
+    derevo
   )
