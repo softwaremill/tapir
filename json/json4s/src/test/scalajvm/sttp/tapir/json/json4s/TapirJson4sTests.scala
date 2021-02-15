@@ -4,8 +4,9 @@ import org.json4s._
 import org.scalatest.Assertion
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.DecodeResult.Error.{JsonDecodeException}
+import sttp.tapir.DecodeResult.Error.JsonDecodeException
 import sttp.tapir.DecodeResult.Value
+import sttp.tapir.SchemaType.SCoproduct
 import sttp.tapir.generic.auto._
 import sttp.tapir.{DecodeResult, Schema}
 
@@ -64,5 +65,9 @@ class TapirJson4sTests extends AnyFlatSpecLike with Matchers {
 
     val error = failure.error.asInstanceOf[JsonDecodeException]
     error.underlying shouldBe a[MappingException]
+  }
+
+  it should "return a coproduct schema for a JValue" in {
+    schemaForJson4s.schemaType shouldBe a[SCoproduct]
   }
 }

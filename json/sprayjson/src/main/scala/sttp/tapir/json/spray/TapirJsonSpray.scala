@@ -24,10 +24,21 @@ trait TapirJsonSpray {
       }
     } { t => t.toJson.toString() }
 
-  implicit val schemaForSprayJsValue: Schema[JsValue] = Schema(
-    SProduct(
-      SObjectInfo("spray.json.JsValue"),
-      List.empty
+  // JsValue is a coproduct with unknown implementations
+  implicit val schemaForSprayJsValue: Schema[JsValue] =
+    Schema(
+      SCoproduct(
+        SObjectInfo("spray.json.JsValue"),
+        List.empty,
+        None
+      )
     )
-  )
+
+  implicit val schemaForSprayJsObject: Schema[JsObject] =
+    Schema(
+      SProduct(
+        SObjectInfo("spray.json.JsObject"),
+        Iterable.empty
+      )
+    )
 }
