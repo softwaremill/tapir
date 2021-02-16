@@ -60,6 +60,7 @@ lazy val allAggregates = core.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
   zio.projectRefs ++
+  newtype.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
   json4s.projectRefs ++
@@ -300,6 +301,24 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
       scalaTest.value % Test,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
     )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core)
+
+lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-newtype",
+    libraryDependencies ++= Seq(
+      "io.estatico" %% "newtype" % Versions.newtype,
+      scalaTest.value % Test,
+    ),
+    libraryDependencies ++= {
+      if(scalaVersion.value == scala2_12) compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil else Nil
+    },
+    Compile / scalacOptions ++= {
+      if(scalaVersion.value == scala2_13) "-Ymacro-annotations" :: Nil else Nil
+    }
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)

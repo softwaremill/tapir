@@ -28,4 +28,5 @@ object Versions {
   val vertx = "4.0.2"
   val jsScalaJavaTime = "2.1.0"
   val jwtScala = "5.0.0"
+  val newtype = "0.4.4"
 }
