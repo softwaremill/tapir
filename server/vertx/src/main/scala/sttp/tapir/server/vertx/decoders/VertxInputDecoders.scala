@@ -74,10 +74,10 @@ object VertxInputDecoders {
   ): Future[DecodeInputsResult] = {
     result match {
       case values: DecodeInputsResult.Values =>
-        values.bodyInput match {
+        values.bodyInputWithIndex match {
           case None =>
             Future.succeededFuture(values)
-          case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
+          case Some((bodyInput @ EndpointIO.Body(bodyType, codec, _), _)) =>
             extractRawBody(bodyType, rc).flatMap(raw => Future.succeededFuture(codec.decode(raw))).flatMap {
               case DecodeResult.Value(body) =>
                 Future.succeededFuture(values.setBodyInputValue(body))

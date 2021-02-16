@@ -1,9 +1,7 @@
 package sttp.tapir.server.akkahttp
 
-import java.io.ByteArrayInputStream
-
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Directives.{extractExecutionContext, extractMaterializer, extractRequestContext, onSuccess, reject}
+import akka.http.scaladsl.server.Directives.reject
 import akka.http.scaladsl.server.{Directive1, RequestContext, StandardRoute}
 import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
@@ -12,10 +10,12 @@ import akka.util.ByteString
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.monad.FutureMonad
+import sttp.tapir.server.internal._
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, RawBodyType, RawPart}
 
+import java.io.ByteArrayInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
 private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOptions) {
@@ -23,29 +23,16 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
     import akka.http.scaladsl.server.Directives._
     import akka.http.scaladsl.server._
 
-    def decodeBody(result: DecodeInputsResult): Directive1[DecodeInputsResult] = {
-      result match {
-        case values: DecodeInputsResult.Values =>
-          values.bodyInput match {
-            case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
-              rawBodyDirective(bodyType)
-                .map { v =>
-                  codec.decode(v) match {
-                    case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                    case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
-                  }
-                }
-
-            case None => provide(values)
-          }
-        case failure: DecodeInputsResult.Failure => provide(failure)
-      }
-    }
-
     extractRequestContext.flatMap { ctx =>
       extractExecutionContext.flatMap { implicit ec =>
         extractMaterializer.flatMap { implicit mat =>
-          decodeBody(DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx))).flatMap {
+          val decodeBody = new DecodeBody[RequestContext, Future]()(new FutureMonad) {
+            override def rawBody[R](ctx: RequestContext, body: EndpointIO.Body[R, _]): Future[R] = {
+              entityToRawValue(ctx.request.entity, body.bodyType, ctx)
+            }
+          }
+
+          onSuccess(decodeBody(ctx, DecodeInputs(e.input, new AkkaDecodeInputsContext(ctx)))).flatMap {
             case values: DecodeInputsResult.Values =>
               InputValues(e.input, values) match {
                 case InputValuesResult.Value(params, _)        => provide(params.asAny.asInstanceOf[I])
@@ -58,15 +45,6 @@ private[akkahttp] class EndpointToAkkaDirective(serverOptions: AkkaHttpServerOpt
       }
     }
   }
-
-  private def rawBodyDirective(bodyType: RawBodyType[_]): Directive1[Any] =
-    extractRequestContext.flatMap { ctx =>
-      extractMaterializer.flatMap { implicit materializer =>
-        extractExecutionContext.flatMap { implicit ec =>
-          onSuccess(entityToRawValue(ctx.request.entity, bodyType, ctx)).asInstanceOf[Directive1[Any]]
-        }
-      }
-    }
 
   private def decodeFailureDirective[I](
       ctx: RequestContext,

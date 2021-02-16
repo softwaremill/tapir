@@ -850,7 +850,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     circeJson,
     swaggerUiAkka,
     swaggerUiHttp4s,
-    zioServer
+    zioServer,
+    sttpStubServer,
+    playJson
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))

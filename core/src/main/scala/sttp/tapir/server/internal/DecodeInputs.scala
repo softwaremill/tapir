@@ -21,7 +21,6 @@ object DecodeInputsResult {
 
       copy(bodyInputWithIndex = Some((input, bodyIndex)))
     }
-    def bodyInput: Option[EndpointIO.Body[_, _]] = bodyInputWithIndex.map(_._1)
 
     /** Sets the value of the body input, once it is known, if a body input is defined.
       */
