@@ -3,7 +3,6 @@ package sttp.tapir
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
-
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -11,7 +10,7 @@ import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
-import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
+import sttp.model.{Header, HeaderNames, MediaType, Part, QueryParams, StatusCode}
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.model._
@@ -70,7 +69,18 @@ package object tests {
     .out(header[Int]("IntHeader") and stringBody)
 
   val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Any] =
-    endpoint.post.in("api" / "echo").in(jsonBody[FruitAmount]).out(jsonBody[FruitAmount]).name("echo json")
+    endpoint.post.in("api" / "echo")
+      .in(jsonBody[FruitAmount])
+      .out(jsonBody[FruitAmount]).name("echo json")
+
+  val in_content_type_fixed_header: Endpoint[Unit, Unit, Unit, Any] =
+    endpoint.post.in("api" / "echo")
+      .in(header(Header.contentType(MediaType.ApplicationJson)))
+
+  implicit val mediaTypeCodec: Codec[String, MediaType, CodecFormat.TextPlain] = Codec.string.mapDecode(_ => DecodeResult.Mismatch("", ""))(_.toString())
+  val in_content_type_header_with_custom_decode_results: Endpoint[MediaType, Unit, Unit, Any] =
+    endpoint.post.in("api" / "echo")
+      .in(header[MediaType]("Content-Type"))
 
   val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte], Any] =
     endpoint.post.in("api" / "echo").in(byteArrayBody).out(byteArrayBody).name("echo byte array")
