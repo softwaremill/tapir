@@ -1,12 +1,14 @@
 package sttp.tapir.server.stub
 
-import sttp.client3.Response
+import sttp.client3.monad.IdMonad
+import sttp.client3.{Identity, Request, Response}
 
 import java.nio.charset.Charset
-import sttp.client3.testing.SttpBackendStub
+import sttp.client3.testing._
 import sttp.model.StatusCode
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{
+  DecodeBody,
   DecodeInputs,
   DecodeInputsResult,
   EncodeOutputBody,
@@ -15,7 +17,10 @@ import sttp.tapir.server.internal.{
   InputValuesResult,
   OutputValues
 }
-import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointOutput, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointOutput, RawBodyType, WebSocketBodyOutput}
+
+import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
 
 trait SttpStubServer {
 
@@ -36,7 +41,7 @@ trait SttpStubServer {
       new TypeAwareWhenRequest(
         endpoint,
         new stub.WhenRequest(req =>
-          DecodeInputs(endpoint.input, new SttpDecodeInputs(req)) match {
+          decodeBody(req, DecodeInputs(endpoint.input, new SttpDecodeInputs(req))) match {
             case _: DecodeInputsResult.Failure => false
             case values: DecodeInputsResult.Values =>
               InputValues(endpoint.input, values) match {
@@ -46,6 +51,20 @@ trait SttpStubServer {
           }
         )
       )
+    }
+
+    private val decodeBody = new DecodeBody[Request[_, _], Identity]()(IdMonad) {
+      override def rawBody[RAW](request: Request[_, _], body: EndpointIO.Body[RAW, _]): Identity[RAW] = {
+        val asByteArray = request.forceBodyAsByteArray
+        body.bodyType match {
+          case RawBodyType.StringBody(charset) => new String(asByteArray, charset)
+          case RawBodyType.ByteArrayBody       => asByteArray
+          case RawBodyType.ByteBufferBody      => ByteBuffer.wrap(asByteArray)
+          case RawBodyType.InputStreamBody     => new ByteArrayInputStream(asByteArray)
+          case RawBodyType.FileBody            => throw new UnsupportedOperationException
+          case _: RawBodyType.MultipartBody    => throw new UnsupportedOperationException
+        }
+      }
     }
 
     def whenDecodingInputFailureMatches[E, O](
