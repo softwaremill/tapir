@@ -305,24 +305,24 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
 
-
+lazy val macroAnnotations = Seq(
+  libraryDependencies ++= {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, 11 | 12)) => List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
+    case _ => List()
+  }
+},
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, y)) if y == 11 => Seq("-Xexperimental")
+      case Some((2, y)) if y == 13 => Seq("-Ymacro-annotations")
+      case _ => Seq.empty[String]
+    }
+  }
+)
 lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
   .settings(commonSettings)
-  .settings(libraryDependencies ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 11 | 12)) => List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
-      case _                  => List()
-    }
-  })
-  .settings(
-    scalacOptions ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, y)) if y == 11 => Seq("-Xexperimental")
-        case Some((2, y)) if y == 13 => Seq("-Ymacro-annotations")
-        case _                       => Seq.empty[String]
-      }
-    }
-  )
+  .settings(macroAnnotations)
   .settings(
     name := "tapir-derevo",
     libraryDependencies ++= Seq(
@@ -924,6 +924,7 @@ compileDocumentation := {
 lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc")) // important: it must not be doc/
   .enablePlugins(MdocPlugin)
   .settings(commonSettings)
+  .settings(macroAnnotations)
   .settings(
     mdocIn := file("doc"),
     moduleName := "tapir-doc",

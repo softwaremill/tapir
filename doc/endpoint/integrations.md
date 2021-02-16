@@ -44,7 +44,7 @@ To use, add the following dependency:
 ```
 
 Then you can derive schema for your ADT along with other typeclasses besides ADT declaration itself:
-```scala mdoc:compile-only
+```scala mdoc:silent:reset-object
 import derevo.derive
 import sttp.tapir.derevo.schema
 
