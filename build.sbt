@@ -179,7 +179,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       val sourceDir = (sourceDirectory in Compile).value
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
-        case _ => sourceDir / "scala-2.13-"
+        case _                       => sourceDir / "scala-2.13-"
       }
     },
     // Until https://youtrack.jetbrains.com/issue/SCL-18636 is fixed and IntelliJ properly imports projects with
@@ -308,16 +308,16 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
 
 lazy val macroAnnotations = Seq(
   libraryDependencies ++= {
-  CrossVersion.partialVersion(scalaVersion.value) match {
-    case Some((2, 11 | 12)) => List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
-    case _ => List()
-  }
-},
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 11 | 12)) => List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
+      case _                  => List()
+    }
+  },
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, y)) if y == 11 => Seq("-Xexperimental")
       case Some((2, y)) if y == 13 => Seq("-Ymacro-annotations")
-      case _ => Seq.empty[String]
+      case _                       => Seq.empty[String]
     }
   }
 )
@@ -330,22 +330,23 @@ lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
       "org.manatki" %% "derevo-core" % Versions.derevo,
       scalaTest.value % Test
     )
-    .jvmPlatform(scalaVersions = allScalaVersions)
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
-    
+
 lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype"))
   .settings(commonSettings)
   .settings(
     name := "tapir-newtype",
     libraryDependencies ++= Seq(
       "io.estatico" %% "newtype" % Versions.newtype,
-      scalaTest.value % Test,
+      scalaTest.value % Test
     ),
     libraryDependencies ++= {
-      if(scalaVersion.value == scala2_12) compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil else Nil
+      if (scalaVersion.value == scala2_12) compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil else Nil
     },
     Compile / scalacOptions ++= {
-      if(scalaVersion.value == scala2_13) "-Ymacro-annotations" :: Nil else Nil
+      if (scalaVersion.value == scala2_13) "-Ymacro-annotations" :: Nil else Nil
     }
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
