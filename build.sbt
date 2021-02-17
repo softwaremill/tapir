@@ -111,6 +111,22 @@ val testJS = taskKey[Unit]("Test JS projects")
 def filterProject(p: String => Boolean) =
   ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
 
+lazy val macroAnnotations = Seq(
+  libraryDependencies ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, 11 | 12)) => List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
+      case _                  => List()
+    }
+  },
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, y)) if y == 11 => Seq("-Xexperimental")
+      case Some((2, y)) if y == 13 => Seq("-Ymacro-annotations")
+      case _                       => Seq.empty[String]
+    }
+  }
+)
+
 lazy val rootProject = (project in file("."))
   .settings(commonSettings)
   .settings(mimaPreviousArtifacts := Set.empty)
@@ -306,21 +322,6 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
 
-lazy val macroAnnotations = Seq(
-  libraryDependencies ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, 11 | 12)) => List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
-      case _                  => List()
-    }
-  },
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, y)) if y == 11 => Seq("-Xexperimental")
-      case Some((2, y)) if y == 13 => Seq("-Ymacro-annotations")
-      case _                       => Seq.empty[String]
-    }
-  }
-)
 lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
   .settings(commonSettings)
   .settings(macroAnnotations)
@@ -336,18 +337,13 @@ lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
 
 lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype"))
   .settings(commonSettings)
+  .settings(macroAnnotations)
   .settings(
     name := "tapir-newtype",
     libraryDependencies ++= Seq(
       "io.estatico" %% "newtype" % Versions.newtype,
       scalaTest.value % Test
-    ),
-    libraryDependencies ++= {
-      if (scalaVersion.value == scala2_12) compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil else Nil
-    },
-    Compile / scalacOptions ++= {
-      if (scalaVersion.value == scala2_13) "-Ymacro-annotations" :: Nil else Nil
-    }
+    )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
