@@ -1,3 +1,3 @@
 package sttp.tapir.integ.cats
 
-object instances extends ExampleInstances
+object instances extends ExampleInstances with EndpointIOInstances
