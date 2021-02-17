@@ -60,6 +60,7 @@ lazy val allAggregates = core.projectRefs ++
   enumeratum.projectRefs ++
   refined.projectRefs ++
   zio.projectRefs ++
+  newtype.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
   json4s.projectRefs ++
@@ -329,6 +330,23 @@ lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
       "org.manatki" %% "derevo-core" % Versions.derevo,
       scalaTest.value % Test
     )
+    .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core)
+    
+lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-newtype",
+    libraryDependencies ++= Seq(
+      "io.estatico" %% "newtype" % Versions.newtype,
+      scalaTest.value % Test,
+    ),
+    libraryDependencies ++= {
+      if(scalaVersion.value == scala2_12) compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.full) :: Nil else Nil
+    },
+    Compile / scalacOptions ++= {
+      if(scalaVersion.value == scala2_13) "-Ymacro-annotations" :: Nil else Nil
+    }
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core)
@@ -437,8 +455,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.6.3",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.6.3" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.6.4",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.6.4" % Test,
       scalaTest.value % Test
     )
   )
@@ -880,7 +898,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     circeJson,
     swaggerUiAkka,
     swaggerUiHttp4s,
-    zioServer
+    zioServer,
+    sttpStubServer,
+    playJson
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))

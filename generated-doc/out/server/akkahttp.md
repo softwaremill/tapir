@@ -4,14 +4,14 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.17.10"
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.17.11"
 ```
 
 This will transitively pull some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion. Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.17.10" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.17.11" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Now import the object:
@@ -156,7 +156,7 @@ val countCharactersRoute: Route =
 ## Streaming
 
 The akka-http interpreter accepts streaming bodies of type `Source[ByteString, Any]`, as described by the `AkkaStreams`
-capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(AkkaStreams, schema, format)`.
+capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(AkkaStreams)(schema, format)`.
 
 The capability can be added to the classpath independently of the interpreter through the 
 `"com.softwaremill.sttp.shared" %% "akka"` dependency.

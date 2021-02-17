@@ -101,3 +101,14 @@ object Color extends Enumeration with EnumHelper {
     val Red   = Value("red")
 }
 ``` 
+
+## NewType integration
+
+If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapir-newtype` module will provide implicit codecs and
+schemas for a types with a @newtype and @newsubtype annotations as long as a codec and schema for its underlying value already exists:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "@VERSION@"
+```
+
+Then, `import sttp.tapir.codec.newtype`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecNewType` trait to bring the implicit values into scope.

@@ -9,6 +9,7 @@ import sttp.tapir.Codec.JsonCodec
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
+import sttp.tapir.SchemaType.{SCoproduct, SProduct}
 
 object TapirJsonSprayCodec extends TapirJsonSpray
 
@@ -98,5 +99,13 @@ class TapirJsonSprayTests extends AnyFlatSpec with Matchers with DefaultJsonProt
       JsonError("Object is missing required member 'price'", List(FieldName("price")))
     )
     error.underlying shouldBe a[DeserializationException]
+  }
+
+  it should "return a coproduct schema for a JsValue" in {
+    schemaForSprayJsValue.schemaType shouldBe a[SCoproduct]
+  }
+
+  it should "return a product schema for a JsObject" in {
+    schemaForSprayJsObject.schemaType shouldBe a[SProduct]
   }
 }

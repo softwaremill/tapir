@@ -11,6 +11,7 @@ import sttp.tapir.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.monad.MonadError
+import sttp.tapir.client.sttp._
 
 class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
@@ -18,7 +19,6 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
   implicit val idMonad: MonadError[Identity] = IdMonad
 
   it should "combine tapir endpoint with sttp stub" in {
-    import sttp.tapir.client.sttp._
     // given
     val endpoint = sttp.tapir.endpoint
       .in("api" / "sometest4")
@@ -37,7 +37,6 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
   }
 
   it should "combine tapir endpoint with sttp stub - errors" in {
-    import sttp.tapir.client.sttp._
     // given
     val endpoint = sttp.tapir.endpoint
       .in("api" / "sometest4")
@@ -71,7 +70,6 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
    */
 
   it should "combine tapir endpoint with sttp stub - multiple inputs" in {
-    import sttp.tapir.client.sttp._
     // given
     val endpoint = sttp.tapir.endpoint
       .in("api" / path[String]("id") and query[Int]("amount"))
@@ -89,7 +87,6 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
   }
 
   it should "combine tapir endpoint with sttp stub - header output" in {
-    import sttp.tapir.client.sttp._
     // given
     val endpoint = sttp.tapir.endpoint.post
       .out(header[String]("X"))
@@ -106,7 +103,6 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
   }
 
   it should "match with inputs" in {
-    import sttp.tapir.client.sttp._
     // given
     val endpoint = sttp.tapir.endpoint
       .in("api" / "sometest4")
@@ -133,8 +129,26 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     response2.statusText shouldBe "Internal server error"
   }
 
+  it should "match on body inputs" in {
+    // given
+    val endpoint = sttp.tapir.endpoint.post.in(plainBody[Int]).out(plainBody[Int])
+
+    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
+      .apply(idMonad)
+      .whenInputMatches(endpoint) { body => body > 2 }
+      .thenSuccess(42)
+      .whenAnyRequest
+      .thenRespondServerError()
+
+    val response1 = SttpClientInterpreter.toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(10).send(backend)
+    response1.body shouldBe Right(42)
+
+    val response2 = SttpClientInterpreter.toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(1).send(backend)
+    response2.body shouldBe Left(())
+    response2.code shouldBe StatusCode.InternalServerError
+  }
+
   it should "match with decode failure" in {
-    import sttp.tapir.client.sttp._
     // given
     val endpoint = sttp.tapir.endpoint
       .in("api" / "sometest4")

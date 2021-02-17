@@ -6,7 +6,7 @@ import cats.effect.{Concurrent, ContextShift, Sync, Timer}
 import cats.syntax.all._
 import org.http4s.{Http, HttpRoutes, Request, Response}
 import org.log4s._
-import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.server.internal.{DecodeBody, DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import cats.arrow.FunctionK
@@ -18,27 +18,16 @@ private[http4s] class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Tim
   private val outputToResponse = new OutputToHttp4sResponse[F](serverOptions)
 
   def toHttp[I, E, O, G[_]: Sync](t: F ~> G, se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G]): Http[OptionT[G, *], F] = {
-    def decodeBody(req: Request[F], result: DecodeInputsResult): G[DecodeInputsResult] = {
-      result match {
-        case values: DecodeInputsResult.Values =>
-          values.bodyInput match {
-            case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
-              t(new Http4sRequestToRawBody(serverOptions).apply(req.body, bodyType, req.charset, req)).map { v =>
-                codec.decode(v) match {
-                  case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                  case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
-                }
-              }
+    val monadError = new CatsMonadError[G]
 
-            case None => (values: DecodeInputsResult).pure[G]
-          }
-        case failure: DecodeInputsResult.Failure => (failure: DecodeInputsResult).pure[G]
-      }
+    val decodeBody = new DecodeBody[Request[F], G]()(monadError) {
+      override def rawBody[R](request: Request[F], body: EndpointIO.Body[R, _]): G[R] =
+        t(new Http4sRequestToRawBody(serverOptions).apply(request.body, body.bodyType, request.charset, request))
     }
 
     def valueToResponse(value: Any): G[Response[F]] = {
       val i = value.asInstanceOf[I]
-      se.logic(new CatsMonadError[G])(i)
+      se.logic(monadError)(i)
         .flatMap {
           case Right(result) => t(outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result))
           case Left(err)     => t(outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err))

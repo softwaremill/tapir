@@ -21,7 +21,6 @@ object DecodeInputsResult {
 
       copy(bodyInputWithIndex = Some((input, bodyIndex)))
     }
-    def bodyInput: Option[EndpointIO.Body[_, _]] = bodyInputWithIndex.map(_._1)
 
     /** Sets the value of the body input, once it is known, if a body input is defined.
       */
@@ -225,7 +224,8 @@ object DecodeInputs {
         else (DecodeResult.Mismatch(m.method, ctx.method.method), ctx)
 
       case EndpointIO.FixedHeader(sttp.model.Header(n, v), codec, _) =>
-        if (List(v) == ctx.header(n)) (codec.decode(()), ctx)
+        if (ctx.header(n) == Nil) (DecodeResult.Missing, ctx)
+        else if (List(v) == ctx.header(n)) (codec.decode(()), ctx)
         else (DecodeResult.Mismatch(List(v).mkString, ctx.header(n).mkString), ctx)
 
       case EndpointInput.Query(name, codec, _) =>

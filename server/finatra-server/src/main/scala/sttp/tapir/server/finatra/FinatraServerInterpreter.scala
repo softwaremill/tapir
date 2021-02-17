@@ -8,7 +8,7 @@ import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.internal._
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.server.internal.{DecodeBody, DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 
 import java.nio.charset.Charset
 import scala.reflect.ClassTag
@@ -27,27 +27,12 @@ trait FinatraServerInterpreter extends Logging {
     toRoute(e.serverLogicRecoverErrors(logic))
 
   def toRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
-    val handler = { request: Request =>
-      def decodeBody(result: DecodeInputsResult): Future[DecodeInputsResult] = {
-        result match {
-          case values: DecodeInputsResult.Values =>
-            values.bodyInput match {
-              case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
-                new FinatraRequestToRawBody(serverOptions)
-                  .apply(bodyType, request.content, request.charset.map(Charset.forName), request)
-                  .map { rawBody =>
-                    val decodeResult = codec.decode(rawBody)
-                    decodeResult match {
-                      case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                      case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
-                    }
-                  }
-              case None => Future.value(values)
-            }
-          case failure: DecodeInputsResult.Failure => Future.value(failure)
-        }
-      }
+    val decodeBody = new DecodeBody[Request, Future]()(FutureMonadError) {
+      override def rawBody[R](request: Request, body: EndpointIO.Body[R, _]): Future[R] = new FinatraRequestToRawBody(serverOptions)
+        .apply(body.bodyType, request.content, request.charset.map(Charset.forName), request)
+    }
 
+    val handler = { request: Request =>
       def valueToResponse(value: Any): Future[Response] = {
         val i = value.asInstanceOf[I]
 
@@ -84,7 +69,7 @@ trait FinatraServerInterpreter extends Logging {
         }
       }
 
-      decodeBody(DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
+      decodeBody(request, DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
         case values: DecodeInputsResult.Values =>
           InputValues(e.input, values) match {
             case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)

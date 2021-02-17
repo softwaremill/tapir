@@ -9,6 +9,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
+import sttp.tapir.SchemaType.{SCoproduct, SProduct}
 
 object TapirJsonPlayCodec extends TapirJsonPlay
 
@@ -103,6 +104,14 @@ class TapirJsonPlayTests extends AnyFlatSpec with TapirJsonPlayTestExtensions wi
       JsonError("error.path.missing", List(FieldName("obj[0]"), FieldName("price")))
     )
     error.underlying shouldBe a[JsResultException]
+  }
+
+  it should "return a coproduct schema for a JsValue" in {
+    schemaForPlayJsValue.schemaType shouldBe a[SCoproduct]
+  }
+
+  it should "return a product schema for a JsObject" in {
+    schemaForPlayJsObject.schemaType shouldBe a[SProduct]
   }
 
 }

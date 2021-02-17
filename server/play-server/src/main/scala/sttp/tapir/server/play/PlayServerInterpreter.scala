@@ -9,10 +9,10 @@ import sttp.monad.FutureMonad
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.server.ServerDefaults.StatusCodes
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.server.internal.{DecodeBody, DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 
 import java.nio.charset.Charset
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.reflect.ClassTag
 
 trait PlayServerInterpreter {
@@ -32,11 +32,12 @@ trait PlayServerInterpreter {
   }
 
   def toRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+    implicit val ec: ExecutionContextExecutor = mat.executionContext
+    implicit val monad: FutureMonad = new FutureMonad()
+
     def valueToResponse(value: Any): Future[Result] = {
       val i = value.asInstanceOf[I]
-      implicit val ec = mat.executionContext
-
-      e.logic(new FutureMonad())(i)
+      e.logic(monad)(i)
         .map {
           case Right(result) =>
             serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.success.code)(serverOptions.logger)
@@ -63,30 +64,14 @@ trait PlayServerInterpreter {
       }
     }
 
-    def decodeBody(request: Request[RawBuffer], result: DecodeInputsResult)(implicit mat: Materializer): Future[DecodeInputsResult] = {
-      implicit val ec = mat.executionContext
-
-      result match {
-        case values: DecodeInputsResult.Values =>
-          values.bodyInput match {
-            case Some(bodyInput @ EndpointIO.Body(bodyType, codec, _)) =>
-              new PlayRequestToRawBody(serverOptions)
-                .apply(
-                  bodyType,
-                  request.charset.map(Charset.forName),
-                  request,
-                  request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))
-                )
-                .map { rawBody =>
-                  codec.decode(rawBody) match {
-                    case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                    case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
-                  }
-                }
-            case None => Future(values)
-          }
-        case failure: DecodeInputsResult.Failure => Future(failure)
-      }
+    val decodeBody = new DecodeBody[Request[RawBuffer], Future] {
+      override def rawBody[R](request: Request[RawBuffer], body: EndpointIO.Body[R, _]): Future[R] = new PlayRequestToRawBody(serverOptions)
+        .apply(
+          body.bodyType,
+          request.charset.map(Charset.forName),
+          request,
+          request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))
+        )
     }
 
     val res = new PartialFunction[RequestHeader, Handler] {
@@ -103,8 +88,6 @@ trait PlayServerInterpreter {
       }
 
       override def apply(v1: RequestHeader): Handler = {
-        implicit val ec = mat.executionContext
-
         serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
           decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1, 0, serverOptions))).flatMap {
             case values: DecodeInputsResult.Values =>
