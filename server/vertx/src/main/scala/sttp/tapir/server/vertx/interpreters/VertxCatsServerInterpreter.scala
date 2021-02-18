@@ -120,7 +120,8 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
           } else {
             cb(Left(handler.cause()))
           }
-        }): Unit
+        })
+        ()
       }
   }
 }
