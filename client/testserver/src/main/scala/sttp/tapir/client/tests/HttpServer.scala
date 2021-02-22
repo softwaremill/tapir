@@ -11,6 +11,7 @@ import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
+import scodec.bits.ByteVector
 
 import scala.concurrent.ExecutionContext
 
@@ -105,6 +106,24 @@ class HttpServer(port: Port) {
           } else {
             WebSocketFrame.Text("echo: " + msg) // string echo
           }
+        }
+
+      fs2.concurrent.Queue
+        .unbounded[IO, WebSocketFrame]
+        .flatMap { q =>
+          val d = q.dequeue.through(echoReply)
+          val e = q.enqueue
+          WebSocketBuilder[IO].build(d, e)
+        }
+
+    case GET -> Root / "ws" / "echo" / "fragmented" =>
+      val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
+        _.flatMap { case WebSocketFrame.Text(msg, _) =>
+          fs2.Stream(
+            WebSocketFrame.Text(s"fragmented frame with ", last = false),
+            WebSocketFrame.Continuation(ByteVector.view(s"echo: $msg".getBytes()), last = true),
+            WebSocketFrame.Close()
+          )
         }
 
       fs2.concurrent.Queue

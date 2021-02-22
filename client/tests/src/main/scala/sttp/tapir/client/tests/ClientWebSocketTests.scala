@@ -7,6 +7,7 @@ import sttp.tapir.json.circe._
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir.tests.Fruit
+import sttp.ws.WebSocketFrame
 
 trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
   val streams: Streams[S]
@@ -38,6 +39,19 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
           sendAndReceiveLimited(r.toOption.get, 2, List(Fruit("apple"), Fruit("orange")))
         }
         .unsafeRunSync() shouldBe List(Fruit("echo: apple"), Fruit("echo: orange"))
+    }
+
+    test("web sockets, client-terminated echo using fragmented frames") {
+      send(
+        endpoint.get.in("ws" / "echo" / "fragmented").out(webSocketBody[String, CodecFormat.TextPlain, WebSocketFrame, CodecFormat.TextPlain].apply(streams)),
+        port,
+        (),
+        "ws"
+      )
+        .flatMap { r =>
+          sendAndReceiveLimited(r.toOption.get, 2, List("test"))
+        }
+        .unsafeRunSync() shouldBe List(WebSocketFrame.Text("fragmented frame with echo: test", true, None))
     }
 
     // TODO: tests for ping/pong (control frames handling)
