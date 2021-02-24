@@ -15,7 +15,7 @@ import scala.io.Source
   * @param yamlName    The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
   * @param redocVersion The semver version of Redoc to use. Defaults to `2.0.0-rc.23`.
   */
-class RedocHttp4s(title: String, yaml: String, yamlName: String = "docs.yaml", redocVersion: String = "2.0.0-rc.23") {
+class RedocHttp4s(title: String, yaml: String, yamlName: String = "docs.yaml", redocVersion: String = "2.0.0-rc.23", contextPath: String = "") {
   private lazy val html = {
     val fileName = "redoc.html"
     val is = getClass.getClassLoader.getResourceAsStream(fileName)
@@ -30,13 +30,13 @@ class RedocHttp4s(title: String, yaml: String, yamlName: String = "docs.yaml", r
     import dsl._
 
     HttpRoutes.of[F] {
-      case req @ GET -> Root if req.pathInfo.endsWith("/") =>
+      case req @ GET -> Root / `contextPath` / "" =>
         Ok(html, `Content-Type`(MediaType.text.html, Charset.`UTF-8`))
       // as the url to the yaml file is relative, it is important that there is a trailing slash
-      case req @ GET -> Root =>
+      case req @ GET -> Root / `contextPath` =>
         val uri = req.uri
         PermanentRedirect(Location(uri.withPath(uri.path.concat("/"))))
-      case GET -> Root / `yamlName` =>
+      case GET -> Root / `contextPath` / `yamlName` =>
         Ok(yaml, `Content-Type`(MediaType.text.yaml, Charset.`UTF-8`))
     }
   }
