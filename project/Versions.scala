@@ -6,7 +6,7 @@ object Versions {
   val sttp = "3.1.5"
   val sttpModel = "1.3.3"
   val sttpShared = "1.1.1"
-  val akkaHttp = "10.2.3"
+  val akkaHttp = "10.2.4"
   val akkaStreams = "2.6.13"
   val swaggerUi = "3.43.0"
   val upickle = "1.2.3"
