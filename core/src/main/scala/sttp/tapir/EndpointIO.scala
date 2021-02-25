@@ -367,7 +367,7 @@ object EndpointOutput {
 }
 
 sealed trait EndpointIO[T] extends EndpointInput[T] with EndpointOutput[T] {
-  private[tapir] type ThisType[X] <: EndpointInput[X] with EndpointOutput[X]
+  private[tapir] type ThisType[X] <: EndpointIO[X]
 
   def and[J, IJ](other: EndpointIO[J])(implicit concat: ParamConcat.Aux[T, J, IJ]): EndpointIO[IJ] =
     EndpointIO.Pair(this, other, mkCombine(concat), mkSplit(concat))
