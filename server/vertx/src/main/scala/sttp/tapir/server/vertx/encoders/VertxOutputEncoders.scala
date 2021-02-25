@@ -15,7 +15,7 @@ import sttp.model.{Header, Part}
 import sttp.tapir.internal.{ParamsAsAny, charset}
 import sttp.tapir.server.ServerDefaults
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.server.vertx.streams.ReadStreamCompatible
+import sttp.tapir.server.vertx.streams.{Pipe, ReadStreamCompatible}
 import sttp.tapir.server.vertx.VertxEndpointOptions
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 
@@ -240,7 +240,8 @@ object VertxOutputEncoders {
         case None =>
           resp.setChunked(true)
       }
-      stream.pipeTo(resp): Unit
+
+      Pipe(stream, resp)
     }
   }
 

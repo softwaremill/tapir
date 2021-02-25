@@ -4,7 +4,6 @@ import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.ReadStream
 import io.vertx.core.Handler
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.server.vertx.streams._
 import sttp.tapir.server.vertx.streams.ReadStreamState._
 import sttp.tapir.server.vertx.VertxEffectfulEndpointOptions
 import _root_.zio._
@@ -39,12 +38,13 @@ object zio {
               state.get.flatMap {
                 case StreamState(None, handler, _, _) =>
                   ZIO.effect(handler.handle(buffer))
-                case StreamState(Some(promise), handler, _, _) =>
-                  promise.get.flatMap { _ =>
-                    ZIO.effect(handler.handle(buffer))
-                  }
-                case _ =>
-                  UIO.unit
+                case StreamState(Some(promise), _, _, _) =>
+                  for {
+                    _ <- promise.get
+                    // Handler in state may be updated since the moment when we wait
+                    // promise so let's get more recent version.
+                    updatedState <- state.get
+                  } yield updatedState.handler.handle(buffer)
               }
             } onExit {
               case Exit.Success(()) =>

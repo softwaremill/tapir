@@ -47,12 +47,13 @@ object fs2 {
               state.get.flatMap {
                 case StreamState(None, handler, _, _) =>
                   F.delay(handler.handle(buffer))
-                case StreamState(Some(promise), handler, _, _) =>
-                  promise.get.flatMap { _ =>
-                    F.delay(handler.handle(buffer))
-                  }
-                case _ =>
-                  F.unit
+                case StreamState(Some(promise), _, _, _) =>
+                  for {
+                    _ <- promise.get
+                    // Handler in state may be updated since the moment when we wait
+                    // promise so let's get more recent version.
+                    updatedState <- state.get
+                  } yield updatedState.handler.handle(buffer)
               }
             })
             .onFinalizeCase({
