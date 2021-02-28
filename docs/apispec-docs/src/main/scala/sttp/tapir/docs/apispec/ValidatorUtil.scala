@@ -3,13 +3,13 @@ package sttp.tapir.docs.apispec
 import sttp.tapir.Validator
 
 private[docs] object ValidatorUtil {
-  private[docs] def elementValidator(v: Validator[_]): Validator[_] = {
-    val result = asSingleValidators(v).collect {
+  private[docs] def elementValidator(collectionValidator: Validator[_], validators: Validator[_]*): Validator[_] = {
+    val result = asSingleValidators(collectionValidator).collect {
       case Validator.OpenProduct(elementValidator)           => elementValidator
       case Validator.CollectionElements(elementValidator, _) => elementValidator
     }
 
-    Validator.all(result: _*)
+    Validator.all(validators ++ result: _*)
   }
 
   private[docs] def asSingleValidators(v: Validator[_]): Seq[Validator.Single[_]] = {
@@ -37,8 +37,8 @@ private[docs] object ValidatorUtil {
     }
   }
 
-  private[docs] def fieldValidator(v: Validator[_], fieldName: String): Validator[_] = {
-    Validator.all(asSingleValidators(v).collect {
+  private[docs] def fieldValidator(parentValidator: Validator[_], fieldName: String, validators: Validator[_]*): Validator[_] = {
+    Validator.all(validators ++ asSingleValidators(parentValidator).collect {
       case Validator.CollectionElements(Validator.Product(fields), _) if fields.isDefinedAt(fieldName) => fields(fieldName).validator
       case Validator.Product(fields) if fields.isDefinedAt(fieldName)                                  => fields(fieldName).validator
     }: _*)

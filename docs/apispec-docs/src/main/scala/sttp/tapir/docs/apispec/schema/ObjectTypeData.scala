@@ -29,14 +29,14 @@ object ObjectTypeData {
   def apply(typeData: TypeData[_]): List[ObjectTypeData] = {
     typeData match {
       case TypeData(TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _), validator) =>
-        apply(TypeData(o, elementValidator(validator)))
+        apply(TypeData(o, elementValidator(validator, o.validator)))
       case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _, _, _, _, _), validator) =>
         productSchemas(s, st, validator)
       case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _, _, _, _, _), validator) =>
         coproductSchemas(s, st, validator)
       case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _, _, _, _, _), validator) =>
         (st.info -> TypeData(s, validator): ObjectTypeData) +: apply(
-          TypeData(st.valueSchema, elementValidator(validator))
+          TypeData(st.valueSchema, elementValidator(validator, st.valueSchema.validator))
         )
       case _ => List.empty
     }

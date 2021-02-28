@@ -24,14 +24,16 @@ private[schema] class TSchemaToASchema(
               case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
                 fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName.encodedName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name)))
+                fieldName.encodedName -> apply(
+                  TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name, fieldSchema.validator))
+                )
             }.toListMap
           )
         )
       case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
-        Right(ASchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
+        Right(ASchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator, el.validator))))))
       case TSchemaType.SBinary        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate          => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
       case TSchemaType.SDateTime      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
