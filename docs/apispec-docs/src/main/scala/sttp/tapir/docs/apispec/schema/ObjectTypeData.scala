@@ -55,7 +55,7 @@ object ObjectTypeData {
   }
 
   private def fieldsSchemaWithValidator(p: TSchemaType.SProduct, v: Validator[_]): Seq[TypeData[_]] = {
-    p.fields.map { f => TypeData(f._2, fieldValidator(v, f._1.name)) }.toList
+    p.fields.map { f => TypeData(f._2, fieldValidator(v, f._1.name, f._2.validator)) }.toList
   }
 
   private def subtypesSchemaWithValidator(st: TSchemaType.SCoproduct, v: Validator[_]): Seq[TypeData[_]] = {
