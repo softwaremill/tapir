@@ -14,15 +14,15 @@ import scala.io.Source
   * @param yaml         The yaml with the OpenAPI documentation.
   * @param yamlName     The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
   * @param redocVersion The semver version of Redoc to use. Defaults to `2.0.0-rc.23`.
-  * @param contextPath  The base path of the documentation
+  * @param contextPath  The base path segments of the documentation.
   */
 class RedocHttp4s(
-                       title: String,
-                       yaml: String,
-                       yamlName: String = "docs.yaml",
-                       redocVersion: String = "2.0.0-rc.23",
-                       contextPath: String = "",
-                     ) {
+    title: String,
+    yaml: String,
+    yamlName: String = "docs.yaml",
+    redocVersion: String = "2.0.0-rc.23",
+    contextPath: List[String] = Nil
+) {
 
   private lazy val html = {
     val fileName = "redoc.html"
@@ -37,23 +37,15 @@ class RedocHttp4s(
     val dsl = Http4sDsl[F]
     import dsl._
 
-    contextPath match {
-      case "" =>
-        HttpRoutes.of[F] {
-          case GET -> Root =>
-            Ok(html, `Content-Type`(MediaType.text.html, Charset.`UTF-8`))
-          case GET -> Root / `yamlName` =>
-            Ok(yaml, `Content-Type`(MediaType.text.yaml, Charset.`UTF-8`))
-        }
-      case _ =>
-        HttpRoutes.of[F] {
-          case GET -> Root / `contextPath` / "" =>
-            Ok(html, `Content-Type`(MediaType.text.html, Charset.`UTF-8`))
-          case req@GET -> Root / `contextPath` =>
-            PermanentRedirect(Location(req.uri.withPath(req.uri.path.concat("/"))))
-          case GET -> Root / `contextPath` / `yamlName` =>
-            Ok(yaml, `Content-Type`(MediaType.text.yaml, Charset.`UTF-8`))
-        }
+    val rootPath = contextPath.foldLeft(Root: Path)(_ / _)
+
+    HttpRoutes.of[F] {
+      case GET -> `rootPath` / "" =>
+        Ok(html, `Content-Type`(MediaType.text.html, Charset.`UTF-8`))
+      case req @ GET -> `rootPath` =>
+        PermanentRedirect(Location(req.uri.withPath(req.uri.path.concat("/"))))
+      case GET -> `rootPath` / `yamlName` =>
+        Ok(yaml, `Content-Type`(MediaType.text.yaml, Charset.`UTF-8`))
     }
   }
 }
