@@ -215,7 +215,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
 
         // there might be multiple raw-parts for each name, yielding a single value-part
         val anyParts: List[DecodeResult[AnyPart]] = partNamesToDecode.map { name =>
-          val codec = partCodec(name).get
+          val codec = partCodec(name).get.codec
           val rawParts = rawPartsByName.get(name).toList.flatten
           codec.asInstanceOf[Codec[List[_], Any, _]].rawDecode(rawParts.map(_.body)).map { body =>
             // we know there's at least one part. Using this part to create the value-part
