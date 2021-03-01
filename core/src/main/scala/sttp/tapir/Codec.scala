@@ -11,6 +11,7 @@ import sttp.model._
 import sttp.model.headers.{Cookie, CookieWithMeta}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
+import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import sttp.tapir.internal._
 import sttp.tapir.model.UsernamePassword
@@ -177,23 +178,28 @@ object Codec extends CodecExtensions with FormCodecDerivation {
     formSeqCodec(charset).map(_.toMap)(_.toSeq)
 
   def rawPartCodec(
-      partCodecs: Map[String, AnyListCodec],
-      defaultCodec: Option[AnyListCodec]
+      partCodecs: Map[String, PartCodec[_, _]],
+      defaultCodec: Option[PartCodec[_, _]]
   ): Codec[Seq[RawPart], Seq[AnyPart], MultipartFormData] =
     new Codec[Seq[RawPart], Seq[AnyPart], MultipartFormData] {
-      private def partCodec(name: String): Option[AnyListCodec] = partCodecs.get(name).orElse(defaultCodec)
+      private def partCodec(name: String): Option[PartCodec[_, _]] = partCodecs.get(name).orElse(defaultCodec)
 
       override def encode(t: Seq[AnyPart]): Seq[RawPart] = {
         t.flatMap { part =>
-          partCodec(part.name).toList.flatMap { codec =>
+          partCodec(part.name).toList.flatMap { case PartCodec(rawBodyType, codec) =>
             // a single value-part might yield multiple raw-parts (e.g. for repeated fields)
             val rawParts: Seq[RawPart] =
               codec.asInstanceOf[Codec[List[_], Any, _]].encode(part.body).map { b =>
                 val p = part.copy(body = b)
                 // setting the content type basing on the format, if it's not yet defined
                 p.contentType match {
-                  case None => p.contentType(codec.format.mediaType)
-                  case _    => p
+                  case None =>
+                    (codec.format.mediaType, rawBodyType) match {
+                      // only text parts can have a charset
+                      case (s, StringBody(e)) if s.mainType.equalsIgnoreCase("text") => p.contentType(codec.format.mediaType.charset(e))
+                      case _                                                         => p.contentType(codec.format.mediaType)
+                    }
+                  case _ => p
                 }
               }
             rawParts
@@ -240,7 +246,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
   ): MultipartCodec[Seq[AnyPart]] =
     MultipartCodec(
       RawBodyType.MultipartBody(partCodecs.map(t => (t._1, t._2.rawBodyType)).toMap, defaultPartCodec.map(_.rawBodyType)),
-      rawPartCodec(partCodecs.map(t => (t._1, t._2.codec)).toMap, defaultPartCodec.map(_.codec))
+      rawPartCodec(partCodecs, defaultPartCodec)
     )
 
   //
