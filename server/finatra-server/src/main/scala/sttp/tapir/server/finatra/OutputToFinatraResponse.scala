@@ -94,8 +94,8 @@ object OutputToFinatraResponse {
     val contentType: String = part.header("content-type").getOrElse("text/plain")
 
     bodyType match {
-      case RawBodyType.StringBody(charset) =>
-        new StringBody(r.toString, ContentType.create(contentType, charset))
+      case RawBodyType.StringBody(_) =>
+        new StringBody(r.toString, ContentType.parse(contentType))
       case RawBodyType.ByteArrayBody =>
         new ByteArrayBody(r, ContentType.create(contentType), part.fileName.get)
       case RawBodyType.ByteBufferBody =>
