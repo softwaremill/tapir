@@ -5,7 +5,7 @@ import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.tests.{ServerAuthenticationTests, ServerBasicTests, CreateServerTest, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 
-class FinatraCreateServerTest extends TestSuite {
+class FinatraServerTest extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m = FutureMonadError

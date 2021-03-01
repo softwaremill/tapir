@@ -3,9 +3,11 @@ package sttp.tapir.generic
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.generic.auto._
 import sttp.tapir.SchemaType._
-import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, Validator, TapirFile, encodedName}
+import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, TapirFile, Validator, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+
+import java.nio.charset.StandardCharsets
 
 class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDerivationTestExtensions with Matchers {
   it should "generate a codec for a one-arg case class" in {
@@ -106,9 +108,9 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
         "f1",
         "10",
         otherDispositionParams = Map("a1" -> "b1"),
-        headers = List(Header.unsafeApply("X-Y", "a-b"), Header.contentType(MediaType.TextPlain))
+        headers = List(Header.unsafeApply("X-Y", "a-b"), Header.contentType(MediaType.TextPlain.charset(StandardCharsets.UTF_8)))
       ),
-      Part("f2", "v2", contentType = Some(MediaType.TextPlain))
+      Part("f2", "v2", contentType = Some(MediaType.TextPlain.charset(StandardCharsets.UTF_8)))
     )
 
     // when
@@ -119,7 +121,7 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
           "f1",
           10,
           otherDispositionParams = Map("a1" -> "b1"),
-          headers = List(Header.unsafeApply("X-Y", "a-b"), Header.contentType(MediaType.TextPlain))
+          headers = List(Header.unsafeApply("X-Y", "a-b"), Header.contentType(MediaType.TextPlain.charset(StandardCharsets.UTF_8)))
         )
       )
     )
@@ -130,10 +132,8 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
     case class Test1(f1: TapirFile)
     val codec = implicitly[MultipartCodec[Test1]].codec
     val f = createTempFile()
-    println(f.getName)
 
     val x = codec.encode(Test1(f))
-    println(x.head)
 
     try {
       // when
@@ -155,7 +155,7 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
       // when
       codec.encode(Test1(Part("?", Some(f), otherDispositionParams = Map("a1" -> "b1")), 12)) shouldBe List(
         Part("f1", f, otherDispositionParams = Map("a1" -> "b1"), contentType = Some(MediaType.ApplicationOctetStream)),
-        Part("f2", "12", contentType = Some(MediaType.TextPlain))
+        Part("f2", "12", contentType = Some(MediaType.TextPlain.charset(StandardCharsets.UTF_8)))
       )
       codec.decode(List(Part("f1", f, fileName = Some(f.getName)), Part("f2", "12"))) shouldBe DecodeResult.Value(
         Test1(Part("f1", Some(f), fileName = Some(f.getName)), 12)
@@ -164,7 +164,9 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
       f.delete()
     }
 
-    codec.encode(Test1(Part("f1", None), 12)) shouldBe List(Part("f2", "12", contentType = Some(MediaType.TextPlain)))
+    codec.encode(Test1(Part("f1", None), 12)) shouldBe List(
+      Part("f2", "12", contentType = Some(MediaType.TextPlain.charset(StandardCharsets.UTF_8)))
+    )
     codec.decode(List(Part("f2", "12"))) shouldBe DecodeResult.Value(Test1(Part("f1", None), 12))
   }
 
