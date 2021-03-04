@@ -22,7 +22,7 @@ import scala.annotation.{StaticAnnotation, implicitNotFound}
   msg = """Could not find Schema for type ${T}.
 Since 0.17.0 automatic derivation requires the following import: `import sttp.tapir.generic.auto._`
 You can find more details in the docs: https://tapir.softwaremill.com/en/latest/endpoint/customtypes.html#schema-derivation
-When using datatypes integration remember to import respective codecs as described in https://tapir.softwaremill.com/en/latest/endpoint/integrations.html"""
+When using datatypes integration remember to import respective schemas/codecs as described in https://tapir.softwaremill.com/en/latest/endpoint/integrations.html"""
 )
 case class Schema[T](
     schemaType: SchemaType,
