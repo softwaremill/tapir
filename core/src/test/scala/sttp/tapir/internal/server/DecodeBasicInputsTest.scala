@@ -3,7 +3,7 @@ package sttp.tapir.internal.server
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
-import sttp.tapir.server.internal.{DecodeBasicInputs, DecodeInputsContext, DecodeBasicInputsResult}
+import sttp.tapir.server.internal.{DecodeBasicInputs, DecodeBasicInputsResult}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -19,13 +19,12 @@ class DecodeBasicInputsTest extends AnyFlatSpec with Matchers {
     val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false))
 
     // when & then
-    DecodeInputs(input, DecodeInputsContext(StubServerRequest)) shouldBe DecodeBasicInputsResult.Failure(input, DecodeResult.Error("v", e))
+    DecodeBasicInputs(input, StubServerRequest) shouldBe DecodeBasicInputsResult.Failure(input, DecodeResult.Error("v", e))
   }
 
-  object StubServerRequest extends ServerRequest[Any] {
+  object StubServerRequest extends ServerRequest {
     override def protocol: String = ???
     override def connectionInfo: ConnectionInfo = ???
-    override def body: Any = ???
     override def underlying: Any = ???
     override def pathSegments: List[String] = Nil
     override def queryParameters: QueryParams = QueryParams.fromMap(Map("x" -> "v"))
