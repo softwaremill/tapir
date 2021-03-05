@@ -1,6 +1,6 @@
 package sttp.tapir.client.sttp
 
-import sttp.client3.FetchBackend
+import sttp.client3.{FetchBackend, SttpBackend}
 import sttp.model.Uri
 import sttp.tapir.Endpoint
 
@@ -20,7 +20,7 @@ trait SttpClientInterpreterExtensions {
       clientOptions: SttpClientOptions
   ): I => Future[Either[E, O]] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val backend = FetchBackend()
+    val backend: SttpBackend[Future, Any] = FetchBackend()
     SttpClientInterpreter.toClientThrowDecodeFailures(e, baseUri, backend)
   }
 
@@ -36,7 +36,7 @@ trait SttpClientInterpreterExtensions {
       clientOptions: SttpClientOptions
   ): I => Future[O] = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    val backend = FetchBackend()
+    val backend: SttpBackend[Future, Any] = FetchBackend()
     SttpClientInterpreter.toClientThrowErrors(e, baseUri, backend)
   }
 }

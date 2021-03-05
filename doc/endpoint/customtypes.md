@@ -104,7 +104,7 @@ Two policies enable to choose the way custom types are derived:
 
 Case classes, traits and their children are recursively derived by Magnolia.
 
-Importing `sttp.tapir.generic.auto._` enables fully automatic derivation for `Schema`:
+Importing `sttp.tapir.generic.auto._` (or extending the `SchemaDerivation` trait) enables fully automatic derivation for `Schema`:
 
 ```scala mdoc:silent:reset
 import sttp.tapir.Schema
@@ -119,6 +119,8 @@ implicitly[Schema[Parent]]
 
 If you have a case class which contains some non-standard types (other than strings, number, other case classes, 
 collections), you only need to provide schemas for them. Using these, the rest will be derived automatically.
+
+Note that when using [datatypes integrations](integrations.md), respective codecs must also be imported to enable the derivation, e.g. for [newtype](integrations.md#newtype-integration) you'll have to add `import sttp.tapir.codec.newtype._` or extend `TapirCodecNewType`.
 
 ### Semi-automatic derivation
 
