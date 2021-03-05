@@ -8,7 +8,7 @@ import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.internal._
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.server.internal.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
 
 import java.nio.charset.Charset
 import scala.reflect.ClassTag
@@ -70,12 +70,12 @@ trait FinatraServerInterpreter extends Logging {
       }
 
       decodeBody(request, DecodeInputs(e.input, new FinatraDecodeInputsContext(request))).flatMap {
-        case values: DecodeInputsResult.Values =>
-          InputValues(e.input, values) match {
-            case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
-            case InputValuesResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
+        case values: DecodeBasicInputsResult.Values =>
+          InputValue(e.input, values) match {
+            case InputValueResult.Value(params, _)        => valueToResponse(params.asAny)
+            case InputValueResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
           }
-        case DecodeInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
+        case DecodeBasicInputsResult.Failure(input, failure) => Future.value(handleDecodeFailure(e.endpoint, input, failure))
       }
     }
 

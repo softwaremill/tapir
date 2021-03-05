@@ -3,21 +3,21 @@ package sttp.tapir.server.internal
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichVector}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, Mapping}
 
-sealed trait InputValuesResult
-object InputValuesResult {
-  case class Value(params: Params, remainingBasicValues: Vector[Any]) extends InputValuesResult
-  case class Failure(input: EndpointInput[_], failure: DecodeResult.Failure) extends InputValuesResult
+sealed trait InputValueResult
+object InputValueResult {
+  case class Value(params: Params, remainingBasicValues: Vector[Any]) extends InputValueResult
+  case class Failure(input: EndpointInput[_], failure: DecodeResult.Failure) extends InputValueResult
 }
 
-object InputValues {
+object InputValue {
 
   /** Returns the value of the input, tupled and mapped as described by the data structure. Values of basic inputs
     * are taken as consecutive values from `values.basicInputsValues`. Hence, these should match (in order).
     */
-  def apply(input: EndpointInput[_], values: DecodeInputsResult.Values): InputValuesResult =
+  def apply(input: EndpointInput[_], values: DecodeBasicInputsResult.Values): InputValueResult =
     apply(input, values.basicInputsValues)
 
-  private def apply(input: EndpointInput[_], remainingBasicValues: Vector[Any]): InputValuesResult = {
+  private def apply(input: EndpointInput[_], remainingBasicValues: Vector[Any]): InputValueResult = {
     input match {
       case EndpointInput.Pair(left, right, combine, _) => handlePair(left, right, combine, remainingBasicValues)
       case EndpointIO.Pair(left, right, combine, _)    => handlePair(left, right, combine, remainingBasicValues)
@@ -26,7 +26,7 @@ object InputValues {
       case auth: EndpointInput.Auth[_]                 => apply(auth.input, remainingBasicValues)
       case _: EndpointInput.Basic[_] =>
         remainingBasicValues.headAndTail match {
-          case Some((v, valuesTail)) => InputValuesResult.Value(ParamsAsAny(v), valuesTail)
+          case Some((v, valuesTail)) => InputValueResult.Value(ParamsAsAny(v), valuesTail)
           case None =>
             throw new IllegalStateException(s"Mismatch between basic input values: $remainingBasicValues, and basic inputs in: $input")
         }
@@ -38,15 +38,15 @@ object InputValues {
       right: EndpointInput[_],
       combine: CombineParams,
       remainingBasicValues: Vector[Any]
-  ): InputValuesResult = {
+  ): InputValueResult = {
     apply(left, remainingBasicValues) match {
-      case InputValuesResult.Value(leftParams, remainingBasicValues2) =>
+      case InputValueResult.Value(leftParams, remainingBasicValues2) =>
         apply(right, remainingBasicValues2) match {
-          case InputValuesResult.Value(rightParams, remainingBasicValues3) =>
-            InputValuesResult.Value(combine(leftParams, rightParams), remainingBasicValues3)
-          case f2: InputValuesResult.Failure => f2
+          case InputValueResult.Value(rightParams, remainingBasicValues3) =>
+            InputValueResult.Value(combine(leftParams, rightParams), remainingBasicValues3)
+          case f2: InputValueResult.Failure => f2
         }
-      case f: InputValuesResult.Failure => f
+      case f: InputValueResult.Failure => f
     }
   }
 
@@ -54,14 +54,14 @@ object InputValues {
       wrapped: EndpointInput[II],
       codec: Mapping[II, T],
       remainingBasicValues: Vector[Any]
-  ): InputValuesResult = {
+  ): InputValueResult = {
     apply(wrapped, remainingBasicValues) match {
-      case InputValuesResult.Value(pairValue, remainingBasicValues2) =>
+      case InputValueResult.Value(pairValue, remainingBasicValues2) =>
         codec.decode(pairValue.asAny.asInstanceOf[II]) match {
-          case DecodeResult.Value(v)   => InputValuesResult.Value(ParamsAsAny(v), remainingBasicValues2)
-          case f: DecodeResult.Failure => InputValuesResult.Failure(wrapped, f)
+          case DecodeResult.Value(v)   => InputValueResult.Value(ParamsAsAny(v), remainingBasicValues2)
+          case f: DecodeResult.Failure => InputValueResult.Failure(wrapped, f)
         }
-      case f: InputValuesResult.Failure => f
+      case f: InputValueResult.Failure => f
     }
   }
 }

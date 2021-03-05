@@ -45,16 +45,15 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
         }
     }
 
-    val decodedInputs = DecodeInputs(se.endpoint.input, DecodeInputsContext(request, request.pathSegments))
+    val decodedBasicInputs = DecodeBasicInputs(se.endpoint.input, request)
 
-    // TODO: extract decode inputs?
-    decodeBody(decodedInputs).flatMap {
-      case values: DecodeInputsResult.Values =>
-        InputValues(se.endpoint.input, values) match {
-          case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny).map(Some(_))
-          case InputValuesResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
+    decodeBody(decodedBasicInputs).flatMap {
+      case values: DecodeBasicInputsResult.Values =>
+        InputValue(se.endpoint.input, values) match {
+          case InputValueResult.Value(params, _)        => valueToResponse(params.asAny).map(Some(_))
+          case InputValueResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
         }
-      case DecodeInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
+      case DecodeBasicInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
     }
   }
 
@@ -75,27 +74,27 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
     }
   }
 
-  private def decodeBody(result: DecodeInputsResult): F[DecodeInputsResult] =
+  private def decodeBody(result: DecodeBasicInputsResult): F[DecodeBasicInputsResult] =
     result match {
-      case values: DecodeInputsResult.Values =>
+      case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
           case Some((Left(bodyInput @ EndpointIO.Body(_, codec, _)), _)) =>
             requestBody.toRaw(bodyInput.bodyType).map { v =>
               codec.decode(v) match {
                 case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+                case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
               }
             }
 
           case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _))), _)) =>
             (codec.decode(requestBody.toStream()) match {
               case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-              case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+              case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
             }).unit
 
-          case None => (values: DecodeInputsResult).unit
+          case None => (values: DecodeBasicInputsResult).unit
         }
-      case failure: DecodeInputsResult.Failure => (failure: DecodeInputsResult).unit
+      case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
 
   private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[WB, B] = {

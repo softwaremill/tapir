@@ -81,15 +81,6 @@ trait AkkaHttpServerInterpreter {
       case None => complete(HttpResponse(statusCode, headers = akkaHeaders))
     }
   }
-
-  /*
-  TODO
-
-  def toDirective[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(implicit
-      serverOptions: AkkaHttpServerOptions
-  ): Directive[(I, Future[Either[E, O]] => Route)] =
-    new EndpointToAkkaServer(serverOptions).toDirective(e)
-   */
 }
 
 object AkkaHttpServerInterpreter extends AkkaHttpServerInterpreter

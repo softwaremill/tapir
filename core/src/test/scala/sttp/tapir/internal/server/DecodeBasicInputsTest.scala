@@ -3,14 +3,14 @@ package sttp.tapir.internal.server
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsContext, DecodeInputsResult}
+import sttp.tapir.server.internal.{DecodeBasicInputs, DecodeInputsContext, DecodeBasicInputsResult}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.collection.immutable.Seq
 
-class DecodeInputsTest extends AnyFlatSpec with Matchers {
+class DecodeBasicInputsTest extends AnyFlatSpec with Matchers {
   it should "return an error if decoding throws an exception" in {
     // given
     case class X(v: String)
@@ -19,7 +19,7 @@ class DecodeInputsTest extends AnyFlatSpec with Matchers {
     val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false))
 
     // when & then
-    DecodeInputs(input, DecodeInputsContext(StubServerRequest)) shouldBe DecodeInputsResult.Failure(input, DecodeResult.Error("v", e))
+    DecodeInputs(input, DecodeInputsContext(StubServerRequest)) shouldBe DecodeBasicInputsResult.Failure(input, DecodeResult.Error("v", e))
   }
 
   object StubServerRequest extends ServerRequest[Any] {

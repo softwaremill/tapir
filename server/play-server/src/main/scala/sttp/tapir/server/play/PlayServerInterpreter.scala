@@ -9,7 +9,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.server.ServerDefaults.StatusCodes
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
-import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.server.internal.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
 
 import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -78,11 +78,11 @@ trait PlayServerInterpreter {
       override def isDefinedAt(x: RequestHeader): Boolean = {
         val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x, 0, serverOptions))
         val handlingResult = decodeInputResult match {
-          case DecodeInputsResult.Failure(input, failure) =>
+          case DecodeBasicInputsResult.Failure(input, failure) =>
             val decodeFailureCtx = DecodeFailureContext(input, failure, e.endpoint)
             serverOptions.logRequestHandling.decodeFailureNotHandled(e.endpoint, decodeFailureCtx)(serverOptions.logger)
             serverOptions.decodeFailureHandler(decodeFailureCtx) != DecodeFailureHandling.noMatch
-          case DecodeInputsResult.Values(_, _) => true
+          case DecodeBasicInputsResult.Values(_, _) => true
         }
         handlingResult
       }
@@ -90,12 +90,12 @@ trait PlayServerInterpreter {
       override def apply(v1: RequestHeader): Handler = {
         serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
           decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1, 0, serverOptions))).flatMap {
-            case values: DecodeInputsResult.Values =>
-              InputValues(e.input, values) match {
-                case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny)
-                case InputValuesResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e.endpoint, input, failure))
+            case values: DecodeBasicInputsResult.Values =>
+              InputValue(e.input, values) match {
+                case InputValueResult.Value(params, _)        => valueToResponse(params.asAny)
+                case InputValueResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e.endpoint, input, failure))
               }
-            case DecodeInputsResult.Failure(input, failure) =>
+            case DecodeBasicInputsResult.Failure(input, failure) =>
               Future.successful(handleDecodeFailure(e.endpoint, input, failure))
           }
         }

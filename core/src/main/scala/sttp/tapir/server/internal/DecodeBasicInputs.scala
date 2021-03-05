@@ -8,14 +8,14 @@ import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO}
 
 import scala.annotation.tailrec
 
-trait DecodeInputsResult
-object DecodeInputsResult {
+trait DecodeBasicInputsResult
+object DecodeBasicInputsResult {
 
   /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint. */
   case class Values(
       basicInputsValues: Vector[Any],
       bodyInputWithIndex: Option[(Either[EndpointIO.Body[_, _], EndpointIO.StreamBodyWrapper[_, _]], Int)]
-  ) extends DecodeInputsResult {
+  ) extends DecodeBasicInputsResult {
     private def verifyNoBody(input: EndpointInput[_]): Unit = if (bodyInputWithIndex.isDefined) {
       throw new IllegalStateException(s"Double body definition: $input")
     }
@@ -36,10 +36,10 @@ object DecodeInputsResult {
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
-  case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeInputsResult
+  case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeBasicInputsResult
 }
 
-case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String]) {
+private case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String]) {
   def method: Method = request.method
   def nextPathSegment: (Option[String], DecodeInputsContext) =
     pathSegments match {
@@ -52,14 +52,11 @@ case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String
   val queryParameters: QueryParams = request.queryParameters
 }
 
-object DecodeInputsContext {
-  def apply(request: ServerRequest): DecodeInputsContext = DecodeInputsContext(request, request.pathSegments)
-}
-
-object DecodeInputs {
+object DecodeBasicInputs {
   private final case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
 
-  /** Decodes values of all inputs defined by the given `input`, and returns a map from the input to the input's value.
+  /** Decodes values of all basic inputs defined by the given `input`, and returns a map from the input to the
+    * input's value.
     *
     * An exception is the body input, which is not decoded. This is because typically bodies can be only read once.
     * That's why, all non-body inputs are used to decide if a request matches the endpoint, or not. If a body input
@@ -67,7 +64,10 @@ object DecodeInputs {
     *
     * In case any of the decoding fails, the failure is returned together with the failing input.
     */
-  def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeInputsResult = {
+  def apply(input: EndpointInput[_], request: ServerRequest): DecodeBasicInputsResult =
+    apply(input, DecodeInputsContext(request, request.pathSegments))
+
+  private def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeBasicInputsResult = {
     // The first decoding failure is returned.
     // We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
     // An exact-path check is done after method & path matching
@@ -84,7 +84,7 @@ object DecodeInputs {
       matchOthers(methodInputs, _, _),
       matchPath(pathInputs, _, _),
       matchOthers(otherInputs, _, _)
-    )(DecodeInputsResult.Values(Vector.fill(basicInputs.size)(null), None), ctx)._1
+    )(DecodeBasicInputsResult.Values(Vector.fill(basicInputs.size)(null), None), ctx)._1
   }
 
   /** We're decoding paths differently than other inputs. We first map all path segments to their decoding results
@@ -98,9 +98,9 @@ object DecodeInputs {
     */
   private def matchPath(
       pathInputs: Vector[IndexedBasicInput],
-      decodeValues: DecodeInputsResult.Values,
+      decodeValues: DecodeBasicInputsResult.Values,
       ctx: DecodeInputsContext
-  ): (DecodeInputsResult, DecodeInputsContext) = {
+  ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     pathInputs.initAndLast match {
       case None =>
         // Match everything if no path input is specified
@@ -120,10 +120,10 @@ object DecodeInputs {
   private def matchPathInner(
       pathInputs: Vector[IndexedBasicInput],
       ctx: DecodeInputsContext,
-      decodeValues: DecodeInputsResult.Values,
+      decodeValues: DecodeBasicInputsResult.Values,
       decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
       lastPathInput: IndexedBasicInput
-  ): (DecodeInputsResult, DecodeInputsContext) = {
+  ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     pathInputs.headAndTail match {
       case Some((idxInput @ IndexedBasicInput(in, _), restInputs)) =>
         in match {
@@ -135,7 +135,7 @@ object DecodeInputs {
                   val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, codec.decode(seg)))
                   matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput)
                 } else {
-                  val failure = DecodeInputsResult.Failure(in, DecodeResult.Mismatch(expectedSegment, seg))
+                  val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Mismatch(expectedSegment, seg))
                   (failure, newCtx)
                 }
               case None =>
@@ -145,7 +145,7 @@ object DecodeInputs {
                   matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput)
                 } else {
                   // shape path mismatch - input path too short
-                  val failure = DecodeInputsResult.Failure(in, DecodeResult.Missing)
+                  val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
                   (failure, newCtx)
                 }
             }
@@ -156,7 +156,7 @@ object DecodeInputs {
                 val newDecodedPathInputs = decodedPathInputs :+ ((idxInput, i.codec.decode(seg)))
                 matchPathInner(restInputs, newCtx, decodeValues, newDecodedPathInputs, idxInput)
               case None =>
-                val failure = DecodeInputsResult.Failure(in, DecodeResult.Missing)
+                val failure = DecodeBasicInputsResult.Failure(in, DecodeResult.Missing)
                 (failure, newCtx)
             }
           case i: EndpointInput.PathsCapture[_] =>
@@ -173,7 +173,7 @@ object DecodeInputs {
             // shape path mismatch - input path too long; there are more segments in the request path than expected by
             // that input. Reporting a failure on the last path input.
             val failure =
-              DecodeInputsResult.Failure(lastPathInput.input, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
+              DecodeBasicInputsResult.Failure(lastPathInput.input, DecodeResult.Multiple(collectRemainingPath(Vector.empty, ctx)._1))
             (failure, newCtx)
           case None =>
             (foldDecodedPathInputs(decodedPathInputs, decodeValues), newCtx)
@@ -184,13 +184,13 @@ object DecodeInputs {
   @tailrec
   private def foldDecodedPathInputs(
       decodedPathInputs: Vector[(IndexedBasicInput, DecodeResult[_])],
-      acc: DecodeInputsResult.Values
-  ): DecodeInputsResult = {
+      acc: DecodeBasicInputsResult.Values
+  ): DecodeBasicInputsResult = {
     decodedPathInputs.headAndTail match {
       case None => acc
       case Some((t, ts)) =>
         t match {
-          case (indexedInput, failure: DecodeResult.Failure) => DecodeInputsResult.Failure(indexedInput.input, failure)
+          case (indexedInput, failure: DecodeResult.Failure) => DecodeBasicInputsResult.Failure(indexedInput.input, failure)
           case (indexedInput, DecodeResult.Value(v))         => foldDecodedPathInputs(ts, acc.setBasicInputValue(v, indexedInput.index))
         }
     }
@@ -206,9 +206,9 @@ object DecodeInputs {
   @tailrec
   private def matchOthers(
       inputs: Vector[IndexedBasicInput],
-      values: DecodeInputsResult.Values,
+      values: DecodeBasicInputsResult.Values,
       ctx: DecodeInputsContext
-  ): (DecodeInputsResult, DecodeInputsContext) = {
+  ): (DecodeBasicInputsResult, DecodeInputsContext) = {
     inputs.headAndTail match {
       case None => (values, ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index), inputsTail)) =>
@@ -219,7 +219,7 @@ object DecodeInputs {
         val (result, ctx2) = matchOther(indexedInput.input, ctx)
         result match {
           case DecodeResult.Value(v)         => matchOthers(inputsTail, values.setBasicInputValue(v, indexedInput.index), ctx2)
-          case failure: DecodeResult.Failure => (DecodeInputsResult.Failure(indexedInput.input, failure), ctx2)
+          case failure: DecodeResult.Failure => (DecodeBasicInputsResult.Failure(indexedInput.input, failure), ctx2)
         }
     }
   }
@@ -288,13 +288,14 @@ object DecodeInputs {
     case _                                => false
   }
 
-  private type DecodeInputResultTransform = (DecodeInputsResult.Values, DecodeInputsContext) => (DecodeInputsResult, DecodeInputsContext)
+  private type DecodeInputResultTransform =
+    (DecodeBasicInputsResult.Values, DecodeInputsContext) => (DecodeBasicInputsResult, DecodeInputsContext)
   private def compose(fs: DecodeInputResultTransform*): DecodeInputResultTransform = { (values, ctx) =>
     fs match {
       case f +: tail =>
         f(values, ctx) match {
-          case (values2: DecodeInputsResult.Values, ctx2) => compose(tail: _*)(values2, ctx2)
-          case r                                          => r
+          case (values2: DecodeBasicInputsResult.Values, ctx2) => compose(tail: _*)(values2, ctx2)
+          case r                                               => r
         }
       case _ => (values, ctx)
     }

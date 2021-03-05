@@ -6,7 +6,7 @@ import cats.effect.{Concurrent, ContextShift, Sync, Timer}
 import cats.syntax.all._
 import org.http4s.{Http, HttpRoutes, Request, Response}
 import org.log4s._
-import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.server.internal.{DecodeBasicInputsResult, InputValue, InputValueResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import cats.arrow.FunctionK
@@ -40,12 +40,12 @@ private[http4s] class EndpointToHttp4sServer[F[_]: Concurrent: ContextShift: Tim
 
     Kleisli((req: Request[F]) =>
       OptionT(decodeBody(req, internal.DecodeInputs(se.endpoint.input, new Http4sDecodeInputsContext[F](req))).flatMap {
-        case values: DecodeInputsResult.Values =>
-          InputValues(se.endpoint.input, values) match {
-            case InputValuesResult.Value(params, _)        => valueToResponse(params.asAny).map(_.some)
-            case InputValuesResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
+        case values: DecodeBasicInputsResult.Values =>
+          InputValue(se.endpoint.input, values) match {
+            case InputValueResult.Value(params, _)        => valueToResponse(params.asAny).map(_.some)
+            case InputValueResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
           }
-        case DecodeInputsResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
+        case DecodeBasicInputsResult.Failure(input, failure) => t(handleDecodeFailure(se.endpoint, input, failure))
       })
     )
   }

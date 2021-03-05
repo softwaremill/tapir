@@ -86,6 +86,7 @@ case class OutputValues[B, W](
 
   def withStatusCode(sc: StatusCode): OutputValues[B, W] = copy(statusCode = Some(sc))
 
+  // TODO remove?
   def contentLength: Option[Long] =
     headers
       .collectFirst {
