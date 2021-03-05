@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 class AkkaRawToResponseBody(implicit ec: ExecutionContext, m: Materializer)
-    extends RawToResponseBody[Flow[Message, Message, Any], HttpEntity, AkkaStreams] {
+    extends RawToResponseBody[Flow[Message, Message, Any], ResponseEntity, AkkaStreams] {
   override val streams: AkkaStreams = AkkaStreams
 
   override def rawValueToBody[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ResponseEntity =

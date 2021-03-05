@@ -75,7 +75,7 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
     }
   }
 
-  private def decodeBody(result: DecodeInputsResult): F[DecodeInputsResult] = {
+  private def decodeBody(result: DecodeInputsResult): F[DecodeInputsResult] =
     result match {
       case values: DecodeInputsResult.Values =>
         values.bodyInputWithIndex match {
@@ -97,7 +97,6 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
         }
       case failure: DecodeInputsResult.Failure => (failure: DecodeInputsResult).unit
     }
-  }
 
   private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[WB, B] = {
     val outputValues = new EncodeOutputs(rawToResponseBody).apply(output, ParamsAsAny(v), OutputValues.empty)
