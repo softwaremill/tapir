@@ -51,7 +51,7 @@ trait AkkaHttpServerInterpreter {
             implicit val monad: FutureMonad = new FutureMonad()
             val serverRequest = new AkkaServerRequest(ctx)
             val interpreter = new ServerInterpreter(
-              new AkkaRequestBodyToRaw(ctx, serverRequest, serverOptions),
+              new AkkaRequestBody(ctx, serverRequest, serverOptions),
               new AkkaRawToResponseBody,
               serverOptions.decodeFailureHandler,
               serverOptions.logRequestHandling(log)

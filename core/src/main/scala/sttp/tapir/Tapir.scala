@@ -165,8 +165,8 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   /** Extract a value from a server request. This input is only used by server interpreters, it is ignored by
     * documentation interpreters and the provided value is discarded by client interpreters.
     */
-  def extractFromRequest[T](f: ServerRequest[Any] => T): EndpointInput.ExtractFromRequest[T] =
-    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest[Any]]().map(f)(_ => null), EndpointIO.Info.empty)
+  def extractFromRequest[T](f: ServerRequest => T): EndpointInput.ExtractFromRequest[T] =
+    EndpointInput.ExtractFromRequest(Codec.idPlain[ServerRequest]().map(f)(_ => null), EndpointIO.Info.empty)
 
   def statusCode: EndpointOutput.StatusCode[sttp.model.StatusCode] =
     EndpointOutput.StatusCode(Map.empty, Codec.idPlain(), EndpointIO.Info.empty)

@@ -9,7 +9,7 @@ import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaul
 import scala.concurrent.Future
 
 case class AkkaHttpServerOptions(
-    createFile: ServerRequest[Any] => Future[File],
+    createFile: ServerRequest => Future[File],
     decodeFailureHandler: DecodeFailureHandler,
     logRequestHandling: LoggingAdapter => LogRequestHandling[Future[Unit]]
 )
@@ -22,7 +22,7 @@ object AkkaHttpServerOptions {
       defaultLogRequestHandling
     )
 
-  lazy val defaultCreateFile: ServerRequest[Any] => Future[File] = { _ =>
+  lazy val defaultCreateFile: ServerRequest => Future[File] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(Defaults.createTempFile())
   }

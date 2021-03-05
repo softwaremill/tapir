@@ -9,11 +9,9 @@ import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import scala.annotation.tailrec
 import scala.collection.immutable.Seq
 
-private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerRequest[HttpEntity] {
+private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerRequest {
   override def protocol: String = ctx.request.protocol.value
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
-  override def body: HttpEntity = ctx.request.entity
-  override def bodyStream: Any = ctx.request.entity.dataBytes
   override val underlying: Any = ctx
 
   /** Can differ from `uri.path`, if the endpoint is deployed in a context */

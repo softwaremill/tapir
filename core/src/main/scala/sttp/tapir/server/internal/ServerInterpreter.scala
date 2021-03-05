@@ -4,7 +4,7 @@ import sttp.model.{Header, Headers}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
-import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.{
   DecodeFailureContext,
@@ -16,12 +16,12 @@ import sttp.tapir.server.{
 }
 
 class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
-    requestBodyToRaw: RequestBodyToRaw[F],
+    requestBody: RequestBody[F, S],
     rawToResponseBody: RawToResponseBody[WB, B, S],
     decodeFailureHandler: DecodeFailureHandler,
     logRequestHandling: LogRequestHandling[F[Unit]]
 ) {
-  def apply(ses: List[ServerEndpoint[_, _, _, R, F]], request: ServerRequest[B]): F[Option[ServerResponse[WB, B]]] =
+  def apply(ses: List[ServerEndpoint[_, _, _, R, F]], request: ServerRequest): F[Option[ServerResponse[WB, B]]] =
     ses match {
       case Nil => (None: Option[ServerResponse[WB, B]]).unit
       case se :: tail =>
@@ -31,7 +31,7 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
         }
     }
 
-  def apply[I, E, O](se: ServerEndpoint[I, E, O, R, F], request: ServerRequest[B]): F[Option[ServerResponse[WB, B]]] = {
+  def apply[I, E, O](se: ServerEndpoint[I, E, O, R, F], request: ServerRequest): F[Option[ServerResponse[WB, B]]] = {
     def valueToResponse(value: Any): F[ServerResponse[WB, B]] = {
       val i = value.asInstanceOf[I]
       se.logic(implicitly)(i)
@@ -79,13 +79,19 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
     result match {
       case values: DecodeInputsResult.Values =>
         values.bodyInputWithIndex match {
-          case Some((bodyInput @ EndpointIO.Body(_, codec, _), _)) =>
-            requestBodyToRaw(bodyInput.bodyType).map { v =>
+          case Some((Left(bodyInput @ EndpointIO.Body(_, codec, _)), _)) =>
+            requestBody.toRaw(bodyInput.bodyType).map { v =>
               codec.decode(v) match {
                 case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
                 case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
               }
             }
+
+          case Some((Right(bodyInput @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _))), _)) =>
+            (codec.decode(requestBody.toStream()) match {
+              case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
+              case failure: DecodeResult.Failure => DecodeInputsResult.Failure(bodyInput, failure): DecodeInputsResult
+            }).unit
 
           case None => (values: DecodeInputsResult).unit
         }

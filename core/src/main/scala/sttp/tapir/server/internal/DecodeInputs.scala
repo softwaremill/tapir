@@ -12,28 +12,34 @@ trait DecodeInputsResult
 object DecodeInputsResult {
 
   /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint. */
-  case class Values(basicInputsValues: Vector[Any], bodyInputWithIndex: Option[(EndpointIO.Body[_, _], Int)]) extends DecodeInputsResult {
+  case class Values(
+      basicInputsValues: Vector[Any],
+      bodyInputWithIndex: Option[(Either[EndpointIO.Body[_, _], EndpointIO.StreamBodyWrapper[_, _]], Int)]
+  ) extends DecodeInputsResult {
+    private def verifyNoBody(input: EndpointInput[_]): Unit = if (bodyInputWithIndex.isDefined) {
+      throw new IllegalStateException(s"Double body definition: $input")
+    }
     def addBodyInput(input: EndpointIO.Body[_, _], bodyIndex: Int): Values = {
-      if (bodyInputWithIndex.isDefined) {
-        throw new IllegalStateException(s"Double body definition: $input")
-      }
-
-      copy(bodyInputWithIndex = Some((input, bodyIndex)))
+      verifyNoBody(input)
+      copy(bodyInputWithIndex = Some((Left(input), bodyIndex)))
+    }
+    def addStreamingBodyInput(input: EndpointIO.StreamBodyWrapper[_, _], bodyIndex: Int): Values = {
+      verifyNoBody(input)
+      copy(bodyInputWithIndex = Some((Right(input), bodyIndex)))
     }
 
     /** Sets the value of the body input, once it is known, if a body input is defined. */
-    def setBodyInputValue(v: Any): Values =
-      bodyInputWithIndex match {
-        case Some((_, i)) => copy(basicInputsValues = basicInputsValues.updated(i, v))
-        case None         => this
-      }
+    def setBodyInputValue(v: Any): Values = bodyInputWithIndex match {
+      case Some((_, i)) => copy(basicInputsValues = basicInputsValues.updated(i, v))
+      case None         => this
+    }
 
     def setBasicInputValue(v: Any, i: Int): Values = copy(basicInputsValues = basicInputsValues.updated(i, v))
   }
   case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeInputsResult
 }
 
-case class DecodeInputsContext(request: ServerRequest[Any], pathSegments: List[String]) {
+case class DecodeInputsContext(request: ServerRequest, pathSegments: List[String]) {
   def method: Method = request.method
   def nextPathSegment: (Option[String], DecodeInputsContext) =
     pathSegments match {
@@ -47,7 +53,7 @@ case class DecodeInputsContext(request: ServerRequest[Any], pathSegments: List[S
 }
 
 object DecodeInputsContext {
-  def apply(request: ServerRequest[Any]): DecodeInputsContext = DecodeInputsContext(request, request.pathSegments)
+  def apply(request: ServerRequest): DecodeInputsContext = DecodeInputsContext(request, request.pathSegments)
 }
 
 object DecodeInputs {
@@ -207,6 +213,8 @@ object DecodeInputs {
       case None => (values, ctx)
       case Some((IndexedBasicInput(input @ EndpointIO.Body(_, _, _), index), inputsTail)) =>
         matchOthers(inputsTail, values.addBodyInput(input, index), ctx)
+      case Some((IndexedBasicInput(input @ EndpointIO.StreamBodyWrapper(StreamBodyIO(_, _, _, _)), index), inputsTail)) =>
+        matchOthers(inputsTail, values.addStreamingBodyInput(input, index), ctx)
       case Some((indexedInput, inputsTail)) =>
         val (result, ctx2) = matchOther(indexedInput.input, ctx)
         result match {
@@ -257,9 +265,6 @@ object DecodeInputs {
 
       case EndpointInput.ExtractFromRequest(codec, _) =>
         (codec.decode(ctx.request), ctx)
-
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) =>
-        (codec.decode(ctx.request.bodyStream), ctx)
 
       case EndpointIO.Empty(codec, _) =>
         (codec.decode(()), ctx)

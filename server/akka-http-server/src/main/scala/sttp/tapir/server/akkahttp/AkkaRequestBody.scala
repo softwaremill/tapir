@@ -6,21 +6,24 @@ import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
 import akka.stream.Materializer
 import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.ByteString
+import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.internal.RequestBodyToRaw
+import sttp.tapir.server.internal.RequestBody
 import sttp.tapir.{RawBodyType, RawPart}
 
 import java.io.ByteArrayInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
-class AkkaRequestBodyToRaw(ctx: RequestContext, request: ServerRequest[Any], serverOptions: AkkaHttpServerOptions)(implicit
+class AkkaRequestBody(ctx: RequestContext, request: ServerRequest, serverOptions: AkkaHttpServerOptions)(implicit
     mat: Materializer,
     ec: ExecutionContext
-) extends RequestBodyToRaw[Future] {
-  override def apply[R](bodyType: RawBodyType[R]): Future[R] = toRawBody(ctx.request.entity, bodyType)
+) extends RequestBody[Future, AkkaStreams] {
+  override val streams: AkkaStreams = AkkaStreams
+  override def toRaw[R](bodyType: RawBodyType[R]): Future[R] = toRawFromEntity(ctx.request.entity, bodyType)
+  override def toStream(): streams.BinaryStream = ctx.request.entity.dataBytes
 
-  private def toRawBody[R](body: HttpEntity, bodyType: RawBodyType[R]): Future[R] = {
+  private def toRawFromEntity[R](body: HttpEntity, bodyType: RawBodyType[R]): Future[R] = {
     bodyType match {
       case RawBodyType.StringBody(_)   => implicitly[FromEntityUnmarshaller[String]].apply(body)
       case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body)
@@ -42,7 +45,7 @@ class AkkaRequestBodyToRaw(ctx: RequestContext, request: ServerRequest[Any], ser
   }
 
   private def toRawPart[R](part: Multipart.FormData.BodyPart, bodyType: RawBodyType[R]): Future[Part[R]] = {
-    toRawBody(part.entity, bodyType)
+    toRawFromEntity(part.entity, bodyType)
       .map(r =>
         Part(
           part.name,

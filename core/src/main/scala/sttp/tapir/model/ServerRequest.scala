@@ -3,11 +3,9 @@ package sttp.tapir.model
 import sttp.model.{QueryParams, RequestMetadata}
 import java.net.InetSocketAddress
 
-trait ServerRequest[+B] extends RequestMetadata {
+trait ServerRequest extends RequestMetadata {
   def protocol: String
   def connectionInfo: ConnectionInfo
-  def body: B
-  def bodyStream: Any
   def underlying: Any
 
   /** Can differ from `uri.path`, if the endpoint is deployed in a context */
