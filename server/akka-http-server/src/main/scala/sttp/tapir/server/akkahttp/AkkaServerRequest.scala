@@ -14,7 +14,6 @@ private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerReq
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
   override val underlying: Any = ctx
 
-  /** Can differ from `uri.path`, if the endpoint is deployed in a context */
   override lazy val pathSegments: List[String] = {
     @tailrec
     def run(p: AkkaUri.Path, acc: List[String]): List[String] = p match {

@@ -17,7 +17,7 @@ import sttp.tapir.server.{
 
 class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
     requestBody: RequestBody[F, S],
-    rawToResponseBody: RawToResponseBody[WB, B, S],
+    rawToResponseBody: ToResponseBody[WB, B, S],
     decodeFailureHandler: DecodeFailureHandler,
     logRequestHandling: LogRequestHandling[F[Unit]]
 ) {

@@ -15,7 +15,7 @@ import sttp.tapir.{RawBodyType, RawPart}
 import java.io.ByteArrayInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
-class AkkaRequestBody(ctx: RequestContext, request: ServerRequest, serverOptions: AkkaHttpServerOptions)(implicit
+private[akkahttp] class AkkaRequestBody(ctx: RequestContext, request: ServerRequest, serverOptions: AkkaHttpServerOptions)(implicit
     mat: Materializer,
     ec: ExecutionContext
 ) extends RequestBody[Future, AkkaStreams] {

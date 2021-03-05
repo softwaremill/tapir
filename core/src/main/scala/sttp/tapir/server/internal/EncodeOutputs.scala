@@ -6,7 +6,7 @@ import sttp.tapir.{EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketB
 
 import scala.util.Try
 
-class EncodeOutputs[B, W, S](rawToResponseBody: RawToResponseBody[W, B, S]) {
+class EncodeOutputs[B, W, S](rawToResponseBody: ToResponseBody[W, B, S]) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
     output match {
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
@@ -35,9 +35,9 @@ class EncodeOutputs[B, W, S](rawToResponseBody: RawToResponseBody[W, B, S]) {
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value)
       case EndpointIO.Body(rawValueType, codec, _) =>
-        ov.withBody(headers => rawToResponseBody.rawValueToBody(encoded[Any], headers, codec.format, rawValueType))
+        ov.withBody(headers => rawToResponseBody.fromRawValue(encoded[Any], headers, codec.format, rawValueType))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-        ov.withBody(headers => rawToResponseBody.streamValueToBody(encoded, headers, codec.format, charset))
+        ov.withBody(headers => rawToResponseBody.fromStreamValue(encoded, headers, codec.format, charset))
       case EndpointIO.Header(name, _, _) =>
         encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
       case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
@@ -45,7 +45,7 @@ class EncodeOutputs[B, W, S](rawToResponseBody: RawToResponseBody[W, B, S]) {
       case EndpointOutput.StatusCode(_, _, _) => ov.withStatusCode(encoded[StatusCode])
       case EndpointOutput.WebSocketBodyWrapper(o) =>
         ov.withWebSocketBody(
-          rawToResponseBody.webSocketPipeToBody(
+          rawToResponseBody.fromWebSocketPipe(
             encoded[rawToResponseBody.streams.Pipe[Any, Any]],
             o.asInstanceOf[WebSocketBodyOutput[rawToResponseBody.streams.Pipe[Any, Any], Any, Any, Any, S]]
           )

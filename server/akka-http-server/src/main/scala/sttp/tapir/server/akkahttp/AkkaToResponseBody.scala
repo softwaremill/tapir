@@ -9,24 +9,24 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.internal.charset
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrow
-import sttp.tapir.server.internal.RawToResponseBody
+import sttp.tapir.server.internal.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.ExecutionContext
 import scala.util.Try
 
-class AkkaRawToResponseBody(implicit ec: ExecutionContext, m: Materializer)
-    extends RawToResponseBody[Flow[Message, Message, Any], ResponseEntity, AkkaStreams] {
+private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Materializer)
+    extends ToResponseBody[Flow[Message, Message, Any], ResponseEntity, AkkaStreams] {
   override val streams: AkkaStreams = AkkaStreams
 
-  override def rawValueToBody[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ResponseEntity =
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ResponseEntity =
     overrideContentTypeIfDefined(
       rawValueToResponseEntity(bodyType, formatToContentType(format, charset(bodyType)), headers.contentLength, v),
       headers
     )
 
-  override def streamValueToBody(
+  override def fromStreamValue(
       v: streams.BinaryStream,
       headers: HasHeaders,
       format: CodecFormat,
@@ -34,7 +34,7 @@ class AkkaRawToResponseBody(implicit ec: ExecutionContext, m: Materializer)
   ): ResponseEntity =
     overrideContentTypeIfDefined(streamToEntity(formatToContentType(format, charset), headers.contentLength, v), headers)
 
-  override def webSocketPipeToBody[REQ, RESP](
+  override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
   ): Flow[Message, Message, Any] = AkkaWebSockets.pipeToBody(pipe, o)

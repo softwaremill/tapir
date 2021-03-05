@@ -52,7 +52,7 @@ trait AkkaHttpServerInterpreter {
             val serverRequest = new AkkaServerRequest(ctx)
             val interpreter = new ServerInterpreter(
               new AkkaRequestBody(ctx, serverRequest, serverOptions),
-              new AkkaRawToResponseBody,
+              new AkkaToResponseBody,
               serverOptions.decodeFailureHandler,
               serverOptions.logRequestHandling(log)
             )
