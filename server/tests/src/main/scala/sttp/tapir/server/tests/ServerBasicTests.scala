@@ -69,6 +69,9 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_query_out_string)((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
       basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.body shouldBe Right("fruit: orange"))
     },
+    testServer(in_query_out_string, "with URL encoding")((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { baseUri =>
+      basicRequest.get(uri"$baseUri?fruit=red%20apple").send(backend).map(_.body shouldBe Right("fruit: red apple"))
+    },
     testServer[String, Nothing, String](in_query_out_infallible_string)((fruit: String) => pureResult(s"fruit: $fruit".asRight[Nothing])) {
       baseUri =>
         basicRequest.get(uri"$baseUri?fruit=kiwi").send(backend).map(_.body shouldBe Right("fruit: kiwi"))
@@ -83,6 +86,11 @@ class ServerBasicTests[F[_], ROUTE](
     },
     testServer(in_path_path_out_string) { case (fruit: String, amount: Int) => pureResult(s"$fruit $amount".asRight[Unit]) } { baseUri =>
       basicRequest.get(uri"$baseUri/fruit/orange/amount/20").send(backend).map(_.body shouldBe Right("orange 20"))
+    },
+    testServer(in_path_path_out_string, "with URL encoding") { case (fruit: String, amount: Int) =>
+      pureResult(s"$fruit $amount".asRight[Unit])
+    } { baseUri =>
+      basicRequest.get(uri"$baseUri/fruit/apple%2Fred/amount/20").send(backend).map(_.body shouldBe Right("apple/red 20"))
     },
     testServer(in_path, "Empty path should not be passed to path capture decoding") { _ => pureResult(Right(())) } { baseUri =>
       basicRequest.get(uri"$baseUri/api/").send(backend).map(_.code shouldBe StatusCode.NotFound)
@@ -326,20 +334,22 @@ class ServerBasicTests[F[_], ROUTE](
         .send(backend)
         .map(_.code shouldBe StatusCode.BadRequest)
     },
-    testServer(in_content_type_header_with_custom_decode_results, "mismatch content-type")((_: MediaType) => pureResult(Either.right[Unit, Unit](()))) {
-      baseUri =>
-        basicRequest
-          .post(uri"$baseUri/api/echo")
-          .contentType(MediaType.ApplicationXml)
-          .send(backend)
-          .map(_.code shouldBe StatusCode.UnsupportedMediaType)
+    testServer(in_content_type_header_with_custom_decode_results, "mismatch content-type")((_: MediaType) =>
+      pureResult(Either.right[Unit, Unit](()))
+    ) { baseUri =>
+      basicRequest
+        .post(uri"$baseUri/api/echo")
+        .contentType(MediaType.ApplicationXml)
+        .send(backend)
+        .map(_.code shouldBe StatusCode.UnsupportedMediaType)
     },
-    testServer(in_content_type_header_with_custom_decode_results, "missing content-type")((_: MediaType) => pureResult(Either.right[Unit, Unit](()))) {
-      baseUri =>
-        basicRequest
-          .post(uri"$baseUri/api/echo")
-          .send(backend)
-          .map(_.code shouldBe StatusCode.BadRequest)
+    testServer(in_content_type_header_with_custom_decode_results, "missing content-type")((_: MediaType) =>
+      pureResult(Either.right[Unit, Unit](()))
+    ) { baseUri =>
+      basicRequest
+        .post(uri"$baseUri/api/echo")
+        .send(backend)
+        .map(_.code shouldBe StatusCode.BadRequest)
     },
     testServer(in_unit_out_html)(_ => pureResult("<html />".asRight[Unit])) { baseUri =>
       basicRequest.get(uri"$baseUri/api/echo").send(backend).map { r =>

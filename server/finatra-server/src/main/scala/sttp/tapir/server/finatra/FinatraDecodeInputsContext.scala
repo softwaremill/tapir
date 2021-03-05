@@ -1,6 +1,7 @@
 package sttp.tapir.server.finatra
 
 import com.twitter.finagle.http.Request
+import io.netty.handler.codec.http.QueryStringDecoder
 import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.internal.DecodeInputsContext
@@ -18,7 +19,7 @@ class FinatraDecodeInputsContext(request: Request, pathConsumed: Int = 0) extend
     }
     val charactersConsumed = segment.map(_.length).getOrElse(0) + (path.length - nextStart.length)
 
-    (segment, new FinatraDecodeInputsContext(request, pathConsumed + charactersConsumed))
+    (segment.map(QueryStringDecoder.decodeComponent), new FinatraDecodeInputsContext(request, pathConsumed + charactersConsumed))
   }
   override def header(name: String): List[String] = request.headerMap.getAll(name).toList
   override def headers: Seq[(String, String)] = request.headerMap.toList
