@@ -25,5 +25,5 @@ class FinatraDecodeInputsContext(request: Request, pathConsumed: Int = 0) extend
   override def queryParameter(name: String): Seq[String] = request.params.getAll(name).toSeq
   override def queryParameters: QueryParams = QueryParams.fromMultiMap(request.params.toList.groupBy(_._1).mapValues(_.map(_._2)))
   override def bodyStream: Any = request.content
-  override def serverRequest: ServerRequest = new FinatraServerRequest(request)
+  override def request: ServerRequest = new FinatraServerRequest(request)
 }

@@ -154,11 +154,11 @@ object EndpointInput {
     override def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
   }
 
-  case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: Info[T]) extends Basic[T] {
+  case class ExtractFromRequest[T](codec: Codec[ServerRequest[Any], T, TextPlain], info: Info[T]) extends Basic[T] {
     override private[tapir] type ThisType[X] = ExtractFromRequest[X]
-    override private[tapir] type L = ServerRequest
+    override private[tapir] type L = ServerRequest[Any]
     override private[tapir] type CF = TextPlain
-    override private[tapir] def copyWith[U](c: Codec[ServerRequest, U, TextPlain], i: Info[U]): ExtractFromRequest[U] =
+    override private[tapir] def copyWith[U](c: Codec[ServerRequest[Any], U, TextPlain], i: Info[U]): ExtractFromRequest[U] =
       copy(codec = c, info = i)
     override def show: String = s"{data from request}"
   }

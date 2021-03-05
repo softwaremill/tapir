@@ -1,12 +1,14 @@
 package sttp.tapir.internal.server
 
-import sttp.model.{Method, QueryParams}
+import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsContext, DecodeInputsResult}
 import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+
+import scala.collection.immutable.Seq
 
 class DecodeInputsTest extends AnyFlatSpec with Matchers {
   it should "return an error if decoding throws an exception" in {
@@ -17,17 +19,18 @@ class DecodeInputsTest extends AnyFlatSpec with Matchers {
     val input = EndpointInput.Query[X]("x", implicitly, EndpointIO.Info(None, Nil, deprecated = false))
 
     // when & then
-    DecodeInputs(input, StubDecodeInputContext) shouldBe DecodeInputsResult.Failure(input, DecodeResult.Error("v", e))
+    DecodeInputs(input, DecodeInputsContext(StubServerRequest)) shouldBe DecodeInputsResult.Failure(input, DecodeResult.Error("v", e))
   }
 
-  object StubDecodeInputContext extends DecodeInputsContext {
+  object StubServerRequest extends ServerRequest[Any] {
+    override def protocol: String = ???
+    override def connectionInfo: ConnectionInfo = ???
+    override def body: Any = ???
+    override def underlying: Any = ???
+    override def pathSegments: List[String] = Nil
+    override def queryParameters: QueryParams = QueryParams.fromMap(Map("x" -> "v"))
     override def method: Method = Method.GET
-    override def nextPathSegment: (Option[String], DecodeInputsContext) = (None, this)
-    override def header(name: String): List[String] = Nil
-    override def headers: Seq[(String, String)] = Nil
-    override def queryParameter(name: String): Seq[String] = List("v")
-    override def queryParameters: QueryParams = QueryParams.fromMap(Map.empty)
-    override def bodyStream: Any = ()
-    override def serverRequest: ServerRequest = ???
+    override def uri: Uri = ???
+    override def headers: Seq[Header] = Nil
   }
 }

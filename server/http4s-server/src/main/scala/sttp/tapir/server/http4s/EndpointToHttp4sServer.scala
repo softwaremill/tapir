@@ -6,7 +6,7 @@ import cats.effect.{Concurrent, ContextShift, Sync, Timer}
 import cats.syntax.all._
 import org.http4s.{Http, HttpRoutes, Request, Response}
 import org.log4s._
-import sttp.tapir.server.internal.{DecodeBody, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.server.internal.{DecodeInputsResult, InputValues, InputValuesResult}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint, internal}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import cats.arrow.FunctionK

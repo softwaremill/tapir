@@ -29,5 +29,5 @@ private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed:
   override def queryParameters: QueryParams = QueryParams.fromMultiMap(request.queryString)
   override def bodyStream: Any = throw new UnsupportedOperationException("Play doesn't support request body streaming")
 
-  override def serverRequest: ServerRequest = new PlayServerRequest(request)
+  override def request: ServerRequest = new PlayServerRequest(request)
 }

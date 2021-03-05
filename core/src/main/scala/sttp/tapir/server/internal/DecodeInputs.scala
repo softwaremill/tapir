@@ -11,8 +11,7 @@ import scala.annotation.tailrec
 trait DecodeInputsResult
 object DecodeInputsResult {
 
-  /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint.
-    */
+  /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint. */
   case class Values(basicInputsValues: Vector[Any], bodyInputWithIndex: Option[(EndpointIO.Body[_, _], Int)]) extends DecodeInputsResult {
     def addBodyInput(input: EndpointIO.Body[_, _], bodyIndex: Int): Values = {
       if (bodyInputWithIndex.isDefined) {
@@ -22,8 +21,7 @@ object DecodeInputsResult {
       copy(bodyInputWithIndex = Some((input, bodyIndex)))
     }
 
-    /** Sets the value of the body input, once it is known, if a body input is defined.
-      */
+    /** Sets the value of the body input, once it is known, if a body input is defined. */
     def setBodyInputValue(v: Any): Values =
       bodyInputWithIndex match {
         case Some((_, i)) => copy(basicInputsValues = basicInputsValues.updated(i, v))
@@ -35,20 +33,21 @@ object DecodeInputsResult {
   case class Failure(input: EndpointInput.Basic[_], failure: DecodeResult.Failure) extends DecodeInputsResult
 }
 
-trait DecodeInputsContext {
-  def method: Method
+case class DecodeInputsContext(request: ServerRequest[Any], pathSegments: List[String]) {
+  def method: Method = request.method
+  def nextPathSegment: (Option[String], DecodeInputsContext) =
+    pathSegments match {
+      case Nil    => (None, this)
+      case h :: t => (Some(h), DecodeInputsContext(request, t))
+    }
+  def header(name: String): List[String] = request.headers(name).toList
+  def headers: Seq[(String, String)] = request.headers.map(h => (h.name, h.value))
+  def queryParameter(name: String): Seq[String] = queryParameters.getMulti(name).getOrElse(Nil)
+  val queryParameters: QueryParams = request.queryParameters
+}
 
-  def nextPathSegment: (Option[String], DecodeInputsContext)
-
-  def header(name: String): List[String]
-  def headers: Seq[(String, String)]
-
-  def queryParameter(name: String): Seq[String]
-  def queryParameters: QueryParams
-
-  def bodyStream: Any
-
-  def serverRequest: ServerRequest
+object DecodeInputsContext {
+  def apply(request: ServerRequest[Any]): DecodeInputsContext = DecodeInputsContext(request, request.pathSegments)
 }
 
 object DecodeInputs {
@@ -257,10 +256,10 @@ object DecodeInputs {
         (codec.decode(ctx.headers.map((sttp.model.Header.apply _).tupled).toList), ctx)
 
       case EndpointInput.ExtractFromRequest(codec, _) =>
-        (codec.decode(ctx.serverRequest), ctx)
+        (codec.decode(ctx.request), ctx)
 
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) =>
-        (codec.decode(ctx.bodyStream), ctx)
+        (codec.decode(ctx.request.bodyStream), ctx)
 
       case EndpointIO.Empty(codec, _) =>
         (codec.decode(()), ctx)

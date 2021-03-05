@@ -1,18 +1,17 @@
 package sttp.tapir.server.akkahttp
 
 import java.io.File
-
 import akka.event.LoggingAdapter
-import akka.http.scaladsl.server.RequestContext
 import sttp.tapir.Defaults
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaults}
 
 import scala.concurrent.Future
 
 case class AkkaHttpServerOptions(
-    createFile: RequestContext => Future[File],
+    createFile: ServerRequest[Any] => Future[File],
     decodeFailureHandler: DecodeFailureHandler,
-    logRequestHandling: LogRequestHandling[LoggingAdapter => Unit]
+    logRequestHandling: LoggingAdapter => LogRequestHandling[Future[Unit]]
 )
 
 object AkkaHttpServerOptions {
@@ -23,21 +22,22 @@ object AkkaHttpServerOptions {
       defaultLogRequestHandling
     )
 
-  lazy val defaultCreateFile: RequestContext => Future[File] = { _ =>
+  lazy val defaultCreateFile: ServerRequest[Any] => Future[File] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(Defaults.createTempFile())
   }
 
-  lazy val defaultLogRequestHandling: LogRequestHandling[LoggingAdapter => Unit] = LogRequestHandling(
-    doLogWhenHandled = debugLog,
-    doLogAllDecodeFailures = debugLog,
-    doLogLogicExceptions = (msg: String, ex: Throwable) => log => log.error(ex, msg),
-    noLog = _ => ()
+  def defaultLogRequestHandling(log: LoggingAdapter): LogRequestHandling[Future[Unit]] = LogRequestHandling(
+    doLogWhenHandled = debugLog(log),
+    doLogAllDecodeFailures = debugLog(log),
+    doLogLogicExceptions = (msg: String, ex: Throwable) => Future.successful(log.error(ex, msg)),
+    noLog = Future.successful(())
   )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): LoggingAdapter => Unit =
+  private def debugLog(log: LoggingAdapter)(msg: String, exOpt: Option[Throwable]): Future[Unit] = Future.successful {
     exOpt match {
-      case None     => log => log.debug(msg)
-      case Some(ex) => log => log.debug(s"$msg; exception: {}", ex)
+      case None     => log.debug(msg)
+      case Some(ex) => log.debug(s"$msg; exception: {}", ex)
     }
+  }
 }

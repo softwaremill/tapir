@@ -8,7 +8,6 @@ import sttp.client3.testing._
 import sttp.model.StatusCode
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.server.internal.{
-  DecodeBody,
   DecodeInputs,
   DecodeInputsResult,
   EncodeOutputBody,

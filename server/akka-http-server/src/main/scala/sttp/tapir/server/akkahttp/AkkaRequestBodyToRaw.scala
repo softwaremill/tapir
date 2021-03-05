@@ -1,0 +1,55 @@
+package sttp.tapir.server.akkahttp
+
+import akka.http.scaladsl.model.{HttpEntity, Multipart}
+import akka.http.scaladsl.server.RequestContext
+import akka.http.scaladsl.unmarshalling.FromEntityUnmarshaller
+import akka.stream.Materializer
+import akka.stream.scaladsl.{FileIO, Sink}
+import akka.util.ByteString
+import sttp.model.{Header, Part}
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.internal.RequestBodyToRaw
+import sttp.tapir.{RawBodyType, RawPart}
+
+import java.io.ByteArrayInputStream
+import scala.concurrent.{ExecutionContext, Future}
+
+class AkkaRequestBodyToRaw(ctx: RequestContext, request: ServerRequest[Any], serverOptions: AkkaHttpServerOptions)(implicit
+    mat: Materializer,
+    ec: ExecutionContext
+) extends RequestBodyToRaw[Future] {
+  override def apply[R](bodyType: RawBodyType[R]): Future[R] = toRawBody(ctx.request.entity, bodyType)
+
+  private def toRawBody[R](body: HttpEntity, bodyType: RawBodyType[R]): Future[R] = {
+    bodyType match {
+      case RawBodyType.StringBody(_)   => implicitly[FromEntityUnmarshaller[String]].apply(body)
+      case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body)
+      case RawBodyType.ByteBufferBody  => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(_.asByteBuffer)
+      case RawBodyType.InputStreamBody => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(new ByteArrayInputStream(_))
+      case RawBodyType.FileBody =>
+        serverOptions
+          .createFile(request)
+          .flatMap(file => body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => file))
+      case m: RawBodyType.MultipartBody =>
+        implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(body).flatMap { fd =>
+          fd.parts
+            .mapConcat(part => m.partType(part.name).map((part, _)).toList)
+            .mapAsync[RawPart](1) { case (part, codecMeta) => toRawPart(part, codecMeta) }
+            .runWith[Future[scala.collection.immutable.Seq[RawPart]]](Sink.seq)
+            .asInstanceOf[Future[R]]
+        }
+    }
+  }
+
+  private def toRawPart[R](part: Multipart.FormData.BodyPart, bodyType: RawBodyType[R]): Future[Part[R]] = {
+    toRawBody(part.entity, bodyType)
+      .map(r =>
+        Part(
+          part.name,
+          r,
+          otherDispositionParams = part.additionalDispositionParams,
+          headers = part.additionalHeaders.map(h => Header(h.name, h.value))
+        ).contentType(part.entity.contentType.toString())
+      )
+  }
+}

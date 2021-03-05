@@ -29,5 +29,5 @@ private[http4s] class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends D
   override def queryParameter(name: String): Seq[String] = queryParameters.getMulti(name).getOrElse(Nil)
   override val queryParameters: QueryParams = QueryParams.fromMultiMap(req.multiParams)
   override def bodyStream: Any = req.body
-  override def serverRequest: ServerRequest = new Http4sServerRequest(req)
+  override def request: ServerRequest = new Http4sServerRequest(req)
 }

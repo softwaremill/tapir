@@ -9,7 +9,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.server.ServerDefaults.StatusCodes
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
-import sttp.tapir.server.internal.{DecodeBody, DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
+import sttp.tapir.server.internal.{DecodeInputs, DecodeInputsResult, InputValues, InputValuesResult}
 
 import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContextExecutor, Future}

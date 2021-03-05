@@ -40,5 +40,5 @@ private[vertx] class VertxDecodeInputsContext[S: ReadStreamCompatible](
     )
   override def bodyStream: Any =
     ReadStreamCompatible[S].fromReadStream(rc.request.asInstanceOf[ReadStream[Buffer]])
-  override def serverRequest: ServerRequest = new VertxServerRequest(rc)
+  override def request: ServerRequest = new VertxServerRequest(rc)
 }

@@ -39,5 +39,5 @@ class SttpDecodeInputs(r: Request[_, _], segmentIndex: Int = 0) extends DecodeIn
       case _             => throw new UnsupportedOperationException("Trying to read streaming body from a non-streaming request")
     }
 
-  override def serverRequest: ServerRequest = new SttpStubServerRequest(r)
+  override def request: ServerRequest = new SttpStubServerRequest(r)
 }

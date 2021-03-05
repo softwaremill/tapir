@@ -1,17 +1,18 @@
 package sttp.tapir.model
 
-import java.net.{InetSocketAddress, URI}
+import sttp.model.{QueryParams, RequestMetadata}
+import java.net.InetSocketAddress
 
-import sttp.model.Method
-
-trait ServerRequest {
-  def method: Method
+trait ServerRequest[+B] extends RequestMetadata {
   def protocol: String
-  def uri: URI
   def connectionInfo: ConnectionInfo
-  def headers: Seq[(String, String)]
-  def header(name: String): Option[String]
+  def body: B
+  def bodyStream: Any
   def underlying: Any
+
+  /** Can differ from `uri.path`, if the endpoint is deployed in a context */
+  def pathSegments: List[String]
+  def queryParameters: QueryParams
 }
 
 case class ConnectionInfo(local: Option[InetSocketAddress], remote: Option[InetSocketAddress], secure: Option[Boolean])
