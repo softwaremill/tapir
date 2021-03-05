@@ -43,8 +43,6 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
   ): Schema[String Refined Uuid] =
     refinedTapirSchema[String, Uuid].format("uuid")
 
-  //
-
   implicit val validatorForNonEmptyString: ValidatorForPredicate[String, NonEmpty] =
     ValidatorForPredicate.fromPrimitiveValidator[String, NonEmpty](Validator.minLength(1))
 
