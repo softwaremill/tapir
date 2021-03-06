@@ -51,13 +51,14 @@ trait AkkaHttpServerInterpreter {
             implicit val monad: FutureMonad = new FutureMonad()
             val serverRequest = new AkkaServerRequest(ctx)
             val interpreter = new ServerInterpreter(
+              serverRequest,
               new AkkaRequestBody(ctx, serverRequest, serverOptions),
               new AkkaToResponseBody,
               serverOptions.decodeFailureHandler,
               serverOptions.logRequestHandling(log)
             )
 
-            onSuccess(interpreter(ses, serverRequest)) {
+            onSuccess(interpreter(ses)) {
               case None           => reject
               case Some(response) => serverResponseToAkka(response)
             }

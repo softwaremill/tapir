@@ -16,22 +16,23 @@ import sttp.tapir.server.{
 }
 
 class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
+    request: ServerRequest,
     requestBody: RequestBody[F, S],
     rawToResponseBody: ToResponseBody[WB, B, S],
     decodeFailureHandler: DecodeFailureHandler,
     logRequestHandling: LogRequestHandling[F[Unit]]
 ) {
-  def apply(ses: List[ServerEndpoint[_, _, _, R, F]], request: ServerRequest): F[Option[ServerResponse[WB, B]]] =
+  def apply(ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[WB, B]]] =
     ses match {
       case Nil => (None: Option[ServerResponse[WB, B]]).unit
       case se :: tail =>
-        apply(se, request).flatMap {
-          case None => apply(tail, request)
+        apply(se).flatMap {
+          case None => apply(tail)
           case r    => r.unit
         }
     }
 
-  def apply[I, E, O](se: ServerEndpoint[I, E, O, R, F], request: ServerRequest): F[Option[ServerResponse[WB, B]]] = {
+  def apply[I, E, O](se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[WB, B]]] = {
     def valueToResponse(value: Any): F[ServerResponse[WB, B]] = {
       val i = value.asInstanceOf[I]
       se.logic(implicitly)(i)
