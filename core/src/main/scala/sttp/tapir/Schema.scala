@@ -151,7 +151,7 @@ object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPri
   implicit val schemaForLocalTime: Schema[LocalTime] = Schema(SString)
   implicit val schemaForOffsetTime: Schema[OffsetTime] = Schema(SString)
   implicit val schemaForScalaDuration: Schema[scala.concurrent.duration.Duration] = Schema(SString)
-  implicit val schemaForUUID: Schema[UUID] = Schema(SString)
+  implicit val schemaForUUID: Schema[UUID] = Schema(SString).format("uuid")
   implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SString)
   implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString)
 
