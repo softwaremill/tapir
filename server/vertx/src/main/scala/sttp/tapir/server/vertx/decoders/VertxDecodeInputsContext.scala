@@ -1,5 +1,6 @@
 package sttp.tapir.server.vertx.decoders
 
+import io.netty.handler.codec.http.QueryStringDecoder
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.RoutingContext
@@ -28,7 +29,8 @@ private[vertx] class VertxDecodeInputsContext[S: ReadStreamCompatible](
       case Array(s, _) => Some(s)
     }
     val charactersConsumed = segment.map(_.length).getOrElse(0) + (path.length - nextStart.length)
-    (segment, new VertxDecodeInputsContext(rc, pathConsumed + charactersConsumed))
+
+    (segment.map(QueryStringDecoder.decodeComponent), new VertxDecodeInputsContext(rc, pathConsumed + charactersConsumed))
   }
   override def header(name: String): List[String] = request.headers.getAll(name).asScala.toList
   override def headers: Seq[(String, String)] =

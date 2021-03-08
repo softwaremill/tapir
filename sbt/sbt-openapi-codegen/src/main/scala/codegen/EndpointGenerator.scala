@@ -80,7 +80,8 @@ class EndpointGenerator {
       .mkString("\n")
 
     val rqBody = requestBody.fold("") { b =>
-      s"\n.in(${contentTypeMapper(b.contentType, b.schema, b.required)})"
+      if (b.content.size != 1) throw new NotImplementedError("We can handle only one requestBody content!")
+      s"\n.in(${contentTypeMapper(b.content.head.contentType, b.content.head.schema, b.required)})"
     }
 
     params + rqBody
