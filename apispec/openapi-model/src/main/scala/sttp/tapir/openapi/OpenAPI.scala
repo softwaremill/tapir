@@ -164,28 +164,24 @@ case object ResponsesDefaultKey extends ResponsesKey
 case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
-case class Response(description: String, headers: ListMap[String, ReferenceOr[Header]], content: ListMap[String, MediaType]) {
+case class Response(description: String, headers: ListMap[String, ReferenceOr[Header]], content: ListMap[String, MediaType])
 
-  def merge(other: Response): Response =
-    Response(
-      description,
-      headers ++ other.headers,
-      content ++ other.content
-    )
+object Response {
+  val Empty: Response = Response("", ListMap.empty, ListMap.empty)
 }
 
 case class Example(summary: Option[String], description: Option[String], value: Option[ExampleValue], externalValue: Option[String])
 
 case class Header(
-    description: Option[String],
-    required: Option[Boolean],
-    deprecated: Option[Boolean],
-    allowEmptyValue: Option[Boolean],
-    style: Option[ParameterStyle.ParameterStyle],
-    explode: Option[Boolean],
-    allowReserved: Option[Boolean],
-    schema: Option[ReferenceOr[Schema]],
-    example: Option[ExampleValue],
-    examples: ListMap[String, ReferenceOr[Example]],
-    content: ListMap[String, MediaType]
+    description: Option[String] = None,
+    required: Option[Boolean] = None,
+    deprecated: Option[Boolean] = None,
+    allowEmptyValue: Option[Boolean] = None,
+    style: Option[ParameterStyle.ParameterStyle] = None,
+    explode: Option[Boolean] = None,
+    allowReserved: Option[Boolean] = None,
+    schema: Option[ReferenceOr[Schema]] = None,
+    example: Option[ExampleValue] = None,
+    examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
+    content: ListMap[String, MediaType] = ListMap.empty
 )
