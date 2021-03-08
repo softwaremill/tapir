@@ -150,9 +150,15 @@ trait EndpointOutputsOps[I, E, O, -R] {
   )(implicit fc: FnComponents[COMPANION, O, CASE_CLASS]): EndpointType[I, E, CASE_CLASS, R] =
     withOutput(validated(output.mapTo(c)(fc)))
 
-  private def validated[OP](output: EndpointOutput[OP]): EndpointOutput[OP] =
+  private def validated[OP](output: EndpointOutput[OP]): EndpointOutput[OP] = {
+
+    def isBody(o: EndpointOutput.Basic[_]): Boolean = o match {
+      case _ @(EndpointIO.Body(_, _, _) | EndpointIO.StreamBodyWrapper(_) | EndpointIO.Empty(_, _)) => true
+      case _                                                                                        => false
+    }
+
     output.asBasicOutputsList
-      .flatMap { case (status, outputs) => for (s <- status) yield s -> outputs.map(o => Option(o.codec).map(_.format)) }
+      .flatMap { case (status, outputs) => for (s <- status) yield s -> outputs.filter(isBody).map(o => Option(o.codec).map(_.format)) }
       .groupBy { case (status, _) => status }
       .map { case (status, outputs) =>
         val formats = outputs.flatMap { case (_, output) => output }
@@ -163,6 +169,7 @@ trait EndpointOutputsOps[I, E, O, -R] {
       case (Nil, _)    => output
       case (errors, _) => throw new RuntimeException((for (Left(e) <- errors) yield e).mkString("\n"))
     }
+  }
 }
 
 trait EndpointInfoOps[I, E, O, -R] {

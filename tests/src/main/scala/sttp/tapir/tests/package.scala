@@ -12,7 +12,7 @@ import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
 import sttp.model.{Header, HeaderNames, MediaType, Part, QueryParams, StatusCode}
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.Codec.{PlainCodec, XmlCodec}
 import sttp.tapir.model._
 
 package object tests {
@@ -69,17 +69,22 @@ package object tests {
     .out(header[Int]("IntHeader") and stringBody)
 
   val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(jsonBody[FruitAmount])
-      .out(jsonBody[FruitAmount]).name("echo json")
+      .out(jsonBody[FruitAmount])
+      .name("echo json")
 
   val in_content_type_fixed_header: Endpoint[Unit, Unit, Unit, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(header(Header.contentType(MediaType.ApplicationJson)))
 
-  implicit val mediaTypeCodec: Codec[String, MediaType, CodecFormat.TextPlain] = Codec.string.mapDecode(_ => DecodeResult.Mismatch("", ""))(_.toString())
+  implicit val mediaTypeCodec: Codec[String, MediaType, CodecFormat.TextPlain] =
+    Codec.string.mapDecode(_ => DecodeResult.Mismatch("", ""))(_.toString())
   val in_content_type_header_with_custom_decode_results: Endpoint[MediaType, Unit, Unit, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(header[MediaType]("Content-Type"))
 
   val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte], Any] =
@@ -254,7 +259,7 @@ package object tests {
 
   val in_unit_out_html: Endpoint[Unit, Unit, String, Any] =
     endpoint.in("api" / "echo").out(htmlBodyUtf8)
-
+  
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Any] =
     endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location"))
 
@@ -308,6 +313,18 @@ package object tests {
       .in(query[String]("p1").default("DEFAULT"))
       .out(stringBody)
       .name("Query with default")
+
+//  val out_multiple_media_types: Endpoint[Unit, Unit, StringWrapper, Any] = {
+//    implicit val schemaForColor: Schema[StringWrapper] = Schema.string
+//    implicit val xmlCodecForColor: XmlCodec[StringWrapper] =
+//      Codec.xml(_rawDecode = _ => DecodeResult.Value(StringWrapper("string")))(_encode = s => s.v)
+//    endpoint.get.out(
+//      sttp.tapir.oneOf(
+//        statusMapping(StatusCode.Ok, xmlBody[StringWrapper]),
+//        statusMapping(StatusCode.Ok, jsonBody[StringWrapper])
+//      )
+//    )
+//  }
 
   //
 
