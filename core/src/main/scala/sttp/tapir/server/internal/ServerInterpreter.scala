@@ -1,6 +1,6 @@
 package sttp.tapir.server.internal
 
-import sttp.model.{Header, Headers}
+import sttp.model.Headers
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
@@ -102,7 +102,7 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
     val outputValues = new EncodeOutputs(rawToResponseBody).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
-    val headers = outputValues.headers.map(p => Header(p._1, p._2))
+    val headers = outputValues.headers
     outputValues.body match {
       case Some(Left(bodyFromHeaders)) => ServerResponse(statusCode, headers, Some(Right(bodyFromHeaders(Headers(headers)))))
       case Some(Right(pipeF))          => ServerResponse(statusCode, headers, Some(Left(pipeF)))

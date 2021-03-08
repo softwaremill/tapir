@@ -2,7 +2,7 @@ package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.server.RequestContext
 import akka.http.scaladsl.model.headers.{`Content-Length`, `Content-Type`}
-import akka.http.scaladsl.model.{HttpEntity, Uri => AkkaUri}
+import akka.http.scaladsl.model.{Uri => AkkaUri}
 import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
@@ -12,7 +12,7 @@ import scala.collection.immutable.Seq
 private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerRequest {
   override def protocol: String = ctx.request.protocol.value
   override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
-  override val underlying: Any = ctx
+  override def underlying: Any = ctx
 
   override lazy val pathSegments: List[String] = {
     @tailrec

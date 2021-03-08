@@ -1,10 +1,13 @@
 package sttp.tapir.server.internal
 
-import sttp.model.{HasHeaders, HeaderNames, StatusCode}
+import sttp.model.{HasHeaders, Header, HeaderNames, MediaType, StatusCode}
+import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
-import sttp.tapir.{EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
+import java.nio.charset.Charset
 import scala.util.Try
+import scala.collection.immutable.Seq
 
 class EncodeOutputs[B, W, S](rawToResponseBody: ToResponseBody[W, B, S]) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
@@ -33,14 +36,16 @@ class EncodeOutputs[B, W, S](rawToResponseBody: ToResponseBody[W, B, S]) {
     output match {
       case EndpointIO.Empty(_, _)                   => ov
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
-      case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name -> header.value)
-      case EndpointIO.Body(rawValueType, codec, _) =>
-        ov.withBody(headers => rawToResponseBody.fromRawValue(encoded[Any], headers, codec.format, rawValueType))
+      case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name, header.value)
+      case EndpointIO.Body(rawBodyType, codec, _) =>
+        ov.withBody(headers => rawToResponseBody.fromRawValue(encoded[Any], headers, codec.format, rawBodyType))
+          .withDefaultContentType(codec.format, charset(codec.format.mediaType, rawBodyType))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
         ov.withBody(headers => rawToResponseBody.fromStreamValue(encoded, headers, codec.format, charset))
+          .withDefaultContentType(codec.format, charset)
       case EndpointIO.Header(name, _, _) =>
-        encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader((name, headerValue)) }
-      case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader((h.name, h.value)))
+        encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader(name, headerValue) }
+      case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader(h.name, h.value))
       case EndpointIO.MappedPair(wrapped, _)  => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
       case EndpointOutput.StatusCode(_, _, _) => ov.withStatusCode(encoded[StatusCode])
       case EndpointOutput.WebSocketBodyWrapper(o) =>
@@ -59,11 +64,19 @@ class EncodeOutputs[B, W, S](rawToResponseBody: ToResponseBody[W, B, S]) {
       case EndpointOutput.MappedPair(wrapped, _) => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
     }
   }
+
+  private def charset[R](mediaType: MediaType, bodyType: RawBodyType[R]): Option[Charset] = bodyType match {
+    // TODO: add to MediaType - setting optional charset if text
+    case StringBody(charset) if mediaType.mainType.equalsIgnoreCase("text") => Some(charset)
+    case _                                                                  => None
+  }
 }
 
 case class OutputValues[B, W](
     body: Option[Either[HasHeaders => B, W]],
-    headers: Vector[(String, String)],
+    explicitHeaders: Vector[Header],
+    // headers, which should be added to the response if a value is not provided explicitly
+    defaultHeaders: Vector[Header],
     statusCode: Option[StatusCode]
 ) {
   def withBody(b: HasHeaders => B): OutputValues[B, W] = {
@@ -82,18 +95,27 @@ case class OutputValues[B, W](
     copy(body = Some(Right(w)))
   }
 
-  def withHeader(h: (String, String)): OutputValues[B, W] = copy(headers = headers :+ h)
+  def withDefaultHeader(n: String, v: String): OutputValues[B, W] = copy(defaultHeaders = defaultHeaders :+ Header(n, v))
+  def withDefaultContentType(format: CodecFormat, charset: Option[Charset]): OutputValues[B, W] =
+    withDefaultHeader(HeaderNames.ContentType, charset.fold(format.mediaType)(format.mediaType.charset(_)).toString())
+
+  def withHeader(n: String, v: String): OutputValues[B, W] = copy(explicitHeaders = explicitHeaders :+ Header(n, v))
 
   def withStatusCode(sc: StatusCode): OutputValues[B, W] = copy(statusCode = Some(sc))
+
+  def headers: Seq[Header] = {
+    val explicitHeaderNames = explicitHeaders.map(_.name.toLowerCase).toSet
+    explicitHeaders ++ defaultHeaders.filterNot(h => explicitHeaderNames.contains(h.name.toLowerCase))
+  }
 
   // TODO remove?
   def contentLength: Option[Long] =
     headers
       .collectFirst {
-        case (k, v) if HeaderNames.ContentLength.equalsIgnoreCase(k) => v
+        case Header(k, v) if HeaderNames.ContentLength.equalsIgnoreCase(k) => v
       }
       .flatMap(v => Try(v.toLong).toOption)
 }
 object OutputValues {
-  def empty[B, W]: OutputValues[B, W] = OutputValues[B, W](None, Vector.empty, None)
+  def empty[B, W]: OutputValues[B, W] = OutputValues[B, W](None, Vector.empty, Vector.empty, None)
 }

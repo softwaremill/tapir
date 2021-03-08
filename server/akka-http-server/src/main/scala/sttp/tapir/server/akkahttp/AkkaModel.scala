@@ -2,11 +2,15 @@ package sttp.tapir.server.akkahttp
 
 import akka.http.scaladsl.model.HttpHeader
 import akka.http.scaladsl.model.HttpHeader.ParsingResult
-import sttp.model.{HasHeaders, Header}
+import sttp.model.{HasHeaders, Header, HeaderNames}
+
 import scala.collection.immutable.Seq
 
 private[akkahttp] object AkkaModel {
-  def parseHeadersOrThrow(hs: HasHeaders): Seq[HttpHeader] = hs.headers.map(parseHeaderOrThrow)
+  private val ctHeaderNameLowerCase = HeaderNames.ContentType.toLowerCase
+
+  def parseHeadersOrThrowWithoutContentType(hs: HasHeaders): Seq[HttpHeader] =
+    hs.headers.map(parseHeaderOrThrow).filterNot(_.is(ctHeaderNameLowerCase))
 
   def parseHeaderOrThrow(h: Header): HttpHeader =
     HttpHeader.parse(h.name, h.value) match {

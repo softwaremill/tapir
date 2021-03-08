@@ -8,7 +8,7 @@ import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.internal.charset
-import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrow
+import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentType
 import sttp.tapir.server.internal.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
@@ -83,7 +83,7 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
           part.name,
           body,
           part.otherDispositionParams,
-          parseHeadersOrThrow(part).filterNot(_.is(HeaderNames.ContentType.toLowerCase)).toList
+          parseHeadersOrThrowWithoutContentType(part).toList
         )
     }
   }
@@ -97,7 +97,10 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       case CodecFormat.Zip()                => MediaTypes.`application/zip`
       case CodecFormat.XWwwFormUrlencoded() => MediaTypes.`application/x-www-form-urlencoded`
       case CodecFormat.MultipartFormData()  => MediaTypes.`multipart/form-data`
-      case f                                => parseContentType(f.mediaType.toString())
+      case f                                =>
+        // TODO: add to MediaType - setting optional charset if text
+        val mt = if (f.mediaType.mainType.equalsIgnoreCase("text")) charset.fold(f.mediaType)(f.mediaType.charset(_)) else f.mediaType
+        parseContentType(mt.toString())
     }
   }
 
