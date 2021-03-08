@@ -23,7 +23,7 @@ private[http4s] class Http4sServerRequest[F[_]](req: Request[F]) extends ServerR
 
     // if the routes are mounted within a context (e.g. using a router), we have to match against what comes
     // after the context. This information is stored in the the PathInfoCaret attribute
-    run(req.pathInfo, Nil)
+    run(req.pathInfo, Nil).map(org.http4s.Uri.decode(_))
   }
 
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.multiParams)
