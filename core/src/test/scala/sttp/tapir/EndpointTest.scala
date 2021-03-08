@@ -1,13 +1,13 @@
 package sttp.tapir
 
-import sttp.model.{Method, StatusCode}
-import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
-import sttp.tapir.internal._
-
-import scala.concurrent.Future
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.model.{Method, StatusCode}
+import sttp.tapir.internal._
+import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
+
+import scala.concurrent.Future
 
 class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers {
   "endpoint" should "compile inputs" in {
@@ -69,6 +69,20 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
           statusMapping(StatusCode.Unauthorized, emptyOutput)
         )
       )
+  }
+
+  it should "not allow to map status code multiple times to same format" in {
+    implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
+
+    the[RuntimeException] thrownBy {
+      endpoint.get
+        .out(
+          sttp.tapir.oneOf(
+            statusMapping(StatusCode.Ok, stringBody),
+            statusMapping(StatusCode.Ok, plainBody)
+          )
+        )
+    }
   }
 
   def pairToTuple(input: EndpointInput[_]): Any =

@@ -5,9 +5,9 @@ import sttp.model.Method
 import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
+import sttp.tapir.internal._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint, ServerEndpointInParts}
 import sttp.tapir.typelevel.{FnComponents, ParamConcat, ParamSubtract}
-import sttp.tapir.internal._
 
 import scala.collection.immutable.Nil
 import scala.reflect.ClassTag
@@ -117,38 +117,52 @@ trait EndpointOutputsOps[I, E, O, -R] {
   private[tapir] def withOutput[O2, R2](input: EndpointOutput[O2]): EndpointType[I, E, O2, R with R2]
 
   def out[P, OP](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R] =
-    withOutput(output.and(i))
+    withOutput(validated(output.and(i)))
 
   def prependOut[P, PO](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
-    withOutput(i.and(output))
+    withOutput(validated(i.and(output)))
 
   def out[BS, P, OP, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R with R2] =
-    withOutput(output.and(i.toEndpointIO))
+    withOutput(validated(output.and(i.toEndpointIO)))
 
   def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
-    withOutput(i.toEndpointIO.and(output))
+    withOutput(validated(i.toEndpointIO.and(output)))
 
   def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
       ts: ParamConcat.Aux[O, P, OP]
-  ): EndpointType[I, E, OP, R with R2 with WebSockets] = withOutput(output.and(i.toEndpointOutput))
+  ): EndpointType[I, E, OP, R with R2 with WebSockets] = withOutput(validated(output.and(i.toEndpointOutput)))
 
   def prependOut[PIPE_REQ_RESP, P, PO, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
       ts: ParamConcat.Aux[P, O, PO]
-  ): EndpointType[I, E, PO, R with R2 with WebSockets] = withOutput(i.toEndpointOutput.and(output))
+  ): EndpointType[I, E, PO, R with R2 with WebSockets] = withOutput(validated(i.toEndpointOutput.and(output)))
 
   def mapOut[OO](m: Mapping[O, OO]): EndpointType[I, E, OO, R] =
-    withOutput(output.map(m))
+    withOutput(validated(output.map(m)))
 
   def mapOut[OO](f: O => OO)(g: OO => O): EndpointType[I, E, OO, R] =
-    withOutput(output.map(f)(g))
+    withOutput(validated(output.map(f)(g)))
 
   def mapOutDecode[OO](f: O => DecodeResult[OO])(g: OO => O): EndpointType[I, E, OO, R] =
-    withOutput(output.mapDecode(f)(g))
+    withOutput(validated(output.mapDecode(f)(g)))
 
   def mapOutTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
   )(implicit fc: FnComponents[COMPANION, O, CASE_CLASS]): EndpointType[I, E, CASE_CLASS, R] =
-    withOutput(output.mapTo(c)(fc))
+    withOutput(validated(output.mapTo(c)(fc)))
+
+  private def validated[OP](output: EndpointOutput[OP]): EndpointOutput[OP] =
+    output.asBasicOutputsList
+      .flatMap { case (status, outputs) => for (s <- status) yield s -> outputs.map(o => Option(o.codec).map(_.format)) }
+      .groupBy { case (status, _) => status }
+      .map { case (status, outputs) =>
+        val formats = outputs.flatMap { case (_, output) => output }
+        val duplicates = formats.diff(formats.distinct)
+        if (duplicates.nonEmpty) Left(s"Ambiguous mapping of status $status to format ${duplicates.mkString(", ")}") else Right(())
+      }
+      .partition(_.isLeft) match {
+      case (Nil, _)    => output
+      case (errors, _) => throw new RuntimeException((for (Left(e) <- errors) yield e).mkString("\n"))
+    }
 }
 
 trait EndpointInfoOps[I, E, O, -R] {
