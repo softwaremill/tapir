@@ -4,7 +4,7 @@ import eu.timepit.refined.api.{Refined, Validate}
 import eu.timepit.refined.collection.NonEmpty
 import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import eu.timepit.refined.refineV
-import eu.timepit.refined.string.MatchesRegex
+import eu.timepit.refined.string.{MatchesRegex, Uuid}
 import shapeless.Witness
 import sttp.tapir._
 
@@ -36,7 +36,12 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
       }(_.value)
   }
 
-  //
+  implicit def uuidTapirSchema(implicit
+      vSchema: Schema[String],
+      refinedValidator: Validate[String, Uuid],
+      refinedValidatorTranslation: ValidatorForPredicate[String, Uuid]
+  ): Schema[String Refined Uuid] =
+    refinedTapirSchema[String, Uuid].format("uuid")
 
   implicit val validatorForNonEmptyString: ValidatorForPredicate[String, NonEmpty] =
     ValidatorForPredicate.fromPrimitiveValidator[String, NonEmpty](Validator.minLength(1))
