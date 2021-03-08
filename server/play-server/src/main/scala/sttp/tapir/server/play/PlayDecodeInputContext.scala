@@ -2,9 +2,12 @@ package sttp.tapir.server.play
 
 import akka.stream.Materializer
 import play.api.mvc.RequestHeader
+import play.utils.UriEncoding
 import sttp.model.{Method, QueryParams}
-import sttp.tapir.server.internal.DecodeInputsContext
 import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.internal.DecodeInputsContext
+
+import java.nio.charset.StandardCharsets
 
 private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed: Int = 0, serverOptions: PlayServerOptions)(implicit
     mat: Materializer
@@ -20,8 +23,9 @@ private[play] class PlayDecodeInputContext(request: RequestHeader, pathConsumed:
       case Array(s, _) => Some(s)
     }
     val charactersConsumed = segment.map(_.length).getOrElse(0) + (path.length - nextStart.length)
+    val urlDecodedSegment = segment.map(UriEncoding.decodePathSegment(_, StandardCharsets.UTF_8))
 
-    (segment, new PlayDecodeInputContext(request, pathConsumed + charactersConsumed, serverOptions))
+    (urlDecodedSegment, new PlayDecodeInputContext(request, pathConsumed + charactersConsumed, serverOptions))
   }
   override def header(name: String): List[String] = request.headers.toMap.get(name).toList.flatten
   override def headers: Seq[(String, String)] = request.headers.headers

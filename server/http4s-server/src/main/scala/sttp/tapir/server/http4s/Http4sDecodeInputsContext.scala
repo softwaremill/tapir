@@ -22,7 +22,7 @@ private[http4s] class Http4sDecodeInputsContext[F[_]](req: Request[F]) extends D
     val segmentSlashLength = segment.map(_.length).getOrElse(0) + 1
     val reqWithNewCaret = req.withAttribute(Request.Keys.PathInfoCaret, oldCaret + segmentSlashLength)
 
-    (segment, new Http4sDecodeInputsContext(reqWithNewCaret))
+    (segment.map(org.http4s.Uri.decode(_)), new Http4sDecodeInputsContext(reqWithNewCaret))
   }
   override def header(name: String): List[String] = req.headers.get(CaseInsensitiveString(name)).map(_.value).toList
   override def headers: Seq[(String, String)] = req.headers.toList.map(h => (h.name.value, h.value))
