@@ -6,21 +6,14 @@ import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.{
-  DecodeFailureContext,
-  DecodeFailureHandler,
-  DecodeFailureHandling,
-  LogRequestHandling,
-  ServerDefaults,
-  ServerEndpoint
-}
+import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
+import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
 
 class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
     request: ServerRequest,
     requestBody: RequestBody[F, S],
     rawToResponseBody: ToResponseBody[WB, B, S],
-    decodeFailureHandler: DecodeFailureHandler,
-    logRequestHandling: LogRequestHandling[F[Unit]]
+    interceptors: List[EndpointInterceptor[F]]
 ) {
   def apply(ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[WB, B]]] =
     ses match {
@@ -33,16 +26,11 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
     }
 
   def apply[I, E, O](se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[WB, B]]] = {
-    def valueToResponse(value: Any): F[ServerResponse[WB, B]] = {
-      val i = value.asInstanceOf[I]
+    def valueToResponse(i: I): F[ServerResponse[WB, B]] = {
       se.logic(implicitly)(i)
         .map {
           case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
           case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
-        }
-        .flatMap { response => logRequestHandling.requestHandled(se.endpoint, response.code.code).map(_ => response) }
-        .handleError { case e: Exception =>
-          logRequestHandling.logicException(se.endpoint, e).flatMap(_ => implicitly[MonadError[F]].error(e))
         }
     }
 
@@ -51,28 +39,53 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
     decodeBody(decodedBasicInputs).flatMap {
       case values: DecodeBasicInputsResult.Values =>
         InputValue(se.endpoint.input, values) match {
-          case InputValueResult.Value(params, _)        => valueToResponse(params.asAny).map(Some(_))
-          case InputValueResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
+          case InputValueResult.Value(params, _) =>
+            callInterceptorsOnDecodeSuccess(interceptors, se.endpoint, params.asAny.asInstanceOf[I], valueToResponse).map(Some(_))
+          case InputValueResult.Failure(input, failure) =>
+            callInterceptorsOnDecodeFailure(interceptors, se.endpoint, input, failure)
         }
-      case DecodeBasicInputsResult.Failure(input, failure) => handleDecodeFailure(se.endpoint, input, failure)
+      case DecodeBasicInputsResult.Failure(input, failure) => callInterceptorsOnDecodeFailure(interceptors, se.endpoint, input, failure)
     }
   }
 
-  private def handleDecodeFailure(
-      e: Endpoint[_, _, _, _],
-      input: EndpointInput[_],
+  private def callInterceptorsOnDecodeSuccess[I](
+      is: List[EndpointInterceptor[F]],
+      endpoint: Endpoint[I, _, _, _],
+      i: I,
+      callLogic: I => F[ServerResponse[WB, B]]
+  ): F[ServerResponse[WB, B]] = is match {
+    case Nil => callLogic(i)
+    case interpreter :: tail =>
+      interpreter.onDecodeSuccess(
+        request,
+        endpoint,
+        i,
+        {
+          case None                                      => callInterceptorsOnDecodeSuccess(tail, endpoint, i, callLogic)
+          case Some(ValuedEndpointOutput(output, value)) => outputToResponse(ServerDefaults.StatusCodes.success, output, value).unit
+        }
+      )
+  }
+
+  private def callInterceptorsOnDecodeFailure(
+      is: List[EndpointInterceptor[F]],
+      endpoint: Endpoint[_, _, _, _],
+      failingInput: EndpointInput[_],
       failure: DecodeResult.Failure
-  ): F[Option[ServerResponse[WB, B]]] = {
-    val decodeFailureCtx = DecodeFailureContext(input, failure, e)
-    val handling = decodeFailureHandler(decodeFailureCtx)
-    handling match {
-      case DecodeFailureHandling.NoMatch =>
-        logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx).map(_ => None)
-      case DecodeFailureHandling.RespondWithResponse(output, value) =>
-        logRequestHandling
-          .decodeFailureHandled(e, decodeFailureCtx, value)
-          .map(_ => Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value)))
-    }
+  ): F[Option[ServerResponse[WB, B]]] = is match {
+    case Nil => Option.empty[ServerResponse[WB, B]].unit
+    case interpreter :: tail =>
+      interpreter.onDecodeFailure(
+        request,
+        endpoint,
+        failure,
+        failingInput,
+        {
+          case None => callInterceptorsOnDecodeFailure(tail, endpoint, failingInput, failure)
+          case Some(ValuedEndpointOutput(output, value)) =>
+            (Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value)): Option[ServerResponse[WB, B]]).unit
+        }
+      )
   }
 
   private def decodeBody(result: DecodeBasicInputsResult): F[DecodeBasicInputsResult] =

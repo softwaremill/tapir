@@ -5,7 +5,6 @@ import akka.http.scaladsl.model.{HttpResponse, ResponseEntity, StatusCode => Akk
 import akka.http.scaladsl.server.Directives.{
   complete,
   extractExecutionContext,
-  extractLog,
   extractMaterializer,
   extractRequestContext,
   handleWebSocketMessages,
@@ -47,21 +46,18 @@ trait AkkaHttpServerInterpreter {
     extractRequestContext { ctx =>
       extractExecutionContext { implicit ec =>
         extractMaterializer { implicit mat =>
-          extractLog { log =>
-            implicit val monad: FutureMonad = new FutureMonad()
-            val serverRequest = new AkkaServerRequest(ctx)
-            val interpreter = new ServerInterpreter(
-              serverRequest,
-              new AkkaRequestBody(ctx, serverRequest, serverOptions),
-              new AkkaToResponseBody,
-              serverOptions.decodeFailureHandler,
-              serverOptions.logRequestHandling(log)
-            )
+          implicit val monad: FutureMonad = new FutureMonad()
+          val serverRequest = new AkkaServerRequest(ctx)
+          val interpreter = new ServerInterpreter(
+            serverRequest,
+            new AkkaRequestBody(ctx, serverRequest, serverOptions),
+            new AkkaToResponseBody,
+            serverOptions.interceptors
+          )
 
-            onSuccess(interpreter(ses)) {
-              case None           => reject
-              case Some(response) => serverResponseToAkka(response)
-            }
+          onSuccess(interpreter(ses)) {
+            case None           => reject
+            case Some(response) => serverResponseToAkka(response)
           }
         }
       }

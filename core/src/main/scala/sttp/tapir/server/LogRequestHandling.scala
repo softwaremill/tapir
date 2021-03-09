@@ -1,11 +1,37 @@
 package sttp.tapir.server
 
+import sttp.tapir.model.ServerResponse
 import sttp.tapir.{DecodeResult, Endpoint}
 
 /** Callbacks to log how a request was handled.
   * @tparam T Interpreter-specific value representing the log action.
   */
-case class LogRequestHandling[T](
+trait LogRequestHandling[T] {
+
+  /** Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
+    * given failure returns a no-match.
+    */
+  def decodeFailureNotHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext): T
+
+  /** Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
+    * given failure provides a response.
+    */
+  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_, _]): T
+
+  /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by
+    * providing a response (which might be an error or success).
+    */
+  def requestHandled(e: Endpoint[_, _, _, _], statusCode: Int): T
+
+  /** Invoked when an exception has been thrown when running the server logic. */
+  def logicException(e: Endpoint[_, _, _, _], ex: Throwable): T
+}
+
+/** Callbacks to log how a request was handled.
+  *
+  * @tparam T Interpreter-specific value representing the log action.
+  */
+case class DefaultLogRequestHandling[T](
     doLogWhenHandled: (String, Option[Throwable]) => T,
     doLogAllDecodeFailures: (String, Option[Throwable]) => T,
     doLogLogicExceptions: (String, Throwable) => T,
@@ -13,7 +39,7 @@ case class LogRequestHandling[T](
     logWhenHandled: Boolean = true,
     logAllDecodeFailures: Boolean = false,
     logLogicExceptions: Boolean = true
-) {
+) extends LogRequestHandling[T] {
 
   /** Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
     * given failure returns a no-match.
@@ -30,10 +56,10 @@ case class LogRequestHandling[T](
   /** Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
     * given failure provides a response.
     */
-  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, responseValue: Any): T = {
+  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_, _]): T = {
     if (logWhenHandled)
       doLogWhenHandled(
-        s"Request handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.input.show}; responding with: $responseValue",
+        s"Request handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.input.show}; responding with: $response",
         exception(ctx)
       )
     else noLog

@@ -22,7 +22,7 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
       e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): Route = {
-    implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
+    implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default(
       decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
     )
     AkkaHttpServerInterpreter.toRoute(e)

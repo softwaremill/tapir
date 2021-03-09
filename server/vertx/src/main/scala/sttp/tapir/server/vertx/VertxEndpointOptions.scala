@@ -6,7 +6,7 @@ import io.vertx.core.Context
 import io.vertx.core.Vertx
 import io.vertx.core.logging.{Logger, LoggerFactory}
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import scala.concurrent.ExecutionContext
 

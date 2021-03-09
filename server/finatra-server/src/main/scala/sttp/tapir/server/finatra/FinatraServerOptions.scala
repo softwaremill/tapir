@@ -5,7 +5,7 @@ import java.io.{File, FileOutputStream}
 import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Defaults
-import sttp.tapir.server.{DecodeFailureHandler, LogRequestHandling, ServerDefaults}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 case class FinatraServerOptions(
     createFile: Array[Byte] => Future[File],

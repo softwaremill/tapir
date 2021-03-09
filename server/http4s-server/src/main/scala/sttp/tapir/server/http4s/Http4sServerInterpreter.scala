@@ -100,8 +100,7 @@ trait Http4sServerInterpreter {
         serverRequest,
         new Http4sRequestBody[F, G](req, serverRequest, serverOptions, t),
         new Http4sToResponseBody[F, G](serverOptions),
-        serverOptions.decodeFailureHandler,
-        serverOptions.logRequestHandling
+        serverOptions.interceptors
       )
 
       OptionT(interpreter(serverEndpoints).flatMap {

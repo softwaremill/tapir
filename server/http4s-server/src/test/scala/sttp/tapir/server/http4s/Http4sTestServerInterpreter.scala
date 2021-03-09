@@ -26,8 +26,8 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): HttpRoutes[IO] = {
     implicit val serverOptions: Http4sServerOptions[IO] = Http4sServerOptions
-      .default[IO]
-      .copy(
+      .default[IO](
+        logRequestHandling = Http4sServerOptions.defaultLogRequestHandling,
         decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
       )
     Http4sServerInterpreter.toRoutes(e)

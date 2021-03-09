@@ -5,7 +5,7 @@ import sttp.tapir.{EndpointOutput, CodecFormat}
 /** Describes the action to take, when decoding an input of a request fails. Should another endpoint be tried,
   * or should a response be sent.
   */
-trait DecodeFailureHandling
+sealed trait DecodeFailureHandling
 
 object DecodeFailureHandling {
   case object NoMatch extends DecodeFailureHandling
