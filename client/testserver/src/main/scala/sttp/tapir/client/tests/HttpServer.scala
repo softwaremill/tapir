@@ -135,25 +135,24 @@ class HttpServer(port: Port) {
         }
 
     case r @ GET -> Root / "api" / "organization" =>
-      r.headers
-        .get(Accept)
-        .map(_.value match {
-          case "application/json" => Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json))
-          case "application/xml"  => Ok("<organization><name>sml</name></organization>", `Content-Type`(MediaType.application.xml))
-        })
-        .getOrElse(NotAcceptable())
+      fromAcceptHeader(r) {
+        case "application/json" => organizationJson
+        case "application/xml"  => organizationXml
+      }
 
     case r @ GET -> Root / "api" / "entity" =>
-      r.headers
-        .get(Accept)
-        .map(_.value match {
-          case "application/json" => Ok("{\"name\": \"John\", \"age\": 21}", `Content-Type`(MediaType.application.json))
-          case "application/xml"  => Ok("<organization><name>sml</name></organization>", `Content-Type`(MediaType.application.xml))
-        })
-        .getOrElse(NotAcceptable())
-
-
+      fromAcceptHeader(r) {
+        case "application/json" => personJson
+        case "application/xml"  => organizationXml
+      }
   }
+
+  private def fromAcceptHeader(r: Request[IO])(f: String => IO[Response[IO]]): IO[Response[IO]] =
+    r.headers.get(Accept).map(h => f(h.value)).getOrElse(NotAcceptable())
+
+  private val organizationXml = Ok("<organization><name>sml</name></organization>", `Content-Type`(MediaType.application.xml))
+  private val organizationJson = Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json))
+  private val personJson = Ok("{\"name\": \"John\", \"age\": 21}", `Content-Type`(MediaType.application.json))
 
   private val corsService = CORS(service)
   private val app: HttpApp[IO] = Router("/" -> corsService).orNotFound

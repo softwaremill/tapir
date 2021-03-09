@@ -230,7 +230,8 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
       "com.softwaremill.common" %%% "tagging" % "2.2.1",
       scalaTest.value,
       "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided",
-      "org.typelevel" %%% "cats-effect" % Versions.catsEffect
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
+      "org.scala-lang.modules" %% "scala-xml" % "1.2.0"
     ),
     libraryDependencies ++= loggerDependencies
   )
