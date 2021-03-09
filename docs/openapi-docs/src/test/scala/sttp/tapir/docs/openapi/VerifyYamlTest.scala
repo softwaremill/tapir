@@ -16,7 +16,7 @@ import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests.{Person, _}
+import sttp.tapir.tests.{MultipleMediaTypes, Person, _}
 
 import scala.collection.immutable.ListMap
 import org.scalatest.funsuite.AnyFunSuite
@@ -953,62 +953,18 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should match the expected yaml with multiple media types for common schema") {
-    implicit val schemaForPerson: Schema[Person] = Schema[Person](
-      SchemaType.SProduct(
-        SObjectInfo("sttp.tapir.tests.Person"),
-        List(FieldName("name") -> Schema(SString), FieldName("age") -> Schema(SInteger))
-      )
-    )
-    implicit val xmlCodecForPerson: XmlCodec[Person] =
-      Codec.xml(_rawDecode = _ => DecodeResult.Value(Person("john", 24)))(_encode = _ => "john 24")
-
     val expectedYaml = load("expected_multiple_media_types_common_schema.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.get.out(
-          sttp.tapir.oneOf(
-            statusMapping(StatusCode.Ok, jsonBody[Person]),
-            statusMapping(StatusCode.Ok, xmlBody[Person])
-          )
-        ),
-        Info("Examples", "1.0")
-      )
-      .toYaml
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_or_xml_common_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should match the expected yaml with multiple media types for different schemas") {
-    implicit val schemaForPerson: Schema[Person] = Schema[Person](
-      SchemaType.SProduct(
-        SObjectInfo("sttp.tapir.tests.Person"),
-        List(FieldName("name") -> Schema(SString), FieldName("age") -> Schema(SInteger))
-      )
-    )
-    implicit val schemaForOrganization: Schema[Organization] = Schema[Organization](
-      SchemaType.SProduct(
-        SObjectInfo("sttp.tapir.tests.Organization"),
-        List(FieldName("name") -> Schema(SString))
-      )
-    )
-    implicit val xmlCodecForOrganization: XmlCodec[Organization] =
-      Codec.xml(_rawDecode = _ => DecodeResult.Value(Organization("sml")))(_encode = _ => "sml")
-
+  test("should match the expected yaml with multiple media types for different schema") {
     val expectedYaml = load("expected_multiple_media_types_different_schema.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.get.out(
-          sttp.tapir.oneOf(
-            statusMapping(StatusCode.Ok, jsonBody[Person]),
-            statusMapping(StatusCode.Ok, xmlBody[Organization])
-          )
-        ),
-        Info("Examples", "1.0")
-      )
-      .toYaml
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_or_xml_different_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml

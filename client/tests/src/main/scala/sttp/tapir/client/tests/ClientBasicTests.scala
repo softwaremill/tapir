@@ -1,13 +1,13 @@
 package sttp.tapir.client.tests
 
-import java.io.ByteArrayInputStream
-import java.nio.ByteBuffer
-
 import sttp.model.{QueryParams, StatusCode}
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.tests.TestUtil.writeToFile
 import sttp.tapir.tests._
+
+import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
 
 trait ClientBasicTests { this: ClientTests[Any] =>
   private val testFile = writeToFile("pen pineapple apple pen")
@@ -47,13 +47,16 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         in_query_list_out_header_list,
         port,
         List("plum", "watermelon", "apple")
-      ).unsafeToFuture().map(
-        _.toOption.get should contain theSameElementsAs (
-          // The fetch API merges multiple header values having the same name into a single comma separated value
-          if (platformIsScalaJS)
-            List("apple, watermelon, plum")
-          else
-            List("apple", "watermelon", "plum")))
+      ).unsafeToFuture()
+        .map(
+          _.toOption.get should contain theSameElementsAs (
+            // The fetch API merges multiple header values having the same name into a single comma separated value
+            if (platformIsScalaJS)
+              List("apple, watermelon, plum")
+            else
+              List("apple", "watermelon", "plum")
+          )
+        )
     }
     // cookie support in sttp is currently only available on the JVM
     if (!platformIsScalaJS) {
@@ -91,7 +94,27 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       Right((("1", "2"), "3", "4"))
     )
 
-    //
+    testClient(
+      MultipleMediaTypes.out_json_or_xml_common_schema.name("json content organization"),
+      "application/json",
+      Right(Organization("sml"))
+    )
+    testClient(
+      MultipleMediaTypes.out_json_or_xml_common_schema.name("xml content organization"),
+      "application/xml",
+      Right(Organization("sml"))
+    )
+
+    testClient(
+      MultipleMediaTypes.out_json_or_xml_different_schema.name("json content person"),
+      "application/json",
+      Right(Person("John", 21))
+    )
+    testClient(
+      MultipleMediaTypes.out_json_or_xml_different_schema.name("xml content organization"),
+      "application/xml",
+      Right(Organization("sml"))
+    )
 
     test(in_headers_out_headers.showDetail) {
       send(

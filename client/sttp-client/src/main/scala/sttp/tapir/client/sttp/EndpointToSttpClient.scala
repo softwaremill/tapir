@@ -1,14 +1,15 @@
 package sttp.tapir.client.sttp
 
-import java.io.ByteArrayInputStream
-import java.nio.ByteBuffer
 import sttp.capabilities.Streams
 import sttp.client3._
-import sttp.model.{HeaderNames, Method, Part, ResponseMetadata, StatusCode, Uri}
+import sttp.model._
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
+
+import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
 
 private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
   def toSttpRequest[O, E, I](e: Endpoint[I, E, O, R], baseUri: Option[Uri]): I => Request[DecodeResult[Either[E, O]], R] = { params =>
@@ -62,14 +63,23 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
           case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
           case EndpointIO.Empty(codec, _)                  => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
-            mappings
-              .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
-              case Some(mapping) =>
-                getOutputParams(mapping.output, body, meta).flatMap(p => codec.decode(p.asAny))
+            val content = meta.header("Content-Type").map(MediaType.parse).getOrElse(Left(""))
+
+            val mappingsForStatus = mappings
+              .filter(m => m.statusCode.isEmpty || m.statusCode.contains(meta.code))
+
+            mappingsForStatus
+              .find(_.output match {
+                case _ @EndpointIO.Body(_, codec, _) if codecMatchesContent(codec, content)       => true
+                case o @ EndpointIO.StreamBodyWrapper(_) if codecMatchesContent(o.codec, content) => true
+                case _                                                                            => false
+              })
+              .orElse(mappingsForStatus.headOption) match {
+              case Some(mapping) => getOutputParams(mapping.output, body, meta).flatMap(p => codec.decode(p.asAny))
               case None =>
                 DecodeResult.Error(
                   meta.statusText,
-                  new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $output")
+                  new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} and content $content in outputs $output")
                 )
             }
 
@@ -95,6 +105,12 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     val r = getOutputParams(right, body, meta)
     l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
   }
+
+  private def codecMatchesContent[CF <: CodecFormat](codec: Codec[_, _, CF], content: Either[String, MediaType]): Boolean =
+    content match {
+      case Right(mt) => codec.format.mediaType == mt
+      case Left(s)   => codec.format.mediaType.toString().contains(s)
+    }
 
   private type PartialAnyRequest = PartialRequest[Any, Any]
 

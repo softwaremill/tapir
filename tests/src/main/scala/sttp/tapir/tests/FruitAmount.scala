@@ -3,6 +3,7 @@ package sttp.tapir.tests
 import sttp.tapir._
 
 import scala.collection.immutable
+import scala.xml.Elem
 
 case class FruitAmount(fruit: String, amount: Int)
 
@@ -19,6 +20,10 @@ sealed trait Entity {
 }
 case class Person(name: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
+
+object Organization {
+  def fromXml(elem: Elem): Organization = Organization((elem \ "name").text)
+}
 
 object Enumeratum {
   import enumeratum.EnumEntry

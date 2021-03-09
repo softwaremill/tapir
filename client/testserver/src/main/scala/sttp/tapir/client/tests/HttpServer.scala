@@ -3,19 +3,19 @@ package sttp.tapir.client.tests
 import cats.effect._
 import cats.implicits._
 import org.http4s.dsl.io._
-import org.http4s.{multipart, _}
-import org.http4s.server.middleware._
+import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
+import org.http4s.{multipart, _}
 import scodec.bits.ByteVector
+import sttp.tapir.client.tests.HttpServer._
 
 import scala.concurrent.ExecutionContext
-
-import HttpServer._
 
 object HttpServer {
   type Port = Int
@@ -133,6 +133,26 @@ class HttpServer(port: Port) {
           val e = q.enqueue
           WebSocketBuilder[IO].build(d, e)
         }
+
+    case r @ GET -> Root / "api" / "organization" =>
+      r.headers
+        .get(Accept)
+        .map(_.value match {
+          case "application/json" => Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json))
+          case "application/xml"  => Ok("<organization><name>sml</name></organization>", `Content-Type`(MediaType.application.xml))
+        })
+        .getOrElse(NotAcceptable())
+
+    case r @ GET -> Root / "api" / "entity" =>
+      r.headers
+        .get(Accept)
+        .map(_.value match {
+          case "application/json" => Ok("{\"name\": \"John\", \"age\": 21}", `Content-Type`(MediaType.application.json))
+          case "application/xml"  => Ok("<organization><name>sml</name></organization>", `Content-Type`(MediaType.application.xml))
+        })
+        .getOrElse(NotAcceptable())
+
+
   }
 
   private val corsService = CORS(service)

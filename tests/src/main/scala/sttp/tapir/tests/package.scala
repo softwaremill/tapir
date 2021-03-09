@@ -13,7 +13,10 @@ import sttp.capabilities.Streams
 import sttp.model.{Header, HeaderNames, MediaType, Part, QueryParams, StatusCode}
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.Codec.{PlainCodec, XmlCodec}
+import sttp.tapir.SchemaType.{SInteger, SObjectInfo, SString}
 import sttp.tapir.model._
+
+import scala.xml.XML
 
 package object tests {
   val in_query_out_string: Endpoint[String, Unit, String, Any] = endpoint.in(query[String]("fruit")).out(stringBody)
@@ -259,7 +262,7 @@ package object tests {
 
   val in_unit_out_html: Endpoint[Unit, Unit, String, Any] =
     endpoint.in("api" / "echo").out(htmlBodyUtf8)
-  
+
   val in_unit_out_header_redirect: Endpoint[Unit, Unit, String, Any] =
     endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location"))
 
@@ -314,17 +317,54 @@ package object tests {
       .out(stringBody)
       .name("Query with default")
 
-//  val out_multiple_media_types: Endpoint[Unit, Unit, StringWrapper, Any] = {
-//    implicit val schemaForColor: Schema[StringWrapper] = Schema.string
-//    implicit val xmlCodecForColor: XmlCodec[StringWrapper] =
-//      Codec.xml(_rawDecode = _ => DecodeResult.Value(StringWrapper("string")))(_encode = s => s.v)
-//    endpoint.get.out(
-//      sttp.tapir.oneOf(
-//        statusMapping(StatusCode.Ok, xmlBody[StringWrapper]),
-//        statusMapping(StatusCode.Ok, jsonBody[StringWrapper])
-//      )
-//    )
-//  }
+  object MultipleMediaTypes {
+    implicit val schemaForPerson: Schema[Person] = Schema[Person](
+      SchemaType.SProduct(
+        SObjectInfo("sttp.tapir.tests.Person"),
+        List(FieldName("name") -> Schema(SString), FieldName("age") -> Schema(SInteger))
+      )
+    )
+
+    implicit val schemaForOrganization: Schema[Organization] = Schema[Organization](
+      SchemaType.SProduct(
+        SObjectInfo("sttp.tapir.tests.Organization"),
+        List(FieldName("name") -> Schema(SString))
+      )
+    )
+
+    implicit val xmlCodecForOrganization: XmlCodec[Organization] =
+      Codec.xml(_rawDecode = s => DecodeResult.Value(Organization.fromXml(XML.loadString(s))))(_encode =
+        o =>
+          { // @formatter:off
+            <organization>
+              <name>{o.name}</name>
+            </organization>
+            // @formatter:on
+          }.toString()
+      )
+
+    val out_json_or_xml_common_schema: Endpoint[String, Unit, Organization, Any] =
+      endpoint.get
+        .in("api" / "organization")
+        .in(header[String]("Accept"))
+        .out(
+          sttp.tapir.oneOf(
+            statusMapping(StatusCode.Ok, jsonBody[Organization]),
+            statusMapping(StatusCode.Ok, xmlBody[Organization])
+          )
+        )
+
+    val out_json_or_xml_different_schema: Endpoint[String, Unit, Entity with Product with Serializable, Any] =
+      endpoint.get
+        .in("api" / "entity")
+        .in(header[String]("Accept"))
+        .out(
+          sttp.tapir.oneOf(
+            statusMapping(StatusCode.Ok, jsonBody[Person]),
+            statusMapping(StatusCode.Ok, xmlBody[Organization])
+          )
+        )
+  }
 
   //
 

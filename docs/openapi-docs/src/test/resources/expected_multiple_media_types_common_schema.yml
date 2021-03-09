@@ -3,28 +3,31 @@ info:
   title: Examples
   version: '1.0'
 paths:
-  /:
+  /api/organization:
     get:
-      operationId: getRoot
+      operationId: getApiOrganization
+      parameters:
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: ''
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Person'
+                $ref: '#/components/schemas/Organization'
             application/xml:
               schema:
-                $ref: '#/components/schemas/Person'
+                $ref: '#/components/schemas/Organization'
 components:
   schemas:
-    Person:
+    Organization:
       required:
         - name
-        - age
       type: object
       properties:
         name:
           type: string
-        age:
-          type: integer

@@ -153,8 +153,8 @@ trait EndpointOutputsOps[I, E, O, -R] {
   private def validated[OP](output: EndpointOutput[OP]): EndpointOutput[OP] = {
 
     def isBody(o: EndpointOutput.Basic[_]): Boolean = o match {
-      case _ @(EndpointIO.Body(_, _, _) | EndpointIO.StreamBodyWrapper(_) | EndpointIO.Empty(_, _)) => true
-      case _                                                                                        => false
+      case _ @(EndpointIO.Body(_, _, _) | EndpointIO.StreamBodyWrapper(_)) => true
+      case _                                                               => false
     }
 
     output.asBasicOutputsList

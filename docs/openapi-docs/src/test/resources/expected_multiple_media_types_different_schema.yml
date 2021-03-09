@@ -3,9 +3,15 @@ info:
   title: Examples
   version: '1.0'
 paths:
-  /:
+  /api/entity:
     get:
-      operationId: getRoot
+      operationId: getApiEntity
+      parameters:
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: ''
