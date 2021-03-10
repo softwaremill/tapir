@@ -8,8 +8,9 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.Endpoint
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.{DecodeFailureHandler, ServerEndpoint}
 import sttp.tapir.tests.Port
 import zio.{Runtime, Task}
 import zio.interop.catz._

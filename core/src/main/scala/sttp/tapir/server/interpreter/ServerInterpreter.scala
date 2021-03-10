@@ -1,13 +1,13 @@
 package sttp.tapir.server.interpreter
 
-import sttp.model.Headers
+import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
-import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.ServerEndpoint
 
 class ServerInterpreter[R, F[_]: MonadError, B, S](
     request: ServerRequest,
@@ -29,8 +29,8 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     def valueToResponse(i: I): F[ServerResponse[B]] = {
       se.logic(implicitly)(i)
         .map {
-          case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
-          case Left(err)     => outputToResponse(ServerDefaults.StatusCodes.error, se.endpoint.errorOutput, err)
+          case Right(result) => outputToResponse(defaultSuccessStatusCode, se.endpoint.output, result)
+          case Left(err)     => outputToResponse(defaultErrorStatusCode, se.endpoint.errorOutput, err)
         }
     }
 
@@ -62,7 +62,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         i,
         {
           case None                                      => callInterceptorsOnDecodeSuccess(tail, endpoint, i, callLogic)
-          case Some(ValuedEndpointOutput(output, value)) => outputToResponse(ServerDefaults.StatusCodes.success, output, value).unit
+          case Some(ValuedEndpointOutput(output, value)) => outputToResponse(defaultSuccessStatusCode, output, value).unit
         }
       )
   }
@@ -83,7 +83,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         {
           case None => callInterceptorsOnDecodeFailure(tail, endpoint, failingInput, failure)
           case Some(ValuedEndpointOutput(output, value)) =>
-            (Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value)): Option[ServerResponse[B]]).unit
+            (Some(outputToResponse(defaultErrorStatusCode, output, value)): Option[ServerResponse[B]]).unit
         }
       )
   }
@@ -121,4 +121,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case None                  => ServerResponse(statusCode, headers, None)
     }
   }
+
+  private val defaultSuccessStatusCode: StatusCode = StatusCode.Ok
+  private val defaultErrorStatusCode: StatusCode = StatusCode.BadRequest
 }

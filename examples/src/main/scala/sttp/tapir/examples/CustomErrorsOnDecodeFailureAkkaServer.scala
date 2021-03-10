@@ -9,7 +9,8 @@ import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOpti
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import sttp.client3._
-import sttp.tapir.server.{DecodeFailureHandling, ServerDefaults}
+import sttp.tapir.server.DecodeFailureHandling
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
 
 object CustomErrorsOnDecodeFailureAkkaServer extends App {
   // corresponds to: GET /?amount=...

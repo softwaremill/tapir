@@ -3,7 +3,8 @@ package sttp.tapir.server.tests
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource}
 import sttp.tapir.Endpoint
-import sttp.tapir.server.{DecodeFailureHandler, ServerEndpoint}
+import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Port
 
 import scala.reflect.ClassTag

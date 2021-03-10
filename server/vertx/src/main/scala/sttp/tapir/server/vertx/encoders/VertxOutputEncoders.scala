@@ -3,7 +3,6 @@ package sttp.tapir.server.vertx.encoders
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-
 import io.vertx.core.buffer.Buffer
 import io.vertx.core.http.HttpHeaders
 import io.vertx.core.http.HttpServerResponse
@@ -13,7 +12,7 @@ import io.vertx.ext.web.RoutingContext
 import sttp.capabilities.Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.internal.{ParamsAsAny, charset}
-import sttp.tapir.server.ServerDefaults
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
 import sttp.tapir.server.interpreter.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.server.vertx.streams.{Pipe, ReadStreamCompatible}
 import sttp.tapir.server.vertx.VertxEndpointOptions

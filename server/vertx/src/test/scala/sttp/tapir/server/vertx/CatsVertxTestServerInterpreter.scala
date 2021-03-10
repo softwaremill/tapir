@@ -7,8 +7,9 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.{DecodeFailureHandler, ServerEndpoint}
 import sttp.tapir.tests.Port
 
 import scala.reflect.ClassTag

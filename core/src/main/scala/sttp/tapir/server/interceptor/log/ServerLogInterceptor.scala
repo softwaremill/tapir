@@ -3,8 +3,7 @@ package sttp.tapir.server.interceptor.log
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.DecodeFailureContext
-import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointInput}
 
 class ServerLogInterceptor[T, F[_], B](log: ServerLog[T], toEffect: (T, ServerRequest) => F[Unit]) extends EndpointInterceptor[F, B] {
@@ -33,13 +32,12 @@ class ServerLogInterceptor[T, F[_], B](log: ServerLog[T], toEffect: (T, ServerRe
     next(None)
       .flatMap {
         case r @ None =>
-          toEffect(log.decodeFailureNotHandled(endpoint, DecodeFailureContext(failingInput, failure, endpoint)), request).map(_ =>
+          toEffect(log.decodeFailureNotHandled(endpoint, DecodeFailureContext(failingInput, failure, endpoint, request)), request).map(_ =>
             r: Option[ServerResponse[B]]
           )
         case r @ Some(response) =>
-          toEffect(log.decodeFailureHandled(endpoint, DecodeFailureContext(failingInput, failure, endpoint), response), request).map(_ =>
-            r: Option[ServerResponse[B]]
-          )
+          toEffect(log.decodeFailureHandled(endpoint, DecodeFailureContext(failingInput, failure, endpoint, request), response), request)
+            .map(_ => r: Option[ServerResponse[B]])
       }
       .handleError { case e: Exception =>
         toEffect(log.exception(endpoint, e), request).flatMap(_ => monad.error(e))

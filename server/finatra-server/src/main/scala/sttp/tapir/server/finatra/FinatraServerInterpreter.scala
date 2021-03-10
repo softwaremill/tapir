@@ -7,7 +7,9 @@ import sttp.monad.MonadError
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.internal._
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
-import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.interceptor.DecodeFailureContext
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
+import sttp.tapir.server.{DecodeFailureHandling, ServerEndpoint}
 import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
 
 import java.nio.charset.Charset

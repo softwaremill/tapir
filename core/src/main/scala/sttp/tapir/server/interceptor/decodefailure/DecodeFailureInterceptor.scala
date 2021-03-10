@@ -1,8 +1,8 @@
-package sttp.tapir.server.interceptor
+package sttp.tapir.server.interceptor.decodefailure
 
 import sttp.monad.MonadError
 import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandler, DecodeFailureHandling, interceptor}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointInput}
 
 class DecodeFailureInterceptor[F[_], B](handler: DecodeFailureHandler) extends EndpointInterceptor[F, B] {
@@ -13,9 +13,9 @@ class DecodeFailureInterceptor[F[_], B](handler: DecodeFailureHandler) extends E
       failingInput: EndpointInput[_],
       next: Option[ValuedEndpointOutput[_]] => F[Option[ServerResponse[B]]]
   )(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] = {
-    handler(DecodeFailureContext(failingInput, failure, endpoint)) match {
-      case DecodeFailureHandling.NoMatch                            => next(None)
-      case DecodeFailureHandling.RespondWithResponse(output, value) => next(Some(interceptor.ValuedEndpointOutput(output, value)))
+    handler(DecodeFailureContext(failingInput, failure, endpoint, request)) match {
+      case None               => next(None)
+      case Some(valuedOutput) => next(Some(valuedOutput))
     }
   }
 }

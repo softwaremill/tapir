@@ -1,7 +1,7 @@
 package sttp.tapir.server.interceptor.log
 
 import sttp.tapir.model.ServerResponse
-import sttp.tapir.server.DecodeFailureContext
+import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.{DecodeResult, Endpoint}
 
 /** Callbacks used by [[ServerLogInterceptor]] to log how a request was handled.
@@ -41,7 +41,7 @@ case class DefaultServerLog[T](
   def decodeFailureNotHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext): T =
     if (logAllDecodeFailures)
       doLogAllDecodeFailures(
-        s"Request not handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.input.show}",
+        s"Request not handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
         exception(ctx)
       )
     else noLog
@@ -49,7 +49,7 @@ case class DefaultServerLog[T](
   def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_]): T =
     if (logWhenHandled)
       doLogWhenHandled(
-        s"Request handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.input.show}; responding with: $response",
+        s"Request handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; responding with: $response",
         exception(ctx)
       )
     else noLog

@@ -5,8 +5,8 @@ import cats.effect.{ContextShift, Sync}
 import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.{DecodeFailureInterceptor, EndpointInterceptor}
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.interceptor.EndpointInterceptor
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 
 import java.io.File
 import scala.concurrent.ExecutionContext
@@ -44,7 +44,7 @@ object Http4sServerOptions {
   def customInterceptors[F[_], G[_]: Sync: ContextShift](
       serverLog: Option[ServerLog[G[Unit]]],
       additionalInterceptors: List[EndpointInterceptor[G, Http4sResponseBody[F]]] = Nil,
-      decodeFailureHandler: DecodeFailureHandler = ServerDefaults.decodeFailureHandler
+      decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
       defaultCreateFile[G].apply(ExecutionContext.Implicits.global),

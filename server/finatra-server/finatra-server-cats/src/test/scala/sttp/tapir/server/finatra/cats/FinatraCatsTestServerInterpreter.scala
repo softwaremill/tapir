@@ -3,9 +3,10 @@ package sttp.tapir.server.finatra.cats
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource, Timer}
 import sttp.tapir.Endpoint
-import sttp.tapir.server.finatra.{FinatraRoute, FinatraTestServerInterpreter, FinatraServerOptions}
+import sttp.tapir.server.finatra.{FinatraRoute, FinatraServerOptions, FinatraTestServerInterpreter}
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.{DecodeFailureHandler, ServerEndpoint}
 import sttp.tapir.tests.Port
 
 import scala.concurrent.ExecutionContext

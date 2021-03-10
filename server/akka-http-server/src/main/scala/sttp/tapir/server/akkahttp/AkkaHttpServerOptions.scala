@@ -5,9 +5,9 @@ import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
 import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLogInterceptor, ServerLog}
-import sttp.tapir.server.interceptor.{DecodeFailureInterceptor, EndpointInterceptor}
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.EndpointInterceptor
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 
 import scala.concurrent.Future
 
@@ -35,7 +35,7 @@ object AkkaHttpServerOptions {
   def customInterceptors(
       serverLog: Option[ServerLog[LoggingAdapter => Future[Unit]]] = Some(Log.defaultServerLog),
       additionalInterceptors: List[EndpointInterceptor[Future, AkkaResponseBody]] = Nil,
-      decodeFailureHandler: DecodeFailureHandler = ServerDefaults.decodeFailureHandler
+      decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): AkkaHttpServerOptions =
     AkkaHttpServerOptions(
       defaultCreateFile,

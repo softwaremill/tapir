@@ -15,7 +15,8 @@ import sttp.tapir.server.vertx.VertxEndpointOptions
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers.tryEncodeError
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
-import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling}
+import sttp.tapir.server.DecodeFailureHandling
+import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, RawBodyType}
 
 import scala.reflect.ClassTag

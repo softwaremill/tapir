@@ -9,7 +9,8 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -28,7 +29,7 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
     implicit val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
       .customInterceptors(
         serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
-        decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
+        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
     Http4sServerInterpreter.toRoutes(e)
   }

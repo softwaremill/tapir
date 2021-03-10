@@ -9,8 +9,9 @@ import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.tapir.Endpoint
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.{DecodeFailureHandler, ServerEndpoint}
 import sttp.tapir.tests.Port
 
 import scala.concurrent.Future

@@ -1,12 +1,12 @@
 package sttp.tapir.server.vertx
 
 import java.io.File
-
 import io.vertx.core.Context
 import io.vertx.core.Vertx
 import io.vertx.core.logging.{Logger, LoggerFactory}
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.DecodeFailureHandler
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
 
 import scala.concurrent.ExecutionContext
 

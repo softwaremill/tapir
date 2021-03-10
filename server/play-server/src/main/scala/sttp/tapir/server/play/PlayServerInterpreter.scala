@@ -7,8 +7,10 @@ import play.api.mvc.{ActionBuilder, AnyContent, Handler, RawBuffer, Request, Req
 import play.api.routing.Router.Routes
 import sttp.monad.FutureMonad
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
-import sttp.tapir.server.ServerDefaults.StatusCodes
-import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults.StatusCodes
+import sttp.tapir.server.interceptor.DecodeFailureContext
+import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
+import sttp.tapir.server.{DecodeFailureHandling, ServerEndpoint, interceptor}
 import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
 
 import java.nio.charset.Charset
@@ -79,7 +81,7 @@ trait PlayServerInterpreter {
         val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x, 0, serverOptions))
         val handlingResult = decodeInputResult match {
           case DecodeBasicInputsResult.Failure(input, failure) =>
-            val decodeFailureCtx = DecodeFailureContext(input, failure, e.endpoint)
+            val decodeFailureCtx = interceptor.DecodeFailureContext(input, failure, e.endpoint)
             serverOptions.logRequestHandling.decodeFailureNotHandled(e.endpoint, decodeFailureCtx)(serverOptions.logger)
             serverOptions.decodeFailureHandler(decodeFailureCtx) != DecodeFailureHandling.noMatch
           case DecodeBasicInputsResult.Values(_, _) => true
