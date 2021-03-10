@@ -7,6 +7,7 @@ import sttp.tapir.tests.{Test, in_stream_out_stream, in_stream_out_stream_with_c
 import cats.syntax.all._
 import sttp.monad.MonadError
 import org.scalatest.matchers.should.Matchers._
+import sttp.model.{Header, HeaderNames}
 
 class ServerStreamingTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], serverTests: CreateServerTest[F, S, ROUTE], streams: Streams[S])(
     implicit m: MonadError[F]
@@ -30,7 +31,11 @@ class ServerStreamingTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], server
           basicRequest.post(uri"$baseUri/api/echo").contentLength(penPineapple.length.toLong).body(penPineapple).send(backend).map {
             response =>
               response.body shouldBe Right(penPineapple)
-              response.contentLength shouldBe Some(penPineapple.length)
+              if (response.headers.contains(Header(HeaderNames.TransferEncoding, "chunked"))) {
+                response.contentLength shouldBe None
+              } else {
+                response.contentLength shouldBe Some(penPineapple.length)
+              }
           }
         }
       }

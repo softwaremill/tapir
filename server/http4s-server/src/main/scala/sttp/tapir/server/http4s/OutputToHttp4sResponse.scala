@@ -1,22 +1,22 @@
 package sttp.tapir.server.http4s
 
-import java.nio.charset.StandardCharsets
-
 import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
 import cats.syntax.all._
 import fs2.concurrent.Queue
 import fs2.{Chunk, Pipe}
 import org.http4s
-import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
+import org.http4s.headers.{`Content-Disposition`, `Content-Type`, `Transfer-Encoding`}
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
-import org.http4s.{Charset, EntityBody, EntityEncoder, Header, Headers, Response, Status, multipart}
+import org.http4s._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Part, Header => SttpHeader}
 import sttp.tapir.internal._
 import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
+
+import java.nio.charset.StandardCharsets
 
 private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Timer](serverOptions: Http4sServerOptions[F]) {
   def apply[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): F[Response[F]] = {
@@ -25,7 +25,8 @@ private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Tim
 
     val headers = allOutputHeaders(outputValues)
     outputValues.body match {
-      case Some(Left((entity, _))) => Response(status = statusCode, headers = headers, body = entity).pure[F]
+      case Some(Left((entity, _))) =>
+        Response(status = statusCode, headers = headers, body = entity).pure[F]
       case Some(Right(pipeF)) =>
         Queue.bounded[F, WebSocketFrame](32).flatMap { queue =>
           pipeF.flatMap { pipe =>
@@ -43,28 +44,32 @@ private[http4s] class OutputToHttp4sResponse[F[_]: Concurrent: ContextShift: Tim
 
   private type EncodeOutputsWebSocket = F[Pipe[F, WebSocketFrame, WebSocketFrame]]
 
-  private def allOutputHeaders(outputValues: OutputValues[(EntityBody[F], Header), F[Pipe[F, WebSocketFrame, WebSocketFrame]]]): Headers = {
+  private def allOutputHeaders(
+      outputValues: OutputValues[(EntityBody[F], List[Header]), F[Pipe[F, WebSocketFrame, WebSocketFrame]]]
+  ): Headers = {
     val headers = outputValues.headers.map { case (k, v) => Header.Raw(CaseInsensitiveString(k), v) }
     val shouldAddCtHeader = !headers.exists(_.name == `Content-Type`.name)
     outputValues.body match {
-      case Some(Left((_, ctHeader))) if shouldAddCtHeader => Headers.of(headers :+ ctHeader: _*)
+      case Some(Left((_, ctHeader))) if shouldAddCtHeader => Headers.of(headers ++ ctHeader: _*)
       case _                                              => Headers.of(headers: _*)
     }
   }
 
-  private val encodeOutputs: EncodeOutputs[(EntityBody[F], Header), EncodeOutputsWebSocket, Fs2Streams[F]] =
+  private val encodeOutputs: EncodeOutputs[(EntityBody[F], List[Header]), EncodeOutputsWebSocket, Fs2Streams[F]] =
     new EncodeOutputs(
-      new EncodeOutputBody[(EntityBody[F], Header), EncodeOutputsWebSocket, Fs2Streams[F]] {
+      new EncodeOutputBody[(EntityBody[F], List[Header]), EncodeOutputsWebSocket, Fs2Streams[F]] {
         override val streams: Fs2Streams[F] = Fs2Streams[F]
-        override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): (EntityBody[F], Header) =
-          rawValueToEntity(bodyType, formatToContentType(format, charset(bodyType)), v)
+        override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): (EntityBody[F], List[Header]) = {
+          val (entityBody, header) = rawValueToEntity(bodyType, formatToContentType(format, charset(bodyType)), v)
+          (entityBody, List(header))
+        }
         override def streamValueToBody(
             v: EntityBody[F],
             format: CodecFormat,
             charset: Option[java.nio.charset.Charset]
-        ): (EntityBody[F], Header) = {
+        ): (EntityBody[F], List[Header]) = {
           val ctHeader = formatToContentType(format, charset)
-          (v.asInstanceOf[EntityBody[F]], ctHeader)
+          (v.asInstanceOf[EntityBody[F]], List(ctHeader, `Transfer-Encoding`(http4s.TransferCoding.chunked)))
         }
         override def webSocketPipeToBody[REQ, RESP](
             pipe: Pipe[F, REQ, RESP],
