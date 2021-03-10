@@ -96,10 +96,9 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
           case EndpointOutput.OneOf(mappings, codec) =>
             val content = headers.get("Content-Type").map(h => MediaType.parse(h.head)).getOrElse(Left(""))
 
-            val mappingsForStatus = mappings
-              .filter(m => m.statusCode.isEmpty || m.statusCode.contains(code))
-
-            mappingsForStatus.find(m => outputMatchesContent(m.output, content)) match {
+            mappings collectFirst {
+              case m if (m.statusCode.isEmpty || m.statusCode.contains(code)) && outputMatchesContent(m.output, content) => m
+            } match {
               case Some(mapping) =>
                 getOutputParams(mapping.output, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
               case None =>
