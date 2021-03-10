@@ -20,17 +20,18 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
       output: EndpointOutput[_],
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
-  ): ListMap[ResponsesKey, ReferenceOr[Response]] =
-    output.asBasicOutputsList
-      .groupBy { case (status, _) => status }
-      .flatMap { case (sc, outputs) =>
-        val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
-        val allOutputs = outputs.flatMap { case (_, output) => output }
-        outputsToResponse(sc, allOutputs).map(response => (responseKey, Right(response)))
-      } match {
+  ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
+    val outputs = output.asBasicOutputsList
+    val byStatusCode = output.asBasicOutputsList.groupBy { case (sc, _) => sc }
+    outputs.map { case (sc, _) => sc }.distinct.flatMap { sc =>
+      val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
+      val allOutputs = byStatusCode.get(sc).map(_.flatMap { case (_, output) => output }).getOrElse(List())
+      outputsToResponse(sc, allOutputs).map(response => (responseKey, Right(response)))
+    } match {
       case responses if responses.isEmpty => defaultResponse.map(defaultResponseKey -> Right(_)).toIterable.toListMap
-      case responses                      => responses.toListMap
+      case responses => responses.toListMap
     }
+  }
 
   private def outputsToResponse(sc: Option[sttp.model.StatusCode], outputs: List[EndpointOutput[_]]): Option[Response] = {
     val bodies = collectBodies(outputs)

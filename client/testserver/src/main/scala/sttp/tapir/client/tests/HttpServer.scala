@@ -150,7 +150,7 @@ class HttpServer(port: Port) {
   private def fromAcceptHeader(r: Request[IO])(f: String => IO[Response[IO]]): IO[Response[IO]] =
     r.headers.get(Accept).map(h => f(h.value)).getOrElse(NotAcceptable())
 
-  private val organizationXml = Ok("<organization><name>sml</name></organization>", `Content-Type`(MediaType.application.xml))
+  private val organizationXml = Ok("<name>sml</name>", `Content-Type`(MediaType.application.xml))
   private val organizationJson = Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json))
   private val personJson = Ok("{\"name\": \"John\", \"age\": 21}", `Content-Type`(MediaType.application.json))
 

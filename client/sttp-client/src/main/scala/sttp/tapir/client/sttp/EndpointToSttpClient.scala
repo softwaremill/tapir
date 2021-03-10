@@ -68,13 +68,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
             val mappingsForStatus = mappings
               .filter(m => m.statusCode.isEmpty || m.statusCode.contains(meta.code))
 
-            mappingsForStatus
-              .find(_.output match {
-                case _ @EndpointIO.Body(_, codec, _) if codecMatchesContent(codec, content)       => true
-                case o @ EndpointIO.StreamBodyWrapper(_) if codecMatchesContent(o.codec, content) => true
-                case _                                                                            => false
-              })
-              .orElse(mappingsForStatus.headOption) match {
+            mappingsForStatus.find(m => outputMatchingContent(m.output, content)) match {
               case Some(mapping) => getOutputParams(mapping.output, body, meta).flatMap(p => codec.decode(p.asAny))
               case None =>
                 DecodeResult.Error(
@@ -106,11 +100,19 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
   }
 
-  private def codecMatchesContent[CF <: CodecFormat](codec: Codec[_, _, CF], content: Either[String, MediaType]): Boolean =
-    content match {
-      case Right(mt) => codec.format.mediaType == mt
-      case Left(s)   => codec.format.mediaType.toString().contains(s)
+  private def outputMatchingContent(output: EndpointOutput[_], content: Either[String, MediaType]): Boolean = {
+    def mediaMatchesContent(media: MediaType): Boolean =
+      content match {
+        case Right(mt) => media.noCharset == mt.noCharset
+        case Left(s)   => media.noCharset.toString().contains(s)
+      }
+
+    output match {
+      case EndpointIO.Body(_, codec, _)                               => mediaMatchesContent(codec.format.mediaType)
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => mediaMatchesContent(codec.format.mediaType)
+      case _                                                          => false
     }
+  }
 
   private type PartialAnyRequest = PartialRequest[Any, Any]
 

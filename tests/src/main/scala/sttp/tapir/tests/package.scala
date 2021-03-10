@@ -16,8 +16,6 @@ import sttp.tapir.Codec.{PlainCodec, XmlCodec}
 import sttp.tapir.SchemaType.{SInteger, SObjectInfo, SString}
 import sttp.tapir.model._
 
-import scala.xml.XML
-
 package object tests {
   val in_query_out_string: Endpoint[String, Unit, String, Any] = endpoint.in(query[String]("fruit")).out(stringBody)
 
@@ -333,15 +331,7 @@ package object tests {
     )
 
     implicit val xmlCodecForOrganization: XmlCodec[Organization] =
-      Codec.xml(_rawDecode = s => DecodeResult.Value(Organization.fromXml(XML.loadString(s))))(_encode =
-        o =>
-          { // @formatter:off
-            <organization>
-              <name>{o.name}</name>
-            </organization>
-            // @formatter:on
-          }.toString()
-      )
+      Codec.xml(_rawDecode = s => DecodeResult.Value(Organization.fromXml(s)))(_encode = _ => "sml")
 
     val out_json_or_xml_common_schema: Endpoint[String, Unit, Organization, Any] =
       endpoint.get
