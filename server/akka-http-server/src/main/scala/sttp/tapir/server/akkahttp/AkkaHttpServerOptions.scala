@@ -5,8 +5,9 @@ import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
 import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.{DecodeFailureInterceptor, EndpointInterceptor, LogInterceptor}
-import sttp.tapir.server.{DecodeFailureHandler, DefaultLogRequestHandling, LogRequestHandling, ServerDefaults}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLogInterceptor, ServerLog}
+import sttp.tapir.server.interceptor.{DecodeFailureInterceptor, EndpointInterceptor}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import scala.concurrent.Future
 
@@ -19,45 +20,59 @@ case class AkkaHttpServerOptions(
 }
 
 object AkkaHttpServerOptions {
-  def default(
-      logRequestHandling: LogRequestHandling[LoggingAdapter => Future[Unit]] = defaultLogRequestHandling,
+
+  /** Creates default [[AkkaHttpServerOptions]] with custom interceptors, sitting between an optional logging
+    * interceptor, and the ultimate decode failure handling interceptor.
+    *
+    * The options can be then further customised using copy constructors or the methods to append/prepend
+    * interceptors.
+    *
+    * @param serverLog The server log using which an interceptor will be created, if any.
+    * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
+    *                               responses.
+    * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
+    */
+  def customInterceptors(
+      serverLog: Option[ServerLog[LoggingAdapter => Future[Unit]]] = Some(Log.defaultServerLog),
+      additionalInterceptors: List[EndpointInterceptor[Future, AkkaResponseBody]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = ServerDefaults.decodeFailureHandler
   ): AkkaHttpServerOptions =
     AkkaHttpServerOptions(
       defaultCreateFile,
-      List(
-        logInterceptor(logRequestHandling),
-        new DecodeFailureInterceptor(decodeFailureHandler)
-      )
+      serverLog.map(Log.serverLogInterceptor).toList ++
+        additionalInterceptors ++
+        List(new DecodeFailureInterceptor(decodeFailureHandler))
     )
 
-  lazy val defaultCreateFile: ServerRequest => Future[File] = { _ =>
+  val defaultCreateFile: ServerRequest => Future[File] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(Defaults.createTempFile())
   }
 
-  val defaultLogRequestHandling: LogRequestHandling[LoggingAdapter => Future[Unit]] = DefaultLogRequestHandling(
-    doLogWhenHandled = debugLog,
-    doLogAllDecodeFailures = debugLog,
-    doLogLogicExceptions = (msg: String, ex: Throwable) => log => Future.successful(log.error(ex, msg)),
-    noLog = _ => Future.successful(())
-  )
-
-  def logInterceptor(
-      logRequestHandling: LogRequestHandling[LoggingAdapter => Future[Unit]]
-  ): LogInterceptor[LoggingAdapter => Future[Unit], Future, AkkaResponseBody] =
-    new LogInterceptor[LoggingAdapter => Future[Unit], Future, AkkaResponseBody](
-      logRequestHandling,
-      (f, request) => f(request.underlying.asInstanceOf[RequestContext].log)
+  object Log {
+    val defaultServerLog: ServerLog[LoggingAdapter => Future[Unit]] = DefaultServerLog(
+      doLogWhenHandled = debugLog,
+      doLogAllDecodeFailures = debugLog,
+      doLogExceptions = (msg: String, ex: Throwable) => log => Future.successful(log.error(ex, msg)),
+      noLog = _ => Future.successful(())
     )
 
-  implicit val defaultOptions: AkkaHttpServerOptions = default()
+    def serverLogInterceptor(
+        serverLog: ServerLog[LoggingAdapter => Future[Unit]]
+    ): ServerLogInterceptor[LoggingAdapter => Future[Unit], Future, AkkaResponseBody] =
+      new ServerLogInterceptor[LoggingAdapter => Future[Unit], Future, AkkaResponseBody](
+        serverLog,
+        (f, request) => f(request.underlying.asInstanceOf[RequestContext].log)
+      )
 
-  private def debugLog(msg: String, exOpt: Option[Throwable]): LoggingAdapter => Future[Unit] = log =>
-    Future.successful {
-      exOpt match {
-        case None     => log.debug(msg)
-        case Some(ex) => log.debug(s"$msg; exception: {}", ex)
+    private def debugLog(msg: String, exOpt: Option[Throwable]): LoggingAdapter => Future[Unit] = log =>
+      Future.successful {
+        exOpt match {
+          case None     => log.debug(msg)
+          case Some(ex) => log.debug(s"$msg; exception: {}", ex)
+        }
       }
-    }
+  }
+
+  implicit val default: AkkaHttpServerOptions = customInterceptors()
 }

@@ -4,12 +4,17 @@ import cats.Applicative
 import cats.effect.{ContextShift, Sync}
 import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.{DecodeFailureInterceptor, EndpointInterceptor, LogInterceptor}
-import sttp.tapir.server.{DecodeFailureHandler, DefaultLogRequestHandling, LogRequestHandling, ServerDefaults}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.{DecodeFailureInterceptor, EndpointInterceptor}
+import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
 
 import java.io.File
 import scala.concurrent.ExecutionContext
 
+/** @tparam F The effect type used for response body streams. Usually the same as `G`.
+  * @tparam G The effect type used for representing arbitrary side-effects, such as creating files or logging.
+  *           Usually the same as `F`.
+  */
 case class Http4sServerOptions[F[_], G[_]](
     createFile: ServerRequest => G[File],
     blockingExecutionContext: ExecutionContext,
@@ -23,39 +28,54 @@ case class Http4sServerOptions[F[_], G[_]](
 }
 
 object Http4sServerOptions {
-  def default[F[_], G[_]: Sync: ContextShift](
-      logRequestHandling: LogRequestHandling[G[Unit]],
-      decodeFailureHandler: DecodeFailureHandler
+
+  /** Creates default [[Http4sServerOptions]] with custom interceptors, sitting between an optional logging
+    * interceptor, and the ultimate decode failure handling interceptor.
+    *
+    * The options can be then further customised using copy constructors or the methods to append/prepend
+    * interceptors.
+    *
+    * @param serverLog The server log using which an interceptor will be created, if any. To keep the default, use
+    *                  `Http4sServerOptions.Log.defaultServerLog`
+    * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
+    *                               responses.
+    * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
+    */
+  def customInterceptors[F[_], G[_]: Sync: ContextShift](
+      serverLog: Option[ServerLog[G[Unit]]],
+      additionalInterceptors: List[EndpointInterceptor[G, Http4sResponseBody[F]]] = Nil,
+      decodeFailureHandler: DecodeFailureHandler = ServerDefaults.decodeFailureHandler
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
       defaultCreateFile[G].apply(ExecutionContext.Implicits.global),
       ExecutionContext.Implicits.global,
       8192,
-      List(
-        new LogInterceptor[G[Unit], G, Http4sResponseBody[F]](logRequestHandling, (f, _) => f),
-        new DecodeFailureInterceptor(decodeFailureHandler)
-      )
+      serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
+        additionalInterceptors ++
+        List(new DecodeFailureInterceptor(decodeFailureHandler))
     )
 
   def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => ServerRequest => F[File] =
     ec => _ => cs.evalOn(ec)(sync.delay(Defaults.createTempFile()))
 
-  def defaultLogRequestHandling[F[_]: Sync]: LogRequestHandling[F[Unit]] =
-    DefaultLogRequestHandling[F[Unit]](
-      doLogWhenHandled = debugLog[F],
-      doLogAllDecodeFailures = debugLog[F],
-      doLogLogicExceptions = (msg: String, ex: Throwable) => Sync[F].delay(Http4sServerInterpreter.log.error(ex)(msg)),
-      noLog = Applicative[F].unit
-    )
+  object Log {
+    def defaultServerLog[F[_]: Sync]: ServerLog[F[Unit]] =
+      DefaultServerLog[F[Unit]](
+        doLogWhenHandled = debugLog[F],
+        doLogAllDecodeFailures = debugLog[F],
+        doLogExceptions = (msg: String, ex: Throwable) => Sync[F].delay(Http4sServerInterpreter.log.error(ex)(msg)),
+        noLog = Applicative[F].unit
+      )
 
-  implicit def defaultOptions[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] = default(
-    defaultLogRequestHandling[G],
-    ServerDefaults.decodeFailureHandler
-  )
+    def serverLogInterceptor[F[_], G[_]](serverLog: ServerLog[G[Unit]]): ServerLogInterceptor[G[Unit], G, Http4sResponseBody[F]] =
+      new ServerLogInterceptor[G[Unit], G, Http4sResponseBody[F]](serverLog, (f, _) => f)
 
-  private def debugLog[F[_]: Sync](msg: String, exOpt: Option[Throwable]): F[Unit] =
-    exOpt match {
-      case None     => Sync[F].delay(Http4sServerInterpreter.log.debug(msg))
-      case Some(ex) => Sync[F].delay(Http4sServerInterpreter.log.debug(ex)(msg))
-    }
+    private def debugLog[F[_]: Sync](msg: String, exOpt: Option[Throwable]): F[Unit] =
+      exOpt match {
+        case None     => Sync[F].delay(Http4sServerInterpreter.log.debug(msg))
+        case Some(ex) => Sync[F].delay(Http4sServerInterpreter.log.debug(ex)(msg))
+      }
+  }
+
+  implicit def default[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] = customInterceptors(Some(Log.defaultServerLog[G]))
 }
