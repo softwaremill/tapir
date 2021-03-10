@@ -72,7 +72,11 @@ class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSu
           )
           .get(baseUri)
           .send(backend)
-          .map(_.body.value.value._1 should be >= 4)
+          .map(_.body match {
+            case Right(Some((pings, _))) => pings should be >= 4
+            case wrongResponse => fail(s"expected to get count of received data chunks, instead got $wrongResponse")
+          })
+
       }
     )
 
