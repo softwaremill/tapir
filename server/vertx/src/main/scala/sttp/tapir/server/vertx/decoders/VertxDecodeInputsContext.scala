@@ -6,7 +6,7 @@ import io.vertx.core.streams.ReadStream
 import io.vertx.ext.web.RoutingContext
 import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.internal.DecodeInputsContext
+import sttp.tapir.server.interpreter.DecodeInputsContext
 import sttp.tapir.server.vertx.routing.MethodMapping
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 

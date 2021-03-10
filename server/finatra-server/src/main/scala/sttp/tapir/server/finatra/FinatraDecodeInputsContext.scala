@@ -4,7 +4,7 @@ import com.twitter.finagle.http.Request
 import io.netty.handler.codec.http.QueryStringDecoder
 import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.internal.DecodeInputsContext
+import sttp.tapir.server.interpreter.DecodeInputsContext
 
 class FinatraDecodeInputsContext(request: Request, pathConsumed: Int = 0) extends DecodeInputsContext {
   override def method: Method = Method(request.method.toString.toUpperCase)

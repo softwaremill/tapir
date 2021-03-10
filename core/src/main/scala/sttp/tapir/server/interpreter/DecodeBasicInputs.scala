@@ -1,4 +1,4 @@
-package sttp.tapir.server.internal
+package sttp.tapir.server.interpreter
 
 import sttp.model.headers.Cookie
 import sttp.model.{HeaderNames, Method, QueryParams}

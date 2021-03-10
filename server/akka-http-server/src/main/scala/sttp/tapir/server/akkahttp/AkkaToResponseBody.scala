@@ -9,7 +9,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.internal.charset
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentType
-import sttp.tapir.server.internal.ToResponseBody
+import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.charset.{Charset, StandardCharsets}

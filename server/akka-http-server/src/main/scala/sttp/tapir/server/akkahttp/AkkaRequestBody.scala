@@ -9,7 +9,7 @@ import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.internal.RequestBody
+import sttp.tapir.server.interpreter.RequestBody
 import sttp.tapir.{RawBodyType, RawPart}
 
 import java.io.ByteArrayInputStream

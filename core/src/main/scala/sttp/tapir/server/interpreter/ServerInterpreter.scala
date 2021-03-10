@@ -1,4 +1,4 @@
-package sttp.tapir.server.internal
+package sttp.tapir.server.interpreter
 
 import sttp.model.Headers
 import sttp.monad.MonadError

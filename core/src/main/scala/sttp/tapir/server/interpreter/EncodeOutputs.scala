@@ -1,4 +1,4 @@
-package sttp.tapir.server.internal
+package sttp.tapir.server.interpreter
 
 import sttp.model.{HasHeaders, Header, HeaderNames, MediaType, StatusCode}
 import sttp.tapir.RawBodyType.StringBody

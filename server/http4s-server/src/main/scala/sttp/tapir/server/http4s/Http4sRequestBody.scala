@@ -10,7 +10,7 @@ import org.http4s.{Charset, EntityDecoder, Request, multipart}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.internal.RequestBody
+import sttp.tapir.server.interpreter.RequestBody
 import sttp.tapir.{RawBodyType, RawPart}
 
 private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( // TODO: constraints?

@@ -13,7 +13,7 @@ import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
 import sttp.model.{MediaType, Part, StatusCode}
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
-import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.interpreter.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
 
 private[play] object OutputToPlayResponse {

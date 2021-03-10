@@ -5,7 +5,7 @@ import play.api.mvc.RequestHeader
 import play.utils.UriEncoding
 import sttp.model.{Method, QueryParams}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.internal.DecodeInputsContext
+import sttp.tapir.server.interpreter.DecodeInputsContext
 
 import java.nio.charset.StandardCharsets
 

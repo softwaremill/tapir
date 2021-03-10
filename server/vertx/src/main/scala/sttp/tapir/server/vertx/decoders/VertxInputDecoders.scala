@@ -10,7 +10,7 @@ import io.vertx.ext.web.RoutingContext
 import io.vertx.core.Future
 import sttp.model.Part
 import sttp.tapir.internal.Params
-import sttp.tapir.server.internal.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
+import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
 import sttp.tapir.server.vertx.VertxEndpointOptions
 import sttp.tapir.server.vertx.encoders.VertxOutputEncoders
 import sttp.tapir.server.vertx.handlers.tryEncodeError

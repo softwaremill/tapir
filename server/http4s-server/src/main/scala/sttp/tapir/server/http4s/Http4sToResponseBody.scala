@@ -12,7 +12,7 @@ import org.http4s.websocket.WebSocketFrame
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, Part, Header => SttpHeader}
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
-import sttp.tapir.server.internal.ToResponseBody
+import sttp.tapir.server.interpreter.ToResponseBody
 
 import java.nio.charset.Charset
 

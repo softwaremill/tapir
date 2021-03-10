@@ -21,7 +21,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentType
-import sttp.tapir.server.internal.ServerInterpreter
+import sttp.tapir.server.interpreter.ServerInterpreter
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag

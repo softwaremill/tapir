@@ -1,4 +1,4 @@
-package sttp.tapir.server.internal
+package sttp.tapir.server.interpreter
 
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichVector}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, Mapping}

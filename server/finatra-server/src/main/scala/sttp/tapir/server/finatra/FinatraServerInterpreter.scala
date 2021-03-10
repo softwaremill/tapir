@@ -8,7 +8,7 @@ import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.internal._
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.server.{DecodeFailureContext, DecodeFailureHandling, ServerDefaults, ServerEndpoint}
-import sttp.tapir.server.internal.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
+import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
 
 import java.nio.charset.Charset
 import scala.reflect.ClassTag

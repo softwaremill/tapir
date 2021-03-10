@@ -9,7 +9,7 @@ import org.apache.http.entity.ContentType
 import org.apache.http.entity.mime.content._
 import org.apache.http.entity.mime.{FormBodyPart, FormBodyPartBuilder, MultipartEntityBuilder}
 import sttp.model.{Header, Part}
-import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
+import sttp.tapir.server.interpreter.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.internal._
 

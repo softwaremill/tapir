@@ -4,7 +4,7 @@ import sttp.client3.{Request, StreamBody}
 import sttp.model.{Method, QueryParams}
 import sttp.model.Uri.QuerySegment
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.internal.DecodeInputsContext
+import sttp.tapir.server.interpreter.DecodeInputsContext
 
 class SttpDecodeInputs(r: Request[_, _], segmentIndex: Int = 0) extends DecodeInputsContext {
   override def method: Method = Method(r.method.method)
