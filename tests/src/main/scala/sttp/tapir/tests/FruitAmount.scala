@@ -20,13 +20,6 @@ sealed trait Entity {
 case class Person(name: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
 
-object Organization {
-  def fromXml(xml: String): Organization = {
-    // <name>xxx</name>
-    Organization(xml.split(">")(1).split("<").head)
-  }
-}
-
 object Enumeratum {
   import enumeratum.{Enum, EnumEntry}
 

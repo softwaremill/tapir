@@ -331,7 +331,10 @@ package object tests {
     )
 
     implicit val xmlCodecForOrganization: XmlCodec[Organization] =
-      Codec.xml(_rawDecode = s => DecodeResult.Value(Organization.fromXml(s)))(_encode = _ => "sml")
+      Codec.xml(_rawDecode = xml => DecodeResult.Value(
+        // <name>xxx</name>
+        Organization(xml.split(">")(1).split("<").head)
+      ))(_encode = _ => "sml")
 
     val out_json_or_xml_common_schema: Endpoint[String, Unit, Organization, Any] =
       endpoint.get
