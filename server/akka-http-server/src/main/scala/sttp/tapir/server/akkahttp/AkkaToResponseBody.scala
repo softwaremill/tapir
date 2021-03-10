@@ -1,9 +1,8 @@
 package sttp.tapir.server.akkahttp
 
-import akka.http.scaladsl.model.ws.Message
 import akka.http.scaladsl.model._
 import akka.stream.Materializer
-import akka.stream.scaladsl.{Flow, StreamConverters}
+import akka.stream.scaladsl.StreamConverters
 import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
@@ -17,13 +16,15 @@ import scala.concurrent.ExecutionContext
 import scala.util.Try
 
 private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Materializer)
-    extends ToResponseBody[Flow[Message, Message, Any], ResponseEntity, AkkaStreams] {
+    extends ToResponseBody[AkkaResponseBody, AkkaStreams] {
   override val streams: AkkaStreams = AkkaStreams
 
-  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ResponseEntity =
-    overrideContentTypeIfDefined(
-      rawValueToResponseEntity(bodyType, formatToContentType(format, charset(bodyType)), headers.contentLength, v),
-      headers
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): AkkaResponseBody =
+    Right(
+      overrideContentTypeIfDefined(
+        rawValueToResponseEntity(bodyType, formatToContentType(format, charset(bodyType)), headers.contentLength, v),
+        headers
+      )
     )
 
   override def fromStreamValue(
@@ -31,13 +32,13 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
       headers: HasHeaders,
       format: CodecFormat,
       charset: Option[Charset]
-  ): ResponseEntity =
-    overrideContentTypeIfDefined(streamToEntity(formatToContentType(format, charset), headers.contentLength, v), headers)
+  ): AkkaResponseBody =
+    Right(overrideContentTypeIfDefined(streamToEntity(formatToContentType(format, charset), headers.contentLength, v), headers))
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
-  ): Flow[Message, Message, Any] = AkkaWebSockets.pipeToBody(pipe, o)
+  ): AkkaResponseBody = Left(AkkaWebSockets.pipeToBody(pipe, o))
 
   private def rawValueToResponseEntity[CF <: CodecFormat, R](
       bodyType: RawBodyType[R],

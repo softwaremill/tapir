@@ -12,10 +12,10 @@ import scala.concurrent.Future
 
 case class AkkaHttpServerOptions(
     createFile: ServerRequest => Future[File],
-    interceptors: List[EndpointInterceptor[Future]]
+    interceptors: List[EndpointInterceptor[Future, AkkaResponseBody]]
 ) {
-  def prependInterceptor(i: EndpointInterceptor[Future]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: EndpointInterceptor[Future]): AkkaHttpServerOptions = copy(interceptors = interceptors :+ i)
+  def prependInterceptor(i: EndpointInterceptor[Future, AkkaResponseBody]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: EndpointInterceptor[Future, AkkaResponseBody]): AkkaHttpServerOptions = copy(interceptors = interceptors :+ i)
 }
 
 object AkkaHttpServerOptions {
@@ -45,8 +45,8 @@ object AkkaHttpServerOptions {
 
   def logInterceptor(
       logRequestHandling: LogRequestHandling[LoggingAdapter => Future[Unit]]
-  ): LogInterceptor[LoggingAdapter => Future[Unit], Future] =
-    new LogInterceptor[LoggingAdapter => Future[Unit], Future](
+  ): LogInterceptor[LoggingAdapter => Future[Unit], Future, AkkaResponseBody] =
+    new LogInterceptor[LoggingAdapter => Future[Unit], Future, AkkaResponseBody](
       logRequestHandling,
       (f, request) => f(request.underlying.asInstanceOf[RequestContext].log)
     )

@@ -24,7 +24,7 @@ import scala.reflect.ClassTag
 
 trait Http4sServerInterpreter {
   def toHttp[I, E, O, F[_], G[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(t: F ~> G)(logic: I => G[Either[E, O]])(implicit
-      serverOptions: Http4sServerOptions[G],
+      serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],
       fcs: ContextShift[F],
@@ -32,7 +32,7 @@ trait Http4sServerInterpreter {
   ): Http[OptionT[G, *], F] = toHttp(e.serverLogic(logic))(t)
 
   def toHttpRecoverErrors[I, E, O, F[_], G[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(t: F ~> G)(logic: I => G[O])(implicit
-      serverOptions: Http4sServerOptions[G],
+      serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],
       fcs: ContextShift[F],
@@ -43,12 +43,12 @@ trait Http4sServerInterpreter {
 
   def toRoutes[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(
       logic: I => F[Either[E, O]]
-  )(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = toRoutes(
+  )(implicit serverOptions: Http4sServerOptions[F, F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = toRoutes(
     e.serverLogic(logic)
   )
 
   def toRouteRecoverErrors[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(logic: I => F[O])(implicit
-      serverOptions: Http4sServerOptions[F],
+      serverOptions: Http4sServerOptions[F, F],
       fs: Concurrent[F],
       fcs: ContextShift[F],
       eIsThrowable: E <:< Throwable,
@@ -61,7 +61,7 @@ trait Http4sServerInterpreter {
   def toHttp[I, E, O, F[_], G[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G])(
       t: F ~> G
   )(implicit
-      serverOptions: Http4sServerOptions[G],
+      serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],
       fcs: ContextShift[F],
@@ -70,14 +70,14 @@ trait Http4sServerInterpreter {
 
   def toRoutes[I, E, O, F[_]](
       se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]
-  )(implicit serverOptions: Http4sServerOptions[F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = toRoutes(
+  )(implicit serverOptions: Http4sServerOptions[F, F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = toRoutes(
     List(se)
   )
 
   //
 
   def toRoutes[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]])(implicit
-      serverOptions: Http4sServerOptions[F],
+      serverOptions: Http4sServerOptions[F, F],
       fs: Concurrent[F],
       fcs: ContextShift[F],
       timer: Timer[F]
@@ -86,7 +86,7 @@ trait Http4sServerInterpreter {
   //
 
   def toHttp[F[_], G[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]])(t: F ~> G)(implicit
-      serverOptions: Http4sServerOptions[G],
+      serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],
       fcs: ContextShift[F],
@@ -96,7 +96,7 @@ trait Http4sServerInterpreter {
 
     Kleisli { (req: Request[F]) =>
       val serverRequest = new Http4sServerRequest(req)
-      val interpreter = new ServerInterpreter(
+      val interpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, G, Http4sResponseBody[F], Fs2Streams[F]](
         serverRequest,
         new Http4sRequestBody[F, G](req, serverRequest, serverOptions, t),
         new Http4sToResponseBody[F, G](serverOptions),
@@ -111,7 +111,7 @@ trait Http4sServerInterpreter {
   }
 
   private def serverResponseToHttp4s[F[_]: Concurrent](
-      response: ServerResponse[F[Pipe[F, WebSocketFrame, WebSocketFrame]], EntityBody[F]]
+      response: ServerResponse[Http4sResponseBody[F]]
   ): F[Response[F]] = {
     val statusCode = statusCodeToHttp4sStatus(response.code)
     val headers = Headers(response.headers.map { case SttpHeader(k, v) => Header.Raw(CaseInsensitiveString(k), v) }.toList)

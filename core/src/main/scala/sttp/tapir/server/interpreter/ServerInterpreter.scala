@@ -9,15 +9,15 @@ import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.server.{ServerDefaults, ServerEndpoint}
 
-class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
+class ServerInterpreter[R, F[_]: MonadError, B, S](
     request: ServerRequest,
     requestBody: RequestBody[F, S],
-    rawToResponseBody: ToResponseBody[WB, B, S],
-    interceptors: List[EndpointInterceptor[F]]
+    rawToResponseBody: ToResponseBody[B, S],
+    interceptors: List[EndpointInterceptor[F, B]]
 ) {
-  def apply(ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[WB, B]]] =
+  def apply(ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[B]]] =
     ses match {
-      case Nil => (None: Option[ServerResponse[WB, B]]).unit
+      case Nil => (None: Option[ServerResponse[B]]).unit
       case se :: tail =>
         apply(se).flatMap {
           case None => apply(tail)
@@ -25,8 +25,8 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
         }
     }
 
-  def apply[I, E, O](se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[WB, B]]] = {
-    def valueToResponse(i: I): F[ServerResponse[WB, B]] = {
+  def apply[I, E, O](se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] = {
+    def valueToResponse(i: I): F[ServerResponse[B]] = {
       se.logic(implicitly)(i)
         .map {
           case Right(result) => outputToResponse(ServerDefaults.StatusCodes.success, se.endpoint.output, result)
@@ -49,11 +49,11 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
   }
 
   private def callInterceptorsOnDecodeSuccess[I](
-      is: List[EndpointInterceptor[F]],
+      is: List[EndpointInterceptor[F, B]],
       endpoint: Endpoint[I, _, _, _],
       i: I,
-      callLogic: I => F[ServerResponse[WB, B]]
-  ): F[ServerResponse[WB, B]] = is match {
+      callLogic: I => F[ServerResponse[B]]
+  ): F[ServerResponse[B]] = is match {
     case Nil => callLogic(i)
     case interpreter :: tail =>
       interpreter.onDecodeSuccess(
@@ -68,12 +68,12 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
   }
 
   private def callInterceptorsOnDecodeFailure(
-      is: List[EndpointInterceptor[F]],
+      is: List[EndpointInterceptor[F, B]],
       endpoint: Endpoint[_, _, _, _],
       failingInput: EndpointInput[_],
       failure: DecodeResult.Failure
-  ): F[Option[ServerResponse[WB, B]]] = is match {
-    case Nil => Option.empty[ServerResponse[WB, B]].unit
+  ): F[Option[ServerResponse[B]]] = is match {
+    case Nil => Option.empty[ServerResponse[B]].unit
     case interpreter :: tail =>
       interpreter.onDecodeFailure(
         request,
@@ -83,7 +83,7 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
         {
           case None => callInterceptorsOnDecodeFailure(tail, endpoint, failingInput, failure)
           case Some(ValuedEndpointOutput(output, value)) =>
-            (Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value)): Option[ServerResponse[WB, B]]).unit
+            (Some(outputToResponse(ServerDefaults.StatusCodes.error, output, value)): Option[ServerResponse[B]]).unit
         }
       )
   }
@@ -111,15 +111,14 @@ class ServerInterpreter[R, F[_]: MonadError, WB, B, S](
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
 
-  private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[WB, B] = {
+  private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
     val outputValues = new EncodeOutputs(rawToResponseBody).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
     val headers = outputValues.headers
     outputValues.body match {
-      case Some(Left(bodyFromHeaders)) => ServerResponse(statusCode, headers, Some(Right(bodyFromHeaders(Headers(headers)))))
-      case Some(Right(pipeF))          => ServerResponse(statusCode, headers, Some(Left(pipeF)))
-      case None                        => ServerResponse(statusCode, headers, None)
+      case Some(bodyFromHeaders) => ServerResponse(statusCode, headers, Some(bodyFromHeaders(Headers(headers))))
+      case None                  => ServerResponse(statusCode, headers, None)
     }
   }
 }

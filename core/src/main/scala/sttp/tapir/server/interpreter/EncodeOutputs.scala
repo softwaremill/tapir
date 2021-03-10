@@ -9,8 +9,8 @@ import java.nio.charset.Charset
 import scala.util.Try
 import scala.collection.immutable.Seq
 
-class EncodeOutputs[B, W, S](rawToResponseBody: ToResponseBody[W, B, S]) {
-  def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
+class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
+  def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
     output match {
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
       case s: EndpointOutput.Single[_]                => applySingle(s, value, ov)
@@ -25,13 +25,13 @@ class EncodeOutputs[B, W, S](rawToResponseBody: ToResponseBody[W, B, S]) {
       right: EndpointOutput[_],
       split: SplitParams,
       params: Params,
-      ov: OutputValues[B, W]
-  ): OutputValues[B, W] = {
+      ov: OutputValues[B]
+  ): OutputValues[B] = {
     val (leftParams, rightParams) = split(params)
     apply(right, rightParams, apply(left, leftParams, ov))
   }
 
-  private def applySingle(output: EndpointOutput.Single[_], value: Params, ov: OutputValues[B, W]): OutputValues[B, W] = {
+  private def applySingle(output: EndpointOutput.Single[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
     def encoded[T]: T = output._mapping.asInstanceOf[Mapping[T, Any]].encode(value.asAny)
     output match {
       case EndpointIO.Empty(_, _)                   => ov
@@ -49,7 +49,7 @@ class EncodeOutputs[B, W, S](rawToResponseBody: ToResponseBody[W, B, S]) {
       case EndpointIO.MappedPair(wrapped, _)  => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
       case EndpointOutput.StatusCode(_, _, _) => ov.withStatusCode(encoded[StatusCode])
       case EndpointOutput.WebSocketBodyWrapper(o) =>
-        ov.withWebSocketBody(
+        ov.withBody(_ =>
           rawToResponseBody.fromWebSocketPipe(
             encoded[rawToResponseBody.streams.Pipe[Any, Any]],
             o.asInstanceOf[WebSocketBodyOutput[rawToResponseBody.streams.Pipe[Any, Any], Any, Any, Any, S]]
@@ -72,36 +72,28 @@ class EncodeOutputs[B, W, S](rawToResponseBody: ToResponseBody[W, B, S]) {
   }
 }
 
-case class OutputValues[B, W](
-    body: Option[Either[HasHeaders => B, W]],
+case class OutputValues[B](
+    body: Option[HasHeaders => B],
     explicitHeaders: Vector[Header],
     // headers, which should be added to the response if a value is not provided explicitly
     defaultHeaders: Vector[Header],
     statusCode: Option[StatusCode]
 ) {
-  def withBody(b: HasHeaders => B): OutputValues[B, W] = {
+  def withBody(b: HasHeaders => B): OutputValues[B] = {
     if (body.isDefined) {
       throw new IllegalArgumentException("Body is already defined")
     }
 
-    copy(body = Some(Left(b)))
+    copy(body = Some(b))
   }
 
-  def withWebSocketBody(w: W): OutputValues[B, W] = {
-    if (body.isDefined) {
-      throw new IllegalArgumentException("Body is already defined")
-    }
-
-    copy(body = Some(Right(w)))
-  }
-
-  def withDefaultHeader(n: String, v: String): OutputValues[B, W] = copy(defaultHeaders = defaultHeaders :+ Header(n, v))
-  def withDefaultContentType(format: CodecFormat, charset: Option[Charset]): OutputValues[B, W] =
+  def withDefaultHeader(n: String, v: String): OutputValues[B] = copy(defaultHeaders = defaultHeaders :+ Header(n, v))
+  def withDefaultContentType(format: CodecFormat, charset: Option[Charset]): OutputValues[B] =
     withDefaultHeader(HeaderNames.ContentType, charset.fold(format.mediaType)(format.mediaType.charset(_)).toString())
 
-  def withHeader(n: String, v: String): OutputValues[B, W] = copy(explicitHeaders = explicitHeaders :+ Header(n, v))
+  def withHeader(n: String, v: String): OutputValues[B] = copy(explicitHeaders = explicitHeaders :+ Header(n, v))
 
-  def withStatusCode(sc: StatusCode): OutputValues[B, W] = copy(statusCode = Some(sc))
+  def withStatusCode(sc: StatusCode): OutputValues[B] = copy(statusCode = Some(sc))
 
   def headers: Seq[Header] = {
     val explicitHeaderNames = explicitHeaders.map(_.name.toLowerCase).toSet
@@ -117,5 +109,5 @@ case class OutputValues[B, W](
       .flatMap(v => Try(v.toLong).toOption)
 }
 object OutputValues {
-  def empty[B, W]: OutputValues[B, W] = OutputValues[B, W](None, Vector.empty, Vector.empty, None)
+  def empty[B]: OutputValues[B] = OutputValues[B](None, Vector.empty, Vector.empty, None)
 }

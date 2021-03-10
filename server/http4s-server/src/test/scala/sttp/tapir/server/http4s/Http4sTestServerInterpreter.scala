@@ -25,8 +25,8 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
       e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): HttpRoutes[IO] = {
-    implicit val serverOptions: Http4sServerOptions[IO] = Http4sServerOptions
-      .default[IO](
+    implicit val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
+      .default(
         logRequestHandling = Http4sServerOptions.defaultLogRequestHandling,
         decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
       )

@@ -16,7 +16,7 @@ trait LogRequestHandling[T] {
   /** Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
     * given failure provides a response.
     */
-  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_, _]): T
+  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_]): T
 
   /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by
     * providing a response (which might be an error or success).
@@ -56,7 +56,7 @@ case class DefaultLogRequestHandling[T](
   /** Invoked when there's a decode failure for an input of the endpoint and the [[DecodeFailureHandler]] for the
     * given failure provides a response.
     */
-  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_, _]): T = {
+  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_]): T = {
     if (logWhenHandled)
       doLogWhenHandled(
         s"Request handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.input.show}; responding with: $response",

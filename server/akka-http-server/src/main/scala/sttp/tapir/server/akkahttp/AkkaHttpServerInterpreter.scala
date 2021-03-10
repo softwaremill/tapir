@@ -1,7 +1,6 @@
 package sttp.tapir.server.akkahttp
 
-import akka.http.scaladsl.model.ws.Message
-import akka.http.scaladsl.model.{HttpResponse, ResponseEntity, StatusCode => AkkaStatusCode}
+import akka.http.scaladsl.model.{HttpResponse, StatusCode => AkkaStatusCode}
 import akka.http.scaladsl.server.Directives.{
   complete,
   extractExecutionContext,
@@ -13,7 +12,6 @@ import akka.http.scaladsl.server.Directives.{
   respondWithHeaders
 }
 import akka.http.scaladsl.server.Route
-import akka.stream.scaladsl.Flow
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.monad.FutureMonad
@@ -64,7 +62,7 @@ trait AkkaHttpServerInterpreter {
     }
   }
 
-  private def serverResponseToAkka(response: ServerResponse[Flow[Message, Message, Any], ResponseEntity]): Route = {
+  private def serverResponseToAkka(response: ServerResponse[AkkaResponseBody]): Route = {
     val statusCode = AkkaStatusCode.int2StatusCode(response.code.code)
     val akkaHeaders = parseHeadersOrThrowWithoutContentType(response)
 

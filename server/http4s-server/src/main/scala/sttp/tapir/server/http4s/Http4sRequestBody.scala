@@ -16,7 +16,7 @@ import sttp.tapir.{RawBodyType, RawPart}
 private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( // TODO: constraints?
     request: Request[F],
     serverRequest: ServerRequest,
-    serverOptions: Http4sServerOptions[G],
+    serverOptions: Http4sServerOptions[F, G],
     t: F ~> G
 ) extends RequestBody[G, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]

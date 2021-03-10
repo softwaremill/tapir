@@ -10,27 +10,29 @@ import sttp.tapir.server.{DecodeFailureHandler, DefaultLogRequestHandling, LogRe
 import java.io.File
 import scala.concurrent.ExecutionContext
 
-case class Http4sServerOptions[F[_]](
-    createFile: ServerRequest => F[File],
+case class Http4sServerOptions[F[_], G[_]](
+    createFile: ServerRequest => G[File],
     blockingExecutionContext: ExecutionContext,
     ioChunkSize: Int,
-    interceptors: List[EndpointInterceptor[F]]
+    interceptors: List[EndpointInterceptor[G, Http4sResponseBody[F]]]
 ) {
-  def prependInterceptor(i: EndpointInterceptor[F]): Http4sServerOptions[F] = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: EndpointInterceptor[F]): Http4sServerOptions[F] = copy(interceptors = interceptors :+ i)
+  def prependInterceptor(i: EndpointInterceptor[G, Http4sResponseBody[F]]): Http4sServerOptions[F, G] =
+    copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: EndpointInterceptor[G, Http4sResponseBody[F]]): Http4sServerOptions[F, G] =
+    copy(interceptors = interceptors :+ i)
 }
 
 object Http4sServerOptions {
-  def default[F[_]: Sync: ContextShift](
-      logRequestHandling: LogRequestHandling[F[Unit]],
+  def default[F[_], G[_]: Sync: ContextShift](
+      logRequestHandling: LogRequestHandling[G[Unit]],
       decodeFailureHandler: DecodeFailureHandler
-  ): Http4sServerOptions[F] =
+  ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
-      defaultCreateFile.apply(ExecutionContext.Implicits.global),
+      defaultCreateFile[G].apply(ExecutionContext.Implicits.global),
       ExecutionContext.Implicits.global,
       8192,
       List(
-        new LogInterceptor[F[Unit], F](logRequestHandling, (f, _) => f),
+        new LogInterceptor[G[Unit], G, Http4sResponseBody[F]](logRequestHandling, (f, _) => f),
         new DecodeFailureInterceptor(decodeFailureHandler)
       )
     )
@@ -46,8 +48,8 @@ object Http4sServerOptions {
       noLog = Applicative[F].unit
     )
 
-  implicit def defaultOptions[F[_]: Sync: ContextShift]: Http4sServerOptions[F] = default(
-    defaultLogRequestHandling[F],
+  implicit def defaultOptions[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] = default(
+    defaultLogRequestHandling[G],
     ServerDefaults.decodeFailureHandler
   )
 

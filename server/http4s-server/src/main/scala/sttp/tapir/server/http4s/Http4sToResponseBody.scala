@@ -1,14 +1,12 @@
 package sttp.tapir.server.http4s
 
-import cats.Monad
 import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
 import cats.syntax.all._
-import fs2.{Chunk, Pipe, Stream}
+import fs2.{Chunk, Stream}
 import org.http4s
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.{EntityBody, EntityEncoder, Header, Headers, multipart}
 import org.http4s.util.CaseInsensitiveString
-import org.http4s.websocket.WebSocketFrame
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, Part, Header => SttpHeader}
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
@@ -16,21 +14,26 @@ import sttp.tapir.server.interpreter.ToResponseBody
 
 import java.nio.charset.Charset
 
-private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift, G[_]: Monad](
-    serverOptions: Http4sServerOptions[G]
-) extends ToResponseBody[F[Pipe[F, WebSocketFrame, WebSocketFrame]], EntityBody[F], Fs2Streams[F]] {
+private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift, G[_]](
+    serverOptions: Http4sServerOptions[F, G]
+) extends ToResponseBody[Http4sResponseBody[F], Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
 
-  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): EntityBody[F] =
-    rawValueToEntity(bodyType, v)
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): Http4sResponseBody[F] =
+    Right(rawValueToEntity(bodyType, v))
 
-  override def fromStreamValue(v: Stream[F, Byte], headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): EntityBody[F] =
-    v
+  override def fromStreamValue(
+      v: Stream[F, Byte],
+      headers: HasHeaders,
+      format: CodecFormat,
+      charset: Option[Charset]
+  ): Http4sResponseBody[F] =
+    Right(v)
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
       o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
-  ): F[Pipe[F, WebSocketFrame, WebSocketFrame]] = Http4sWebSockets.pipeToBody(pipe, o)
+  ): Http4sResponseBody[F] = Left(Http4sWebSockets.pipeToBody(pipe, o))
 
   private def rawValueToEntity[CF <: CodecFormat, R](bodyType: RawBodyType[R], r: R): EntityBody[F] = {
     bodyType match {
