@@ -139,7 +139,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     def mediaMatchesContent(media: MediaType): Boolean =
       content match {
         case Right(mt) => media.noCharset == mt.noCharset
-        case Left(s)   => media.noCharset.toString().contains(s)
+        case Left(_)   => false
       }
 
     output match {
