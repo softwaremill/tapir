@@ -56,6 +56,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
           )
         )
       case EndpointOutput.OneOf(mappings, _) =>
+        // ContentNegotiation(request.headers).pickBest(...) - select codec from status mappings
         val enc = encoded[Any]
         val mapping = mappings
           .find(mapping => mapping.appliesTo(enc))
