@@ -140,7 +140,7 @@ trait EndpointOutputsOps[I, E, O, -R] {
     withOutput(validated(output.map(m)))
 
   def mapOut[OO](f: O => OO)(g: OO => O): EndpointType[I, E, OO, R] =
-    withOutput(validated(output.map(f)(g)))
+    withOutput(output.map(f)(g))
 
   def mapOutDecode[OO](f: O => DecodeResult[OO])(g: OO => O): EndpointType[I, E, OO, R] =
     withOutput(validated(output.mapDecode(f)(g)))
@@ -158,16 +158,20 @@ trait EndpointOutputsOps[I, E, O, -R] {
     }
 
     output.asBasicOutputsList
-      .flatMap { case (status, outputs) => for (s <- status) yield s -> outputs.filter(isBody).map(o => Option(o.codec).map(_.format)) }
+      .map { case (status, outputs) => status -> outputs.filter(isBody).map(o => Some(o.codec.format)) }
       .groupBy { case (status, _) => status }
       .map { case (status, outputs) =>
         val formats = outputs.flatMap { case (_, output) => output }
         val duplicates = formats.diff(formats.distinct)
-        if (duplicates.nonEmpty) Left(s"Ambiguous mapping of status $status to format ${duplicates.mkString(", ")}") else Right(())
+        if (duplicates.nonEmpty)
+          Left(
+            s"Ambiguous mapping of status ${status.map(_.toString).getOrElse("default status (200/400)")} to format ${duplicates.mkString(", ")}"
+          )
+        else Right(())
       }
       .partition(_.isLeft) match {
       case (Nil, _)    => output
-      case (errors, _) => throw new RuntimeException((for (Left(e) <- errors) yield e).mkString("\n"))
+      case (errors, _) => throw new RuntimeException((errors collect { case Left(e) => e }).mkString("\n"))
     }
   }
 }

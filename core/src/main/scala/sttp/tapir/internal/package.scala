@@ -1,12 +1,11 @@
 package sttp.tapir
 
-import java.nio.charset.Charset
-
-import sttp.model.{Method, StatusCode}
+import sttp.model.{MediaType, Method, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
+import java.nio.charset.Charset
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -191,6 +190,22 @@ package object internal {
       traverseOutputs[RawBodyType[_]] { case b: EndpointIO.Body[_, _] =>
         Vector(b.bodyType)
       }.headOption
+    }
+
+    def matchesContent(content: Either[String, MediaType]): Boolean = {
+      def mediaMatchesContent(media: MediaType): Boolean =
+        content match {
+          case Right(mt) => media.noCharset == mt.noCharset
+          case Left(_)   => false
+        }
+
+      output
+        .traverseOutputs {
+          case EndpointIO.Body(_, codec, _)                               => Vector(mediaMatchesContent(codec.format.mediaType))
+          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => Vector(mediaMatchesContent(codec.format.mediaType))
+        }
+        .find(_ == true)
+        .getOrElse(false)
     }
   }
 

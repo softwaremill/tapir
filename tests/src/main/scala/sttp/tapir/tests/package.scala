@@ -316,29 +316,20 @@ package object tests {
       .name("Query with default")
 
   object MultipleMediaTypes {
-    implicit val schemaForPerson: Schema[Person] = Schema[Person](
-      SchemaType.SProduct(
-        SObjectInfo("sttp.tapir.tests.Person"),
-        List(FieldName("name") -> Schema(SString), FieldName("age") -> Schema(SInteger))
-      )
-    )
-
-    implicit val schemaForOrganization: Schema[Organization] = Schema[Organization](
-      SchemaType.SProduct(
-        SObjectInfo("sttp.tapir.tests.Organization"),
-        List(FieldName("name") -> Schema(SString))
-      )
-    )
+    implicit val schemaForPerson: Schema[Person] = Schema.derived[Person]
+    implicit val schemaForOrganization: Schema[Organization] = Schema.derived[Organization]
 
     implicit val xmlCodecForOrganization: XmlCodec[Organization] =
-      Codec.xml(_rawDecode = xml => DecodeResult.Value(
-        // <name>xxx</name>
-        Organization(xml.split(">")(1).split("<").head)
-      ))(_encode = _ => "sml")
+      Codec.xml(xml =>
+        DecodeResult.Value(
+          // <name>xxx</name>
+          Organization(xml.split(">")(1).split("<").head)
+        )
+      )(_ => "sml")
 
     val out_json_or_xml_common_schema: Endpoint[String, Unit, Organization, Any] =
       endpoint.get
-        .in("api" / "organization")
+        .in("content-negotiation" / "organization")
         .in(header[String]("Accept"))
         .out(
           sttp.tapir.oneOf(
@@ -349,7 +340,7 @@ package object tests {
 
     val out_json_or_xml_different_schema: Endpoint[String, Unit, Entity with Product with Serializable, Any] =
       endpoint.get
-        .in("api" / "entity")
+        .in("content-negotiation" / "entity")
         .in(header[String]("Accept"))
         .out(
           sttp.tapir.oneOf(

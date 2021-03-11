@@ -21,15 +21,15 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
-    val outputs = output.asBasicOutputsList
-    val byStatusCode = output.asBasicOutputsList.groupBy { case (sc, _) => sc }
-    outputs.map { case (sc, _) => sc }.distinct.flatMap { sc =>
+    val outputs = output.asBasicOutputsList.map { case (sc, _) => sc }.distinct
+    val byStatusCode =
+      output.asBasicOutputsList.groupBy { case (sc, _) => sc }.mapValues(_.flatMap { case (_, output) => output })
+    outputs.flatMap { sc =>
       val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
-      val allOutputs = byStatusCode.get(sc).map(_.flatMap { case (_, output) => output }).getOrElse(List())
-      outputsToResponse(sc, allOutputs).map(response => (responseKey, Right(response)))
+      outputsToResponse(sc, byStatusCode.getOrElse(sc, List())).map(response => (responseKey, Right(response)))
     } match {
       case responses if responses.isEmpty => defaultResponse.map(defaultResponseKey -> Right(_)).toIterable.toListMap
-      case responses => responses.toListMap
+      case responses                      => responses.toListMap
     }
   }
 
@@ -56,33 +56,36 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
     }
   }
 
-  private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] = {
-    outputs.collect {
-      case EndpointIO.Body(_, codec, info) => (info.description, codecToMediaType(codec, info.examples))
+  private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] =
+    outputs.flatMap(_.traverseOutputs {
+      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples)))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
-        (info.description, codecToMediaType(codec, info.examples))
-    }
-  }
+        Vector((info.description, codecToMediaType(codec, info.examples)))
+    })
 
   private def collectHeaders(outputs: List[EndpointOutput[_]]): List[(String, Right[Nothing, Header])] = {
-    outputs.collect {
+    outputs.flatMap(_.traverseOutputs {
       case EndpointIO.Header(name, codec, info) =>
-        name -> Right(
-          Header(
-            description = info.description,
-            required = Some(!codec.schema.isOptional),
-            schema = Some(objectSchemas(codec)),
-            example = info.example.flatMap(exampleValue(codec, _))
+        Vector(
+          name -> Right(
+            Header(
+              description = info.description,
+              required = Some(!codec.schema.isOptional),
+              schema = Some(objectSchemas(codec)),
+              example = info.example.flatMap(exampleValue(codec, _))
+            )
           )
         )
       case EndpointIO.FixedHeader(h, _, info) =>
-        h.name -> Right(
-          Header(
-            description = info.description,
-            required = Some(true),
-            schema = Option(Right(ASchema(ASchemaType.String)))
+        Vector(
+          h.name -> Right(
+            Header(
+              description = info.description,
+              required = Some(true),
+              schema = Option(Right(ASchema(ASchemaType.String)))
+            )
           )
         )
-    }
+    })
   }
 }

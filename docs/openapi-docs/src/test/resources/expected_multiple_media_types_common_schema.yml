@@ -3,9 +3,9 @@ info:
   title: Examples
   version: '1.0'
 paths:
-  /api/organization:
+  /content-negotiation/organization:
     get:
-      operationId: getApiOrganization
+      operationId: getContent-negotiationOrganization
       parameters:
         - name: Accept
           in: header

@@ -134,23 +134,23 @@ class HttpServer(port: Port) {
           WebSocketBuilder[IO].build(d, e)
         }
 
-    case r @ GET -> Root / "api" / "organization" =>
+    case r @ GET -> Root / "content-negotiation" / "organization" =>
       fromAcceptHeader(r) {
         case "application/json" => organizationJson
         case "application/xml"  => organizationXml
       }
 
-    case r @ GET -> Root / "api" / "entity" =>
+    case r @ GET -> Root / "content-negotiation" / "entity" =>
       fromAcceptHeader(r) {
         case "application/json" => personJson
         case "application/xml"  => organizationXml
       }
   }
 
-  private def fromAcceptHeader(r: Request[IO])(f: String => IO[Response[IO]]): IO[Response[IO]] =
+  private def fromAcceptHeader(r: Request[IO])(f: PartialFunction[String, IO[Response[IO]]]): IO[Response[IO]] =
     r.headers.get(Accept).map(h => f(h.value)).getOrElse(NotAcceptable())
 
-  private val organizationXml = Ok("<name>sml</name>", `Content-Type`(MediaType.application.xml))
+  private val organizationXml = Ok("<name>sml-xml</name>", `Content-Type`(MediaType.application.xml))
   private val organizationJson = Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json))
   private val personJson = Ok("{\"name\": \"John\", \"age\": 21}", `Content-Type`(MediaType.application.json))
 

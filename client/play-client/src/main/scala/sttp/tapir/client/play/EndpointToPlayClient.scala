@@ -97,7 +97,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
             val content = headers.get("Content-Type").map(h => MediaType.parse(h.head)).getOrElse(Left(""))
 
             mappings collectFirst {
-              case m if (m.statusCode.isEmpty || m.statusCode.contains(code)) && outputMatchesContent(m.output, content) => m
+              case m if (m.statusCode.isEmpty || m.statusCode.contains(code)) && m.output.matchesContent(content) => m
             } match {
               case Some(mapping) =>
                 getOutputParams(mapping.output, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
@@ -133,20 +133,6 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     val l = getOutputParams(left, body, headers, code, statusText)
     val r = getOutputParams(right, body, headers, code, statusText)
     l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
-  }
-
-  private def outputMatchesContent(output: EndpointOutput[_], content: Either[String, MediaType]): Boolean = {
-    def mediaMatchesContent(media: MediaType): Boolean =
-      content match {
-        case Right(mt) => media.noCharset == mt.noCharset
-        case Left(_)   => false
-      }
-
-    output match {
-      case EndpointIO.Body(_, codec, _)                               => mediaMatchesContent(codec.format.mediaType)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => mediaMatchesContent(codec.format.mediaType)
-      case _                                                          => false
-    }
   }
 
   private def cookiesAsHeaders(cookies: Seq[WSCookie]): Map[String, Seq[String]] = {

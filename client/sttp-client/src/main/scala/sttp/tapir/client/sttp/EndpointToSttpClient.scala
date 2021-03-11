@@ -63,10 +63,10 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
           case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
           case EndpointIO.Empty(codec, _)                  => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
-            val content = meta.header("Content-Type").map(MediaType.parse).getOrElse(Left(""))
+            val content = meta.header(HeaderNames.ContentType).map(MediaType.parse).getOrElse(Left(""))
 
             mappings collectFirst {
-              case m if (m.statusCode.isEmpty || m.statusCode.contains(meta.code)) && outputMatchesContent(m.output, content) => m
+              case m if (m.statusCode.isEmpty || m.statusCode.contains(meta.code)) && m.output.matchesContent(content) => m
             } match {
               case Some(mapping) => getOutputParams(mapping.output, body, meta).flatMap(p => codec.decode(p.asAny))
               case None =>
@@ -97,20 +97,6 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     val l = getOutputParams(left, body, meta)
     val r = getOutputParams(right, body, meta)
     l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
-  }
-
-  private def outputMatchesContent(output: EndpointOutput[_], content: Either[String, MediaType]): Boolean = {
-    def mediaMatchesContent(media: MediaType): Boolean =
-      content match {
-        case Right(mt) => media.noCharset == mt.noCharset
-        case Left(_)   => false
-      }
-
-    output match {
-      case EndpointIO.Body(_, codec, _)                               => mediaMatchesContent(codec.format.mediaType)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => mediaMatchesContent(codec.format.mediaType)
-      case _                                                          => false
-    }
   }
 
   private type PartialAnyRequest = PartialRequest[Any, Any]

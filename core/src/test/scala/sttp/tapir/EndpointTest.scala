@@ -4,6 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.internal._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 
@@ -78,8 +79,22 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       endpoint.get
         .out(
           sttp.tapir.oneOf(
-            statusMapping(StatusCode.Ok, stringBody),
-            statusMapping(StatusCode.Ok, plainBody)
+            statusMapping(StatusCode.Accepted, stringBody),
+            statusMapping(StatusCode.Accepted, plainBody)
+          )
+        )
+    }
+  }
+
+  it should "not allow to map default status code multiple times to same format" in {
+    implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
+
+    the[RuntimeException] thrownBy {
+      endpoint.get
+        .out(
+          sttp.tapir.oneOf(
+            statusDefaultMapping(stringBody),
+            statusDefaultMapping(plainBody)
           )
         )
     }
@@ -218,11 +233,14 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       .in(query[Int]("y"))
       .serverLogicForCurrent { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
 
+    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, Seq()))
+    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, ""))
+
     base
       .in(query[Double]("z"))
       .serverLogicForCurrent { z => Future.successful(Right(User2(z)): Either[String, User2]) }
       .in(query[String]("a"))
-      .out(plainBody[Result](null: Codec[String, Result, CodecFormat.TextPlain]))
+      .out(plainBody[Result])
       .serverLogic { case ((u1, u2), a) =>
         Future.successful(Right(Result(u1, u2, a)): Either[String, Result])
       }
@@ -236,12 +254,15 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     def parse1(t: String): Future[Either[String, User1]] = Future.successful(Right(User1(t)))
     def parse2(t: Int): Future[Either[String, User2]] = Future.successful(Right(User2(t)))
 
+    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, Seq()))
+    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, 0d))
+
     val _: ServerEndpoint[(String, Int, Double), String, Result, Any, Future] = endpoint
       .in(query[String]("x"))
       .in(query[Int]("y"))
       .in(query[Double]("z"))
       .errorOut(stringBody)
-      .out(plainBody[Result](null: Codec[String, Result, CodecFormat.TextPlain]))
+      .out(plainBody[Result])
       .serverLogicPart(parse1)
       .andThenPart(parse2)
       .andThen { case ((user1, user2), d) =>

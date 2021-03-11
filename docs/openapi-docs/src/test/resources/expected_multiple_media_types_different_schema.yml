@@ -3,9 +3,9 @@ info:
   title: Examples
   version: '1.0'
 paths:
-  /api/entity:
+  /content-negotiation/entity:
     get:
-      operationId: getApiEntity
+      operationId: getContent-negotiationEntity
       parameters:
         - name: Accept
           in: header

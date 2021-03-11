@@ -102,7 +102,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     testClient(
       MultipleMediaTypes.out_json_or_xml_common_schema.name("xml content organization"),
       "application/xml",
-      Right(Organization("sml"))
+      Right(Organization("sml-xml"))
     )
 
     testClient(
@@ -113,7 +113,7 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     testClient(
       MultipleMediaTypes.out_json_or_xml_different_schema.name("xml content organization"),
       "application/xml",
-      Right(Organization("sml"))
+      Right(Organization("sml-xml"))
     )
 
     test(in_headers_out_headers.showDetail) {
