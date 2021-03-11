@@ -137,18 +137,18 @@ trait EndpointOutputsOps[I, E, O, -R] {
   ): EndpointType[I, E, PO, R with R2 with WebSockets] = withOutput(validated(i.toEndpointOutput.and(output)))
 
   def mapOut[OO](m: Mapping[O, OO]): EndpointType[I, E, OO, R] =
-    withOutput(validated(output.map(m)))
+    withOutput(output.map(m))
 
   def mapOut[OO](f: O => OO)(g: OO => O): EndpointType[I, E, OO, R] =
     withOutput(output.map(f)(g))
 
   def mapOutDecode[OO](f: O => DecodeResult[OO])(g: OO => O): EndpointType[I, E, OO, R] =
-    withOutput(validated(output.mapDecode(f)(g)))
+    withOutput(output.mapDecode(f)(g))
 
   def mapOutTo[COMPANION, CASE_CLASS <: Product](
       c: COMPANION
   )(implicit fc: FnComponents[COMPANION, O, CASE_CLASS]): EndpointType[I, E, CASE_CLASS, R] =
-    withOutput(validated(output.mapTo(c)(fc)))
+    withOutput(output.mapTo(c)(fc))
 
   private def validated[OP](output: EndpointOutput[OP]): EndpointOutput[OP] = {
 
@@ -165,7 +165,7 @@ trait EndpointOutputsOps[I, E, O, -R] {
         val duplicates = formats.diff(formats.distinct)
         if (duplicates.nonEmpty)
           Left(
-            s"Ambiguous mapping of status ${status.map(_.toString).getOrElse("default status (200/400)")} to format ${duplicates.mkString(", ")}"
+            s"Ambiguous mapping of status ${status.map(_.toString).getOrElse("default status")} to format ${duplicates.mkString(", ")}"
           )
         else Right(())
       }
