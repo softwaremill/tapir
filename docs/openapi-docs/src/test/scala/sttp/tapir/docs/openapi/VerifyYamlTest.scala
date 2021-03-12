@@ -16,13 +16,14 @@ import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests._
+import sttp.tapir.tests.{MultipleMediaTypes, Person, _}
 
 import scala.collection.immutable.ListMap
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Codec.XmlCodec
+import sttp.tapir.SchemaType.{SInteger, SObjectInfo, SString}
 import sttp.tapir.model.UsernamePassword
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
@@ -948,6 +949,24 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_with_dateTimes, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml with multiple media types for common schema") {
+    val expectedYaml = load("expected_multiple_media_types_common_schema.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_or_xml_common_schema, Info("Examples", "1.0")).toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml with multiple media types for different schema") {
+    val expectedYaml = load("expected_multiple_media_types_different_schema.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_or_xml_different_schema, Info("Examples", "1.0")).toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 }

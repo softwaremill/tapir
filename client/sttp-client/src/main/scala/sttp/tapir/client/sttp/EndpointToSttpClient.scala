@@ -1,14 +1,15 @@
 package sttp.tapir.client.sttp
 
-import java.io.ByteArrayInputStream
-import java.nio.ByteBuffer
 import sttp.capabilities.Streams
 import sttp.client3._
-import sttp.model.{HeaderNames, Method, Part, ResponseMetadata, StatusCode, Uri}
+import sttp.model._
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
+
+import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
 
 private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
   def toSttpRequest[O, E, I](e: Endpoint[I, E, O, R], baseUri: Option[Uri]): I => Request[DecodeResult[Either[E, O]], R] = { params =>
@@ -62,14 +63,16 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
           case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
           case EndpointIO.Empty(codec, _)                  => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
-            mappings
-              .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(meta.code)) match {
-              case Some(mapping) =>
-                getOutputParams(mapping.output, body, meta).flatMap(p => codec.decode(p.asAny))
+            val content = meta.header(HeaderNames.ContentType).map(MediaType.parse).getOrElse(Left(""))
+
+            mappings collectFirst {
+              case m if (m.statusCode.isEmpty || m.statusCode.contains(meta.code)) && m.output.matchesContent(content) => m
+            } match {
+              case Some(mapping) => getOutputParams(mapping.output, body, meta).flatMap(p => codec.decode(p.asAny))
               case None =>
                 DecodeResult.Error(
                   meta.statusText,
-                  new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $output")
+                  new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} and content $content in outputs $output")
                 )
             }
 

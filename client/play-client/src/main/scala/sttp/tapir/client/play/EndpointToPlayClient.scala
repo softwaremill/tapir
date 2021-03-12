@@ -1,16 +1,11 @@
 package sttp.tapir.client.play
 
-import java.io.{ByteArrayInputStream, File, InputStream}
-import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.util.function.Supplier
-
 import play.api.libs.ws.DefaultBodyReadables._
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import sttp.capabilities.Streams
 import sttp.capabilities.akka.AkkaStreams
-import sttp.model.Method
+import sttp.model.{MediaType, Method}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
@@ -26,6 +21,10 @@ import sttp.tapir.{
   StreamBodyIO
 }
 
+import java.io.{ByteArrayInputStream, File, InputStream}
+import java.nio.ByteBuffer
+import java.nio.file.Files
+import java.util.function.Supplier
 import scala.collection.Seq
 
 private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient) {
@@ -95,8 +94,11 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
           case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
           case EndpointIO.Empty(codec, _)                  => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
-            mappings
-              .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(code)) match {
+            val content = headers.get("Content-Type").map(h => MediaType.parse(h.head)).getOrElse(Left(""))
+
+            mappings collectFirst {
+              case m if (m.statusCode.isEmpty || m.statusCode.contains(code)) && m.output.matchesContent(content) => m
+            } match {
               case Some(mapping) =>
                 getOutputParams(mapping.output, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
               case None =>
