@@ -6,7 +6,6 @@ import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
 import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
-import scala.util.Try
 import scala.collection.immutable.Seq
 
 class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
@@ -43,6 +42,9 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
         ov.withBody(headers => rawToResponseBody.fromStreamValue(encoded, headers, codec.format, charset))
           .withDefaultContentType(codec.format, charset)
+          .withHeaderTransformation(hs =>
+            if (hs.exists(_.is(HeaderNames.ContentLength))) hs else hs :+ Header(HeaderNames.TransferEncoding, "chunked")
+          )
       case EndpointIO.Header(name, _, _) =>
         encoded[List[String]].foldLeft(ov) { case (ovv, headerValue) => ovv.withHeader(name, headerValue) }
       case EndpointIO.Headers(_, _)           => encoded[List[sttp.model.Header]].foldLeft(ov)((ov2, h) => ov2.withHeader(h.name, h.value))
@@ -74,9 +76,8 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
 
 case class OutputValues[B](
     body: Option[HasHeaders => B],
-    explicitHeaders: Vector[Header],
-    // headers, which should be added to the response if a value is not provided explicitly
-    defaultHeaders: Vector[Header],
+    baseHeaders: Vector[Header],
+    headerTransformations: Vector[Vector[Header] => Vector[Header]],
     statusCode: Option[StatusCode]
 ) {
   def withBody(b: HasHeaders => B): OutputValues[B] = {
@@ -87,26 +88,22 @@ case class OutputValues[B](
     copy(body = Some(b))
   }
 
-  def withDefaultHeader(n: String, v: String): OutputValues[B] = copy(defaultHeaders = defaultHeaders :+ Header(n, v))
-  def withDefaultContentType(format: CodecFormat, charset: Option[Charset]): OutputValues[B] =
-    withDefaultHeader(HeaderNames.ContentType, charset.fold(format.mediaType)(format.mediaType.charset(_)).toString())
+  def withHeaderTransformation(t: Vector[Header] => Vector[Header]): OutputValues[B] =
+    copy(headerTransformations = headerTransformations :+ t)
+  def withDefaultContentType(format: CodecFormat, charset: Option[Charset]): OutputValues[B] = {
+    withHeaderTransformation { hs =>
+      if (hs.exists(_.is(HeaderNames.ContentType))) hs
+      else hs :+ Header(HeaderNames.ContentType, charset.fold(format.mediaType)(format.mediaType.charset(_)).toString())
+    }
+  }
 
-  def withHeader(n: String, v: String): OutputValues[B] = copy(explicitHeaders = explicitHeaders :+ Header(n, v))
+  def withHeader(n: String, v: String): OutputValues[B] = copy(baseHeaders = baseHeaders :+ Header(n, v))
 
   def withStatusCode(sc: StatusCode): OutputValues[B] = copy(statusCode = Some(sc))
 
   def headers: Seq[Header] = {
-    val explicitHeaderNames = explicitHeaders.map(_.name.toLowerCase).toSet
-    explicitHeaders ++ defaultHeaders.filterNot(h => explicitHeaderNames.contains(h.name.toLowerCase))
+    headerTransformations.foldLeft(baseHeaders) { case (hs, t) => t(hs) }
   }
-
-  // TODO remove?
-  def contentLength: Option[Long] =
-    headers
-      .collectFirst {
-        case Header(k, v) if HeaderNames.ContentLength.equalsIgnoreCase(k) => v
-      }
-      .flatMap(v => Try(v.toLong).toOption)
 }
 object OutputValues {
   def empty[B]: OutputValues[B] = OutputValues[B](None, Vector.empty, Vector.empty, None)

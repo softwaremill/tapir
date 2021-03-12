@@ -7,7 +7,7 @@ import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.internal.charset
-import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentType
+import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
@@ -84,7 +84,7 @@ private[akkahttp] class AkkaToResponseBody(implicit ec: ExecutionContext, m: Mat
           part.name,
           body,
           part.otherDispositionParams,
-          parseHeadersOrThrowWithoutContentType(part).toList
+          parseHeadersOrThrowWithoutContentHeaders(part).toList
         )
     }
   }

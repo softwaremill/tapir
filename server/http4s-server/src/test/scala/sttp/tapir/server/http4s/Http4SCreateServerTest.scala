@@ -11,7 +11,14 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.tapir._
-import sttp.tapir.server.tests.{CreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerStreamingTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.server.tests.{
+  CreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerStreamingTests,
+  ServerWebSocketTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
@@ -74,7 +81,7 @@ class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSu
           .send(backend)
           .map(_.body match {
             case Right(Some((pings, _))) => pings should be >= 2
-            case wrongResponse => fail(s"expected to get count of received data chunks, instead got $wrongResponse")
+            case wrongResponse           => fail(s"expected to get count of received data chunks, instead got $wrongResponse")
           })
 
       }

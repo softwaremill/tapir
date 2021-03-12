@@ -18,7 +18,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentType
+import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interpreter.ServerInterpreter
 
 import scala.concurrent.Future
@@ -64,7 +64,7 @@ trait AkkaHttpServerInterpreter {
 
   private def serverResponseToAkka(response: ServerResponse[AkkaResponseBody]): Route = {
     val statusCode = AkkaStatusCode.int2StatusCode(response.code.code)
-    val akkaHeaders = parseHeadersOrThrowWithoutContentType(response)
+    val akkaHeaders = parseHeadersOrThrowWithoutContentHeaders(response)
 
     response.body match {
       case Some(Left(flow)) =>

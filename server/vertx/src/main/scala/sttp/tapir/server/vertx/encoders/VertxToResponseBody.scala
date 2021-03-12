@@ -40,11 +40,7 @@ class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxEnd
       format: CodecFormat,
       charset: Option[Charset]
   ): RoutingContext => Unit = { rc =>
-    val resp = rc.response
-    if (headers.contentLength.isEmpty) {
-      resp.setChunked(true)
-    }
-    Pipe(readStreamCompatible.asReadStream(v.asInstanceOf[readStreamCompatible.streams.BinaryStream]), resp)
+    Pipe(readStreamCompatible.asReadStream(v.asInstanceOf[readStreamCompatible.streams.BinaryStream]), rc.response)
   }
 
   override def fromWebSocketPipe[REQ, RESP](
