@@ -34,15 +34,7 @@ private[vertx] class VertxServerRequest(rc: RoutingContext) extends ServerReques
   }
   override lazy val pathSegments: List[String] = {
     val path = Option(rc.request.path).getOrElse("")
-
-    @tailrec
-    def run(p: String, acc: List[String]): List[String] = p.dropWhile(_ == '/').split("/", 2) match { // TODO: simplify?
-      case Array("")   => acc.reverse
-      case Array(s)    => (s :: acc).reverse
-      case Array(s, t) => run(t, s :: acc)
-    }
-
-    run(path, Nil).map(QueryStringDecoder.decodeComponent)
+    path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
   }
 
   override def underlying: Any = rc

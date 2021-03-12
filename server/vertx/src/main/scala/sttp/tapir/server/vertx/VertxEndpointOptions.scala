@@ -22,13 +22,13 @@ object VertxEndpointOptions {
 
   private def debugLog(log: Logger)(msg: String, exOpt: Option[Throwable]): Unit =
     exOpt match {
-      case None     => log.debug(msg)
+      case None     => log.debug(msg, Nil: _*)
       case Some(ex) => log.debug(s"$msg; exception: {}", ex)
     }
 
   private def infoLog(log: Logger)(msg: String, exOpt: Option[Throwable]): Unit =
     exOpt match {
-      case None     => log.info(msg)
+      case None     => log.info(msg, Nil: _*)
       case Some(ex) => log.info(s"$msg; exception: {}", ex)
     }
 }
