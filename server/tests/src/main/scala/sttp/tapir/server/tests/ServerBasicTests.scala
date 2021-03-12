@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
 import io.circe.generic.auto._
+import org.scalatest
 import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model._
@@ -21,6 +22,7 @@ import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import java.io.{ByteArrayInputStream, InputStream}
 
 class ServerBasicTests[F[_], ROUTE](
     backend: SttpBackend[IO, Any],
@@ -591,6 +593,49 @@ class ServerBasicTests[F[_], ROUTE](
     testServer(in_query_with_default_out_string)(in => pureResult(in.asRight[Unit])) { baseUri =>
       basicRequest.get(uri"$baseUri?p1=x").send(backend).map(_.body shouldBe Right("x")) >>
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
+    },
+    //
+    testServer(MultipleMediaTypes.out_json_or_xml_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
+      val json = "{\"name\":\"sml\"}"
+      val xml = "<name>sml</name>"
+      val htmlUtf8 = "<p>sml-utf8</p>"
+      val htmlIso = "<p>sml-iso88591</p>"
+
+      def ok(body: String) = (StatusCode.Ok, body.asRight[String])
+
+      val cases: Map[(String, String), (StatusCode, Either[String, String])] = Map(
+        ("application/json", "*") -> ok(json),
+        ("application/xml", "*") -> ok(xml),
+        ("text/html", "*") -> ok(htmlUtf8),
+        ("text/html;q=0.123, application/json;q=0.124, application/xml;q=0.125", "*") -> ok(xml),
+        ("application/xml, application/json", "*") -> ok(xml),
+        ("application/xml;q=0.5, application/json;q=0.9", "*") -> ok(json),
+        ("application/json;q=0.5, application/xml;q=0.5", "*") -> ok(json),
+        ("application/json, application/xml, text/*;q=0.1", "iso-8859-1") -> ok(htmlIso),
+        ("text/*;q=0.5, application/*", "*") -> ok(json),
+        ("text/*;q=0.5, application/xml;q=0.3", "*") -> ok(htmlUtf8),
+        ("text/html", "utf-8;q=0.9, iso-8859-1;q=0.5") -> ok(htmlUtf8),
+        ("text/html", "utf-8;q=0.5, iso-8859-1;q=0.9") -> ok(htmlIso),
+        ("text/html", "utf-8, iso-8859-1") -> ok(htmlUtf8),
+        ("text/html", "iso-8859-1, utf-8") -> ok(htmlIso),
+        ("*/*", "iso-8859-1") -> ok(htmlIso),
+        ("*/*", "*;q=0.5, iso-8859-1") -> ok(htmlIso),
+        ("text/html", "iso-8859-5") -> (StatusCode.NotAcceptable, Left("")),
+        ("text/csv", "*") -> (StatusCode.NotAcceptable, Left(""))
+      )
+
+      cases.foldLeft(IO(scalatest.Assertions.succeed))((prev, next) => {
+        val ((accept, acceptCharset), (code, body)) = next
+        prev >> basicRequest
+          .get(uri"$baseUri/content-negotiation/organization")
+          .header(HeaderNames.Accept, accept)
+          .header(HeaderNames.AcceptCharset, acceptCharset)
+          .send(backend)
+          .map { response =>
+            response.code shouldBe code
+            response.body shouldBe body
+          }
+      })
     },
     //
     testServer(

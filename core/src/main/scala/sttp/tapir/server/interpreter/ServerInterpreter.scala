@@ -4,10 +4,10 @@ import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
-import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 
 class ServerInterpreter[R, F[_]: MonadError, B, S](
     request: ServerRequest,
@@ -112,7 +112,8 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     }
 
   private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
-    val outputValues = new EncodeOutputs(rawToResponseBody).apply(output, ParamsAsAny(v), OutputValues.empty)
+    val outputValues =
+      new EncodeOutputs(rawToResponseBody, new ContentNegotiator(request.headers)).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
     val headers = outputValues.headers

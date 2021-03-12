@@ -1,71 +1,89 @@
 package sttp.tapir.server.interpreter
 
-import sttp.model.{Header, MediaType}
+import sttp.model.{Header, HeaderNames, MediaType}
+import sttp.tapir.EndpointOutput.StatusMapping
 
-private[internal] class MediaTypeNegotiator(headers: Seq[Header]) {
+private[interpreter] class MediaTypeNegotiator(headers: Seq[Header]) {
 
-  val acceptedMediaTypes: Seq[(MediaType, Float)] = ContentNegotiation.extract("Accept", s => MediaType.unsafeParse(s), headers).sortBy {
-    case (MediaType("*", "*", _), q) => (2, -q) // unbounded ranges comes last
-    case (MediaType(_, "*", _), q)   => (1, -q) // bounded ranges comes next
-    case (_, q)                      => (0, -q) // most specific comes first
-  }
+  val acceptedMediaTypes: Seq[(MediaType, Float)] =
+    ContentNegotiation.extract(HeaderNames.Accept, headers)(MediaType.unsafeParse).sortBy {
+      case (MediaType("*", "*", _), q) => (2, -q) // unbounded ranges comes last
+      case (MediaType(_, "*", _), q)   => (1, -q) // bounded ranges comes next
+      case (_, q)                      => (0, -q) // most specific comes first
+    }
 
-  def gValueFor(mediaType: MediaType): Float =
+  def qValueFor(mediaType: MediaType): Float =
     acceptedMediaTypes match {
-      case Nil => 1f // accepts all
-      case mts => mts collectFirst { case (mt, q) if mt == mediaType => q } getOrElse 0f
+      case _ @(Nil | (MediaType("*", "*", _), _) :: Nil) => 1f // accepts all
+      case mts                                           => mts collectFirst { case (mt, q) if matches(mt, mediaType) => q } getOrElse 0f
+    }
+
+  def indexOf(mediaType: MediaType): Int = acceptedMediaTypes.indexWhere { case (mt, _) => mt.noCharset == mediaType.noCharset }
+
+  private def matches(a: MediaType, b: MediaType): Boolean =
+    (a, b) match {
+      case (MediaType("*", _, _), MediaType("*", _, _))                                                                           => true
+      case (MediaType(mainA, "*", _), MediaType(mainB, "*", _)) if mainA.equalsIgnoreCase(mainB)                                  => true
+      case (MediaType(mainA, "*", _), MediaType(mainB, _, _)) if mainA.equalsIgnoreCase(mainB)                                    => true
+      case (MediaType(mainA, _, _), MediaType(mainB, "*", _)) if mainA.equalsIgnoreCase(mainB)                                    => true
+      case (MediaType(mainA, subA, _), MediaType(mainB, subB, _)) if mainA.equalsIgnoreCase(mainB) && subA.equalsIgnoreCase(subB) => true
+      case _                                                                                                                      => false
     }
 }
 
-private[internal] class CharsetNegotiator(headers: Seq[Header]) {
+private[interpreter] class CharsetNegotiator(headers: Seq[Header]) {
 
-  val acceptedCharsets: Seq[(HttpCharset, Float)] = ContentNegotiation.extract("Accept-Charset", s => HttpCharset(s), headers).sortBy {
-    case (HttpCharset("*"), _) => 1f // unbounded come last
-    case (_, q)                => -q // others come first
-  }
+  val acceptedCharsets: Seq[(String, Float)] =
+    ContentNegotiation.extract(HeaderNames.AcceptCharset, headers)(identity).sortBy {
+      case ("*", _) => 1f // unbounded come last
+      case (_, q)   => -q // others come first
+    }
 
-  def qValueFor(charset: HttpCharset): Float =
+  def qValueFor(charset: String): Float =
     acceptedCharsets match {
-      case Nil => 1f // accepts all
-      case chs => chs collectFirst { case (ch, q) if ch == charset => q } getOrElse 0f
+      case _ @(Nil | ("*", _) :: Nil) => 1f // accepts all
+      case chs                        => chs collectFirst { case (ch, q) if ch.equalsIgnoreCase(charset) => q } getOrElse 0f
     }
+
+  def indexOf(charset: String): Int = acceptedCharsets.indexWhere { case (ch, _) => ch.equalsIgnoreCase(charset) }
 }
 
-private[internal] case class HttpCharset(name: String)
-
-private[internal] class ContentNegotiator(headers: Seq[Header]) {
+private[interpreter] class ContentNegotiator(headers: Seq[Header]) {
 
   val mtn = new MediaTypeNegotiator(headers)
   val csn = new CharsetNegotiator(headers)
 
-  def pickBest(alternatives: Seq[MediaType]): Option[MediaType] =
-    alternatives
-      .map(alt => alt -> qValueFor(alt))
-      .sortBy { case (_, q) => -q }
-      .collectFirst { case (alt, q) if q > 0f => alt }
+  def pickBest(mappings: Seq[(StatusMapping[_], MediaType)]): Option[StatusMapping[_]] = {
+    def mediaIndex(mt: MediaType) = mtn.indexOf(mt)
+    def charsetIndex(mt: MediaType) = mt.charset.map(csn.indexOf).getOrElse(0)
+
+    mappings
+      .map { case (m, mt) => (m, mt) -> qValueFor(mt) }
+      // in case of same q value position in header is a tie breaker
+      .sortBy { case ((_, mt), q) => (-q, mediaIndex(mt), charsetIndex(mt)) }
+      .collectFirst { case ((m, _), q) if q > 0f => m }
+  }
 
   private def qValueFor(mediaType: MediaType): Float =
     mediaType match {
-      case m @ MediaType(_, _, Some(charset)) => math.min(mtn.gValueFor(m), csn.qValueFor(HttpCharset(charset)))
-      case m @ MediaType(_, _, None)          => mtn.gValueFor(m)
+      case m @ MediaType(_, _, Some(charset)) => math.min(csn.qValueFor(charset), mtn.qValueFor(m))
+      case m @ MediaType(_, _, None)          => mtn.qValueFor(m)
     }
 }
 
-private[internal] object ContentNegotiation {
-  private val QPattern = "q=(\\d.\\d{1,3})".r
+private[interpreter] object ContentNegotiation {
+  private val QPattern = "q=(\\d.?\\d{1,3}?)".r
 
-  def extract[T](name: String, convert: String => T, headers: Seq[Header]): Seq[(T, Float)] =
+  def extract[T](name: String, headers: Seq[Header])(convert: String => T): Seq[(T, Float)] =
     headers
       .filter(_.name == name)
       .flatMap(_.value.split(",").flatMap { part =>
         part.replaceAll("\\s+", "").split(";").toList match {
-          case media :: Nil => Some((convert(media), 1f))
-          case media :: params =>
+          case value :: Nil => Some((convert(value), 1f))
+          case value :: params =>
             val q = params collectFirst { case QPattern(q) => q }
-            Some((convert(media), q.map(_.toFloat).getOrElse(1f)))
+            Some((convert(value), q.map(_.toFloat).getOrElse(1f)))
           case _ => None
         }
       })
-
-  def apply(headers: Seq[Header]) = new ContentNegotiator(headers)
 }

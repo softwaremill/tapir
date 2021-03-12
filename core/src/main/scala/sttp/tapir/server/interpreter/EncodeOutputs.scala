@@ -1,15 +1,16 @@
 package sttp.tapir.server.interpreter
 
-import sttp.model.{HasHeaders, Header, HeaderNames, MediaType, StatusCode}
+import sttp.model._
+import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
 import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
-import scala.util.Try
 import scala.collection.immutable.Seq
+import scala.util.Try
 
-class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
+class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], contentNegotiator: ContentNegotiator) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
     output match {
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
@@ -38,8 +39,9 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)
       case EndpointIO.FixedHeader(header, _, _)     => ov.withHeader(header.name, header.value)
       case EndpointIO.Body(rawBodyType, codec, _) =>
+        val maybeCharset = if (codec.format.mediaType.mainType.equalsIgnoreCase("text")) charset(rawBodyType) else None
         ov.withBody(headers => rawToResponseBody.fromRawValue(encoded[Any], headers, codec.format, rawBodyType))
-          .withDefaultContentType(codec.format, charset(codec.format.mediaType, rawBodyType))
+          .withDefaultContentType(codec.format, maybeCharset)
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
         ov.withBody(headers => rawToResponseBody.fromStreamValue(encoded, headers, codec.format, charset))
           .withDefaultContentType(codec.format, charset)
@@ -56,20 +58,31 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
           )
         )
       case EndpointOutput.OneOf(mappings, _) =>
-        // ContentNegotiation(request.headers).pickBest(...) - select codec from status mappings
         val enc = encoded[Any]
-        val mapping = mappings
-          .find(mapping => mapping.appliesTo(enc))
-          .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $enc, in output: $output"))
-        apply(mapping.output, ParamsAsAny(enc), mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
+
+        val mappingsWithCodec = mappings
+          .filter(_.appliesTo(enc)) collect {
+          case sm @ StatusMapping(_, EndpointIO.Body(rawBodyType, codec, _), _) =>
+            charset(rawBodyType) match {
+              case Some(charset) => sm -> codec.format.mediaType.charset(charset.name())
+              case _             => sm -> codec.format.mediaType
+            }
+          case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)), _) => sm -> codec.format.mediaType
+          case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _)                                 => sm -> codec.format.mediaType
+        }
+
+        contentNegotiator
+          .pickBest(mappingsWithCodec)
+          .map(mapping => apply(mapping.output, ParamsAsAny(enc), mapping.statusCode.map(ov.withStatusCode).getOrElse(ov)))
+          .getOrElse(ov.withStatusCode(StatusCode.NotAcceptable))
       case EndpointOutput.MappedPair(wrapped, _) => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
     }
   }
 
-  private def charset[R](mediaType: MediaType, bodyType: RawBodyType[R]): Option[Charset] = bodyType match {
+  private def charset[R](bodyType: RawBodyType[R]): Option[Charset] = bodyType match {
     // TODO: add to MediaType - setting optional charset if text
-    case StringBody(charset) if mediaType.mainType.equalsIgnoreCase("text") => Some(charset)
-    case _                                                                  => None
+    case StringBody(charset) => Some(charset)
+    case _                   => None
   }
 }
 
