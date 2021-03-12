@@ -9,7 +9,6 @@ import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.vertx.routing.MethodMapping
 
-import scala.annotation.tailrec
 import scala.collection.immutable._
 import scala.collection.JavaConverters._
 
