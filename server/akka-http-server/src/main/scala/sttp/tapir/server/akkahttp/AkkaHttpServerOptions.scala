@@ -41,7 +41,7 @@ object AkkaHttpServerOptions {
       defaultCreateFile,
       serverLog.map(Log.serverLogInterceptor).toList ++
         additionalInterceptors ++
-        List(new DecodeFailureInterceptor(decodeFailureHandler))
+        List(new DecodeFailureInterceptor[Future, AkkaResponseBody](decodeFailureHandler))
     )
 
   val defaultCreateFile: ServerRequest => Future[File] = { _ =>
