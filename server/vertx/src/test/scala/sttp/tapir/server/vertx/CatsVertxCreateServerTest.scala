@@ -11,7 +11,7 @@ class CatsVertxCreateServerTest extends TestSuite {
   import VertxCatsServerInterpreter._
 
   def vertxResource: Resource[IO, Vertx] =
-    Resource.make(IO.delay(Vertx.vertx()))(vertx => vertx.close.liftF[IO].void)
+    Resource.make(IO.delay(Vertx.vertx()))(vertx => new CatsFFromVFuture[IO]().apply(vertx.close).void)
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     vertxResource.map { implicit vertx =>

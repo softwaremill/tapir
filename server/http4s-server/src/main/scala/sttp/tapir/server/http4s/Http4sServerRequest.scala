@@ -15,7 +15,7 @@ private[http4s] class Http4sServerRequest[F[_]](req: Request[F]) extends ServerR
   /** Can differ from `uri.path`, if the endpoint is deployed in a context */
   override lazy val pathSegments: List[String] = {
     @tailrec
-    def run(p: String, acc: List[String]): List[String] = p.dropWhile(_ == '/').split("/", 2) match {
+    def run(p: String, acc: List[String]): List[String] = p.dropWhile(_ == '/').split("/", 2) match { // TODO: simplify?
       case Array("")   => acc.reverse
       case Array(s)    => (s :: acc).reverse
       case Array(s, t) => run(t, s :: acc)

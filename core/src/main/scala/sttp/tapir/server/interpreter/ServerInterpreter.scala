@@ -12,7 +12,7 @@ import sttp.tapir.server.ServerEndpoint
 class ServerInterpreter[R, F[_]: MonadError, B, S](
     request: ServerRequest,
     requestBody: RequestBody[F, S],
-    rawToResponseBody: ToResponseBody[B, S],
+    toResponseBody: ToResponseBody[B, S],
     interceptors: List[EndpointInterceptor[F, B]]
 ) {
   def apply(ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[B]]] =
@@ -112,7 +112,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     }
 
   private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
-    val outputValues = new EncodeOutputs(rawToResponseBody).apply(output, ParamsAsAny(v), OutputValues.empty)
+    val outputValues = new EncodeOutputs(toResponseBody).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
     val headers = outputValues.headers

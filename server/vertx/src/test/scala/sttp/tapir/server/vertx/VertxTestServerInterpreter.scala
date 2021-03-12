@@ -7,9 +7,9 @@ import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
 import sttp.tapir.Endpoint
-import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.{DecodeFailureHandler, ServerEndpoint}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Port
 
 import scala.reflect.ClassTag
@@ -18,15 +18,15 @@ import scala.concurrent.Future
 class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route] {
   import VertxTestServerInterpreter._
 
-  implicit val options: VertxFutureEndpointOptions = VertxFutureEndpointOptions()
-    .logWhenHandled(true)
-    .logAllDecodeFailures(true)
-
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler]
-  ): Router => Route =
-    VertxFutureServerInterpreter.route(e)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)))
+  ): Router => Route = {
+    implicit val options: VertxFutureEndpointOptions = VertxFutureEndpointOptions.customInterceptors(decodeFailureHandler =
+      decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
+    )
+    VertxFutureServerInterpreter.route(e)
+  }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
@@ -43,7 +43,6 @@ class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Fut
 }
 
 object VertxTestServerInterpreter {
-
   def vertxFutureToIo[A](future: => VFuture[A]): IO[A] =
     IO.async[A] { cb =>
       future
