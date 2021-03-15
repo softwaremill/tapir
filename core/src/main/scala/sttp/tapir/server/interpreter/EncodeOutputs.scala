@@ -65,8 +65,9 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], contentNegoti
         val mappingsWithCodec = mappings.filter(_.appliesTo(enc)) collect {
           case sm @ StatusMapping(_, EndpointIO.Body(bodyType, codec, _), _) =>
             sm -> charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
-          case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)), _) => sm -> codec.format.mediaType
-          case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _)                                 => sm -> codec.format.mediaType
+          case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)), _) =>
+            sm -> charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
+          case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _) => sm -> codec.format.mediaType
         }
 
         contentNegotiator
