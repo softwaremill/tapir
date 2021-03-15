@@ -15,6 +15,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.tests.MultipleMediaTypes.{organizationHtmlIso, organizationHtmlUtf8, organizationJson, organizationXml, out_json_xml_text_common_schema}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
@@ -595,26 +596,27 @@ class ServerBasicTests[F[_], ROUTE](
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
     },
     //
-    testServer(MultipleMediaTypes.out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
+    testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
       def ok(body: String) = (StatusCode.Ok, body.asRight[String])
 
       val cases: Map[(String, String), (StatusCode, Either[String, String])] = Map(
-        ("application/json", "*") -> ok(MultipleMediaTypes.organizationJson),
-        ("application/xml", "*") -> ok(MultipleMediaTypes.organizationXml),
-        ("text/html", "*") -> ok(MultipleMediaTypes.organizationHtmlUtf8),
-        ("text/html;q=0.123, application/json;q=0.124, application/xml;q=0.125", "*") -> ok(MultipleMediaTypes.organizationXml),
-        ("application/xml, application/json", "*") -> ok(MultipleMediaTypes.organizationXml),
-        ("application/xml;q=0.5, application/json;q=0.9", "*") -> ok(MultipleMediaTypes.organizationJson),
-        ("application/json;q=0.5, application/xml;q=0.5", "*") -> ok(MultipleMediaTypes.organizationJson),
-        ("application/json, application/xml, text/*;q=0.1", "iso-8859-1") -> ok(MultipleMediaTypes.organizationHtmlIso),
-        ("text/*;q=0.5, application/*", "*") -> ok(MultipleMediaTypes.organizationJson),
-        ("text/*;q=0.5, application/xml;q=0.3", "*") -> ok(MultipleMediaTypes.organizationHtmlUtf8),
-        ("text/html", "utf-8;q=0.9, iso-8859-1;q=0.5") -> ok(MultipleMediaTypes.organizationHtmlUtf8),
-        ("text/html", "utf-8;q=0.5, iso-8859-1;q=0.9") -> ok(MultipleMediaTypes.organizationHtmlIso),
-        ("text/html", "utf-8, iso-8859-1") -> ok(MultipleMediaTypes.organizationHtmlUtf8),
-        ("text/html", "iso-8859-1, utf-8") -> ok(MultipleMediaTypes.organizationHtmlIso),
-        ("*/*", "iso-8859-1") -> ok(MultipleMediaTypes.organizationHtmlIso),
-        ("*/*", "*;q=0.5, iso-8859-1") -> ok(MultipleMediaTypes.organizationHtmlIso),
+        ("application/json", "*") -> ok(organizationJson),
+        ("application/xml", "*") -> ok(organizationXml),
+        ("text/html", "*") -> ok(organizationHtmlUtf8),
+        ("text/html;q=0.123, application/json;q=0.124, application/xml;q=0.125", "*") -> ok(organizationXml),
+        ("application/xml, application/json", "*") -> ok(organizationXml),
+        ("application/json, application/xml", "*") -> ok(organizationJson),
+        ("application/xml;q=0.5, application/json;q=0.9", "*") -> ok(organizationJson),
+        ("application/json;q=0.5, application/xml;q=0.5", "*") -> ok(organizationJson),
+        ("application/json, application/xml, text/*;q=0.1", "iso-8859-1") -> ok(organizationHtmlIso),
+        ("text/*;q=0.5, application/*", "*") -> ok(organizationJson),
+        ("text/*;q=0.5, application/xml;q=0.3", "utf-8") -> ok(organizationHtmlUtf8),
+        ("text/html", "utf-8;q=0.9, iso-8859-1;q=0.5") -> ok(organizationHtmlUtf8),
+        ("text/html", "utf-8;q=0.5, iso-8859-1;q=0.9") -> ok(organizationHtmlIso),
+        ("text/html", "utf-8, iso-8859-1") -> ok(organizationHtmlUtf8),
+        ("text/html", "iso-8859-1, utf-8") -> ok(organizationHtmlIso),
+        ("*/*", "iso-8859-1") -> ok(organizationHtmlIso),
+        ("*/*", "*;q=0.5, iso-8859-1") -> ok(organizationHtmlIso),
         ("text/html", "iso-8859-5") -> (StatusCode.NotAcceptable, Left("")),
         ("text/csv", "*") -> (StatusCode.NotAcceptable, Left(""))
       )
