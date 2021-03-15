@@ -74,6 +74,10 @@ private[interpreter] class ContentNegotiator(headers: Seq[Header]) {
 private[interpreter] object ContentNegotiation {
   private val QPattern = "q=(\\d.?\\d{1,3}?)".r
 
+  /**
+   * Extracts values from Accept and Accept-Charset header as tuples with corresponding q factor
+   * Ex: "Accept: text/hmtl;q=0.9;p=a, text/csv;q=0.7;p=b"
+   */
   def extract[T](name: String, headers: Seq[Header])(convert: String => T): Seq[(T, Float)] =
     headers
       .filter(_.name == name)

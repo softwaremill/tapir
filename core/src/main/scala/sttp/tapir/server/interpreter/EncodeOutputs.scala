@@ -8,7 +8,6 @@ import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType
 
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
-import scala.util.Try
 
 class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], contentNegotiator: ContentNegotiator) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
@@ -63,13 +62,9 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], contentNegoti
       case EndpointOutput.OneOf(mappings, _) =>
         val enc = encoded[Any]
 
-        val mappingsWithCodec = mappings
-          .filter(_.appliesTo(enc)) collect {
-          case sm @ StatusMapping(_, EndpointIO.Body(rawBodyType, codec, _), _) =>
-            charset(rawBodyType) match {
-              case Some(charset) => sm -> codec.format.mediaType.charset(charset.name())
-              case _             => sm -> codec.format.mediaType
-            }
+        val mappingsWithCodec = mappings.filter(_.appliesTo(enc)) collect {
+          case sm @ StatusMapping(_, EndpointIO.Body(bodyType, codec, _), _) =>
+            sm -> charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
           case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)), _) => sm -> codec.format.mediaType
           case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _)                                 => sm -> codec.format.mediaType
         }
