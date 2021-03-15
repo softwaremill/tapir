@@ -5,7 +5,7 @@ import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -192,20 +192,20 @@ package object internal {
       }.headOption
     }
 
-    def matchesContent(content: Either[String, MediaType]): Boolean = {
-      def mediaMatchesContent(media: MediaType): Boolean =
-        content match {
-          case Right(mt) => media.noCharset == mt.noCharset
-          case Left(_)   => false
-        }
+    def matchesContent(content: MediaType): Boolean = {
+      val contentWithCharset = content match {
+        case m @ MediaType(_, _, None) => m.charset(StandardCharsets.UTF_8.name()) // default UTF-8
+        case m                         => m
+      }
 
-      output
-        .traverseOutputs {
-          case EndpointIO.Body(_, codec, _)                               => Vector(mediaMatchesContent(codec.format.mediaType))
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => Vector(mediaMatchesContent(codec.format.mediaType))
-        }
-        .find(_ == true)
-        .getOrElse(false)
+      traverseOutputs {
+        case EndpointIO.Body(bodyType, codec, _) =>
+          val mediaType = charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
+          Vector(mediaType == contentWithCharset)
+        case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+          val mediaType = charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
+          Vector(mediaType == contentWithCharset)
+      }.find(_ == true).getOrElse(false)
     }
   }
 

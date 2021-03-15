@@ -22,6 +22,9 @@ paths:
             application/xml:
               schema:
                 $ref: '#/components/schemas/Organization'
+            text/html:
+              schema:
+                $ref: '#/components/schemas/Organization'
 components:
   schemas:
     Organization:

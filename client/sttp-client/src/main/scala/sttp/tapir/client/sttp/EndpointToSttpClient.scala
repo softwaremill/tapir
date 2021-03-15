@@ -63,18 +63,27 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
           case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
           case EndpointIO.Empty(codec, _)                  => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
-            val content = meta.header(HeaderNames.ContentType).map(MediaType.parse).getOrElse(Left(""))
-
-            mappings collectFirst {
-              case m if (m.statusCode.isEmpty || m.statusCode.contains(meta.code)) && m.output.matchesContent(content) => m
-            } match {
-              case Some(mapping) => getOutputParams(mapping.output, body, meta).flatMap(p => codec.decode(p.asAny))
-              case None =>
-                DecodeResult.Error(
-                  meta.statusText,
-                  new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} and content $content in outputs $output")
-                )
-            }
+            meta
+              .header(HeaderNames.ContentType)
+              .map(MediaType.parse)
+              .map {
+                case Right(content) =>
+                  mappings collectFirst {
+                    case m if (m.statusCode.isEmpty || m.statusCode.contains(meta.code)) && m.output.matchesContent(content) => m
+                  } match {
+                    case Some(mapping) => getOutputParams(mapping.output, body, meta).flatMap(p => codec.decode(p.asAny))
+                    case None =>
+                      DecodeResult.Error(
+                        meta.statusText,
+                        new IllegalArgumentException(
+                          s"Cannot find mapping for status code ${meta.code} and content $content in outputs $output"
+                        )
+                      )
+                  }
+                case Left(_) =>
+                  DecodeResult.Error(meta.statusText, new IllegalArgumentException("Unable to parse Content-Type header"))
+              }
+              .getOrElse(DecodeResult.Error(meta.statusText, new IllegalStateException("Missing Content-Type header")))
 
           case EndpointIO.MappedPair(wrapped, codec)     => getOutputParams(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
           case EndpointOutput.MappedPair(wrapped, codec) => getOutputParams(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))

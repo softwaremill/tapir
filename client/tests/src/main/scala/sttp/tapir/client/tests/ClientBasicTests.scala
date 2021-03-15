@@ -95,23 +95,23 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     )
 
     testClient(
-      MultipleMediaTypes.out_json_or_xml_common_schema.name("json content organization"),
+      MultipleMediaTypes.out_json_xml_text_common_schema.name("json content organization"),
       "application/json",
       Right(Organization("sml"))
     )
     testClient(
-      MultipleMediaTypes.out_json_or_xml_common_schema.name("xml content organization"),
+      MultipleMediaTypes.out_json_xml_text_common_schema.name("xml content organization"),
       "application/xml",
       Right(Organization("sml-xml"))
     )
 
     testClient(
-      MultipleMediaTypes.out_json_or_xml_different_schema.name("json content person"),
+      MultipleMediaTypes.out_json_xml_different_schema.name("json content person"),
       "application/json",
       Right(Person("John", 21))
     )
     testClient(
-      MultipleMediaTypes.out_json_or_xml_different_schema.name("xml content organization"),
+      MultipleMediaTypes.out_json_xml_different_schema.name("xml content organization"),
       "application/xml",
       Right(Organization("sml-xml"))
     )

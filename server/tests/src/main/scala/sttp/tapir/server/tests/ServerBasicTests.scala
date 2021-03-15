@@ -595,31 +595,26 @@ class ServerBasicTests[F[_], ROUTE](
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
     },
     //
-    testServer(MultipleMediaTypes.out_json_or_xml_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
-      val json = "{\"name\":\"sml\"}"
-      val xml = "<name>sml</name>"
-      val htmlUtf8 = "<p>sml-utf8</p>"
-      val htmlIso = "<p>sml-iso88591</p>"
-
+    testServer(MultipleMediaTypes.out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
       def ok(body: String) = (StatusCode.Ok, body.asRight[String])
 
       val cases: Map[(String, String), (StatusCode, Either[String, String])] = Map(
-        ("application/json", "*") -> ok(json),
-        ("application/xml", "*") -> ok(xml),
-        ("text/html", "*") -> ok(htmlUtf8),
-        ("text/html;q=0.123, application/json;q=0.124, application/xml;q=0.125", "*") -> ok(xml),
-        ("application/xml, application/json", "*") -> ok(xml),
-        ("application/xml;q=0.5, application/json;q=0.9", "*") -> ok(json),
-        ("application/json;q=0.5, application/xml;q=0.5", "*") -> ok(json),
-        ("application/json, application/xml, text/*;q=0.1", "iso-8859-1") -> ok(htmlIso),
-        ("text/*;q=0.5, application/*", "*") -> ok(json),
-        ("text/*;q=0.5, application/xml;q=0.3", "*") -> ok(htmlUtf8),
-        ("text/html", "utf-8;q=0.9, iso-8859-1;q=0.5") -> ok(htmlUtf8),
-        ("text/html", "utf-8;q=0.5, iso-8859-1;q=0.9") -> ok(htmlIso),
-        ("text/html", "utf-8, iso-8859-1") -> ok(htmlUtf8),
-        ("text/html", "iso-8859-1, utf-8") -> ok(htmlIso),
-        ("*/*", "iso-8859-1") -> ok(htmlIso),
-        ("*/*", "*;q=0.5, iso-8859-1") -> ok(htmlIso),
+        ("application/json", "*") -> ok(MultipleMediaTypes.organizationJson),
+        ("application/xml", "*") -> ok(MultipleMediaTypes.organizationXml),
+        ("text/html", "*") -> ok(MultipleMediaTypes.organizationHtmlUtf8),
+        ("text/html;q=0.123, application/json;q=0.124, application/xml;q=0.125", "*") -> ok(MultipleMediaTypes.organizationXml),
+        ("application/xml, application/json", "*") -> ok(MultipleMediaTypes.organizationXml),
+        ("application/xml;q=0.5, application/json;q=0.9", "*") -> ok(MultipleMediaTypes.organizationJson),
+        ("application/json;q=0.5, application/xml;q=0.5", "*") -> ok(MultipleMediaTypes.organizationJson),
+        ("application/json, application/xml, text/*;q=0.1", "iso-8859-1") -> ok(MultipleMediaTypes.organizationHtmlIso),
+        ("text/*;q=0.5, application/*", "*") -> ok(MultipleMediaTypes.organizationJson),
+        ("text/*;q=0.5, application/xml;q=0.3", "*") -> ok(MultipleMediaTypes.organizationHtmlUtf8),
+        ("text/html", "utf-8;q=0.9, iso-8859-1;q=0.5") -> ok(MultipleMediaTypes.organizationHtmlUtf8),
+        ("text/html", "utf-8;q=0.5, iso-8859-1;q=0.9") -> ok(MultipleMediaTypes.organizationHtmlIso),
+        ("text/html", "utf-8, iso-8859-1") -> ok(MultipleMediaTypes.organizationHtmlUtf8),
+        ("text/html", "iso-8859-1, utf-8") -> ok(MultipleMediaTypes.organizationHtmlIso),
+        ("*/*", "iso-8859-1") -> ok(MultipleMediaTypes.organizationHtmlIso),
+        ("*/*", "*;q=0.5, iso-8859-1") -> ok(MultipleMediaTypes.organizationHtmlIso),
         ("text/html", "iso-8859-5") -> (StatusCode.NotAcceptable, Left("")),
         ("text/csv", "*") -> (StatusCode.NotAcceptable, Left(""))
       )

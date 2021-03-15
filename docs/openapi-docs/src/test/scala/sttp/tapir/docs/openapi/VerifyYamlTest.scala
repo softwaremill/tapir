@@ -955,7 +955,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml with multiple media types for common schema") {
     val expectedYaml = load("expected_multiple_media_types_common_schema.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_or_xml_common_schema, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_xml_text_common_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
@@ -964,7 +964,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml with multiple media types for different schema") {
     val expectedYaml = load("expected_multiple_media_types_different_schema.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_or_xml_different_schema, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_xml_different_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml

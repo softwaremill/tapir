@@ -321,21 +321,19 @@ package object tests {
     implicit val schemaForPerson: Schema[Person] = Schema.derived[Person]
     implicit val schemaForOrganization: Schema[Organization] = Schema.derived[Organization]
 
+    // <name>xxx</name>
+    def fromClosedTags(tags: String): Organization = Organization(tags.split(">")(1).split("<").head)
+
     implicit val xmlCodecForOrganization: XmlCodec[Organization] =
-      Codec.xml(xml =>
-        DecodeResult.Value(
-          // <name>xxx</name>
-          Organization(xml.split(">")(1).split("<").head)
-        )
-      )(o => s"<name>${o.name}</name>")
+      Codec.xml(xml => DecodeResult.Value(fromClosedTags(xml)))(o => s"<name>${o.name}-xml</name>")
 
     implicit val htmlCodecForOrganizationUTF8: Codec[String, Organization, CodecFormat.TextHtml] =
-      Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(Organization("sml-html")))(o => s"<p>${o.name}-utf8</p>")
+      Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-utf8</p>")
 
     implicit val htmlCodecForOrganizationISO88591: Codec[String, Organization, CodecFormat.TextHtml] =
-      Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(Organization("sml-html")))(o => s"<p>${o.name}-iso88591</p>")
+      Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-iso88591</p>")
 
-    val out_json_or_xml_common_schema: Endpoint[String, Unit, Organization, Any] =
+    val out_json_xml_text_common_schema: Endpoint[String, Unit, Organization, Any] =
       endpoint.get
         .in("content-negotiation" / "organization")
         .in(header[String](HeaderNames.Accept))
@@ -348,7 +346,7 @@ package object tests {
           )
         )
 
-    val out_json_or_xml_different_schema: Endpoint[String, Unit, Entity with Product with Serializable, Any] =
+    val out_json_xml_different_schema: Endpoint[String, Unit, Entity with Product with Serializable, Any] =
       endpoint.get
         .in("content-negotiation" / "entity")
         .in(header[String]("Accept"))
@@ -358,6 +356,11 @@ package object tests {
             statusMapping(StatusCode.Ok, xmlBody[Organization])
           )
         )
+
+    val organizationJson = "{\"name\":\"sml\"}"
+    val organizationXml = "<name>sml-xml</name>"
+    val organizationHtmlUtf8 = "<p>sml-utf8</p>"
+    val organizationHtmlIso = "<p>sml-iso88591</p>"
   }
 
   //

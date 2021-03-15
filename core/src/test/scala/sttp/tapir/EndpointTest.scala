@@ -8,6 +8,7 @@ import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.internal._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 
+import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
 
 class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers {
@@ -72,7 +73,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       )
   }
 
-  it should "not allow to map status code multiple times to same format" in {
+  it should "not allow to map status code multiple times to same format same charset" in {
     implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
 
     the[RuntimeException] thrownBy {
@@ -86,7 +87,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     }
   }
 
-  it should "not allow to map default status code multiple times to same format" in {
+  it should "not allow to map default status code multiple times to same format same charset" in {
     implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
 
     the[RuntimeException] thrownBy {
@@ -98,6 +99,17 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
           )
         )
     }
+  }
+
+  it should "allow to map status code multiple times to same format different charset" in {
+    implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
+    endpoint.get
+      .out(
+        sttp.tapir.oneOf(
+          statusMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
+          statusMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
+        )
+      )
   }
 
   def pairToTuple(input: EndpointInput[_]): Any =

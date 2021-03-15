@@ -158,16 +158,23 @@ trait EndpointOutputsOps[I, E, O, -R] {
     }
 
     output.asBasicOutputsList
-      .map { case (status, outputs) => status -> outputs.filter(isBody).map(o => Some(o.codec.format)) }
+      .map { case (status, outputs) => status -> outputs.filter(isBody) }
       .groupBy { case (status, _) => status }
       .map { case (status, outputs) =>
-        val formats = outputs.flatMap { case (_, output) => output }
+        val formats = outputs.flatMap { case (_, output) =>
+          output.collect {
+            case EndpointIO.Body(bodyType, codec, _) =>
+              charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
+            case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+              charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
+          }
+        }
         val duplicates = formats.diff(formats.distinct)
-        if (duplicates.nonEmpty)
+        if (duplicates.nonEmpty) {
           Left(
             s"Ambiguous mapping of status ${status.map(_.toString).getOrElse("default status")} to format ${duplicates.mkString(", ")}"
           )
-        else Right(())
+        } else Right(())
       }
       .partition(_.isLeft) match {
       case (Nil, _)    => output

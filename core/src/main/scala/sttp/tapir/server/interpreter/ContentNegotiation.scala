@@ -5,7 +5,7 @@ import sttp.tapir.EndpointOutput.StatusMapping
 
 private[interpreter] class MediaTypeNegotiator(headers: Seq[Header]) {
 
-  val acceptedMediaTypes: Seq[(MediaType, Float)] =
+  private val acceptedMediaTypes: Seq[(MediaType, Float)] =
     ContentNegotiation.extract(HeaderNames.Accept, headers)(MediaType.unsafeParse).sortBy {
       case (MediaType("*", "*", _), q) => (2, -q) // unbounded ranges comes last
       case (MediaType(_, "*", _), q)   => (1, -q) // bounded ranges comes next
@@ -33,7 +33,7 @@ private[interpreter] class MediaTypeNegotiator(headers: Seq[Header]) {
 
 private[interpreter] class CharsetNegotiator(headers: Seq[Header]) {
 
-  val acceptedCharsets: Seq[(String, Float)] =
+  private val acceptedCharsets: Seq[(String, Float)] =
     ContentNegotiation.extract(HeaderNames.AcceptCharset, headers)(identity).sortBy {
       case ("*", _) => 1f // unbounded come last
       case (_, q)   => -q // others come first
@@ -50,8 +50,8 @@ private[interpreter] class CharsetNegotiator(headers: Seq[Header]) {
 
 private[interpreter] class ContentNegotiator(headers: Seq[Header]) {
 
-  val mtn = new MediaTypeNegotiator(headers)
-  val csn = new CharsetNegotiator(headers)
+  private val mtn = new MediaTypeNegotiator(headers)
+  private val csn = new CharsetNegotiator(headers)
 
   def pickBest(mappings: Seq[(StatusMapping[_], MediaType)]): Option[StatusMapping[_]] = {
     def mediaIndex(mt: MediaType) = mtn.indexOf(mt)

@@ -5,7 +5,7 @@ import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import sttp.capabilities.Streams
 import sttp.capabilities.akka.AkkaStreams
-import sttp.model.{MediaType, Method}
+import sttp.model.{HeaderNames, MediaType, Method}
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
@@ -94,19 +94,26 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
           case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
           case EndpointIO.Empty(codec, _)                  => codec.decode(())
           case EndpointOutput.OneOf(mappings, codec) =>
-            val content = headers.get("Content-Type").map(h => MediaType.parse(h.head)).getOrElse(Left(""))
-
-            mappings collectFirst {
-              case m if (m.statusCode.isEmpty || m.statusCode.contains(code)) && m.output.matchesContent(content) => m
-            } match {
-              case Some(mapping) =>
-                getOutputParams(mapping.output, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
-              case None =>
-                DecodeResult.Error(
-                  statusText,
-                  new IllegalArgumentException(s"Cannot find mapping for status code ${code} in outputs $output")
-                )
-            }
+            headers
+              .get(HeaderNames.ContentType)
+              .map { h => MediaType.parse(h.head) }
+              .map {
+                case Right(content) =>
+                  mappings collectFirst {
+                    case m if (m.statusCode.isEmpty || m.statusCode.contains(code)) && m.output.matchesContent(content) => m
+                  } match {
+                    case Some(mapping) =>
+                      getOutputParams(mapping.output, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
+                    case None =>
+                      DecodeResult.Error(
+                        statusText,
+                        new IllegalArgumentException(s"Cannot find mapping for status code $code in outputs $output")
+                      )
+                  }
+                case Left(_) =>
+                  DecodeResult.Error(statusText, new IllegalArgumentException("Unable to parse Content-Type header"))
+              }
+              .getOrElse(DecodeResult.Error(statusText, new IllegalStateException("Missing Content-Type header")))
 
           case EndpointIO.MappedPair(wrapped, codec) =>
             getOutputParams(wrapped, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))

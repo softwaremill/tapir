@@ -21,12 +21,12 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
       defaultResponseKey: ResponsesKey,
       defaultResponse: Option[Response]
   ): ListMap[ResponsesKey, ReferenceOr[Response]] = {
-    val outputs = output.asBasicOutputsList.map { case (sc, _) => sc }.distinct
-    val byStatusCode =
-      output.asBasicOutputsList.groupBy { case (sc, _) => sc }.mapValues(_.flatMap { case (_, output) => output })
-    outputs.flatMap { sc =>
+    val outputs = output.asBasicOutputsList
+    val statusCodes = outputs.map { case (sc, _) => sc }.distinct
+    val outputsByStatusCode = outputs.groupBy { case (sc, _) => sc }.mapValues(_.flatMap { case (_, output) => output })
+    statusCodes.flatMap { sc =>
       val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
-      outputsToResponse(sc, byStatusCode.getOrElse(sc, List())).map(response => (responseKey, Right(response)))
+      outputsToResponse(sc, outputsByStatusCode.getOrElse(sc, List())).map(response => (responseKey, Right(response)))
     } match {
       case responses if responses.isEmpty => defaultResponse.map(defaultResponseKey -> Right(_)).toIterable.toListMap
       case responses                      => responses.toListMap
