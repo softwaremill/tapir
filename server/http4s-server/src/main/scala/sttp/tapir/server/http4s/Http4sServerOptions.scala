@@ -52,7 +52,7 @@ object Http4sServerOptions {
       8192,
       serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
         additionalInterceptors ++
-        List(new DecodeFailureInterceptor(decodeFailureHandler))
+        List(new DecodeFailureInterceptor[G, Http4sResponseBody[F]](decodeFailureHandler))
     )
 
   def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => ServerRequest => F[File] =

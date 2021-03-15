@@ -1,22 +1,28 @@
 package sttp.tapir.server.finatra
 
-import java.io.ByteArrayInputStream
-import java.nio.ByteBuffer
-import java.nio.charset.Charset
-
 import com.twitter.finagle.http.Request
 import com.twitter.finatra.http.request.RequestUtils
 import com.twitter.io.Buf
 import com.twitter.util.Future
 import org.apache.commons.fileupload.FileItemHeaders
-import sttp.model.{Part, Header}
-import sttp.tapir.{RawPart, RawBodyType}
+import sttp.capabilities.Streams
+import sttp.model.{Header, Part}
+import sttp.tapir.{RawBodyType, RawPart}
+import sttp.tapir.internal.NoStreams
+import sttp.tapir.server.interpreter.RequestBody
 
+import java.io.ByteArrayInputStream
+import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
 
-class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
-  def apply[R](bodyType: RawBodyType[R], body: Buf, charset: Option[Charset], request: Request): Future[R] = {
+class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) extends RequestBody[Future, Nothing] {
+  override val streams: Streams[Nothing] = NoStreams
+
+  override def toRaw[R](bodyType: RawBodyType[R]): Future[R] = toRaw(bodyType, request.content, request.charset.map(Charset.forName))
+
+  private def toRaw[R](bodyType: RawBodyType[R], body: Buf, charset: Option[Charset]): Future[R] = {
     def asByteArray: Array[Byte] = {
       val array = new Array[Byte](body.length)
       body.write(array, 0)
@@ -85,7 +91,7 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
 
             for {
               partType <- m.partType(name)
-              futureBody = apply(partType, Buf.ByteArray.Owned(multiPartItem.data), charset, request)
+              futureBody = toRaw(partType, Buf.ByteArray.Owned(multiPartItem.data), charset)
             } yield futureBody
               .map(body =>
                 Part(name, body, otherDispositionParams = dispositionParams - "name", headers = fileItemHeaders(multiPartItem.headers))
@@ -96,4 +102,6 @@ class FinatraRequestToRawBody(serverOptions: FinatraServerOptions) {
       )
       .map(_.toList)
   }
+
+  override def toStream(): streams.BinaryStream = throw new UnsupportedOperationException()
 }

@@ -8,9 +8,13 @@ import scala.collection.immutable.Seq
 
 private[akkahttp] object AkkaModel {
   private val ctHeaderNameLowerCase = HeaderNames.ContentType.toLowerCase
+  private val clHeaderNameLowerCase = HeaderNames.ContentLength.toLowerCase
+  private val teHeaderNameLowerCase = HeaderNames.TransferEncoding.toLowerCase
 
-  def parseHeadersOrThrowWithoutContentType(hs: HasHeaders): Seq[HttpHeader] =
-    hs.headers.map(parseHeaderOrThrow).filterNot(_.is(ctHeaderNameLowerCase))
+  def parseHeadersOrThrowWithoutContentHeaders(hs: HasHeaders): Seq[HttpHeader] =
+    hs.headers
+      .map(parseHeaderOrThrow)
+      .filterNot(h => h.is(ctHeaderNameLowerCase) || h.is(clHeaderNameLowerCase) || h.is(teHeaderNameLowerCase))
 
   def parseHeaderOrThrow(h: Header): HttpHeader =
     HttpHeader.parse(h.name, h.value) match {

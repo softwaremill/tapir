@@ -5,16 +5,17 @@ import cats.syntax.all._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
+import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.tapir._
 import sttp.tapir.server.tests.{
+  CreateServerTest,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerStreamingTests,
-  CreateServerTest,
   ServerWebSocketTests,
   backendResource
 }
@@ -24,7 +25,7 @@ import sttp.ws.{WebSocket, WebSocketFrame}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
-class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite {
+class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with EitherValues with OptionValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
@@ -63,6 +64,26 @@ class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSu
           .get(baseUri.scheme("ws"))
           .send(backend)
           .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
+      },
+      createServerTest.testServer(
+        endpoint.out(streamBody(Fs2Streams[IO])(Schema.binary, CodecFormat.TextPlain())),
+        "streaming should send data according to producer stream rate"
+      )((_: Unit) =>
+        IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8Encode).interruptAfter(5.seconds)))
+      ) { baseUri =>
+        basicRequest
+          .response(
+            asStream(Fs2Streams[IO])(bs => {
+              bs.through(fs2.text.utf8Decode).mapAccumulate(0)((pings, currentTime) => (pings + 1, currentTime)).compile.last
+            })
+          )
+          .get(baseUri)
+          .send(backend)
+          .map(_.body match {
+            case Right(Some((pings, _))) => pings should be >= 2
+            case wrongResponse           => fail(s"expected to get count of received data chunks, instead got $wrongResponse")
+          })
+
       }
     )
 

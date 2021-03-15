@@ -14,11 +14,11 @@ class ZioVertxCreateServerTest extends TestSuite {
   import ZioVertxTestServerInterpreter._
 
   def vertxResource: Resource[IO, Vertx] =
-    Resource.make(Task.effect(Vertx.vertx()))(vertx => vertx.close.asTask.unit).mapK(zioToIo)
+    Resource.make(Task.effect(Vertx.vertx()))(vertx => new RioFromVFuture[Any].apply(vertx.close).unit).mapK(zioToIo)
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     vertxResource.map { implicit vertx =>
-      implicit val m: MonadError[Task] = VertxCatsServerInterpreter.monadError
+      implicit val m: MonadError[Task] = VertxZioServerInterpreter.monadError
       val interpreter = new ZioVertxTestServerInterpreter(vertx)
       val createServerTest = new CreateServerTest(interpreter)
 
