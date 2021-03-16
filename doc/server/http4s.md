@@ -87,6 +87,25 @@ The capability can be added to the classpath independently of the interpreter th
 The interpreter supports web sockets, with pipes of type `Pipe[F, REQ, RESP]`. See [web sockets](../endpoint/websockets.md) 
 for more details.
 
+## Server Sent Events
+
+The interpreter supports Server Sent Events.
+
+For example, to define an endpoint that returns event stream you have to:
+
+```scala mdoc:compile-only
+import cats.effect.IO
+import sttp.model.sse.ServerSentEvent
+import sttp.tapir._
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
+
+val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
+
+val routes = Http4sServerInterpreter.toRoutes(sseEndpoint)(_ =>
+  IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
+)
+```
+
 ## Configuration
 
 The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see
