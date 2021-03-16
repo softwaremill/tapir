@@ -89,9 +89,9 @@ for more details.
 
 ## Server Sent Events
 
-The interpreter supports Server Sent Events.
+The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
 
-For example, to define an endpoint that returns event stream you have to:
+For example, to define an endpoint that returns event stream:
 
 ```scala mdoc:compile-only
 import cats.effect.IO
