@@ -170,6 +170,27 @@ akka-http does not expose control frames (`Ping`, `Pong` and `Close`), so any se
 ping/pong frames which are sent explicitly are ignored. [Automatic pings](https://doc.akka.io/docs/akka-http/current/server-side/websocket-support.html#automatic-keep-alive-ping-support) 
 can be instead enabled through configuration.
 
+## Server Sent Events
+
+The interpreter supports Server Sent Events (for more information see [Akka SSE docs](https://doc.akka.io/docs/akka-http/current/common/sse-support.html)). 
+
+For example, to define an endpoint that returns event stream you have to:
+
+```scala mdoc:compile-only
+import akka.stream.scaladsl.Source
+import sttp.model.sse.ServerSentEvent
+import sttp.tapir._
+import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, serverSentEventsBody}
+
+import scala.concurrent.Future
+
+val sseEndpoint = endpoint.get.out(serverSentEventsBody)
+
+val routes = AkkaHttpServerInterpreter.toRoute(sseEndpoint)(_ =>
+  Future.successful(Right(Source.single(ServerSentEvent(Some("data"), None, None, None))))
+)
+```
+
 ## Configuration
 
 The interpreter can be configured by providing an implicit `AkkaHttpServerOptions` value and status mappers, see
