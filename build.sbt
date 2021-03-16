@@ -661,8 +661,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp
     )
   )
   .dependsOn(tests)
@@ -675,7 +674,8 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
+      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
