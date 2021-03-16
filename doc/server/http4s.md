@@ -99,7 +99,12 @@ import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
 
+import cats.effect.{ContextShift, Timer}
+
 val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
+
+implicit val cs: ContextShift[IO] = ???
+implicit val t: Timer[IO] = ???
 
 val routes = Http4sServerInterpreter.toRoutes(sseEndpoint)(_ =>
   IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
