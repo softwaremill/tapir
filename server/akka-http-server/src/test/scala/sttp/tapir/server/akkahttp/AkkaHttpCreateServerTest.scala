@@ -75,7 +75,7 @@ class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
                         AkkaServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
                       )
                     )
-                    .send(AkkaHttpBackend())
+                    .send(AkkaHttpBackend.usingActorSystem(actorSystem))
                     .flatMap(_.body.value.transform(sse => sse shouldBe List(sse1, sse2), ex => fail(ex)))
                 )
               }
