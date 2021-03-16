@@ -16,7 +16,7 @@ import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests._
+import sttp.tapir.tests.{Person, _}
 
 import scala.collection.immutable.ListMap
 import org.scalatest.funsuite.AnyFunSuite

@@ -1,9 +1,8 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.tapir.{SchemaType => TSchemaType, Schema => TSchema}
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.apispec.ValidatorUtil.{elementValidator, fieldValidator}
-import sttp.tapir.{Codec, Validator}
+import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 import scala.collection.mutable.ListBuffer
 
@@ -28,15 +27,18 @@ object ObjectTypeData {
 
   def apply(typeData: TypeData[_]): List[ObjectTypeData] = {
     typeData match {
-      case TypeData(TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _), validator) =>
-        apply(TypeData(o, elementValidator(validator)))
-      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _, _, _, _, _), validator) =>
-        productSchemas(s, st, validator)
-      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _, _, _, _, _), validator) =>
-        coproductSchemas(s, st, validator)
-      case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _, _, _, _, _), validator) =>
-        (st.info -> TypeData(s, validator): ObjectTypeData) +: apply(
-          TypeData(st.valueSchema, elementValidator(validator))
+      case TypeData(TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, schemaValidator), codecValidator) =>
+        apply(TypeData(o, elementValidator(schemaValidator.asInstanceOf[Validator[Any]].and(codecValidator.asInstanceOf[Validator[Any]]))))
+      case TypeData(s @ TSchema(st: TSchemaType.SProduct, _, _, _, _, _, _, schemaValidator), codecValidator) =>
+        productSchemas(s, st, schemaValidator.asInstanceOf[Validator[Any]].and(codecValidator.asInstanceOf[Validator[Any]]))
+      case TypeData(s @ TSchema(st: TSchemaType.SCoproduct, _, _, _, _, _, _, schemaValidator), codecValidator) =>
+        coproductSchemas(s, st, schemaValidator.asInstanceOf[Validator[Any]].and(codecValidator.asInstanceOf[Validator[Any]]))
+      case TypeData(s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _, _, _, _, schemaValidator), codecValidator) =>
+        (st.info -> TypeData(s, codecValidator): ObjectTypeData) +: apply(
+          TypeData(
+            st.valueSchema,
+            elementValidator(schemaValidator.asInstanceOf[Validator[Any]].and(codecValidator.asInstanceOf[Validator[Any]]))
+          )
         )
       case _ => List.empty
     }
