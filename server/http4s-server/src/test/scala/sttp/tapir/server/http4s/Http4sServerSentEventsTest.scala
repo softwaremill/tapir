@@ -8,11 +8,11 @@ import sttp.model.sse.ServerSentEvent
 
 import java.nio.charset.Charset
 
-class Http4sServerInterpreterTest extends AnyFunSuite with Matchers {
+class Http4sServerSentEventsTest extends AnyFunSuite with Matchers {
 
   test("serialiseSSEToBytes should successfully serialise simple Server Sent Event to ByteString") {
     val sse: fs2.Stream[IO, ServerSentEvent] = fs2.Stream(ServerSentEvent(Some("data"), Some("event"), Some("id1"), Some(10)))
-    val serialised = Http4sServerInterpreter.serialiseSSEToBytes(Fs2Streams[IO])(sse)
+    val serialised = Http4sServerSentEvents.serialiseSSEToBytes(Fs2Streams[IO])(sse)
     val futureEventsBytes = serialised.compile.toList
     futureEventsBytes.map(sseEvents => {
       sseEvents shouldBe
@@ -27,7 +27,7 @@ class Http4sServerInterpreterTest extends AnyFunSuite with Matchers {
 
   test("serialiseSSEToBytes should omit fields that are not set") {
     val sse = fs2.Stream(ServerSentEvent(Some("data"), None, Some("id1"), None))
-    val serialised = Http4sServerInterpreter.serialiseSSEToBytes(Fs2Streams[IO])(sse)
+    val serialised = Http4sServerSentEvents.serialiseSSEToBytes(Fs2Streams[IO])(sse)
     val futureEvents = serialised.compile.toList
     futureEvents.map(sseEvents => {
       sseEvents shouldBe
@@ -49,7 +49,7 @@ class Http4sServerInterpreterTest extends AnyFunSuite with Matchers {
         None
       )
     )
-    val serialised = Http4sServerInterpreter.serialiseSSEToBytes(Fs2Streams[IO])(sse)
+    val serialised = Http4sServerSentEvents.serialiseSSEToBytes(Fs2Streams[IO])(sse)
     val futureEvents = serialised.compile.toList
     futureEvents.map(sseEvents => {
       sseEvents shouldBe
@@ -76,7 +76,7 @@ class Http4sServerInterpreterTest extends AnyFunSuite with Matchers {
           |
           |""".stripMargin.getBytes(Charset.forName("UTF-8"))
     )
-    val parsed = Http4sServerInterpreter.parseBytesToSSE(Fs2Streams[IO])(sseBytes)
+    val parsed = Http4sServerSentEvents.parseBytesToSSE(Fs2Streams[IO])(sseBytes)
     val futureEvents = parsed.compile.toList
     futureEvents.map(events =>
       events shouldBe List(

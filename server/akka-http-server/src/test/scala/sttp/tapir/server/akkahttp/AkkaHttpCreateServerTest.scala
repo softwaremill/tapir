@@ -55,10 +55,10 @@ class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
             .unsafeRunSync()
         },
         Test("Send and receive SSE") {
-          implicit val ec = scala.concurrent.ExecutionContext.Implicits.global
+          implicit val ec = actorSystem.dispatcher
           val e = endpoint.get
             .in("sse")
-            .out(serverSentEventBody)
+            .out(serverSentEventsBody)
             .serverLogic[Future](_ => {
               Source(List(sse1, sse2)).asRight[Unit].unit(new FutureMonad())
             })
@@ -72,7 +72,7 @@ class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
                     .get(uri"http://localhost:$port/sse")
                     .response(
                       asStreamUnsafe(AkkaStreams).mapRight(stream =>
-                        AkkaHttpServerInterpreter.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
+                        AkkaServerSentEvents.parseBytesToSSE(stream).runFold(List.empty[ServerSentEvent])((acc, sse) => acc :+ sse)
                       )
                     )
                     .send(AkkaHttpBackend())

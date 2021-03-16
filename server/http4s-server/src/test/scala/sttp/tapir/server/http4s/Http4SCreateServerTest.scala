@@ -91,12 +91,12 @@ class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSu
           })
       },
       createServerTest.testServer(
-        endpoint.out(serverSentEventBody[IO]),
+        endpoint.out(serverSentEventsBody[IO]),
         "Send and receive SSE"
       )((_: Unit) => IO(Right(fs2.Stream(sse1, sse2)))) { baseUri =>
         basicRequest
           .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
-            Http4sServerInterpreter
+            Http4sServerSentEvents
               .parseBytesToSSE(Fs2Streams[IO])
               .apply(stream)
               .compile

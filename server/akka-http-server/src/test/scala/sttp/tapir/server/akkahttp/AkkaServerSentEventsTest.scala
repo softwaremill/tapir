@@ -8,13 +8,13 @@ import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.model.sse.ServerSentEvent
 
-class AkkaHttpServerInterpreterTest extends AsyncFunSuite with Matchers {
+class AkkaServerSentEventsTest extends AsyncFunSuite with Matchers {
 
   implicit val materializer: Materializer = Materializer(ActorSystem("AkkaHttpServerInterpreterTest"))
 
   test("serialiseSSEToBytes should successfully serialise simple Server Sent Event to ByteString") {
     val sse = Source.single(ServerSentEvent(Some("data"), Some("event"), Some("id1"), Some(10)))
-    val serialised = AkkaHttpServerInterpreter.serialiseSSEToBytes(sse)
+    val serialised = AkkaServerSentEvents.serialiseSSEToBytes(sse)
     val futureEvents = serialised.runFold(List.empty[ByteString])((acc, event) => acc :+ event)
     futureEvents.map(sseEvents => {
       sseEvents shouldBe List(
@@ -32,7 +32,7 @@ class AkkaHttpServerInterpreterTest extends AsyncFunSuite with Matchers {
 
   test("serialiseSSEToBytes should omit fields that are not set") {
     val sse = Source.single(ServerSentEvent(Some("data"), None, Some("id1"), None))
-    val serialised = AkkaHttpServerInterpreter.serialiseSSEToBytes(sse)
+    val serialised = AkkaServerSentEvents.serialiseSSEToBytes(sse)
     val futureEvents = serialised.runFold(List.empty[ByteString])((acc, event) => acc :+ event)
     futureEvents.map(sseEvents => {
       sseEvents shouldBe List(
@@ -57,7 +57,7 @@ class AkkaHttpServerInterpreterTest extends AsyncFunSuite with Matchers {
         None
       )
     )
-    val serialised = AkkaHttpServerInterpreter.serialiseSSEToBytes(sse)
+    val serialised = AkkaServerSentEvents.serialiseSSEToBytes(sse)
     val futureEvents = serialised.runFold(List.empty[ByteString])((acc, event) => acc :+ event)
     futureEvents.map(sseEvents => {
       sseEvents shouldBe List(
@@ -89,7 +89,7 @@ class AkkaHttpServerInterpreterTest extends AsyncFunSuite with Matchers {
         |""".stripMargin
       )
     )
-    val parsed = AkkaHttpServerInterpreter.parseBytesToSSE(sseBytes)
+    val parsed = AkkaServerSentEvents.parseBytesToSSE(sseBytes)
     val futureEvents = parsed.runFold(List.empty[ServerSentEvent])((acc, event) => acc :+ event)
     futureEvents.map(events =>
           events shouldBe List(
