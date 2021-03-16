@@ -661,7 +661,8 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
     )
   )
   .dependsOn(tests)
