@@ -1,17 +1,16 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
-import sttp.tapir.docs.apispec.ValidatorUtil.{asPrimitiveValidators, elementValidator, fieldValidator}
+import sttp.tapir.docs.apispec.ValidatorUtil.asPrimitiveValidators
 import sttp.tapir.docs.apispec.{exampleValue, rawToString}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
-/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve references.
-  */
+/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve references. */
 private[schema] class TSchemaToASchema(
     objectToSchemaReference: ObjectToSchemaReference
 ) {
-  def apply(typeData: TypeData[_]): ReferenceOr[ASchema] = {
-    val result = typeData.schema.schemaType match {
+  def apply(schema: TSchema[_]): ReferenceOr[ASchema] = {
+    val result = schema.schemaType match {
       case TSchemaType.SInteger => Right(ASchema(SchemaType.Integer))
       case TSchemaType.SNumber  => Right(ASchema(SchemaType.Number))
       case TSchemaType.SBoolean => Right(ASchema(SchemaType.Boolean))
@@ -24,14 +23,14 @@ private[schema] class TSchemaToASchema(
               case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
                 fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName.encodedName -> apply(TypeData(fieldSchema, fieldSchema.validator))
+                fieldName.encodedName -> apply(fieldSchema)
             }.toListMap
           )
         )
       case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
-        Right(ASchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
+        Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
       case TSchemaType.SBinary        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
       case TSchemaType.SDate          => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
       case TSchemaType.SDateTime      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
@@ -49,23 +48,23 @@ private[schema] class TSchemaToASchema(
             required = List.empty,
             additionalProperties = Some(valueSchema.schemaType match {
               case so: TSchemaType.SObject => Left(objectToSchemaReference.map(so.info))
-              case _                       => apply(TypeData(valueSchema, elementValidator(typeData.validator)))
+              case _                       => apply(valueSchema)
             })
           )
         )
     }
 
-    val primitiveValidators = typeData.schema.schemaType match {
-      case TSchemaType.SArray(_) => asPrimitiveValidators(typeData.validator, unwrapCollections = false)
-      case _                     => asPrimitiveValidators(typeData.validator, unwrapCollections = true)
+    val primitiveValidators = schema.schemaType match {
+      case TSchemaType.SArray(_) => asPrimitiveValidators(schema.validator, unwrapCollections = false)
+      case _                     => asPrimitiveValidators(schema.validator, unwrapCollections = true)
     }
-    val wholeNumbers = typeData.schema.schemaType match {
+    val wholeNumbers = schema.schemaType match {
       case TSchemaType.SInteger => true
       case _                    => false
     }
 
     result
-      .map(addMetadata(_, typeData.schema))
+      .map(addMetadata(_, schema))
       .map(addConstraints(_, primitiveValidators, wholeNumbers))
   }
 

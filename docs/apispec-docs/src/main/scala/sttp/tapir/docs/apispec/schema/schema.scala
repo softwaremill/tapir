@@ -1,9 +1,9 @@
 package sttp.tapir.docs.apispec
 
-import sttp.tapir.{SchemaType => TSchemaType}
+import sttp.tapir.{SchemaType => TSchemaType, Schema => TSchema}
 
 package object schema {
-  private[docs] type ObjectTypeData = (TSchemaType.SObjectInfo, TypeData[_])
+  private[docs] type ObjectSchema = (TSchemaType.SObjectInfo, TSchema[_])
   private[docs] type ObjectKey = String
 
   private[docs] def calculateUniqueKeys[T](ts: Iterable[T], toName: T => String): Map[T, String] = {
