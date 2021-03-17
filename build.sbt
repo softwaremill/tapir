@@ -567,13 +567,10 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
   .settings(commonJvmSettings)
   .settings(
-    libraryDependencies ++= Seq(
-      "io.circe" %% "circe-generic-extras" % Versions.circe % Test
-    ),
     name := "tapir-openapi-docs"
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test, enumeratum % Test, openapiCirce % Test)
+  .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test)
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonJvmSettings)
