@@ -24,7 +24,7 @@ private[schema] class TSchemaToASchema(
               case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
                 fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
               case (fieldName, fieldSchema) =>
-                fieldName.encodedName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name)))
+                fieldName.encodedName -> apply(TypeData(fieldSchema, fieldSchema.validator))
             }.toListMap
           )
         )
