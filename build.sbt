@@ -107,6 +107,10 @@ lazy val allAggregates = core.projectRefs ++
 
 val testJVM = taskKey[Unit]("Test JVM projects")
 val testJS = taskKey[Unit]("Test JS projects")
+val testDocs = taskKey[Unit]("Test docs projects")
+val testServers = taskKey[Unit]("Test server projects")
+val testClients = taskKey[Unit]("Test client projects")
+val testOther = taskKey[Unit]("Test other projects")
 
 def filterProject(p: String => Boolean) =
   ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
@@ -134,7 +138,17 @@ lazy val rootProject = (project in file("."))
     publishArtifact := false,
     name := "tapir",
     testJVM := (test in Test).all(filterProject(p => !p.contains("JS"))).value,
-    testJS := (test in Test).all(filterProject(_.contains("JS"))).value
+    testJS := (test in Test).all(filterProject(_.contains("JS"))).value,
+    testDocs := (test in Test).all(filterProject(p => p.contains("Docs") || p.contains("openapi") || p.contains("asyncapi"))).value,
+    testServers := (test in Test).all(filterProject(p => p.contains("Server"))).value,
+    testClients := (test in Test).all(filterProject(p => p.contains("Client"))).value,
+    testOther := (test in Test)
+      .all(
+        filterProject(p =>
+          !p.contains("Server") && !p.contains("Client") && !p.contains("Docs") && !p.contains("openapi") && !p.contains("asyncapi")
+        )
+      )
+      .value
   )
   .aggregate(allAggregates: _*)
 
@@ -884,7 +898,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
       "io.circe" %% "circe-generic-extras" % Versions.circe,
-      "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum,
+      "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
