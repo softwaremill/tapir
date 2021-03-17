@@ -553,10 +553,13 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
   .settings(commonJvmSettings)
   .settings(
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-generic-extras" % Versions.circe % Test
+    ),
     name := "tapir-openapi-docs"
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test)
+  .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test, enumeratum % Test, openapiCirce % Test)
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonJvmSettings)
@@ -879,7 +882,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
-      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala
+      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
+      "io.circe" %% "circe-generic-extras" % Versions.circe,
+      "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum,
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
@@ -898,7 +903,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUiHttp4s,
     zioServer,
     sttpStubServer,
-    playJson
+    playJson,
+    enumeratum
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
