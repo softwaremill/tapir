@@ -893,9 +893,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
-      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala,
-      "io.circe" %% "circe-generic-extras" % Versions.circe,
-      "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum
+      "com.pauldijou" %% "jwt-circe" % Versions.jwtScala
     ),
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
@@ -914,8 +912,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUiHttp4s,
     zioServer,
     sttpStubServer,
-    playJson,
-    enumeratum
+    playJson
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
