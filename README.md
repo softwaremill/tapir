@@ -89,13 +89,13 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 
 Add the following dependency:
 
-```scala
+```sbt
 "com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.18"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
 
-```scala
+```sbt
 scalacOptions += "-Ypartial-unification"
 ```
 
@@ -113,7 +113,7 @@ Sidenote for scala 2.12.4 and higher: if you encounter an issue with compiling y
 a `StackOverflowException` related to [this](https://github.com/scala/bug/issues/10604) scala bug, 
 please increase your stack memory. Example:
 
-```
+```shell
 sbt -J-Xss4M clean compile
 ```
 
