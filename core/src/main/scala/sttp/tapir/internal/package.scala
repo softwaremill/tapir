@@ -192,9 +192,9 @@ package object internal {
       }.headOption
     }
 
-    def matchesContent(content: MediaType): Boolean = {
+    def hasBodyMatchingContent(content: MediaType): Boolean = {
       val contentWithCharset = content match {
-        case m @ MediaType(_, _, None) => m.charset(StandardCharsets.UTF_8.name()) // default UTF-8
+        case m @ MediaType(_, _, None) => m.charset(StandardCharsets.ISO_8859_1.name()) // default
         case m                         => m
       }
 

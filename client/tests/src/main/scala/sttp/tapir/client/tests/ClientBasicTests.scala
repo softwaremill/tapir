@@ -94,6 +94,9 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       Right((("1", "2"), "3", "4"))
     )
 
+    testClient(out_no_content_or_ok_empty_output.name("204"), 204, Right(()))
+    testClient(out_no_content_or_ok_empty_output.name("200"), 200, Right(()))
+
     testClient(
       MultipleMediaTypes.out_json_xml_text_common_schema.name("json content organization"),
       "application/json",
@@ -142,5 +145,4 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         .map(_ shouldBe Right("Location: secret"))
     }
   }
-
 }

@@ -315,6 +315,17 @@ package object tests {
       .out(stringBody)
       .name("Query with default")
 
+  val out_no_content_or_ok_empty_output: Endpoint[Int, Unit, Unit, Any] =
+    endpoint
+      .in("status")
+      .in(query[Int]("statusOut"))
+      .out(
+        sttp.tapir.oneOf(
+          statusMapping(StatusCode.NoContent, emptyOutput),
+          statusMapping(StatusCode.Ok, emptyOutput)
+        )
+      )
+
   //
 
   object MultipleMediaTypes {
