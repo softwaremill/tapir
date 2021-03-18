@@ -144,6 +144,8 @@ causes another problem: out of memory when running JS tests for multiple modules
 * test single JS projects
 * use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
 
+You can test only server/client/doc/other projects using `testServers`, `testClients`, `testDocs` and `testOther`.
+
 ## Commercial Support
 
 We offer commercial support for tapir and related technologies, as well as development services. [Contact us](https://softwaremill.com) to learn more about our offer!
