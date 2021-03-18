@@ -193,18 +193,19 @@ package object internal {
     }
 
     def hasBodyMatchingContent(content: MediaType): Boolean = {
-      val contentWithCharset = content match {
-        case m @ MediaType(_, _, None) => m.charset(StandardCharsets.ISO_8859_1.name()) // default
-        case m                         => m
+      val contentToMatch = content match {
+        // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
+        case m @ MediaType("text", _, None) => m.charset(StandardCharsets.ISO_8859_1.name())
+        case m                              => m
       }
 
       traverseOutputs {
         case EndpointIO.Body(bodyType, codec, _) =>
           val mediaType = charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
-          Vector(mediaType == contentWithCharset)
+          Vector(mediaType == contentToMatch)
         case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
           val mediaType = charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
-          Vector(mediaType == contentWithCharset)
+          Vector(mediaType == contentToMatch)
       }.find(_ == true).getOrElse(false)
     }
   }
