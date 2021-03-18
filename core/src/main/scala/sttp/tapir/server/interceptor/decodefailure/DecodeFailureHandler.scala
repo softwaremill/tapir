@@ -27,13 +27,13 @@ trait DecodeFailureHandler {
 case class DefaultDecodeFailureHandler(
     respond: DecodeFailureContext => Option[(StatusCode, List[Header])],
     failureMessage: DecodeFailureContext => String,
-    response: (StatusCode, List[Header], String) => Option[ValuedEndpointOutput[_]]
+    response: (StatusCode, List[Header], String) => ValuedEndpointOutput[_]
 ) extends DecodeFailureHandler {
   def apply(ctx: DecodeFailureContext): Option[ValuedEndpointOutput[_]] = {
     respond(ctx) match {
       case Some((sc, hs)) =>
         val failureMsg = failureMessage(ctx)
-        response(sc, hs, failureMsg)
+        Some(response(sc, hs, failureMsg))
       case None => None
     }
   }
@@ -61,8 +61,8 @@ object DefaultDecodeFailureHandler {
     failureResponse
   )
 
-  def failureResponse(c: StatusCode, hs: List[Header], m: String): Option[ValuedEndpointOutput[_]] =
-    Some(ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m)))
+  def failureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
+    ValuedEndpointOutput(statusCode.and(headers).and(stringBody), (c, hs, m))
 
   /** @param badRequestOnPathErrorIfPathShapeMatches Should a status 400 be returned if the shape of the path
     * of the request matches, but decoding some path segment fails with a [[DecodeResult.Error]].

@@ -99,7 +99,11 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
   }
 
   private[vertx] class CatsFFromVFuture[F[_]: Async] extends FromVFuture[F] {
-    def apply[T](f: => Future[T]): F[T] =
+    def apply[T](f: => Future[T]): F[T] = f.asF
+  }
+
+  implicit class VertxFutureToCatsF[A](f: => Future[A]) {
+    def asF[F[_]: Async]: F[A] = {
       Async[F].async { cb =>
         f.onComplete({ handler =>
           if (handler.succeeded()) {
@@ -110,5 +114,6 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
         })
         ()
       }
+    }
   }
 }

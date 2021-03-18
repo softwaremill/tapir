@@ -80,24 +80,24 @@ a different format (other than textual):
 ```scala mdoc:compile-only
 import sttp.tapir._
 import sttp.tapir.server._
-import sttp.tapir.server.akkahttp.{ AkkaHttpServerInterpreter, AkkaHttpServerOptions }
+import sttp.tapir.server.interceptor.ValuedEndpointOutput
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.model.StatusCode
+import sttp.model.{Header, StatusCode}
 import io.circe.generic.auto._
 
 implicit val ec = scala.concurrent.ExecutionContext.global
 case class MyFailure(msg: String)
-def myFailureResponse(response: DefaultDecodeFailureResponse, message: String): DecodeFailureHandling =
-  DecodeFailureHandling.response(ServerDefaults.failureOutput(jsonBody[MyFailure]))(
-   (response, MyFailure(message))
-  )
+def myFailureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
+  ValuedEndpointOutput(statusCode.and(headers).and(jsonBody[MyFailure]), (c, hs, MyFailure(m)))
   
-val myDecodeFailureHandler = ServerDefaults.decodeFailureHandler.copy(
+val myDecodeFailureHandler = DefaultDecodeFailureHandler.handler.copy(
   response = myFailureResponse
 )
 
-implicit val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
+implicit val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
   decodeFailureHandler = myDecodeFailureHandler
 )
 ```

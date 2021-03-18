@@ -105,9 +105,13 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
   }
 
   private[vertx] object FutureFromVFuture extends FromVFuture[Future] {
-    def apply[T](f: => VFuture[T]): Future[T] = {
-      val promise = Promise[T]()
-      f.onComplete { handler =>
+    def apply[T](f: => VFuture[T]): Future[T] = f.asScala
+  }
+
+  implicit class VertxFutureToScalaFuture[A](future: => VFuture[A]) {
+    def asScala: Future[A] = {
+      val promise = Promise[A]()
+      future.onComplete { handler =>
         if (handler.succeeded()) {
           promise.success(handler.result())
         } else {

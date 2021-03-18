@@ -1,8 +1,6 @@
 package sttp.tapir.server
 
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxFutureServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxZioServerInterpreter
+import sttp.tapir.server.vertx.interpreters.{VertxCatsServerInterpreter, VertxFutureServerInterpreter, VertxZioServerInterpreter}
 
 package object vertx {
 
