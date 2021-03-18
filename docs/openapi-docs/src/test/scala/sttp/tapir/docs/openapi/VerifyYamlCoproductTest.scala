@@ -8,6 +8,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.circe.yaml._
 import io.circe.Codec
+import VerifyYamlCoproductTest._
 
 class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   test("should match expected yaml for coproduct with enum field") {
@@ -29,16 +30,19 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   }
 }
 
-object Color extends Enumeration {
-  type Color = Value
+object VerifyYamlCoproductTest {
+  object Color extends Enumeration {
+    type Color = Value
 
-  val Blue = Value("blue")
-  val Red = Value("red")
+    val Blue = Value("blue")
+    val Red = Value("red")
 
-  implicit def schemaForEnum: Schema[Value] = Schema.string.validate(Validator.enum(values.toList, v => Option(v)))
+    implicit def schemaForEnum: Schema[Value] = Schema.string.validate(Validator.enum(values.toList, v => Option(v)))
+  }
+
+  sealed trait Shape {
+    def shapeType: String
+  }
+
+  case class Square(color: Color.Value, shapeType: String = "square") extends Shape
 }
-
-sealed trait Shape {
-  def shapeType: String
-}
-case class Square(color: Color.Value, shapeType: String = "square") extends Shape
