@@ -26,8 +26,6 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
     val operation = Some(endpointToOperation(defaultId, e, inputs))
     val pathItem = PathItem(
-      None,
-      None,
       get = if (method == GET) operation else None,
       put = if (method == PUT) operation else None,
       post = if (method == POST) operation else None,
@@ -35,9 +33,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       options = if (method == OPTIONS) operation else None,
       head = if (method == HEAD) operation else None,
       patch = if (method == PATCH) operation else None,
-      trace = if (method == TRACE) operation else None,
-      servers = List.empty,
-      parameters = List.empty
+      trace = if (method == TRACE) operation else None
     )
 
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), pathItem)
@@ -58,7 +54,6 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       responses,
       if (e.info.deprecated) Some(true) else None,
       operationSecurity(e),
-      List.empty
     )
   }
 

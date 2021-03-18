@@ -50,7 +50,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
     if (bodies.nonEmpty || headers.nonEmpty) {
       Some(Response(description, headers.toListMap, content))
     } else if (outputs.nonEmpty) {
-      Some(Response(description, ListMap.empty, ListMap.empty))
+      Some(Response(description))
     } else {
       None
     }

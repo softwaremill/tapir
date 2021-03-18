@@ -79,7 +79,6 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], contentNegoti
   }
 
   private def charset[R](bodyType: RawBodyType[R]): Option[Charset] = bodyType match {
-    // TODO: add to MediaType - setting optional charset if text
     case StringBody(charset) => Some(charset)
     case _                   => None
   }
