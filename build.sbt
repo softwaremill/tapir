@@ -342,12 +342,12 @@ lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
   .settings(
     name := "tapir-derevo",
     libraryDependencies ++= Seq(
-      "org.manatki" %% "derevo-core" % Versions.derevo,
+      "tf.tofu" %% "derevo-core" % Versions.derevo,
       scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core)
+  .dependsOn(core, newtype)
 
 lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype"))
   .settings(commonSettings)
