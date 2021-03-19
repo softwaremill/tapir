@@ -1,0 +1,37 @@
+openapi: 3.0.3
+info:
+  title: My Bookshop
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shape'
+components:
+  schemas:
+    Shape:
+      oneOf:
+        - $ref: '#/components/schemas/Square'
+      discriminator:
+        propertyName: shapeType
+        mapping:
+          Square: '#/components/schemas/Square'
+    Square:
+      required:
+        - color
+        - shapeType
+      type: object
+      properties:
+        color:
+          type: string
+          enum:
+            - blue
+            - red
+        shapeType:
+          type: string

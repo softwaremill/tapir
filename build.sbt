@@ -107,6 +107,10 @@ lazy val allAggregates = core.projectRefs ++
 
 val testJVM = taskKey[Unit]("Test JVM projects")
 val testJS = taskKey[Unit]("Test JS projects")
+val testDocs = taskKey[Unit]("Test docs projects")
+val testServers = taskKey[Unit]("Test server projects")
+val testClients = taskKey[Unit]("Test client projects")
+val testOther = taskKey[Unit]("Test other projects")
 
 def filterProject(p: String => Boolean) =
   ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
@@ -134,7 +138,17 @@ lazy val rootProject = (project in file("."))
     publishArtifact := false,
     name := "tapir",
     testJVM := (test in Test).all(filterProject(p => !p.contains("JS"))).value,
-    testJS := (test in Test).all(filterProject(_.contains("JS"))).value
+    testJS := (test in Test).all(filterProject(_.contains("JS"))).value,
+    testDocs := (test in Test).all(filterProject(p => p.contains("Docs") || p.contains("openapi") || p.contains("asyncapi"))).value,
+    testServers := (test in Test).all(filterProject(p => p.contains("Server"))).value,
+    testClients := (test in Test).all(filterProject(p => p.contains("Client"))).value,
+    testOther := (test in Test)
+      .all(
+        filterProject(p =>
+          !p.contains("Server") && !p.contains("Client") && !p.contains("Docs") && !p.contains("openapi") && !p.contains("asyncapi")
+        )
+      )
+      .value
   )
   .aggregate(allAggregates: _*)
 
@@ -328,12 +342,12 @@ lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
   .settings(
     name := "tapir-derevo",
     libraryDependencies ++= Seq(
-      "org.manatki" %% "derevo-core" % Versions.derevo,
+      "tf.tofu" %% "derevo-core" % Versions.derevo,
       scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core)
+  .dependsOn(core, newtype)
 
 lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype"))
   .settings(commonSettings)
@@ -674,7 +688,8 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams,
-      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared
+      "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared,
+      "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
