@@ -14,6 +14,7 @@ interpreted as:
   Currently supported:
   * [sttp](client/sttp.md).
   * [Play](client/play.md).
+  * [Http4s](client/http4s.md).
 * documentation. Currently supported:
   * [OpenAPI](docs/openapi.md).
   * [AsyncAPI](docs/asyncapi.md).
