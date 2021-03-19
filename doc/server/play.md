@@ -119,7 +119,7 @@ Find more details about how to bind a `Router` to your application in the [Play 
 
 ## Configuration
 
-The interpreter can be configured by providing an implicit `PlayServerOptions` value and status mappers, see
+The interpreter can be configured by providing an implicit `PlayServerOptions` value, see
 [server options](options.md) for details.
 
 ## Defining an endpoint together with the server logic

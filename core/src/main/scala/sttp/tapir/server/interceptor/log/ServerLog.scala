@@ -4,8 +4,8 @@ import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.{DecodeResult, Endpoint}
 
-/** Callbacks used by [[ServerLogInterceptor]] to log how a request was handled.
-  * @tparam T Interpreter-specific value representing the log action.
+/** Used by [[ServerLogInterceptor]] to log how a request was handled.
+  * @tparam T Interpreter-specific value representing the log effect.
   */
 trait ServerLog[T] {
 

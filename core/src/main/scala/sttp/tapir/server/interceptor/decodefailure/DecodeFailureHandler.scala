@@ -22,7 +22,7 @@ trait DecodeFailureHandler {
   *   headers), using `respond`
   * - in case a response is sent, creates the message using `failureMessage`
   * - in case a response is sent, creates the response using `response`, given the status code, headers, and
-  *   the created failure message
+  *   the created failure message. By default, the headers might include authentication challenge.
   */
 case class DefaultDecodeFailureHandler(
     respond: DecodeFailureContext => Option[(StatusCode, List[Header])],

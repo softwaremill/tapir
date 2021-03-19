@@ -89,7 +89,7 @@ for more details.
 
 ## Configuration
 
-The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see
+The interpreter can be configured by providing an implicit `Http4sServerOptions` value, see
 [server options](options.md) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.

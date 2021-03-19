@@ -4,7 +4,10 @@ import sttp.monad.MonadError
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointInput}
 
-/** @tparam B The interpreter-specific, low-level type of body. */
+/** Allows intercepting the handling of a request by an endpoint, when either the endpoint's inputs have been
+  * decoded successfully, or when decoding has failed.
+  * @tparam B The interpreter-specific, low-level type of body.
+  */
 trait EndpointInterceptor[F[_], B] {
 
   /** Called when the the given `request` has been successfully decoded into inputs `i`, as described by
