@@ -5,6 +5,8 @@ import akka.util.ByteString
 import play.api.http.HttpEntity
 import play.api.mvc.{ActionBuilder, AnyContent, Handler, RawBuffer, Request, RequestHeader, ResponseHeader, Result}
 import play.api.routing.Router.Routes
+import sttp.capabilities.WebSockets
+import sttp.capabilities.akka.AkkaStreams
 import sttp.monad.FutureMonad
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
 import sttp.tapir.server.ServerDefaults.StatusCodes
@@ -16,13 +18,13 @@ import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.reflect.ClassTag
 
 trait PlayServerInterpreter {
-  def toRoute[I, E, O](e: Endpoint[I, E, O, Any])(
+  def toRoute[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(
       logic: I => Future[Either[E, O]]
   )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
     toRoute(e.serverLogic(logic))
   }
 
-  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[O])(implicit
+  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(logic: I => Future[O])(implicit
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E],
       mat: Materializer,
@@ -31,7 +33,9 @@ trait PlayServerInterpreter {
     toRoute(e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+  def toRoute[I, E, O](
+      e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future]
+  )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
     implicit val ec: ExecutionContextExecutor = mat.executionContext
     implicit val monad: FutureMonad = new FutureMonad()
 
@@ -105,7 +109,7 @@ trait PlayServerInterpreter {
   }
 
   def toRoute[I, E, O](
-      serverEndpoints: List[ServerEndpoint[_, _, _, Any, Future]]
+      serverEndpoints: List[ServerEndpoint[_, _, _, AkkaStreams with WebSockets, Future]]
   )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
     serverEndpoints
       .map(toRoute(_))
