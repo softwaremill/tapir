@@ -11,7 +11,8 @@ import sttp.tapir.tests._
 
 class ServerRejectTests[F[_], ROUTE](
     createServerTest: CreateServerTest[F, Any, ROUTE],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE]
+    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
+    useMethodNotAllowedForUnsupportedMethod: Boolean = false
 )(implicit
     m: MonadError[F]
 ) {
@@ -40,7 +41,10 @@ class ServerRejectTests[F[_], ROUTE](
     testServer(endpoint.get.in("path"), "should return 404 for an unsupported method, when a single endpoint is interpreted")((_: Unit) =>
       pureResult(().asRight[Unit])
     ) { (backend, baseUri) =>
-      basicRequest.post(uri"$baseUri/path").send(backend).map(_.code shouldBe StatusCode.NotFound)
+      val statusCode =
+        if (useMethodNotAllowedForUnsupportedMethod) StatusCode.MethodNotAllowed
+        else StatusCode.NotFound
+      basicRequest.post(uri"$baseUri/path").send(backend).map(_.code shouldBe statusCode)
     }
   )
 }

@@ -30,11 +30,12 @@ class VertxRequestBody[F[_], S <: Streams[S]](
 
   override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = fromVFuture(bodyType match {
     case RawBodyType.StringBody(defaultCharset) =>
-      Future.succeededFuture(RawValue(Option(rc.getBodyAsString(defaultCharset.toString)).getOrElse("")))
+      val str = rc.getBodyAsString(defaultCharset.toString)
+      Future.succeededFuture(RawValue(Option(str).getOrElse("")))
     case RawBodyType.ByteArrayBody =>
       Future.succeededFuture(RawValue(Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)))
     case RawBodyType.ByteBufferBody =>
-      Future.succeededFuture(RawValue(Option(rc.getBody).fold(ByteBuffer.allocate(0))(_.getByteBuf.nioBuffer())))
+      Future.succeededFuture(RawValue(Option(rc.getBody).fold(ByteBuffer.allocate(0))(buffer => buffer.getByteBuf.nioBuffer())))
     case RawBodyType.InputStreamBody =>
       val bytes = Option(rc.getBody).fold(Array.emptyByteArray)(_.getBytes)
       Future.succeededFuture(RawValue(new ByteArrayInputStream(bytes)))

@@ -5,7 +5,7 @@ object Versions {
   val circeYaml = "0.14.1"
   val sttp = "3.3.18"
   val sttpModel = "1.4.22"
-  val sttpShared = "1.3.1"
+  val sttpShared = "1.3.2"
   val akkaHttp = "10.2.7"
   val akkaStreams = "2.6.18"
   val swaggerUi = "4.2.1"
@@ -22,6 +22,7 @@ object Versions {
   val enumeratum = "1.7.0"
   val zio = "1.0.13"
   val zioInteropCats = "3.2.9.0"
+  val zioInteropReactiveStreams = "1.3.9"
   val zioJson = "0.2.0-M3"
   val playClient = "2.1.7"
   val playServer = "2.8.13"
@@ -32,4 +33,6 @@ object Versions {
   val derevo = "0.13.0"
   val newtype = "0.4.4"
   val awsLambdaInterface = "2.1.0"
+  val armeria = "1.14.0"
+  val fs2 = "3.2.4"
 }

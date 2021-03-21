@@ -460,6 +460,7 @@ class ServerBasicTests[F[_], ROUTE](
         .post(uri"$baseUri/p2")
         .body("a" * 1000000)
         .send(backend)
+        // TODO(ikhoon): Fix Armeria to see Flags.maxRequestLength()?
         .map { r => r.body shouldBe "p2 1000000" }
     },
     testServer(

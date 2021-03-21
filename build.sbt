@@ -1,12 +1,11 @@
+import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.SbtSoftwareMillCommon.commonSmlBuildSettings
-import com.softwaremill.Publish.{ossPublishSettings, updateDocs}
 import com.softwaremill.UpdateVersionInDocs
 import com.typesafe.tools.mima.core.{Problem, ProblemFilters}
+import java.net.URL
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
-
-import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
 
@@ -777,6 +776,44 @@ lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-htt
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, serverTests % Test)
 
+// TODO(ikhoon): Add Armeria client module
+lazy val armeriaServer: ProjectMatrix = (projectMatrix in file("server/armeria-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-armeria-server",
+    libraryDependencies ++= Seq(
+      "com.linecorp.armeria" % "armeria" % Versions.armeria,
+      "com.softwaremill.sttp.shared" %% "armeria" % Versions.sttpShared
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(core, serverTests % Test)
+
+lazy val armeriaServerCats: ProjectMatrix =
+  (projectMatrix in file("server/armeria-server/cats"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := "tapir-armeria-server-cats",
+      libraryDependencies ++= Seq(
+        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared,
+        "co.fs2" %% "fs2-reactive-streams" % Versions.fs2
+      )
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(armeriaServer % "compile->compile;test->test", cats, serverTests % Test)
+
+lazy val armeriaServerZio: ProjectMatrix =
+  (projectMatrix in file("server/armeria-server/zio"))
+    .settings(commonJvmSettings)
+    .settings(
+      name := "tapir-armeria-server-zio",
+      libraryDependencies ++= Seq(
+        "dev.zio" %% "zio-interop-reactivestreams" % Versions.zioInteropReactiveStreams
+      )
+    )
+    .jvmPlatform(scalaVersions = scala2And3Versions)
+    .dependsOn(armeriaServer % "compile->compile;test->test", zio, serverTests % Test)
+
 lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -1174,6 +1211,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
     akkaHttpServer,
+    armeriaServer,
     http4sServer,
     http4sClient,
     sttpClient,
@@ -1227,6 +1265,9 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
   .dependsOn(
     core % "compile->test",
     akkaHttpServer,
+    armeriaServer,
+    armeriaServerCats,
+    armeriaServerZio,
     circeJson,
     enumeratum,
     finatraServer,
