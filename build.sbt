@@ -90,6 +90,7 @@ lazy val allAggregates = core.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
   sttpStubServer.projectRefs ++
+  sttpMockServer.projectRefs ++
   finatraServer.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
@@ -699,6 +700,20 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, serverTests % "test", sttpClient)
+
+lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "sttp-mock-server",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-parser" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, serverTests % "test", sttpClient, circeJson /*todo: remove*/ )
 
 lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-server"))
   .settings(commonJvmSettings)
