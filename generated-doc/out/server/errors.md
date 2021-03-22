@@ -80,11 +80,12 @@ a different format (other than textual):
 ```scala
 import sttp.tapir._
 import sttp.tapir.server._
-import sttp.tapir.server.akkahttp.{ AkkaHttpServerInterpreter, AkkaHttpServerOptions }
+import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.model.StatusCode
 import io.circe.generic.auto._
+import sttp.tapir.server.interceptor.decodefailure.{DefaultDecodeFailureResponse, ServerDefaults}
 
 implicit val ec = scala.concurrent.ExecutionContext.global
 case class MyFailure(msg: String)

@@ -13,7 +13,7 @@ import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
@@ -764,9 +764,12 @@ class ServerBasicTests[F[_], ROUTE](
   )
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
-    ServerDefaults.decodeFailureHandler.copy(
-      respond = ServerDefaults.FailureHandling
-        .respond(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
+    DefaultDecodeFailureHandler.handler.copy(
+      respond = DefaultDecodeFailureHandler.respond(
+        _,
+        badRequestOnPathErrorIfPathShapeMatches = true,
+        badRequestOnPathInvalidIfPathShapeMatches = true
+      )
     )
 
   def throwFruits(name: String): F[String] =

@@ -25,7 +25,8 @@ val countCharactersServerEndpoint: ServerEndpoint[String, Unit, Int, Any, Future
     Future.successful[Either[Unit, Int]](Right(s.length))
   }
 
-val countCharactersRoute: Route = AkkaHttpServerInterpreter.toRoute(countCharactersServerEndpoint)
+val countCharactersRoute: Route = 
+  AkkaHttpServerInterpreter.toRoute(countCharactersServerEndpoint)
 ```
 
 A `ServerEndpoint` can then be converted to a route using `.toRoute`/`.toRoutes` methods (without any additional

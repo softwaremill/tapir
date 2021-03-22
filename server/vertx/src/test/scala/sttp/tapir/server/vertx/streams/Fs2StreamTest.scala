@@ -1,7 +1,6 @@
 package sttp.tapir.server.vertx.streams
 
 import java.nio.ByteBuffer
-
 import cats.effect.{ContextShift, IO, Timer}
 import cats.effect.concurrent.Ref
 import cats.syntax.flatMap._
@@ -11,14 +10,15 @@ import _root_.fs2.Chunk
 import io.vertx.core.buffer.Buffer
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.server.vertx.VertxEffectfulEndpointOptions
+import sttp.tapir.server.vertx.VertxCatsEndpointOptions
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
 
 class Fs2StreamTest extends AnyFlatSpec with Matchers {
-
-  implicit val options = VertxEffectfulEndpointOptions(maxQueueSizeForReadStream = 4)
+  implicit val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
+  implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
+  implicit val options: VertxCatsEndpointOptions[IO] = VertxCatsEndpointOptions.default[IO].copy(maxQueueSizeForReadStream = 4)
 
   def intAsBuffer(int: Int): Chunk[Byte] = {
     val buffer = ByteBuffer.allocate(4)
@@ -45,10 +45,6 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
     ()
   }
 
-  implicit val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
-
-  implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
-
   def eventually[A](io: IO[A])(cond: PartialFunction[A, Unit]): IO[A] = {
     val frequency = 50.millis
     val timeout = 15.seconds
@@ -67,11 +63,12 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
     internal(0)
   }
 
-
-  "Fs2ReadStreamCompatiable" should "convert fs2 stream to read stream" in {
-    val stream = Stream.unfoldChunkEval(0)({ num =>
-      IO.delay(100.millis).as(((intAsBuffer(num), num + 1)).some)
-    }).interruptAfter(4.seconds)
+  "Fs2ReadStreamCompatible" should "convert fs2 stream to read stream" in {
+    val stream = Stream
+      .unfoldChunkEval(0)({ num =>
+        IO.delay(100.millis).as(((intAsBuffer(num), num + 1)).some)
+      })
+      .interruptAfter(4.seconds)
 
     (for {
       ref <- Ref.of[IO, List[Int]](Nil)
@@ -106,7 +103,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
       } else {
         timer.sleep(100.millis).as(((intAsBuffer(num), num + 1)).some)
       }
-    })//.interruptAfter(2.seconds)
+    }) //.interruptAfter(2.seconds)
     val readStream = fs2.fs2ReadStreamCompatible[IO].asReadStream(stream)
     (for {
       ref <- Ref.of[IO, List[Int]](Nil)
@@ -133,8 +130,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
       _ <- eventually(for {
         completed <- completedRef.get
         interrupted <- interruptedRef.get
-      } yield (completed, interrupted))({
-        case (false, Some(_)) =>
+      } yield (completed, interrupted))({ case (false, Some(_)) =>
       })
     } yield ()).unsafeRunSync()
   }
@@ -145,7 +141,8 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
     val readStream = new FakeStream()
     val stream = fs2.fs2ReadStreamCompatible[IO](opts, implicitly).fromReadStream(readStream)
     (for {
-      resultFiber <- stream.chunkN(4)
+      resultFiber <- stream
+        .chunkN(4)
         .map(chunkAsInt)
         .compile
         .toList
@@ -170,19 +167,22 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
     val readStream = new FakeStream()
     val stream = fs2.fs2ReadStreamCompatible[IO].fromReadStream(readStream)
     (for {
-      resultFiber <- stream.chunkN(4)
+      resultFiber <- stream
+        .chunkN(4)
         .map(chunkAsInt)
         .evalMap(i => IO.sleep(50.millis).as(i))
         .compile
         .toList
         .start
-      _ <- IO.delay({
-        (1 to count).foreach { i =>
-          Thread.sleep(25)
-          readStream.handle(intAsVertxBuffer(i))
-        }
-        readStream.end()
-      }).start
+      _ <- IO
+        .delay({
+          (1 to count).foreach { i =>
+            Thread.sleep(25)
+            readStream.handle(intAsVertxBuffer(i))
+          }
+          readStream.end()
+        })
+        .start
       result <- resultFiber.join
     } yield {
       shouldIncreaseMonotonously(result)
@@ -197,19 +197,22 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
     val readStream = new FakeStream()
     val stream = fs2.fs2ReadStreamCompatible[IO].fromReadStream(readStream)
     (for {
-      resultFiber <- stream.chunkN(4)
+      resultFiber <- stream
+        .chunkN(4)
         .map(chunkAsInt)
         .evalMap(i => IO.sleep(50.millis).as(i))
         .compile
         .toList
         .start
-      _ <- IO.delay({
-        (1 to count).foreach { i =>
-          Thread.sleep(25)
-          readStream.handle(intAsVertxBuffer(i))
-        }
-        readStream.fail(new Exception("!"))
-      }).start
+      _ <- IO
+        .delay({
+          (1 to count).foreach { i =>
+            Thread.sleep(25)
+            readStream.handle(intAsVertxBuffer(i))
+          }
+          readStream.fail(new Exception("!"))
+        })
+        .start
       result <- resultFiber.join.attempt
     } yield {
       result.isLeft shouldBe true
