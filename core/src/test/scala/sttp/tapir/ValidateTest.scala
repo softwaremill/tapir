@@ -2,6 +2,7 @@ package sttp.tapir
 
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.generic.Derived
 
 class ValidateTest extends AnyFlatSpec with Matchers {
   it should "validate product" in {
@@ -100,6 +101,13 @@ class ValidateTest extends AnyFlatSpec with Matchers {
     v.validate(Cat("tom1", List(Cat("tom2", List(Dog("", Nil)))))) should have length 1
   }
 
+  it should "use validators defined when modifying the schema" in {
+    import sttp.tapir.generic.auto._
+    val s: Schema[SimpleDog] = implicitly[Derived[Schema[SimpleDog]]].value.modify(_.name)(_.validate(Validator.minLength(3)))
+
+    s.validator.validate(SimpleDog("a")) should have length 1
+  }
+
   private def noPath[T](v: ValidationError[T]): ValidationError[T] =
     v match {
       case p: ValidationError.Primitive[T] => p.copy(path = Nil)
@@ -113,3 +121,5 @@ sealed trait Animal
 sealed trait Pet extends Animal {}
 case class Dog(name: String, friends: List[Pet]) extends Pet
 case class Cat(name: String, friends: List[Pet]) extends Pet
+
+case class SimpleDog(name: String)
