@@ -4,14 +4,14 @@ import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
-import sttp.tapir.server.vertx.decoders.VertxInputDecoders.decodeBodyAndInputsThen
-import sttp.tapir.server.vertx.handlers.tryEncodeError
+import sttp.tapir.Endpoint
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.vertx.VertxZioEndpointOptions
+import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
+import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.zio._
-import sttp.tapir.server.vertx.VertxEffectfulEndpointOptions
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.internal.Params
-import sttp.tapir.Endpoint
 import zio._
 
 import scala.reflect.ClassTag
@@ -19,86 +19,77 @@ import scala.reflect.ClassTag
 trait VertxZioServerInterpreter extends CommonServerInterpreter {
 
   def route[R, I, E, O](e: Endpoint[I, E, O, ZioStreams])(logic: I => ZIO[R, E, O])(implicit
-      endpointOptions: VertxEffectfulEndpointOptions,
+      endpointOptions: VertxZioEndpointOptions[RIO[R, *]],
       runtime: Runtime[R]
   ): Router => Route =
     route(ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]](e, _ => logic(_).either))
 
   def route[R, I, E, O](e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]])(implicit
-      endpointOptions: VertxEffectfulEndpointOptions,
+      endpointOptions: VertxZioEndpointOptions[RIO[R, *]],
       runtime: Runtime[R]
   ): Router => Route = { router =>
-    implicit val ect: Option[ClassTag[E]] = None
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
-      .handler(endpointHandler(e)(e.logic, responseHandlerWithError(e)))
+      .handler(endpointHandler(e))
   }
 
   def routeRecoverErrors[R, I, E, O](e: Endpoint[I, E, O, ZioStreams])(
       logic: I => RIO[R, O]
   )(implicit
-      endpointOptions: VertxEffectfulEndpointOptions,
+      endpointOptions: VertxZioEndpointOptions[RIO[R, *]],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E],
       runtime: Runtime[R]
   ): Router => Route =
     route(e.serverLogicRecoverErrors(logic))
 
-  private def endpointHandler[R, I, E, O, A](e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]])(
-      logic: MonadError[RIO[R, *]] => I => RIO[R, A],
-      responseHandler: (A, RoutingContext) => Unit
-  )(implicit
-      serverOptions: VertxEffectfulEndpointOptions,
-      runtime: Runtime[R],
-      ect: Option[ClassTag[E]]
-  ): Handler[RoutingContext] = { rc =>
-    decodeBodyAndInputsThen(
-      e.endpoint,
-      rc,
-      logicHandler(e)(logic(monadError.asInstanceOf[MonadError[RIO[R, *]]]), responseHandler, rc)
-    )
-  }
-
-  private def logicHandler[R, I, E, O, T](
+  private def endpointHandler[R, I, E, O, A](
       e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
-  )(logic: I => RIO[R, T], responseHandler: (T, RoutingContext) => Unit, rc: RoutingContext)(implicit
-      serverOptions: VertxEffectfulEndpointOptions,
-      runtime: Runtime[R],
-      ect: Option[ClassTag[E]]
-  ): Params => Unit = { params =>
-    val canceler = runtime.unsafeRunAsyncCancelable(logic(params.asAny.asInstanceOf[I])) {
-      case Exit.Success(result) =>
-        responseHandler(result, rc)
-      case Exit.Failure(cause) =>
-        serverOptions.logRequestHandling.logicException(e.endpoint, cause.squash)(serverOptions.logger)
-        tryEncodeError(e.endpoint, rc, cause.squash)
-    }
+  )(implicit runtime: Runtime[R], serverOptions: VertxZioEndpointOptions[RIO[R, *]]): Handler[RoutingContext] = { rc =>
+    val fromVFuture = new RioFromVFuture[R]
+    val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Unit, ZioStreams](
+      new VertxServerRequest(rc),
+      new VertxRequestBody[RIO[R, *], ZioStreams](rc, serverOptions, fromVFuture),
+      new VertxToResponseBody(serverOptions),
+      serverOptions.interceptors
+    )
 
+    val result = interpreter(e)
+      .flatMap {
+        case None           => fromVFuture(rc.response.setStatusCode(404).end())
+        case Some(response) => Task.succeed(VertxOutputEncoders(response).apply(rc))
+      }
+      .catchAll { e =>
+        RIO.effect(rc.fail(e))
+      }
+
+    val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
     rc.response.exceptionHandler { _ =>
       canceler(Fiber.Id.None)
       ()
     }
-
     ()
   }
 
-  private[vertx] val monadError = new MonadError[Task] {
-    override def unit[T](t: T): Task[T] = Task.succeed(t)
-    override def map[T, T2](fa: Task[T])(f: T => T2): Task[T2] = fa.map(f)
-    override def flatMap[T, T2](fa: Task[T])(f: T => Task[T2]): Task[T2] = fa.flatMap(f)
-    override def error[T](t: Throwable): Task[T] = Task.fail(t)
-    override protected def handleWrappedError[T](rt: Task[T])(h: PartialFunction[Throwable, Task[T]]): Task[T] =
-      rt.catchSome(h)
-    override def eval[T](t: => T): Task[T] = Task.effect(t)
-    override def suspend[T](t: => Task[T]): Task[T] = Task.effectSuspend(t)
-    override def flatten[T](ffa: Task[Task[T]]): Task[T] = ffa.flatten
-    override def ensure[T](f: Task[T], e: => Task[Unit]): Task[T] = f.ensuring(e.catchAll(_ => Task.unit))
+  private[vertx] implicit def monadError[R]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
+    override def unit[T](t: T): RIO[R, T] = Task.succeed(t)
+    override def map[T, T2](fa: RIO[R, T])(f: T => T2): RIO[R, T2] = fa.map(f)
+    override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
+    override def error[T](t: Throwable): RIO[R, T] = Task.fail(t)
+    override protected def handleWrappedError[T](rt: RIO[R, T])(h: PartialFunction[Throwable, RIO[R, T]]): RIO[R, T] = rt.catchSome(h)
+    override def eval[T](t: => T): RIO[R, T] = Task.effect(t)
+    override def suspend[T](t: => RIO[R, T]): RIO[R, T] = RIO.effectSuspend(t)
+    override def flatten[T](ffa: RIO[R, RIO[R, T]]): RIO[R, T] = ffa.flatten
+    override def ensure[T](f: RIO[R, T], e: => RIO[R, Unit]): RIO[R, T] = f.ensuring(e.catchAll(_ => Task.unit))
   }
 
-  implicit class VertxFutureForZio[A](future: => Future[A]) {
+  private[vertx] class RioFromVFuture[R] extends FromVFuture[RIO[R, *]] {
+    def apply[T](f: => Future[T]): RIO[R, T] = f.asRIO
+  }
 
-    def asTask: Task[A] =
-      Task.effectAsync { cb =>
-        future.onComplete { handler =>
+  implicit class VertxFutureToRIO[A](f: => Future[A]) {
+    def asRIO[R]: RIO[R, A] = {
+      RIO.effectAsync { cb =>
+        f.onComplete { handler =>
           if (handler.succeeded()) {
             cb(Task.succeed(handler.result()))
           } else {
@@ -106,5 +97,6 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
           }
         }
       }
+    }
   }
 }

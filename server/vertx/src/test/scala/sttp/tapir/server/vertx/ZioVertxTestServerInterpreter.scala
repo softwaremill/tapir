@@ -8,8 +8,9 @@ import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.Endpoint
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Port
 import zio.{Runtime, Task}
 import zio.interop.catz._
@@ -20,15 +21,16 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
   import VertxZioServerInterpreter._
   import ZioVertxTestServerInterpreter._
 
-  implicit val options = VertxEffectfulEndpointOptions()
-    .logWhenHandled(true)
-    .logAllDecodeFailures(true)
+  private val taskFromVFuture = new RioFromVFuture[Any]
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler]
-  ): Router => Route =
-    VertxZioServerInterpreter.route(e)(options.copy(decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)), runtime)
+  ): Router => Route = {
+    implicit val options: VertxZioEndpointOptions[Task] =
+      VertxZioEndpointOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+    VertxZioServerInterpreter.route(e)
+  }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Task[O])(implicit
       eClassTag: ClassTag[E]
@@ -38,15 +40,14 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
-    val listenIO = server.listen(0).asTask
+    val listenIO = taskFromVFuture(server.listen(0))
     routes.toList.foreach(_.apply(router))
-    Resource.make(listenIO)(s => s.close.asTask.unit).map(_.actualPort()).mapK(zioToIo)
+    Resource.make(listenIO)(s => taskFromVFuture(s.close).unit).map(_.actualPort()).mapK(zioToIo)
   }
 }
 
 object ZioVertxTestServerInterpreter {
-
-  implicit val runtime = Runtime.default
+  implicit val runtime: Runtime[zio.ZEnv] = Runtime.default
 
   val zioToIo: FunctionK[Task, IO] = new FunctionK[Task, IO] {
     override def apply[A](fa: Task[A]): IO[A] =

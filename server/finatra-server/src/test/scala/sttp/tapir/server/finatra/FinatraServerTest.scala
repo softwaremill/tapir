@@ -8,7 +8,6 @@ import sttp.tapir.tests.{Test, TestSuite}
 class FinatraServerTest extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
-    implicit val m = FutureMonadError
     val interpreter = new FinatraTestServerInterpreter()
     val createServerTest = new CreateServerTest(interpreter)
 
