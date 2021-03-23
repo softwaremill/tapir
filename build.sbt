@@ -52,7 +52,7 @@ val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3"
 )
 
 lazy val allAggregates = core.projectRefs ++
