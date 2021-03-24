@@ -52,7 +52,7 @@ val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.2"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3"
 )
 
 lazy val allAggregates = core.projectRefs ++
@@ -107,6 +107,10 @@ lazy val allAggregates = core.projectRefs ++
 
 val testJVM = taskKey[Unit]("Test JVM projects")
 val testJS = taskKey[Unit]("Test JS projects")
+val testDocs = taskKey[Unit]("Test docs projects")
+val testServers = taskKey[Unit]("Test server projects")
+val testClients = taskKey[Unit]("Test client projects")
+val testOther = taskKey[Unit]("Test other projects")
 
 def filterProject(p: String => Boolean) =
   ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
@@ -134,7 +138,17 @@ lazy val rootProject = (project in file("."))
     publishArtifact := false,
     name := "tapir",
     testJVM := (test in Test).all(filterProject(p => !p.contains("JS"))).value,
-    testJS := (test in Test).all(filterProject(_.contains("JS"))).value
+    testJS := (test in Test).all(filterProject(_.contains("JS"))).value,
+    testDocs := (test in Test).all(filterProject(p => p.contains("Docs") || p.contains("openapi") || p.contains("asyncapi"))).value,
+    testServers := (test in Test).all(filterProject(p => p.contains("Server"))).value,
+    testClients := (test in Test).all(filterProject(p => p.contains("Client"))).value,
+    testOther := (test in Test)
+      .all(
+        filterProject(p =>
+          !p.contains("Server") && !p.contains("Client") && !p.contains("Docs") && !p.contains("openapi") && !p.contains("asyncapi")
+        )
+      )
+      .value
   )
   .aggregate(allAggregates: _*)
 
@@ -227,7 +241,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-generic" % Versions.circe,
       "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum,
-      "com.softwaremill.common" %%% "tagging" % "2.2.1",
+      "com.softwaremill.common" %%% "tagging" % "2.3.0",
       scalaTest.value,
       "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
@@ -328,12 +342,12 @@ lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
   .settings(
     name := "tapir-derevo",
     libraryDependencies ++= Seq(
-      "org.manatki" %% "derevo-core" % Versions.derevo,
+      "tf.tofu" %% "derevo-core" % Versions.derevo,
       scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core)
+  .dependsOn(core, newtype)
 
 lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype"))
   .settings(commonSettings)

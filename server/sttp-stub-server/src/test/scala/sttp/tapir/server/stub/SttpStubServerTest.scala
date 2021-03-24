@@ -4,7 +4,7 @@ import io.circe.generic.auto._
 import sttp.client3._
 import sttp.client3.monad._
 import sttp.client3.testing.SttpBackendStub
-import sttp.model.StatusCode
+import sttp.model.{Header, MediaType, StatusCode}
 import sttp.tapir._
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
@@ -51,23 +51,8 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
     val response: Identity[Response[Either[ResponseWrapper, Unit]]] =
       SttpClientInterpreter.toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(11).send(backend)
 
-    response shouldBe Response(Left(ResponseWrapper(1.0)), StatusCode.BadRequest)
+    response shouldBe Response(Left(ResponseWrapper(1.0)), StatusCode.BadRequest, "", List(Header.contentType(MediaType.ApplicationJson)))
   }
-
-  /*
-  Mismatch between input value: (id1,11), and inputs:
-
-  Vector(
-    Tuple(
-      Vector(
-        Tuple(Vector(FixedPath(api, x, Info(None, List(), false)), PathCapture(Some(id), x, Info(None, List(), false))), x),
-        Query(amount, x, Info(None, List(), false))
-      ),
-      x
-    ),
-    FixedMethod(POST, x, Info(None, List(), false))
-  )
-   */
 
   it should "combine tapir endpoint with sttp stub - multiple inputs" in {
     // given

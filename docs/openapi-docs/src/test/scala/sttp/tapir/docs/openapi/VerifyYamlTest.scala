@@ -953,6 +953,40 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should include max items in modified string collection schema") {
+    val expectedYaml = load("expected_valid_modified_array_strings.yml")
+
+    implicit val customObjectWithStringsSchema: Schema[ObjectWithStrings] = implicitly[Derived[Schema[ObjectWithStrings]]].value
+      .modify(_.data)(_.validate(Validator.maxSize[String, List](1)))
+
+    val actualYaml = OpenAPIDocsInterpreter
+      .toOpenAPI(
+        endpoint.out(jsonBody[ObjectWithStrings]),
+        Info("Entities", "1.0")
+      )
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should include max items in modified object collection schema") {
+    val expectedYaml = load("expected_valid_modified_array_objects.yml")
+
+    implicit val customObjectWithStringsSchema: Schema[ObjectWithList] = implicitly[Derived[Schema[ObjectWithList]]].value
+      .modify(_.data)(_.validate(Validator.maxSize[FruitAmount, List](1)))
+
+    val actualYaml = OpenAPIDocsInterpreter
+      .toOpenAPI(
+        endpoint.out(jsonBody[ObjectWithList]),
+        Info("Entities", "1.0")
+      )
+      .toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should match the expected yaml using double quoted style") {
     val ep = endpoint.get.description("first line:\nsecond line")
 
@@ -990,6 +1024,7 @@ sealed trait GenericEntity[T]
 case class GenericPerson[T](data: T) extends GenericEntity[T]
 
 case class ObjectWithList(data: List[FruitAmount])
+case class ObjectWithStrings(data: List[String])
 
 sealed trait Clause
 case class Expression(v: String) extends Clause

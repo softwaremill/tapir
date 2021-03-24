@@ -79,8 +79,14 @@ specifies how to serialize a case class to plain text, and a different `Codec[St
 how to serialize a case class to json. Both can be implicitly available without implicit resolution conflicts.
 
 Different codec formats can be used in different contexts. When defining a path, query or header parameter, only a codec 
-with the `TextPlain` media type can be used. However, for bodies, any media types is allowed. For example, the 
+with the `TextPlain` media type can be used. However, for bodies, any media type is allowed. For example, the 
 input/output described by `jsonBody[T]` requires a json codec.
+
+### Codec formats and server interpreters
+
+Codec formats define the *default* media type, which will be set as the `Content-Type` header. However, any user-provided
+value will overwrite this default. This will happen, for example, if the endpoint contains an explicit content type
+header: `.out(header(HeaderNames.ContentType))`. This way, dynamic content types can be implemented.
 
 ## Next
 

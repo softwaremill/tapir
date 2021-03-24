@@ -9,8 +9,9 @@ import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.tapir.Endpoint
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
@@ -24,14 +25,14 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestS
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =
-      PlayServerOptions.default.copy(decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler))
-    PlayServerInterpreter.toRoute(e)
+      PlayServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+    PlayServerInterpreter.toRoutes(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Routes = {
-    PlayServerInterpreter.toRouteRecoverErrors(e)(fn)
+    PlayServerInterpreter.toRoutesRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {

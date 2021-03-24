@@ -26,7 +26,7 @@ object PathMapping {
     * @param endpoint a Tapir endpoint
     * @return the route definition matching the endpoint input definition
     */
-  private[vertx] def extractRouteDefinition(endpoint: Endpoint[_, _, _, _]): (Option[HttpMethod], String) =
+  private[vertx] def extractRouteDefinition(endpoint: Endpoint[_, _, _, _]): RouteDefinition =
     (MethodMapping.sttpToVertx(endpoint.httpMethod), extractVertxPath(endpoint))
 
   private def extractVertxPath(endpoint: Endpoint[_, _, _, _]): String = {
