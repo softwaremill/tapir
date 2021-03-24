@@ -5,13 +5,12 @@ import sttp.model.headers.Accepts
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
-import sttp.tapir.model.ServerRequest
 import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
 
-class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], request: ServerRequest) {
+class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], requestHeaders: Seq[Header]) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
     output match {
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
@@ -64,19 +63,18 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], request: Serv
       case EndpointOutput.OneOf(mappings, _) =>
         val enc = encoded[Any]
 
-        val mappingsWithCodec = mappings
+        val mappingsWithCodec: Map[MediaType, StatusMapping[_]] = mappings
           .filter(_.appliesTo(enc))
           .collect({
             case sm @ StatusMapping(_, EndpointIO.Body(bodyType, codec, _), _) =>
-              charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm
+              (charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType), sm)
             case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)), _) =>
-              charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm
-            case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _) => codec.format.mediaType -> sm
-          })
-          .toMap
+              (charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType), sm)
+            case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _) => (codec.format.mediaType, sm)
+          }).toMap
 
-        val ranges = Accepts.unsafeParse(request.headers)
-        val mediaTypes = mappingsWithCodec.keys.toSeq.asInstanceOf[scala.collection.immutable.Seq[MediaType]]
+        val ranges = Accepts.unsafeParse(requestHeaders)
+        val mediaTypes = mappingsWithCodec.keys.asInstanceOf[scala.collection.immutable.Seq[MediaType]]
         val bestMatch = MediaType.bestMatch(mediaTypes, ranges)
 
         bestMatch

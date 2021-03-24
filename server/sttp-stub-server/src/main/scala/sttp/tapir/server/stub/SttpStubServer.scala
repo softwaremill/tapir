@@ -1,24 +1,16 @@
 package sttp.tapir.server.stub
 
-import sttp.client3.{Identity, Request, Response}
-
-import java.nio.charset.Charset
 import sttp.client3.testing._
+import sttp.client3.{Identity, Request, Response}
 import sttp.model.{HasHeaders, Headers, StatusCode}
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
-import sttp.tapir.server.interpreter.{
-  DecodeBasicInputs,
-  DecodeBasicInputsResult,
-  EncodeOutputs,
-  InputValue,
-  InputValueResult,
-  OutputValues,
-  ToResponseBody
-}
+import sttp.tapir.server.interpreter._
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
+import scala.collection.immutable.Seq
 
 trait SttpStubServer {
 
@@ -120,7 +112,7 @@ trait SttpStubServer {
         }
 
         val outputValues: OutputValues[Any] =
-          new EncodeOutputs[Any, Nothing](toResponseBody).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
+          new EncodeOutputs[Any, Nothing](toResponseBody, Seq()).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
 
         whenRequest.thenRespond(
           sttp.client3.Response(
