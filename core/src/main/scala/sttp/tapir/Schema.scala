@@ -85,6 +85,34 @@ case class Schema[T](
 
   def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
 
+  def showValidators: Option[String] = {
+    if (hasValidation) {
+      val thisValidator = validator.show
+      val childValidators = schemaType match {
+        case SOption(element) => element.showValidators.map(esv => s"elements($esv)")
+        case SArray(element)  => element.showValidators.map(esv => s"elements($esv)")
+        case SProduct(_, fields) =>
+          fields.map(f => f.schema.showValidators.map(fvs => s"${f.name.name}->($fvs)")).collect { case Some(s) => s } match {
+            case Nil => None
+            case l   => Some(l.mkString(","))
+          }
+        case SOpenProduct(_, valueSchema) => valueSchema.showValidators.map(esv => s"elements($esv)")
+        case SCoproduct(_, schemas, _) =>
+          schemas.subtypes.map { case (n, v) => v.showValidators.map(svs => s"$n->($svs)") }.toList match {
+            case Nil => None
+            case l   => Some(l.mkString(","))
+          }
+        case SRef(_) => Some("recursive")
+        case _       => None
+      }
+
+      (thisValidator.toList ++ childValidators.toList) match {
+        case Nil => None
+        case l   => Some(l.mkString(","))
+      }
+    } else None
+  }
+
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
   def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.modifyMacro[T, U]

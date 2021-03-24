@@ -123,8 +123,8 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
   it should "show recursive validators" in {
     import sttp.tapir.generic.auto._
     implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
-    val v: Validator[RecursiveName] = implicitly[Schema[RecursiveName]].validator
-    v.show shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
+    val s: Schema[RecursiveName] = implicitly[Schema[RecursiveName]]
+    s.showValidators shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
   }
 
   // #946: derivation of validator twice in the same derivation

@@ -209,11 +209,9 @@ package object internal {
       }
   }
 
-  def addValidatorShow(s: String, schema: Schema[_]): String = {
-    schema.validator.show match { // TODO
-      case None     => s
-      case Some(sv) => s"$s($sv)"
-    }
+  def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {
+    case None     => s
+    case Some(sv) => s"$s($sv)"
   }
 
   def showMultiple(et: Vector[EndpointTransput[_]]): String = {
