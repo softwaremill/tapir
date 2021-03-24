@@ -4,7 +4,6 @@ import java.time.ZoneOffset.UTC
 import java.time.{Instant, LocalDateTime, ZonedDateTime}
 import io.circe.Json
 import io.circe.generic.auto._
-import io.circe.yaml.Printer.StringStyle
 import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.{Endpoint, endpoint}
