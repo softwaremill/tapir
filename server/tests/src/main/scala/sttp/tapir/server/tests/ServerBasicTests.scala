@@ -15,7 +15,13 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.tests.MultipleMediaTypes.{organizationHtmlIso, organizationHtmlUtf8, organizationJson, organizationXml, out_json_xml_text_common_schema}
+import sttp.tapir.tests.MultipleMediaTypes.{
+  organizationHtmlIso,
+  organizationHtmlUtf8,
+  organizationJson,
+  organizationXml,
+  out_json_xml_text_common_schema
+}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
@@ -598,6 +604,7 @@ class ServerBasicTests[F[_], ROUTE](
     //
     testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
       def ok(body: String) = (StatusCode.Ok, body.asRight[String])
+      def notAcceptable() = (StatusCode.NotAcceptable, "".asLeft[String])
 
       val cases: Map[(String, String), (StatusCode, Either[String, String])] = Map(
         ("application/json", "*") -> ok(organizationJson),
@@ -617,8 +624,8 @@ class ServerBasicTests[F[_], ROUTE](
         ("text/html", "iso-8859-1, utf-8") -> ok(organizationHtmlIso),
         ("*/*", "iso-8859-1") -> ok(organizationHtmlIso),
         ("*/*", "*;q=0.5, iso-8859-1") -> ok(organizationHtmlIso),
-        ("text/html", "iso-8859-5") -> (StatusCode.NotAcceptable, Left("")),
-        ("text/csv", "*") -> (StatusCode.NotAcceptable, Left(""))
+        ("text/html", "iso-8859-5") -> notAcceptable(),
+        ("text/csv", "*") -> notAcceptable()
       )
 
       cases.foldLeft(IO(scalatest.Assertions.succeed))((prev, next) => {

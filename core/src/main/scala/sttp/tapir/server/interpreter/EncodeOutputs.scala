@@ -1,15 +1,17 @@
 package sttp.tapir.server.interpreter
 
 import sttp.model._
+import sttp.model.headers.Accepts
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
 
-class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], contentNegotiator: ContentNegotiator) {
+class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], request: ServerRequest) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
     output match {
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
@@ -62,16 +64,23 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], contentNegoti
       case EndpointOutput.OneOf(mappings, _) =>
         val enc = encoded[Any]
 
-        val mappingsWithCodec = mappings.filter(_.appliesTo(enc)) collect {
-          case sm @ StatusMapping(_, EndpointIO.Body(bodyType, codec, _), _) =>
-            sm -> charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
-          case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)), _) =>
-            sm -> charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
-          case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _) => sm -> codec.format.mediaType
-        }
+        val mappingsWithCodec = mappings
+          .filter(_.appliesTo(enc))
+          .collect({
+            case sm @ StatusMapping(_, EndpointIO.Body(bodyType, codec, _), _) =>
+              charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm
+            case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)), _) =>
+              charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm
+            case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _) => codec.format.mediaType -> sm
+          })
+          .toMap
 
-        contentNegotiator
-          .pickBest(mappingsWithCodec)
+        val ranges = Accepts.unsafeParse(request.headers)
+        val mediaTypes = mappingsWithCodec.keys.toSeq.asInstanceOf[scala.collection.immutable.Seq[MediaType]]
+        val bestMatch = MediaType.bestMatch(mediaTypes, ranges)
+
+        bestMatch
+          .flatMap(mappingsWithCodec.get)
           .map(mapping => apply(mapping.output, ParamsAsAny(enc), mapping.statusCode.map(ov.withStatusCode).getOrElse(ov)))
           .getOrElse(ov.withStatusCode(StatusCode.NotAcceptable))
       case EndpointOutput.MappedPair(wrapped, _) => apply(wrapped, ParamsAsAny(encoded[Any]), ov)

@@ -113,7 +113,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
 
   private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
     val outputValues =
-      new EncodeOutputs(toResponseBody, new ContentNegotiator(request.headers)).apply(output, ParamsAsAny(v), OutputValues.empty)
+      new EncodeOutputs(toResponseBody, request).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
     val headers = outputValues.headers

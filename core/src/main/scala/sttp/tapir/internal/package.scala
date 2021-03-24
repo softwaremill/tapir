@@ -195,7 +195,7 @@ package object internal {
     def hasBodyMatchingContent(content: MediaType): Boolean = {
       val contentToMatch = content match {
         // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
-        case m @ MediaType("text", _, None) => m.charset(StandardCharsets.ISO_8859_1.name())
+        case m @ MediaType("text", _, None, _) => m.charset(StandardCharsets.ISO_8859_1.name())
         case m                              => m
       }
 
