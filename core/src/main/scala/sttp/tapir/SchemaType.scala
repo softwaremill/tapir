@@ -1,7 +1,5 @@
 package sttp.tapir
 
-import sttp.tapir.generic.SealedTrait
-
 /** The type of the low-level representation of a `T` values. Part of [[Schema]]s. */
 sealed trait SchemaType[T] {
   def show: String
@@ -91,8 +89,10 @@ object SchemaType {
     override def contramap[TT](g: TT => T): SchemaType[TT] = SOpenProduct[TT, V](info, valueSchema)(g.andThen(fieldValues))
   }
 
-  case class SCoproduct[T](info: SObjectInfo, schemas: SealedTrait[Schema, T], discriminator: Option[Discriminator]) extends SObject[T] {
-    override def show: String = "oneOf:" + schemas.subtypes.values.mkString(",")
+  case class SCoproduct[T](info: SObjectInfo, subtypes: Map[SObjectInfo, Schema[_]], discriminator: Option[Discriminator])(
+      val subtypeInfo: T => SObjectInfo
+  ) extends SObject[T] {
+    override def show: String = "oneOf:" + subtypes.values.mkString(",")
 
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
@@ -101,31 +101,25 @@ object SchemaType {
     ): SCoproduct[T] = {
       SCoproduct(
         info,
-        new SealedTrait[Schema, T] {
-          override def dispatch(t: T): String = schemas.dispatch(t)
-          override val subtypes: Map[String, Schema[T]] = schemas.subtypes.mapValues {
-            case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _) =>
-              s.copy(schemaType = st.copy(fields = st.fields :+ new ProductField[T] {
-                override type FieldType = D
-                override val name: FieldName = discriminatorName
-                override def get(t: T): Option[D] = None
-                override def schema: Schema[D] = discriminatorSchema
-              }))
-            case s => s
-          }.toMap
-        },
+        subtypes.mapValues {
+          case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _) =>
+            s.copy(schemaType = st.copy(fields = st.fields :+ new ProductField[T] {
+              override type FieldType = D
+              override val name: FieldName = discriminatorName
+              override def get(t: T): Option[D] = None
+              override def schema: Schema[D] = discriminatorSchema
+            }))
+          case s => s
+        }.toMap,
         Some(Discriminator(discriminatorName.encodedName, discriminatorMappingOverride))
-      )
+      )(subtypeInfo)
     }
 
     override def contramap[TT](g: TT => T): SchemaType[TT] = SCoproduct(
       info,
-      new SealedTrait[Schema, TT] {
-        override def dispatch(t: TT): String = schemas.dispatch(g(t))
-        override def subtypes: Map[String, Schema[TT]] = schemas.subtypes.asInstanceOf[Map[String, Schema[TT]]]
-      },
+      subtypes,
       discriminator
-    )
+    )(g.andThen(subtypeInfo))
   }
 
   case class SRef[T](info: SObjectInfo) extends SchemaType[T] {

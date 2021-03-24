@@ -257,8 +257,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   it should "find schema for recursive coproduct type" in {
     val schemaType = removeValidators(implicitly[Schema[Node]]).schemaType
     schemaType shouldBe a[SCoproduct[Node]]
-    schemaType.asInstanceOf[SCoproduct[Node]].schemas.subtypes shouldBe Map(
-      "sttp.tapir.generic.Edge" -> Schema(
+    schemaType.asInstanceOf[SCoproduct[Node]].subtypes shouldBe Map(
+      SObjectInfo("sttp.tapir.generic.Edge") -> Schema(
         SProduct[Edge](
           SObjectInfo("sttp.tapir.generic.Edge"),
           List(
@@ -267,7 +267,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           )
         )
       ),
-      "sttp.tapir.generic.SimpleNode" -> Schema(
+      SObjectInfo("sttp.tapir.generic.SimpleNode") -> Schema(
         SProduct[SimpleNode](
           SObjectInfo("sttp.tapir.generic.SimpleNode"),
           List(field(FieldName("id"), longSchema))
@@ -353,14 +353,14 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schemaType = implicitly[Schema[Entity]].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 
-    schemaType.asInstanceOf[SCoproduct[Entity]].schemas.subtypes shouldBe Map(
-      "sttp.tapir.generic.Organization" -> Schema(
+    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes shouldBe Map(
+      SObjectInfo("sttp.tapir.generic.Organization") -> Schema(
         SProduct[Organization](
           SObjectInfo("sttp.tapir.generic.Organization"),
           List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
         )
       ),
-      "sttp.tapir.generic.Person" -> Schema(
+      SObjectInfo("sttp.tapir.generic.Person") -> Schema(
         SProduct[Person](
           SObjectInfo("sttp.tapir.generic.Person"),
           List(
@@ -391,16 +391,13 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
           )
         )
       )
-    case SCoproduct(info, schemas, discriminator) =>
+    case st @ SCoproduct(info, subtypes, discriminator) =>
       s.copy(schemaType =
         SCoproduct(
           info,
-          new SealedTrait[Schema, T] {
-            override def dispatch(t: T): String = schemas.dispatch(t)
-            override def subtypes: Map[String, Typeclass[T]] = schemas.subtypes.mapValues(removeValidators).toMap
-          },
+          subtypes.mapValues(subtypeSchema => removeValidators(subtypeSchema)).toMap,
           discriminator
-        )
+        )(st.subtypeInfo)
       )
     case st @ SOpenProduct(info, valueSchema) => s.copy(schemaType = SOpenProduct(info, removeValidators(valueSchema))(st.fieldValues))
     case st @ SArray(element)                 => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))

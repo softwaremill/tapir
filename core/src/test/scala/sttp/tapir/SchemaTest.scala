@@ -4,7 +4,6 @@ import sttp.tapir.SchemaType._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.TestUtil.field
-import sttp.tapir.generic.SealedTrait
 
 class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify basic schema" in {
@@ -131,26 +130,23 @@ class SchemaTest extends AnyFlatSpec with Matchers {
   it should "generate one-of schema using the given discriminator" in {
     val coproduct = SCoproduct[Unit](
       SObjectInfo("A"),
-      new SealedTrait[Schema, Unit] {
-        override def dispatch(t: Unit): String = ""
-        override def subtypes: Map[String, Schema[Unit]] = Map(
-          "H" -> Schema(SProduct[Unit](SObjectInfo("H"), List(field(FieldName("f1"), Schema(SInteger()))))),
-          "G" -> Schema(
-            SProduct[Unit](SObjectInfo("G"), List(field(FieldName("f1"), Schema(SString())), field(FieldName("f2"), Schema(SString()))))
-          ),
-          "U" -> Schema(SString[Unit]())
-        )
-      },
+      Map(
+        SObjectInfo("H") -> Schema(SProduct[Unit](SObjectInfo("H"), List(field(FieldName("f1"), Schema(SInteger()))))),
+        SObjectInfo("G") -> Schema(
+          SProduct[Unit](SObjectInfo("G"), List(field(FieldName("f1"), Schema(SString())), field(FieldName("f2"), Schema(SString()))))
+        ),
+        SObjectInfo("U") -> Schema(SString[Unit]())
+      ),
       None
-    )
+    )(_ => SObjectInfo(""))
 
     val coproduct2 = coproduct.addDiscriminatorField(FieldName("who_am_i"))
 
-    coproduct2.schemas.subtypes shouldBe Map(
-      "H" -> Schema(
+    coproduct2.subtypes shouldBe Map(
+      SObjectInfo("H") -> Schema(
         SProduct[Unit](SObjectInfo("H"), List(field(FieldName("f1"), Schema(SInteger())), field(FieldName("who_am_i"), Schema(SString()))))
       ),
-      "G" -> Schema(
+      SObjectInfo("G") -> Schema(
         SProduct[Unit](
           SObjectInfo("G"),
           List(
@@ -160,7 +156,7 @@ class SchemaTest extends AnyFlatSpec with Matchers {
           )
         )
       ),
-      "U" -> Schema(SString[Unit]())
+      SObjectInfo("U") -> Schema(SString[Unit]())
     )
 
     coproduct2.discriminator shouldBe Some(Discriminator("who_am_i", Map.empty))

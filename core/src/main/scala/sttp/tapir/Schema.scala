@@ -3,7 +3,7 @@ package sttp.tapir
 import magnolia.Magnolia
 import sttp.model.Part
 import sttp.tapir.SchemaType._
-import sttp.tapir.generic.{Derived, SealedTrait}
+import sttp.tapir.generic.Derived
 import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
 import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
 import sttp.tapir.internal.ModifySchemaMacro
@@ -97,8 +97,8 @@ case class Schema[T](
             case l   => Some(l.mkString(","))
           }
         case SOpenProduct(_, valueSchema) => valueSchema.showValidators.map(esv => s"elements($esv)")
-        case SCoproduct(_, schemas, _) =>
-          schemas.subtypes.map { case (n, v) => v.showValidators.map(svs => s"$n->($svs)") }.toList match {
+        case SCoproduct(_, subtypes, _) =>
+          subtypes.map { case (n, v) => v.showValidators.map(svs => s"$n->($svs)") }.toList match {
             case Nil => None
             case l   => Some(l.mkString(","))
           }
@@ -136,11 +136,8 @@ case class Schema[T](
             })
           case s @ SOpenProduct(_, valueSchema) if f == Schema.ModifyCollectionElements =>
             s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))(s.fieldValues)
-          case s @ SCoproduct(_, schemas, _) =>
-            s.copy(schemas = new SealedTrait[Schema, T] {
-              override def dispatch(t: T): String = schemas.dispatch(t)
-              override val subtypes: Map[String, Schema[T]] = schemas.subtypes.mapValues(_.modifyAtPath(fieldPath, modify)).toMap
-            })
+          case s @ SCoproduct(_, subtypes, _) =>
+            s.copy(subtypes = subtypes.mapValues(_.modifyAtPath(fieldPath, modify)).toMap)(s.subtypeInfo)
           case _ => schemaType
         }
         copy(schemaType = schemaType2)
@@ -164,9 +161,9 @@ case class Schema[T](
         case s @ SOpenProduct(info, valueSchema) =>
           val objects2 = objects + (info -> this)
           s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
-        case SCoproduct(info, schemas, _) =>
+        case s @ SCoproduct(info, subtypes, _) =>
           val objects2 = objects + (info -> this)
-          schemas.subtypes.get(schemas.dispatch(t)).map(_.applyValidation(t, objects2)).getOrElse(Nil)
+          subtypes.get(s.subtypeInfo(t)).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
         case SRef(info) => objects.get(info).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects)).getOrElse(Nil)
         case _          => Nil
       })
@@ -179,7 +176,7 @@ case class Schema[T](
       case SArray(element)              => element.hasValidation
       case s: SProduct[T]               => s.fieldsWithValidation.nonEmpty
       case SOpenProduct(_, valueSchema) => valueSchema.hasValidation
-      case SCoproduct(_, schemas, _)    => schemas.subtypes.values.exists(_.hasValidation)
+      case SCoproduct(_, subtypes, _)   => subtypes.values.exists(_.hasValidation)
       case SRef(_)                      => true
       case _                            => false
     })

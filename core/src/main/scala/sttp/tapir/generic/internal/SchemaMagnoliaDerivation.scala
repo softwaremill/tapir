@@ -3,20 +3,7 @@ package sttp.tapir.generic.internal
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{
-  FieldName,
-  Schema,
-  SchemaType,
-  Validator,
-  deprecated,
-  description,
-  default,
-  encodedName,
-  encodedExample,
-  format,
-  generic,
-  validate
-}
+import sttp.tapir.{FieldName, Schema, SchemaType, deprecated, description, default, encodedName, encodedExample, format, validate}
 import SchemaMagnoliaDerivation.deriveCache
 
 import scala.collection.mutable
@@ -83,13 +70,9 @@ trait SchemaMagnoliaDerivation {
     withCache(ctx.typeName, ctx.annotations) {
       val baseCoproduct = SCoproduct(
         typeNameToObjectInfo(ctx.typeName, ctx.annotations),
-        new generic.SealedTrait[Schema, T] {
-          override def dispatch(t: T): String = ctx.dispatch(t) { v => v.typeName.full }
-          override val subtypes: Map[String, Typeclass[T]] =
-            ctx.subtypes.map(s => s.typeName.full -> s.typeclass.asInstanceOf[Typeclass[T]]).toMap
-        },
+        ctx.subtypes.map(s => typeNameToObjectInfo(s.typeName, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toMap,
         None
-      )
+      )((t: T) => ctx.dispatch(t) { v => typeNameToObjectInfo(v.typeName, v.annotations) })
       val coproduct = genericDerivationConfig.discriminator match {
         case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
         case None    => baseCoproduct
