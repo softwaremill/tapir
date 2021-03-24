@@ -48,7 +48,7 @@ case class Schema[T](
   /** Returns an optional version of this schema, with `isOptional` set to true. */
   def asOption: Schema[Option[T]] =
     Schema(
-      schemaType = SOption(this)(_.toIterable),
+      schemaType = SOption(this)(identity),
       isOptional = true,
       deprecated = deprecated
     )
@@ -123,7 +123,7 @@ case class Schema[T](
       case f :: fs =>
         val schemaType2 = schemaType match {
           case s @ SArray(element) if f == Schema.ModifyCollectionElements  => SArray(element.modifyAtPath(fs, modify))(s.toIterable)
-          case s @ SOption(element) if f == Schema.ModifyCollectionElements => SOption(element.modifyAtPath(fs, modify))(s.toIterable)
+          case s @ SOption(element) if f == Schema.ModifyCollectionElements => SOption(element.modifyAtPath(fs, modify))(s.toOption)
           case s @ SProduct(_, fields) =>
             s.copy(fields = fields.map { field =>
               if (field.name.name == f) new ProductField[T] {
@@ -156,7 +156,7 @@ case class Schema[T](
     // we avoid running validation for structures where there are no validation rules applied (recursively)
     if (hasValidation) {
       validator(t) ++ (schemaType match {
-        case s @ SOption(element) => s.toIterable(t).flatMap(element.applyValidation(_, objects))
+        case s @ SOption(element) => s.toOption(t).toList.flatMap(element.applyValidation(_, objects))
         case s @ SArray(element)  => s.toIterable(t).flatMap(element.applyValidation(_, objects))
         case s @ SProduct(info, _) =>
           val objects2 = objects + (info -> this)

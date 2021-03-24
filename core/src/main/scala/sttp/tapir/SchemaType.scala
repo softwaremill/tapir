@@ -25,9 +25,9 @@ object SchemaType {
     def show: String = "boolean"
     override def contramap[TT](g: TT => T): SchemaType[TT] = SBoolean()
   }
-  case class SOption[T, E](element: Schema[E])(val toIterable: T => Iterable[E]) extends SchemaType[T] { // TODO: toOption?
+  case class SOption[T, E](element: Schema[E])(val toOption: T => Option[E]) extends SchemaType[T] {
     def show: String = s"option(${element.show})"
-    override def contramap[TT](g: TT => T): SchemaType[TT] = SOption(element)(g.andThen(toIterable))
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SOption(element)(g.andThen(toOption))
   }
   case class SArray[T, E](element: Schema[E])(val toIterable: T => Iterable[E]) extends SchemaType[T] {
     def show: String = s"array(${element.show})"

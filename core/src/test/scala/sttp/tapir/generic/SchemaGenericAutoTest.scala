@@ -58,7 +58,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "find schema for optional types" in {
-    implicitly[Schema[Option[String]]].schemaType shouldBe SOption[Option[String], String](Schema(SString()))(_.toIterable)
+    implicitly[Schema[Option[String]]].schemaType shouldBe SOption[Option[String], String](Schema(SString()))(identity)
     implicitly[Schema[Option[String]]].isOptional shouldBe true
   }
 
@@ -404,7 +404,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       )
     case st @ SOpenProduct(info, valueSchema) => s.copy(schemaType = SOpenProduct(info, removeValidators(valueSchema))(st.fieldValues))
     case st @ SArray(element)                 => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))
-    case st @ SOption(element)                => s.copy(schemaType = SOption(removeValidators(element))(st.toIterable))
+    case st @ SOption(element)                => s.copy(schemaType = SOption(removeValidators(element))(st.toOption))
     case _                                    => s
   }).copy(validator = Validator.pass)
 }
