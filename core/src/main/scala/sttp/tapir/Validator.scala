@@ -46,7 +46,7 @@ object Validator extends ValidatorEnumMacro {
     * This enumeration will only be used for documentation, as a value outside of the allowed values will not be
     * decoded in the first place (the decoder has no other option than to fail).
     */
-  def deriveEnum[T]: Validator.Enum[T] = macro validatorForEnum[T]
+  def derivedEnum[T]: Validator.Enum[T] = macro validatorForEnum[T]
   def enum[T](possibleValues: List[T]): Validator.Enum[T] = Enum(possibleValues, None)
 
   /** @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.

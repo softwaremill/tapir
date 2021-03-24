@@ -108,7 +108,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
   }
 
   it should "validate enum" in {
-    Validator.deriveEnum[Color](Blue) shouldBe empty
+    Validator.derivedEnum[Color](Blue) shouldBe empty
   }
 
   it should "validate closed set of ints" in {
