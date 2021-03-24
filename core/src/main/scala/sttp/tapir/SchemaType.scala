@@ -77,6 +77,10 @@ object SchemaType {
         }
       )
     )
+
+    private[tapir] val fieldsWithValidation: List[ProductField[T]] = fields.collect {
+      case f if f.schema.hasValidation => f
+    }
   }
   object SProduct {
     def empty[T]: SProduct[T] = SProduct(SObjectInfo.Unit, Nil)

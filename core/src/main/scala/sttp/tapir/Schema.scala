@@ -125,20 +125,35 @@ case class Schema[T](
   def applyValidation(t: T): List[ValidationError[_]] = applyValidation(t, Map())
 
   private def applyValidation(t: T, objects: Map[SObjectInfo, Schema[_]]): List[ValidationError[_]] = {
-    validator(t) ++ (schemaType match {
-      case s @ SOption(element) => s.toIterable(t).flatMap(element.applyValidation(_, objects))
-      case s @ SArray(element)  => s.toIterable(t).flatMap(element.applyValidation(_, objects))
-      case SProduct(info, fields) =>
-        val objects2 = objects + (info -> this)
-        fields.flatMap(f => f.get(t).map(f.schema.applyValidation(_, objects2)).getOrElse(Nil).map(_.prependPath(f.name)))
-      case s @ SOpenProduct(info, valueSchema) =>
-        val objects2 = objects + (info -> this)
-        s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
-      case SCoproduct(info, schemas, _) =>
-        val objects2 = objects + (info -> this)
-        schemas.subtypes.get(schemas.dispatch(t)).map(_.applyValidation(t, objects2)).getOrElse(Nil)
-      case SRef(info) => objects.get(info).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects)).getOrElse(Nil)
-      case _          => Nil
+    // we avoid running validation for structures where there are no validation rules applied (recursively)
+    if (hasValidation) {
+      validator(t) ++ (schemaType match {
+        case s @ SOption(element) => s.toIterable(t).flatMap(element.applyValidation(_, objects))
+        case s @ SArray(element)  => s.toIterable(t).flatMap(element.applyValidation(_, objects))
+        case s @ SProduct(info, _) =>
+          val objects2 = objects + (info -> this)
+          s.fieldsWithValidation.flatMap(f => f.get(t).map(f.schema.applyValidation(_, objects2)).getOrElse(Nil).map(_.prependPath(f.name)))
+        case s @ SOpenProduct(info, valueSchema) =>
+          val objects2 = objects + (info -> this)
+          s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
+        case SCoproduct(info, schemas, _) =>
+          val objects2 = objects + (info -> this)
+          schemas.subtypes.get(schemas.dispatch(t)).map(_.applyValidation(t, objects2)).getOrElse(Nil)
+        case SRef(info) => objects.get(info).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects)).getOrElse(Nil)
+        case _          => Nil
+      })
+    } else Nil
+  }
+
+  private[tapir] def hasValidation: Boolean = {
+    (validator != Validator.pass) || (schemaType match {
+      case SOption(element)             => element.hasValidation
+      case SArray(element)              => element.hasValidation
+      case s: SProduct[T]               => s.fieldsWithValidation.nonEmpty
+      case SOpenProduct(_, valueSchema) => valueSchema.hasValidation
+      case SCoproduct(_, schemas, _)    => schemas.subtypes.values.exists(_.hasValidation)
+      case SRef(_)                      => true
+      case _                            => false
     })
   }
 }
