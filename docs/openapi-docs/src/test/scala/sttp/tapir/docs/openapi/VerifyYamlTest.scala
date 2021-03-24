@@ -4,6 +4,8 @@ import java.time.ZoneOffset.UTC
 import java.time.{Instant, LocalDateTime, ZonedDateTime}
 import io.circe.Json
 import io.circe.generic.auto._
+import io.circe.yaml.Printer.StringStyle
+import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.{Endpoint, endpoint}
 import sttp.tapir.EndpointIO.Example
@@ -16,7 +18,7 @@ import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests._
+import sttp.tapir.tests.{Person, _}
 
 import scala.collection.immutable.ListMap
 import org.scalatest.funsuite.AnyFunSuite
@@ -948,6 +950,26 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_with_dateTimes, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml using double quoted style") {
+    val ep = endpoint.get.description("first line:\nsecond line")
+
+    val expectedYaml = load("expected_double_quoted.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, "String style", "1.0").toYaml(DoubleQuoted)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml using literal style") {
+    val ep = endpoint.get.description("first line:\nsecond line")
+
+    val expectedYaml = load("expected_literal.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, "String style", "1.0").toYaml(Literal)
+    val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 }
