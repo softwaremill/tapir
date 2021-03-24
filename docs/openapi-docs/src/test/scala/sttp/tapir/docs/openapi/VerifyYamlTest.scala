@@ -1,29 +1,24 @@
 package sttp.tapir.docs.openapi
 
-import java.time.ZoneOffset.UTC
-import java.time.{Instant, LocalDateTime, ZonedDateTime}
 import io.circe.Json
 import io.circe.generic.auto._
-import sttp.model.{Method, StatusCode}
-import sttp.tapir.{Endpoint, endpoint}
-import sttp.tapir.EndpointIO.Example
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
-import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
-import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
-import sttp.tapir.generic.{Configuration, Derived}
-import sttp.tapir.json.circe._
-import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests.{Person, _}
-
-import scala.collection.immutable.ListMap
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.model.UsernamePassword
+import sttp.tapir.docs.openapi.dtos.Book
+import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
+import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import sttp.tapir.openapi.circe.yaml._
+import sttp.tapir.openapi._
+import sttp.tapir.tests.{Person, _}
+import sttp.tapir.{Endpoint, endpoint, _}
+
+import java.time.{Instant, LocalDateTime}
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
@@ -132,19 +127,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("expected_multipart.yml")
 
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(in_file_multipart_out_multipart, "Fruits", "1.0").toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should support authentication") {
-    val expectedYaml = load("expected_auth.yml")
-
-    val e1 = endpoint.in(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
-    val e2 = endpoint.in(auth.bearer[String]()).in("api2" / path[String]).out(stringBody)
-    val e3 = endpoint.in(auth.apiKey(header[String]("apikey"))).in("api3" / path[String]).out(stringBody)
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
