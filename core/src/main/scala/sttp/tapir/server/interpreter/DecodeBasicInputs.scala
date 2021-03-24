@@ -8,7 +8,7 @@ import sttp.tapir.{DecodeResult, EndpointIO, EndpointInput, StreamBodyIO}
 
 import scala.annotation.tailrec
 
-trait DecodeBasicInputsResult
+sealed trait DecodeBasicInputsResult
 object DecodeBasicInputsResult {
 
   /** @param basicInputsValues Values of basic inputs, in order as they are defined in the endpoint. */

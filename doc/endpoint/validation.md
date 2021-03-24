@@ -32,7 +32,7 @@ val e = endpoint.in(
     .validate(Validator.max(100)))
 ``` 
 
-Validation rules added using the built-in validators are translated to [OpenAPI](../openapi.md) documentation.
+Validation rules added using the built-in validators are translated to [OpenAPI](../docs/openapi.md) documentation.
 
 ## Validation rules and automatic codec derivation
 

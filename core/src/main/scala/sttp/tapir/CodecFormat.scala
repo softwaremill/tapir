@@ -41,4 +41,8 @@ object CodecFormat {
   case class Zip() extends CodecFormat {
     override val mediaType: MediaType = MediaType.ApplicationZip
   }
+
+  case class TextEventStream() extends CodecFormat {
+    override val mediaType: MediaType = MediaType.TextEventStream
+  }
 }

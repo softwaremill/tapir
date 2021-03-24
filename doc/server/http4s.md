@@ -87,9 +87,33 @@ The capability can be added to the classpath independently of the interpreter th
 The interpreter supports web sockets, with pipes of type `Pipe[F, REQ, RESP]`. See [web sockets](../endpoint/websockets.md) 
 for more details.
 
+## Server Sent Events
+
+The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
+
+For example, to define an endpoint that returns event stream:
+
+```scala mdoc:compile-only
+import cats.effect.IO
+import sttp.model.sse.ServerSentEvent
+import sttp.tapir._
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
+
+import cats.effect.{ContextShift, Timer}
+
+val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
+
+implicit val cs: ContextShift[IO] = ???
+implicit val t: Timer[IO] = ???
+
+val routes = Http4sServerInterpreter.toRoutes(sseEndpoint)(_ =>
+  IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
+)
+```
+
 ## Configuration
 
-The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see
+The interpreter can be configured by providing an implicit `Http4sServerOptions` value, see
 [server options](options.md) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.

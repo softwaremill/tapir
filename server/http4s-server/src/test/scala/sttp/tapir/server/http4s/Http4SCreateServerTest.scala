@@ -10,6 +10,7 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
+import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.server.tests.{
   CreateServerTest,
@@ -22,8 +23,10 @@ import sttp.tapir.server.tests.{
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
+import scala.util.Random
 
 class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with EitherValues with OptionValues {
 
@@ -31,6 +34,9 @@ class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSu
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
     val interpreter = new Http4sTestServerInterpreter()
     val createServerTest = new CreateServerTest(interpreter)
+    def randomUUID = Some(UUID.randomUUID().toString)
+    val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
+    val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
 
     import interpreter.timer
 
@@ -83,7 +89,22 @@ class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSu
             case Right(Some((pings, _))) => pings should be >= 2
             case wrongResponse           => fail(s"expected to get count of received data chunks, instead got $wrongResponse")
           })
-
+      },
+      createServerTest.testServer(
+        endpoint.out(serverSentEventsBody[IO]),
+        "Send and receive SSE"
+      )((_: Unit) => IO(Right(fs2.Stream(sse1, sse2)))) { baseUri =>
+        basicRequest
+          .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
+            Http4sServerSentEvents
+              .parseBytesToSSE(Fs2Streams[IO])
+              .apply(stream)
+              .compile
+              .toList
+          })
+          .get(baseUri)
+          .send(backend)
+          .map(_.body.value shouldBe List(sse1, sse2))
       }
     )
 

@@ -1,6 +1,7 @@
 package sttp.tapir.derevo
 
 import derevo.derive
+import io.estatico.newtype.macros.newtype
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema
@@ -22,6 +23,14 @@ class DerevoSchemaDerivationSpec extends AnyFlatSpec with Matchers {
     generatedSchema.show shouldBe expectedSchema.show
   }
 
+  "Generated schema by derevo for newtype" should "be the same as mapped Schema" in {
+
+    val expectedSchema: Schema[types.Amount] = implicitly[Schema[Int]].map(i => Some(types.Amount(i)))(_.i)
+    val generatedSchema: Schema[types.Amount] = implicitly[Schema[types.Amount]]
+
+    generatedSchema.show shouldBe expectedSchema.show
+  }
+
   "Generated schema by derevo with custom description" should "be the same as Schema.derived with altered description" in {
 
     val testDescription = "test description"
@@ -37,5 +46,12 @@ class DerevoSchemaDerivationSpec extends AnyFlatSpec with Matchers {
     generatedSchema.description shouldBe Some(testDescription)
     generatedSchema.show shouldBe expectedSchema.show
   }
+
+}
+
+object types {
+  @derive(schema)
+  @newtype
+  case class Amount(i: Int)
 
 }

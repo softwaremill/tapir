@@ -6,6 +6,10 @@ import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{DecodeFailureContext, EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointInput}
 
+/** @param toEffect Converts the interpreter-specific value representing the log effect, into an `F`-effect, which
+  *                 can be composed with the result of processing a request.
+  * @tparam T Interpreter-specific value representing the log effect.
+  */
 class ServerLogInterceptor[T, F[_], B](log: ServerLog[T], toEffect: (T, ServerRequest) => F[Unit]) extends EndpointInterceptor[F, B] {
   override def onDecodeSuccess[I](
       request: ServerRequest,

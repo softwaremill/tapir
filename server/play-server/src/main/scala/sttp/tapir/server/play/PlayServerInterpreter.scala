@@ -1,121 +1,93 @@
 package sttp.tapir.server.play
 
 import akka.stream.Materializer
-import akka.util.ByteString
-import play.api.http.HttpEntity
-import play.api.mvc.{ActionBuilder, AnyContent, Handler, RawBuffer, Request, RequestHeader, ResponseHeader, Result}
+import play.api.http.{HeaderNames, HttpEntity}
+import play.api.mvc._
 import play.api.routing.Router.Routes
+import sttp.model.StatusCode
 import sttp.monad.FutureMonad
-import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput}
-import sttp.tapir.server.interceptor.decodefailure.ServerDefaults.StatusCodes
+import sttp.tapir.Endpoint
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.DecodeFailureContext
-import sttp.tapir.server.interceptor.decodefailure.ServerDefaults
-import sttp.tapir.server.{DecodeFailureHandling, ServerEndpoint, interceptor}
-import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, InputValue, InputValueResult}
+import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, ServerInterpreter}
 
-import java.nio.charset.Charset
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.reflect.ClassTag
 
 trait PlayServerInterpreter {
-  def toRoute[I, E, O](e: Endpoint[I, E, O, Any])(
+
+  def toRoutes[I, E, O](e: Endpoint[I, E, O, Any])(
       logic: I => Future[Either[E, O]]
   )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
-    toRoute(e.serverLogic(logic))
+    toRoutes(e.serverLogic(logic))
   }
 
-  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[O])(implicit
+  def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[O])(implicit
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E],
       mat: Materializer,
       serverOptions: PlayServerOptions
   ): Routes = {
-    toRoute(e.serverLogicRecoverErrors(logic))
+    toRoutes(e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoute[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+  def toRoutes[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+    toRoutes(List(e))
+  }
+
+  def toRoutes[I, E, O](
+      serverEndpoints: List[ServerEndpoint[_, _, _, Any, Future]]
+  )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
     implicit val ec: ExecutionContextExecutor = mat.executionContext
     implicit val monad: FutureMonad = new FutureMonad()
 
-    def valueToResponse(value: Any): Future[Result] = {
-      val i = value.asInstanceOf[I]
-      e.logic(monad)(i)
-        .map {
-          case Right(result) =>
-            serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.success.code)(serverOptions.logger)
-            OutputToPlayResponse(ServerDefaults.StatusCodes.success, e.output, result)
-          case Left(err) =>
-            serverOptions.logRequestHandling.requestHandled(e.endpoint, ServerDefaults.StatusCodes.error.code)(serverOptions.logger)
-            OutputToPlayResponse(ServerDefaults.StatusCodes.error, e.errorOutput, err)
+    new PartialFunction[RequestHeader, Handler] {
+      override def isDefinedAt(request: RequestHeader): Boolean = {
+        val serverRequest = new PlayServerRequest(request)
+        serverEndpoints.exists { se =>
+          DecodeBasicInputs(se.input, serverRequest) match {
+            case DecodeBasicInputsResult.Values(_, _) => true
+            case DecodeBasicInputsResult.Failure(input, failure) =>
+              serverOptions.decodeFailureHandler(DecodeFailureContext(input, failure, se.endpoint, serverRequest)).isDefined
+          }
         }
-    }
-    def handleDecodeFailure(
-        e: Endpoint[_, _, _, _],
-        input: EndpointInput[_],
-        failure: DecodeResult.Failure
-    ): Result = {
-      val decodeFailureCtx = DecodeFailureContext(input, failure, e)
-      val handling = serverOptions.decodeFailureHandler(decodeFailureCtx)
-      handling match {
-        case DecodeFailureHandling.NoMatch =>
-          serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(serverOptions.logger)
-          Result(header = ResponseHeader(StatusCodes.error.code), body = HttpEntity.NoEntity)
-        case DecodeFailureHandling.RespondWithResponse(output, value) =>
-          serverOptions.logRequestHandling.decodeFailureNotHandled(e, decodeFailureCtx)(serverOptions.logger)
-          OutputToPlayResponse(ServerDefaults.StatusCodes.error, output, value)
-      }
-    }
-
-    val decodeBody = new DecodeBody[Request[RawBuffer], Future] {
-      override def rawBody[R](request: Request[RawBuffer], body: EndpointIO.Body[R, _]): Future[R] = new PlayRequestToRawBody(serverOptions)
-        .apply(
-          body.bodyType,
-          request.charset.map(Charset.forName),
-          request,
-          request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))
-        )
-    }
-
-    val res = new PartialFunction[RequestHeader, Handler] {
-      override def isDefinedAt(x: RequestHeader): Boolean = {
-        val decodeInputResult = DecodeInputs(e.input, new PlayDecodeInputContext(x, 0, serverOptions))
-        val handlingResult = decodeInputResult match {
-          case DecodeBasicInputsResult.Failure(input, failure) =>
-            val decodeFailureCtx = interceptor.DecodeFailureContext(input, failure, e.endpoint)
-            serverOptions.logRequestHandling.decodeFailureNotHandled(e.endpoint, decodeFailureCtx)(serverOptions.logger)
-            serverOptions.decodeFailureHandler(decodeFailureCtx) != DecodeFailureHandling.noMatch
-          case DecodeBasicInputsResult.Values(_, _) => true
-        }
-        handlingResult
       }
 
       override def apply(v1: RequestHeader): Handler = {
         serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
-          decodeBody(request, DecodeInputs(e.input, new PlayDecodeInputContext(v1, 0, serverOptions))).flatMap {
-            case values: DecodeBasicInputsResult.Values =>
-              InputValue(e.input, values) match {
-                case InputValueResult.Value(params, _)        => valueToResponse(params.asAny)
-                case InputValueResult.Failure(input, failure) => Future.successful(handleDecodeFailure(e.endpoint, input, failure))
+          val serverRequest = new PlayServerRequest(request)
+          val interpreter = new ServerInterpreter[Any, Future, HttpEntity, Nothing](
+            serverRequest,
+            new PlayRequestBody(request, serverOptions),
+            new PlayToResponseBody,
+            serverOptions.interceptors
+          )
+
+          interpreter(serverEndpoints).map {
+            case None => Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity)
+            case Some(response) =>
+              val headers: Map[String, String] = response.headers
+                .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
+                  if (a.contains(b.name)) a + (b.name -> (a(b.name) :+ b.value)) else a + (b.name -> List(b.value))
+                }
+                .map {
+                  // See comment in play.api.mvc.CookieHeaderEncoding
+                  case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
+                  case (key, value)                                  => (key, value.mkString(", "))
+                }
+              val status = response.code.code
+
+              response.body match {
+                case Some(entity) =>
+                  val result = Result(ResponseHeader(status, headers), entity)
+                  headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
+                case None => Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
               }
-            case DecodeBasicInputsResult.Failure(input, failure) =>
-              Future.successful(handleDecodeFailure(e.endpoint, input, failure))
           }
         }
       }
     }
-    res
   }
-
-  def toRoute[I, E, O](
-      serverEndpoints: List[ServerEndpoint[_, _, _, Any, Future]]
-  )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
-    serverEndpoints
-      .map(toRoute(_))
-      .reduce((a: Routes, b: Routes) => a.orElse(b))
-  }
-
-  implicit def actionBuilderFromPlayServerOptions(implicit playServerOptions: PlayServerOptions): ActionBuilder[Request, AnyContent] =
-    playServerOptions.defaultActionBuilder
 }
 
 object PlayServerInterpreter extends PlayServerInterpreter

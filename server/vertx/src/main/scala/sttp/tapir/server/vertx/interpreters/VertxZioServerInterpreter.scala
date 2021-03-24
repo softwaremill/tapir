@@ -83,7 +83,11 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
   }
 
   private[vertx] class RioFromVFuture[R] extends FromVFuture[RIO[R, *]] {
-    def apply[T](f: => Future[T]): RIO[R, T] =
+    def apply[T](f: => Future[T]): RIO[R, T] = f.asRIO
+  }
+
+  implicit class VertxFutureToRIO[A](f: => Future[A]) {
+    def asRIO[R]: RIO[R, A] = {
       RIO.effectAsync { cb =>
         f.onComplete { handler =>
           if (handler.succeeded()) {
@@ -93,5 +97,6 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
           }
         }
       }
+    }
   }
 }

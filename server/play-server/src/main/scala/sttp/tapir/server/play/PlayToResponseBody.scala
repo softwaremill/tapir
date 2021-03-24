@@ -1,87 +1,55 @@
 package sttp.tapir.server.play
 
+import akka.NotUsed
+import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
+import akka.util.ByteString
+import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
+import play.api.mvc.{Codec, MultipartFormData}
+import play.api.mvc.MultipartFormData.{DataPart, FilePart}
+import sttp.model.{HasHeaders, MediaType, Part}
+import sttp.tapir.internal.NoStreams
+import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.tapir.server.interpreter.ToResponseBody
+
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
 
-import akka.NotUsed
-import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
-import akka.util.ByteString
-import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
-import play.api.mvc.MultipartFormData.{DataPart, FilePart}
-import play.api.mvc.{Codec, MultipartFormData, ResponseHeader, Result}
-import sttp.model.{MediaType, Part, StatusCode}
-import sttp.tapir.internal.{NoStreams, ParamsAsAny}
-import sttp.tapir.server.interpreter.{EncodeOutputBody, EncodeOutputs, OutputValues}
-import sttp.tapir.{CodecFormat, EndpointOutput, RawBodyType, RawPart, WebSocketBodyOutput}
+class PlayToResponseBody extends ToResponseBody[HttpEntity, Nothing] {
+  override val streams: NoStreams = NoStreams
 
-private[play] object OutputToPlayResponse {
-  def apply[O](
-      defaultStatus: StatusCode,
-      output: EndpointOutput[O],
-      v: Any
-  ): Result = {
-    val outputValues = encodeOutputs(output, ParamsAsAny(v), OutputValues.empty)
-    val headers: Map[String, String] = outputValues.headers
-      .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
-        if (a.contains(b._1)) a + (b._1 -> (a(b._1) :+ b._2)) else a + (b._1 -> List(b._2))
-      }
-      .map {
-        // See comment in play.api.mvc.CookieHeaderEncoding
-        case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
-        case (key, value)                                  => (key, value.mkString(", "))
-      }
-    val status = outputValues.statusCode.getOrElse(defaultStatus)
-
-    outputValues.body match {
-      case Some(entity) =>
-        val result = Result(ResponseHeader(status.code, headers), entity.merge)
-        headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
-      case None => Result(ResponseHeader(status.code, headers), HttpEntity.NoEntity)
-    }
+  override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity = {
+    fromRawValue(v, headers, bodyType)
   }
 
-  private val encodeOutputs: EncodeOutputs[HttpEntity, Nothing, Nothing] =
-    new EncodeOutputs[HttpEntity, Nothing, Nothing](new EncodeOutputBody[HttpEntity, Nothing, Nothing] {
-      override val streams: NoStreams = NoStreams
-      override def rawValueToBody[R](v: R, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity =
-        rawValueToResponseEntity(bodyType.asInstanceOf[RawBodyType[Any]], formatToContentType(format), v)
-      override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): HttpEntity =
-        v
-      override def webSocketPipeToBody[REQ, RESP](
-          pipe: Nothing,
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
-      ): Nothing =
-        pipe
-    })
-
-  private def rawValueToResponseEntity[R](bodyType: RawBodyType[R], contentType: Option[String], r: R): HttpEntity = {
+  private def fromRawValue[R](v: R, headers: HasHeaders, bodyType: RawBodyType[R]): HttpEntity = {
+    val contentType = headers.contentType
     bodyType match {
       case RawBodyType.StringBody(charset) =>
-        val str = r.asInstanceOf[String]
+        val str = v.asInstanceOf[String]
         HttpEntity.Strict(ByteString(str, charset), contentType)
 
       case RawBodyType.ByteArrayBody =>
-        val bytes = r.asInstanceOf[Array[Byte]]
+        val bytes = v.asInstanceOf[Array[Byte]]
         HttpEntity.Strict(ByteString(bytes), contentType)
 
       case RawBodyType.ByteBufferBody =>
-        val byteBuffer = r.asInstanceOf[ByteBuffer]
+        val byteBuffer = v.asInstanceOf[ByteBuffer]
         HttpEntity.Strict(ByteString(byteBuffer), contentType)
 
       case RawBodyType.InputStreamBody =>
-        val stream = r.asInstanceOf[InputStream]
+        val stream = v.asInstanceOf[InputStream]
         HttpEntity.Streamed(StreamConverters.fromInputStream(() => stream), None, contentType)
 
       case RawBodyType.FileBody =>
-        val path = r.asInstanceOf[File].toPath
+        val path = v.asInstanceOf[File].toPath
         val fileSize = Some(Files.size(path))
         val file = FileIO.fromPath(path)
         HttpEntity.Streamed(file, fileSize, contentType)
 
       case m: RawBodyType.MultipartBody =>
-        val rawParts = r.asInstanceOf[Seq[RawPart]]
+        val rawParts = v.asInstanceOf[Seq[RawPart]]
 
         val dataParts = rawParts
           .filter { part =>
@@ -108,12 +76,20 @@ private[play] object OutputToPlayResponse {
     }
   }
 
+  override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): HttpEntity =
+    throw new UnsupportedOperationException
+
+  override def fromWebSocketPipe[REQ, RESP](
+      pipe: streams.Pipe[REQ, RESP],
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+  ): HttpEntity = throw new UnsupportedOperationException
+
   private def rawPartsToFilePart[T](
       m: RawBodyType.MultipartBody,
       part: Part[T]
   ): Option[MultipartFormData.FilePart[Source[ByteString, _]]] = {
     m.partType(part.name).flatMap { partType =>
-      val entity: HttpEntity = rawValueToResponseEntity(partType.asInstanceOf[RawBodyType[Any]], part.contentType, part.body)
+      val entity: HttpEntity = fromRawValue(part.body, part, partType.asInstanceOf[RawBodyType[Any]])
 
       for {
         fileName <- part.fileName
@@ -131,7 +107,7 @@ private[play] object OutputToPlayResponse {
       }
 
       val maybeData: Option[String] =
-        rawValueToResponseEntity(partType.asInstanceOf[RawBodyType[Any]], part.contentType, part.body) match {
+        fromRawValue(part.body, part, partType.asInstanceOf[RawBodyType[Any]]) match {
           case HttpEntity.Strict(data, _)   => Some(data.decodeString(charset))
           case HttpEntity.Streamed(_, _, _) => None
           case HttpEntity.Chunked(_, _)     => None

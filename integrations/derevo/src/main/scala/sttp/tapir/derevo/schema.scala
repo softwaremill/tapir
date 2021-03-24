@@ -1,14 +1,16 @@
 package sttp.tapir.derevo
 
 import derevo.Derivation
+import derevo.NewTypeDerivation
 import sttp.tapir.Schema
 
 import scala.reflect.macros.blackbox
 
-object schema extends Derivation[Schema] {
+object schema extends Derivation[Schema] with NewTypeDerivation[Schema] {
   def instance[A]: Schema[A] = macro SchemaCustomDerived.schema[A]
 
   def apply[A](description: String): Schema[A] = macro SchemaCustomDerived.schemaDescription[A]
+
 }
 
 class SchemaCustomDerived(val c: blackbox.Context) {
