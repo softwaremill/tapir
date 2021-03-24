@@ -209,8 +209,8 @@ package object internal {
       }
   }
 
-  def addValidatorShow(s: String, v: Validator[_]): String = {
-    v.show match {
+  def addValidatorShow(s: String, schema: Schema[_]): String = {
+    schema.validator.show match { // TODO
       case None     => s
       case Some(sv) => s"$s($sv)"
     }

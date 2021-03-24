@@ -1,12 +1,12 @@
 package sttp.tapir.generic
 
 import java.math.{BigDecimal => JBigDecimal}
-
 import sttp.tapir.SchemaType.{SObjectInfo, SProduct}
 import sttp.tapir.generic.auto._
 import sttp.tapir.{Codec, CodecFormat, DecodeResult, FieldName, Schema, Validator, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.TestUtil.field
 
 class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestExtensions with Matchers {
   it should "generate a codec for a one-arg case class" in {
@@ -63,9 +63,9 @@ class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestEx
 
     // when
     codec.schema.schemaType shouldBe
-      SProduct(
+      SProduct[Test6](
         SObjectInfo("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
-        List((FieldName("f1"), implicitly[Schema[String]]), (FieldName("f2"), implicitly[Schema[Int]]))
+        List(field(FieldName("f1"), implicitly[Schema[String]]), field(FieldName("f2"), implicitly[Schema[Int]]))
       )
   }
 

@@ -39,7 +39,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   // TODO: cache directives
   def cookie[T: Codec[Option[String], *, TextPlain]](name: String): EndpointInput.Cookie[T] =
     EndpointInput.Cookie(name, implicitly, EndpointIO.Info.empty)
-  def cookies: EndpointIO.Header[List[Cookie]] = header[List[String]](HeaderNames.Cookie).map(Codec.cookiesCodec)
+  def cookies: EndpointIO.Header[List[Cookie]] = header[List[Cookie]](HeaderNames.Cookie)
   def setCookie(name: String): EndpointIO.Header[CookieValueWithMeta] = {
     setCookies.mapDecode(cs =>
       cs.filter(_.name == name) match {
@@ -49,7 +49,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
       }
     )(cv => List(CookieWithMeta(name, cv)))
   }
-  def setCookies: EndpointIO.Header[List[CookieWithMeta]] = header[List[String]](HeaderNames.SetCookie).map(Codec.cookiesWithMetaCodec)
+  def setCookies: EndpointIO.Header[List[CookieWithMeta]] = header[List[CookieWithMeta]](HeaderNames.SetCookie)
 
   def stringBody: EndpointIO.Body[String, String] = stringBody(StandardCharsets.UTF_8)
   def stringBody(charset: String): EndpointIO.Body[String, String] = stringBody(Charset.forName(charset))
@@ -179,7 +179,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `T` are covered).
     */
   def oneOf[T](firstCase: StatusMapping[_ <: T], otherCases: StatusMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
-    EndpointOutput.OneOf[T, T](firstCase +: otherCases, Codec.idPlain())
+    EndpointOutput.OneOf[T, T](firstCase +: otherCases, Mapping.id)
 
   /** Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the runtime class of `T`.

@@ -1,73 +1,132 @@
 package sttp.tapir
 
-sealed trait SchemaType {
+import sttp.tapir.generic.SealedTrait
+
+/** The type of the low-level representation of a `T` values. Part of [[Schema]]s. */
+sealed trait SchemaType[T] {
   def show: String
+  def contramap[TT](g: TT => T): SchemaType[TT]
 }
 
 object SchemaType {
-  case object SString extends SchemaType {
+  case class SString[T]() extends SchemaType[T] {
     def show: String = "string"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SString()
   }
-  case object SInteger extends SchemaType {
+  case class SInteger[T]() extends SchemaType[T] {
     def show: String = "integer"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SInteger()
   }
-  case object SNumber extends SchemaType {
+  case class SNumber[T]() extends SchemaType[T] {
     def show: String = "number"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SNumber()
   }
-  case object SBoolean extends SchemaType {
+  case class SBoolean[T]() extends SchemaType[T] {
     def show: String = "boolean"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SBoolean()
   }
-  case class SArray(element: Schema[_]) extends SchemaType {
+  case class SOption[T, E](element: Schema[E])(val toIterable: T => Iterable[E]) extends SchemaType[T] { // TODO: toOption?
+    def show: String = s"option(${element.show})"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SOption(element)(g.andThen(toIterable))
+  }
+  case class SArray[T, E](element: Schema[E])(val toIterable: T => Iterable[E]) extends SchemaType[T] {
     def show: String = s"array(${element.show})"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SArray(element)(g.andThen(toIterable))
   }
-  case object SBinary extends SchemaType {
+  case class SBinary[T]() extends SchemaType[T] {
     def show: String = "binary"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SBinary()
   }
-  case object SDate extends SchemaType {
+  case class SDate[T]() extends SchemaType[T] {
     def show: String = "date"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SDate()
   }
-  case object SDateTime extends SchemaType {
+  case class SDateTime[T]() extends SchemaType[T] {
     def show: String = "date-time"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SDateTime()
   }
 
-  sealed trait SObject extends SchemaType {
+  sealed trait SObject[T] extends SchemaType[T] {
     def info: SObjectInfo
   }
-  case class SProduct(info: SObjectInfo, fields: Iterable[(FieldName, Schema[_])]) extends SObject {
-    def required: Iterable[FieldName] =
-      fields.collect {
-        case (f, s) if !s.isOptional => f
-      }
-    def show: String = s"object(${fields.map(f => s"${f._1}->${f._2.show}").mkString(",")}"
+
+  trait ProductField[T] {
+    type FieldType
+    def name: FieldName
+    def get(t: T): Option[FieldType]
+    def schema: Schema[FieldType]
+
+    override def equals(other: Any): Boolean = other match { // TODO
+      case p: ProductField[_] => p.name == name && p.schema == schema
+      case _                  => false
+    }
+
+    override def toString: String = s"field($name,${schema})" // TODO
+  }
+  case class SProduct[T](info: SObjectInfo, fields: List[ProductField[T]]) extends SObject[T] {
+    def required: List[FieldName] = fields.collect { case f if !f.schema.isOptional => f.name }
+    def show: String = s"object(${fields.map(f => s"${f.name}->${f.schema.show}").mkString(",")}"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SProduct(
+      info,
+      fields.map(f =>
+        new ProductField[TT] {
+          type FieldType = f.FieldType
+          override val name: FieldName = f.name
+          override def get(t: TT): Option[FieldType] = f.get(g(t))
+          override val schema: Schema[FieldType] = f.schema
+        }
+      )
+    )
   }
   object SProduct {
-    val Empty: SProduct = SProduct(SObjectInfo.Unit, Iterable.empty)
+    def empty[T]: SProduct[T] = SProduct(SObjectInfo.Unit, Nil)
   }
-  case class SCoproduct(info: SObjectInfo, schemas: List[Schema[_]], discriminator: Option[Discriminator]) extends SObject {
-    override def show: String = "oneOf:" + schemas.mkString(",")
+
+  case class SOpenProduct[T, V](info: SObjectInfo, valueSchema: Schema[V])(val fieldValues: T => Map[String, V]) extends SObject[T] {
+    override def show: String = s"map"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SOpenProduct[TT, V](info, valueSchema)(g.andThen(fieldValues))
+  }
+
+  case class SCoproduct[T](info: SObjectInfo, schemas: SealedTrait[Schema, T], discriminator: Option[Discriminator]) extends SObject[T] {
+    override def show: String = "oneOf:" + schemas.subtypes.values.mkString(",")
 
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
         discriminatorSchema: Schema[D] = Schema.string,
-        discriminatorMappingOverride: Map[String, SRef] = Map.empty
-    ): SCoproduct = {
+        discriminatorMappingOverride: Map[String, SRef[_]] = Map.empty // TODO: used?
+    ): SCoproduct[T] = {
       SCoproduct(
         info,
-        schemas.map {
-          case s @ Schema(st: SchemaType.SProduct, _, _, _, _, _, _, _) =>
-            s.copy(schemaType = st.copy(fields = st.fields.toSeq :+ (discriminatorName -> discriminatorSchema)))
-          case s => s
+        new SealedTrait[Schema, T] {
+          override def dispatch(t: T): String = schemas.dispatch(t)
+          override val subtypes: Map[String, Schema[T]] = schemas.subtypes.mapValues {
+            case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _) =>
+              s.copy(schemaType = st.copy(fields = st.fields :+ new ProductField[T] {
+                override type FieldType = D
+                override val name: FieldName = discriminatorName
+                override def get(t: T): Option[D] = None
+                override def schema: Schema[D] = discriminatorSchema
+              }))
+            case s => s
+          }.toMap
         },
         Some(Discriminator(discriminatorName.encodedName, discriminatorMappingOverride))
       )
     }
-  }
-  case class SOpenProduct(info: SObjectInfo, valueSchema: Schema[_]) extends SObject {
-    override def show: String = s"map"
+
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SCoproduct(
+      info,
+      new SealedTrait[Schema, TT] {
+        override def dispatch(t: TT): String = schemas.dispatch(g(t))
+        override def subtypes: Map[String, Schema[TT]] = schemas.subtypes.asInstanceOf[Map[String, Schema[TT]]]
+      },
+      discriminator
+    )
   }
 
-  case class SRef(info: SObjectInfo) extends SchemaType {
+  case class SRef[T](info: SObjectInfo) extends SchemaType[T] {
     def show: String = s"ref($info)"
+    override def contramap[TT](g: TT => T): SchemaType[TT] = SRef(info)
   }
 
   case class SObjectInfo(fullName: String, typeParameterShortNames: List[String] = Nil)
@@ -75,5 +134,5 @@ object SchemaType {
     val Unit: SObjectInfo = SObjectInfo(fullName = "Unit")
   }
 
-  case class Discriminator(propertyName: String, mappingOverride: Map[String, SRef])
+  case class Discriminator(propertyName: String, mappingOverride: Map[String, SRef[_]])
 }

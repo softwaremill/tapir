@@ -44,7 +44,7 @@ trait TapirAliases {
   val RenderPathTemplate = sttp.tapir.RenderPathTemplate
 
   /** SchemaType.scala */
-  type SchemaType = sttp.tapir.SchemaType
+  type SchemaType[T] = sttp.tapir.SchemaType[T]
   val SchemaType = sttp.tapir.SchemaType
 
   /** Schema.scala */

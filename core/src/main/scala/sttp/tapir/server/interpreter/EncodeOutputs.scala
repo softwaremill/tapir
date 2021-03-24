@@ -3,7 +3,7 @@ package sttp.tapir.server.interpreter
 import sttp.model.{HasHeaders, Header, HeaderNames, MediaType, StatusCode}
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
-import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
@@ -31,7 +31,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S]) {
   }
 
   private def applySingle(output: EndpointOutput.Single[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
-    def encoded[T]: T = output._mapping.asInstanceOf[Mapping[T, Any]].encode(value.asAny)
+    def encoded[T]: T = output._encode.asInstanceOf[Any => T].apply(value.asAny)
     output match {
       case EndpointIO.Empty(_, _)                   => ov
       case EndpointOutput.FixedStatusCode(sc, _, _) => ov.withStatusCode(sc)

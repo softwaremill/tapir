@@ -5,6 +5,7 @@ import sttp.tapir.generic.{Configuration, D}
 import org.scalatest.flatspec.AnyFlatSpec
 import sttp.tapir.generic.auto._
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.TestUtil.field
 
 class SchemaMacroTest extends AnyFlatSpec with Matchers {
   behavior of "apply modification"
@@ -18,7 +19,10 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     val info1 = SObjectInfo("sttp.tapir.Person")
     implicitly[Schema[Person]]
       .modify(_.age)(_.description("test").default(10)) shouldBe Schema(
-      SProduct(info1, List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).description("test").default(10))))
+      SProduct[Person](
+        info1,
+        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(10)))
+      )
     )
   }
 
@@ -28,19 +32,27 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
 
     val expectedNestedProduct =
       Schema(
-        SProduct(info2, List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).description("test").default(11))))
+        SProduct[Person](
+          info2,
+          List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(11)))
+        )
       )
 
     implicitly[Schema[DevTeam]]
       .modify(_.p1.age)(_.description("test").default(11)) shouldBe
-      Schema(SProduct(info1, List((FieldName("p1"), expectedNestedProduct), (FieldName("p2"), implicitly[Schema[Person]]))))
+      Schema(
+        SProduct[DevTeam](info1, List(field(FieldName("p1"), expectedNestedProduct), field(FieldName("p2"), implicitly[Schema[Person]])))
+      )
   }
 
   it should "modify array elements in products" in {
     val info1 = SObjectInfo("sttp.tapir.ArrayWrapper")
     implicitly[Schema[ArrayWrapper]]
       .modify(_.f1.each)(_.format("xyz")) shouldBe Schema(
-      SProduct(info1, List((FieldName("f1"), Schema(SArray(Schema(SString).format("xyz")), isOptional = true))))
+      SProduct[ArrayWrapper](
+        info1,
+        List(field(FieldName("f1"), Schema(SArray[List[String], String](Schema(SString()).format("xyz"))(identity), isOptional = true)))
+      )
     )
   }
 
@@ -48,7 +60,12 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     val info1 = SObjectInfo("sttp.tapir.ArrayWrapper")
     implicitly[Schema[ArrayWrapper]]
       .modify(_.f1)(_.format("xyz")) shouldBe Schema(
-      SProduct(info1, List((FieldName("f1"), Schema(SArray(Schema(SString)), isOptional = true).format("xyz"))))
+      SProduct[ArrayWrapper](
+        info1,
+        List(
+          field(FieldName("f1"), Schema(SArray[List[String], String](Schema(SString()))(identity), isOptional = true).format("xyz"))
+        )
+      )
     )
   }
 
@@ -58,9 +75,12 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     implicitly[Schema[DevTeam]]
       .modify(_.p1)(_.format("xyz"))
       .modify(_.p2)(_.format("qwe")) shouldBe Schema(
-      SProduct(
+      SProduct[DevTeam](
         info1,
-        List((FieldName("p1"), implicitly[Schema[Person]].format("xyz")), (FieldName("p2"), implicitly[Schema[Person]].format("qwe")))
+        List(
+          field(FieldName("p1"), implicitly[Schema[Person]].format("xyz")),
+          field(FieldName("p2"), implicitly[Schema[Person]].format("qwe"))
+        )
       )
     )
   }
@@ -69,24 +89,32 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     val parentSchema = implicitly[Schema[Parent]]
     parentSchema
       .modify(_.child)(_.format("xyz")) shouldBe Schema(
-      SProduct(SObjectInfo("sttp.tapir.Parent"), List(FieldName("child") -> implicitly[Schema[Person]].format("xyz").asOption)),
+      SProduct[Parent](
+        SObjectInfo("sttp.tapir.Parent"),
+        List(field(FieldName("child"), implicitly[Schema[Person]].asOption.format("xyz")))
+      ),
       validator = parentSchema.validator
     )
   }
 
+  /*
+  Schema(SProduct(SObjectInfo(sttp.tapir.Parent,List()),List(field(FieldName(child,child),Schema(SOption(Schema(SProduct(SObjectInfo(sttp.tapir.Person,List()),List(field(FieldName(name,name),Schema(SString(),false,None,None,None,None,false,All(List()))), field(FieldName(age,age),Schema(SInteger(),false,None,None,None,None,false,All(List()))))),false,None,None,None,None,false,All(List()))),true,None,None,None,None,false,All(List()))))),false,None,None,None,None,false,All(List())) was not equal to Schema(SProduct(SObjectInfo(sttp.tapir.Parent,List()),List(field(FieldName(child,child),Schema(SOption(Schema(SProduct(SObjectInfo(sttp.tapir.Person,List()),List(field(FieldName(name,name),Schema(SString(),false,None,None,None,None,false,All(List()))), field(FieldName(age,age),Schema(SInteger(),false,None,None,Some(xyz),None,false,All(List()))))),false,None,None,None,None,false,All(List()))),true,None,None,None,None,false,All(List()))))),false,None,None,None,None,false,All(List()))
+   */
   it should "modify property of optional parameter" in {
     val parentSchema = implicitly[Schema[Parent]]
     parentSchema
       .modify(_.child.each.age)(_.format("xyz")) shouldBe Schema(
-      SProduct(
+      SProduct[Parent](
         SObjectInfo("sttp.tapir.Parent"),
         List(
-          FieldName("child") -> Schema(
-            SProduct(
-              SObjectInfo("sttp.tapir.Person"),
-              List(FieldName("name") -> Schema(SString), FieldName("age") -> Schema(SInteger).format("xyz"))
-            ),
-            isOptional = true
+          field(
+            FieldName("child"),
+            Schema(
+              SProduct[Person](
+                SObjectInfo("sttp.tapir.Person"),
+                List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).format("xyz")))
+              )
+            ).asOption
           )
         )
       ),
@@ -97,11 +125,16 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   it should "modify property of open product" in {
     implicitly[Schema[Team]]
       .modify(_.v.each)(_.description("test")) shouldBe Schema(
-      SProduct(
+      SProduct[Team](
         SObjectInfo("sttp.tapir.Team"),
         List(
-          FieldName("v") -> Schema(
-            SOpenProduct(SObjectInfo("Map", List("Person")), implicitly[Schema[Person]].description("test"))
+          field(
+            FieldName("v"),
+            Schema(
+              SOpenProduct[Map[String, Person], Person](SObjectInfo("Map", List("Person")), implicitly[Schema[Person]].description("test"))(
+                identity
+              )
+            )
           )
         )
       )
@@ -117,9 +150,9 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
 
   it should "add default to product" in {
     val expected = Schema(
-      SProduct(
+      SProduct[Person](
         SObjectInfo("sttp.tapir.Person"),
-        List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).default(34)))
+        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).default(34)))
       )
     )
 
@@ -130,9 +163,9 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
 
   it should "add example to product" in {
     val expected = Schema(
-      SProduct(
+      SProduct[Person](
         SObjectInfo("sttp.tapir.Person"),
-        List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).encodedExample(18)))
+        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).encodedExample(18)))
       )
     )
 
@@ -143,9 +176,9 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
 
   it should "add description to product" in {
     val expected = Schema(
-      SProduct(
+      SProduct[Person](
         SObjectInfo("sttp.tapir.Person"),
-        List((FieldName("name"), Schema(SString)), (FieldName("age"), Schema(SInteger).description("test")))
+        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test")))
       )
     )
 
@@ -155,9 +188,9 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   it should "work with custom naming configuration" in {
     implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
     val actual = implicitly[Schema[D]].modify(_.someFieldName)(_.description("something"))
-    actual.schemaType shouldBe SProduct(
+    actual.schemaType shouldBe SProduct[D](
       SObjectInfo("sttp.tapir.generic.D"),
-      List((FieldName("someFieldName", "some-field-name"), Schema(SString).description("something")))
+      List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
     )
   }
 }

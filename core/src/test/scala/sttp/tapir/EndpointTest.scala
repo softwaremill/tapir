@@ -169,9 +169,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   "validate" should "accumulate validators" in {
     val input = query[Int]("x").validate(Validator.min(1)).validate(Validator.max(3))
-    input.codec.validator.validate(0) should not be empty
-    input.codec.validator.validate(4) should not be empty
-    input.codec.validator.validate(2) shouldBe empty
+    input.codec.schema.applyValidation(0) should not be empty
+    input.codec.schema.applyValidation(4) should not be empty
+    input.codec.schema.applyValidation(2) shouldBe empty
   }
 
   val httpMethodTestData = List(
