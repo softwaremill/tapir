@@ -3,9 +3,8 @@ package sttp.tapir.server.interpreter
 import sttp.model._
 import sttp.model.headers.Accepts
 import sttp.tapir.EndpointOutput.StatusMapping
-import sttp.tapir.RawBodyType.StringBody
-import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams}
-import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, RawBodyType, StreamBodyIO, WebSocketBodyOutput}
+import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams, _}
+import sttp.tapir.{CodecFormat, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
@@ -65,13 +64,15 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], requestHeader
 
         val bodyMappings: Map[MediaType, StatusMapping[_]] = mappings
           .filter(_.appliesTo(enc))
-          .collect({
-            case sm @ StatusMapping(_, EndpointIO.Body(bodyType, codec, _), _) =>
-              (charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType), sm)
-            case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)), _) =>
-              (charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType), sm)
-            case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _) => (codec.format.mediaType, sm)
-          })
+          .flatMap(sm =>
+            sm.output.traverseOutputs {
+              case EndpointIO.Body(bodyType, codec, _) =>
+                Vector(charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm)
+              case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+                Vector(charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm)
+              case EndpointIO.Empty(codec, _) => Vector(codec.format.mediaType -> sm)
+            }
+          )
           .toMap
 
         if (bodyMappings.nonEmpty) {
@@ -80,7 +81,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], requestHeader
           MediaType
             .bestMatch(mediaTypes, ranges)
             .flatMap(bodyMappings.get)
-            .map(m => apply(m.output, ParamsAsAny(enc), m.statusCode.map(ov.withStatusCode).getOrElse(ov)))
+            .map(sm => apply(sm.output, ParamsAsAny(enc), sm.statusCode.map(ov.withStatusCode).getOrElse(ov)))
             .getOrElse(ov.withStatusCode(StatusCode.NotAcceptable))
         } else {
           val mapping = mappings
@@ -90,11 +91,6 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], requestHeader
         }
       case EndpointOutput.MappedPair(wrapped, _) => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
     }
-  }
-
-  private def charset[R](bodyType: RawBodyType[R]): Option[Charset] = bodyType match {
-    case StringBody(charset) => Some(charset)
-    case _                   => None
   }
 }
 

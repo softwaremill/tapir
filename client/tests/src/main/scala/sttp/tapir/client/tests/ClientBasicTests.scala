@@ -97,6 +97,9 @@ trait ClientBasicTests { this: ClientTests[Any] =>
     testClient(out_no_content_or_ok_empty_output.name("204"), 204, Right(()))
     testClient(out_no_content_or_ok_empty_output.name("200"), 200, Right(()))
 
+    // when no content response should pick first non body mapping
+    testClient(out_json_or_empty_output_no_content, 204, Right(Left(())))
+
     testClient(
       MultipleMediaTypes.out_json_xml_text_common_schema.name("json content organization"),
       "application/json",

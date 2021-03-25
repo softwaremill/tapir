@@ -75,7 +75,13 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
 
             contentType match {
               case None =>
-                mappingsForStatus.headOption
+                val firstNonBodyMapping = mappingsForStatus.find(_.output.traverseOutputs {
+                  case _ @(EndpointIO.Body(_, _, _) | EndpointIO.StreamBodyWrapper(_)) => Vector(false)
+                  case _                                                               => Vector(true)
+                } forall (_ == true))
+
+                firstNonBodyMapping
+                  .orElse(mappingsForStatus.headOption)
                   .map(applyMapping)
                   .getOrElse(
                     DecodeResult.Error(
