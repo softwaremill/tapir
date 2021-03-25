@@ -1,12 +1,7 @@
 package sttp.tapir
 
-import sttp.tapir.SchemaType.ProductField
+import sttp.tapir.SchemaType.SProductField
 
 object TestUtil {
-  def field[T, U](_name: FieldName, _schema: Schema[U]): SchemaType.ProductField[T] = new ProductField[T] {
-    override type FieldType = U
-    override def name: FieldName = _name
-    override def get(t: T): Option[U] = None
-    override def schema: Schema[U] = _schema
-  }
+  def field[T, U](_name: FieldName, _schema: Schema[U]): SchemaType.SProductField[T] = SProductField[T, U](_name, _schema, _ => None)
 }

@@ -381,14 +381,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       s.copy(schemaType =
         SProduct(
           info,
-          fields.map(f =>
-            new ProductField[T] {
-              override type FieldType = f.FieldType
-              override def name: FieldName = f.name
-              override def get(t: T): Option[FieldType] = f.get(t)
-              override def schema: Typeclass[FieldType] = removeValidators(f.schema)
-            }
-          )
+          fields.map(f => SProductField[T, f.FieldType](f.name, removeValidators(f.schema), f.get))
         )
       )
     case st @ SCoproduct(info, subtypes, discriminator) =>

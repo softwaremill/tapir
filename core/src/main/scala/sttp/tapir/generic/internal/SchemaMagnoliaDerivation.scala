@@ -31,12 +31,7 @@ trait SchemaMagnoliaDerivation {
         val pSchema = enrichSchema(p.typeclass, p.annotations)
         val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
 
-        new ProductField[T] {
-          override type FieldType = p.PType
-          override val name: FieldName = FieldName(p.label, encodedName)
-          override def get(t: T): Option[FieldType] = Some(p.dereference(t))
-          override val schema: Typeclass[FieldType] = pSchema
-        }
+        SProductField[T, p.PType](FieldName(p.label, encodedName), pSchema, t => Some(p.dereference(t)))
       }.toList
     )
 

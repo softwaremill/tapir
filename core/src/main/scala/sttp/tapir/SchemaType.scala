@@ -48,35 +48,37 @@ object SchemaType {
     def info: SObjectInfo
   }
 
-  trait ProductField[T] {
+  trait SProductField[T] {
     type FieldType
     def name: FieldName
-    def get(t: T): Option[FieldType]
     def schema: Schema[FieldType]
+    def get: T => Option[FieldType]
 
-    override def equals(other: Any): Boolean = other match { // TODO
-      case p: ProductField[_] => p.name == name && p.schema == schema
-      case _                  => false
+    override def equals(other: Any): Boolean = other match {
+      case p: SProductField[_] => p.name == name && p.schema == schema
+      case _                   => false
     }
 
-    override def toString: String = s"field($name,${schema})" // TODO
+    def show: String = s"field($name,${schema.show})"
+    override def toString: String = s"SProductField($name,$schema)"
   }
-  case class SProduct[T](info: SObjectInfo, fields: List[ProductField[T]]) extends SObject[T] {
+  object SProductField {
+    def apply[T, F](_name: FieldName, _schema: Schema[F], _get: T => Option[F]): SProductField[T] = new SProductField[T] {
+      override type FieldType = F
+      override val name: FieldName = _name
+      override val schema: Schema[F] = _schema
+      override val get: T => Option[F] = _get
+    }
+  }
+  case class SProduct[T](info: SObjectInfo, fields: List[SProductField[T]]) extends SObject[T] {
     def required: List[FieldName] = fields.collect { case f if !f.schema.isOptional => f.name }
     def show: String = s"object(${fields.map(f => s"${f.name}->${f.schema.show}").mkString(",")}"
     override def contramap[TT](g: TT => T): SchemaType[TT] = SProduct(
       info,
-      fields.map(f =>
-        new ProductField[TT] {
-          type FieldType = f.FieldType
-          override val name: FieldName = f.name
-          override def get(t: TT): Option[FieldType] = f.get(g(t))
-          override val schema: Schema[FieldType] = f.schema
-        }
-      )
+      fields.map(f => SProductField[TT, f.FieldType](f.name, f.schema, g.andThen(f.get)))
     )
 
-    private[tapir] val fieldsWithValidation: List[ProductField[T]] = fields.collect {
+    private[tapir] val fieldsWithValidation: List[SProductField[T]] = fields.collect {
       case f if f.schema.hasValidation => f
     }
   }
@@ -103,12 +105,7 @@ object SchemaType {
         info,
         subtypes.mapValues {
           case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _) =>
-            s.copy(schemaType = st.copy(fields = st.fields :+ new ProductField[T] {
-              override type FieldType = D
-              override val name: FieldName = discriminatorName
-              override def get(t: T): Option[D] = None
-              override def schema: Schema[D] = discriminatorSchema
-            }))
+            s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[T, D](discriminatorName, discriminatorSchema, _ => None)))
           case s => s
         }.toMap,
         Some(Discriminator(discriminatorName.encodedName, discriminatorMappingOverride))

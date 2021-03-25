@@ -83,7 +83,7 @@ case class Schema[T](
 
   def deprecated(d: Boolean): Schema[T] = copy(deprecated = d)
 
-  def show: String = s"schema is $schemaType${if (isOptional) " (optional)" else ""}"
+  def show: String = s"schema is $schemaType"
 
   def showValidators: Option[String] = {
     if (hasValidation) {
@@ -126,12 +126,7 @@ case class Schema[T](
           case s @ SOption(element) if f == Schema.ModifyCollectionElements => SOption(element.modifyAtPath(fs, modify))(s.toOption)
           case s @ SProduct(_, fields) =>
             s.copy(fields = fields.map { field =>
-              if (field.name.name == f) new ProductField[T] {
-                override type FieldType = field.FieldType
-                override val name: FieldName = field.name
-                override def get(t: T): Option[FieldType] = field.get(t)
-                override val schema: Schema[FieldType] = field.schema.modifyAtPath(fs, modify)
-              }
+              if (field.name.name == f) SProductField[T, field.FieldType](field.name, field.schema.modifyAtPath(fs, modify), field.get)
               else field
             })
           case s @ SOpenProduct(_, valueSchema) if f == Schema.ModifyCollectionElements =>
