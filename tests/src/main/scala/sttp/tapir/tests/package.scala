@@ -315,16 +315,19 @@ package object tests {
       .out(stringBody)
       .name("Query with default")
 
-  val out_no_content_or_ok_empty_output: Endpoint[Int, Unit, Unit, Any] =
+  val out_no_content_or_ok_empty_output: Endpoint[Int, Unit, Unit, Any] = {
+    val anyMatches: PartialFunction[Any, Boolean] = { case _ => true}
+
     endpoint
       .in("status")
       .in(query[Int]("statusOut"))
       .out(
         sttp.tapir.oneOf(
-          statusMapping(StatusCode.NoContent, emptyOutput),
-          statusMapping(StatusCode.Ok, emptyOutput)
+          statusMappingValueMatcher(StatusCode.NoContent, emptyOutput)(anyMatches),
+          statusMappingValueMatcher(StatusCode.Ok, emptyOutput)(anyMatches)
         )
       )
+  }
 
   //
 

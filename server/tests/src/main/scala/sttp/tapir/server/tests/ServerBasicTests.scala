@@ -642,6 +642,10 @@ class ServerBasicTests[F[_], ROUTE](
       })
     },
     //
+    testServer(out_no_content_or_ok_empty_output)(_ => pureResult(().asRight[Unit])) { baseUri =>
+      basicRequest.get(uri"$baseUri/status?statusOut=200").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
+    //
     testServer(
       "recover errors from exceptions",
       NonEmptyList.of(

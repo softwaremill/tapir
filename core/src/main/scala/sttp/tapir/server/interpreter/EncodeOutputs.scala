@@ -63,7 +63,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], requestHeader
       case EndpointOutput.OneOf(mappings, _) =>
         val enc = encoded[Any]
 
-        val mappingsWithCodec: Map[MediaType, StatusMapping[_]] = mappings
+        val bodyMappings: Map[MediaType, StatusMapping[_]] = mappings
           .filter(_.appliesTo(enc))
           .collect({
             case sm @ StatusMapping(_, EndpointIO.Body(bodyType, codec, _), _) =>
@@ -71,16 +71,23 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], requestHeader
             case sm @ StatusMapping(_, EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)), _) =>
               (charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType), sm)
             case sm @ StatusMapping(_, EndpointIO.Empty(codec, _), _) => (codec.format.mediaType, sm)
-          }).toMap
+          })
+          .toMap
 
-        val ranges = Accepts.unsafeParse(requestHeaders)
-        val mediaTypes = mappingsWithCodec.keys.asInstanceOf[scala.collection.immutable.Seq[MediaType]]
-        val bestMatch = MediaType.bestMatch(mediaTypes, ranges)
-
-        bestMatch
-          .flatMap(mappingsWithCodec.get)
-          .map(mapping => apply(mapping.output, ParamsAsAny(enc), mapping.statusCode.map(ov.withStatusCode).getOrElse(ov)))
-          .getOrElse(ov.withStatusCode(StatusCode.NotAcceptable))
+        if (bodyMappings.nonEmpty) {
+          val ranges = Accepts.unsafeParse(requestHeaders)
+          val mediaTypes = bodyMappings.keys.toSeq.asInstanceOf[scala.collection.immutable.Seq[MediaType]]
+          MediaType
+            .bestMatch(mediaTypes, ranges)
+            .flatMap(bodyMappings.get)
+            .map(m => apply(m.output, ParamsAsAny(enc), m.statusCode.map(ov.withStatusCode).getOrElse(ov)))
+            .getOrElse(ov.withStatusCode(StatusCode.NotAcceptable))
+        } else {
+          val mapping = mappings
+            .find(_.appliesTo(enc))
+            .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $enc, in output: $output"))
+          apply(mapping.output, ParamsAsAny(enc), mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
+        }
       case EndpointOutput.MappedPair(wrapped, _) => apply(wrapped, ParamsAsAny(encoded[Any]), ov)
     }
   }
