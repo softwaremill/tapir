@@ -4,13 +4,13 @@ import io.circe.Codec
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir._
 import sttp.tapir.docs.openapi.VerifyYamlCoproductTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.{Entity, Organization, Person}
-import sttp.tapir._
 
 class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   test("should match expected yaml for coproduct with enum field") {
@@ -122,6 +122,14 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
 }
 
 object VerifyYamlCoproductTest {
+  sealed trait GenericEntity[T]
+  case class GenericPerson[T](data: T) extends GenericEntity[T]
+
+  sealed trait Clause
+  case class Expression(v: String) extends Clause
+  case class Not(not: Clause) extends Clause
+  case class NestedEntity(entity: Entity)
+
   object Color extends Enumeration {
     type Color = Value
 

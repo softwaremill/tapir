@@ -4,6 +4,7 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.model.StatusCode
+import sttp.tapir.docs.openapi.VerifyYamlOneOfTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
@@ -68,4 +69,11 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+}
+
+object VerifyYamlOneOfTest {
+  sealed trait ErrorInfo
+  case class NotFound(what: String) extends ErrorInfo
+  case class Unauthorized(realm: String) extends ErrorInfo
+  case class Unknown(code: Int, msg: String) extends ErrorInfo
 }

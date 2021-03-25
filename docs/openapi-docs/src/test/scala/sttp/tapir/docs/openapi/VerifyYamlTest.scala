@@ -17,6 +17,7 @@ import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi._
 import sttp.tapir.tests.{Person, _}
 import sttp.tapir.{Endpoint, endpoint, _}
+import VerifyYamlTest._
 
 import java.time.{Instant, LocalDateTime}
 
@@ -445,26 +446,9 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 }
 
-case class F1(data: List[F1])
-case class G[T](data: T)
-
-case class NestedEntity(entity: Entity)
-
-sealed trait ErrorInfo
-case class NotFound(what: String) extends ErrorInfo
-case class Unauthorized(realm: String) extends ErrorInfo
-case class Unknown(code: Int, msg: String) extends ErrorInfo
-
-case class ObjectWrapper(value: FruitAmount)
-
-sealed trait GenericEntity[T]
-case class GenericPerson[T](data: T) extends GenericEntity[T]
-
-case class ObjectWithList(data: List[FruitAmount])
-case class ObjectWithStrings(data: List[String])
-
-sealed trait Clause
-case class Expression(v: String) extends Clause
-case class Not(not: Clause) extends Clause
-
-case class MyClass(myAttribute: Int)
+object VerifyYamlTest {
+  case class F1(data: List[F1])
+  case class G[T](data: T)
+  case class ObjectWrapper(value: FruitAmount)
+  case class ObjectWithList(data: List[FruitAmount])
+}
