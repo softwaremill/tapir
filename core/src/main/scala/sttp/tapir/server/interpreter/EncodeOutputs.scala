@@ -67,10 +67,14 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], requestHeader
           .flatMap(sm =>
             sm.output.traverseOutputs {
               case EndpointIO.Body(bodyType, codec, _) =>
-                Vector(charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm)
+                Vector[(MediaType, StatusMapping[_])](
+                  charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm
+                )
               case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-                Vector(charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm)
-              case EndpointIO.Empty(codec, _) => Vector(codec.format.mediaType -> sm)
+                Vector[(MediaType, StatusMapping[_])](
+                  charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm
+                )
+              case EndpointIO.Empty(codec, _) => Vector[(MediaType, StatusMapping[_])](codec.format.mediaType -> sm)
             }
           )
           .toMap

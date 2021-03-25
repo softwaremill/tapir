@@ -7,6 +7,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
@@ -14,20 +15,10 @@ import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests.{MultipleMediaTypes, Person, _}
 import sttp.tapir.openapi._
 import sttp.tapir.tests.{Person, _}
 import sttp.tapir.{Endpoint, endpoint, _}
-import VerifyYamlTest._
 
-import scala.collection.immutable.ListMap
-import org.scalatest.funsuite.AnyFunSuite
-import org.scalatest.matchers.should.Matchers
-import sttp.capabilities.Streams
-import sttp.tapir.Codec.XmlCodec
-import sttp.tapir.SchemaType.{SInteger, SObjectInfo, SString}
-import sttp.tapir.model.UsernamePassword
 import java.time.{Instant, LocalDateTime}
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
@@ -449,24 +440,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
         Info("Entities", "1.0")
       )
       .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should match the expected yaml with multiple media types for common schema") {
-    val expectedYaml = load("expected_multiple_media_types_common_schema.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_xml_text_common_schema, Info("Examples", "1.0")).toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should match the expected yaml with multiple media types for different schema") {
-    val expectedYaml = load("expected_multiple_media_types_different_schema.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_xml_different_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
