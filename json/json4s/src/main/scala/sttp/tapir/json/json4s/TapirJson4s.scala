@@ -7,6 +7,8 @@ import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.SchemaType.{SCoproduct, SObjectInfo}
 import sttp.tapir.{Codec, EndpointIO, Schema, anyFromUtf8StringBody}
 
+import scala.collection.immutable.ListMap
+
 trait TapirJson4s {
   def jsonBody[T: Manifest: Schema](implicit formats: Formats, serialization: Serialization): EndpointIO.Body[String, T] =
     anyFromUtf8StringBody(json4sCodec[T])
@@ -27,8 +29,8 @@ trait TapirJson4s {
     Schema(
       SCoproduct(
         SObjectInfo("org.json4s.JValue"),
-        List.empty,
+        ListMap.empty,
         None
-      )
+      )(_ => None)
     )
 }

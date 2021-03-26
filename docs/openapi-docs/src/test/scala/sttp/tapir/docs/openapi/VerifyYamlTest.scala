@@ -217,7 +217,10 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     implicit val customFruitAmountSchema: Schema[FruitAmount] = Schema(
       SProduct(
         SObjectInfo("tapir.tests.FruitAmount", Nil),
-        List((FieldName("fruit"), Schema(SString)), (FieldName("amount"), Schema(SInteger).format("int32")))
+        List(
+          SProductField(FieldName("fruit"), Schema(SString()), (_: FruitAmount) => None),
+          SProductField(FieldName("amount"), Schema(SInteger()).format("int32"), (_: FruitAmount) => None)
+        )
       )
     ).description("Amount of fruits")
 

@@ -21,6 +21,7 @@ import scala.concurrent.Future
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.TestUtil.field
+import sttp.tapir.internal.IterableToListMap
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   private val stringSchema = implicitly[Schema[String]]
@@ -372,7 +373,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       )
     )
 
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(Discriminator("who_am_i", Map.empty))
+    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
   }
 
   // comparing recursive schemas without validators
@@ -388,7 +389,7 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       s.copy(schemaType =
         SCoproduct(
           info,
-          subtypes.mapValues(subtypeSchema => removeValidators(subtypeSchema)).toMap,
+          subtypes.mapValues(subtypeSchema => removeValidators(subtypeSchema)).toListMap,
           discriminator
         )(st.subtypeInfo)
       )

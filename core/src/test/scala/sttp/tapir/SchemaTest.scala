@@ -5,6 +5,8 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.TestUtil.field
 
+import scala.collection.immutable.ListMap
+
 class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify basic schema" in {
     implicitly[Schema[String]].modifyUnsafe[String]()(_.description("test")) shouldBe implicitly[Schema[String]]
@@ -130,7 +132,7 @@ class SchemaTest extends AnyFlatSpec with Matchers {
   it should "generate one-of schema using the given discriminator" in {
     val coproduct = SCoproduct[Unit](
       SObjectInfo("A"),
-      Map(
+      ListMap(
         SObjectInfo("H") -> Schema(SProduct[Unit](SObjectInfo("H"), List(field(FieldName("f1"), Schema(SInteger()))))),
         SObjectInfo("G") -> Schema(
           SProduct[Unit](SObjectInfo("G"), List(field(FieldName("f1"), Schema(SString())), field(FieldName("f2"), Schema(SString()))))
@@ -138,7 +140,7 @@ class SchemaTest extends AnyFlatSpec with Matchers {
         SObjectInfo("U") -> Schema(SString[Unit]())
       ),
       None
-    )(_ => SObjectInfo(""))
+    )(_ => None)
 
     val coproduct2 = coproduct.addDiscriminatorField(FieldName("who_am_i"))
 
@@ -159,7 +161,7 @@ class SchemaTest extends AnyFlatSpec with Matchers {
       SObjectInfo("U") -> Schema(SString[Unit]())
     )
 
-    coproduct2.discriminator shouldBe Some(Discriminator("who_am_i", Map.empty))
+    coproduct2.discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
   }
 
 }

@@ -1,5 +1,9 @@
 package sttp.tapir
 
+import sttp.tapir.internal.IterableToListMap
+
+import scala.collection.immutable.ListMap
+
 /** The type of the low-level representation of a `T` values. Part of [[Schema]]s. */
 sealed trait SchemaType[T] {
   def show: String
@@ -91,15 +95,15 @@ object SchemaType {
     override def contramap[TT](g: TT => T): SchemaType[TT] = SOpenProduct[TT, V](info, valueSchema)(g.andThen(fieldValues))
   }
 
-  case class SCoproduct[T](info: SObjectInfo, subtypes: Map[SObjectInfo, Schema[_]], discriminator: Option[Discriminator])(
-      val subtypeInfo: T => SObjectInfo
+  case class SCoproduct[T](info: SObjectInfo, subtypes: ListMap[SObjectInfo, Schema[_]], discriminator: Option[SDiscriminator])(
+      val subtypeInfo: T => Option[SObjectInfo]
   ) extends SObject[T] {
     override def show: String = "oneOf:" + subtypes.values.mkString(",")
 
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
         discriminatorSchema: Schema[D] = Schema.string,
-        discriminatorMappingOverride: Map[String, SRef[_]] = Map.empty // TODO: used?
+        discriminatorMapping: Map[String, SRef[_]] = Map.empty
     ): SCoproduct[T] = {
       SCoproduct(
         info,
@@ -107,8 +111,8 @@ object SchemaType {
           case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _) =>
             s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[T, D](discriminatorName, discriminatorSchema, _ => None)))
           case s => s
-        }.toMap,
-        Some(Discriminator(discriminatorName.encodedName, discriminatorMappingOverride))
+        }.toListMap,
+        Some(SDiscriminator(discriminatorName, discriminatorMapping))
       )(subtypeInfo)
     }
 
@@ -129,5 +133,6 @@ object SchemaType {
     val Unit: SObjectInfo = SObjectInfo(fullName = "Unit")
   }
 
-  case class Discriminator(propertyName: String, mappingOverride: Map[String, SRef[_]])
+  /** @param mapping Schemas that should be used, given the `name` field's value. */
+  case class SDiscriminator(name: FieldName, mapping: Map[String, SRef[_]])
 }
