@@ -97,9 +97,6 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     )
   }
 
-  /*
-  Schema(SProduct(SObjectInfo(sttp.tapir.Parent,List()),List(field(FieldName(child,child),Schema(SOption(Schema(SProduct(SObjectInfo(sttp.tapir.Person,List()),List(field(FieldName(name,name),Schema(SString(),false,None,None,None,None,false,All(List()))), field(FieldName(age,age),Schema(SInteger(),false,None,None,None,None,false,All(List()))))),false,None,None,None,None,false,All(List()))),true,None,None,None,None,false,All(List()))))),false,None,None,None,None,false,All(List())) was not equal to Schema(SProduct(SObjectInfo(sttp.tapir.Parent,List()),List(field(FieldName(child,child),Schema(SOption(Schema(SProduct(SObjectInfo(sttp.tapir.Person,List()),List(field(FieldName(name,name),Schema(SString(),false,None,None,None,None,false,All(List()))), field(FieldName(age,age),Schema(SInteger(),false,None,None,Some(xyz),None,false,All(List()))))),false,None,None,None,None,false,All(List()))),true,None,None,None,None,false,All(List()))))),false,None,None,None,None,false,All(List()))
-   */
   it should "modify property of optional parameter" in {
     val parentSchema = implicitly[Schema[Parent]]
     parentSchema
