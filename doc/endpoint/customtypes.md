@@ -167,7 +167,7 @@ import sttp.tapir._
 case class MyCustomType()
 implicit val schemaForMyCustomType: Schema[MyCustomType] = Schema.string
 // or, if the low-level representation is e.g. a number
-implicit val anotherSchemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaType.SInteger)
+implicit val anotherSchemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaType.SInteger())
 ```
 
 ### Sealed traits / coproducts

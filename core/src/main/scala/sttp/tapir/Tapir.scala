@@ -93,14 +93,60 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   def multipartBody[T](implicit multipartCodec: MultipartCodec[T]): EndpointIO.Body[Seq[RawPart], T] =
     EndpointIO.Body(multipartCodec.rawBodyType, multipartCodec.codec, EndpointIO.Info.empty)
 
-  /** @param s A supported streams implementation.
-    * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
+  /** Creates a stream body with a binary schema. The `application/octet-stream` media type will be used by default,
+    * but can be later overridden by providing a custom `Content-Type` header value.
+    * @param s A supported streams implementation.
+    */
+  def streamBinaryBody[S](
+      s: Streams[S]
+  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(CodecFormat.OctetStream(), Schema.binary), EndpointIO.Info.empty, None)
+
+  /** Creates a stream body with a text schema.
+    * @param s A supported streams implementation.
+    * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
+    *               header.
     * @param charset An optional charset of the resulting stream's data, to be used in the content type.
     */
-  def streamBody[S](
+  def streamTextBody[S](
       s: Streams[S]
-  )(schema: Schema[s.BinaryStream], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, schema), EndpointIO.Info.empty, charset)
+  )(format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, Schema.string), EndpointIO.Info.empty, charset)
+
+  /** Creates a stream body, with a schema corresponding to a list of `T` values. The schema will only be used for
+    * documentation, it will *not* be used to validate incoming data.
+    *
+    * @param s A supported streams implementation.
+    * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
+    * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
+    *               header.
+    * @param charset An optional charset of the resulting stream's data, to be used in the content type.
+    */
+  def streamListBody[S, T](
+      s: Streams[S]
+  )(schema: Schema[List[T]], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, schema.map[s.BinaryStream](_ => None)(_ => Nil)), EndpointIO.Info.empty, charset)
+
+  /** Creates a stream body, with a schema corresponding to iterable `C[T]` values. The schema will only be used for
+    * documentation, it will *not* be used to validate incoming data.
+    *
+    * @param s A supported streams implementation.
+    * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
+    * @param emptyIterable A value corresponding to an empty iterable, used to map over the schema so that it skips
+    *                      validation.
+    * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
+    *               header.
+    * @param charset An optional charset of the resulting stream's data, to be used in the content type.
+    */
+  def streamIterableBody[S, C[X] <: Iterable[X], T](
+      s: Streams[S]
+  )(
+      schema: Schema[C[T]],
+      emptyIterable: C[T],
+      format: CodecFormat,
+      charset: Option[Charset] = None
+  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, schema.map[s.BinaryStream](_ => None)(_ => emptyIterable)), EndpointIO.Info.empty, charset)
 
   // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
   // while the third one (S) can be inferred.

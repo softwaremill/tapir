@@ -61,7 +61,7 @@ import io.circe.generic.semiauto._
 case class Amount(v: Int) extends AnyVal
 case class FruitAmount(fruit: String, amount: Amount)
 
-implicit val amountSchema: Schema[Amount] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+implicit val amountSchema: Schema[Amount] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
 implicit val amountEncoder: Encoder[Amount] = Encoder.encodeInt.contramap(_.v)
 implicit val amountDecoder: Decoder[Amount] = Decoder.decodeInt.map(Amount.apply)
 
@@ -107,7 +107,7 @@ implicit def plainCodecForColor: PlainCodec[Color] = {
       case "red"  => Red
       case "blue" => Blue
     })(_.toString.toLowerCase)
-    .validate(Validator.enum)
+    .validate(Validator.derivedEnum)
 }
 ```
 
@@ -115,7 +115,7 @@ If the enum is nested within an object, regardless of whether the codec for that
 we need to specify the encode function by hand:
 
 ```scala mdoc:silent
-implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.enum.encode(_.toString.toLowerCase))
+implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
 ```
 
 Like other validators/schemas, enum schemas need to be added to a codec manually or through an implicit value, if the 
