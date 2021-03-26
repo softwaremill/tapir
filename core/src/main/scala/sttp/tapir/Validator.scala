@@ -56,8 +56,7 @@ object Validator extends ValidatorEnumMacro {
 
   //
 
-  sealed trait Single[T] extends Validator[T] // TODO: both needed?
-  sealed trait Primitive[T] extends Single[T]
+  sealed trait Primitive[T] extends Validator[T]
 
   case class Min[T](value: T, exclusive: Boolean)(implicit val valueIsNumeric: Numeric[T]) extends Primitive[T] {
     override def apply(t: T): List[ValidationError[_]] = {
@@ -122,7 +121,7 @@ object Validator extends ValidatorEnumMacro {
       }
     }
   }
-  case class Custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String] = None) extends Validator.Single[T] {
+  case class Custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String] = None) extends Validator[T] {
     override def apply(t: T): List[ValidationError[_]] = {
       doValidate(t)
     }
