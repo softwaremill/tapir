@@ -262,13 +262,8 @@ sealed trait EndpointOutput[T] extends EndpointTransput[T] {
 }
 
 object EndpointOutput {
-  sealed trait Single[T] extends EndpointOutput[T] {
-    private[tapir] def _encode: T => Any // TODO: remove
-  }
-
-  sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T] {
-    override private[tapir] def _encode: T => Any = codec.encode
-  }
+  sealed trait Single[T] extends EndpointOutput[T]
+  sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
 
   //
 
@@ -327,10 +322,9 @@ object EndpointOutput {
       appliesTo: Any => Boolean
   )
 
-  case class OneOf[O, T](mappings: Seq[StatusMapping[_ <: O]], codec: Mapping[O, T]) extends Single[T] {
+  case class OneOf[O, T](mappings: Seq[StatusMapping[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
-    override private[tapir] def _encode: T => Any = codec.encode
-    override def map[U](mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](codec = codec.map(mapping))
+    override def map[U](_mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](mapping = mapping.map(_mapping))
     override def show: String = showOneOf(mappings.map(_.output.show))
   }
 
@@ -349,7 +343,6 @@ object EndpointOutput {
 
   case class MappedPair[T, U, TU, V](output: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointOutput.Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
-    override private[tapir] def _encode: V => Any = mapping.encode
     override def show: String = output.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](output, mapping.map(m))
   }
@@ -446,7 +439,6 @@ object EndpointIO {
 
   case class MappedPair[T, U, TU, V](io: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointIO.Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
-    override private[tapir] def _encode: V => Any = mapping.encode
     override def show: String = io.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](io, mapping.map(m))
   }
