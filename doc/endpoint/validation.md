@@ -36,41 +36,8 @@ Validation rules added using the built-in validators are translated to [OpenAPI]
 
 ## Validation rules and automatic codec derivation
 
-As validators are parts of schemas, they are looked up as part of the with implicit `Schema[T]` values. 
-
-While they can be manually defined, tapir provides tools to derive automatically schemas for custom types 
-(traits and case classes).
-
-## Custom type validation
-
-Note that to validate a nested member of a case class, it needs to have a unique type (that is, not an `Int`, as 
-providing an implicit `Validator[Int]` would validate all ints in the hierarchy), as schema lookup is type-driven.
-
-To introduce unique types for primitive values, you can use value classes or [type tagging](https://github.com/softwaremill/scala-common#tagging).
-
-For example, to support an integer wrapped in a value type in a json body, we need to provide Circe encoders and 
-decoders (if that's the json library that we are using), schema information with validator:
- 
-```scala mdoc:silent:reset-object
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.{ Encoder, Decoder }
-import io.circe.generic.semiauto._
-
-case class Amount(v: Int) extends AnyVal
-case class FruitAmount(fruit: String, amount: Amount)
-
-implicit val amountSchema: Schema[Amount] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
-implicit val amountEncoder: Encoder[Amount] = Encoder.encodeInt.contramap(_.v)
-implicit val amountDecoder: Decoder[Amount] = Decoder.decodeInt.map(Amount.apply)
-
-implicit val decoder: Decoder[FruitAmount] = deriveDecoder[FruitAmount]
-implicit val encoder: Encoder[FruitAmount] = deriveEncoder[FruitAmount]
-
-val e: Endpoint[FruitAmount, Unit, Unit, Nothing] =
-  endpoint.in(jsonBody[FruitAmount])
-```
+As validators are parts of schemas, they are looked up as part of the implicit `Schema[T]` values. When 
+[customising schemas](schemas.md), use the `.validate` method on the schema to add a validator.
 
 ## Decode failures
 

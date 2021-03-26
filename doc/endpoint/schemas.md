@@ -3,7 +3,7 @@
 Implicit schemas for basic types (`String`, `Int`, etc.), and their collections (`Option`, `List`, `Array` etc.) are
 defined out-of-the box. They don't contain any meta-data, such as descriptions or example values.
 
-For case classes types, `Schema[_]` values can be derived automatically using
+For case classes, `Schema[_]` values can be derived automatically using
 [Magnolia](https://propensive.com/opensource/magnolia/), given that schemas are defined for all the case class's fields.
 
 There are two policies of custom type derivation are available:
@@ -172,6 +172,40 @@ The "unsafe" prefix comes from the fact that the method takes a list of strings,
 which represent fields, and the correctness of this specification is not checked.
 
 Non-standard collections can be unwrapped in the modification path by providing an implicit value of `ModifyFunctor`.
+
+### Using value classes/tagged types
+
+An alternative to customising schemas for case class fields of primitive type (e.g. `Int`s), is creating a unique type.
+As schema lookup is type-driven, if a schema for a such type is provided as an implicit value, it will be used 
+during automatic or semi-automatic schema derivation. Such schemas can have custom meta-data, including description,
+validation, etc.
+
+To introduce unique types for primitive values, which don't have a runtime overhead, you can use value classes or 
+[type tagging](https://github.com/softwaremill/scala-common#tagging).
+
+For example, to support an integer wrapped in a value type in a json body, we need to provide Circe encoders and
+decoders (if that's the json library that we are using), schema information with validator:
+
+```scala mdoc:silent:reset-object
+import sttp.tapir._
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import io.circe.{ Encoder, Decoder }
+import io.circe.generic.semiauto._
+
+case class Amount(v: Int) extends AnyVal
+case class FruitAmount(fruit: String, amount: Amount)
+
+implicit val amountSchema: Schema[Amount] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
+implicit val amountEncoder: Encoder[Amount] = Encoder.encodeInt.contramap(_.v)
+implicit val amountDecoder: Decoder[Amount] = Decoder.decodeInt.map(Amount.apply)
+
+implicit val decoder: Decoder[FruitAmount] = deriveDecoder[FruitAmount]
+implicit val encoder: Encoder[FruitAmount] = deriveEncoder[FruitAmount]
+
+val e: Endpoint[FruitAmount, Unit, Unit, Nothing] =
+  endpoint.in(jsonBody[FruitAmount])
+```
 
 ## Next
 
