@@ -1,6 +1,6 @@
 # Validation
 
-Tapir supports validation for primitive/base types. Validation of composite values, whole data structures, business 
+Tapir supports validation for primitive types. Validation of composite values, whole data structures, business 
 rules enforcement etc. should be done as part of the [server logic](../server/logic.md) of the endpoint, using the 
 dedicated error output (the `E` in `Endpoint[I, E, O, S]`) to report errors. 
 
@@ -83,11 +83,11 @@ To customise error messages that are returned upon validation/decode failures by
 
 ## Enum validators
 
-Validators for enumerations can be created using the `Validator.enum` method, which either:
+Validators for enumerations can be created using:
 
-* takes a type parameter, which should be an abstract, sealed base type, and using a macro determines the possible 
-  implementations
-* takes the list of possible values
+* `Validator.derivedEnum`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
+  macro determines the possible values
+* `Validator.enum`, which takes the list of possible values
 
 To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
 converts the enum value to a raw type (typically a string). This method is inferred *only* if the validator is directly 
@@ -118,8 +118,8 @@ we need to specify the encode function by hand:
 implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
 ```
 
-Like other validators/schemas, enum schemas need to be added to a codec manually or through an implicit value, if the 
-codec and validator is automatically derived. 
+Like other validators/schemas, enum schemas need to be added to a codec manually, or through an implicit value if the 
+codec is automatically derived. 
 
 ## Next
 

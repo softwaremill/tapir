@@ -5,7 +5,7 @@ To support a custom type, you'll need to provide an implicit `Codec` for that ty
 This can be done by writing a codec from scratch, mapping over an existing codec, or automatically deriving one.
 Which of these approaches can be taken, depends on the context in which the codec will be used.
 
-## Providing an implicit codec
+## Creating an implicit codec by hand
 
 To create a custom codec, you can either directly implement the `Codec` trait, which requires to provide the following
 information:
@@ -85,172 +85,11 @@ Automatic codec derivation usually requires other implicits, such as:
 
 * json encoders/decoders from the json library
 * codecs for individual form fields
-* schema of the custom type, through the `Schema[T]` implicit
+* schema of the custom type, through the `Schema[T]` implicits (see the next section)
 
 Note the derivation of e.g. circe json encoders/decoders and tapir schemas are separate processes, and must be 
 configured separately.
 
-## Schema derivation
-
-For case classes types, `Schema[_]` values can be derived automatically using [Magnolia](https://propensive.com/opensource/magnolia/), given
-that schemas are defined for all the case class's fields. 
-
-Two policies enable to choose the way custom types are derived:
-
-* automatic derivation
-* semi automatic derivation
-
-### Automatic derivation
-
-Case classes, traits and their children are recursively derived by Magnolia.
-
-Importing `sttp.tapir.generic.auto._` (or extending the `SchemaDerivation` trait) enables fully automatic derivation for `Schema`:
-
-```scala mdoc:silent:reset
-import sttp.tapir.Schema
-import sttp.tapir.generic.auto._
-
-case class Parent(child: Child)
-case class Child(value: String)
-
-// implicit schema used by codecs
-implicitly[Schema[Parent]]
-```
-
-If you have a case class which contains some non-standard types (other than strings, number, other case classes, 
-collections), you only need to provide schemas for them. Using these, the rest will be derived automatically.
-
-Note that when using [datatypes integrations](integrations.md), respective codecs must also be imported to enable the derivation, e.g. for [newtype](integrations.md#newtype-integration) you'll have to add `import sttp.tapir.codec.newtype._` or extend `TapirCodecNewType`.
-
-### Semi-automatic derivation
-
-Semi-automatic derivation can be done using `Schema.derived[T]`. 
-
-It only derives selected type `T`. However, derivation is not recursive: schemas must be explicitly defined for every 
-child type.
-
-This mode is easier to debug and helps to avoid issues encountered by automatic mode (wrong schemas for value classes 
-or custom types):
-
-```scala mdoc:silent:reset
-import sttp.tapir.Schema
-
-case class Parent(child: Child)
-case class Child(value: String)
-
-implicit lazy val sChild: Schema[Child] = Schema.derived
-implicit lazy val sParent: Schema[Parent] = Schema.derived
-```
-
-Note that while schemas for regular types can be safely defined as `val`s, in case of recursive values, the schema
-values must be `lazy val`s.
-
-### Configuring derivation
-
-It is possible to configure Magnolia's automatic derivation to use `snake_case`, `kebab-case` or a custom field naming 
-policy, by providing an implicit `sttp.tapir.generic.Configuration` value. This influences how the low-level 
-representation is described in documentation:
-
-```scala mdoc:silent
-import sttp.tapir.generic.Configuration
-
-implicit val customConfiguration: Configuration =
-  Configuration.default.withSnakeCaseMemberNames
-```
-
-Alternatively, `Schema[_]` values can be defined by hand, either for whole case classes, or only for some of its fields.
-For example, here we state that the schema for `MyCustomType` is a `String`:
-
-```scala mdoc:silent
-import sttp.tapir._
-
-case class MyCustomType()
-implicit val schemaForMyCustomType: Schema[MyCustomType] = Schema.string
-// or, if the low-level representation is e.g. a number
-implicit val anotherSchemaForMyCustomType: Schema[MyCustomType] = Schema(SchemaType.SInteger())
-```
-
-### Sealed traits / coproducts
-
-Schema derivation for coproduct types (sealed trait hierarchies) is supported as well. By default, such hierarchies
-will be represented as a coproduct which contains a list of child schemas, without any discriminator field.
-
-A discriminator field can be specified for coproducts by providing it in the configuration; this will be only used
-during automatic derivation:
-
-```scala mdoc:silent:reset
-import sttp.tapir.generic.Configuration
-
-implicit val customConfiguration: Configuration =
-  Configuration.default.withDiscriminator("who_am_i")
-```
-
-Alternatively, derived schemas can be customised (see below), and a discriminator can be added by calling
-the `SchemaType.SCoproduct.addDiscriminatorField(name, schema, mapingOverride)` method.
-
-Finally, if the discriminator is a field that's defined on the base trait (and hence in each implementation), the
-schemas can be specified using `Schema.oneOfUsingField`, for example (this will also generate the appropriate
-mapping overrides):
-
-```scala mdoc:silent:reset
-sealed trait Entity {
-  def kind: String
-} 
-case class Person(firstName:String, lastName:String) extends Entity { 
-  def kind: String = "person"
-}
-case class Organization(name: String) extends Entity {
-  def kind: String = "org"  
-}
-
-import sttp.tapir._
-
-val sPerson = Schema.derived[Person]
-val sOrganization = Schema.derived[Organization]
-implicit val sEntity: Schema[Entity] = 
-    Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("person" -> sPerson, "org" -> sOrganization)
-```
-
-## Customising derived schemas
-
-In some cases, it might be desirable to customise the derived schemas, e.g. to add a description to a particular
-field of a case class. One way the automatic derivation can be customised is using annotations:
-
-* `@encodedName` sets name for case class's field which is used in the encoded form (and also in documentation)
-* `@description` sets description for the whole case class or its field
-* `@default` sets default value for a case class field
-* `@encodedExample` sets example value for a case class field which is used in the documentation in the encoded form
-* `@format` sets the format for a case class field
-* `@deprecated` marks a case class's field as deprecated
-
-If the target type isn't accessible or can't be modified, schemas can be customized by looking up an implicit instance 
-of the `Derived[Schema[T]]` type, modifying the value, and assigning it to an implicit schema. 
-
-When such an implicit `Schema[T]` is in scope will have higher priority than the built-in low-priority conversion 
-from `Derived[Schema[T]]` to `Schema[T]`.
-
-Schemas for products/coproducts (case classes and case class families) can be traversed and modified using
-`.modify` method. To traverse collections, use `.each`.
-
-For example:
-
-```scala mdoc:silent:reset
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.generic.Derived
-
-case class Basket(fruits: List[FruitAmount])
-case class FruitAmount(fruit: String, amount: Int)
-implicit val customBasketSchema: Schema[Basket] = implicitly[Derived[Schema[Basket]]].value
-  .modify(_.fruits.each.amount)(_.description("How many fruits?"))
-```
-
-There is also an unsafe variant of this method, but it should be avoided in most cases. 
-The "unsafe" prefix comes from the fact that the method takes a list of strings, 
-which represent fields, and the correctness of this specification is not checked.
-
-Non-standard collections can be unwrapped in the modification path by providing an implicit value of `ModifyFunctor`.
-
 ## Next
 
-Read on about [validation](validation.md).
+Read on about [deriving schemas](schemas.md).
