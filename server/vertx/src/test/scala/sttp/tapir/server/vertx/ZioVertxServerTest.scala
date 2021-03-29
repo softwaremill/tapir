@@ -9,7 +9,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 import zio.interop.catz._
 import zio.Task
 
-class ZioVertxCreateServerTest extends TestSuite {
+class ZioVertxServerTest extends TestSuite {
   import VertxZioServerInterpreter._
   import ZioVertxTestServerInterpreter._
 
