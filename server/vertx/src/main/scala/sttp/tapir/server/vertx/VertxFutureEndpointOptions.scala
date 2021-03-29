@@ -5,6 +5,7 @@ import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
 import sttp.tapir.server.interceptor.EndpointInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 
 import java.io.File
@@ -29,12 +30,13 @@ final case class VertxFutureEndpointOptions(
 
 object VertxFutureEndpointOptions {
 
-  /** Creates default [[VertxFutureEndpointOptions]] with custom interceptors, sitting between an optional logging
-    * interceptor, and the ultimate decode failure handling interceptor.
+  /** Creates default [[VertxFutureEndpointOptions]] with custom interceptors, sitting between an optional exception
+    * interceptor, optional logging interceptor, and the ultimate decode failure handling interceptor.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
     *
+    * @param exceptionHandler Whether to respond to exceptions, or propagate them to vertx.
     * @param serverLog The server log using which an interceptor will be created, if any. To keep the default, use
     *                  `VertxEndpointOptions.defaultServerLog`
     * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
@@ -42,13 +44,15 @@ object VertxFutureEndpointOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxEndpointOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[EndpointInterceptor[Future, RoutingContext => Unit]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): VertxFutureEndpointOptions = {
     VertxFutureEndpointOptions(
       File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
-      serverLog.map(new ServerLogInterceptor[Unit, Future, RoutingContext => Unit](_, (_, _) => Future.successful(()))).toList ++
+      exceptionHandler.map(new ExceptionInterceptor[Future, RoutingContext => Unit](_)).toList ++
+        serverLog.map(new ServerLogInterceptor[Unit, Future, RoutingContext => Unit](_, (_, _) => Future.successful(()))).toList ++
         additionalInterceptors ++
         List(new DecodeFailureInterceptor[Future, RoutingContext => Unit](decodeFailureHandler)),
       None

@@ -593,6 +593,9 @@ class ServerBasicTests[F[_], ROUTE](
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
     },
     //
+    testServer(endpoint, "handle exceptions")(_ => throw new RuntimeException()) { baseUri =>
+      basicRequest.get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
+    },
     testServer(
       "recover errors from exceptions",
       NonEmptyList.of(

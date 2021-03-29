@@ -7,6 +7,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.EndpointInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 
 import java.io.File
 import scala.concurrent.ExecutionContext
@@ -29,12 +30,13 @@ case class Http4sServerOptions[F[_], G[_]](
 
 object Http4sServerOptions {
 
-  /** Creates default [[Http4sServerOptions]] with custom interceptors, sitting between an optional logging
-    * interceptor, and the ultimate decode failure handling interceptor.
+  /** Creates default [[Http4sServerOptions]] with custom interceptors, sitting between an optional exception
+    * interceptor, optional logging interceptor, and the ultimate decode failure handling interceptor.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
     *
+    * @param exceptionHandler Whether to respond to exceptions, or propagate them to http4s.
     * @param serverLog The server log using which an interceptor will be created, if any. To keep the default, use
     *                  `Http4sServerOptions.Log.defaultServerLog`
     * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
@@ -42,6 +44,7 @@ object Http4sServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors[F[_], G[_]: Sync: ContextShift](
+      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[G[Unit]]],
       additionalInterceptors: List[EndpointInterceptor[G, Http4sResponseBody[F]]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
@@ -50,7 +53,8 @@ object Http4sServerOptions {
       defaultCreateFile[G].apply(ExecutionContext.Implicits.global),
       ExecutionContext.Implicits.global,
       8192,
-      serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
+      exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
+        serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
         additionalInterceptors ++
         List(new DecodeFailureInterceptor[G, Http4sResponseBody[F]](decodeFailureHandler))
     )
