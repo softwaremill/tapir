@@ -46,7 +46,7 @@ object VertxZioEndpointOptions {
     VertxZioEndpointOptions(
       File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
       maxQueueSizeForReadStream = 16,
-      exceptionHandler.map(new ExceptionInterceptor[Future, RoutingContext => Unit](_)).toList ++
+      exceptionHandler.map(new ExceptionInterceptor[RIO[R, *], RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, RIO[R, *], RoutingContext => Unit](_, (_, _) => RIO.unit)).toList ++
         additionalInterceptors ++
         List(new DecodeFailureInterceptor[RIO[R, *], RoutingContext => Unit](decodeFailureHandler))

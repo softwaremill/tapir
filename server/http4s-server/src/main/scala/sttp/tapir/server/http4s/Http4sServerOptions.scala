@@ -44,7 +44,7 @@ object Http4sServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors[F[_], G[_]: Sync: ContextShift](
-      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
+      exceptionHandler: Option[ExceptionHandler],
       serverLog: Option[ServerLog[G[Unit]]],
       additionalInterceptors: List[EndpointInterceptor[G, Http4sResponseBody[F]]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
@@ -81,5 +81,6 @@ object Http4sServerOptions {
       }
   }
 
-  implicit def default[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] = customInterceptors(Some(Log.defaultServerLog[G]))
+  implicit def default[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] =
+    customInterceptors(Some(DefaultExceptionHandler), Some(Log.defaultServerLog[G]))
 }
