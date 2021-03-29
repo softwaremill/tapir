@@ -297,6 +297,10 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     */
   val emptyOutput: EndpointOutput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
+  /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
+    */
+  def emptyOutputAs[T](value: T): EndpointOutput[T] = emptyOutput.map(_ => value)(_ => ())
+
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   val infallibleEndpoint: Endpoint[Unit, Nothing, Unit, Any] =

@@ -71,6 +71,20 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       )
   }
 
+  it should "compile one-of empty output of a custom type" in {
+    sealed trait Error
+    final case class BadRequest(message: String) extends Error
+    final case object NotFound extends Error
+
+    endpoint.post
+      .errorOut(
+        sttp.tapir.oneOf(
+          statusMapping(StatusCode.BadRequest, stringBody.map(BadRequest)(_.message)),
+          statusMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
+        )
+      )
+  }
+
   def pairToTuple(input: EndpointInput[_]): Any =
     input match {
       case EndpointInput.Pair(left, right, _, _) => (pairToTuple(left), pairToTuple(right))
