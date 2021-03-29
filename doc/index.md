@@ -150,6 +150,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    
    client/sttp
    client/play
+   client/http4s
 
 .. toctree::
    :maxdepth: 2
