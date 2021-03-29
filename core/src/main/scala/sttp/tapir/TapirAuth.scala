@@ -54,7 +54,7 @@ object TapirAuth {
       challenge: WWWAuthenticate
   ): EndpointInput.Auth.Http[T] = {
     val codec = implicitly[Codec[List[String], T, CodecFormat.TextPlain]]
-    val authCodec = Codec.list(Codec.string.map(stringPrefixWithSpace(authType))).map(codec).schema(codec.schema)
+    val authCodec = Codec.list(Codec.string.map(stringPrefixWithSpace(authType))).mapDecode(codec.decode)(codec.encode).schema(codec.schema)
     EndpointInput.Auth.Http(authType, header[T]("Authorization")(authCodec), challenge, None)
   }
 

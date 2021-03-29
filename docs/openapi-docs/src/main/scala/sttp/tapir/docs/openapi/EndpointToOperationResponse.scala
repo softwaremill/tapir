@@ -3,7 +3,7 @@ package sttp.tapir.docs.openapi
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.tapir.apispec.ReferenceOr
-import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
+import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.openapi.{Header, Response, ResponsesCodeKey, ResponsesDefaultKey, ResponsesKey}

@@ -3,9 +3,9 @@ package sttp.tapir.docs.asyncapi
 import sttp.model.MediaType
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.apispec.IterableToListMap
 import sttp.tapir.asyncapi.{Message, SingleMessage}
 import sttp.tapir.docs.apispec.schema.{ObjectSchema, Schemas, calculateUniqueKeys}
+import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, WebSocketBodyOutput, Schema => TSchema, SchemaType => TSchemaType}
 import sttp.ws.WebSocketFrame
 

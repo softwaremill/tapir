@@ -6,6 +6,7 @@ import sttp.tapir.SchemaType._
 import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, TapirFile, Validator, encodedName}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.TestUtil.field
 
 import java.nio.charset.StandardCharsets
 
@@ -53,9 +54,9 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
 
     // when
     codec.schema.schemaType shouldBe
-      SProduct(
+      SProduct[Test6](
         SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"),
-        List((FieldName("f1"), implicitly[Schema[String]]), (FieldName("f2"), implicitly[Schema[Int]]))
+        List(field(FieldName("f1"), implicitly[Schema[String]]), field(FieldName("f2"), implicitly[Schema[Int]]))
       )
   }
 
@@ -66,9 +67,9 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
 
     // when
     codec.schema.schemaType shouldBe
-      SProduct(
+      SProduct[Test1](
         SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
-        List((FieldName("f1"), implicitly[Schema[TapirFile]]), (FieldName("f2"), implicitly[Schema[Int]]))
+        List(field(FieldName("f1"), implicitly[Schema[TapirFile]]), field(FieldName("f2"), implicitly[Schema[Int]]))
       )
   }
 

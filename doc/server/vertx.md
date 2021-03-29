@@ -144,7 +144,7 @@ val streamedResponse =
   endpoint
     .in("stream")
     .in(query[Int]("key"))
-    .out(streamBody(Fs2Streams[IO])(Schema.string, CodecFormat.TextPlain()))
+    .out(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain()))
 
 val attach = route(streamedResponse) { key =>
   IO.pure(Right(Stream.chunk(Chunk.array("Hello world!".getBytes)).repeatN(key)))

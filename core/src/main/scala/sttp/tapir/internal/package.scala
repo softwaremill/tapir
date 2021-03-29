@@ -1,12 +1,12 @@
 package sttp.tapir
 
 import java.nio.charset.Charset
-
 import sttp.model.{Method, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
+import scala.collection.immutable
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -209,11 +209,9 @@ package object internal {
       }
   }
 
-  def addValidatorShow(s: String, v: Validator[_]): String = {
-    v.show match {
-      case None     => s
-      case Some(sv) => s"$s($sv)"
-    }
+  def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {
+    case None     => s
+    case Some(sv) => s"$s($sv)"
   }
 
   def showMultiple(et: Vector[EndpointTransput[_]]): String = {
@@ -266,5 +264,15 @@ package object internal {
   implicit class RichVector[T](c: Vector[T]) {
     def headAndTail: Option[(T, Vector[T])] = if (c.isEmpty) None else Some((c.head, c.tail))
     def initAndLast: Option[(Vector[T], T)] = if (c.isEmpty) None else Some((c.init, c.last))
+  }
+
+  implicit class IterableToListMap[A](xs: Iterable[A]) {
+    def toListMap[T, U](implicit ev: A <:< (T, U)): immutable.ListMap[T, U] = {
+      val b = immutable.ListMap.newBuilder[T, U]
+      for (x <- xs)
+        b += x
+
+      b.result()
+    }
   }
 }

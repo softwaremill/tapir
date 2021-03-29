@@ -30,7 +30,7 @@ package object apispec {
   private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
   private[docs] def exampleValue[T](schema: Schema[_], raw: Any): Option[ExampleValue] = {
     (raw, schema.schemaType) match {
-      case (it: Iterable[_], _: SchemaType.SArray) => Some(ExampleMultipleValue(it.map(rawToString).toList))
+      case (it: Iterable[_], SchemaType.SArray(_)) => Some(ExampleMultipleValue(it.map(rawToString).toList))
       case (it: Iterable[_], _)                    => it.headOption.map(v => ExampleSingleValue(rawToString(v)))
       case (it: Option[_], _)                      => it.map(v => ExampleSingleValue(rawToString(v)))
       case (v, _)                                  => Some(ExampleSingleValue(rawToString(v)))

@@ -69,17 +69,22 @@ package object tests {
     .out(header[Int]("IntHeader") and stringBody)
 
   val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(jsonBody[FruitAmount])
-      .out(jsonBody[FruitAmount]).name("echo json")
+      .out(jsonBody[FruitAmount])
+      .name("echo json")
 
   val in_content_type_fixed_header: Endpoint[Unit, Unit, Unit, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(header(Header.contentType(MediaType.ApplicationJson)))
 
-  implicit val mediaTypeCodec: Codec[String, MediaType, CodecFormat.TextPlain] = Codec.string.mapDecode(_ => DecodeResult.Mismatch("", ""))(_.toString())
+  implicit val mediaTypeCodec: Codec[String, MediaType, CodecFormat.TextPlain] =
+    Codec.string.mapDecode(_ => DecodeResult.Mismatch("", ""))(_.toString())
   val in_content_type_header_with_custom_decode_results: Endpoint[MediaType, Unit, Unit, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(header[MediaType]("Content-Type"))
 
   val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte], Any] =
@@ -136,12 +141,12 @@ package object tests {
     endpoint.get.in("api" / "echo" / "param-to-header").in(query[List[String]]("qq")).out(header[List[String]]("hh"))
 
   def in_stream_out_stream[S](s: Streams[S]): Endpoint[s.BinaryStream, Unit, s.BinaryStream, S] = {
-    val sb = streamBody(s)(Schema.string, CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+    val sb = streamTextBody(s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
     endpoint.post.in("api" / "echo").in(sb).out(sb)
   }
 
   def in_stream_out_stream_with_content_length[S](s: Streams[S]): Endpoint[(Long, s.BinaryStream), Unit, (Long, s.BinaryStream), S] = {
-    val sb = streamBody[S](s)(Schema.string, CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+    val sb = streamTextBody[S](s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
     endpoint.post.in("api" / "echo").in(header[Long](HeaderNames.ContentLength)).in(sb).out(header[Long](HeaderNames.ContentLength)).out(sb)
   }
 
@@ -326,7 +331,7 @@ package object tests {
     }
 
     val in_valid_json: Endpoint[ValidFruitAmount, Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
       implicit val schemaForStringWrapper: Schema[StringWrapper] =
         Schema.string.validate(Validator.minLength(4).contramap(_.v))
       implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
@@ -337,7 +342,7 @@ package object tests {
     }
 
     val in_valid_optional_json: Endpoint[Option[ValidFruitAmount], Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
       implicit val schemaForStringWrapper: Schema[StringWrapper] =
         Schema.string.validate(Validator.minLength(4).contramap(_.v))
       implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
@@ -354,7 +359,7 @@ package object tests {
     }
 
     val in_valid_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
 
@@ -373,7 +378,7 @@ package object tests {
     }
 
     val in_valid_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
@@ -386,7 +391,7 @@ package object tests {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
-          .validate(Validator.enum)
+          .validate(Validator.derivedEnum)
       }
       endpoint.in(query[Color]("color"))
     }
@@ -398,7 +403,7 @@ package object tests {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
-          .validate(Validator.enum)
+          .validate(Validator.derivedEnum)
       }
       endpoint.in(query[Option[Color]]("color"))
     }
@@ -424,13 +429,13 @@ package object tests {
     }
 
     val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Any] = {
-      implicit def schemaForColor: Schema[Color] = Schema.string.validate(Validator.enum.encode(_.toString.toLowerCase))
+      implicit def schemaForColor: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
       endpoint.in(jsonBody[ColorWrapper])
     }
 
     val in_valid_int_array: Endpoint[List[IntWrapper], Unit, Unit, Any] = {
       implicit val schemaForIntWrapper: Schema[IntWrapper] =
-        Schema(SchemaType.SInteger).validate(Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v))
+        Schema(SchemaType.SInteger()).validate(Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v))
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[List[IntWrapper]])

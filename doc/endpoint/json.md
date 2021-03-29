@@ -16,7 +16,7 @@ the json codec that is in scope.
 
 ## Circe
 
-To use Circe add the following dependency to your project:
+To use Circe, add the following dependency to your project:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-json-circe" % "@VERSION@"

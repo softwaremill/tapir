@@ -8,7 +8,7 @@ object SchemaMapMacro {
   /*
     Extract name and generic type parameters of map value type for object info creation
    */
-  def schemaForMap[M: c.WeakTypeTag, V: c.WeakTypeTag](
+  def schemaForMap[V: c.WeakTypeTag](
       c: blackbox.Context
   )(schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[String, V]]] = {
     import c.universe._
@@ -23,10 +23,8 @@ object SchemaMapMacro {
     val schemaForMap =
       q"""{
           val s = $schemaForV
-          val v = _root_.sttp.tapir.Validator.openProduct(s.validator)
           _root_.sttp.tapir.Schema(
-            _root_.sttp.tapir.SchemaType.SOpenProduct(_root_.sttp.tapir.SchemaType.SObjectInfo("Map", $genericTypeParametersM), s),
-            validator = v)
+            _root_.sttp.tapir.SchemaType.SOpenProduct(_root_.sttp.tapir.SchemaType.SObjectInfo("Map", $genericTypeParametersM), s)(identity))
          }"""
     Debug.logGeneratedCode(c)(weakTypeV.typeSymbol.fullName, schemaForMap)
     c.Expr[Schema[Map[String, V]]](schemaForMap)
