@@ -604,7 +604,8 @@ class ServerBasicTests[F[_], ROUTE](
     //
     testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
       def ok(body: String) = (StatusCode.Ok, body.asRight[String])
-      def notAcceptable() = (StatusCode.NotAcceptable, "".asLeft[String])
+      def unsupportedMediaType() = (StatusCode.UnsupportedMediaType, "".asLeft[String])
+      def badRequest() = (StatusCode.BadRequest, "".asLeft[String])
 
       val cases: Map[(String, String), (StatusCode, Either[String, String])] = Map(
         ("application/json", "*") -> ok(organizationJson),
@@ -624,8 +625,11 @@ class ServerBasicTests[F[_], ROUTE](
         ("text/html", "iso-8859-1, utf-8") -> ok(organizationHtmlIso),
         ("*/*", "iso-8859-1") -> ok(organizationHtmlIso),
         ("*/*", "*;q=0.5, iso-8859-1") -> ok(organizationHtmlIso),
-        ("text/html", "iso-8859-5") -> notAcceptable(),
-        ("text/csv", "*") -> notAcceptable()
+        //
+        ("text/html", "iso-8859-5") -> unsupportedMediaType(),
+        ("text/csv", "*") -> unsupportedMediaType(),
+        //
+        ("text/html;(q)=xxx", "utf-8") -> badRequest()
       )
 
       cases.foldLeft(IO(scalatest.Assertions.succeed))((prev, next) => {
@@ -641,11 +645,6 @@ class ServerBasicTests[F[_], ROUTE](
           }
       })
     },
-    //
-    testServer(out_no_content_or_ok_empty_output)(_ => pureResult(().asRight[Unit])) { baseUri =>
-      basicRequest.get(uri"$baseUri/status?statusOut=200").send(backend).map(_.code shouldBe StatusCode.Ok)
-    },
-    //
     testServer(
       "recover errors from exceptions",
       NonEmptyList.of(

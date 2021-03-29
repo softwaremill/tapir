@@ -2,8 +2,9 @@ package sttp.tapir.server.stub
 
 import sttp.client3.testing._
 import sttp.client3.{Identity, Request, Response}
-import sttp.model.{HasHeaders, Headers, StatusCode}
+import sttp.model._
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.interpreter._
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 
@@ -112,7 +113,7 @@ trait SttpStubServer {
         }
 
         val outputValues: OutputValues[Any] =
-          new EncodeOutputs[Any, Nothing](toResponseBody, Seq()).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
+          new EncodeOutputs[Any, Nothing](toResponseBody, StubServerRequest).apply(output, ParamsAsAny(responseValue), OutputValues.empty)
 
         whenRequest.thenRespond(
           sttp.client3.Response(
@@ -130,5 +131,16 @@ trait SttpStubServer {
         */
       def generic: stub.WhenRequest = whenRequest
     }
+  }
+
+  private lazy val StubServerRequest = new ServerRequest {
+    override def protocol: String = ""
+    override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
+    override def underlying: Any = ()
+    override def pathSegments: List[String] = List.empty
+    override def queryParameters: QueryParams = QueryParams()
+    override def method: Method = Method.GET
+    override def uri: Uri = Uri.apply("http://locahost", 8080)
+    override def headers: Seq[Header] = Seq.empty
   }
 }

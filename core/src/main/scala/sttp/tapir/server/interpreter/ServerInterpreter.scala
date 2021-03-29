@@ -6,6 +6,7 @@ import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.content.ContentTypeInterceptor
 import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 
@@ -40,7 +41,12 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case values: DecodeBasicInputsResult.Values =>
         InputValue(se.endpoint.input, values) match {
           case InputValueResult.Value(params, _) =>
-            callInterceptorsOnDecodeSuccess(interceptors, se.endpoint, params.asAny.asInstanceOf[I], valueToResponse).map(Some(_))
+            callInterceptorsOnDecodeSuccess(
+              new ContentTypeInterceptor[F, B]() :: interceptors,
+              se.endpoint,
+              params.asAny.asInstanceOf[I],
+              valueToResponse
+            ).map(Some(_))
           case InputValueResult.Failure(input, failure) =>
             callInterceptorsOnDecodeFailure(interceptors, se.endpoint, input, failure)
         }
@@ -113,7 +119,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
 
   private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
     val outputValues =
-      new EncodeOutputs(toResponseBody, request.headers).apply(output, ParamsAsAny(v), OutputValues.empty)
+      new EncodeOutputs(toResponseBody, request).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
     val headers = outputValues.headers
