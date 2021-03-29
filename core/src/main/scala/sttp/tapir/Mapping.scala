@@ -25,27 +25,7 @@ trait Mapping[L, H] { outer =>
     * - catches any exceptions that might occur, converting them to decode failures
     * - validates the result
     */
-  def decode(l: L): DecodeResult[H] = validate(tryRawDecode(l))
-
-  private def tryRawDecode(l: L): DecodeResult[H] = {
-    Try(rawDecode(l)) match {
-      case Success(r) => r
-      case Failure(e) => DecodeResult.Error(l.toString, e)
-    }
-  }
-
-  private def validate(r: DecodeResult[H]): DecodeResult[H] = {
-    r match {
-      case DecodeResult.Value(v) =>
-        val validationErrors = validator.validate(v)
-        if (validationErrors.isEmpty) {
-          DecodeResult.Value(v)
-        } else {
-          DecodeResult.InvalidValue(validationErrors)
-        }
-      case r => r
-    }
-  }
+  def decode(l: L): DecodeResult[H] = Mapping.decode(l, rawDecode, validator.apply)
 
   def validator: Validator[H]
 
@@ -60,15 +40,8 @@ trait Mapping[L, H] { outer =>
     new Mapping[L, H] {
       override def rawDecode(l: L): DecodeResult[H] = outer.decode(l)
       override def encode(h: H): L = outer.encode(h)
-      override def validator: Validator[H] = addEncodeToEnumValidator(v).and(outer.validator)
+      override def validator: Validator[H] = Mapping.addEncodeToEnumValidator(v, encode).and(outer.validator)
     }
-
-  private[tapir] def addEncodeToEnumValidator(v: Validator[H]): Validator[H] = {
-    v match {
-      case v @ Validator.Enum(_, None) => v.encode(encode)
-      case _                           => v
-    }
-  }
 }
 
 object Mapping {
@@ -96,5 +69,38 @@ object Mapping {
       if (v.toLowerCase.startsWith(prefixLower)) DecodeResult.Value(v.substring(prefixLength))
       else DecodeResult.Error(v, new IllegalArgumentException(s"The given value doesn't start with $prefix"))
     Mapping.fromDecode(removePrefix)(v => s"$prefix$v")
+  }
+
+  private[tapir] def decode[L, H](
+      l: L,
+      rawDecode: L => DecodeResult[H],
+      applyValidation: H => List[ValidationError[_]]
+  ): DecodeResult[H] = {
+    def tryRawDecode(l: L): DecodeResult[H] = {
+      Try(rawDecode(l)) match {
+        case Success(r) => r
+        case Failure(e) => DecodeResult.Error(l.toString, e)
+      }
+    }
+
+    def validate(r: DecodeResult[H]): DecodeResult[H] = {
+      r match {
+        case DecodeResult.Value(v) =>
+          val validationErrors = applyValidation(v)
+          if (validationErrors.isEmpty) {
+            DecodeResult.Value(v)
+          } else {
+            DecodeResult.InvalidValue(validationErrors)
+          }
+        case r => r
+      }
+    }
+
+    validate(tryRawDecode(l))
+  }
+
+  private[tapir] def addEncodeToEnumValidator[T](v: Validator[T], encode: T => Any): Validator[T] = v match {
+    case v @ Validator.Enum(_, None) => v.encode(encode)
+    case _                           => v
   }
 }

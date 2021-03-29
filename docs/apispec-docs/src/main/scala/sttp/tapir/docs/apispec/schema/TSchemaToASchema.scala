@@ -3,6 +3,7 @@ package sttp.tapir.docs.apispec.schema
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
 import sttp.tapir.docs.apispec.ValidatorUtil.asPrimitiveValidators
 import sttp.tapir.docs.apispec.{exampleValue, rawToString}
+import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve references. */
@@ -11,34 +12,39 @@ private[schema] class TSchemaToASchema(
 ) {
   def apply(schema: TSchema[_]): ReferenceOr[ASchema] = {
     val result = schema.schemaType match {
-      case TSchemaType.SInteger => Right(ASchema(SchemaType.Integer))
-      case TSchemaType.SNumber  => Right(ASchema(SchemaType.Number))
-      case TSchemaType.SBoolean => Right(ASchema(SchemaType.Boolean))
-      case TSchemaType.SString  => Right(ASchema(SchemaType.String))
+      case TSchemaType.SInteger() => Right(ASchema(SchemaType.Integer))
+      case TSchemaType.SNumber()  => Right(ASchema(SchemaType.Number))
+      case TSchemaType.SBoolean() => Right(ASchema(SchemaType.Boolean))
+      case TSchemaType.SString()  => Right(ASchema(SchemaType.String))
       case p @ TSchemaType.SProduct(_, fields) =>
         Right(
           ASchema(SchemaType.Object).copy(
-            required = p.required.map(_.encodedName).toList,
-            properties = fields.map {
-              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
-                fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
-              case (fieldName, fieldSchema) =>
-                fieldName.encodedName -> apply(fieldSchema)
+            required = p.required.map(_.encodedName),
+            properties = fields.map { f =>
+              f.schema match {
+                case TSchema(s: TSchemaType.SObject[_], _, _, _, _, _, _, _) =>
+                  f.name.encodedName -> Left(objectToSchemaReference.map(s.info))
+                case fieldSchema =>
+                  f.name.encodedName -> apply(fieldSchema)
+              }
             }.toListMap
           )
         )
-      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject[_], _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
-      case TSchemaType.SBinary        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
-      case TSchemaType.SDate          => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
-      case TSchemaType.SDateTime      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
+      case TSchemaType.SOption(el)    => apply(el)
+      case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
+      case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
+      case TSchemaType.SDateTime()    => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
       case TSchemaType.SRef(fullName) => Left(objectToSchemaReference.map(fullName))
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           ASchema.apply(
-            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _, _, _, _) => Left(objectToSchemaReference.map(s.info)) },
+            schemas.values.toList.collect { case TSchema(s: TSchemaType.SProduct[_], _, _, _, _, _, _, _) =>
+              Left(objectToSchemaReference.map(s.info))
+            },
             d.map(tDiscriminatorToADiscriminator)
           )
         )
@@ -47,20 +53,17 @@ private[schema] class TSchemaToASchema(
           ASchema(SchemaType.Object).copy(
             required = List.empty,
             additionalProperties = Some(valueSchema.schemaType match {
-              case so: TSchemaType.SObject => Left(objectToSchemaReference.map(so.info))
-              case _                       => apply(valueSchema)
+              case so: TSchemaType.SObject[_] => Left(objectToSchemaReference.map(so.info))
+              case _                          => apply(valueSchema)
             })
           )
         )
     }
 
-    val primitiveValidators = schema.schemaType match {
-      case TSchemaType.SArray(_) => asPrimitiveValidators(schema.validator, unwrapCollections = false)
-      case _                     => asPrimitiveValidators(schema.validator, unwrapCollections = true)
-    }
+    val primitiveValidators = asPrimitiveValidators(schema.validator)
     val wholeNumbers = schema.schemaType match {
-      case TSchemaType.SInteger => true
-      case _                    => false
+      case TSchemaType.SInteger() => true
+      case _                      => false
     }
 
     result
@@ -112,12 +115,12 @@ private[schema] class TSchemaToASchema(
     if (wholeNumber) BigDecimal(vIsNumeric.toLong(v)) else BigDecimal(vIsNumeric.toDouble(v))
   }
 
-  private def tDiscriminatorToADiscriminator(discriminator: TSchemaType.Discriminator): Discriminator = {
+  private def tDiscriminatorToADiscriminator(discriminator: TSchemaType.SDiscriminator): Discriminator = {
     val schemas = Some(
-      discriminator.mappingOverride.map { case (k, TSchemaType.SRef(fullName)) =>
+      discriminator.mapping.map { case (k, TSchemaType.SRef(fullName)) =>
         k -> objectToSchemaReference.map(fullName).$ref
       }.toListMap
     )
-    Discriminator(discriminator.propertyName, schemas)
+    Discriminator(discriminator.name.encodedName, schemas)
   }
 }

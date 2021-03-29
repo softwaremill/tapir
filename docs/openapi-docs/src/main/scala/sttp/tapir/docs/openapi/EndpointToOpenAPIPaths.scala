@@ -4,7 +4,7 @@ import sttp.model.Method
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
-import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
+import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.{SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, ResponsesKey}

@@ -34,9 +34,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   object TestStreams extends TestStreams
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBody(TestStreams)(Schema.binary, CodecFormat.Json())): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
+    endpoint.in(streamBinaryBody(TestStreams)): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
     endpoint
-      .in(streamBody(TestStreams)(Schema.binary, CodecFormat.Json()))
+      .in(streamBinaryBody(TestStreams))
       .in(path[Int]): Endpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
   }
 
@@ -49,9 +49,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBody(TestStreams)(Schema.binary, CodecFormat.Json())): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
+    endpoint.out(streamBinaryBody(TestStreams)): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
     endpoint
-      .out(streamBody(TestStreams)(Schema.binary, CodecFormat.Json()))
+      .out(streamBinaryBody(TestStreams))
       .out(header[Int]("h1")): Endpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
   }
 
@@ -108,6 +108,20 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
         sttp.tapir.oneOf(
           statusMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
           statusMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
+        )
+      )
+  }
+
+  it should "compile one-of empty output of a custom type" in {
+    sealed trait Error
+    final case class BadRequest(message: String) extends Error
+    final case object NotFound extends Error
+
+    endpoint.post
+      .errorOut(
+        sttp.tapir.oneOf(
+          statusMapping(StatusCode.BadRequest, stringBody.map(BadRequest)(_.message)),
+          statusMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
         )
       )
   }
@@ -210,9 +224,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   "validate" should "accumulate validators" in {
     val input = query[Int]("x").validate(Validator.min(1)).validate(Validator.max(3))
-    input.codec.validator.validate(0) should not be empty
-    input.codec.validator.validate(4) should not be empty
-    input.codec.validator.validate(2) shouldBe empty
+    input.codec.schema.applyValidation(0) should not be empty
+    input.codec.schema.applyValidation(4) should not be empty
+    input.codec.schema.applyValidation(2) shouldBe empty
   }
 
   val httpMethodTestData = List(

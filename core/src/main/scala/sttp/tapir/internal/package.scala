@@ -6,6 +6,7 @@ import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
 import java.nio.charset.{Charset, StandardCharsets}
+import scala.collection.immutable
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -196,7 +197,7 @@ package object internal {
       val contentToMatch = content match {
         // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
         case m @ MediaType("text", _, None, _) => m.charset(StandardCharsets.ISO_8859_1.name())
-        case m                              => m
+        case m                                 => m
       }
 
       traverseOutputs {
@@ -225,11 +226,9 @@ package object internal {
       }
   }
 
-  def addValidatorShow(s: String, v: Validator[_]): String = {
-    v.show match {
-      case None     => s
-      case Some(sv) => s"$s($sv)"
-    }
+  def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {
+    case None     => s
+    case Some(sv) => s"$s($sv)"
   }
 
   def showMultiple(et: Vector[EndpointTransput[_]]): String = {
@@ -282,5 +281,15 @@ package object internal {
   implicit class RichVector[T](c: Vector[T]) {
     def headAndTail: Option[(T, Vector[T])] = if (c.isEmpty) None else Some((c.head, c.tail))
     def initAndLast: Option[(Vector[T], T)] = if (c.isEmpty) None else Some((c.init, c.last))
+  }
+
+  implicit class IterableToListMap[A](xs: Iterable[A]) {
+    def toListMap[T, U](implicit ev: A <:< (T, U)): immutable.ListMap[T, U] = {
+      val b = immutable.ListMap.newBuilder[T, U]
+      for (x <- xs)
+        b += x
+
+      b.result()
+    }
   }
 }
