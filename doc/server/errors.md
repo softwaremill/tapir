@@ -14,7 +14,7 @@ specified as part of the server's interpreter [options](options.md).
 
 Each endpoint can contain dedicated error outputs, in addition to outputs which are used in case of success. The 
 business logic can then return either an error value, or a success value. Any business-logic-level errors should
-be signalled this way. This can include validation, failure of downstream services, or inability to server the request
+be signalled this way. This can include validation, failure of downstream services, or inability to serve the request
 at that time.
 
 If the business logic signals errors as exceptions, some or all can be recovered from and mapped to an error value.
