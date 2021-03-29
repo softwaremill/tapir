@@ -6,6 +6,7 @@ import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Defaults
 import sttp.tapir.server.interceptor.EndpointInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 
 case class FinatraServerOptions(
@@ -15,8 +16,8 @@ case class FinatraServerOptions(
 
 object FinatraServerOptions extends Logging {
 
-  /** Creates default [[FinatraServerOptions]] with custom interceptors, sitting between an optional logging
-    * interceptor, and the ultimate decode failure handling interceptor.
+  /** Creates default [[FinatraServerOptions]] with custom interceptors, sitting between an optional exception
+    * interceptor, optional logging interceptor, and the ultimate decode failure handling interceptor.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
@@ -27,13 +28,15 @@ object FinatraServerOptions extends Logging {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(defaultServerLog),
       additionalInterceptors: List[EndpointInterceptor[Future, FinatraContent]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): FinatraServerOptions =
     FinatraServerOptions(
       defaultCreateFile(futurePool),
-      serverLog.map(sl => new ServerLogInterceptor[Unit, Future, FinatraContent](sl, (_: Unit, _) => Future.Done)).toList ++
+      exceptionHandler.map(new ExceptionInterceptor[Future, FinatraContent](_)).toList ++
+        serverLog.map(sl => new ServerLogInterceptor[Unit, Future, FinatraContent](sl, (_: Unit, _) => Future.Done)).toList ++
         additionalInterceptors ++
         List(new DecodeFailureInterceptor[Future, FinatraContent](decodeFailureHandler))
     )
