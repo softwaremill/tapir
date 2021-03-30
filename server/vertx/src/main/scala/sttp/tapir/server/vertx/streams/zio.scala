@@ -5,7 +5,7 @@ import io.vertx.core.streams.ReadStream
 import io.vertx.core.Handler
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.vertx.streams.ReadStreamState._
-import sttp.tapir.server.vertx.VertxZioEndpointOptions
+import sttp.tapir.server.vertx.VertxZioServerOptions
 import _root_.zio._
 import _root_.zio.stream.ZStream
 
@@ -23,7 +23,7 @@ object zio {
   }
 
   implicit def zioReadStreamCompatible[F[_]](implicit
-      opts: VertxZioEndpointOptions[F],
+      opts: VertxZioServerOptions[F],
       runtime: Runtime[Any]
   ) = new ReadStreamCompatible[ZioStreams] {
     override val streams: ZioStreams = ZioStreams

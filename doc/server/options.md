@@ -7,7 +7,7 @@ Each interpreter accepts an implicit options value, which contains configuration
 * if, and how to handle exceptions (see [error handling](errors.md))
 * if, and how to log requests (see [loggin & debugging](debugging.md))  
 * how to handle decode failures (see [error handling](errors.md))
-* additional user-provided endpoint interceptors
+* additional user-provided interceptors
 
 To use custom server options, define an implicit value, which will be in scope when converting endpoints to the
 target route representation. For example, for `AkkaHttpServerOptions`:
@@ -18,6 +18,11 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
 implicit val customServerOptions: AkkaHttpServerOptions = 
   AkkaHttpServerOptions.customInterceptors(decodeFailureHandler = ???)
 ```
+
+## Request interceptors
+
+Request interceptors intercept whole request, and are called once for each request. They can provide additional
+endpoint interceptors, as well as modify the request, or the response.
 
 ## Endpoint interceptors
 

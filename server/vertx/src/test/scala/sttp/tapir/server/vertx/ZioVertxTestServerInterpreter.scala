@@ -27,8 +27,8 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
       e: ServerEndpoint[I, E, O, ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route = {
-    implicit val options: VertxZioEndpointOptions[Task] =
-      VertxZioEndpointOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+    implicit val options: VertxZioServerOptions[Task] =
+      VertxZioServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
     VertxZioServerInterpreter.route(e)
   }
 

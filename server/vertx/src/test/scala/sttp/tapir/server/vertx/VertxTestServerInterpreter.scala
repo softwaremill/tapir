@@ -22,7 +22,7 @@ class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Fut
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route = {
-    implicit val options: VertxFutureEndpointOptions = VertxFutureEndpointOptions.customInterceptors(decodeFailureHandler =
+    implicit val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(decodeFailureHandler =
       decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     VertxFutureServerInterpreter.route(e)

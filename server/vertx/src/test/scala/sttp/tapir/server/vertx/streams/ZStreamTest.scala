@@ -12,13 +12,13 @@ import _root_.zio.stream.ZStream
 import _root_.zio.clock.Clock
 import _root_.zio.internal.tracing.TracingConfig
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.server.vertx.VertxZioEndpointOptions
+import sttp.tapir.server.vertx.VertxZioServerOptions
 
 class ZStreamTest extends AnyFlatSpec with Matchers {
 
   val runtime = Runtime.default.mapPlatform(_.withTracingConfig(TracingConfig.disabled))
 
-  val options = VertxZioEndpointOptions.default.copy(maxQueueSizeForReadStream = 4)
+  val options = VertxZioServerOptions.default.copy(maxQueueSizeForReadStream = 4)
 
   def intAsBuffer(int: Int): Chunk[Byte] = {
     val buffer = ByteBuffer.allocate(4)

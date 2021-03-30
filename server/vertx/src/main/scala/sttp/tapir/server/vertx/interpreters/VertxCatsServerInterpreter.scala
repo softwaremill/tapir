@@ -11,7 +11,7 @@ import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.Endpoint
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.vertx.VertxCatsEndpointOptions
+import sttp.tapir.server.vertx.VertxCatsServerOptions
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 
@@ -25,7 +25,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     * @return A function, that given a router, will attach this endpoint to it
     */
   def route[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]])(implicit
-      endpointOptions: VertxCatsEndpointOptions[F],
+      endpointOptions: VertxCatsServerOptions[F],
       effect: ConcurrentEffect[F]
   ): Router => Route =
     route(e.serverLogic(logic))
@@ -38,7 +38,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
   def routeRecoverErrors[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(
       logic: I => F[O]
   )(implicit
-      endpointOptions: VertxCatsEndpointOptions[F],
+      endpointOptions: VertxCatsServerOptions[F],
       effect: ConcurrentEffect[F],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
@@ -52,7 +52,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
   def route[F[_], I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
   )(implicit
-      endpointOptions: VertxCatsEndpointOptions[F],
+      endpointOptions: VertxCatsServerOptions[F],
       effect: ConcurrentEffect[F]
   ): Router => Route = { router =>
     import sttp.tapir.server.vertx.streams.fs2._
@@ -61,17 +61,17 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
 
   private def endpointHandler[F[_], I, E, O, A, S: ReadStreamCompatible](
       e: ServerEndpoint[I, E, O, _, F]
-  )(implicit serverOptions: VertxCatsEndpointOptions[F], effect: Effect[F]): Handler[RoutingContext] = { rc =>
+  )(implicit serverOptions: VertxCatsServerOptions[F], effect: Effect[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     val fFromVFuture = new CatsFFromVFuture[F]
     val interpreter = new ServerInterpreter(
-      new VertxServerRequest(rc),
       new VertxRequestBody(rc, serverOptions, fFromVFuture),
       new VertxToResponseBody(serverOptions),
       serverOptions.interceptors
     )
+    val serverRequest = new VertxServerRequest(rc)
 
-    val result = interpreter(e)
+    val result = interpreter(serverRequest, e)
       .flatMap {
         case None           => fFromVFuture(rc.response.setStatusCode(404).end()).void
         case Some(response) => VertxOutputEncoders(response).apply(rc).pure
