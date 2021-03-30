@@ -4,10 +4,12 @@ import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
 import sttp.tapir.server.interceptor.EndpointInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import zio.RIO
 
 import java.io.File
+import scala.concurrent.Future
 
 final case class VertxZioEndpointOptions[F[_]](
     uploadDirectory: File,
@@ -22,12 +24,13 @@ final case class VertxZioEndpointOptions[F[_]](
 
 object VertxZioEndpointOptions {
 
-  /** Creates default [[VertxZioEndpointOptions]] with custom interceptors, sitting between an optional logging
-    * interceptor, and the ultimate decode failure handling interceptor.
+  /** Creates default [[VertxZioEndpointOptions]] with custom interceptors, sitting between an optional exception
+    * interceptor, optional logging interceptor, and the ultimate decode failure handling interceptor.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
     *
+    * @param exceptionHandler Whether to respond to exceptions, or propagate them to vertx.
     * @param serverLog The server log using which an interceptor will be created, if any. To keep the default, use
     *                  `VertxEndpointOptions.defaultServerLog`
     * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
@@ -35,6 +38,7 @@ object VertxZioEndpointOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors[R](
+      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxEndpointOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[EndpointInterceptor[RIO[R, *], RoutingContext => Unit]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
@@ -42,7 +46,8 @@ object VertxZioEndpointOptions {
     VertxZioEndpointOptions(
       File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
       maxQueueSizeForReadStream = 16,
-      serverLog.map(new ServerLogInterceptor[Unit, RIO[R, *], RoutingContext => Unit](_, (_, _) => RIO.unit)).toList ++
+      exceptionHandler.map(new ExceptionInterceptor[RIO[R, *], RoutingContext => Unit](_)).toList ++
+        serverLog.map(new ServerLogInterceptor[Unit, RIO[R, *], RoutingContext => Unit](_, (_, _) => RIO.unit)).toList ++
         additionalInterceptors ++
         List(new DecodeFailureInterceptor[RIO[R, *], RoutingContext => Unit](decodeFailureHandler))
     )

@@ -7,7 +7,7 @@ import sttp.monad.MonadError
 import sttp.tapir.server.tests.{ServerAuthenticationTests, ServerBasicTests, ServerStreamingTests, CreateServerTest, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 
-class CatsVertxCreateServerTest extends TestSuite {
+class CatsVertxServerTest extends TestSuite {
   import VertxCatsServerInterpreter._
 
   def vertxResource: Resource[IO, Vertx] =

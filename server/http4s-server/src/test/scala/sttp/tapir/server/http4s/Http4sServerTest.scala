@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with EitherValues with OptionValues {
+class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with EitherValues with OptionValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]

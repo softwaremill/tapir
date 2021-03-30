@@ -6,7 +6,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{ServerAuthenticationTests, ServerBasicTests, CreateServerTest, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 
-class PlayCreateServerTest extends TestSuite {
+class PlayServerTest extends TestSuite {
 
   def actorSystemResource: Resource[IO, ActorSystem] =
     Resource.make(IO.delay(ActorSystem()))(actorSystem => IO.fromFuture(IO.delay(actorSystem.terminate())).void)

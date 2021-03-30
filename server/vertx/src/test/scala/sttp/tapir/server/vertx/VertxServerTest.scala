@@ -8,7 +8,7 @@ import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.ExecutionContext
 
-class VertxCreateServerTest extends TestSuite {
+class VertxServerTest extends TestSuite {
   def vertxResource: Resource[IO, Vertx] =
     Resource.make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
 

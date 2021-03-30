@@ -602,6 +602,9 @@ class ServerBasicTests[F[_], ROUTE](
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
     },
     //
+    testServer(endpoint, "handle exceptions")(_ => throw new RuntimeException()) { baseUri =>
+      basicRequest.get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
+    },
     testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
       def ok(body: String) = (StatusCode.Ok, body.asRight[String])
       def unsupportedMediaType() = (StatusCode.UnsupportedMediaType, "".asLeft[String])
