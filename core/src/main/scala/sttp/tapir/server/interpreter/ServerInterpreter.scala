@@ -8,7 +8,6 @@ import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{EndpointInterceptor, Interceptor, RequestInterceptor, ValuedEndpointOutput}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.content.ContentTypeInterceptor
-import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 
 class ServerInterpreter[R, F[_]: MonadError, B, S](
@@ -59,8 +58,8 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     def valueToResponse(i: I): F[ServerResponse[B]] = {
       se.logic(implicitly)(i)
         .map {
-          case Right(result) => outputToResponse(defaultSuccessStatusCode, se.endpoint.output, result)
-          case Left(err)     => outputToResponse(defaultErrorStatusCode, se.endpoint.errorOutput, err)
+          case Right(result) => outputToResponse(request, defaultSuccessStatusCode, se.endpoint.output, result)
+          case Left(err)     => outputToResponse(request, defaultErrorStatusCode, se.endpoint.errorOutput, err)
         }
     }
 
@@ -101,7 +100,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         i,
         {
           case None                                      => callInterceptorsOnDecodeSuccess(request, tail, endpoint, i, callLogic)
-          case Some(ValuedEndpointOutput(output, value)) => outputToResponse(defaultSuccessStatusCode, output, value).unit
+          case Some(ValuedEndpointOutput(output, value)) => outputToResponse(request, defaultSuccessStatusCode, output, value).unit
         }
       )
   }
@@ -123,7 +122,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         {
           case None => callInterceptorsOnDecodeFailure(request, tail, endpoint, failingInput, failure)
           case Some(ValuedEndpointOutput(output, value)) =>
-            (Some(outputToResponse(defaultErrorStatusCode, output, value)): Option[ServerResponse[B]]).unit
+            (Some(outputToResponse(request, defaultErrorStatusCode, output, value)): Option[ServerResponse[B]]).unit
         }
       )
   }
@@ -151,7 +150,12 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
 
-  private def outputToResponse[O](defaultStatusCode: StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
+  private def outputToResponse[O](
+      request: ServerRequest,
+      defaultStatusCode: StatusCode,
+      output: EndpointOutput[O],
+      v: O
+  ): ServerResponse[B] = {
     val outputValues =
       new EncodeOutputs(toResponseBody, request.acceptsContentTypes.getOrElse(Nil)).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
