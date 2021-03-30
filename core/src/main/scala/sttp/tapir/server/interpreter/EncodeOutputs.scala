@@ -3,13 +3,12 @@ package sttp.tapir.server.interpreter
 import sttp.model._
 import sttp.tapir.EndpointOutput.StatusMapping
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams, _}
-import sttp.tapir.model.ServerRequest
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
 
-class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], request: ServerRequest) {
+class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], ranges: Either[String, Seq[ContentTypeRange]]) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
     output match {
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
@@ -61,11 +60,13 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], request: Serv
             o.asInstanceOf[WebSocketBodyOutput[rawToResponseBody.streams.Pipe[Any, Any], Any, Any, Any, S]]
           )
         )
-      case EndpointOutput.OneOf(mappings, mapping) =>
+      case o @ EndpointOutput.OneOf(mappings, mapping) =>
         val enc = encodedM[Any](mapping)
 
-        val bodyMappings: Map[MediaType, StatusMapping[_]] = mappings
-          .filter(_.appliesTo(enc))
+        val applicableMappings = mappings.filter(_.appliesTo(enc))
+        require(applicableMappings.nonEmpty, s"OneOf output without applicable mapping ${o.show}")
+
+        val bodyMappings: Map[MediaType, StatusMapping[_]] = applicableMappings
           .flatMap(sm =>
             sm.output.traverseOutputs {
               case EndpointIO.Body(bodyType, codec, _) =>
@@ -80,19 +81,17 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], request: Serv
           )
           .toMap
 
-        if (bodyMappings.nonEmpty) {
-          val mediaTypes = bodyMappings.keys.toVector
-          MediaType
-            .bestMatch(mediaTypes, request.ranges.getOrElse(Seq.empty[ContentTypeRange]))
-            .flatMap(mt => bodyMappings.get(mt).orElse(bodyMappings.headOption.map { case (_, sm) => sm }))
-            .map(sm => apply(sm.output, ParamsAsAny(enc), sm.statusCode.map(ov.withStatusCode).getOrElse(ov)))
-            .getOrElse(throw new IllegalStateException(s"No mapping for requested content type"))
-        } else {
-          val mapping = mappings
-            .find(_.appliesTo(enc))
-            .getOrElse(throw new IllegalArgumentException(s"No status code mapping for value: $enc, in output: $output"))
-          apply(mapping.output, ParamsAsAny(enc), mapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
+        val sm = {
+          if (bodyMappings.nonEmpty) {
+            val mediaTypes = bodyMappings.keys.toVector
+            MediaType
+              .bestMatch(mediaTypes, ranges.getOrElse(Seq.empty[ContentTypeRange]))
+              .flatMap(bodyMappings.get)
+              .getOrElse(applicableMappings.head)
+          } else applicableMappings.head
         }
+        apply(sm.output, ParamsAsAny(enc), sm.statusCode.map(ov.withStatusCode).getOrElse(ov))
+
       case EndpointOutput.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encodedM[Any](mapping)), ov)
     }
   }

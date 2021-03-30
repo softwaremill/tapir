@@ -5,13 +5,16 @@ import sttp.client3._
 import sttp.model._
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
+import sttp.tapir.client.AbstractEndpointToClient
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
+import scala.annotation.tailrec
 
-private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
+private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R])
+    extends AbstractEndpointToClient {
   def toSttpRequest[O, E, I](e: Endpoint[I, E, O, R], baseUri: Option[Uri]): I => Request[DecodeResult[Either[E, O]], R] = { params =>
     val (uri, req1) =
       setInputParams(
@@ -21,10 +24,13 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
         basicRequest.asInstanceOf[PartialAnyRequest]
       )
 
-    val req2 = req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
+    val req2: RequestT[Identity, Any, Any] =
+      req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
 
     val isWebSocket = bodyIsWebSocket(e.output)
+
     def isSuccess(meta: ResponseMetadata) = if (isWebSocket) meta.code == StatusCode.SwitchingProtocols else meta.isSuccess
+
     val responseAs = fromMetadata(
       responseAsFromOutputs(e.errorOutput, isWebSocket = false),
       ConditionalResponseAs(isSuccess, responseAsFromOutputs(e.output, isWebSocket))
@@ -41,101 +47,9 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], R]]
   }
 
-  private def getOutputParams(output: EndpointOutput[_], body: Any, meta: ResponseMetadata): DecodeResult[Params] = {
-    output match {
-      case s: EndpointOutput.Single[_] =>
-        (s match {
-          case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
-          case EndpointOutput.WebSocketBodyWrapper(o: WebSocketBodyOutput[_, _, _, _, Any]) =>
-            val streams = o.streams.asInstanceOf[wsToPipe.S]
-            o.codec.decode(
-              wsToPipe
-                .apply(streams)(
-                  body.asInstanceOf[WebSocket[wsToPipe.F]],
-                  o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
-                )
-            )
-          case EndpointIO.Header(name, codec, _)           => codec.decode(meta.headers(name).toList)
-          case EndpointIO.Headers(codec, _)                => codec.decode(meta.headers.toList)
-          case EndpointOutput.StatusCode(_, codec, _)      => codec.decode(meta.code)
-          case EndpointOutput.FixedStatusCode(_, codec, _) => codec.decode(())
-          case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
-          case EndpointIO.Empty(codec, _)                  => codec.decode(())
-          case EndpointOutput.OneOf(mappings, codec) =>
-            val mappingsForStatus = mappings collect {
-              case m if m.statusCode.isEmpty || m.statusCode.contains(meta.code) => m
-            }
-
-            val contentType = meta
-              .header(HeaderNames.ContentType)
-              .map(MediaType.parse)
-
-            def applyMapping(m: EndpointOutput.StatusMapping[_]) = getOutputParams(m.output, body, meta).flatMap(p => codec.decode(p.asAny))
-
-            contentType match {
-              case None =>
-                val firstNonBodyMapping = mappingsForStatus.find(_.output.traverseOutputs {
-                  case _ @(EndpointIO.Body(_, _, _) | EndpointIO.StreamBodyWrapper(_)) => Vector(false)
-                  case _                                                               => Vector(true)
-                } forall (_ == true))
-
-                firstNonBodyMapping
-                  .orElse(mappingsForStatus.headOption)
-                  .map(applyMapping)
-                  .getOrElse(
-                    DecodeResult.Error(
-                      meta.statusText,
-                      new IllegalArgumentException(s"Cannot find mapping for status code ${meta.code} in outputs $output")
-                    )
-                  )
-
-              case Some(Right(content)) =>
-                val bodyMappingForStatus = mappingsForStatus collectFirst {
-                  case m if m.output.hasBodyMatchingContent(content) => m
-                }
-
-                bodyMappingForStatus
-                  .orElse(mappingsForStatus.headOption)
-                  .map(applyMapping)
-                  .getOrElse(
-                    DecodeResult.Error(
-                      meta.statusText,
-                      new IllegalArgumentException(
-                        s"Cannot find mapping for status code ${meta.code} and content $content in outputs $output"
-                      )
-                    )
-                  )
-
-              case Some(Left(_)) => DecodeResult.Error(meta.statusText, new IllegalArgumentException("Unable to parse Content-Type header"))
-            }
-
-          case EndpointIO.MappedPair(wrapped, codec)     => getOutputParams(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
-          case EndpointOutput.MappedPair(wrapped, codec) => getOutputParams(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
-
-        }).map(ParamsAsAny)
-
-      case EndpointOutput.Void()                        => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
-      case EndpointOutput.Pair(left, right, combine, _) => handleOutputPair(left, right, combine, body, meta)
-      case EndpointIO.Pair(left, right, combine, _)     => handleOutputPair(left, right, combine, body, meta)
-    }
-  }
-
-  private def handleOutputPair(
-      left: EndpointOutput[_],
-      right: EndpointOutput[_],
-      combine: CombineParams,
-      body: Any,
-      meta: ResponseMetadata
-  ): DecodeResult[Params] = {
-    val l = getOutputParams(left, body, meta)
-    val r = getOutputParams(right, body, meta)
-    l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
-  }
-
   private type PartialAnyRequest = PartialRequest[Any, Any]
 
-  @scala.annotation.tailrec
+  @tailrec
   private def setInputParams[I](
       input: EndpointInput[I],
       params: Params,
@@ -289,6 +203,19 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     out.traverseOutputs { case EndpointOutput.WebSocketBodyWrapper(_) =>
       Vector(())
     }.nonEmpty
+  }
+
+  override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] = {
+    val streams = o.streams.asInstanceOf[wsToPipe.S]
+    o.codec
+      .asInstanceOf[Codec[Any, _, CodecFormat]]
+      .decode(
+        wsToPipe
+          .apply(streams)(
+            body.asInstanceOf[WebSocket[wsToPipe.F]],
+            o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
+          )
+      )
   }
 
 }
