@@ -158,9 +158,6 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     setInputParams(tuple.asInstanceOf[EndpointInput[Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), req)
   }
 
-  //        type PlayPart = play.shaded.ahc.org.asynchttpclient.request.body.multipart.Part
-  //        type PlayPartBase = play.shaded.ahc.org.asynchttpclient.request.body.multipart.PartBase
-
   private def setBody[R, T, CF <: CodecFormat](
       v: T,
       bodyType: RawBodyType[R],
@@ -168,12 +165,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       req: StandaloneWSRequest
   ): StandaloneWSRequest = {
     val encoded: R = codec.encode(v)
-    // TODO can't we get rid of asInstanceOf ?
     val req2 = bodyType match {
       case RawBodyType.StringBody(_) =>
-        // Play infer the content-type from the body, if we pass a String, it will infer "text/plain"
-        // That's why we create a custom BodyWritable
-        // TODO: what about charset?
         val defaultStringBodyWritable: BodyWritable[String] = implicitly[BodyWritable[String]]
         val bodyWritable = BodyWritable[String](defaultStringBodyWritable.transform, codec.format.mediaType.toString)
         req.withBody(encoded.asInstanceOf[String])(bodyWritable)
@@ -184,30 +177,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         val inputStreamSupplier: Supplier[InputStream] = () => encoded.asInstanceOf[InputStream]
         req.withBody(inputStreamSupplier)
       case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[File])
-      case m: RawBodyType.MultipartBody =>
-//        val parts: Seq[PlayPart] = (encoded: Seq[RawPart]).flatMap { p =>
-//          m.partType(p.name).map { partType =>
-//            // name, body, content type, content length, file name
-//            val playPart =
-//              partToPlayPart(p.asInstanceOf[Part[Any]], partType.asInstanceOf[RawBodyType[Any]], p.contentType, p.contentLength, p.fileName)
-//
-//            // headers; except content type set above
-//            p.headers
-//              .filterNot(_.is(HeaderNames.ContentType))
-//              .foreach { header =>
-//                playPart.addCustomHeader(header.name, header.value)
-//              }
-//
-//            playPart
-//          }
-//        }
-//
-        // TODO we need a BodyWritable[Source[PlayPart, _]]
-        // But it's not part of Play Standalone
-        // See https://github.com/playframework/playframework/blob/master/transport/client/play-ws/src/main/scala/play/api/libs/ws/WSBodyWritables.scala
-        // req.withBody(Source(parts.toList))
-
-        throw new IllegalArgumentException("Multipart body aren't supported")
+      case _: RawBodyType.MultipartBody => throw new IllegalArgumentException("Multipart body aren't supported")
     }
 
     req2
@@ -219,25 +189,6 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case _           => throw new IllegalArgumentException("Only AkkaStreams streaming is supported")
     }
   }
-
-//  private def partToPlayPart[R](
-//      p: Part[R],
-//      bodyType: RawBodyType[R],
-//      contentType: Option[String],
-//      contentLength: Option[Long],
-//      fileName: Option[String]
-//  ): PlayPartBase = {
-//    // TODO can't we get rid of the asInstanceOf???
-//    bodyType match {
-//      case RawBodyType.StringBody(charset) => new StringPart(p.name, p.body.asInstanceOf[String], contentType.orNull, charset)
-//      case RawBodyType.ByteArrayBody       => new ByteArrayPart(p.name, p.body.asInstanceOf[Array[Byte]], contentType.orNull)
-//      case RawBodyType.ByteBufferBody      => new ByteArrayPart(p.name, p.body.asInstanceOf[ByteBuffer].array(), contentType.orNull)
-//      case RawBodyType.InputStreamBody =>
-//        new InputStreamPart(p.name, p.body.asInstanceOf[InputStream], fileName.orNull, contentLength.getOrElse(-1L), contentType.orNull)
-//      case RawBodyType.FileBody            => new FilePart(p.name, p.body.asInstanceOf[File], contentType.orNull)
-//      case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
-//    }
-//  }
 
   private def getOrThrow[T](dr: DecodeResult[T]): T =
     dr match {
