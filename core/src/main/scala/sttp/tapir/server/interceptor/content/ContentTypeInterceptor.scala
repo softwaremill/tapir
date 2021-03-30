@@ -7,7 +7,7 @@ import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.{Endpoint, EndpointIO, StreamBodyIO, _}
 
-class ContentTypeInterceptor[F[_], B](ranges: Either[String, Seq[ContentTypeRange]]) extends EndpointInterceptor[F, B] {
+class ContentTypeInterceptor[F[_], B] extends EndpointInterceptor[F, B] {
 
   override def onDecodeSuccess[I](
       request: ServerRequest,
@@ -15,7 +15,7 @@ class ContentTypeInterceptor[F[_], B](ranges: Either[String, Seq[ContentTypeRang
       i: I,
       next: Option[ValuedEndpointOutput[_]] => F[ServerResponse[B]]
   )(implicit monad: MonadError[F]): F[ServerResponse[B]] =
-    ranges match {
+    request.acceptsContentTypes match {
       case _ @(Right(Nil) | Right(ContentTypeRange.AnyRange :: Nil)) => next(None)
       case Right(ranges) =>
         val supportedMediaTypes = endpoint.output.traverseOutputs {

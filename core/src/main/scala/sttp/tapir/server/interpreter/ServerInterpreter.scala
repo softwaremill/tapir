@@ -1,7 +1,6 @@
 package sttp.tapir.server.interpreter
 
-import sttp.model.headers.Accepts
-import sttp.model.{ContentTypeRange, Headers, StatusCode}
+import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
@@ -10,8 +9,6 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.content.ContentTypeInterceptor
 import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
-
-import scala.collection.immutable.Seq
 
 class ServerInterpreter[R, F[_]: MonadError, B, S](
     request: ServerRequest,
@@ -30,13 +27,11 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     }
 
   def apply[I, E, O](se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] = {
-    val ranges = Accepts.parse(request.headers)
-
     def valueToResponse(i: I): F[ServerResponse[B]] = {
       se.logic(implicitly)(i)
         .map {
-          case Right(result) => outputToResponse(defaultSuccessStatusCode, se.endpoint.output, result, ranges)
-          case Left(err)     => outputToResponse(defaultErrorStatusCode, se.endpoint.errorOutput, err, ranges)
+          case Right(result) => outputToResponse(defaultSuccessStatusCode, se.endpoint.output, result)
+          case Left(err)     => outputToResponse(defaultErrorStatusCode, se.endpoint.errorOutput, err)
         }
     }
 
@@ -47,17 +42,15 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         InputValue(se.endpoint.input, values) match {
           case InputValueResult.Value(params, _) =>
             callInterceptorsOnDecodeSuccess(
-              new ContentTypeInterceptor[F, B](ranges) :: interceptors,
+              new ContentTypeInterceptor[F, B]() :: interceptors,
               se.endpoint,
               params.asAny.asInstanceOf[I],
-              valueToResponse,
-              ranges
+              valueToResponse
             ).map(Some(_))
           case InputValueResult.Failure(input, failure) =>
-            callInterceptorsOnDecodeFailure(interceptors, se.endpoint, input, failure, ranges)
+            callInterceptorsOnDecodeFailure(interceptors, se.endpoint, input, failure)
         }
-      case DecodeBasicInputsResult.Failure(input, failure) =>
-        callInterceptorsOnDecodeFailure(interceptors, se.endpoint, input, failure, ranges)
+      case DecodeBasicInputsResult.Failure(input, failure) => callInterceptorsOnDecodeFailure(interceptors, se.endpoint, input, failure)
     }
   }
 
@@ -65,8 +58,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       is: List[EndpointInterceptor[F, B]],
       endpoint: Endpoint[I, _, _, _],
       i: I,
-      callLogic: I => F[ServerResponse[B]],
-      ranges: Either[String, Seq[ContentTypeRange]]
+      callLogic: I => F[ServerResponse[B]]
   ): F[ServerResponse[B]] = is match {
     case Nil => callLogic(i)
     case interpreter :: tail =>
@@ -75,8 +67,8 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         endpoint,
         i,
         {
-          case None                                      => callInterceptorsOnDecodeSuccess(tail, endpoint, i, callLogic, ranges)
-          case Some(ValuedEndpointOutput(output, value)) => outputToResponse(defaultSuccessStatusCode, output, value, ranges).unit
+          case None                                      => callInterceptorsOnDecodeSuccess(tail, endpoint, i, callLogic)
+          case Some(ValuedEndpointOutput(output, value)) => outputToResponse(defaultSuccessStatusCode, output, value).unit
         }
       )
   }
@@ -85,8 +77,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       is: List[EndpointInterceptor[F, B]],
       endpoint: Endpoint[_, _, _, _],
       failingInput: EndpointInput[_],
-      failure: DecodeResult.Failure,
-      ranges: Either[String, Seq[ContentTypeRange]]
+      failure: DecodeResult.Failure
   ): F[Option[ServerResponse[B]]] = is match {
     case Nil => Option.empty[ServerResponse[B]].unit
     case interpreter :: tail =>
@@ -96,9 +87,9 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         failure,
         failingInput,
         {
-          case None => callInterceptorsOnDecodeFailure(tail, endpoint, failingInput, failure, ranges)
+          case None => callInterceptorsOnDecodeFailure(tail, endpoint, failingInput, failure)
           case Some(ValuedEndpointOutput(output, value)) =>
-            (Some(outputToResponse(defaultErrorStatusCode, output, value, ranges)): Option[ServerResponse[B]]).unit
+            (Some(outputToResponse(defaultErrorStatusCode, output, value)): Option[ServerResponse[B]]).unit
         }
       )
   }
@@ -126,14 +117,9 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
 
-  private def outputToResponse[O](
-      defaultStatusCode: sttp.model.StatusCode,
-      output: EndpointOutput[O],
-      v: O,
-      ranges: Either[String, Seq[ContentTypeRange]]
-  ): ServerResponse[B] = {
+  private def outputToResponse[O](defaultStatusCode: StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
     val outputValues =
-      new EncodeOutputs(toResponseBody, ranges).apply(output, ParamsAsAny(v), OutputValues.empty)
+      new EncodeOutputs(toResponseBody, request.acceptsContentTypes.getOrElse(Nil)).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
     val headers = outputValues.headers

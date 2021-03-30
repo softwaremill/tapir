@@ -4,6 +4,7 @@ import sttp.client3.testing._
 import sttp.client3.{Identity, Request, Response}
 import sttp.model._
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.interpreter._
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 

@@ -8,7 +8,7 @@ import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, Stre
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
 
-class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], ranges: Either[String, Seq[ContentTypeRange]]) {
+class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsContentTypes: Seq[ContentTypeRange]) {
   def apply(output: EndpointOutput[_], value: Params, ov: OutputValues[B]): OutputValues[B] = {
     output match {
       case s: EndpointIO.Single[_]                    => applySingle(s, value, ov)
@@ -85,7 +85,7 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], ranges: Eithe
           if (bodyMappings.nonEmpty) {
             val mediaTypes = bodyMappings.keys.toVector
             MediaType
-              .bestMatch(mediaTypes, ranges.getOrElse(Seq.empty[ContentTypeRange]))
+              .bestMatch(mediaTypes, acceptsContentTypes)
               .flatMap(bodyMappings.get)
               .getOrElse(applicableMappings.head)
           } else applicableMappings.head
