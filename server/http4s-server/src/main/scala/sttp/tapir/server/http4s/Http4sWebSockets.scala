@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s
 
 import cats.Monad
-import cats.effect.{Concurrent, Timer}
+import cats.effect.Concurrent
 import fs2._
 import fs2.concurrent.Queue
 import org.http4s.websocket.{WebSocketFrame => Http4sWebSocketFrame}
@@ -10,9 +10,10 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.{DecodeResult, WebSocketBodyOutput, WebSocketFrameDecodeFailure}
 import sttp.ws.WebSocketFrame
 import cats.syntax.all._
+import cats.effect.Temporal
 
 private[http4s] object Http4sWebSockets {
-  def pipeToBody[F[_]: Concurrent: Timer, REQ, RESP](
+  def pipeToBody[F[_]: Concurrent: Temporal, REQ, RESP](
       pipe: Pipe[F, REQ, RESP],
       o: WebSocketBodyOutput[Pipe[F, REQ, RESP], REQ, RESP, _, Fs2Streams[F]]
   ): F[Pipe[F, Http4sWebSocketFrame, Http4sWebSocketFrame]] = {

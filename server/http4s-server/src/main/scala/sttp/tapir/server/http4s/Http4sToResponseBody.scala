@@ -1,6 +1,6 @@
 package sttp.tapir.server.http4s
 
-import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
+import cats.effect.Concurrent
 import cats.syntax.all._
 import fs2.{Chunk, Stream}
 import org.http4s
@@ -13,8 +13,9 @@ import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 import sttp.tapir.server.interpreter.ToResponseBody
 
 import java.nio.charset.Charset
+import cats.effect.Temporal
 
-private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift, G[_]](
+private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Temporal: ContextShift, G[_]](
     serverOptions: Http4sServerOptions[F, G]
 ) extends ToResponseBody[Http4sResponseBody[F], Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
