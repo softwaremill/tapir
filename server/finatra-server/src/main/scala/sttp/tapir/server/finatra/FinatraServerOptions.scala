@@ -4,14 +4,14 @@ import java.io.{File, FileOutputStream}
 import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Defaults
-import sttp.tapir.server.interceptor.EndpointInterceptor
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 
 case class FinatraServerOptions(
     createFile: Array[Byte] => Future[File],
-    interceptors: List[EndpointInterceptor[Future, FinatraContent]]
+    interceptors: List[Interceptor[Future, FinatraContent]]
 )
 
 object FinatraServerOptions extends Logging {
@@ -30,7 +30,7 @@ object FinatraServerOptions extends Logging {
   def customInterceptors(
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(defaultServerLog),
-      additionalInterceptors: List[EndpointInterceptor[Future, FinatraContent]] = Nil,
+      additionalInterceptors: List[Interceptor[Future, FinatraContent]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): FinatraServerOptions =
     FinatraServerOptions(

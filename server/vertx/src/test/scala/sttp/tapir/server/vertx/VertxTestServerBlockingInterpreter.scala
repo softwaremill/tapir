@@ -14,7 +14,7 @@ class VertxTestServerBlockingInterpreter(vertx: Vertx) extends VertxTestServerIn
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route = {
-    implicit val options: VertxFutureEndpointOptions = VertxFutureEndpointOptions.customInterceptors(decodeFailureHandler =
+    implicit val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(decodeFailureHandler =
       decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     VertxFutureServerInterpreter.blockingRoute(e)

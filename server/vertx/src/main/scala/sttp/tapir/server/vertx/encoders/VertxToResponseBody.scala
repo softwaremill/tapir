@@ -8,14 +8,14 @@ import sttp.capabilities.Streams
 import sttp.model.{HasHeaders, Part}
 import sttp.tapir.{CodecFormat, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.interpreter.ToResponseBody
-import sttp.tapir.server.vertx.VertxEndpointOptions
+import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.server.vertx.streams.{Pipe, ReadStreamCompatible}
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxEndpointOptions[F])
+class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxServerOptions[F])
     extends ToResponseBody[RoutingContext => Unit, S] {
   private val readStreamCompatible = ReadStreamCompatible[S]
   override val streams: Streams[S] = readStreamCompatible.streams
@@ -51,7 +51,7 @@ class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxEnd
   private def handleMultipleBodyParts[CF <: CodecFormat, R](
       multipart: RawBodyType[R] with RawBodyType.MultipartBody,
       r: R
-  )(implicit endpointOptions: VertxEndpointOptions[F]): RoutingContext => Future[Void] = { rc =>
+  )(implicit endpointOptions: VertxServerOptions[F]): RoutingContext => Future[Void] = { rc =>
     val resp = rc.response
     resp.setChunked(true)
     resp.putHeader(HttpHeaders.CONTENT_TYPE.toString, "multipart/form-data")
@@ -68,7 +68,7 @@ class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxEnd
   }
 
   private def handleBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T])(implicit
-      endpointOptions: VertxEndpointOptions[F]
+      endpointOptions: VertxServerOptions[F]
   ): RoutingContext => Future[Void] = { rc =>
     val resp = rc.response
     m.partType(part.name)
@@ -94,7 +94,7 @@ class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxEnd
   }
 
   private def writeBodyPart[CF <: CodecFormat, R](bodyType: RawBodyType[R], contentType: String, r: R)(implicit
-      endpointOptions: VertxEndpointOptions[F]
+      endpointOptions: VertxServerOptions[F]
   ): RoutingContext => Future[Void] = { rc =>
     val resp = rc.response
     resp

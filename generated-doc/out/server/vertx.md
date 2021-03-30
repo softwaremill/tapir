@@ -31,13 +31,13 @@ functions which take multiple arguments need to be converted to a function using
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.vertx.{ VertxFutureEndpointOptions, VertxFutureServerInterpreter }
+import sttp.tapir.server.vertx.{VertxFutureServerOptions, VertxFutureServerInterpreter}
 import io.vertx.ext.web._
 import scala.concurrent.Future
 
-implicit val options: VertxFutureEndpointOptions = ???
+implicit val options: VertxFutureServerOptions = ???
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
 val aRoute: Router => Route = VertxFutureServerInterpreter.route(anEndpoint)((logic _).tupled)
 ```
 
@@ -46,7 +46,7 @@ An HTTP server can then be started as in the following example:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.vertx.VertxFutureEndpointOptions
+import sttp.tapir.server.vertx.VertxFutureServerOptions
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter._
 import io.vertx.core.Vertx
 import io.vertx.ext.web._
@@ -56,7 +56,7 @@ import scala.concurrent.duration._
 object Main {
   // JVM entry point that starts the HTTP server
   def main(args: Array[String]): Unit = {
-    implicit val options: VertxFutureEndpointOptions = ???
+    implicit val options: VertxFutureServerOptions = ???
     val vertx = Vertx.vertx()
     val server = vertx.createHttpServer()
     val router = Router.router(vertx)
@@ -67,6 +67,7 @@ object Main {
     Await.result(server.requestHandler(router).listen(9000).asScala, Duration.Inf)
   }
 }
+
 ```
 
 ## Configuration

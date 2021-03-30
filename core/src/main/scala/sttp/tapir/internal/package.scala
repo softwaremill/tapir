@@ -1,11 +1,11 @@
 package sttp.tapir
 
-import java.nio.charset.Charset
-import sttp.model.{Method, StatusCode}
+import sttp.model.{MediaType, Method, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
+import java.nio.charset.{Charset, StandardCharsets}
 import scala.collection.immutable
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
@@ -191,6 +191,23 @@ package object internal {
       traverseOutputs[RawBodyType[_]] { case b: EndpointIO.Body[_, _] =>
         Vector(b.bodyType)
       }.headOption
+    }
+
+    def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
+      case EndpointIO.Body(bodyType, codec, _) =>
+        Vector(codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())))
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+        Vector(codec.format.mediaType.copy(charset = charset.map(_.name())))
+    }
+
+    def hasBodyMatchingContent(content: MediaType): Boolean = {
+      val contentToMatch = content match {
+        // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
+        case m @ MediaType("text", _, None, _) => m.charset(StandardCharsets.ISO_8859_1.name())
+        case m                                 => m
+      }
+
+      supportedMediaTypes.exists(_ == contentToMatch)
     }
   }
 

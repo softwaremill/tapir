@@ -3,20 +3,19 @@ package sttp.tapir.client.tests
 import cats.effect._
 import cats.implicits._
 import org.http4s.dsl.io._
-import org.http4s.{multipart, _}
-import org.http4s.server.middleware._
+import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
+import org.http4s.{multipart, _}
 import scodec.bits.ByteVector
+import sttp.tapir.client.tests.HttpServer._
 
 import scala.concurrent.ExecutionContext
-
-import HttpServer._
-import cats.effect.Temporal
 
 object HttpServer {
   type Port = Int
@@ -44,6 +43,7 @@ class HttpServer(port: Port) {
   private object amountOptParam extends OptionalQueryParamDecoderMatcher[String]("amount")
   private object colorOptParam extends OptionalQueryParamDecoderMatcher[String]("color")
   private object apiKeyOptParam extends OptionalQueryParamDecoderMatcher[String]("api-key")
+  private object statusOutParam extends QueryParamDecoderMatcher[Int]("statusOut")
 
   private val service = HttpRoutes.of[IO] {
     case GET -> Root :? fruitParam(f) +& amountOptParam(amount) =>
@@ -99,6 +99,13 @@ class HttpServer(port: Port) {
     case GET -> Root / "mapping" :? numParam(v) =>
       if (v % 2 == 0) Accepted("A") else Ok("B")
 
+    case _ @GET -> Root / "status" :? statusOutParam(status) =>
+      status match {
+        case 204 => NoContent()
+        case 200 => Ok(`Content-Type`(MediaType.text.plain))
+        case _   => BadRequest()
+      }
+
     case GET -> Root / "ws" / "echo" =>
       val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
         _.collect { case WebSocketFrame.Text(msg, _) =>
@@ -134,7 +141,26 @@ class HttpServer(port: Port) {
           val e = q.enqueue
           WebSocketBuilder[IO].build(d, e)
         }
+
+    case r @ GET -> Root / "content-negotiation" / "organization" =>
+      fromAcceptHeader(r) {
+        case "application/json" => organizationJson
+        case "application/xml"  => organizationXml
+      }
+
+    case r @ GET -> Root / "content-negotiation" / "entity" =>
+      fromAcceptHeader(r) {
+        case "application/json" => personJson
+        case "application/xml"  => organizationXml
+      }
   }
+
+  private def fromAcceptHeader(r: Request[IO])(f: PartialFunction[String, IO[Response[IO]]]): IO[Response[IO]] =
+    r.headers.get(Accept).map(h => f(h.value)).getOrElse(NotAcceptable())
+
+  private val organizationXml = Ok("<name>sml-xml</name>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
+  private val organizationJson = Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
+  private val personJson = Ok("{\"name\": \"John\", \"age\": 21}", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
 
   private val corsService = CORS(service)
   private val app: HttpApp[IO] = Router("/" -> corsService).orNotFound

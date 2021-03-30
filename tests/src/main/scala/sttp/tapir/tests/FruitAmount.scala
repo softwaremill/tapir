@@ -21,8 +21,7 @@ case class Person(name: String, age: Int) extends Entity
 case class Organization(name: String) extends Entity
 
 object Enumeratum {
-  import enumeratum.EnumEntry
-  import enumeratum.Enum
+  import enumeratum.{Enum, EnumEntry}
 
   case class FruitWithEnum(fruit: String, amount: Int, fruitType: List[FruitType])
 

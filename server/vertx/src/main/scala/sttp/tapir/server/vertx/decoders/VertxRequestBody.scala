@@ -8,7 +8,7 @@ import sttp.capabilities.Streams
 import sttp.model.Part
 import sttp.tapir.RawBodyType
 import sttp.tapir.server.interpreter.RequestBody
-import sttp.tapir.server.vertx.VertxEndpointOptions
+import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.server.vertx.interpreters.FromVFuture
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 
@@ -22,7 +22,7 @@ import scala.collection.JavaConverters._
 
 class VertxRequestBody[F[_], S: ReadStreamCompatible](
     rc: RoutingContext,
-    serverOptions: VertxEndpointOptions[F],
+    serverOptions: VertxServerOptions[F],
     fromVFuture: FromVFuture[F]
 ) extends RequestBody[F, S] {
   override val streams: Streams[S] = ReadStreamCompatible[S].streams

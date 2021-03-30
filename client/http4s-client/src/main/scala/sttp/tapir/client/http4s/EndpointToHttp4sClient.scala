@@ -8,8 +8,10 @@ import org.http4s._
 import org.http4s.headers.`Content-Type`
 import sttp.capabilities.Streams
 import sttp.capabilities.fs2.Fs2Streams
+import sttp.model.ResponseMetadata
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichEndpointOutput, SplitParams}
+import sttp.tapir.client.ClientOutputParams
+import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
   Codec,
   CodecFormat,
@@ -20,12 +22,12 @@ import sttp.tapir.{
   EndpointOutput,
   Mapping,
   RawBodyType,
-  StreamBodyIO
+  StreamBodyIO,
+  WebSocketBodyOutput
 }
 
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
-import scala.collection.Seq
 
 private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Http4sClientOptions) {
 
@@ -179,11 +181,10 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     val output = if (code.isSuccess) e.output else e.errorOutput
 
     // headers with cookies
-    val headers: Map[String, List[String]] = response.headers.toList.groupBy(_.name.value).mapValues(_.map(_.value)).toMap
+    val headers = response.headers.toList.map(h => sttp.model.Header(h.name.toString(), h.value)).toVector
 
     parser(response).map { responseBody =>
-      val params = getOutputParams(output, responseBody, headers, code, response.status.reason)
-
+      val params = clientOutputParams(output, responseBody, ResponseMetadata(code, response.status.reason, headers))
       params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
     }
   }
@@ -223,65 +224,8 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     }.headOption
   }
 
-  private def getOutputParams(
-      output: EndpointOutput[_],
-      body: => Any,
-      headers: Map[String, Seq[String]],
-      code: sttp.model.StatusCode,
-      statusText: String
-  ): DecodeResult[Params] = {
-    output match {
-      case s: EndpointOutput.Single[_] =>
-        (s match {
-          case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
-          case EndpointOutput.WebSocketBodyWrapper(_) =>
-            DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
-          case EndpointIO.Header(name, codec, _) => codec.decode(headers(name).toList)
-          case EndpointIO.Headers(codec, _) =>
-            val h = headers.flatMap { case (k, v) => v.map(sttp.model.Header(k, _)) }.toList
-            codec.decode(h)
-          case EndpointOutput.StatusCode(_, codec, _)      => codec.decode(code)
-          case EndpointOutput.FixedStatusCode(_, codec, _) => codec.decode(())
-          case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
-          case EndpointIO.Empty(codec, _)                  => codec.decode(())
-          case EndpointOutput.OneOf(mappings, codec) =>
-            mappings
-              .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(code)) match {
-              case Some(mapping) =>
-                getOutputParams(mapping.output, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
-              case None =>
-                DecodeResult.Error(
-                  statusText,
-                  new IllegalArgumentException(s"Cannot find mapping for status code ${code} in outputs $output")
-                )
-            }
-
-          case EndpointIO.MappedPair(wrapped, codec) =>
-            getOutputParams(wrapped, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
-          case EndpointOutput.MappedPair(wrapped, codec) =>
-            getOutputParams(wrapped, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
-
-        }).map(ParamsAsAny)
-
-      case EndpointOutput.Void()                        => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
-      case EndpointOutput.Pair(left, right, combine, _) => handleOutputPair(left, right, combine, body, headers, code, statusText)
-      case EndpointIO.Pair(left, right, combine, _)     => handleOutputPair(left, right, combine, body, headers, code, statusText)
-    }
+  private val clientOutputParams = new ClientOutputParams {
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
+      DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
   }
-
-  private def handleOutputPair(
-      left: EndpointOutput[_],
-      right: EndpointOutput[_],
-      combine: CombineParams,
-      body: => Any,
-      headers: Map[String, Seq[String]],
-      code: sttp.model.StatusCode,
-      statusText: String
-  ): DecodeResult[Params] = {
-    val l = getOutputParams(left, body, headers, code, statusText)
-    val r = getOutputParams(right, body, headers, code, statusText)
-    l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
-  }
-
 }

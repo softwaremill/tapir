@@ -57,13 +57,12 @@ trait PlayServerInterpreter {
         serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
           val serverRequest = new PlayServerRequest(request)
           val interpreter = new ServerInterpreter[Any, Future, HttpEntity, Nothing](
-            serverRequest,
             new PlayRequestBody(request, serverOptions),
             new PlayToResponseBody,
             serverOptions.interceptors
           )
 
-          interpreter(serverEndpoints).map {
+          interpreter(serverRequest, serverEndpoints).map {
             case None => Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity)
             case Some(response) =>
               val headers: Map[String, String] = response.headers

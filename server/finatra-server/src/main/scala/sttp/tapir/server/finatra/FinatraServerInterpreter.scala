@@ -29,13 +29,12 @@ trait FinatraServerInterpreter extends Logging {
     val handler = { request: Request =>
       val serverRequest = new FinatraServerRequest(request)
       val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, Nothing](
-        serverRequest,
         new FinatraRequestBody(request, serverOptions),
         new FinatraToResponseBody,
         serverOptions.interceptors
       )(FutureMonadError)
 
-      serverInterpreter(se).map {
+      serverInterpreter(serverRequest, se).map {
         case None => Response(Status.NotFound)
         case Some(response) =>
           val status = Status(response.code.code)

@@ -1,18 +1,14 @@
 package sttp.tapir.client.play
 
-import java.io.{ByteArrayInputStream, File, InputStream}
-import java.nio.ByteBuffer
-import java.nio.file.Files
-import java.util.function.Supplier
-
 import play.api.libs.ws.DefaultBodyReadables._
 import play.api.libs.ws.DefaultBodyWritables._
 import play.api.libs.ws._
 import sttp.capabilities.Streams
 import sttp.capabilities.akka.AkkaStreams
-import sttp.model.Method
+import sttp.model.{Header, Method, ResponseMetadata}
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
+import sttp.tapir.client.ClientOutputParams
+import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
   Codec,
   CodecFormat,
@@ -23,10 +19,15 @@ import sttp.tapir.{
   EndpointOutput,
   Mapping,
   RawBodyType,
-  StreamBodyIO
+  StreamBodyIO,
+  WebSocketBodyOutput
 }
 
-import scala.collection.Seq
+import java.io.{ByteArrayInputStream, File, InputStream}
+import java.nio.ByteBuffer
+import java.nio.file.Files
+import java.util.function.Supplier
+import scala.collection.immutable.Seq
 
 private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient) {
 
@@ -65,72 +66,15 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     val parser = if (code.isSuccess) responseFromOutput(e.output) else responseFromOutput(e.errorOutput)
     val output = if (code.isSuccess) e.output else e.errorOutput
 
-    val headers = cookiesAsHeaders(response.cookies) ++ response.headers
+    val headers = (cookiesAsHeaders(response.cookies.toVector) ++ response.headers).flatMap { case (name, values) =>
+      values.map { v => Header(name, v) }
+    }.toVector
 
-    val params = getOutputParams(output, parser(response), headers, code, response.statusText)
+    val meta = ResponseMetadata(code, response.statusText, headers)
+
+    val params = clientOutputParams(output, parser(response), meta)
 
     params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
-  }
-
-  private def getOutputParams(
-      output: EndpointOutput[_],
-      body: => Any,
-      headers: Map[String, Seq[String]],
-      code: sttp.model.StatusCode,
-      statusText: String
-  ): DecodeResult[Params] = {
-    output match {
-      case s: EndpointOutput.Single[_] =>
-        (s match {
-          case EndpointIO.Body(_, codec, _)                               => codec.decode(body)
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => codec.decode(body)
-          case EndpointOutput.WebSocketBodyWrapper(_) =>
-            DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
-          case EndpointIO.Header(name, codec, _) => codec.decode(headers(name).toList)
-          case EndpointIO.Headers(codec, _) =>
-            val h = headers.flatMap { case (k, v) => v.map(sttp.model.Header(k, _)) }.toList
-            codec.decode(h)
-          case EndpointOutput.StatusCode(_, codec, _)      => codec.decode(code)
-          case EndpointOutput.FixedStatusCode(_, codec, _) => codec.decode(())
-          case EndpointIO.FixedHeader(_, codec, _)         => codec.decode(())
-          case EndpointIO.Empty(codec, _)                  => codec.decode(())
-          case EndpointOutput.OneOf(mappings, codec) =>
-            mappings
-              .find(mapping => mapping.statusCode.isEmpty || mapping.statusCode.contains(code)) match {
-              case Some(mapping) =>
-                getOutputParams(mapping.output, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
-              case None =>
-                DecodeResult.Error(
-                  statusText,
-                  new IllegalArgumentException(s"Cannot find mapping for status code ${code} in outputs $output")
-                )
-            }
-
-          case EndpointIO.MappedPair(wrapped, codec) =>
-            getOutputParams(wrapped, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
-          case EndpointOutput.MappedPair(wrapped, codec) =>
-            getOutputParams(wrapped, body, headers, code, statusText).flatMap(p => codec.decode(p.asAny))
-
-        }).map(ParamsAsAny)
-
-      case EndpointOutput.Void()                        => DecodeResult.Error("", new IllegalArgumentException("Cannot convert a void output to a value!"))
-      case EndpointOutput.Pair(left, right, combine, _) => handleOutputPair(left, right, combine, body, headers, code, statusText)
-      case EndpointIO.Pair(left, right, combine, _)     => handleOutputPair(left, right, combine, body, headers, code, statusText)
-    }
-  }
-
-  private def handleOutputPair(
-      left: EndpointOutput[_],
-      right: EndpointOutput[_],
-      combine: CombineParams,
-      body: => Any,
-      headers: Map[String, Seq[String]],
-      code: sttp.model.StatusCode,
-      statusText: String
-  ): DecodeResult[Params] = {
-    val l = getOutputParams(left, body, headers, code, statusText)
-    val r = getOutputParams(right, body, headers, code, statusText)
-    l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
   }
 
   private def cookiesAsHeaders(cookies: Seq[WSCookie]): Map[String, Seq[String]] = {
@@ -214,9 +158,6 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     setInputParams(tuple.asInstanceOf[EndpointInput[Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), req)
   }
 
-  //        type PlayPart = play.shaded.ahc.org.asynchttpclient.request.body.multipart.Part
-  //        type PlayPartBase = play.shaded.ahc.org.asynchttpclient.request.body.multipart.PartBase
-
   private def setBody[R, T, CF <: CodecFormat](
       v: T,
       bodyType: RawBodyType[R],
@@ -224,12 +165,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       req: StandaloneWSRequest
   ): StandaloneWSRequest = {
     val encoded: R = codec.encode(v)
-    // TODO can't we get rid of asInstanceOf ?
     val req2 = bodyType match {
       case RawBodyType.StringBody(_) =>
-        // Play infer the content-type from the body, if we pass a String, it will infer "text/plain"
-        // That's why we create a custom BodyWritable
-        // TODO: what about charset?
         val defaultStringBodyWritable: BodyWritable[String] = implicitly[BodyWritable[String]]
         val bodyWritable = BodyWritable[String](defaultStringBodyWritable.transform, codec.format.mediaType.toString)
         req.withBody(encoded.asInstanceOf[String])(bodyWritable)
@@ -240,30 +177,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
         val inputStreamSupplier: Supplier[InputStream] = () => encoded.asInstanceOf[InputStream]
         req.withBody(inputStreamSupplier)
       case RawBodyType.FileBody         => req.withBody(encoded.asInstanceOf[File])
-      case m: RawBodyType.MultipartBody =>
-//        val parts: Seq[PlayPart] = (encoded: Seq[RawPart]).flatMap { p =>
-//          m.partType(p.name).map { partType =>
-//            // name, body, content type, content length, file name
-//            val playPart =
-//              partToPlayPart(p.asInstanceOf[Part[Any]], partType.asInstanceOf[RawBodyType[Any]], p.contentType, p.contentLength, p.fileName)
-//
-//            // headers; except content type set above
-//            p.headers
-//              .filterNot(_.is(HeaderNames.ContentType))
-//              .foreach { header =>
-//                playPart.addCustomHeader(header.name, header.value)
-//              }
-//
-//            playPart
-//          }
-//        }
-//
-        // TODO we need a BodyWritable[Source[PlayPart, _]]
-        // But it's not part of Play Standalone
-        // See https://github.com/playframework/playframework/blob/master/transport/client/play-ws/src/main/scala/play/api/libs/ws/WSBodyWritables.scala
-        // req.withBody(Source(parts.toList))
-
-        throw new IllegalArgumentException("Multipart body aren't supported")
+      case _: RawBodyType.MultipartBody => throw new IllegalArgumentException("Multipart body aren't supported")
     }
 
     req2
@@ -275,25 +189,6 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
       case _           => throw new IllegalArgumentException("Only AkkaStreams streaming is supported")
     }
   }
-
-//  private def partToPlayPart[R](
-//      p: Part[R],
-//      bodyType: RawBodyType[R],
-//      contentType: Option[String],
-//      contentLength: Option[Long],
-//      fileName: Option[String]
-//  ): PlayPartBase = {
-//    // TODO can't we get rid of the asInstanceOf???
-//    bodyType match {
-//      case RawBodyType.StringBody(charset) => new StringPart(p.name, p.body.asInstanceOf[String], contentType.orNull, charset)
-//      case RawBodyType.ByteArrayBody       => new ByteArrayPart(p.name, p.body.asInstanceOf[Array[Byte]], contentType.orNull)
-//      case RawBodyType.ByteBufferBody      => new ByteArrayPart(p.name, p.body.asInstanceOf[ByteBuffer].array(), contentType.orNull)
-//      case RawBodyType.InputStreamBody =>
-//        new InputStreamPart(p.name, p.body.asInstanceOf[InputStream], fileName.orNull, contentLength.getOrElse(-1L), contentType.orNull)
-//      case RawBodyType.FileBody            => new FilePart(p.name, p.body.asInstanceOf[File], contentType.orNull)
-//      case RawBodyType.MultipartBody(_, _) => throw new IllegalArgumentException("Nested multipart bodies aren't supported")
-//    }
-//  }
 
   private def getOrThrow[T](dr: DecodeResult[T]): T =
     dr match {
@@ -335,4 +230,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     }.headOption
   }
 
+  private val clientOutputParams = new ClientOutputParams {
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
+      DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
+  }
 }

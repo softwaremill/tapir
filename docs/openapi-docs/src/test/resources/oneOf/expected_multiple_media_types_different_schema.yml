@@ -1,0 +1,43 @@
+openapi: 3.0.3
+info:
+  title: Examples
+  version: '1.0'
+paths:
+  /content-negotiation/entity:
+    get:
+      operationId: getContent-negotiationEntity
+      parameters:
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Person'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Organization'
+components:
+  schemas:
+    Person:
+      required:
+        - name
+        - age
+      type: object
+      properties:
+        name:
+          type: string
+        age:
+          type: integer
+    Organization:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
