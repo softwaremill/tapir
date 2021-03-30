@@ -2,17 +2,17 @@ package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.Logger
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.server.interceptor.EndpointInterceptor
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 
 import java.io.File
 
-trait VertxEndpointOptions[F[_]] {
+trait VertxServerOptions[F[_]] {
   def uploadDirectory: File
-  def interceptors: List[EndpointInterceptor[F, RoutingContext => Unit]]
+  def interceptors: List[Interceptor[F, RoutingContext => Unit]]
 }
 
-object VertxEndpointOptions {
+object VertxServerOptions {
   def defaultServerLog(log: Logger): ServerLog[Unit] = DefaultServerLog(
     doLogWhenHandled = debugLog(log),
     doLogAllDecodeFailures = infoLog(log),

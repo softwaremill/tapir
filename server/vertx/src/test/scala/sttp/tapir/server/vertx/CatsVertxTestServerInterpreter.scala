@@ -23,9 +23,8 @@ class CatsVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter
       e: ServerEndpoint[I, E, O, Fs2Streams[IO], IO],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route = {
-    implicit val options: VertxCatsEndpointOptions[IO] = VertxCatsEndpointOptions.customInterceptors(decodeFailureHandler =
-      decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-    )
+    implicit val options: VertxCatsServerOptions[IO] =
+      VertxCatsServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
     VertxCatsServerInterpreter.route(e)
   }
 

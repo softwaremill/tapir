@@ -1,29 +1,30 @@
 package sttp.tapir.server.vertx
 
-import cats.Applicative
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.server.interceptor.EndpointInterceptor
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
+import zio.RIO
 
 import java.io.File
+import scala.concurrent.Future
 
-final case class VertxCatsEndpointOptions[F[_]](
+final case class VertxZioServerOptions[F[_]](
     uploadDirectory: File,
     maxQueueSizeForReadStream: Int,
-    interceptors: List[EndpointInterceptor[F, RoutingContext => Unit]]
-) extends VertxEndpointOptions[F] {
-  def prependInterceptor(i: EndpointInterceptor[F, RoutingContext => Unit]): VertxCatsEndpointOptions[F] =
+    interceptors: List[Interceptor[F, RoutingContext => Unit]]
+) extends VertxServerOptions[F] {
+  def prependInterceptor(i: Interceptor[F, RoutingContext => Unit]): VertxZioServerOptions[F] =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: EndpointInterceptor[F, RoutingContext => Unit]): VertxCatsEndpointOptions[F] =
+  def appendInterceptor(i: Interceptor[F, RoutingContext => Unit]): VertxZioServerOptions[F] =
     copy(interceptors = interceptors :+ i)
 }
 
-object VertxCatsEndpointOptions {
+object VertxZioServerOptions {
 
-  /** Creates default [[VertxCatsEndpointOptions]] with custom interceptors, sitting between an optional exception
+  /** Creates default [[VertxZioServerOptions]] with custom interceptors, sitting between an optional exception
     * interceptor, optional logging interceptor, and the ultimate decode failure handling interceptor.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
@@ -36,21 +37,21 @@ object VertxCatsEndpointOptions {
     *                               responses.
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
-  def customInterceptors[F[_]: Applicative](
+  def customInterceptors[R](
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
-      serverLog: Option[ServerLog[Unit]] = Some(VertxEndpointOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
-      additionalInterceptors: List[EndpointInterceptor[F, RoutingContext => Unit]] = Nil,
+      serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
+      additionalInterceptors: List[Interceptor[RIO[R, *], RoutingContext => Unit]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
-  ): VertxCatsEndpointOptions[F] = {
-    VertxCatsEndpointOptions(
+  ): VertxZioServerOptions[RIO[R, *]] = {
+    VertxZioServerOptions(
       File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
       maxQueueSizeForReadStream = 16,
-      exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
-        serverLog.map(new ServerLogInterceptor[Unit, F, RoutingContext => Unit](_, (_, _) => Applicative[F].unit)).toList ++
+      exceptionHandler.map(new ExceptionInterceptor[RIO[R, *], RoutingContext => Unit](_)).toList ++
+        serverLog.map(new ServerLogInterceptor[Unit, RIO[R, *], RoutingContext => Unit](_, (_, _) => RIO.unit)).toList ++
         additionalInterceptors ++
-        List(new DecodeFailureInterceptor[F, RoutingContext => Unit](decodeFailureHandler))
+        List(new DecodeFailureInterceptor[RIO[R, *], RoutingContext => Unit](decodeFailureHandler))
     )
   }
 
-  implicit def default[F[_]: Applicative]: VertxCatsEndpointOptions[F] = customInterceptors()
+  implicit def default[R]: VertxZioServerOptions[RIO[R, *]] = customInterceptors()
 }

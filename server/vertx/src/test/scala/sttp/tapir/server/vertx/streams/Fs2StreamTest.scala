@@ -10,7 +10,7 @@ import _root_.fs2.Chunk
 import io.vertx.core.buffer.Buffer
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.server.vertx.VertxCatsEndpointOptions
+import sttp.tapir.server.vertx.VertxCatsServerOptions
 
 import scala.concurrent.duration._
 import scala.util.control.NonFatal
@@ -18,7 +18,7 @@ import scala.util.control.NonFatal
 class Fs2StreamTest extends AnyFlatSpec with Matchers {
   implicit val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
   implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
-  implicit val options: VertxCatsEndpointOptions[IO] = VertxCatsEndpointOptions.default[IO].copy(maxQueueSizeForReadStream = 4)
+  implicit val options: VertxCatsServerOptions[IO] = VertxCatsServerOptions.default[IO].copy(maxQueueSizeForReadStream = 4)
 
   def intAsBuffer(int: Int): Chunk[Byte] = {
     val buffer = ByteBuffer.allocate(4)

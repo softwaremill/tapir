@@ -7,7 +7,7 @@ import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.vertx.VertxZioEndpointOptions
+import sttp.tapir.server.vertx.VertxZioServerOptions
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
@@ -19,13 +19,13 @@ import scala.reflect.ClassTag
 trait VertxZioServerInterpreter extends CommonServerInterpreter {
 
   def route[R, I, E, O](e: Endpoint[I, E, O, ZioStreams])(logic: I => ZIO[R, E, O])(implicit
-      endpointOptions: VertxZioEndpointOptions[RIO[R, *]],
+      endpointOptions: VertxZioServerOptions[RIO[R, *]],
       runtime: Runtime[R]
   ): Router => Route =
     route(ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]](e, _ => logic(_).either))
 
   def route[R, I, E, O](e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]])(implicit
-      endpointOptions: VertxZioEndpointOptions[RIO[R, *]],
+      endpointOptions: VertxZioServerOptions[RIO[R, *]],
       runtime: Runtime[R]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
@@ -35,7 +35,7 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
   def routeRecoverErrors[R, I, E, O](e: Endpoint[I, E, O, ZioStreams])(
       logic: I => RIO[R, O]
   )(implicit
-      endpointOptions: VertxZioEndpointOptions[RIO[R, *]],
+      endpointOptions: VertxZioServerOptions[RIO[R, *]],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E],
       runtime: Runtime[R]
@@ -44,16 +44,16 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
 
   private def endpointHandler[R, I, E, O, A](
       e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
-  )(implicit runtime: Runtime[R], serverOptions: VertxZioEndpointOptions[RIO[R, *]]): Handler[RoutingContext] = { rc =>
+  )(implicit runtime: Runtime[R], serverOptions: VertxZioServerOptions[RIO[R, *]]): Handler[RoutingContext] = { rc =>
     val fromVFuture = new RioFromVFuture[R]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Unit, ZioStreams](
-      new VertxServerRequest(rc),
       new VertxRequestBody[RIO[R, *], ZioStreams](rc, serverOptions, fromVFuture),
       new VertxToResponseBody(serverOptions),
       serverOptions.interceptors
     )
+    val serverRequest = new VertxServerRequest(rc)
 
-    val result = interpreter(e)
+    val result = interpreter(serverRequest, e)
       .flatMap {
         case None           => fromVFuture(rc.response.setStatusCode(404).end())
         case Some(response) => Task.succeed(VertxOutputEncoders(response).apply(rc))

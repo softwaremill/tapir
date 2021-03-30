@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx
 import io.vertx.core.{Context, Vertx}
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.server.interceptor.EndpointInterceptor
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
@@ -11,26 +11,26 @@ import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import java.io.File
 import scala.concurrent.{ExecutionContext, Future}
 
-final case class VertxFutureEndpointOptions(
+final case class VertxFutureServerOptions(
     uploadDirectory: File,
-    interceptors: List[EndpointInterceptor[Future, RoutingContext => Unit]],
+    interceptors: List[Interceptor[Future, RoutingContext => Unit]],
     private val specificExecutionContext: Option[ExecutionContext]
-) extends VertxEndpointOptions[Future] {
+) extends VertxServerOptions[Future] {
   def executionContextOr(default: ExecutionContext): ExecutionContext =
     specificExecutionContext.getOrElse(default)
 
   private[vertx] def executionContextOrCurrentCtx(rc: RoutingContext) =
     executionContextOr(new VertxExecutionContext(rc.vertx, rc.vertx.getOrCreateContext))
 
-  def prependInterceptor(i: EndpointInterceptor[Future, RoutingContext => Unit]): VertxFutureEndpointOptions =
+  def prependInterceptor(i: Interceptor[Future, RoutingContext => Unit]): VertxFutureServerOptions =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: EndpointInterceptor[Future, RoutingContext => Unit]): VertxFutureEndpointOptions =
+  def appendInterceptor(i: Interceptor[Future, RoutingContext => Unit]): VertxFutureServerOptions =
     copy(interceptors = interceptors :+ i)
 }
 
-object VertxFutureEndpointOptions {
+object VertxFutureServerOptions {
 
-  /** Creates default [[VertxFutureEndpointOptions]] with custom interceptors, sitting between an optional exception
+  /** Creates default [[VertxFutureServerOptions]] with custom interceptors, sitting between an optional exception
     * interceptor, optional logging interceptor, and the ultimate decode failure handling interceptor.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
@@ -45,11 +45,11 @@ object VertxFutureEndpointOptions {
     */
   def customInterceptors(
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
-      serverLog: Option[ServerLog[Unit]] = Some(VertxEndpointOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
-      additionalInterceptors: List[EndpointInterceptor[Future, RoutingContext => Unit]] = Nil,
+      serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
+      additionalInterceptors: List[Interceptor[Future, RoutingContext => Unit]] = Nil,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
-  ): VertxFutureEndpointOptions = {
-    VertxFutureEndpointOptions(
+  ): VertxFutureServerOptions = {
+    VertxFutureServerOptions(
       File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
       exceptionHandler.map(new ExceptionInterceptor[Future, RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, Future, RoutingContext => Unit](_, (_, _) => Future.successful(()))).toList ++
@@ -59,7 +59,7 @@ object VertxFutureEndpointOptions {
     )
   }
 
-  implicit val default: VertxFutureEndpointOptions = customInterceptors()
+  implicit val default: VertxFutureServerOptions = customInterceptors()
 }
 
 class VertxExecutionContext(val vertx: Vertx, val ctx: Context) extends ExecutionContext {
