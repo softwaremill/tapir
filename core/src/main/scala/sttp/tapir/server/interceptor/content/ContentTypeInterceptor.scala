@@ -18,14 +18,7 @@ class ContentTypeInterceptor[F[_], B] extends EndpointInterceptor[F, B] {
     request.acceptsContentTypes match {
       case _ @(Right(Nil) | Right(ContentTypeRange.AnyRange :: Nil)) => next(None)
       case Right(ranges) =>
-        val supportedMediaTypes = endpoint.output.traverseOutputs {
-          case EndpointIO.Body(bodyType, codec, _) =>
-            Vector(charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType))
-          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-            Vector(charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType))
-        }
-
-        val hasMatchingRepresentation = supportedMediaTypes.exists(mt => ranges.exists(mt.matches))
+        val hasMatchingRepresentation = endpoint.output.supportedMediaTypes.exists(mt => ranges.exists(mt.matches))
 
         if (hasMatchingRepresentation) next(None)
         else next(Some(ValuedEndpointOutput(statusCode(StatusCode.UnsupportedMediaType), ())))

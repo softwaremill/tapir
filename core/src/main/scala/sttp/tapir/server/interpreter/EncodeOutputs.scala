@@ -71,11 +71,11 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
             sm.output.traverseOutputs {
               case EndpointIO.Body(bodyType, codec, _) =>
                 Vector[(MediaType, StatusMapping[_])](
-                  charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm
+                  codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())) -> sm
                 )
               case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
                 Vector[(MediaType, StatusMapping[_])](
-                  charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType) -> sm
+                  codec.format.mediaType.copy(charset = charset.map(_.name())) -> sm
                 )
             }
           )

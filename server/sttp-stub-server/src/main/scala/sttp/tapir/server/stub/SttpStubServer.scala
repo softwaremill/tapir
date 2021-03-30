@@ -113,7 +113,7 @@ trait SttpStubServer {
         }
 
         val outputValues: OutputValues[Any] =
-          new EncodeOutputs[Any, Nothing](toResponseBody, Right(Seq(ContentTypeRange.AnyRange)))
+          new EncodeOutputs[Any, Nothing](toResponseBody, Seq(ContentTypeRange.AnyRange))
             .apply(output, ParamsAsAny(responseValue), OutputValues.empty)
 
         whenRequest.thenRespond(

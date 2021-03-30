@@ -164,9 +164,9 @@ trait EndpointOutputsOps[I, E, O, -R] {
         val formats = outputs.flatMap { case (_, output) =>
           output.collect {
             case EndpointIO.Body(bodyType, codec, _) =>
-              charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
+              codec.format.mediaType.copy(charset = charset(bodyType).map(_.name()))
             case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-              charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
+              codec.format.mediaType.copy(charset = charset.map(_.name()))
           }
         }
         val duplicates = formats.diff(formats.distinct)

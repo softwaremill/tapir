@@ -193,6 +193,13 @@ package object internal {
       }.headOption
     }
 
+    def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
+      case EndpointIO.Body(bodyType, codec, _) =>
+        Vector(codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())))
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+        Vector(codec.format.mediaType.copy(charset = charset.map(_.name())))
+    }
+
     def hasBodyMatchingContent(content: MediaType): Boolean = {
       val contentToMatch = content match {
         // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
@@ -200,14 +207,7 @@ package object internal {
         case m                                 => m
       }
 
-      traverseOutputs {
-        case EndpointIO.Body(bodyType, codec, _) =>
-          val mediaType = charset(bodyType).map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
-          Vector(mediaType == contentToMatch)
-        case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-          val mediaType = charset.map(ch => codec.format.mediaType.charset(ch.name())).getOrElse(codec.format.mediaType)
-          Vector(mediaType == contentToMatch)
-      }.find(_ == true).getOrElse(false)
+      supportedMediaTypes.exists(_ == contentToMatch)
     }
   }
 
