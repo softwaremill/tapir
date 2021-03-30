@@ -5,7 +5,7 @@ import sttp.client3._
 import sttp.model._
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir._
-import sttp.tapir.client.AbstractEndpointToClient
+import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.internal._
 import sttp.ws.WebSocket
 
@@ -13,8 +13,7 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import scala.annotation.tailrec
 
-private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R])
-    extends AbstractEndpointToClient {
+private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, wsToPipe: WebSocketToPipe[R]) {
   def toSttpRequest[O, E, I](e: Endpoint[I, E, O, R], baseUri: Option[Uri]): I => Request[DecodeResult[Either[E, O]], R] = { params =>
     val (uri, req1) =
       setInputParams(
@@ -36,7 +35,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       ConditionalResponseAs(isSuccess, responseAsFromOutputs(e.output, isWebSocket))
     ).mapWithMetadata { (body, meta) =>
       val output = if (isSuccess(meta)) e.output else e.errorOutput
-      val params = getOutputParams(output, body, meta)
+      val params = clientOutputParams(output, body, meta)
       params.map(_.asAny).map(p => if (isSuccess(meta)) Right(p) else Left(p))
     }.map {
       case DecodeResult.Error(o, e) =>
@@ -205,17 +204,18 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     }.nonEmpty
   }
 
-  override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] = {
-    val streams = o.streams.asInstanceOf[wsToPipe.S]
-    o.codec
-      .asInstanceOf[Codec[Any, _, CodecFormat]]
-      .decode(
-        wsToPipe
-          .apply(streams)(
-            body.asInstanceOf[WebSocket[wsToPipe.F]],
-            o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
-          )
-      )
+  private val clientOutputParams = new ClientOutputParams {
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] = {
+      val streams = o.streams.asInstanceOf[wsToPipe.S]
+      o.codec
+        .asInstanceOf[Codec[Any, _, CodecFormat]]
+        .decode(
+          wsToPipe
+            .apply(streams)(
+              body.asInstanceOf[WebSocket[wsToPipe.F]],
+              o.asInstanceOf[WebSocketBodyOutput[Any, _, _, _, wsToPipe.S]]
+            )
+        )
+    }
   }
-
 }

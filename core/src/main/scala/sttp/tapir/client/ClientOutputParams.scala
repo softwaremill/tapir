@@ -4,9 +4,8 @@ import sttp.model.{HeaderNames, MediaType, ResponseMetadata}
 import sttp.tapir.internal.{CombineParams, Params, ParamsAsAny, _}
 import sttp.tapir.{DecodeResult, EndpointIO, EndpointOutput, StreamBodyIO, WebSocketBodyOutput}
 
-abstract class AbstractEndpointToClient {
-
-  def getOutputParams(output: EndpointOutput[_], body: Any, meta: ResponseMetadata): DecodeResult[Params] =
+abstract class ClientOutputParams {
+  def apply(output: EndpointOutput[_], body: Any, meta: ResponseMetadata): DecodeResult[Params] =
     output match {
       case s: EndpointOutput.Single[_] =>
         (s match {
@@ -28,7 +27,7 @@ abstract class AbstractEndpointToClient {
               .header(HeaderNames.ContentType)
               .map(MediaType.parse)
 
-            def applyMapping(m: EndpointOutput.StatusMapping[_]) = getOutputParams(m.output, body, meta).flatMap(p => codec.decode(p.asAny))
+            def applyMapping(m: EndpointOutput.StatusMapping[_]) = apply(m.output, body, meta).flatMap(p => codec.decode(p.asAny))
 
             contentType match {
               case None =>
@@ -65,8 +64,8 @@ abstract class AbstractEndpointToClient {
 
               case Some(Left(_)) => DecodeResult.Error(meta.statusText, new IllegalArgumentException("Unable to parse Content-Type header"))
             }
-          case EndpointIO.MappedPair(wrapped, codec)     => getOutputParams(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
-          case EndpointOutput.MappedPair(wrapped, codec) => getOutputParams(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
+          case EndpointIO.MappedPair(wrapped, codec)     => apply(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
+          case EndpointOutput.MappedPair(wrapped, codec) => apply(wrapped, body, meta).flatMap(p => codec.decode(p.asAny))
 
         }).map(ParamsAsAny)
 
@@ -82,8 +81,8 @@ abstract class AbstractEndpointToClient {
       body: Any,
       meta: ResponseMetadata
   ): DecodeResult[Params] = {
-    val l = getOutputParams(left, body, meta)
-    val r = getOutputParams(right, body, meta)
+    val l = apply(left, body, meta)
+    val r = apply(right, body, meta)
     l.flatMap(leftParams => r.map(rightParams => combine(leftParams, rightParams)))
   }
 

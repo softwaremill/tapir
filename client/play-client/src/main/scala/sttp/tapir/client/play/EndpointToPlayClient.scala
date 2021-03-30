@@ -7,7 +7,7 @@ import sttp.capabilities.Streams
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Method, ResponseMetadata}
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.client.AbstractEndpointToClient
+import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointInput, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
   Codec,
@@ -29,7 +29,7 @@ import java.nio.file.Files
 import java.util.function.Supplier
 import scala.collection.immutable.Seq
 
-private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient) extends AbstractEndpointToClient {
+private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: StandaloneWSClient) {
 
   def toPlayRequest[I, E, O, R](
       e: Endpoint[I, E, O, R],
@@ -72,7 +72,7 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
 
     val meta = ResponseMetadata(code, response.statusText, headers)
 
-    val params = getOutputParams(output, parser(response), meta)
+    val params = clientOutputParams(output, parser(response), meta)
 
     params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
   }
@@ -230,6 +230,8 @@ private[play] class EndpointToPlayClient(clientOptions: PlayClientOptions, ws: S
     }.headOption
   }
 
-  override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
-    DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
+  private val clientOutputParams = new ClientOutputParams {
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
+      DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
+  }
 }

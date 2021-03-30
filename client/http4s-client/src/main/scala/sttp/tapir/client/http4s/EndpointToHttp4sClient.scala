@@ -10,7 +10,7 @@ import sttp.capabilities.Streams
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.ResponseMetadata
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.client.AbstractEndpointToClient
+import sttp.tapir.client.ClientOutputParams
 import sttp.tapir.internal.{Params, ParamsAsAny, RichEndpointOutput, SplitParams}
 import sttp.tapir.{
   Codec,
@@ -29,7 +29,7 @@ import sttp.tapir.{
 import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
 
-private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Http4sClientOptions) extends AbstractEndpointToClient {
+private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Http4sClientOptions) {
 
   def toHttp4sRequest[I, E, O, R, F[_]: ContextShift: Effect](
       e: Endpoint[I, E, O, R],
@@ -184,7 +184,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     val headers = response.headers.toList.map(h => sttp.model.Header(h.name.toString(), h.value)).toVector
 
     parser(response).map { responseBody =>
-      val params = getOutputParams(output, responseBody, ResponseMetadata(code, response.status.reason, headers))
+      val params = clientOutputParams(output, responseBody, ResponseMetadata(code, response.status.reason, headers))
       params.map(_.asAny).map(p => if (code.isSuccess) Right(p.asInstanceOf[O]) else Left(p.asInstanceOf[E]))
     }
   }
@@ -224,6 +224,8 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     }.headOption
   }
 
-  override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
-    DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
+  private val clientOutputParams = new ClientOutputParams {
+    override def decodeWebSocketBody(o: WebSocketBodyOutput[_, _, _, _, _], body: Any): DecodeResult[Any] =
+      DecodeResult.Error("", new IllegalArgumentException("WebSocket aren't supported yet"))
+  }
 }
