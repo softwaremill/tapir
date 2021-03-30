@@ -7,6 +7,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
@@ -17,7 +18,6 @@ import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi._
 import sttp.tapir.tests.{Person, _}
 import sttp.tapir.{Endpoint, endpoint, _}
-import VerifyYamlTest._
 
 import java.time.{Instant, LocalDateTime}
 

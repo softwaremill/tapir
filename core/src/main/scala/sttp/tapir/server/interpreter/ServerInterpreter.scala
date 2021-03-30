@@ -4,10 +4,12 @@ import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
-import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{EndpointInterceptor, Interceptor, RequestInterceptor, ValuedEndpointOutput}
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.content.ContentTypeInterceptor
+import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
+import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 
 class ServerInterpreter[R, F[_]: MonadError, B, S](
     requestBody: RequestBody[F, S],
@@ -68,7 +70,13 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case values: DecodeBasicInputsResult.Values =>
         InputValue(se.endpoint.input, values) match {
           case InputValueResult.Value(params, _) =>
-            callInterceptorsOnDecodeSuccess(request, endpointInterceptors, se.endpoint, params.asAny.asInstanceOf[I], valueToResponse)
+            callInterceptorsOnDecodeSuccess(
+              request,
+              new ContentTypeInterceptor[F, B]() :: endpointInterceptors,
+              se.endpoint,
+              params.asAny.asInstanceOf[I],
+              valueToResponse
+            )
               .map(Some(_))
           case InputValueResult.Failure(input, failure) =>
             callInterceptorsOnDecodeFailure(request, endpointInterceptors, se.endpoint, input, failure)
@@ -143,8 +151,9 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case failure: DecodeBasicInputsResult.Failure => (failure: DecodeBasicInputsResult).unit
     }
 
-  private def outputToResponse[O](defaultStatusCode: sttp.model.StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
-    val outputValues = new EncodeOutputs(toResponseBody).apply(output, ParamsAsAny(v), OutputValues.empty)
+  private def outputToResponse[O](defaultStatusCode: StatusCode, output: EndpointOutput[O], v: O): ServerResponse[B] = {
+    val outputValues =
+      new EncodeOutputs(toResponseBody, request.acceptsContentTypes.getOrElse(Nil)).apply(output, ParamsAsAny(v), OutputValues.empty)
     val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
     val headers = outputValues.headers

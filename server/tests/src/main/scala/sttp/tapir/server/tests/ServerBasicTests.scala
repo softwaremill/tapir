@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
 import io.circe.generic.auto._
+import org.scalatest
 import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model._
@@ -14,6 +15,13 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.tests.MultipleMediaTypes.{
+  organizationHtmlIso,
+  organizationHtmlUtf8,
+  organizationJson,
+  organizationXml,
+  out_json_xml_text_common_schema
+}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
@@ -21,6 +29,7 @@ import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
+import java.io.{ByteArrayInputStream, InputStream}
 
 class ServerBasicTests[F[_], ROUTE](
     backend: SttpBackend[IO, Any],
@@ -595,6 +604,49 @@ class ServerBasicTests[F[_], ROUTE](
     //
     testServer(endpoint, "handle exceptions")(_ => throw new RuntimeException()) { baseUri =>
       basicRequest.get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
+    },
+    testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
+      def ok(body: String) = (StatusCode.Ok, body.asRight[String])
+      def unsupportedMediaType() = (StatusCode.UnsupportedMediaType, "".asLeft[String])
+      def badRequest() = (StatusCode.BadRequest, "".asLeft[String])
+
+      val cases: Map[(String, String), (StatusCode, Either[String, String])] = Map(
+        ("application/json", "*") -> ok(organizationJson),
+        ("application/xml", "*") -> ok(organizationXml),
+        ("text/html", "*") -> ok(organizationHtmlUtf8),
+        ("text/html;q=0.123, application/json;q=0.124, application/xml;q=0.125", "*") -> ok(organizationXml),
+        ("application/xml, application/json", "*") -> ok(organizationXml),
+        ("application/json, application/xml", "*") -> ok(organizationJson),
+        ("application/xml;q=0.5, application/json;q=0.9", "*") -> ok(organizationJson),
+        ("application/json;q=0.5, application/xml;q=0.5", "*") -> ok(organizationJson),
+        ("application/json, application/xml, text/*;q=0.1", "iso-8859-1") -> ok(organizationHtmlIso),
+        ("text/*;q=0.5, application/*", "*") -> ok(organizationJson),
+        ("text/*;q=0.5, application/xml;q=0.3", "utf-8") -> ok(organizationHtmlUtf8),
+        ("text/html", "utf-8;q=0.9, iso-8859-1;q=0.5") -> ok(organizationHtmlUtf8),
+        ("text/html", "utf-8;q=0.5, iso-8859-1;q=0.9") -> ok(organizationHtmlIso),
+        ("text/html", "utf-8, iso-8859-1") -> ok(organizationHtmlUtf8),
+        ("text/html", "iso-8859-1, utf-8") -> ok(organizationHtmlIso),
+        ("*/*", "iso-8859-1") -> ok(organizationHtmlIso),
+        ("*/*", "*;q=0.5, iso-8859-1") -> ok(organizationHtmlIso),
+        //
+        ("text/html", "iso-8859-5") -> unsupportedMediaType(),
+        ("text/csv", "*") -> unsupportedMediaType(),
+        //
+        ("text/html;(q)=xxx", "utf-8") -> badRequest()
+      )
+
+      cases.foldLeft(IO(scalatest.Assertions.succeed))((prev, next) => {
+        val ((accept, acceptCharset), (code, body)) = next
+        prev >> basicRequest
+          .get(uri"$baseUri/content-negotiation/organization")
+          .header(HeaderNames.Accept, accept)
+          .header(HeaderNames.AcceptCharset, acceptCharset)
+          .send(backend)
+          .map { response =>
+            response.code shouldBe code
+            response.body shouldBe body
+          }
+      })
     },
     testServer(
       "recover errors from exceptions",

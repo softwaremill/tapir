@@ -12,7 +12,8 @@ import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
 import sttp.model.{Header, HeaderNames, MediaType, Part, QueryParams, StatusCode}
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.Codec.{PlainCodec, XmlCodec}
+import sttp.tapir.CodecFormat.TextHtml
 import sttp.tapir.model._
 
 package object tests {
@@ -313,6 +314,79 @@ package object tests {
       .in(query[String]("p1").default("DEFAULT"))
       .out(stringBody)
       .name("Query with default")
+
+  val out_no_content_or_ok_empty_output: Endpoint[Int, Unit, Unit, Any] = {
+    val anyMatches: PartialFunction[Any, Boolean] = { case _ => true }
+
+    endpoint
+      .in("status")
+      .in(query[Int]("statusOut"))
+      .out(
+        sttp.tapir.oneOf(
+          statusMappingValueMatcher(StatusCode.NoContent, emptyOutput)(anyMatches),
+          statusMappingValueMatcher(StatusCode.Ok, emptyOutput)(anyMatches)
+        )
+      )
+  }
+
+  val out_json_or_empty_output_no_content: Endpoint[Int, Unit, Either[Unit, Person], Any] =
+    endpoint
+      .in("status")
+      .in(query[Int]("statusOut"))
+      .out(
+        sttp.tapir.oneOf[Either[Unit, Person]](
+          statusMappingValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
+          statusMappingValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
+        )
+      )
+
+  //
+
+  object MultipleMediaTypes {
+    implicit val schemaForPerson: Schema[Person] = Schema.derived[Person]
+    implicit val schemaForOrganization: Schema[Organization] = Schema.derived[Organization]
+
+    // <name>xxx</name>
+    def fromClosedTags(tags: String): Organization = Organization(tags.split(">")(1).split("<").head)
+
+    implicit val xmlCodecForOrganization: XmlCodec[Organization] =
+      Codec.xml(xml => DecodeResult.Value(fromClosedTags(xml)))(o => s"<name>${o.name}-xml</name>")
+
+    implicit val htmlCodecForOrganizationUTF8: Codec[String, Organization, CodecFormat.TextHtml] =
+      Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-utf8</p>")
+
+    implicit val htmlCodecForOrganizationISO88591: Codec[String, Organization, CodecFormat.TextHtml] =
+      Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-iso88591</p>")
+
+    val out_json_xml_text_common_schema: Endpoint[String, Unit, Organization, Any] =
+      endpoint.get
+        .in("content-negotiation" / "organization")
+        .in(header[String](HeaderNames.Accept))
+        .out(
+          sttp.tapir.oneOf(
+            statusMapping(StatusCode.Ok, jsonBody[Organization]),
+            statusMapping(StatusCode.Ok, xmlBody[Organization]),
+            statusMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
+            statusMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
+          )
+        )
+
+    val out_json_xml_different_schema: Endpoint[String, Unit, Entity with Product with Serializable, Any] =
+      endpoint.get
+        .in("content-negotiation" / "entity")
+        .in(header[String]("Accept"))
+        .out(
+          sttp.tapir.oneOf(
+            statusMapping(StatusCode.Ok, jsonBody[Person]),
+            statusMapping(StatusCode.Ok, xmlBody[Organization])
+          )
+        )
+
+    val organizationJson = "{\"name\":\"sml\"}"
+    val organizationXml = "<name>sml-xml</name>"
+    val organizationHtmlUtf8 = "<p>sml-utf8</p>"
+    val organizationHtmlIso = "<p>sml-iso88591</p>"
+  }
 
   //
 
