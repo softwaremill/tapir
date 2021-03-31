@@ -1,6 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import enumeratum.EnumEntry.Uppercase
+import enumeratum.values.{IntEnum, IntEnumEntry}
 import enumeratum.{EnumEntry, _}
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
@@ -27,7 +28,7 @@ class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe expectedYaml
   }
 
-  test("should create component for enum using enumeratum") {
+  test("should create component for enum using enumeratum Enum") {
     import sttp.tapir.codec.enumeratum._
 
     val actualYaml = OpenAPIDocsInterpreter
@@ -43,6 +44,22 @@ class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
       .toYaml
 
     val expectedYaml = load("enum/expected_enumeratum_enum_component.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should create component for enum using enumeratum IntEnum") {
+    import sttp.tapir.codec.enumeratum._
+
+    val actualYaml = OpenAPIDocsInterpreter
+      .toOpenAPI(
+        Seq(endpoint.in("error1").out(jsonBody[Error1Response]), endpoint.in("error2").out(jsonBody[Error2Response])),
+        "Errors",
+        "1.0"
+      )
+      .toYaml
+
+    val expectedYaml = load("enum/expected_enumeratum_int_enum_component.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
@@ -71,4 +88,16 @@ object VerifyYamlEnumTest {
   case class Poland(countryCode: CountryCode)
   case class Belgium(countryCode: CountryCode)
   case class Luxembourg(countryCode: CountryCode)
+
+  sealed abstract class ErrorCode(val value: Int) extends IntEnumEntry
+
+  object ErrorCode extends IntEnum[ErrorCode] {
+    case object Error1 extends ErrorCode(1)
+    case object Error2 extends ErrorCode(2)
+
+    override def values: immutable.IndexedSeq[ErrorCode] = findValues
+  }
+
+  case class Error1Response(error: ErrorCode)
+  case class Error2Response(error: ErrorCode)
 }

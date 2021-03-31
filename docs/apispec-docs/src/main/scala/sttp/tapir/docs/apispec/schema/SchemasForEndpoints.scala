@@ -8,9 +8,9 @@ import sttp.tapir.internal.IterableToListMap
 import scala.collection.immutable.ListMap
 
 class SchemasForEndpoints(
-    val es: Iterable[Endpoint[_, _, _, _]],
-    val schemaName: SObjectInfo => String,
-    val useRefForEnums: Boolean
+    es: Iterable[Endpoint[_, _, _, _]],
+    schemaName: SObjectInfo => String,
+    useRefForEnums: Boolean
 ) {
 
   def apply(): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {

@@ -43,7 +43,7 @@ class ToObjectSchema(useRefForEnums: Boolean = false) {
     (st.info -> s: ObjectSchema) +: st.fields
       .flatMap(a =>
         a.schema match {
-          case s @ TSchema(_: TSchemaType.SString[_], _, _, _, _, _, _, _ @Validator.Enum(_, _, Some(info))) if useRefForEnums =>
+          case s @ TSchema(_, _, _, _, _, _, _, _ @Validator.Enum(_, _, Some(info))) if useRefForEnums =>
             List(info -> s: ObjectSchema)
           case _ => apply(a.schema)
         }

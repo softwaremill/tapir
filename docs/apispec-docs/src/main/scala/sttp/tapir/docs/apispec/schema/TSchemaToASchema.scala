@@ -25,7 +25,7 @@ private[schema] class TSchemaToASchema(
               f.schema match {
                 case TSchema(s: TSchemaType.SObject[_], _, _, _, _, _, _, _) =>
                   f.name.encodedName -> Left(objectToSchemaReference.map(s.info))
-                case TSchema(_: TSchemaType.SString[_], _, _, _, _, _, _, _ @Validator.Enum(_, _, Some(info))) if useRefForEnums =>
+                case TSchema(_, _, _, _, _, _, _, _ @Validator.Enum(_, _, Some(info))) if useRefForEnums =>
                   f.name.encodedName -> Left(objectToSchemaReference.map(info))
                 case fieldSchema =>
                   f.name.encodedName -> apply(fieldSchema)

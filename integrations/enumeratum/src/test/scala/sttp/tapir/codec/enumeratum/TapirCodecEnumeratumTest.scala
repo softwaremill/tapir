@@ -2,11 +2,11 @@ package sttp.tapir.codec.enumeratum
 
 import enumeratum._
 import enumeratum.values._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
 import sttp.tapir.SchemaType.{SInteger, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 
 class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   import TapirCodecEnumeratumTest._
@@ -42,8 +42,10 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     enum.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
-        case Validator.Enum(_, Some(encode), _) => encode(v) shouldBe Some(v.entryName)
-        case a                               => fail(s"Expected enum validator with encode function: got $a")
+        case Validator.Enum(_, Some(encode), info) =>
+          encode(v) shouldBe Some(v.entryName)
+          info.isDefined shouldBe true
+        case a                                  => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }
@@ -52,8 +54,10 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     enum.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
-        case Validator.Enum(_, Some(encode), _) => encode(v) shouldBe Some(v.value)
-        case a                               => fail(s"Expected enum validator with encode function: got $a")
+        case Validator.Enum(_, Some(encode), info) =>
+          encode(v) shouldBe Some(v.value)
+          info.isDefined shouldBe true
+        case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }

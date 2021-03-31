@@ -8,10 +8,8 @@ import sttp.tapir._
 trait TapirCodecEnumeratum {
   // Regular enums
 
-  def validatorEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Validator[E] = {
-    val fullName = `enum`.getClass.getCanonicalName.replace("$", "")
-    Validator.enum(enum.values.toList, v => Some(v.entryName), Some(SObjectInfo(fullName)))
-  }
+  def validatorEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Validator[E] =
+    Validator.enum(enum.values.toList, v => Some(v.entryName), Some(SObjectInfo(fullName(`enum`))))
 
   implicit def schemaForEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Schema[E] =
     Schema(SchemaType.SString(), validator = validatorEnumEntry)
@@ -29,7 +27,7 @@ trait TapirCodecEnumeratum {
   // Value enums
 
   def validatorValueEnumEntry[T, E <: ValueEnumEntry[T]](implicit enum: ValueEnum[T, E]): Validator[E] =
-    Validator.enum(enum.values.toList, v => Some(v.value))
+    Validator.enum(enum.values.toList, v => Some(v.value), Some(SObjectInfo(fullName(`enum`))))
 
   implicit def schemaForIntEnumEntry[E <: IntEnumEntry](implicit enum: IntEnum[E]): Schema[E] =
     Schema(SchemaType.SInteger(), validator = validatorValueEnumEntry[Int, E])
@@ -77,6 +75,8 @@ trait TapirCodecEnumeratum {
 
   implicit def plainCodecByteEnumEntry[E <: ByteEnumEntry](implicit enum: ByteEnum[E]): Codec.PlainCodec[E] =
     plainCodecValueEnumEntry[Byte, E]
+
+  private def fullName[T](t: T) = t.getClass.getName.replace("$", ".")
 
   // no Codec.PlainCodec[Char]
 }
