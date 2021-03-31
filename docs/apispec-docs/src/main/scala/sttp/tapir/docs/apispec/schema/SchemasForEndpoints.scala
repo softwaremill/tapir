@@ -1,18 +1,23 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.apispec.{Schema => ASchema, _}
 import sttp.tapir._
+import sttp.tapir.apispec.{Schema => ASchema, _}
 
 import scala.collection.immutable.ListMap
 
-object SchemasForEndpoints {
-  def apply(es: Iterable[Endpoint[_, _, _, _]], schemaName: SObjectInfo => String): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
-    val sObjects = ObjectSchema.unique(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
+class SchemasForEndpoints(
+    val es: Iterable[Endpoint[_, _, _, _]],
+    val schemaName: SObjectInfo => String,
+    val enumsToComponents: Boolean
+) {
+
+  def apply(): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
+    val sObjects = toObjectSchema.unique(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1), schemaName)
 
     val objectToSchemaReference = new ObjectToSchemaReference(infoToKey)
-    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference)
+    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference, enumsToComponents)
     val schemas = new Schemas(tschemaToASchema, objectToSchemaReference)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
@@ -24,10 +29,10 @@ object SchemasForEndpoints {
     input match {
       case EndpointInput.FixedMethod(_, _, _)     => List.empty
       case EndpointInput.FixedPath(_, _, _)       => List.empty
-      case EndpointInput.PathCapture(_, codec, _) => ObjectSchema(codec)
+      case EndpointInput.PathCapture(_, codec, _) => toObjectSchema(codec)
       case EndpointInput.PathsCapture(_, _)       => List.empty
-      case EndpointInput.Query(_, codec, _)       => ObjectSchema(codec)
-      case EndpointInput.Cookie(_, codec, _)      => ObjectSchema(codec)
+      case EndpointInput.Query(_, codec, _)       => toObjectSchema(codec)
+      case EndpointInput.Cookie(_, codec, _)      => toObjectSchema(codec)
       case EndpointInput.QueryParams(_, _)        => List.empty
       case _: EndpointInput.Auth[_]               => List.empty
       case _: EndpointInput.ExtractFromRequest[_] => List.empty
@@ -45,7 +50,7 @@ object SchemasForEndpoints {
       case EndpointOutput.Void()                   => List.empty
       case EndpointOutput.Pair(left, right, _, _)  => forOutput(left) ++ forOutput(right)
       case EndpointOutput.WebSocketBodyWrapper(wrapped) =>
-        ObjectSchema(wrapped.codec) ++ ObjectSchema(wrapped.requests) ++ ObjectSchema(wrapped.responses)
+        toObjectSchema(wrapped.codec) ++ toObjectSchema(wrapped.requests) ++ toObjectSchema(wrapped.responses)
       case op: EndpointIO[_] => forIO(op)
     }
   }
@@ -53,13 +58,15 @@ object SchemasForEndpoints {
   private def forIO(io: EndpointIO[_]): List[ObjectSchema] = {
     io match {
       case EndpointIO.Pair(left, right, _, _)                         => forIO(left) ++ forIO(right)
-      case EndpointIO.Header(_, codec, _)                             => ObjectSchema(codec)
+      case EndpointIO.Header(_, codec, _)                             => toObjectSchema(codec)
       case EndpointIO.Headers(_, _)                                   => List.empty
-      case EndpointIO.Body(_, codec, _)                               => ObjectSchema(codec)
-      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => ObjectSchema(codec.schema)
+      case EndpointIO.Body(_, codec, _)                               => toObjectSchema(codec)
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, _)) => toObjectSchema(codec.schema)
       case EndpointIO.MappedPair(wrapped, _)                          => forIO(wrapped)
       case EndpointIO.FixedHeader(_, _, _)                            => List.empty
       case EndpointIO.Empty(_, _)                                     => List.empty
     }
   }
+
+  private val toObjectSchema = new ToObjectSchema(enumsToComponents)
 }

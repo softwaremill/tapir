@@ -1,5 +1,6 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
 import sttp.tapir.docs.apispec.ValidatorUtil.asPrimitiveValidators
 import sttp.tapir.docs.apispec.{exampleValue, rawToString}
@@ -7,7 +8,8 @@ import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 /** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve references. */
 private[schema] class TSchemaToASchema(
-    objectToSchemaReference: ObjectToSchemaReference
+    objectToSchemaReference: ObjectToSchemaReference,
+    enumsToComponent: Boolean
 ) {
   def apply(schema: TSchema[_]): ReferenceOr[ASchema] = {
     val result = schema.schemaType match {
@@ -22,6 +24,8 @@ private[schema] class TSchemaToASchema(
             properties = fields.map {
               case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
                 fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
+              case (fieldName, TSchema(_: TSchemaType.SString.type, _, _, _, _, _, _, _: Validator.Enum[_])) if enumsToComponent =>
+                fieldName.encodedName -> Left(objectToSchemaReference.map(SObjectInfo(fieldName.name.capitalize)))
               case (fieldName, fieldSchema) =>
                 fieldName.encodedName -> apply(fieldSchema)
             }.toListMap

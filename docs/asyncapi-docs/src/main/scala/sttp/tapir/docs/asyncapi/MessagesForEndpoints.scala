@@ -5,7 +5,7 @@ import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.apispec.IterableToListMap
 import sttp.tapir.asyncapi.{Message, SingleMessage}
-import sttp.tapir.docs.apispec.schema.{ObjectSchema, Schemas, calculateUniqueKeys}
+import sttp.tapir.docs.apispec.schema.{ToObjectSchema, Schemas, calculateUniqueKeys}
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, WebSocketBodyOutput, Schema => TSchema, SchemaType => TSchemaType}
 import sttp.ws.WebSocketFrame
 
@@ -31,7 +31,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SObje
   }
 
   private def toData(codec: Codec[_, _, _ <: CodecFormat]): CodecData =
-    ObjectSchema(codec).headOption match { // the first element, if any, corresponds to the object
+    ToObjectSchema(codec).headOption match { // the first element, if any, corresponds to the object
       case Some(os) => Left((os._1, codec.format.mediaType))
       case None     => Right(codec.schema.copy(description = None, deprecated = false))
     }

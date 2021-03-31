@@ -11,7 +11,7 @@ import scala.collection.immutable.ListMap
 private[openapi] object EndpointToOpenAPIDocs {
   def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): OpenAPI = {
     val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
-    val (keyToSchema, schemas) = SchemasForEndpoints(es2, options.schemaName)
+    val (keyToSchema, schemas) = new SchemasForEndpoints(es2, options.schemaName, options.enumsToComponents).apply()
     val securitySchemes = SecuritySchemesForEndpoints(es2)
     val pathCreator = new EndpointToOpenAPIPaths(schemas, securitySchemes, options)
     val componentsCreator = new EndpointToOpenAPIComponents(keyToSchema, securitySchemes)
