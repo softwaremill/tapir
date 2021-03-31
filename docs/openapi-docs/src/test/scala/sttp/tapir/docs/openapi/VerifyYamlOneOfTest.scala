@@ -9,6 +9,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
+import sttp.tapir.tests.MultipleMediaTypes
 import sttp.tapir.{Codec, CodecFormat, Schema, SchemaType, endpoint, header, plainBody, statusCode, statusDefaultMapping, statusMapping}
 
 class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
@@ -66,6 +67,24 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml with multiple media types for common schema") {
+    val expectedYaml = load("oneOf/expected_multiple_media_types_common_schema.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_xml_text_common_schema, Info("Examples", "1.0")).toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml with multiple media types for different schema") {
+    val expectedYaml = load("oneOf/expected_multiple_media_types_different_schema.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_xml_different_schema, Info("Examples", "1.0")).toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 

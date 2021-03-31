@@ -1,0 +1,36 @@
+openapi: 3.0.3
+info:
+  title: Examples
+  version: '1.0'
+paths:
+  /content-negotiation/organization:
+    get:
+      operationId: getContent-negotiationOrganization
+      parameters:
+        - name: Accept
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Organization'
+            text/html:
+              schema:
+                $ref: '#/components/schemas/Organization'
+components:
+  schemas:
+    Organization:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string

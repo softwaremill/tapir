@@ -1,6 +1,6 @@
 package sttp.tapir.docs.asyncapi
 
-import sttp.tapir.apispec.{IterableToListMap, SecurityRequirement}
+import sttp.tapir.apispec.SecurityRequirement
 import sttp.tapir.asyncapi.{AsyncAPI, Info, Server}
 import sttp.tapir.docs.apispec.schema.SchemasForEndpoints
 import sttp.tapir.docs.apispec.{SecuritySchemes, SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}

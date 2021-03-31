@@ -2,6 +2,7 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir._
+import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.apispec.{Schema => ASchema, _}
 
 import scala.collection.immutable.ListMap

@@ -7,6 +7,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
@@ -17,7 +18,6 @@ import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi._
 import sttp.tapir.tests.{Person, _}
 import sttp.tapir.{Endpoint, endpoint, _}
-import VerifyYamlTest._
 
 import java.time.{Instant, LocalDateTime}
 
@@ -79,8 +79,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   object TestStreams extends TestStreams
 
   val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], TestStreams] = endpoint
-    .in(streamBody(TestStreams)(Schema.string, CodecFormat.TextPlain()))
-    .out(streamBody(TestStreams)(Schema.binary, CodecFormat.OctetStream()))
+    .in(streamTextBody(TestStreams)(CodecFormat.TextPlain()))
+    .out(streamBinaryBody(TestStreams))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = load("expected_streaming.yml")
@@ -217,7 +217,10 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     implicit val customFruitAmountSchema: Schema[FruitAmount] = Schema(
       SProduct(
         SObjectInfo("tapir.tests.FruitAmount", Nil),
-        List((FieldName("fruit"), Schema(SString)), (FieldName("amount"), Schema(SInteger).format("int32")))
+        List(
+          SProductField(FieldName("fruit"), Schema(SString()), (_: FruitAmount) => None),
+          SProductField(FieldName("amount"), Schema(SInteger()).format("int32"), (_: FruitAmount) => None)
+        )
       )
     ).description("Amount of fruits")
 

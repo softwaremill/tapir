@@ -1,13 +1,15 @@
 package sttp.tapir
 
-import sttp.model.{Method, StatusCode}
-import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
-import sttp.tapir.internal._
-
-import scala.concurrent.Future
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import sttp.model.{Method, StatusCode}
+import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.internal._
+import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
+
+import java.nio.charset.StandardCharsets
+import scala.concurrent.Future
 
 class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers {
   "endpoint" should "compile inputs" in {
@@ -32,9 +34,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   object TestStreams extends TestStreams
 
   it should "compile inputs with streams" in {
-    endpoint.in(streamBody(TestStreams)(Schema.binary, CodecFormat.Json())): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
+    endpoint.in(streamBinaryBody(TestStreams)): Endpoint[Vector[Byte], Unit, Unit, TestStreams]
     endpoint
-      .in(streamBody(TestStreams)(Schema.binary, CodecFormat.Json()))
+      .in(streamBinaryBody(TestStreams))
       .in(path[Int]): Endpoint[(Vector[Byte], Int), Unit, Unit, TestStreams]
   }
 
@@ -47,9 +49,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   it should "compile outputs with streams" in {
-    endpoint.out(streamBody(TestStreams)(Schema.binary, CodecFormat.Json())): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
+    endpoint.out(streamBinaryBody(TestStreams)): Endpoint[Unit, Unit, Vector[Byte], TestStreams]
     endpoint
-      .out(streamBody(TestStreams)(Schema.binary, CodecFormat.Json()))
+      .out(streamBinaryBody(TestStreams))
       .out(header[Int]("h1")): Endpoint[Unit, Unit, (Vector[Byte], Int), TestStreams]
   }
 
@@ -67,6 +69,59 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
         sttp.tapir.oneOf(
           statusMapping(StatusCode.NotFound, emptyOutput),
           statusMapping(StatusCode.Unauthorized, emptyOutput)
+        )
+      )
+  }
+
+  it should "not allow to map status code multiple times to same format same charset" in {
+    implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
+
+    the[RuntimeException] thrownBy {
+      endpoint.get
+        .out(
+          sttp.tapir.oneOf(
+            statusMapping(StatusCode.Accepted, stringBody),
+            statusMapping(StatusCode.Accepted, plainBody)
+          )
+        )
+    }
+  }
+
+  it should "not allow to map default status code multiple times to same format same charset" in {
+    implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
+
+    the[RuntimeException] thrownBy {
+      endpoint.get
+        .out(
+          sttp.tapir.oneOf(
+            statusDefaultMapping(stringBody),
+            statusDefaultMapping(plainBody)
+          )
+        )
+    }
+  }
+
+  it should "allow to map status code multiple times to same format different charset" in {
+    implicit val codec: Codec[String, String, CodecFormat.TextPlain] = Codec.string
+    endpoint.get
+      .out(
+        sttp.tapir.oneOf(
+          statusMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
+          statusMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
+        )
+      )
+  }
+
+  it should "compile one-of empty output of a custom type" in {
+    sealed trait Error
+    final case class BadRequest(message: String) extends Error
+    final case object NotFound extends Error
+
+    endpoint.post
+      .errorOut(
+        sttp.tapir.oneOf(
+          statusMapping(StatusCode.BadRequest, stringBody.map(BadRequest)(_.message)),
+          statusMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
         )
       )
   }
@@ -169,9 +224,9 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   "validate" should "accumulate validators" in {
     val input = query[Int]("x").validate(Validator.min(1)).validate(Validator.max(3))
-    input.codec.validator.validate(0) should not be empty
-    input.codec.validator.validate(4) should not be empty
-    input.codec.validator.validate(2) shouldBe empty
+    input.codec.schema.applyValidation(0) should not be empty
+    input.codec.schema.applyValidation(4) should not be empty
+    input.codec.schema.applyValidation(2) shouldBe empty
   }
 
   val httpMethodTestData = List(
@@ -204,11 +259,14 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       .in(query[Int]("y"))
       .serverLogicForCurrent { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
 
+    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, List.empty))
+    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, ""))
+
     base
       .in(query[Double]("z"))
       .serverLogicForCurrent { z => Future.successful(Right(User2(z)): Either[String, User2]) }
       .in(query[String]("a"))
-      .out(plainBody[Result](null: Codec[String, Result, CodecFormat.TextPlain]))
+      .out(plainBody[Result])
       .serverLogic { case ((u1, u2), a) =>
         Future.successful(Right(Result(u1, u2, a)): Either[String, Result])
       }
@@ -222,12 +280,15 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     def parse1(t: String): Future[Either[String, User1]] = Future.successful(Right(User1(t)))
     def parse2(t: Int): Future[Either[String, User2]] = Future.successful(Right(User2(t)))
 
+    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, List.empty))
+    implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, 0d))
+
     val _: ServerEndpoint[(String, Int, Double), String, Result, Any, Future] = endpoint
       .in(query[String]("x"))
       .in(query[Int]("y"))
       .in(query[Double]("z"))
       .errorOut(stringBody)
-      .out(plainBody[Result](null: Codec[String, Result, CodecFormat.TextPlain]))
+      .out(plainBody[Result])
       .serverLogicPart(parse1)
       .andThenPart(parse2)
       .andThen { case ((user1, user2), d) =>

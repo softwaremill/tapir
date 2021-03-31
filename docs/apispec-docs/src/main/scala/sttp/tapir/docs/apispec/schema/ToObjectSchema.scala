@@ -28,17 +28,19 @@ class ToObjectSchema(val enumsToComponent: Boolean = false) {
     typeData match {
       case TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _) =>
         apply(o)
-      case s @ TSchema(st: TSchemaType.SProduct, _, _, _, _, _, _, _) =>
+      case TSchema(TSchemaType.SOption(o), _, _, _, _, _, _, _) =>
+        apply(o)
+      case s @ TSchema(st: TSchemaType.SProduct[_], _, _, _, _, _, _, _) =>
         productSchemas(s, st)
-      case s @ TSchema(st: TSchemaType.SCoproduct, _, _, _, _, _, _, _) =>
+      case s @ TSchema(st: TSchemaType.SCoproduct[_], _, _, _, _, _, _, _) =>
         coproductSchemas(s, st)
-      case s @ TSchema(st: TSchemaType.SOpenProduct, _, _, _, _, _, _, _) =>
+      case s @ TSchema(st: TSchemaType.SOpenProduct[_, _], _, _, _, _, _, _, _) =>
         (st.info -> s: ObjectSchema) +: apply(st.valueSchema)
       case _ => List.empty
     }
   }
 
-  private def productSchemas(s: TSchema[_], st: TSchemaType.SProduct): List[ObjectSchema] = {
+  private def productSchemas[T](s: TSchema[T], st: TSchemaType.SProduct[T]): List[ObjectSchema] = {
     (st.info -> s: ObjectSchema) +: st.fields
       .flatMap(a =>
         a match {
@@ -50,12 +52,14 @@ class ToObjectSchema(val enumsToComponent: Boolean = false) {
       .toList
   }
 
-  private def coproductSchemas(s: TSchema[_], st: TSchemaType.SCoproduct): List[ObjectSchema] = {
+  private def coproductSchemas[T](s: TSchema[T], st: TSchemaType.SCoproduct[T]): List[ObjectSchema] = {
     (st.info -> s: ObjectSchema) +: subtypesSchema(st)
       .flatMap(apply)
       .toList
   }
 
-  private def subtypesSchema(st: TSchemaType.SCoproduct): Seq[TSchema[_]] =
-    st.schemas.collect { case s @ TSchema(_: TSchemaType.SProduct, _, _, _, _, _, _, _) => s }
+  private def fieldsSchema(p: TSchemaType.SProduct[_]): Seq[TSchema[_]] = p.fields.map(_.schema)
+
+  private def subtypesSchema(st: TSchemaType.SCoproduct[_]): Seq[TSchema[_]] =
+    st.subtypes.values.collect { case s @ TSchema(_: TSchemaType.SProduct[_], _, _, _, _, _, _, _) => s }.toSeq
 }

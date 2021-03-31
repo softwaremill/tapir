@@ -68,6 +68,6 @@ class TapirJson4sTests extends AnyFlatSpecLike with Matchers {
   }
 
   it should "return a coproduct schema for a JValue" in {
-    schemaForJson4s.schemaType shouldBe a[SCoproduct]
+    schemaForJson4s.schemaType shouldBe a[SCoproduct[_]]
   }
 }

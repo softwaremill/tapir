@@ -11,7 +11,7 @@ class DefaultDecodeFailureHandlerTest extends AnyFlatSpec with Matchers {
     implicit val addressNumberSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(1))
 
     // when
-    val validationErrors = implicitly[Schema[Person]].validator.validate(Person("John", Address("Lane", 0)))
+    val validationErrors = implicitly[Schema[Person]].applyValidation(Person("John", Address("Lane", 0)))
 
     // then
     DefaultDecodeFailureHandler.ValidationMessages.validationErrorsMessage(

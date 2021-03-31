@@ -28,7 +28,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with EitherValues with OptionValues {
+class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with EitherValues with OptionValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
@@ -72,7 +72,7 @@ class Http4SCreateServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSu
           .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
       },
       createServerTest.testServer(
-        endpoint.out(streamBody(Fs2Streams[IO])(Schema.binary, CodecFormat.TextPlain())),
+        endpoint.out(streamBinaryBody(Fs2Streams[IO])),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
         IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8Encode).interruptAfter(5.seconds)))

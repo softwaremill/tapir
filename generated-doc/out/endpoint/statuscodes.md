@@ -34,7 +34,7 @@ val baseEndpoint = endpoint.errorOut(
   oneOf[ErrorInfo](
     statusMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
     statusMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-    statusMapping(StatusCode.NoContent, emptyOutput.map(_ => NoContent)(_ => ())),
+    statusMapping(StatusCode.NoContent, emptyOutputAs(NoContent)),
     statusDefaultMapping(jsonBody[Unknown].description("unknown"))
   )
 )

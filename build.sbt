@@ -262,12 +262,12 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.4.2",
+      "org.typelevel" %%% "cats-core" % "2.5.0",
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.1.2" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.4.2" % Test
+      "org.typelevel" %%% "cats-laws" % "2.5.0" % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -466,8 +466,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.6.4",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.6.4" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.7.0",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.7.0" % Test,
       scalaTest.value % Test
     )
   )
@@ -808,6 +808,20 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   )
   .dependsOn(tests)
 
+lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-client"))
+  .settings(clientTestServerSettings)
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-http4s-client",
+    libraryDependencies ++= Seq(
+      "org.http4s" %% "http4s-core" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-client" % Versions.http4s % Test,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, clientTests % Test)
+
 lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"))
   .settings(clientTestServerSettings)
   .settings(
@@ -890,6 +904,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "org.typelevel" %% "cats-effect" % Versions.catsEffect,
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-circe" % Versions.http4s,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
@@ -903,6 +918,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
   .dependsOn(
     akkaHttpServer,
     http4sServer,
+    http4sClient,
     sttpClient,
     openapiCirceYaml,
     openapiDocs,
@@ -990,6 +1006,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     playJson,
     playServer,
     sprayJson,
+    http4sClient,
     sttpClient,
     playClient,
     sttpStubServer,

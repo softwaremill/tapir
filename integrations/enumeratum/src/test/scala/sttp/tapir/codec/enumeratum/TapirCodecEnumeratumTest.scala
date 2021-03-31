@@ -12,19 +12,19 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   import TapirCodecEnumeratumTest._
 
   it should "find schema for enumeratum enum entries" in {
-    implicitly[Schema[TestEnumEntry]].schemaType shouldBe SString
+    implicitly[Schema[TestEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestIntEnumEntry]].schemaType shouldBe SInteger
+    implicitly[Schema[TestIntEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestIntEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestLongEnumEntry]].schemaType shouldBe SInteger
+    implicitly[Schema[TestLongEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestLongEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestShortEnumEntry]].schemaType shouldBe SInteger
+    implicitly[Schema[TestShortEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestShortEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestStringEnumEntry]].schemaType shouldBe SString
+    implicitly[Schema[TestStringEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestStringEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestByteEnumEntry]].schemaType shouldBe SInteger
+    implicitly[Schema[TestByteEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestByteEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestCharEnumEntry]].schemaType shouldBe SString
+    implicitly[Schema[TestCharEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestCharEnumEntry]].isOptional shouldBe false
   }
 
@@ -40,7 +40,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
 
   private def testEnumValidator[E <: EnumEntry](validator: Validator[E])(implicit enum: Enum[E]) = {
     enum.values.foreach { v =>
-      validator.validate(v) shouldBe Nil
+      validator(v) shouldBe Nil
       validator match {
         case Validator.Enum(_, Some(encode)) => encode(v) shouldBe Some(v.entryName)
         case a                               => fail(s"Expected enum validator with encode function: got $a")
@@ -50,7 +50,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
 
   private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE])(implicit enum: E) = {
     enum.values.foreach { v =>
-      validator.validate(v) shouldBe Nil
+      validator(v) shouldBe Nil
       validator match {
         case Validator.Enum(_, Some(encode)) => encode(v) shouldBe Some(v.value)
         case a                               => fail(s"Expected enum validator with encode function: got $a")

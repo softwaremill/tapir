@@ -1,7 +1,7 @@
 # Streaming support
 
-Both input and output bodies can be mapped to a stream, by using `streamBody(streams)`. The parameter `streams` must 
-implement the `Streams[S]` capability, and determines the precise type of the binary stream supported by the given
+Both input and output bodies can be mapped to a stream, by using `stream[*]Body(streams)`. The parameter `streams` 
+must implement the `Streams[S]` capability, and determines the precise type of the binary stream supported by the given
 non-blocking streams implementation. The interpreter must then support the given capability. Refer to the documentation 
 of server/client interpreters for more information.
 
@@ -17,9 +17,16 @@ of server/client interpreters for more information.
 Adding a stream body input/output influences both the type of the input/output, as well as the 4th type parameter
 of `Endpoint`, which specifies the requirements regarding supported stream types for interpreters.
 
-When using a stream body, the schema (needed for documentation) and format (media type) of the body must be provided by 
-hand, as they cannot be inferred from the raw stream type. For example, to specify that the output is an akka-stream, 
-which is a (presumably large) serialised list of json objects mapping to the `Person` class:  
+When using a stream body, a schema must be provided for documentation. By default, when using `streamBinaryBody`,
+the schema will simply be that of a binary body. If you have a textual stream, you can use `streamTextBody`. In that
+case, you'll also need to provide the default format (media type) and optional charset to be used to determine the
+content type.
+
+If your application later deserializes the body as a list of values, you can use the `streamListBody` and 
+`streamIterableBody` methods. 
+
+For example, to specify that the output is an akka-stream, which is a (presumably large) serialised list of json objects 
+mapping to the `Person` class:  
 
 ```scala mdoc:silent:reset
 import sttp.tapir._
@@ -31,7 +38,7 @@ import akka.util.ByteString
 case class Person(name: String)
 
 // copying the derived json schema type
-endpoint.out(streamBody(AkkaStreams)(Schema(Schema.derived[List[Person]].schemaType), CodecFormat.Json()))
+endpoint.out(streamListBody(AkkaStreams)(Schema.derived[List[Person]], CodecFormat.Json()))
 ```
 
 See also the [runnable streaming example](../examples.md). 

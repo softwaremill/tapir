@@ -12,7 +12,8 @@ import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
 import sttp.model.{Header, HeaderNames, MediaType, Part, QueryParams, StatusCode}
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.Codec.{PlainCodec, XmlCodec}
+import sttp.tapir.CodecFormat.TextHtml
 import sttp.tapir.model._
 
 package object tests {
@@ -69,17 +70,22 @@ package object tests {
     .out(header[Int]("IntHeader") and stringBody)
 
   val in_json_out_json: Endpoint[FruitAmount, Unit, FruitAmount, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(jsonBody[FruitAmount])
-      .out(jsonBody[FruitAmount]).name("echo json")
+      .out(jsonBody[FruitAmount])
+      .name("echo json")
 
   val in_content_type_fixed_header: Endpoint[Unit, Unit, Unit, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(header(Header.contentType(MediaType.ApplicationJson)))
 
-  implicit val mediaTypeCodec: Codec[String, MediaType, CodecFormat.TextPlain] = Codec.string.mapDecode(_ => DecodeResult.Mismatch("", ""))(_.toString())
+  implicit val mediaTypeCodec: Codec[String, MediaType, CodecFormat.TextPlain] =
+    Codec.string.mapDecode(_ => DecodeResult.Mismatch("", ""))(_.toString())
   val in_content_type_header_with_custom_decode_results: Endpoint[MediaType, Unit, Unit, Any] =
-    endpoint.post.in("api" / "echo")
+    endpoint.post
+      .in("api" / "echo")
       .in(header[MediaType]("Content-Type"))
 
   val in_byte_array_out_byte_array: Endpoint[Array[Byte], Unit, Array[Byte], Any] =
@@ -136,12 +142,12 @@ package object tests {
     endpoint.get.in("api" / "echo" / "param-to-header").in(query[List[String]]("qq")).out(header[List[String]]("hh"))
 
   def in_stream_out_stream[S](s: Streams[S]): Endpoint[s.BinaryStream, Unit, s.BinaryStream, S] = {
-    val sb = streamBody(s)(Schema.string, CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+    val sb = streamTextBody(s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
     endpoint.post.in("api" / "echo").in(sb).out(sb)
   }
 
   def in_stream_out_stream_with_content_length[S](s: Streams[S]): Endpoint[(Long, s.BinaryStream), Unit, (Long, s.BinaryStream), S] = {
-    val sb = streamBody[S](s)(Schema.string, CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
+    val sb = streamTextBody[S](s)(CodecFormat.TextPlain(), Some(StandardCharsets.UTF_8))
     endpoint.post.in("api" / "echo").in(header[Long](HeaderNames.ContentLength)).in(sb).out(header[Long](HeaderNames.ContentLength)).out(sb)
   }
 
@@ -309,6 +315,79 @@ package object tests {
       .out(stringBody)
       .name("Query with default")
 
+  val out_no_content_or_ok_empty_output: Endpoint[Int, Unit, Unit, Any] = {
+    val anyMatches: PartialFunction[Any, Boolean] = { case _ => true }
+
+    endpoint
+      .in("status")
+      .in(query[Int]("statusOut"))
+      .out(
+        sttp.tapir.oneOf(
+          statusMappingValueMatcher(StatusCode.NoContent, emptyOutput)(anyMatches),
+          statusMappingValueMatcher(StatusCode.Ok, emptyOutput)(anyMatches)
+        )
+      )
+  }
+
+  val out_json_or_empty_output_no_content: Endpoint[Int, Unit, Either[Unit, Person], Any] =
+    endpoint
+      .in("status")
+      .in(query[Int]("statusOut"))
+      .out(
+        sttp.tapir.oneOf[Either[Unit, Person]](
+          statusMappingValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
+          statusMappingValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
+        )
+      )
+
+  //
+
+  object MultipleMediaTypes {
+    implicit val schemaForPerson: Schema[Person] = Schema.derived[Person]
+    implicit val schemaForOrganization: Schema[Organization] = Schema.derived[Organization]
+
+    // <name>xxx</name>
+    def fromClosedTags(tags: String): Organization = Organization(tags.split(">")(1).split("<").head)
+
+    implicit val xmlCodecForOrganization: XmlCodec[Organization] =
+      Codec.xml(xml => DecodeResult.Value(fromClosedTags(xml)))(o => s"<name>${o.name}-xml</name>")
+
+    implicit val htmlCodecForOrganizationUTF8: Codec[String, Organization, CodecFormat.TextHtml] =
+      Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-utf8</p>")
+
+    implicit val htmlCodecForOrganizationISO88591: Codec[String, Organization, CodecFormat.TextHtml] =
+      Codec.anyStringCodec(TextHtml())(html => DecodeResult.Value(fromClosedTags(html)))(o => s"<p>${o.name}-iso88591</p>")
+
+    val out_json_xml_text_common_schema: Endpoint[String, Unit, Organization, Any] =
+      endpoint.get
+        .in("content-negotiation" / "organization")
+        .in(header[String](HeaderNames.Accept))
+        .out(
+          sttp.tapir.oneOf(
+            statusMapping(StatusCode.Ok, jsonBody[Organization]),
+            statusMapping(StatusCode.Ok, xmlBody[Organization]),
+            statusMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
+            statusMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
+          )
+        )
+
+    val out_json_xml_different_schema: Endpoint[String, Unit, Entity with Product with Serializable, Any] =
+      endpoint.get
+        .in("content-negotiation" / "entity")
+        .in(header[String]("Accept"))
+        .out(
+          sttp.tapir.oneOf(
+            statusMapping(StatusCode.Ok, jsonBody[Person]),
+            statusMapping(StatusCode.Ok, xmlBody[Organization])
+          )
+        )
+
+    val organizationJson = "{\"name\":\"sml\"}"
+    val organizationXml = "<name>sml-xml</name>"
+    val organizationHtmlUtf8 = "<p>sml-utf8</p>"
+    val organizationHtmlIso = "<p>sml-iso88591</p>"
+  }
+
   //
 
   object Validation {
@@ -326,7 +405,7 @@ package object tests {
     }
 
     val in_valid_json: Endpoint[ValidFruitAmount, Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
       implicit val schemaForStringWrapper: Schema[StringWrapper] =
         Schema.string.validate(Validator.minLength(4).contramap(_.v))
       implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
@@ -337,7 +416,7 @@ package object tests {
     }
 
     val in_valid_optional_json: Endpoint[Option[ValidFruitAmount], Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
       implicit val schemaForStringWrapper: Schema[StringWrapper] =
         Schema.string.validate(Validator.minLength(4).contramap(_.v))
       implicit val intEncoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
@@ -354,7 +433,7 @@ package object tests {
     }
 
     val in_valid_json_collection: Endpoint[BasketOfFruits, Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
 
@@ -373,7 +452,7 @@ package object tests {
     }
 
     val in_valid_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Any] = {
-      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
+      implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
@@ -386,7 +465,7 @@ package object tests {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
-          .validate(Validator.enum)
+          .validate(Validator.derivedEnum)
       }
       endpoint.in(query[Color]("color"))
     }
@@ -398,7 +477,7 @@ package object tests {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
-          .validate(Validator.enum)
+          .validate(Validator.derivedEnum)
       }
       endpoint.in(query[Option[Color]]("color"))
     }
@@ -424,13 +503,13 @@ package object tests {
     }
 
     val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Any] = {
-      implicit def schemaForColor: Schema[Color] = Schema.string.validate(Validator.enum.encode(_.toString.toLowerCase))
+      implicit def schemaForColor: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
       endpoint.in(jsonBody[ColorWrapper])
     }
 
     val in_valid_int_array: Endpoint[List[IntWrapper], Unit, Unit, Any] = {
       implicit val schemaForIntWrapper: Schema[IntWrapper] =
-        Schema(SchemaType.SInteger).validate(Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v))
+        Schema(SchemaType.SInteger()).validate(Validator.all(Validator.min(1), Validator.max(10)).contramap(_.v))
       implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[List[IntWrapper]])
