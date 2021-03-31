@@ -310,19 +310,22 @@ object EndpointOutput {
     override def show: String = wrapped.show
   }
 
-  /** Specifies that for `statusCode`, the given `output` should be used.
+  /** Specifies a correspondence between `statusCode` and `output`.
+    *
+    * A single status code can have multiple mappings, with different body content types. The mapping can then be
+    * chosen based on content type negotiation, or the content type header.
     *
     * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
     * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
     * type parameters).
     */
-  case class StatusMapping[O] private[tapir] (
+  case class OneOfMapping[O] private[tapir] (
       statusCode: Option[sttp.model.StatusCode],
       output: EndpointOutput[O],
       appliesTo: Any => Boolean
   )
 
-  case class OneOf[O, T](mappings: Seq[StatusMapping[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
+  case class OneOf[O, T](mappings: Seq[OneOfMapping[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
     override def map[U](_mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](mapping = mapping.map(_mapping))
     override def show: String = showOneOf(mappings.map(_.output.show))

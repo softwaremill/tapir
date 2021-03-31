@@ -1,7 +1,7 @@
 package sttp.tapir.server.interpreter
 
 import sttp.model._
-import sttp.tapir.EndpointOutput.StatusMapping
+import sttp.tapir.EndpointOutput.OneOfMapping
 import sttp.tapir.internal.{Params, ParamsAsAny, SplitParams, _}
 import sttp.tapir.{Codec, CodecFormat, EndpointIO, EndpointOutput, Mapping, StreamBodyIO, WebSocketBodyOutput}
 
@@ -66,15 +66,15 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         val applicableMappings = mappings.filter(_.appliesTo(enc))
         require(applicableMappings.nonEmpty, s"OneOf output without applicable mapping ${o.show}")
 
-        val bodyMappings: Map[MediaType, StatusMapping[_]] = applicableMappings
+        val bodyMappings: Map[MediaType, OneOfMapping[_]] = applicableMappings
           .flatMap(sm =>
             sm.output.traverseOutputs {
               case EndpointIO.Body(bodyType, codec, _) =>
-                Vector[(MediaType, StatusMapping[_])](
+                Vector[(MediaType, OneOfMapping[_])](
                   codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())) -> sm
                 )
               case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-                Vector[(MediaType, StatusMapping[_])](
+                Vector[(MediaType, OneOfMapping[_])](
                   codec.format.mediaType.copy(charset = charset.map(_.name())) -> sm
                 )
             }

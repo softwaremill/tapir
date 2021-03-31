@@ -203,8 +203,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Int, String]](
-          statusMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int) => true },
-          statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
+          oneOfMappingValueMatcher(StatusCode.Accepted, plainBody[Int].map(Left(_))(_.value)) { case Left(_: Int) => true },
+          oneOfMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
 
@@ -214,8 +214,8 @@ package object tests {
       .in(query[Int]("num"))
       .out(
         oneOf(
-          statusMappingExactMatcher(StatusCode.Accepted, plainBody[String])("A"),
-          statusMappingExactMatcher(StatusCode.Ok, plainBody[String])("B")
+          oneOfMappingExactMatcher(StatusCode.Accepted, plainBody[String])("A"),
+          oneOfMappingExactMatcher(StatusCode.Ok, plainBody[String])("B")
         )
       )
 
@@ -226,11 +226,11 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Option[Either[Int, String]]](
-          statusMapping(StatusCode.NoContent, emptyOutput.map[None.type]((_: Unit) => None)(_ => ())),
-          statusMappingValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(
+          oneOfMapping(StatusCode.NoContent, emptyOutput.map[None.type]((_: Unit) => None)(_ => ())),
+          oneOfMappingValueMatcher(StatusCode.Accepted, jsonBody[Some[Left[Int, String]]])(
             implicitly[MatchType[Some[Left[Int, String]]]].partial
           ),
-          statusMappingValueMatcher(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])(
+          oneOfMappingValueMatcher(StatusCode.Ok, jsonBody[Some[Right[Int, String]]])(
             implicitly[MatchType[Some[Right[Int, String]]]].partial
           )
         )
@@ -241,8 +241,8 @@ package object tests {
       .in(query[String]("fruit"))
       .out(
         oneOf[Either[Unit, String]](
-          statusMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit) => true },
-          statusMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
+          oneOfMappingValueMatcher(StatusCode.Accepted, emptyOutput.map(Left(_))(_.value)) { case Left(_: Unit) => true },
+          oneOfMappingValueMatcher(StatusCode.Ok, plainBody[String].map(Right(_))(_.value)) { case Right(_: String) => true }
         )
       )
 
@@ -274,7 +274,7 @@ package object tests {
     endpoint.post.in("api" / "echo" / "coproduct").in(jsonBody[Option[Entity]]).out(jsonBody[Option[Entity]])
 
   val not_existing_endpoint: Endpoint[Unit, String, Unit, Any] =
-    endpoint.in("api" / "not-existing").errorOut(oneOf(statusMapping(StatusCode.BadRequest, stringBody)))
+    endpoint.in("api" / "not-existing").errorOut(oneOf(oneOfMapping(StatusCode.BadRequest, stringBody)))
 
   val in_header_out_header_unit_extended: Endpoint[(Unit, String), Unit, (Unit, String), Any] = {
     def addInputAndOutput[I, E, O](e: Endpoint[I, E, O, Any]): Endpoint[(I, String), E, (O, String), Any] = {
@@ -323,8 +323,8 @@ package object tests {
       .in(query[Int]("statusOut"))
       .out(
         sttp.tapir.oneOf(
-          statusMappingValueMatcher(StatusCode.NoContent, emptyOutput)(anyMatches),
-          statusMappingValueMatcher(StatusCode.Ok, emptyOutput)(anyMatches)
+          oneOfMappingValueMatcher(StatusCode.NoContent, emptyOutput)(anyMatches),
+          oneOfMappingValueMatcher(StatusCode.Ok, emptyOutput)(anyMatches)
         )
       )
   }
@@ -335,8 +335,8 @@ package object tests {
       .in(query[Int]("statusOut"))
       .out(
         sttp.tapir.oneOf[Either[Unit, Person]](
-          statusMappingValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
-          statusMappingValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
+          oneOfMappingValueMatcher(StatusCode.NoContent, jsonBody[Person].map(Right(_))(_ => Person("", 0))) { case Person(_, _) => true },
+          oneOfMappingValueMatcher(StatusCode.NoContent, emptyOutput.map(Left(_))(_ => ())) { case () => true }
         )
       )
 
@@ -364,10 +364,10 @@ package object tests {
         .in(header[String](HeaderNames.Accept))
         .out(
           sttp.tapir.oneOf(
-            statusMapping(StatusCode.Ok, jsonBody[Organization]),
-            statusMapping(StatusCode.Ok, xmlBody[Organization]),
-            statusMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
-            statusMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
+            oneOfMapping(StatusCode.Ok, jsonBody[Organization]),
+            oneOfMapping(StatusCode.Ok, xmlBody[Organization]),
+            oneOfMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationUTF8, StandardCharsets.UTF_8)),
+            oneOfMapping(StatusCode.Ok, anyFromStringBody(htmlCodecForOrganizationISO88591, StandardCharsets.ISO_8859_1))
           )
         )
 
@@ -377,8 +377,8 @@ package object tests {
         .in(header[String]("Accept"))
         .out(
           sttp.tapir.oneOf(
-            statusMapping(StatusCode.Ok, jsonBody[Person]),
-            statusMapping(StatusCode.Ok, xmlBody[Organization])
+            oneOfMapping(StatusCode.Ok, jsonBody[Person]),
+            oneOfMapping(StatusCode.Ok, xmlBody[Organization])
           )
         )
 

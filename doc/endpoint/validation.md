@@ -90,4 +90,4 @@ codec is automatically derived.
 
 ## Next
 
-Read on about [json support](json.md).
+Read on about [content types](contenttype.md).

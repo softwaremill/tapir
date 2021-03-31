@@ -7,8 +7,8 @@ import sttp.capabilities.Streams
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
-import sttp.tapir.EndpointOutput.StatusMapping
-import sttp.tapir.internal.{ModifyMacroSupport, StatusMappingMacro}
+import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.internal.{ModifyMacroSupport, OneOfMappingMacro}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
 import sttp.tapir.internal._
@@ -219,79 +219,117 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   def statusCode(statusCode: sttp.model.StatusCode): EndpointOutput.FixedStatusCode[Unit] =
     EndpointOutput.FixedStatusCode(statusCode, Codec.idPlain(), EndpointIO.Info.empty)
 
-  /** Maps status codes to outputs. All outputs must have a common supertype (`T`). Typically, the supertype is a sealed
-    * trait, and the mappings are implementing cases classes.
+  /** Specifies a correspondence between status codes and outputs.
+    *
+    * All outputs must have a common supertype (`T`). Typically, the supertype is a sealed trait, and the mappings are
+    * implementing cases classes.
+    *
+    * A single status code can have multiple mappings (or there can be multiple default mappings), with different body
+    * content types. The mapping can then be chosen based on content type negotiation, or the content type header.
     *
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `T` are covered).
     */
-  def oneOf[T](firstCase: StatusMapping[_ <: T], otherCases: StatusMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
+  def oneOf[T](firstCase: OneOfMapping[_ <: T], otherCases: OneOfMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
     EndpointOutput.OneOf[T, T](firstCase +: otherCases, Mapping.id)
 
-  /** Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
+  /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the runtime class of `T`.
     *
     * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this
-    * situation would give invalid results. In such cases, use [[statusMappingClassMatcher]],
-    * [[statusMappingValueMatcher]] or [[statusMappingFromMatchType]] instead.
+    * situation would give invalid results. In such cases, use [[oneOfMappingClassMatcher]],
+    * [[oneOfMappingValueMatcher]] or [[oneOfMappingFromMatchType]] instead.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): StatusMapping[T] =
-    macro StatusMappingMacro.classMatcherIfErasedSameAsType[T]
+  def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
+    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
 
-  /** Create a status mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
+  @scala.deprecated("Use oneOfMapping", since = "0.18")
+  def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
+    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
+
+  /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
+  def oneOfMappingClassMatcher[T](
+      statusCode: StatusCode,
+      output: EndpointOutput[T],
+      runtimeClass: Class[_]
+  ): OneOfMapping[T] = {
+    OneOfMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
+  }
+
+  @scala.deprecated("Use oneOfMappingClassMatcher", since = "0.18")
   def statusMappingClassMatcher[T](
       statusCode: StatusCode,
       output: EndpointOutput[T],
       runtimeClass: Class[_]
-  ): StatusMapping[T] = {
-    StatusMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
-  }
+  ): OneOfMapping[T] = oneOfMappingClassMatcher(statusCode, output, runtimeClass)
 
-  /** Create a status mapping which uses `statusCode` and `output` if the provided value (when interpreting as a server
+  /** Create a one-of-mapping which uses `statusCode` and `output` if the provided value (when interpreting as a server
     * matches the `matcher` predicate.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
+  def oneOfMappingValueMatcher[T](statusCode: StatusCode, output: EndpointOutput[T])(
+      matcher: PartialFunction[Any, Boolean]
+  ): OneOfMapping[T] =
+    OneOfMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
+
+  @scala.deprecated("Use oneOfMappingValueMatcher", since = "0.18")
   def statusMappingValueMatcher[T](statusCode: StatusCode, output: EndpointOutput[T])(
       matcher: PartialFunction[Any, Boolean]
-  ): StatusMapping[T] =
-    StatusMapping(Some(statusCode), output, matcher.lift.andThen(_.getOrElse(false)))
+  ): OneOfMapping[T] = oneOfMappingValueMatcher(statusCode, output)(matcher)
 
-  /** Create a status mapping which uses `statusCode` and `output` if the provided value exactly matches one
+  /** Create a one-of-mapping which uses `statusCode` and `output` if the provided value exactly matches one
     * of the values provided in the second argument list.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
+  def oneOfMappingExactMatcher[T: ClassTag](
+      statusCode: StatusCode,
+      output: EndpointOutput[T]
+  )(
+      firstExactValue: T,
+      rest: T*
+  ): OneOfMapping[T] =
+    oneOfMappingValueMatcher(statusCode, output)(exactMatch(rest.toSet + firstExactValue))
+
+  @scala.deprecated("Use oneOfMappingExactMatcher", since = "0.18")
   def statusMappingExactMatcher[T: ClassTag](
       statusCode: StatusCode,
       output: EndpointOutput[T]
   )(
       firstExactValue: T,
       rest: T*
-  ): StatusMapping[T] =
-    statusMappingValueMatcher(statusCode, output)(exactMatch(rest.toSet + firstExactValue))
+  ): OneOfMapping[T] = oneOfMappingExactMatcher(statusCode, output)(firstExactValue, rest: _*)
 
   /** Experimental!
     *
-    * Create a status mapping which uses `statusCode` and `output` if the provided value matches the target type, as
+    * Create a one-of-mapping which uses `statusCode` and `output` if the provided value matches the target type, as
     * checked by [[MatchType]]. Instances of [[MatchType]] are automatically derived and recursively check that
     * classes of all fields match, to bypass issues caused by type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def statusMappingFromMatchType[T: MatchType](statusCode: StatusCode, output: EndpointOutput[T]): StatusMapping[T] =
-    statusMappingValueMatcher(statusCode, output)(implicitly[MatchType[T]].partial)
+  def oneOfMappingFromMatchType[T: MatchType](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
+    oneOfMappingValueMatcher(statusCode, output)(implicitly[MatchType[T]].partial)
 
-  /** Create a fallback mapping to be used in [[oneOf]] output descriptions.
+  @scala.deprecated("Use oneOfMappingFromMatchType", since = "0.18")
+  def statusMappingFromMatchType[T: MatchType](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
+    oneOfMappingValueMatcher(statusCode, output)(implicitly[MatchType[T]].partial)
+
+  /** Create a fallback mapping to be used in [[oneOf]] output descriptions. Multiple such mappings can be specified,
+    * with different body conten types.
     */
-  def statusDefaultMapping[T](output: EndpointOutput[T]): StatusMapping[T] = {
-    StatusMapping(None, output, _ => true)
+  def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfMapping[T] = {
+    OneOfMapping(None, output, _ => true)
   }
+
+  @scala.deprecated("Use oneOfDefaultMapping", since = "0.18")
+  def statusDefaultMapping[T](output: EndpointOutput[T]): OneOfMapping[T] = oneOfDefaultMapping(output)
 
   /** An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
     */
