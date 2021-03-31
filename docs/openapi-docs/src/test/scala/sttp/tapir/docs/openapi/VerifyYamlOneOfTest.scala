@@ -10,7 +10,7 @@ import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.MultipleMediaTypes
-import sttp.tapir.{Codec, CodecFormat, Schema, SchemaType, endpoint, header, plainBody, statusCode, statusDefaultMapping, statusMapping}
+import sttp.tapir.{Codec, CodecFormat, Schema, SchemaType, endpoint, header, plainBody, statusCode, oneOfDefaultMapping, oneOfMapping}
 
 class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
@@ -22,9 +22,9 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
     val e = endpoint.errorOut(
       sttp.tapir.oneOf(
-        statusMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
-        statusMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-        statusDefaultMapping(jsonBody[Unknown].description("unknown"))
+        oneOfMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
+        oneOfMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+        oneOfDefaultMapping(jsonBody[Unknown].description("unknown"))
       )
     )
 
@@ -42,9 +42,9 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
     val e = endpoint.out(
       sttp.tapir.oneOf(
-        statusMapping(StatusCode.Ok, jsonBody[NotFound].description("not found")),
-        statusMapping(StatusCode.Ok, plainBody[Unauthorized]),
-        statusMapping(StatusCode.NoContent, jsonBody[Unknown].description("unknown"))
+        oneOfMapping(StatusCode.Ok, jsonBody[NotFound].description("not found")),
+        oneOfMapping(StatusCode.Ok, plainBody[Unauthorized]),
+        oneOfMapping(StatusCode.NoContent, jsonBody[Unknown].description("unknown"))
       )
     )
 

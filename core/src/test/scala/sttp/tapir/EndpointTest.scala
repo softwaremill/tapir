@@ -67,8 +67,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.post
       .errorOut(
         sttp.tapir.oneOf(
-          statusMapping(StatusCode.NotFound, emptyOutput),
-          statusMapping(StatusCode.Unauthorized, emptyOutput)
+          oneOfMapping(StatusCode.NotFound, emptyOutput),
+          oneOfMapping(StatusCode.Unauthorized, emptyOutput)
         )
       )
   }
@@ -80,8 +80,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       endpoint.get
         .out(
           sttp.tapir.oneOf(
-            statusMapping(StatusCode.Accepted, stringBody),
-            statusMapping(StatusCode.Accepted, plainBody)
+            oneOfMapping(StatusCode.Accepted, stringBody),
+            oneOfMapping(StatusCode.Accepted, plainBody)
           )
         )
     }
@@ -94,8 +94,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       endpoint.get
         .out(
           sttp.tapir.oneOf(
-            statusDefaultMapping(stringBody),
-            statusDefaultMapping(plainBody)
+            oneOfDefaultMapping(stringBody),
+            oneOfDefaultMapping(plainBody)
           )
         )
     }
@@ -106,8 +106,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.get
       .out(
         sttp.tapir.oneOf(
-          statusMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
-          statusMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
+          oneOfMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.UTF_8)),
+          oneOfMapping(StatusCode.Accepted, anyFromStringBody(codec, StandardCharsets.ISO_8859_1))
         )
       )
   }
@@ -120,8 +120,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     endpoint.post
       .errorOut(
         sttp.tapir.oneOf(
-          statusMapping(StatusCode.BadRequest, stringBody.map(BadRequest)(_.message)),
-          statusMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
+          oneOfMapping(StatusCode.BadRequest, stringBody.map(BadRequest)(_.message)),
+          oneOfMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
         )
       )
   }
