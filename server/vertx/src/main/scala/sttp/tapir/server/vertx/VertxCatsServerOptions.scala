@@ -1,9 +1,11 @@
 package sttp.tapir.server.vertx
 
 import cats.Applicative
+import cats.implicits.catsSyntaxOptionId
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
 import sttp.tapir.server.interceptor.Interceptor
+import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
@@ -23,8 +25,11 @@ final case class VertxCatsServerOptions[F[_]](
 
 object VertxCatsServerOptions {
 
-  /** Creates default [[VertxCatsServerOptions]] with custom interceptors, sitting between an optional exception
-    * interceptor, optional logging interceptor, and the ultimate decode failure handling interceptor.
+  /** Creates default [[VertxCatsServerOptions]] with custom interceptors, sitting between two interceptor groups:
+    * 1. the optional exception interceptor and the optional logging interceptor (which should typically be first
+    *    when processing the request, and last when processing the response)),
+    * 2. the optional unsupported media type interceptor and the decode failure handling interceptor (which should
+    *    typically be last when processing the request).
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
@@ -34,12 +39,17 @@ object VertxCatsServerOptions {
     *                  `VertxEndpointOptions.defaultServerLog`
     * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
     *                               responses.
+    * @param unsupportedMediaTypeInterceptor Whether to return 415 (unsupported media type) if there's no body in the
+    *                                        endpoint's outputs, which can satisfy the constraints from the `Accept`
+    *                                        header.
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors[F[_]: Applicative](
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[F, RoutingContext => Unit]] = Nil,
+      unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F, RoutingContext => Unit]] =
+        new UnsupportedMediaTypeInterceptor[F, RoutingContext => Unit]().some,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): VertxCatsServerOptions[F] = {
     VertxCatsServerOptions(
@@ -48,6 +58,7 @@ object VertxCatsServerOptions {
       exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, F, RoutingContext => Unit](_, (_, _) => Applicative[F].unit)).toList ++
         additionalInterceptors ++
+        unsupportedMediaTypeInterceptor.toList ++
         List(new DecodeFailureInterceptor[F, RoutingContext => Unit](decodeFailureHandler))
     )
   }
