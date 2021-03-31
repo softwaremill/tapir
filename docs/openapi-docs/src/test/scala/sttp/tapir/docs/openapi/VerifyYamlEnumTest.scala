@@ -17,7 +17,14 @@ import scala.collection.immutable
 class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
 
   test("should create component for enum using trait") {
+
+    implicit val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = {
+      case soi if soi.fullName.contains("Game") => true
+      case _                                    => false
+    })
+
     implicit val schemaForGame: Schema[Game] = Schema.string[Game].validate(Validator.derivedEnum[Game].encode(_.toString.toLowerCase))
+    implicit val schemaForEpisode: Schema[Episode] = Schema.string[Episode].validate(Validator.derivedEnum[Episode].encode(_.toString.toLowerCase))
 
     val actualYaml = OpenAPIDocsInterpreter
       .toOpenAPI(Seq(endpoint.in("totalWar").out(jsonBody[TotalWar]), endpoint.in("callOfDuty").out(jsonBody[CallOfDuty])), "Games", "1.0")
@@ -30,6 +37,8 @@ class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
 
   test("should create component for enum using enumeratum Enum") {
     import sttp.tapir.codec.enumeratum._
+
+    implicit val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
 
     val actualYaml = OpenAPIDocsInterpreter
       .toOpenAPI(
@@ -51,6 +60,8 @@ class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
   test("should create component for enum using enumeratum IntEnum") {
     import sttp.tapir.codec.enumeratum._
 
+    implicit val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
+
     val actualYaml = OpenAPIDocsInterpreter
       .toOpenAPI(
         Seq(endpoint.in("error1").out(jsonBody[Error1Response]), endpoint.in("error2").out(jsonBody[Error2Response])),
@@ -66,14 +77,16 @@ class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
 }
 
 object VerifyYamlEnumTest {
-  implicit val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(useRefForEnums = true)
-
   sealed trait Game
   case object Strategy extends Game
   case object Action extends Game
 
-  case class TotalWar(game: Game)
-  case class CallOfDuty(game: Game)
+  sealed trait Episode
+  case object First extends Episode
+  case object Second extends Episode
+
+  case class TotalWar(game: Game, episode: Episode)
+  case class CallOfDuty(game: Game, episode: Episode)
 
   sealed abstract class CountryCode extends EnumEntry
 

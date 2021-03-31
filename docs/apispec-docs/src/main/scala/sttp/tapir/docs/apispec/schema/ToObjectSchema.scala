@@ -1,10 +1,11 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 import scala.collection.mutable.ListBuffer
 
-class ToObjectSchema(useRefForEnums: Boolean = false) {
+class ToObjectSchema(referenceEnums: SObjectInfo => Boolean = _ => false) {
 
   /** Keeps only the first object data for each `SObjectInfo`. In case of recursive objects, the first one is the
     * most complete as it contains the built-up structure, unlike subsequent ones, which only represent leaves (#354).
@@ -43,7 +44,7 @@ class ToObjectSchema(useRefForEnums: Boolean = false) {
     (st.info -> s: ObjectSchema) +: st.fields
       .flatMap(a =>
         a.schema match {
-          case s @ TSchema(_, _, _, _, _, _, _, _ @Validator.Enum(_, _, Some(info))) if useRefForEnums =>
+          case s @ TSchema(_, _, _, _, _, _, _, _ @Validator.Enum(_, _, Some(info))) if referenceEnums(info) =>
             List(info -> s: ObjectSchema)
           case _ => apply(a.schema)
         }

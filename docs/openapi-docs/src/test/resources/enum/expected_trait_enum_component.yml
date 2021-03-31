@@ -28,10 +28,16 @@ components:
     TotalWar:
       required:
         - game
+        - episode
       type: object
       properties:
         game:
           $ref: '#/components/schemas/Game'
+        episode:
+          type: string
+          enum:
+            - first
+            - second
     Game:
       type: string
       enum:
@@ -40,7 +46,13 @@ components:
     CallOfDuty:
       required:
         - game
+        - episode
       type: object
       properties:
         game:
           $ref: '#/components/schemas/Game'
+        episode:
+          type: string
+          enum:
+            - first
+            - second
