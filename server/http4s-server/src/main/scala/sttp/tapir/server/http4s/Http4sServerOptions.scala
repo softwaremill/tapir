@@ -1,11 +1,13 @@
 package sttp.tapir.server.http4s
 
 import cats.Applicative
-import cats.effect.Sync
+import cats.effect.{ContextShift, Sync}
+import cats.implicits.catsSyntaxOptionId
 import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.Interceptor
+import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 
@@ -30,8 +32,11 @@ case class Http4sServerOptions[F[_], G[_]](
 
 object Http4sServerOptions {
 
-  /** Creates default [[Http4sServerOptions]] with custom interceptors, sitting between an optional exception
-    * interceptor, optional logging interceptor, and the ultimate decode failure handling interceptor.
+  /** Creates default [[Http4sServerOptions]] with custom interceptors, sitting between two interceptor groups:
+    * 1. the optional exception interceptor and the optional logging interceptor (which should typically be first
+    *    when processing the request, and last when processing the response)),
+    * 2. the optional unsupported media type interceptor and the decode failure handling interceptor (which should
+    *    typically be last when processing the request).
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
@@ -41,12 +46,17 @@ object Http4sServerOptions {
     *                  `Http4sServerOptions.Log.defaultServerLog`
     * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
     *                               responses.
+    * @param unsupportedMediaTypeInterceptor Whether to return 415 (unsupported media type) if there's no body in the
+    *                                        endpoint's outputs, which can satisfy the constraints from the `Accept`
+    *                                        header
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors[F[_], G[_]: Sync: ContextShift](
       exceptionHandler: Option[ExceptionHandler],
       serverLog: Option[ServerLog[G[Unit]]],
       additionalInterceptors: List[Interceptor[G, Http4sResponseBody[F]]] = Nil,
+      unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]] =
+        new UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]().some,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
@@ -56,6 +66,7 @@ object Http4sServerOptions {
       exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
         serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
         additionalInterceptors ++
+        unsupportedMediaTypeInterceptor.toList ++
         List(new DecodeFailureInterceptor[G, Http4sResponseBody[F]](decodeFailureHandler))
     )
 

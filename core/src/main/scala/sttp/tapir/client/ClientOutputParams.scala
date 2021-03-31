@@ -27,7 +27,7 @@ abstract class ClientOutputParams {
               .header(HeaderNames.ContentType)
               .map(MediaType.parse)
 
-            def applyMapping(m: EndpointOutput.StatusMapping[_]) = apply(m.output, body, meta).flatMap(p => codec.decode(p.asAny))
+            def applyMapping(m: EndpointOutput.OneOfMapping[_]) = apply(m.output, body, meta).flatMap(p => codec.decode(p.asAny))
 
             contentType match {
               case None =>

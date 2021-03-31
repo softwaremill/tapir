@@ -7,7 +7,6 @@ import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{EndpointInterceptor, Interceptor, RequestInterceptor, ValuedEndpointOutput}
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.content.ContentTypeInterceptor
 import sttp.tapir.{DecodeResult, Endpoint, EndpointIO, EndpointInput, EndpointOutput, StreamBodyIO}
 
 class ServerInterpreter[R, F[_]: MonadError, B, S](
@@ -69,13 +68,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case values: DecodeBasicInputsResult.Values =>
         InputValue(se.endpoint.input, values) match {
           case InputValueResult.Value(params, _) =>
-            callInterceptorsOnDecodeSuccess(
-              request,
-              new ContentTypeInterceptor[F, B]() :: endpointInterceptors,
-              se.endpoint,
-              params.asAny.asInstanceOf[I],
-              valueToResponse
-            )
+            callInterceptorsOnDecodeSuccess(request, endpointInterceptors, se.endpoint, params.asAny.asInstanceOf[I], valueToResponse)
               .map(Some(_))
           case InputValueResult.Failure(input, failure) =>
             callInterceptorsOnDecodeFailure(request, endpointInterceptors, se.endpoint, input, failure)
