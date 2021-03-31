@@ -42,7 +42,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     enum.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
-        case Validator.Enum(_, Some(encode)) => encode(v) shouldBe Some(v.entryName)
+        case Validator.Enum(_, Some(encode), _) => encode(v) shouldBe Some(v.entryName)
         case a                               => fail(s"Expected enum validator with encode function: got $a")
       }
     }
@@ -52,7 +52,7 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
     enum.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
-        case Validator.Enum(_, Some(encode)) => encode(v) shouldBe Some(v.value)
+        case Validator.Enum(_, Some(encode), _) => encode(v) shouldBe Some(v.value)
         case a                               => fail(s"Expected enum validator with encode function: got $a")
       }
     }

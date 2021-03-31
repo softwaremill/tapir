@@ -2,15 +2,15 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir._
-import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.apispec.{Schema => ASchema, _}
+import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.immutable.ListMap
 
 class SchemasForEndpoints(
     val es: Iterable[Endpoint[_, _, _, _]],
     val schemaName: SObjectInfo => String,
-    val enumsToComponents: Boolean
+    val useRefForEnums: Boolean
 ) {
 
   def apply(): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
@@ -18,7 +18,7 @@ class SchemasForEndpoints(
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1), schemaName)
 
     val objectToSchemaReference = new ObjectToSchemaReference(infoToKey)
-    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference, enumsToComponents)
+    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference, useRefForEnums)
     val schemas = new Schemas(tschemaToASchema, objectToSchemaReference)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
@@ -69,5 +69,5 @@ class SchemasForEndpoints(
     }
   }
 
-  private val toObjectSchema = new ToObjectSchema(enumsToComponents)
+  private val toObjectSchema = new ToObjectSchema(useRefForEnums)
 }

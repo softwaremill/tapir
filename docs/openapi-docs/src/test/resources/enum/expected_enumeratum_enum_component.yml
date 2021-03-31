@@ -1,0 +1,64 @@
+openapi: 3.0.3
+info:
+  title: Countries
+  version: '1.0'
+paths:
+  /poland:
+    get:
+      operationId: getPoland
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Poland'
+  /belgium:
+    get:
+      operationId: getBelgium
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Belgium'
+  /luxembourg:
+    get:
+      operationId: getLuxembourg
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Luxembourg'
+components:
+  schemas:
+    Poland:
+      required:
+        - countryCode
+      type: object
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'
+    CountryCode:
+      type: string
+      enum:
+        - PL
+        - BE
+        - LU
+    Belgium:
+      required:
+        - countryCode
+      type: object
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'
+    Luxembourg:
+      required:
+        - countryCode
+      type: object
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'

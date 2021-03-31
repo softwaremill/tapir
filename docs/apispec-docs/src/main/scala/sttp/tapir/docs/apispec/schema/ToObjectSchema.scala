@@ -1,11 +1,10 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 import scala.collection.mutable.ListBuffer
 
-class ToObjectSchema(val enumsToComponent: Boolean = false) {
+class ToObjectSchema(useRefForEnums: Boolean = false) {
 
   /** Keeps only the first object data for each `SObjectInfo`. In case of recursive objects, the first one is the
     * most complete as it contains the built-up structure, unlike subsequent ones, which only represent leaves (#354).
@@ -43,13 +42,12 @@ class ToObjectSchema(val enumsToComponent: Boolean = false) {
   private def productSchemas[T](s: TSchema[T], st: TSchemaType.SProduct[T]): List[ObjectSchema] = {
     (st.info -> s: ObjectSchema) +: st.fields
       .flatMap(a =>
-        a match {
-          case (name, s @ TSchema(_: TSchemaType.SString.type, _, _, _, _, _, _, _: Validator.Enum[_])) if enumsToComponent =>
-            List(SObjectInfo(name.name.capitalize) -> s: ObjectSchema)
-          case (_, schema) => apply(schema)
+        a.schema match {
+          case s @ TSchema(_: TSchemaType.SString[_], _, _, _, _, _, _, _ @Validator.Enum(_, _, Some(info))) if useRefForEnums =>
+            List(info -> s: ObjectSchema)
+          case _ => apply(a.schema)
         }
       )
-      .toList
   }
 
   private def coproductSchemas[T](s: TSchema[T], st: TSchemaType.SCoproduct[T]): List[ObjectSchema] = {

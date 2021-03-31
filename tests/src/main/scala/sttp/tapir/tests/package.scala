@@ -487,7 +487,7 @@ package object tests {
         Schema.string.validate(
           Validator.enum(
             List(Blue, Red),
-            {
+            encode = {
               case Red  => Some("red")
               case Blue => Some("blue")
             }

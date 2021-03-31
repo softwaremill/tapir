@@ -2,13 +2,16 @@ package sttp.tapir.codec.enumeratum
 
 import enumeratum._
 import enumeratum.values._
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir._
 
 trait TapirCodecEnumeratum {
   // Regular enums
 
-  def validatorEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Validator[E] =
-    Validator.enum(enum.values.toList, v => Some(v.entryName))
+  def validatorEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Validator[E] = {
+    val fullName = `enum`.getClass.getCanonicalName.replace("$", "")
+    Validator.enum(enum.values.toList, v => Some(v.entryName), Some(SObjectInfo(fullName)))
+  }
 
   implicit def schemaForEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Schema[E] =
     Schema(SchemaType.SString(), validator = validatorEnumEntry)
