@@ -29,7 +29,6 @@ import java.io.{ByteArrayInputStream, File, InputStream}
 import java.nio.ByteBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
-import java.io.{ByteArrayInputStream, InputStream}
 
 class ServerBasicTests[F[_], ROUTE](
     backend: SttpBackend[IO, Any],
