@@ -6,7 +6,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import sttp.client3._
 import sttp.tapir._
-import sttp.tapir.server.PartialServerEndpoint
+import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
 import scala.concurrent.duration._
@@ -26,13 +26,13 @@ object PartialServerLogicAkka extends App {
     }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
-  val secureEndpoint: PartialServerEndpoint[User, Unit, Int, Unit, Any, Future] = endpoint
+  val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Future] = endpoint
     .in(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
     .serverLogicForCurrent(auth)
 
   // extend the base endpoint to define (potentially multiple) proper endpoints, define the rest of the server logic
-  val secureHelloWorld1WithLogic = secureEndpoint.get
+  val secureHelloWorld1WithLogic: ServerEndpoint[(String, String), Int, String, Any, Future] = secureEndpoint.get
     .in("hello1")
     .in(query[String]("salutation"))
     .out(stringBody)
