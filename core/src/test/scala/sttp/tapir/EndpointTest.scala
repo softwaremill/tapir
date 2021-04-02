@@ -229,6 +229,21 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     input.codec.schema.applyValidation(2) shouldBe empty
   }
 
+  it should "add validator for an option" in {
+    val input = query[Option[Int]]("x").validateOption(Validator.min(1))
+    input.codec.schema.applyValidation(Some(0)) should not be empty
+    input.codec.schema.applyValidation(Some(2)) shouldBe empty
+    input.codec.schema.applyValidation(None) shouldBe empty
+  }
+
+  it should "add validator for an iterable" in {
+    val input = query[List[Int]]("x").validateIterable(Validator.min(1))
+    input.codec.schema.applyValidation(List(0)) should not be empty
+    input.codec.schema.applyValidation(List(2, 0)) should not be empty
+    input.codec.schema.applyValidation(List(2, 2)) shouldBe empty
+    input.codec.schema.applyValidation(Nil) shouldBe empty
+  }
+
   val httpMethodTestData = List(
     endpoint -> None,
     endpoint.in("api" / "cats" / path[String]).get -> Some(Method.GET),

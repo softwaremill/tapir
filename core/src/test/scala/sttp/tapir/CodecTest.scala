@@ -177,7 +177,7 @@ class CodecTest extends AnyFlatSpec with CodecTestExtensions with Matchers with 
 
   it should "use default, when available" in {
     val codec = implicitly[Codec[List[String], String, TextPlain]]
-    val codecWithDefault = codec.modifySchema(_.default("X"))
+    val codecWithDefault = codec.schema(_.default("X"))
 
     codec.decode(Nil) shouldBe DecodeResult.Missing
     codecWithDefault.decode(Nil) shouldBe DecodeResult.Value("X")

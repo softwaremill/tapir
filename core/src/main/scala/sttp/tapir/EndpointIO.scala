@@ -52,10 +52,15 @@ object EndpointTransput {
 
     def schema(s: Schema[T]): ThisType[T] = copyWith(codec.schema(s), info)
     def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
-    def modifySchema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.modifySchema(modify), info)
+    def schema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.schema(modify), info)
+
+    def validateOption[U](v: Validator[U])(implicit tIsOptionU: T =:= Option[U]): ThisType[T] =
+      schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+    def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit tIsCU: T =:= C[U]): ThisType[T] =
+      schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 
     def description(d: String): ThisType[T] = copyWith(codec, info.description(d))
-    def default(d: T): ThisType[T] = copyWith(codec.modifySchema(_.default(d, Some(codec.encode(d)))), info)
+    def default(d: T): ThisType[T] = copyWith(codec.schema(_.default(d, Some(codec.encode(d)))), info)
     def example(t: T): ThisType[T] = copyWith(codec, info.example(t))
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
@@ -545,11 +550,11 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
 
   def requestsSchema(s: Schema[REQ]): ThisType[T] = copy(requests = requests.schema(s))
   def requestsSchema(s: Option[Schema[REQ]]): ThisType[T] = copy(requests = requests.schema(s))
-  def modifyRequestsSchema(modify: Schema[REQ] => Schema[REQ]): ThisType[T] = copy(requests = requests.modifySchema(modify))
+  def requestsSchema(modify: Schema[REQ] => Schema[REQ]): ThisType[T] = copy(requests = requests.schema(modify))
 
   def responsesSchema(s: Schema[RESP]): ThisType[T] = copy(responses = responses.schema(s))
   def responsesSchema(s: Option[Schema[RESP]]): ThisType[T] = copy(responses = responses.schema(s))
-  def modifyResponsesSchema(modify: Schema[RESP] => Schema[RESP]): ThisType[T] = copy(responses = responses.modifySchema(modify))
+  def responsesSchema(modify: Schema[RESP] => Schema[RESP]): ThisType[T] = copy(responses = responses.schema(modify))
 
   def requestsDescription(d: String): ThisType[T] = copy(requestsInfo = requestsInfo.description(d))
   def requestsExample(e: REQ): ThisType[T] = copy(requestsInfo = requestsInfo.example(e))
