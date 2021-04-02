@@ -14,8 +14,7 @@ private[openapi] class CodecToMediaType(objectSchemas: Schemas) {
       o.format.mediaType.noCharset.toString -> OMediaType(
         Some(objectSchemas(o)),
         convertedExamples.singleExample,
-        convertedExamples.multipleExamples,
-        ListMap.empty
+        convertedExamples.multipleExamples
       )
     )
   }

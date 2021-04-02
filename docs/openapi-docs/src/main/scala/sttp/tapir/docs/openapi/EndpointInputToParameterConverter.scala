@@ -11,57 +11,41 @@ private[openapi] object EndpointInputToParameterConverter {
     val examples = ExampleConverter.convertExamples(query.codec, query.info.examples)
 
     Parameter(
-      query.name,
-      ParameterIn.Query,
-      query.info.description,
-      Some(!query.codec.schema.isOptional),
-      if (query.info.deprecated) Some(true) else None,
-      None,
-      None,
-      None,
-      None,
-      schema,
-      examples.singleExample,
-      examples.multipleExamples,
-      ListMap.empty
+      name = query.name,
+      in = ParameterIn.Query,
+      description = query.info.description,
+      required = Some(!query.codec.schema.isOptional),
+      deprecated = if (query.info.deprecated) Some(true) else None,
+      schema = schema,
+      example = examples.singleExample,
+      examples = examples.multipleExamples
     )
   }
 
   def from[T](pathCapture: EndpointInput.PathCapture[T], schema: ReferenceOr[Schema]): Parameter = {
     val examples = ExampleConverter.convertExamples(pathCapture.codec, pathCapture.info.examples)
     Parameter(
-      pathCapture.name.getOrElse("?"),
-      ParameterIn.Path,
-      pathCapture.info.description,
-      Some(true),
-      None,
-      None,
-      None,
-      None,
-      None,
-      schema,
-      examples.singleExample,
-      examples.multipleExamples,
-      ListMap.empty
+      name = pathCapture.name.getOrElse("?"),
+      in = ParameterIn.Path,
+      description = pathCapture.info.description,
+      required = Some(true),
+      schema = schema,
+      example = examples.singleExample,
+      examples = examples.multipleExamples
     )
   }
 
   def from[T](header: EndpointIO.Header[T], schema: ReferenceOr[Schema]): Parameter = {
     val examples = ExampleConverter.convertExamples(header.codec, header.info.examples)
     Parameter(
-      header.name,
-      ParameterIn.Header,
-      header.info.description,
-      Some(!header.codec.schema.isOptional),
-      if (header.info.deprecated) Some(true) else None,
-      None,
-      None,
-      None,
-      None,
-      schema,
-      examples.singleExample,
-      examples.multipleExamples,
-      ListMap.empty
+      name = header.name,
+      in = ParameterIn.Header,
+      description = header.info.description,
+      required = Some(!header.codec.schema.isOptional),
+      deprecated = if (header.info.deprecated) Some(true) else None,
+      schema = schema,
+      example = examples.singleExample,
+      examples = examples.multipleExamples
     )
   }
 
@@ -72,38 +56,28 @@ private[openapi] object EndpointInputToParameterConverter {
       else
         ExampleConverter.convertExamples(Codec.string, List(EndpointIO.Example(header.h.value, None, None)))
     Parameter(
-      header.h.name,
-      ParameterIn.Header,
-      header.info.description,
-      Some(true),
-      if (header.info.deprecated) Some(true) else None,
-      None,
-      None,
-      None,
-      None,
-      schema,
-      examples.singleExample,
-      examples.multipleExamples,
-      ListMap.empty
+      name = header.h.name,
+      in = ParameterIn.Header,
+      description = header.info.description,
+      required = Some(true),
+      deprecated = if (header.info.deprecated) Some(true) else None,
+      schema = schema,
+      example = examples.singleExample,
+      examples = examples.multipleExamples
     )
   }
 
   def from[T](cookie: EndpointInput.Cookie[T], schema: ReferenceOr[Schema]): Parameter = {
     val examples = ExampleConverter.convertExamples(cookie.codec, cookie.info.examples)
     Parameter(
-      cookie.name,
-      ParameterIn.Cookie,
-      cookie.info.description,
-      Some(!cookie.codec.schema.isOptional),
-      if (cookie.info.deprecated) Some(true) else None,
-      None,
-      None,
-      None,
-      None,
-      schema,
-      examples.singleExample,
-      examples.multipleExamples,
-      ListMap.empty
+      name = cookie.name,
+      in = ParameterIn.Cookie,
+      description = cookie.info.description,
+      required = Some(!cookie.codec.schema.isOptional),
+      deprecated = if (cookie.info.deprecated) Some(true) else None,
+      schema = schema,
+      example = examples.singleExample,
+      examples = examples.multipleExamples
     )
   }
 }

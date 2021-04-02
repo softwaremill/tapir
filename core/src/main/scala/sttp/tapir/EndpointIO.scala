@@ -116,7 +116,7 @@ object EndpointInput {
     override private[tapir] type L = String
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[String, U, TextPlain], i: Info[U]): PathCapture[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.validator)
+    override def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.schema)
 
     def name(n: String): PathCapture[T] = copy(name = Some(n))
   }
@@ -134,7 +134,7 @@ object EndpointInput {
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Query[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"?$name", codec.validator)
+    override def show: String = addValidatorShow(s"?$name", codec.schema)
   }
 
   case class QueryParams[T](codec: Codec[sttp.model.QueryParams, T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -151,7 +151,7 @@ object EndpointInput {
     override private[tapir] type L = Option[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[Option[String], U, TextPlain], i: Info[U]): Cookie[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
+    override def show: String = addValidatorShow(s"{cookie $name}", codec.schema)
   }
 
   case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -262,13 +262,8 @@ sealed trait EndpointOutput[T] extends EndpointTransput[T] {
 }
 
 object EndpointOutput {
-  sealed trait Single[T] extends EndpointOutput[T] {
-    private[tapir] def _mapping: Mapping[_, T]
-  }
-
-  sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T] {
-    override private[tapir] def _mapping: Mapping[_, T] = codec
-  }
+  sealed trait Single[T] extends EndpointOutput[T]
+  sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
 
   //
 
@@ -315,22 +310,24 @@ object EndpointOutput {
     override def show: String = wrapped.show
   }
 
-  /** Specifies that for `statusCode`, the given `output` should be used.
+  /** Specifies a correspondence between `statusCode` and `output`.
+    *
+    * A single status code can have multiple mappings, with different body content types. The mapping can then be
+    * chosen based on content type negotiation, or the content type header.
     *
     * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
     * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
     * type parameters).
     */
-  case class StatusMapping[O] private[tapir] (
+  case class OneOfMapping[O] private[tapir] (
       statusCode: Option[sttp.model.StatusCode],
       output: EndpointOutput[O],
       appliesTo: Any => Boolean
   )
 
-  case class OneOf[O, T](mappings: Seq[StatusMapping[_ <: O]], codec: Mapping[O, T]) extends Single[T] {
+  case class OneOf[O, T](mappings: Seq[OneOfMapping[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
-    override private[tapir] def _mapping: Mapping[_, T] = codec
-    override def map[U](mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](codec = codec.map(mapping))
+    override def map[U](_mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](mapping = mapping.map(_mapping))
     override def show: String = showOneOf(mappings.map(_.output.show))
   }
 
@@ -349,7 +346,6 @@ object EndpointOutput {
 
   case class MappedPair[T, U, TU, V](output: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointOutput.Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
-    override private[tapir] def _mapping: Mapping[_, V] = mapping
     override def show: String = output.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](output, mapping.map(m))
   }
@@ -391,7 +387,7 @@ object EndpointIO {
         case _                               => ""
       }
       val format = codec.format.mediaType
-      addValidatorShow(s"{body as $format$charset}", codec.validator)
+      addValidatorShow(s"{body as $format$charset}", codec.schema)
     }
   }
 
@@ -422,7 +418,7 @@ object EndpointIO {
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Header[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"{header $name}", codec.validator)
+    override def show: String = addValidatorShow(s"{header $name}", codec.schema)
   }
 
   case class Headers[T](codec: Codec[List[sttp.model.Header], T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -446,7 +442,6 @@ object EndpointIO {
 
   case class MappedPair[T, U, TU, V](io: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointIO.Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
-    override private[tapir] def _mapping: Mapping[_, V] = mapping
     override def show: String = io.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](io, mapping.map(m))
   }

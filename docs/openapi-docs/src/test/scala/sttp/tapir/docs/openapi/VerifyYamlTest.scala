@@ -1,30 +1,26 @@
 package sttp.tapir.docs.openapi
 
-import java.time.ZoneOffset.UTC
-import java.time.{Instant, LocalDateTime, ZonedDateTime}
 import io.circe.Json
 import io.circe.generic.auto._
-import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
-import sttp.model.{Method, StatusCode}
-import sttp.tapir.{Endpoint, endpoint}
-import sttp.tapir.EndpointIO.Example
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
-import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
-import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
-import sttp.tapir.generic.{Configuration, Derived}
-import sttp.tapir.json.circe._
-import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.openapi.{Contact, Info, License, Server, ServerVariable}
-import sttp.tapir.tests.{Person, _}
-
-import scala.collection.immutable.ListMap
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
+import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.model.UsernamePassword
+import sttp.tapir.docs.openapi.VerifyYamlTest._
+import sttp.tapir.docs.openapi.dtos.Book
+import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
+import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
+import sttp.tapir.generic.Derived
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import sttp.tapir.openapi.circe.yaml._
+import sttp.tapir.openapi._
+import sttp.tapir.tests.{Person, _}
+import sttp.tapir.{Endpoint, endpoint, _}
+
+import java.time.{Instant, LocalDateTime}
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
@@ -84,8 +80,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   object TestStreams extends TestStreams
 
   val streaming_endpoint: Endpoint[Vector[Byte], Unit, Vector[Byte], TestStreams] = endpoint
-    .in(streamBody(TestStreams)(Schema.string, CodecFormat.TextPlain()))
-    .out(streamBody(TestStreams)(Schema.binary, CodecFormat.OctetStream()))
+    .in(streamTextBody(TestStreams)(CodecFormat.TextPlain()))
+    .out(streamBinaryBody(TestStreams))
 
   test("should match the expected yaml for streaming endpoints") {
     val expectedYaml = load("expected_streaming.yml")
@@ -138,124 +134,10 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should support authentication") {
-    val expectedYaml = load("expected_auth.yml")
-
-    val e1 = endpoint.in(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
-    val e2 = endpoint.in(auth.bearer[String]()).in("api2" / path[String]).out(stringBody)
-    val e3 = endpoint.in(auth.apiKey(header[String]("apikey"))).in("api3" / path[String]).out(stringBody)
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should support optional authentication") {
-    val expectedYaml = load("expected_optional_auth.yml")
-
-    val e1 = endpoint.in(auth.bearer[String]()).in("api1" / path[String]).out(stringBody)
-    val e2 = endpoint.in(auth.bearer[Option[String]]()).in("api2" / path[String]).out(stringBody)
-    val e3 = endpoint.in(auth.apiKey(header[Option[String]]("apikey"))).in("api3" / path[String]).out(stringBody)
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should support naming of security schemes") {
-
-    val expectedYaml = load("expected_auth_with_named_schemes.yml")
-
-    val e1 = endpoint.in(auth.bearer[String]().securitySchemeName("secBearer")).in("secure" / "bearer").out(stringBody)
-    val e2 = endpoint.in(auth.basic[UsernamePassword]().securitySchemeName("secBasic")).in("secure" / "basic").out(stringBody)
-    val e3 =
-      endpoint.in(auth.apiKey(header[String]("apikey")).securitySchemeName("secApiKeyHeader")).in("secure" / "apiKeyHeader").out(stringBody)
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should support Oauth2") {
-    val expectedYaml = load("expected_oauth2.yml")
-    val oauth2 =
-      auth.oauth2
-        .authorizationCode(
-          "https://example.com/auth",
-          ListMap("client" -> "scope for clients", "admin" -> "administration scope")
-        )
-
-    val e1 =
-      endpoint
-        .in(oauth2)
-        .in("api1" / path[String])
-        .out(stringBody)
-    val e2 =
-      endpoint
-        .in(oauth2.requiredScopes(Seq("client")))
-        .in("api2" / path[String])
-        .out(stringBody)
-    val e3 =
-      endpoint
-        .in(oauth2.requiredScopes(Seq("admin")))
-        .in("api3" / path[String])
-        .out(stringBody)
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(List(e1, e2, e3), Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
   test("should support empty bodies") {
     val expectedYaml = load("expected_empty.yml")
 
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint, Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should support multiple status codes") {
-    // given
-    val expectedYaml = load("expected_status_codes.yml")
-
-    // work-around for #10: unsupported sealed trait families
-    implicit val schemaForErrorInfo: Schema[ErrorInfo] = Schema[ErrorInfo](SchemaType.SProduct(SchemaType.SObjectInfo("ErrorInfo"), Nil))
-
-    val e = endpoint.errorOut(
-      sttp.tapir.oneOf(
-        statusMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
-        statusMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-        statusDefaultMapping(jsonBody[Unknown].description("unknown"))
-      )
-    )
-
-    // when
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    // then
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should support multiple the same status codes") {
-    val expectedYaml = load("expected_the_same_status_codes.yml")
-
-    implicit val unauthorizedTextPlainCodec: Codec[String, Unauthorized, CodecFormat.TextPlain] =
-      Codec.string.map(Unauthorized.apply _)(_.realm)
-
-    val e = endpoint.out(
-      sttp.tapir.oneOf(
-        statusMapping(StatusCode.Ok, jsonBody[NotFound].description("not found")),
-        statusMapping(StatusCode.Ok, plainBody[Unauthorized]),
-        statusMapping(StatusCode.NoContent, jsonBody[Unknown].description("unknown"))
-      )
-    )
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -270,60 +152,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
         Info("Fruits", "1.0")
       )
       .toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should match the expected yaml when using coproduct types") {
-    val expectedYaml = load("expected_coproduct.yml")
-
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
-      .out(jsonBody[Entity])
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should match the expected yaml when using coproduct types with discriminator") {
-    val sPerson = implicitly[Schema[Person]]
-    val sOrganization = implicitly[Schema[Organization]]
-    implicit val sEntity: Schema[Entity] =
-      Schema.oneOfUsingField[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
-
-    val expectedYaml = load("expected_coproduct_discriminator.yml")
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
-      .out(jsonBody[Entity])
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should match the expected yaml when using nested coproduct types") {
-    val expectedYaml = load("expected_coproduct_nested.yml")
-
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
-      .out(jsonBody[NestedEntity])
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should match the expected yaml when using nested coproduct types with discriminator") {
-    val sPerson = implicitly[Schema[Person]]
-    val sOrganization = implicitly[Schema[Organization]]
-    implicit val sEntity: Schema[Entity] =
-      Schema.oneOfUsingField[Entity, String](_.name, _.toString)("john" -> sPerson, "sml" -> sOrganization)
-
-    val expectedYaml = load("expected_coproduct_discriminator_nested.yml")
-    val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
-      .out(jsonBody[NestedEntity])
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -390,7 +218,10 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     implicit val customFruitAmountSchema: Schema[FruitAmount] = Schema(
       SProduct(
         SObjectInfo("tapir.tests.FruitAmount", Nil),
-        List((FieldName("fruit"), Schema(SString)), (FieldName("amount"), Schema(SInteger).format("int32")))
+        List(
+          SProductField(FieldName("fruit"), Schema(SString()), (_: FruitAmount) => None),
+          SProductField(FieldName("amount"), Schema(SInteger()).format("int32"), (_: FruitAmount) => None)
+        )
       )
     ).description("Amount of fruits")
 
@@ -413,28 +244,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should unfold coproducts from unfolded arrays") {
-    val expectedYaml = load("expected_unfolded_coproduct_unfolded_array.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint.out(jsonBody[List[Entity]]), Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should differentiate when a generic coproduct type is used multiple times") {
-    val expectedYaml = load("expected_generic_coproduct.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        List(endpoint.in("p1" and jsonBody[GenericEntity[String]]), endpoint.in("p2" and jsonBody[GenericEntity[Int]])),
-        Info("Fruits", "1.0")
-      )
-      .toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
   test("should unfold arrays from object") {
     val expectedYaml = load("expected_unfolded_array_unfolded_object.yml")
 
@@ -449,22 +258,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val actualYaml = OpenAPIDocsInterpreter
       .toOpenAPI(endpoint.out(statusCode(StatusCode.PermanentRedirect)).out(header[String]("Location")), Info("Entities", "1.0"))
-      .toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("use status codes declared with description") {
-    val expectedYaml = load("expected_one_of_status_codes.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint
-          .out(header[String]("Location"))
-          .errorOut(statusCode.description(StatusCode.NotFound, "entity not found").description(StatusCode.BadRequest, "")),
-        Info("Entities", "1.0")
-      )
       .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
@@ -521,264 +314,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint.in(header("Location", "Poland")), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("validator with tagged type in query") {
-    val expectedYaml = load("expected_valid_query_tagged.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_query_tagged.in("add").in("path"), Info("Fruits", "1.0")).toYaml
-    noIndentation(actualYaml) shouldBe expectedYaml
-  }
-
-  test("validator with wrapper type in body") {
-    val expectedYaml = load("expected_valid_body_wrapped.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_valid_json.in("add").in("path"), Info("Fruits", "1.0")).toYaml
-    noIndentation(actualYaml) shouldBe expectedYaml
-  }
-
-  test("validator with optional wrapper type in body") {
-    val expectedYaml = load("expected_valid_optional_body_wrapped.yml")
-
-    val actualYaml =
-      OpenAPIDocsInterpreter.toOpenAPI(Validation.in_valid_optional_json.in("add").in("path"), Info("Fruits", "1.0")).toYaml
-    noIndentation(actualYaml) shouldBe expectedYaml
-  }
-
-  test("validator with enum type in body") {
-    val expectedYaml = load("expected_valid_body_enum.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_json_wrapper_enum.in("add").in("path"), Info("Fruits", "1.0")).toYaml
-
-    noIndentation(actualYaml) shouldBe expectedYaml
-  }
-
-  test("validator with wrappers type in query") {
-    val expectedYaml = load("expected_valid_query_wrapped.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_valid_query.in("add").in("path"), Info("Fruits", "1.0")).toYaml
-    noIndentation(actualYaml) shouldBe expectedYaml
-  }
-
-  test("validator with list") {
-    val expectedYaml = load("expected_valid_body_collection.yml")
-
-    val actualYaml =
-      OpenAPIDocsInterpreter.toOpenAPI(Validation.in_valid_json_collection.in("add").in("path"), Info("Fruits", "1.0")).toYaml
-    noIndentation(actualYaml) shouldBe expectedYaml
-  }
-
-  test("render validator for additional properties of map") {
-    val expectedYaml = load("expected_valid_additional_properties.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_valid_map, Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("render validator for additional properties of array elements") {
-    val expectedYaml = load("expected_valid_int_array.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_valid_int_array, Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("render enum validator for classes") {
-    val expectedYaml = load("expected_valid_enum_class.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_enum_class, Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("render enum validator for classes wrapped in option") {
-    val expectedYaml = load("expected_valid_enum_class_wrapped_in_option.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_optional_enum_class, Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("render enum validator for values") {
-    val expectedYaml = load("expected_valid_enum_values.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.in_enum_values, Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("use enum in object in output response") {
-    val expectedYaml = load("expected_valid_enum_object.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(Validation.out_enum_object, Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("use enumeratum validator for array elements") {
-    import sttp.tapir.codec.enumeratum._
-
-    val expectedYaml = load("expected_valid_enumeratum.yml")
-
-    val actualYaml =
-      OpenAPIDocsInterpreter
-        .toOpenAPI(List(endpoint.in("enum-test").out(jsonBody[Enumeratum.FruitWithEnum])), Info("Fruits", "1.0"))
-        .toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("use enum validator for a cats non-empty-list of enums") {
-    import sttp.tapir.integ.cats.codec._
-    import cats.data.NonEmptyList
-    implicit def schemaForColor: Schema[Color] =
-      Schema.string.validate(Validator.enum(List(Blue, Red), { c => Some(c.toString.toLowerCase()) }))
-
-    val expectedYaml = load("expected_valid_enum_cats_nel.yml")
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint.in(jsonBody[NonEmptyList[Color]]), Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("support example of list and not-list types") {
-    val expectedYaml = load("expected_examples_of_list_and_not_list_types.yml")
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.post
-          .in(query[List[String]]("friends").example(List("bob", "alice")))
-          .in(query[String]("current-person").example("alan"))
-          .in(jsonBody[Person].example(Person("bob", 23))),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("support multiple examples with explicit names") {
-    val expectedYaml = load("expected_multiple_examples_with_names.yml")
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.post
-          .out(
-            jsonBody[Entity].examples(
-              List(
-                Example.of(Person("michal", 40), Some("Michal"), Some("Some summary")),
-                Example.of(Organization("acme"), Some("Acme"))
-              )
-            )
-          ),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("support multiple examples with default names") {
-    val expectedYaml = load("expected_multiple_examples_with_default_names.yml")
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.post
-          .in(jsonBody[Person].example(Person("bob", 23)).example(Person("matt", 30))),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("support example name even if there is a single example") {
-    val expectedYaml = load("expected_single_example_with_name.yml")
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.post
-          .out(
-            jsonBody[Entity].example(
-              Example(Person("michal", 40), Some("Michal"), Some("Some summary"))
-            )
-          ),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("support multiple examples with both explicit and default names ") {
-    val expectedYaml = load("expected_multiple_examples_with_explicit_and_default_names.yml")
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.post
-          .in(jsonBody[Person].examples(List(Example.of(Person("bob", 23), name = Some("Bob")), Example.of(Person("matt", 30))))),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("support examples in different IO params") {
-    val expectedYaml = load("expected_multiple_examples.yml")
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.post
-          .in(path[String]("country").example("Poland").example("UK"))
-          .in(query[String]("current-person").example("alan").example("bob"))
-          .in(jsonBody[Person].example(Person("bob", 23)).example(Person("alan", 50)))
-          .in(header[String]("X-Forwarded-User").example("user1").example("user2"))
-          .in(cookie[String]("cookie-param").example("cookie1").example("cookie2"))
-          .out(jsonBody[Entity].example(Person("michal", 40)).example(Organization("acme"))),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("support recursive coproducts") {
-    val expectedYaml = load("expected_recursive_coproducts.yml")
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.post.in(jsonBody[Clause]),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("render field validator when used inside of coproduct") {
-    implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(11))
-    val expectedYaml = load("expected_valid_coproduct.yml")
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.get.out(jsonBody[Entity]),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("render field validator when used inside of optional coproduct") {
-    implicit val ageSchema: Schema[Int] = Schema.schemaForInt.validate(Validator.min(11))
-    val expectedYaml = load("expected_valid_optional_coproduct.yml")
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint.get.in(jsonBody[Option[Entity]]), Info("Entities", "1.0")).toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
 
@@ -866,27 +401,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("render field validator when using different naming configuration") {
-    val expectedYaml = load("expected_validator_with_custom_naming.yml")
-
-    implicit val customConfiguration: Configuration = Configuration.default.withSnakeCaseMemberNames
-    val baseEndpoint = endpoint.post.in(jsonBody[MyClass])
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(baseEndpoint, Info("Entities", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("automatically add example for fixed header") {
-    val expectedYaml = load("expected_fixed_header_example.yml")
-
-    val e = endpoint.in(header("Content-Type", "application/json"))
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Examples", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
   test("should use date-time format for Instant fields") {
     val expectedYaml = load("expected_date_time.yml")
 
@@ -935,57 +449,6 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("should match the expected yaml when using schema with custom example") {
-    val expectedYaml = load("expected_schema_example.yml")
-
-    val expectedDateTime = ZonedDateTime.of(2021, 1, 1, 1, 1, 1, 1, UTC)
-    val expectedBook = Book("title", Genre("name", "desc"), 2021, Author("name", Country("country")))
-
-    implicit val testSchemaZonedDateTime: Schema[ZonedDateTime] = Schema.schemaForZonedDateTime.encodedExample(expectedDateTime)
-    implicit val testSchemaBook = implicitly[Schema[Book]].encodedExample(circeCodec[Book].encode(expectedBook))
-
-    val endpoint_with_dateTimes = endpoint.post.in(jsonBody[ZonedDateTime]).out(jsonBody[Book])
-
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_with_dateTimes, Info("Examples", "1.0")).toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should include max items in modified string collection schema") {
-    val expectedYaml = load("expected_valid_modified_array_strings.yml")
-
-    implicit val customObjectWithStringsSchema: Schema[ObjectWithStrings] = implicitly[Derived[Schema[ObjectWithStrings]]].value
-      .modify(_.data)(_.validate(Validator.maxSize[String, List](1)))
-
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.out(jsonBody[ObjectWithStrings]),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("should include max items in modified object collection schema") {
-    val expectedYaml = load("expected_valid_modified_array_objects.yml")
-
-    implicit val customObjectWithStringsSchema: Schema[ObjectWithList] = implicitly[Derived[Schema[ObjectWithList]]].value
-      .modify(_.data)(_.validate(Validator.maxSize[FruitAmount, List](1)))
-
-    val actualYaml = OpenAPIDocsInterpreter
-      .toOpenAPI(
-        endpoint.out(jsonBody[ObjectWithList]),
-        Info("Entities", "1.0")
-      )
-      .toYaml
-
-    val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
   test("should match the expected yaml using double quoted style") {
     val ep = endpoint.get.description("first line:\nsecond line")
 
@@ -1007,26 +470,9 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 }
 
-case class F1(data: List[F1])
-case class G[T](data: T)
-
-case class NestedEntity(entity: Entity)
-
-sealed trait ErrorInfo
-case class NotFound(what: String) extends ErrorInfo
-case class Unauthorized(realm: String) extends ErrorInfo
-case class Unknown(code: Int, msg: String) extends ErrorInfo
-
-case class ObjectWrapper(value: FruitAmount)
-
-sealed trait GenericEntity[T]
-case class GenericPerson[T](data: T) extends GenericEntity[T]
-
-case class ObjectWithList(data: List[FruitAmount])
-case class ObjectWithStrings(data: List[String])
-
-sealed trait Clause
-case class Expression(v: String) extends Clause
-case class Not(not: Clause) extends Clause
-
-case class MyClass(myAttribute: Int)
+object VerifyYamlTest {
+  case class F1(data: List[F1])
+  case class G[T](data: T)
+  case class ObjectWrapper(value: FruitAmount)
+  case class ObjectWithList(data: List[FruitAmount])
+}

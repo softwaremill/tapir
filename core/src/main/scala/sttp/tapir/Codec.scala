@@ -20,8 +20,8 @@ import sttp.ws.WebSocketFrame
 import scala.annotation.implicitNotFound
 import scala.concurrent.duration.{Duration => SDuration}
 
-/** A [[Mapping]] between low-level values of type `L` and high-level values of type `H`. Low level values are
-  * formatted as `CF`.
+/** A bi-directional mapping between low-level values of type `L` and high-level values of type `H`. Low level values
+  * are formatted as `CF`.
   *
   * The mapping consists of a pair of functions, one to decode (`L => H`), and one to encode (`H => L`)
   * Decoding can fail, and this is represented as a result of type [[DecodeResult]].
@@ -36,8 +36,7 @@ import scala.concurrent.duration.{Duration => SDuration}
   * Codec instances can be derived basing on other values (e.g. such as json encoders/decoders when integrating with
   * json libraries). Or, they can be defined by hand for custom types, usually customising an existing, simpler codec.
   *
-  * Codecs can be chained with [[Mapping]]s using the `map` function. Codecs are also [[Mapping]]s, meaning that
-  * mappings can be re-used.
+  * Codecs can be chained with [[Mapping]]s using the `map` function.
   *
   * @tparam L The type of the low-level value.
   * @tparam H The type of the high-level value.
@@ -47,24 +46,38 @@ import scala.concurrent.duration.{Duration => SDuration}
 Did you define a codec for: ${H}?
 Did you import the codecs for: ${CF}?
 """)
-trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
+trait Codec[L, H, +CF <: CodecFormat] { outer =>
+  // similar to Mapping
+
+  def rawDecode(l: L): DecodeResult[H]
+  def encode(h: H): L
+
+  /** - calls `rawDecode`
+    * - catches any exceptions that might occur, converting them to decode failures
+    * - validates the result
+    */
+  def decode(l: L): DecodeResult[H] = (Mapping.decode(l, rawDecode, schema.applyValidation), schema.default) match {
+    case (DecodeResult.Missing, Some((d, _))) => DecodeResult.Value(d)
+    case (r, _)                               => r
+  }
+
+  //
+
   def schema: Schema[H]
   def format: CF
 
-  override def validator: Validator[H] = schema.validator
-
-  override def map[HH](codec: Mapping[H, HH]): Codec[L, HH, CF] =
+  def map[HH](mapping: Mapping[H, HH]): Codec[L, HH, CF] =
     new Codec[L, HH, CF] {
-      override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(codec.rawDecode)
-      override def encode(hh: HH): L = outer.encode(codec.encode(hh))
+      override def rawDecode(l: L): DecodeResult[HH] = outer.rawDecode(l).flatMap(mapping.rawDecode)
+      override def encode(hh: HH): L = outer.encode(mapping.encode(hh))
       override def schema: Schema[HH] = outer.schema
         .map(v =>
-          codec.decode(v) match {
+          mapping.decode(v) match {
             case _: Failure => None
             case Value(v)   => Some(v)
           }
-        )(codec.encode)
-        .validate(codec.validator)
+        )(mapping.encode)
+        .validate(mapping.validator)
       override def format: CF = outer.format
     }
 
@@ -89,12 +102,7 @@ trait Codec[L, H, +CF <: CodecFormat] extends Mapping[L, H] { outer =>
       override def format: CF2 = f
     }
 
-  override def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(addEncodeToEnumValidator(v)))
-
-  override def decode(l: L): DecodeResult[H] = (super.decode(l), schema.default) match {
-    case (DecodeResult.Missing, Some((d, _))) => DecodeResult.Value(d)
-    case (r, _)                               => r
-  }
+  def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(Mapping.addEncodeToEnumValidator(v, encode)))
 }
 
 object Codec extends CodecExtensions with FormCodecDerivation {
@@ -109,7 +117,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       override def schema: Schema[L] = s
       override def format: CF = f
     }
-  def idPlain[L](s: Schema[L] = Schema[L](SchemaType.SString)): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
+  def idPlain[L](s: Schema[L] = Schema[L](SchemaType.SString())): Codec[L, L, CodecFormat.TextPlain] = id(CodecFormat.TextPlain(), s)
 
   implicit val string: Codec[String, String, TextPlain] = id[String, TextPlain](TextPlain(), Schema.schemaForString)
 
@@ -230,7 +238,6 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       }
 
       override def schema: Schema[Seq[RawPart]] = Schema.binary
-      override def validator: Validator[Seq[RawPart]] = Validator.pass
       override def format: MultipartFormData = CodecFormat.MultipartFormData()
     }
 

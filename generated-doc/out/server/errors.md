@@ -1,14 +1,24 @@
 # Error handling
 
-## Exception handling
+Error handling in tapir is divided into three areas:
 
-There's no exception handling built into tapir. However, tapir contains a more general error handling mechanism, as the
-endpoints can contain dedicated error outputs.
+1. Error outputs: defined per-endpoint, used for errors handled by the business logic
+2. Failed effects: exceptions which are not handled by the business logic (corresponds to 5xx responses)    
+3. Decode failures: format errors, when the input values can't be decoded (corresponds to 4xx responses, or 
+   trying another endpoint)
 
-If the logic function, which is passed to the server interpreter, fails (i.e. throws an exception, which results in
-a failed `Future` or `IO`/`Task`), this is propagated to the library (akka-http or http4s). 
+While 1. is specific to an endpoint, handlers for 2. and 3. are typically the same for multiple endpoints, and are
+specified as part of the server's interpreter [options](options.md).
 
-However, any exceptions can be recovered from and mapped to an error value. For example:
+## Error outputs
+
+Each endpoint can contain dedicated error outputs, in addition to outputs which are used in case of success. The 
+business logic can then return either an error value, or a success value. Any business-logic-level errors should
+be signalled this way. This can include validation, failure of downstream services, or inability to serve the request
+at that time.
+
+If the business logic signals errors as exceptions, some or all can be recovered from and mapped to an error value.
+For example:
 
 ```scala
 import sttp.tapir._
@@ -44,11 +54,18 @@ value of type `ErrorInfo`.
 Following the convention, the left side of the `Either[ErrorInfo, T]` represents an error, and the right side success.
 
 Alternatively, errors can be recovered from failed effects and mapped to the error output - provided that the `E` type
-in the endpoint description is itself a subclass of exception. This can be done using the `toRouteRecoverErrors` method.
+in the endpoint description is itself a subclass of exception. This can be done using the `toRouteRecoverErrors` method
+(or similar for other interpreters).
 
-## Handling decode failures
+## Failed effects: unhandled exceptions
 
-Quite often user input will be malformed and decoding will fail. Should the request be completed with a 
+If the logic function, which is passed to the server interpreter, fails (i.e. throws an exception, which results in
+a failed `Future` or `IO`/`Task`), this will be handled by the logging and exception interceptors. By default, an 
+`ERROR` will be logged, and an `500 InternalServerError` returned.
+
+## Decode failures
+
+Quite often user input will be malformed and decoding of the request will fail. Should the request be completed with a 
 `400 Bad Request` response, or should the request be forwarded to another endpoint? By default, tapir follows OpenAPI 
 conventions, that an endpoint is uniquely identified by the method and served path. That's why:
 
@@ -59,8 +76,8 @@ conventions, that an endpoint is uniquely identified by the method and served pa
   malformed. A `400 Bad Request` response is returned if a query parameter, header or body causes any decode failure, 
   or if the decoding a path capture causes a validation error.
 
-This can be customised by providing an implicit instance of `sttp.tapir.server.DecodeFailureHandler`, which basing on the
-request, failing input and failure description can decide, whether to return a "no match" or a specific response.
+This can be customised by providing an implicit instance of `sttp.tapir.server.DecodeFailureHandler`, which basing on 
+the request, failing input and failure description can decide, whether to return a "no match" or a specific response.
 
 Only the first failure is passed to the `DecodeFailureHandler`. Inputs are decoded in the following order: method, 
 path, query, header, body.
@@ -80,25 +97,24 @@ a different format (other than textual):
 ```scala
 import sttp.tapir._
 import sttp.tapir.server._
+import sttp.tapir.server.interceptor.ValuedEndpointOutput
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.model.StatusCode
+import sttp.model.{Header, StatusCode}
 import io.circe.generic.auto._
-import sttp.tapir.server.interceptor.decodefailure.{DefaultDecodeFailureResponse, ServerDefaults}
 
 implicit val ec = scala.concurrent.ExecutionContext.global
 case class MyFailure(msg: String)
-def myFailureResponse(response: DefaultDecodeFailureResponse, message: String): DecodeFailureHandling =
-  DecodeFailureHandling.response(ServerDefaults.failureOutput(jsonBody[MyFailure]))(
-   (response, MyFailure(message))
-  )
+def myFailureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
+  ValuedEndpointOutput(statusCode.and(headers).and(jsonBody[MyFailure]), (c, hs, MyFailure(m)))
   
-val myDecodeFailureHandler = ServerDefaults.decodeFailureHandler.copy(
+val myDecodeFailureHandler = DefaultDecodeFailureHandler.handler.copy(
   response = myFailureResponse
 )
 
-implicit val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
+implicit val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
   decodeFailureHandler = myDecodeFailureHandler
 )
 ```
@@ -114,4 +130,4 @@ and endpoint's paths are the same), but when decoding some part of the path ends
 Finally, you can provide custom error messages for validation errors (which optionally describe what failed) and 
 failure errors (which describe the source of the error).
 
-A completely custom implementation of the `DecodeFailureHandler` function can also be used.
+A completely custom implementation of the `DecodeFailureHandler` can also be used.

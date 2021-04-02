@@ -8,7 +8,7 @@ Vert.x interpreter can be used with different effect systems (cats-effect, ZIO) 
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.17.19"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M1"
 ```
 to use this interpreter with `Future`.
 
@@ -31,11 +31,10 @@ functions which take multiple arguments need to be converted to a function using
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.vertx.{ VertxFutureEndpointOptions, VertxFutureServerInterpreter }
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter
 import io.vertx.ext.web._
 import scala.concurrent.Future
 
-implicit val options: VertxFutureEndpointOptions = ???
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
 val aRoute: Router => Route = VertxFutureServerInterpreter.route(anEndpoint)((logic _).tupled)
@@ -46,7 +45,6 @@ An HTTP server can then be started as in the following example:
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.vertx.VertxFutureEndpointOptions
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter._
 import io.vertx.core.Vertx
 import io.vertx.ext.web._
@@ -56,7 +54,6 @@ import scala.concurrent.duration._
 object Main {
   // JVM entry point that starts the HTTP server
   def main(args: Array[String]): Unit = {
-    implicit val options: VertxFutureEndpointOptions = ???
     val vertx = Vertx.vertx()
     val server = vertx.createHttpServer()
     val router = Router.router(vertx)
@@ -83,7 +80,7 @@ It's also possible to define an endpoint together with the server logic in a sin
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.17.19"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M1"
 "com.softwaremill.sttp.shared" %% "fs2" % "LatestVersion"
 ```
 to use this interpreter with Cats Effect typeclasses.
@@ -106,11 +103,8 @@ import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import sttp.tapir._
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
-import sttp.tapir.server.vertx.VertxEffectfulEndpointOptions
 
 object App extends IOApp {
-
-  implicit val opts = VertxEffectfulEndpointOptions()
 
   val responseEndpoint =
     endpoint
@@ -130,8 +124,8 @@ object App extends IOApp {
       val router = Router.router(vertx)
       attach(router)
       server.requestHandler(router).listen(8080)
-    } >>= (_.liftF[IO]))({ server =>
-      IO.delay(server.close) >>= (_.liftF[IO].void)
+    } >>= (_.asF[IO]))({ server =>
+      IO.delay(server.close) >>= (_.asF[IO].void)
     }).use(_ => IO.never)
 }
 ```
@@ -143,17 +137,14 @@ import fs2._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir._
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
-import sttp.tapir.server.vertx.VertxEffectfulEndpointOptions
 
 implicit val effect: ConcurrentEffect[IO] = ???
-
-implicit val opts = VertxEffectfulEndpointOptions()
 
 val streamedResponse =
   endpoint
     .in("stream")
     .in(query[Int]("key"))
-    .out(streamBody(Fs2Streams[IO])(Schema.string, CodecFormat.TextPlain()))
+    .out(streamTextBody(Fs2Streams[IO])(CodecFormat.TextPlain()))
 
 val attach = route(streamedResponse) { key =>
   IO.pure(Right(Stream.chunk(Chunk.array("Hello world!".getBytes)).repeatN(key)))
@@ -164,7 +155,7 @@ val attach = route(streamedResponse) { key =>
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.17.19"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M1"
 "com.softwaremill.sttp.shared" %% "zio" % "LatestVersion"
 ```
 to use this interpreter with ZIO.
@@ -182,14 +173,10 @@ import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import sttp.tapir._
 import sttp.tapir.server.vertx.VertxZioServerInterpreter._
-import sttp.tapir.server.vertx.VertxEffectfulEndpointOptions
 
 import zio._
 
 object Short extends zio.App {
-
-  implicit val opts = VertxEffectfulEndpointOptions()
-
   implicit val runtime = Runtime.default
 
   val responseEndpoint =
@@ -207,8 +194,8 @@ object Short extends zio.App {
       val router = Router.router(vertx)
       attach(router)
       server.requestHandler(router).listen(8080)
-    } >>= (_.asTask))({ server =>
-      ZIO.effect(server.close()).flatMap(_.asTask).orDie
+    } >>= (_.asRIO))({ server =>
+      ZIO.effect(server.close()).flatMap(_.asRIO).orDie
     }).useForever.as(ExitCode.success).orDie
 }
 ```

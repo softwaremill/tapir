@@ -17,7 +17,7 @@ import io.vertx.core.streams.ReadStream
 import io.vertx.core.Handler
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.vertx.streams.ReadStreamState._
-import sttp.tapir.server.vertx.VertxCatsEndpointOptions
+import sttp.tapir.server.vertx.VertxCatsServerOptions
 
 import scala.collection.immutable.{Queue => SQueue}
 
@@ -31,7 +31,7 @@ object fs2 {
       dfd.get
   }
 
-  implicit def fs2ReadStreamCompatible[F[_]](implicit opts: VertxCatsEndpointOptions[F], F: ConcurrentEffect[F]) =
+  implicit def fs2ReadStreamCompatible[F[_]](implicit opts: VertxCatsServerOptions[F], F: ConcurrentEffect[F]) =
     new ReadStreamCompatible[Fs2Streams[F]] {
       override val streams: Fs2Streams[F] = Fs2Streams[F]
 

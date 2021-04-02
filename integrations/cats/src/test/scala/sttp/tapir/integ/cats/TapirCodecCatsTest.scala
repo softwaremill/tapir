@@ -16,26 +16,24 @@ class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
   case class Test(value: String)
 
   it should "find schema for cats collections" in {
-    implicitly[Schema[NonEmptyList[String]]].schemaType shouldBe SArray(Schema(SString))
+    implicitly[Schema[NonEmptyList[String]]].schemaType shouldBe SArray[NonEmptyList[String], String](Schema(SString()))(_.toList)
     implicitly[Schema[NonEmptyList[String]]].isOptional shouldBe false
 
-    implicitly[Schema[NonEmptySet[String]]].schemaType shouldBe SArray(Schema(SString))
+    implicitly[Schema[NonEmptySet[String]]].schemaType shouldBe SArray[NonEmptySet[String], String](Schema(SString()))(_.toSortedSet)
     implicitly[Schema[NonEmptySet[String]]].isOptional shouldBe false
 
-    implicitly[Schema[NonEmptyChain[String]]].schemaType shouldBe SArray(Schema(SString))
+    implicitly[Schema[NonEmptyChain[String]]].schemaType shouldBe SArray[NonEmptyChain[String], String](Schema(SString()))(_.toChain.toList)
     implicitly[Schema[NonEmptyChain[String]]].isOptional shouldBe false
   }
 
   it should "find proper validator for cats collections" in {
     implicit val schemaForTest: Schema[Test] = Schema.derived[Test].validate(Validator.minLength(3).contramap(_.value))
 
-    def expectedValidator[C[X] <: Iterable[X]] = schemaForTest.validator.asIterableElements[C].and(Validator.minSize(1))
+    def expectedValidator[C[X] <: Iterable[X]] = schemaForTest.asIterable[C].validate(Validator.minSize(1))
 
-    implicitly[Schema[NonEmptyList[Test]]].validator.show shouldBe expectedValidator[List].show
-
-    implicitly[Schema[NonEmptySet[Test]]].validator.show shouldBe expectedValidator[List].show
-
-    implicitly[Schema[NonEmptyChain[Test]]].validator.show shouldBe expectedValidator[Set].show
+    implicitly[Schema[NonEmptyList[Test]]].showValidators shouldBe expectedValidator[List].showValidators
+    implicitly[Schema[NonEmptySet[Test]]].showValidators shouldBe expectedValidator[List].showValidators
+    implicitly[Schema[NonEmptyChain[Test]]].showValidators shouldBe expectedValidator[Set].showValidators
   }
 
   implicit def arbitraryNonEmptyList[T: Arbitrary]: Arbitrary[NonEmptyList[T]] =
@@ -77,7 +75,7 @@ class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
 
   it should "have the proper validator" in {
     val codecForNel = implicitly[Codec[List[String], NonEmptyList[String], CodecFormat.TextPlain]]
-    codecForNel.validator.show shouldBe implicitly[Schema[NonEmptyList[String]]].validator.show
+    codecForNel.schema.showValidators shouldBe implicitly[Schema[NonEmptyList[String]]].showValidators
   }
 
   "Provided PlainText codec for non empty chain" should "correctly serialize a non empty chain" in {
@@ -104,7 +102,7 @@ class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
 
   it should "have the proper validator" in {
     val codecForNec = implicitly[Codec[List[String], NonEmptyChain[String], CodecFormat.TextPlain]]
-    codecForNec.validator.show shouldBe implicitly[Schema[NonEmptyChain[String]]].validator.show
+    codecForNec.schema.showValidators shouldBe implicitly[Schema[NonEmptyChain[String]]].showValidators
   }
 
   "Provided PlainText codec for non empty set" should "correctly serialize a non empty set" in {
@@ -131,6 +129,6 @@ class TapirCodecCatsTest extends AnyFlatSpec with Matchers with Checkers {
 
   it should "have the proper validator" in {
     val codecForNes = implicitly[Codec[List[String], NonEmptySet[String], CodecFormat.TextPlain]]
-    codecForNes.validator.show shouldBe implicitly[Schema[NonEmptySet[String]]].validator.show
+    codecForNes.schema.showValidators shouldBe implicitly[Schema[NonEmptySet[String]]].showValidators
   }
 }

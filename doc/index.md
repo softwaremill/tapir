@@ -14,6 +14,7 @@ interpreted as:
   Currently supported:
   * [sttp](client/sttp.md).
   * [Play](client/play.md).
+  * [Http4s](client/http4s.md).
 * documentation. Currently supported:
   * [OpenAPI](docs/openapi.md).
   * [AsyncAPI](docs/asyncapi.md).
@@ -119,7 +120,9 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/statuscodes
    endpoint/codecs
    endpoint/customtypes
+   endpoint/schemas
    endpoint/validation
+   endpoint/contenttype
    endpoint/json
    endpoint/forms
    endpoint/auth
@@ -148,6 +151,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    
    client/sttp
    client/play
+   client/http4s
 
 .. toctree::
    :maxdepth: 2

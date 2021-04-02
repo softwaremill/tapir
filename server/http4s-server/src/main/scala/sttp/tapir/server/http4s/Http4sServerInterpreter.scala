@@ -97,13 +97,12 @@ trait Http4sServerInterpreter {
     Kleisli { (req: Request[F]) =>
       val serverRequest = new Http4sServerRequest(req)
       val interpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, G, Http4sResponseBody[F], Fs2Streams[F]](
-        serverRequest,
         new Http4sRequestBody[F, G](req, serverRequest, serverOptions, t),
         new Http4sToResponseBody[F, G](serverOptions),
         serverOptions.interceptors
       )
 
-      OptionT(interpreter(serverEndpoints).flatMap {
+      OptionT(interpreter(serverRequest, serverEndpoints).flatMap {
         case None           => none.pure[G]
         case Some(response) => t(serverResponseToHttp4s[F](response)).map(_.some)
       })

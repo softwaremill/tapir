@@ -5,9 +5,9 @@ import sttp.model.Method
 import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
+import sttp.tapir.internal._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint, ServerEndpointInParts}
 import sttp.tapir.typelevel.{FnComponents, ParamConcat, ParamSubtract}
-import sttp.tapir.internal._
 
 import scala.collection.immutable.Nil
 import scala.reflect.ClassTag
@@ -117,24 +117,24 @@ trait EndpointOutputsOps[I, E, O, -R] {
   private[tapir] def withOutput[O2, R2](input: EndpointOutput[O2]): EndpointType[I, E, O2, R with R2]
 
   def out[P, OP](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R] =
-    withOutput(output.and(i))
+    withOutput(validated(output.and(i)))
 
   def prependOut[P, PO](i: EndpointOutput[P])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
-    withOutput(i.and(output))
+    withOutput(validated(i.and(output)))
 
   def out[BS, P, OP, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[O, P, OP]): EndpointType[I, E, OP, R with R2] =
-    withOutput(output.and(i.toEndpointIO))
+    withOutput(validated(output.and(i.toEndpointIO)))
 
   def prependOut[BS, P, PO, R2](i: StreamBodyIO[BS, P, R2])(implicit ts: ParamConcat.Aux[P, O, PO]): EndpointType[I, E, PO, R] =
-    withOutput(i.toEndpointIO.and(output))
+    withOutput(validated(i.toEndpointIO.and(output)))
 
   def out[PIPE_REQ_RESP, P, OP, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
       ts: ParamConcat.Aux[O, P, OP]
-  ): EndpointType[I, E, OP, R with R2 with WebSockets] = withOutput(output.and(i.toEndpointOutput))
+  ): EndpointType[I, E, OP, R with R2 with WebSockets] = withOutput(validated(output.and(i.toEndpointOutput)))
 
   def prependOut[PIPE_REQ_RESP, P, PO, R2](i: WebSocketBodyOutput[PIPE_REQ_RESP, _, _, P, R2])(implicit
       ts: ParamConcat.Aux[P, O, PO]
-  ): EndpointType[I, E, PO, R with R2 with WebSockets] = withOutput(i.toEndpointOutput.and(output))
+  ): EndpointType[I, E, PO, R with R2 with WebSockets] = withOutput(validated(i.toEndpointOutput.and(output)))
 
   def mapOut[OO](m: Mapping[O, OO]): EndpointType[I, E, OO, R] =
     withOutput(output.map(m))
@@ -149,6 +149,38 @@ trait EndpointOutputsOps[I, E, O, -R] {
       c: COMPANION
   )(implicit fc: FnComponents[COMPANION, O, CASE_CLASS]): EndpointType[I, E, CASE_CLASS, R] =
     withOutput(output.mapTo(c)(fc))
+
+  private def validated[OP](output: EndpointOutput[OP]): EndpointOutput[OP] = {
+
+    def isBody(o: EndpointOutput.Basic[_]): Boolean = o match {
+      case _ @(EndpointIO.Body(_, _, _) | EndpointIO.StreamBodyWrapper(_)) => true
+      case _                                                               => false
+    }
+
+    output.asBasicOutputsList
+      .map { case (status, outputs) => status -> outputs.filter(isBody) }
+      .groupBy { case (status, _) => status }
+      .map { case (status, outputs) =>
+        val formats = outputs.flatMap { case (_, output) =>
+          output.collect {
+            case EndpointIO.Body(bodyType, codec, _) =>
+              codec.format.mediaType.copy(charset = charset(bodyType).map(_.name()))
+            case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+              codec.format.mediaType.copy(charset = charset.map(_.name()))
+          }
+        }
+        val duplicates = formats.diff(formats.distinct)
+        if (duplicates.nonEmpty) {
+          Left(
+            s"Ambiguous mapping of status ${status.map(_.toString).getOrElse("default status")} to format ${duplicates.mkString(", ")}"
+          )
+        } else Right(())
+      }
+      .partition(_.isLeft) match {
+      case (Nil, _)    => output
+      case (errors, _) => throw new RuntimeException((errors collect { case Left(e) => e }).mkString("\n"))
+    }
+  }
 }
 
 trait EndpointInfoOps[I, E, O, -R] {
@@ -318,11 +350,10 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     * An example use-case is defining an endpoint with fully-defined errors, and with authorization logic built-in.
     * Such an endpoint can be then extended by multiple other endpoints.
     */
-  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[U, Unit, E, O, R, F] =
-    new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
-      override type T = I
-      override def tInput: EndpointInput[T] = outer.input
-      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = _ => f
+  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[I, U, Unit, E, O, R, F] =
+    new PartialServerEndpoint[I, U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+      override def tInput: EndpointInput[I] = outer.input
+      override def partialLogic: MonadError[F] => I => F[Either[E, U]] = _ => f
     }
 
   /** Same as [[serverLogicForCurrent]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
@@ -330,11 +361,10 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     */
   def serverLogicForCurrentRecoverErrors[U, F[_]](
       f: I => F[U]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[U, Unit, E, O, R, F] =
-    new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
-      override type T = I
-      override def tInput: EndpointInput[T] = outer.input
-      override def partialLogic: MonadError[F] => T => F[Either[E, U]] = recoverErrors(f)
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[I, U, Unit, E, O, R, F] =
+    new PartialServerEndpoint[I, U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+      override def tInput: EndpointInput[I] = outer.input
+      override def partialLogic: MonadError[F] => I => F[Either[E, U]] = recoverErrors(f)
     }
 }
 

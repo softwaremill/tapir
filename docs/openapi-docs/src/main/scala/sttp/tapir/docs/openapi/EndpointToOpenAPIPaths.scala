@@ -4,7 +4,7 @@ import sttp.model.Method
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
-import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
+import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.{SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, ResponsesKey}
@@ -26,8 +26,6 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
     val operation = Some(endpointToOperation(defaultId, e, inputs))
     val pathItem = PathItem(
-      None,
-      None,
       get = if (method == GET) operation else None,
       put = if (method == PUT) operation else None,
       post = if (method == POST) operation else None,
@@ -35,9 +33,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       options = if (method == OPTIONS) operation else None,
       head = if (method == HEAD) operation else None,
       patch = if (method == PATCH) operation else None,
-      trace = if (method == TRACE) operation else None,
-      servers = List.empty,
-      parameters = List.empty
+      trace = if (method == TRACE) operation else None
     )
 
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), pathItem)
@@ -58,7 +54,6 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       responses,
       if (e.info.deprecated) Some(true) else None,
       operationSecurity(e),
-      List.empty
     )
   }
 

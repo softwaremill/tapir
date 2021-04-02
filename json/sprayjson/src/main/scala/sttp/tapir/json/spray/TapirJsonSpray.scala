@@ -7,6 +7,7 @@ import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.SchemaType._
 import sttp.tapir._
 
+import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonSpray {
@@ -29,16 +30,16 @@ trait TapirJsonSpray {
     Schema(
       SCoproduct(
         SObjectInfo("spray.json.JsValue"),
-        List.empty,
+        ListMap.empty,
         None
-      )
+      )(_ => None)
     )
 
   implicit val schemaForSprayJsObject: Schema[JsObject] =
     Schema(
       SProduct(
         SObjectInfo("spray.json.JsObject"),
-        Iterable.empty
+        Nil
       )
     )
 }

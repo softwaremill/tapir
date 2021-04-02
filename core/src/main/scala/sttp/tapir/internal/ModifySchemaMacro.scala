@@ -65,16 +65,9 @@ object ModifySchemaMacro {
       case _                       => c.abort(c.enclosingPosition, s"$ShapeInfo, got: ${path.tree}")
     }
 
-    def isOptionalFunctor(tree: c.Tree): Boolean = {
-      tree match {
-        case TypeApply(Select(_, TermName("optionModifyFunctor")), _) => true
-        case _                                                        => false
-      }
-    }
-
     c.Expr[List[String]](q"${pathEls.collect {
       case TermPathElement(c) => c.decodedName.toString
-      case FunctorPathElement(functor, method, _ @_*) if !isOptionalFunctor(functor) =>
+      case FunctorPathElement(functor, method, _ @_*) =>
         method.decodedName.toString
     }}")
   }

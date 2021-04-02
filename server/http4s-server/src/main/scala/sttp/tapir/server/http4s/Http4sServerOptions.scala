@@ -2,11 +2,14 @@ package sttp.tapir.server.http4s
 
 import cats.Applicative
 import cats.effect.{ContextShift, Sync}
+import cats.implicits.catsSyntaxOptionId
 import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.EndpointInterceptor
+import sttp.tapir.server.interceptor.Interceptor
+import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 
 import java.io.File
 import scala.concurrent.ExecutionContext
@@ -19,39 +22,51 @@ case class Http4sServerOptions[F[_], G[_]](
     createFile: ServerRequest => G[File],
     blockingExecutionContext: ExecutionContext,
     ioChunkSize: Int,
-    interceptors: List[EndpointInterceptor[G, Http4sResponseBody[F]]]
+    interceptors: List[Interceptor[G, Http4sResponseBody[F]]]
 ) {
-  def prependInterceptor(i: EndpointInterceptor[G, Http4sResponseBody[F]]): Http4sServerOptions[F, G] =
+  def prependInterceptor(i: Interceptor[G, Http4sResponseBody[F]]): Http4sServerOptions[F, G] =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: EndpointInterceptor[G, Http4sResponseBody[F]]): Http4sServerOptions[F, G] =
+  def appendInterceptor(i: Interceptor[G, Http4sResponseBody[F]]): Http4sServerOptions[F, G] =
     copy(interceptors = interceptors :+ i)
 }
 
 object Http4sServerOptions {
 
-  /** Creates default [[Http4sServerOptions]] with custom interceptors, sitting between an optional logging
-    * interceptor, and the ultimate decode failure handling interceptor.
+  /** Creates default [[Http4sServerOptions]] with custom interceptors, sitting between two interceptor groups:
+    * 1. the optional exception interceptor and the optional logging interceptor (which should typically be first
+    *    when processing the request, and last when processing the response)),
+    * 2. the optional unsupported media type interceptor and the decode failure handling interceptor (which should
+    *    typically be last when processing the request).
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
     *
+    * @param exceptionHandler Whether to respond to exceptions, or propagate them to http4s.
     * @param serverLog The server log using which an interceptor will be created, if any. To keep the default, use
     *                  `Http4sServerOptions.Log.defaultServerLog`
     * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
     *                               responses.
+    * @param unsupportedMediaTypeInterceptor Whether to return 415 (unsupported media type) if there's no body in the
+    *                                        endpoint's outputs, which can satisfy the constraints from the `Accept`
+    *                                        header
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors[F[_], G[_]: Sync: ContextShift](
+      exceptionHandler: Option[ExceptionHandler],
       serverLog: Option[ServerLog[G[Unit]]],
-      additionalInterceptors: List[EndpointInterceptor[G, Http4sResponseBody[F]]] = Nil,
+      additionalInterceptors: List[Interceptor[G, Http4sResponseBody[F]]] = Nil,
+      unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]] =
+        new UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]().some,
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
       defaultCreateFile[G].apply(ExecutionContext.Implicits.global),
       ExecutionContext.Implicits.global,
       8192,
-      serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
+      exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
+        serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
         additionalInterceptors ++
+        unsupportedMediaTypeInterceptor.toList ++
         List(new DecodeFailureInterceptor[G, Http4sResponseBody[F]](decodeFailureHandler))
     )
 
@@ -77,5 +92,6 @@ object Http4sServerOptions {
       }
   }
 
-  implicit def default[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] = customInterceptors(Some(Log.defaultServerLog[G]))
+  implicit def default[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] =
+    customInterceptors(Some(DefaultExceptionHandler), Some(Log.defaultServerLog[G]))
 }

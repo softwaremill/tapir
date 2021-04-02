@@ -2,8 +2,9 @@ package sttp.tapir.docs.openapi
 
 import sttp.tapir.apispec._
 import sttp.tapir.docs.apispec.exampleValue
-import sttp.tapir.{Codec, EndpointIO}
+import sttp.tapir.internal.IterableToListMap
 import sttp.tapir.openapi.Example
+import sttp.tapir.{Codec, EndpointIO}
 
 import scala.collection.immutable.ListMap
 
@@ -21,7 +22,7 @@ private[openapi] object ExampleConverter {
       case examples =>
         val exampleValues = examples.zipWithIndex.map { case (example, i) =>
           example.name.getOrElse(s"Example$i") ->
-            Right(Example(summary = example.summary, description = None, value = exampleValue(example.value), externalValue = None))
+            Right(Example(summary = example.summary, value = exampleValue(example.value)))
         }.toListMap
         Examples(None, exampleValues)
     }

@@ -29,7 +29,7 @@ import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Random
 
-class AkkaHttpCreateServerTest extends TestSuite with EitherValues {
+class AkkaHttpServerTest extends TestSuite with EitherValues {
   def randomUUID = Some(UUID.randomUUID().toString)
   val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
   val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
