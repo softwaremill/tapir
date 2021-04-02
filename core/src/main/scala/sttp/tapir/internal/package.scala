@@ -308,6 +308,6 @@ package object internal {
       toPrimitives(v)
     }
 
-    def traversePrimitives[T](handle: PartialFunction[Validator[_], Vector[T]]): Vector[T] = asPrimitiveValidators.collect(handle).flatten.toVector
+    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] = asPrimitiveValidators.collect(handle).flatten.toVector
   }
 }
