@@ -70,8 +70,8 @@ Options can be customised by providing an implicit instance of `AsyncAPIDocsOpti
 * `publishOperationId`: as above, but for publishing (sending messages to the web socket).
 * `referenceEnums`: defines if enums should be converted to async api components and referenced later.
   This option can be applied to all enums in the schema, or only specific ones.
-  `SObjectInfo` FIP is a unique identifier of object in the schema.
-  By default, it is the path to that object (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
+  `SObjectInfo` input parameter is a unique identifier of object in the schema.
+  By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
 
 ## Exposing AsyncAPI documentation
 
