@@ -23,7 +23,15 @@ excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
-  mimaPreviousArtifacts := Set.empty, //Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
+  mimaPreviousArtifacts := {
+    val minorUnchanged = previousStableVersion.value.flatMap(CrossVersion.partialVersion) == CrossVersion.partialVersion(version.value)
+    val isRcOrMilestone = version.value.contains("M") || version.value.contains("RC")
+    if(minorUnchanged && !isRcOrMilestone)
+      previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
+    else
+      Set.empty
+  },
+  versionScheme := Some("early-semver"),
   updateDocs := Def.taskDyn {
     val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
     Def.task {
