@@ -48,7 +48,7 @@ object Validator extends ValidatorEnumMacro {
     * decoded in the first place (the decoder has no other option than to fail).
     */
   def derivedEnum[T]: Validator.Enum[T] = macro validatorForEnum[T]
-  def enum[T](possibleValues: List[T]): Validator.Enum[T] = Enum(possibleValues, None)
+  def enum[T](possibleValues: List[T]): Validator.Enum[T] = Enum(possibleValues, None, None)
 
   /** @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
     *               This will be automatically inferred if the validator is directly added to a codec.
@@ -129,7 +129,7 @@ object Validator extends ValidatorEnumMacro {
     }
   }
 
-  case class Enum[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], info: Option[SObjectInfo] = None) extends Primitive[T] {
+  case class Enum[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], info: Option[SObjectInfo]) extends Primitive[T] {
     override def apply(t: T): List[ValidationError[_]] = {
       if (possibleValues.contains(t)) {
         List.empty

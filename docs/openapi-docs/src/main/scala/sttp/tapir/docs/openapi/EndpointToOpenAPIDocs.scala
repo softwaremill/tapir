@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import sttp.tapir._
-import sttp.tapir.docs.apispec.schema.SchemasForEndpoints
+import sttp.tapir.docs.apispec.schema.{SchemasForEndpoints, ToObjectSchema}
 import sttp.tapir.docs.apispec.{SecuritySchemesForEndpoints, nameAllPathCapturesInEndpoint}
 import sttp.tapir.internal._
 import sttp.tapir.openapi._
@@ -11,7 +11,8 @@ import scala.collection.immutable.ListMap
 private[openapi] object EndpointToOpenAPIDocs {
   def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions): OpenAPI = {
     val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
-    val (keyToSchema, schemas) = new SchemasForEndpoints(es2, options.schemaName, options.referenceEnums).apply()
+    val toObjectSchema = new ToObjectSchema(options.referenceEnums)
+    val (keyToSchema, schemas) = new SchemasForEndpoints(es2, options.schemaName, toObjectSchema).apply()
     val securitySchemes = SecuritySchemesForEndpoints(es2)
     val pathCreator = new EndpointToOpenAPIPaths(schemas, securitySchemes, options)
     val componentsCreator = new EndpointToOpenAPIComponents(keyToSchema, securitySchemes)

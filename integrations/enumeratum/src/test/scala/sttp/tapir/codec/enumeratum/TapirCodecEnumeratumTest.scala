@@ -5,7 +5,7 @@ import enumeratum.values._
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.SchemaType.{SInteger, SString}
+import sttp.tapir.SchemaType.{SInteger, SObjectInfo, SString}
 import sttp.tapir.{DecodeResult, Schema, Validator}
 
 class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
@@ -44,23 +44,27 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
       validator match {
         case Validator.Enum(_, Some(encode), info) =>
           encode(v) shouldBe Some(v.entryName)
-          info.isDefined shouldBe true
-        case a                                  => fail(s"Expected enum validator with encode function: got $a")
+          info shouldBe Some(SObjectInfo(fullName(`enum`)))
+        case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }
 
-  private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE])(implicit enum: E) = {
+  private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE])(implicit
+      enum: E
+  ) = {
     enum.values.foreach { v =>
       validator(v) shouldBe Nil
       validator match {
         case Validator.Enum(_, Some(encode), info) =>
           encode(v) shouldBe Some(v.value)
-          info.isDefined shouldBe true
+          info shouldBe Some(SObjectInfo(fullName(`enum`)))
         case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }
+
+  private def fullName[E](e: E) = s"$className${e.getClass.getSimpleName}".replace("$", ".")
 
   it should "find correct plain codec for enumeratum enum entries" in {
     testEnumPlainCodec(implicitly[PlainCodec[TestEnumEntry]])
@@ -88,6 +92,8 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
 }
 
 object TapirCodecEnumeratumTest {
+  private val className = this.getClass.getName
+
   sealed trait TestEnumEntry extends EnumEntry
 
   object TestEnumEntry extends Enum[TestEnumEntry] {

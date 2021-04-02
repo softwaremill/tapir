@@ -1,26 +1,12 @@
 package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.internal._
 import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
 
 import scala.collection.mutable.ListBuffer
 
-class ToObjectSchema(referenceEnums: SObjectInfo => Boolean = _ => false) {
-
-  /** Keeps only the first object data for each `SObjectInfo`. In case of recursive objects, the first one is the
-    * most complete as it contains the built-up structure, unlike subsequent ones, which only represent leaves (#354).
-    */
-  def unique(objs: Iterable[ObjectSchema]): Iterable[ObjectSchema] = {
-    val seen: collection.mutable.Set[TSchemaType.SObjectInfo] = collection.mutable.Set()
-    val result: ListBuffer[(TSchemaType.SObjectInfo, TSchema[_])] = ListBuffer()
-    objs.foreach { obj =>
-      if (!seen.contains(obj._1)) {
-        seen.add(obj._1)
-        result += obj
-      }
-    }
-    result.toList
-  }
+class ToObjectSchema(val referenceEnums: SObjectInfo => Boolean) {
 
   def apply[T](codec: Codec[_, T, _]): List[ObjectSchema] = apply(codec.schema)
 
@@ -44,8 +30,11 @@ class ToObjectSchema(referenceEnums: SObjectInfo => Boolean = _ => false) {
     (st.info -> s: ObjectSchema) +: st.fields
       .flatMap(a =>
         a.schema match {
-          case s @ TSchema(_, _, _, _, _, _, _, _ @Validator.Enum(_, _, Some(info))) if referenceEnums(info) =>
-            List(info -> s: ObjectSchema)
+          case s @ TSchema(_, _, _, _, _, _, _, v) =>
+            v.traversePrimitives { case Validator.Enum(_, _, Some(info)) => Vector(info) } match {
+              case info +: _ if referenceEnums(info) => List(info -> s: ObjectSchema)
+              case _                                 => apply(a.schema)
+            }
           case _ => apply(a.schema)
         }
       )
@@ -57,8 +46,25 @@ class ToObjectSchema(referenceEnums: SObjectInfo => Boolean = _ => false) {
       .toList
   }
 
-  private def fieldsSchema(p: TSchemaType.SProduct[_]): Seq[TSchema[_]] = p.fields.map(_.schema)
-
   private def subtypesSchema(st: TSchemaType.SCoproduct[_]): Seq[TSchema[_]] =
     st.subtypes.values.collect { case s @ TSchema(_: TSchemaType.SProduct[_], _, _, _, _, _, _, _) => s }.toSeq
+}
+
+object ToObjectSchema {
+
+  /** Keeps only the first object data for each `SObjectInfo`. In case of recursive objects, the first one is the
+    * most complete as it contains the built-up structure, unlike subsequent ones, which only represent leaves (#354).
+    */
+  def unique(objs: Iterable[ObjectSchema]): Iterable[ObjectSchema] = {
+    val seen: collection.mutable.Set[TSchemaType.SObjectInfo] = collection.mutable.Set()
+    val result: ListBuffer[(TSchemaType.SObjectInfo, TSchema[_])] = ListBuffer()
+    objs.foreach { obj =>
+      if (!seen.contains(obj._1)) {
+        seen.add(obj._1)
+        result += obj
+      }
+    }
+    result.toList
+  }
+
 }

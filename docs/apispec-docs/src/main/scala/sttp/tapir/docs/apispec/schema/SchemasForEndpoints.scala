@@ -10,15 +10,15 @@ import scala.collection.immutable.ListMap
 class SchemasForEndpoints(
     es: Iterable[Endpoint[_, _, _, _]],
     schemaName: SObjectInfo => String,
-    referenceEnums: SObjectInfo => Boolean = _ => false
+    toObjectSchema: ToObjectSchema
 ) {
 
   def apply(): (ListMap[ObjectKey, ReferenceOr[ASchema]], Schemas) = {
-    val sObjects = toObjectSchema.unique(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
+    val sObjects = ToObjectSchema.unique(es.flatMap(e => forInput(e.input) ++ forOutput(e.errorOutput) ++ forOutput(e.output)))
     val infoToKey = calculateUniqueKeys(sObjects.map(_._1), schemaName)
 
     val objectToSchemaReference = new ObjectToSchemaReference(infoToKey)
-    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference, referenceEnums)
+    val tschemaToASchema = new TSchemaToASchema(objectToSchemaReference, toObjectSchema.referenceEnums)
     val schemas = new Schemas(tschemaToASchema, objectToSchemaReference)
     val infosToSchema = sObjects.map(td => (td._1, tschemaToASchema(td._2))).toListMap
 
@@ -68,6 +68,4 @@ class SchemasForEndpoints(
       case EndpointIO.Empty(_, _)                                     => List.empty
     }
   }
-
-  private val toObjectSchema = new ToObjectSchema(referenceEnums)
 }
