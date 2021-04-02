@@ -186,7 +186,7 @@ object DefaultDecodeFailureHandler {
               s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
             case Validator.MaxSize(value) =>
               s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
-            case Validator.Enum(possibleValues, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
+            case Validator.Enum(possibleValues, _, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
           }
         case c: ValidationError.Custom[T] =>
           s"expected $valueName to pass custom validation: ${c.message}, but was '${ve.invalidValue}'"

@@ -100,7 +100,7 @@ object Mapping {
   }
 
   private[tapir] def addEncodeToEnumValidator[T](v: Validator[T], encode: T => Any): Validator[T] = v match {
-    case v @ Validator.Enum(_, None) => v.encode(encode)
-    case _                           => v
+    case v @ Validator.Enum(_, None, _) => v.encode(encode)
+    case _                              => v
   }
 }

@@ -1,5 +1,6 @@
 package sttp.tapir
 
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.generic.internal.ValidatorEnumMacro
 
 import scala.collection.immutable
@@ -47,12 +48,13 @@ object Validator extends ValidatorEnumMacro {
     * decoded in the first place (the decoder has no other option than to fail).
     */
   def derivedEnum[T]: Validator.Enum[T] = macro validatorForEnum[T]
-  def enum[T](possibleValues: List[T]): Validator.Enum[T] = Enum(possibleValues, None)
+  def enum[T](possibleValues: List[T]): Validator.Enum[T] = Enum(possibleValues, None, None)
 
   /** @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
     *               This will be automatically inferred if the validator is directly added to a codec.
     */
-  def enum[T](possibleValues: List[T], encode: EncodeToRaw[T]): Validator.Enum[T] = Enum(possibleValues, Some(encode))
+  def enum[T](possibleValues: List[T], encode: EncodeToRaw[T], info: Option[SObjectInfo] = None): Validator.Enum[T] =
+    Enum(possibleValues, Some(encode), info)
 
   //
 
@@ -127,7 +129,7 @@ object Validator extends ValidatorEnumMacro {
     }
   }
 
-  case class Enum[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]]) extends Primitive[T] {
+  case class Enum[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], info: Option[SObjectInfo]) extends Primitive[T] {
     override def apply(t: T): List[ValidationError[_]] = {
       if (possibleValues.contains(t)) {
         List.empty
@@ -172,16 +174,16 @@ object Validator extends ValidatorEnumMacro {
 
   def show[T](v: Validator[T]): Option[String] = {
     v match {
-      case Min(value, exclusive)   => Some(s"${if (exclusive) ">" else ">="}$value")
-      case Max(value, exclusive)   => Some(s"${if (exclusive) "<" else "<="}$value")
-      case Pattern(value)          => Some(s"~$value")
-      case MinLength(value)        => Some(s"length>=$value")
-      case MaxLength(value)        => Some(s"length<=$value")
-      case MinSize(value)          => Some(s"size>=$value")
-      case MaxSize(value)          => Some(s"size<=$value")
-      case Custom(_, showMessage)  => showMessage.orElse(Some("custom"))
-      case Enum(possibleValues, _) => Some(s"in(${possibleValues.mkString(",")}")
-      case Mapped(wrapped, _)      => show(wrapped)
+      case Min(value, exclusive)      => Some(s"${if (exclusive) ">" else ">="}$value")
+      case Max(value, exclusive)      => Some(s"${if (exclusive) "<" else "<="}$value")
+      case Pattern(value)             => Some(s"~$value")
+      case MinLength(value)           => Some(s"length>=$value")
+      case MaxLength(value)           => Some(s"length<=$value")
+      case MinSize(value)             => Some(s"size>=$value")
+      case MaxSize(value)             => Some(s"size<=$value")
+      case Custom(_, showMessage)     => showMessage.orElse(Some("custom"))
+      case Enum(possibleValues, _, _) => Some(s"in(${possibleValues.mkString(",")}")
+      case Mapped(wrapped, _)         => show(wrapped)
       case All(validators) =>
         validators.flatMap(show(_)) match {
           case immutable.Seq()  => None
