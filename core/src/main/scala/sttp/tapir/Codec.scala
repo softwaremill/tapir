@@ -92,7 +92,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
       override def format: CF = outer.format
     }
   def schema(s2: Option[Schema[H]]): Codec[L, H, CF] = s2.map(schema).getOrElse(this)
-  def modifySchema(modify: Schema[H] => Schema[H]): Codec[L, H, CF] = schema(modify(schema))
+  def schema(modify: Schema[H] => Schema[H]): Codec[L, H, CF] = schema(modify(schema))
 
   def format[CF2 <: CodecFormat](f: CF2): Codec[L, H, CF2] =
     new Codec[L, H, CF2] {
@@ -103,6 +103,10 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     }
 
   def validate(v: Validator[H]): Codec[L, H, CF] = schema(schema.validate(Mapping.addEncodeToEnumValidator(v, encode)))
+  def validateOption[U](v: Validator[U])(implicit hIsOptionU: H =:= Option[U]): Codec[L, H, CF] =
+    schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+  def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit hIsCU: H =:= C[U]): Codec[L, H, CF] =
+    schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
 object Codec extends CodecExtensions with FormCodecDerivation {
