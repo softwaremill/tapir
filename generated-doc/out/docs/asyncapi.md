@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "0.18.0-M1"
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "0.18.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "0.18.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "0.18.0-M2"
 ```
 
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
@@ -68,6 +68,10 @@ Options can be customised by providing an implicit instance of `AsyncAPIDocsOpti
 * `subscribeOperationId`: basing on the endpoint's path and the entire endpoint, determines the id of the subscribe 
   operation. This can be later used by code generators as the name of the method to receive messages from the socket.
 * `publishOperationId`: as above, but for publishing (sending messages to the web socket).
+* `referenceEnums`: defines if enums should be converted to async api components and referenced later.
+  This option can be applied to all enums in the schema, or only specific ones.
+  `SObjectInfo` input parameter is a unique identifier of object in the schema.
+  By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
 
 ## Exposing AsyncAPI documentation
 

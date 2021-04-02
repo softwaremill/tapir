@@ -32,6 +32,15 @@ val e = endpoint.in(
     .validate(Validator.max(100)))
 ``` 
 
+For optional/iterable inputs/outputs, to validate the contained value(s), use:
+
+```scala
+import sttp.tapir._
+
+query[Option[Int]]("item").validateOption(Validator.min(0))
+query[List[Int]]("item").validateIterable(Validator.min(0)) // validates each repeated parameter
+```
+
 Validation rules added using the built-in validators are translated to [OpenAPI](../docs/openapi.md) documentation.
 
 ## Validation rules and automatic codec derivation
