@@ -713,7 +713,7 @@ lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-moc
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, serverTests % "test", sttpClient, circeJson /*todo: remove*/ )
+  .dependsOn(core, serverTests % "test", sttpClient)
 
 lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-server"))
   .settings(commonJvmSettings)
@@ -913,7 +913,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUiHttp4s,
     zioServer,
     sttpStubServer,
-    playJson
+    playJson,
+    sttpMockServer
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
