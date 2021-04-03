@@ -53,5 +53,5 @@ with dependencies on akka-streams and fs2 being marked as optional (hence these 
 
 ## Scala.JS
 
-The client interpreter also supports Scala.JS, the request must then be send using the 
+The client interpreter also supports Scala.JS, the request must then be sent using the 
 [sttp client Scala.JS Fetch backend](https://sttp.softwaremill.com/en/latest/backends/javascript/fetch.html).
