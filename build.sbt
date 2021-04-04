@@ -355,11 +355,15 @@ lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype")
   .settings(
     name := "tapir-newtype",
     libraryDependencies ++= Seq(
-      "io.estatico" %% "newtype" % Versions.newtype,
+      "io.estatico" %%% "newtype" % Versions.newtype,
       scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
   .dependsOn(core)
 
 // json
