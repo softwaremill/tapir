@@ -56,7 +56,7 @@ private[asyncapi] class MessagesForEndpoints(schemas: Schemas, schemaName: SObje
       Nil,
       None,
       Nil,
-      convertedExamples,
+      if (convertedExamples.isEmpty) Nil else List(Map("payload" -> convertedExamples)),
       Nil
     )
   }
