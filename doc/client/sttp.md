@@ -38,7 +38,7 @@ for example usage.
 
 ## Web sockets
 
-To interpret a web socket enddpoint, an additional streams-specific import is needed, so that the interpreter can
+To interpret a web socket endpoint, an additional streams-specific import is needed, so that the interpreter can
 convert sttp's `WebSocket` instance into a pipe. This logic is looked up via the `WebSocketToPipe` implicit.
 
 The required imports are as follows:
