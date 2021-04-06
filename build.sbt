@@ -39,8 +39,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
 
-// run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ browserGeckoTestSettings
+// run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
+val commonJsSettings = commonSettings ++ browserChromeTestSettings
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
