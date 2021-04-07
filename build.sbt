@@ -39,8 +39,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
 
-// run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
-val commonJsSettings = commonSettings ++ browserGeckoTestSettings
+// run JS tests inside Chrome, due to jsdom not supporting fetch and to avoid having to install node
+val commonJsSettings = commonSettings ++ browserChromeTestSettings
 
 def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*): Seq[ModuleID] =
   deps.map(_.apply(CrossVersion.partialVersion(version)))
@@ -266,7 +266,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "org.typelevel" %%% "discipline-scalatest" % "2.1.2" % Test,
+      "org.typelevel" %%% "discipline-scalatest" % "2.1.3" % Test,
       "org.typelevel" %%% "cats-laws" % "2.5.0" % Test
     )
   )
@@ -355,11 +355,15 @@ lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype")
   .settings(
     name := "tapir-newtype",
     libraryDependencies ++= Seq(
-      "io.estatico" %% "newtype" % Versions.newtype,
+      "io.estatico" %%% "newtype" % Versions.newtype,
       scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
   .dependsOn(core)
 
 // json
@@ -466,8 +470,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.7.0",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.7.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.7.1",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.7.1" % Test,
       scalaTest.value % Test
     )
   )

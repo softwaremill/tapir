@@ -1,0 +1,46 @@
+openapi: 3.0.3
+info:
+  title: Errors
+  version: '1.0'
+paths:
+  /error1:
+    get:
+      operationId: getError1
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error1Response'
+  /error2:
+    get:
+      operationId: getError2
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error2Response'
+components:
+  schemas:
+    Error1Response:
+      required:
+        - error
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorCode'
+    ErrorCode:
+      type: integer
+      enum:
+        - '1'
+        - '2'
+    Error2Response:
+      required:
+        - error
+      type: object
+      properties:
+        error:
+          $ref: '#/components/schemas/ErrorCode'

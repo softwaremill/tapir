@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: Games
+  version: '1.0'
+paths:
+  /totalWar:
+    get:
+      operationId: getTotalwar
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TotalWar'
+  /callOfDuty:
+    get:
+      operationId: getCallofduty
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CallOfDuty'
+components:
+  schemas:
+    TotalWar:
+      required:
+        - game
+        - episode
+      type: object
+      properties:
+        game:
+          $ref: '#/components/schemas/Game'
+        episode:
+          type: string
+          enum:
+            - first
+            - second
+    Game:
+      type: string
+      enum:
+        - action
+        - strategy
+    CallOfDuty:
+      required:
+        - game
+        - episode
+      type: object
+      properties:
+        game:
+          $ref: '#/components/schemas/Game'
+        episode:
+          type: string
+          enum:
+            - first
+            - second

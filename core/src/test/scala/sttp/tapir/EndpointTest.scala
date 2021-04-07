@@ -229,6 +229,21 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     input.codec.schema.applyValidation(2) shouldBe empty
   }
 
+  it should "add validator for an option" in {
+    val input = query[Option[Int]]("x").validateOption(Validator.min(1))
+    input.codec.schema.applyValidation(Some(0)) should not be empty
+    input.codec.schema.applyValidation(Some(2)) shouldBe empty
+    input.codec.schema.applyValidation(None) shouldBe empty
+  }
+
+  it should "add validator for an iterable" in {
+    val input = query[List[Int]]("x").validateIterable(Validator.min(1))
+    input.codec.schema.applyValidation(List(0)) should not be empty
+    input.codec.schema.applyValidation(List(2, 0)) should not be empty
+    input.codec.schema.applyValidation(List(2, 2)) shouldBe empty
+    input.codec.schema.applyValidation(Nil) shouldBe empty
+  }
+
   val httpMethodTestData = List(
     endpoint -> None,
     endpoint.in("api" / "cats" / path[String]).get -> Some(Method.GET),
@@ -253,7 +268,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     case class User1(x: String, y: Int)
     case class User2(z: Double)
     case class Result(u1: User1, u2: User2, a: String)
-    val base: PartialServerEndpoint[User1, Unit, String, Unit, Any, Future] = endpoint
+    val base: PartialServerEndpoint[(String, Int), User1, Unit, String, Unit, Any, Future] = endpoint
       .errorOut(stringBody)
       .in(query[String]("x"))
       .in(query[Int]("y"))
@@ -297,7 +312,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   "PartialServerEndpoint" should "include all inputs when recovering the endpoint" in {
-    val pe: PartialServerEndpoint[String, Unit, Int, Unit, Any, Future] =
+    val pe: PartialServerEndpoint[String, String, Unit, Int, Unit, Any, Future] =
       endpoint
         .in("secure")
         .in(query[String]("token"))

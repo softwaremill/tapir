@@ -6,7 +6,8 @@ import sttp.tapir.docs.apispec.defaultSchemaName
 
 case class OpenAPIDocsOptions(
     operationIdGenerator: (Vector[String], Method) => String,
-    schemaName: SObjectInfo => String = defaultSchemaName
+    schemaName: SObjectInfo => String = defaultSchemaName,
+    referenceEnums: SObjectInfo => Boolean = _ => false
 )
 
 object OpenAPIDocsOptions {

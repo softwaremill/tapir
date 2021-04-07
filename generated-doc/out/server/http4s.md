@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.17.19"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.18.0-M2"
 ```
 
 and import the object:
@@ -113,7 +113,7 @@ val routes = Http4sServerInterpreter.toRoutes(sseEndpoint)(_ =>
 
 ## Configuration
 
-The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see
+The interpreter can be configured by providing an implicit `Http4sServerOptions` value, see
 [server options](options.md) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.

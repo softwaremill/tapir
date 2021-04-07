@@ -292,4 +292,22 @@ package object internal {
       b.result()
     }
   }
+
+  implicit class ValidatorSyntax(v: Validator[_]) {
+
+    def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {
+      def toPrimitives(v: Validator[_]): Seq[Validator.Primitive[_]] = {
+        v match {
+          case Validator.Mapped(wrapped, _) => toPrimitives(wrapped)
+          case Validator.All(validators)    => validators.flatMap(toPrimitives)
+          case Validator.Any(validators)    => validators.flatMap(toPrimitives)
+          case Validator.Custom(_, _)       => Nil
+          case bv: Validator.Primitive[_]   => List(bv)
+        }
+      }
+      toPrimitives(v)
+    }
+
+    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] = asPrimitiveValidators.collect(handle).flatten.toVector
+  }
 }
