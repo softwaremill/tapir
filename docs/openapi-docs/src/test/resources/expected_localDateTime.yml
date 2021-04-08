@@ -15,3 +15,9 @@ paths:
       responses:
         '200':
           description: ''
+        '400':
+          description: 'Invalid value for: query parameter localDateTime'
+          content:
+            text/plain:
+              schema:
+                type: string

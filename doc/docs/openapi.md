@@ -80,6 +80,13 @@ Options can be customised by providing an implicit instance of `OpenAPIDocsOptio
   This option can be applied to all enums in the schema, or only specific ones. 
   `SObjectInfo` input parameter is a unique identifier of object in the schema. 
   By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
+* `defaultDecodeFailureOutput`: if an endpoint does not define a Bad Request response in `errorOut`,
+  tapir will try to guess if decoding of inputs may fail, and add a 400 response if necessary.
+  You can override this option to customize the mapping of endpoint's inputs to a default error response.
+  If you'd like to disable this feature, just provide a function that always returns `None`:
+  ```scala
+  OpenAPIDocsOptions.default.copy(defaultDecodeFailureOutput = _ => None)
+  ```
 
 ## OpenAPI Specification Extensions
 

@@ -15,6 +15,12 @@ paths:
       responses:
         '200':
           description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
   /p2:
     get:
       operationId: getP2
@@ -27,6 +33,12 @@ paths:
       responses:
         '200':
           description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   schemas:
     GenericEntity_String:

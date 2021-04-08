@@ -1,23 +1,23 @@
 openapi: 3.0.3
 info:
-  title: Fruits
+  title: Entities
   version: '1.0'
 paths:
-  /add/path:
+  /:
     get:
-      operationId: getAddPath
+      operationId: getRoot
       parameters:
-        - name: fruit
+        - name: amount
           in: query
           required: true
           schema:
-            type: string
-            pattern: apple|banana
+            type: integer
+            minimum: 0
       responses:
         '200':
           description: ''
         '400':
-          description: 'Invalid value for: query parameter fruit'
+          description: 'Invalid value for: query parameter amount'
           content:
             text/plain:
               schema:
