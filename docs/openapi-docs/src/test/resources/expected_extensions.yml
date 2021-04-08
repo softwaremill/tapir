@@ -36,6 +36,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/FruitAmount'
           x-response: foo
+        '400':
+          description: 'Invalid value for: query parameter hi, Invalid value for:
+                        body'
+          content:
+            text/plain:
+              schema:
+                type: string
         default:
           description: ''
           content:

@@ -24,3 +24,10 @@ paths:
             text/plain:
               schema:
                 type: string
+        '400':
+          description: 'Invalid value for: query parameter fruit, Invalid value for:
+                        query parameter amount'
+          content:
+            text/plain:
+              schema:
+                type: string

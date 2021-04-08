@@ -21,6 +21,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Book'
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   schemas:
     Book:

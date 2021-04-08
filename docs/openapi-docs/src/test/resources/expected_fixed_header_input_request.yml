@@ -16,3 +16,9 @@ paths:
       responses:
         '200':
           description: ''
+        '400':
+          description: 'Invalid value for: header Location: Poland'
+          content:
+            text/plain:
+              schema:
+                type: string
