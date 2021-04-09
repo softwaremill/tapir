@@ -13,7 +13,7 @@ trait TapirCodecEnumeratum {
   implicit def schemaForEnumEntry[E <: EnumEntry](implicit enum: Enum[E]): Schema[E] =
     Schema(SchemaType.SString, validator = validatorEnumEntry)
 
-  private def plainCodecEnumEntryUsing[E <: EnumEntry](f: String => Option[E])(implicit enum: Enum[E]) =
+  def plainCodecEnumEntryUsing[E <: EnumEntry](f: String => Option[E])(implicit enum: Enum[E]): Codec[String, E, CodecFormat.TextPlain] =
     Codec.string
       .mapDecode { s =>
         f(s)
