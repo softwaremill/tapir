@@ -11,7 +11,7 @@ val allScalaVersions = List(scala2_12, scala2_13)
 val scala2_12Versions = List(scala2_12)
 val documentationScalaVersion = scala2_12 // Documentation depends on finatraServer, which is 2.12 only
 
-scalaVersion := scala2_12
+scalaVersion := scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
@@ -30,7 +30,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       files1 ++ Seq(file("generated-doc/out"))
     }
   }.value,
-  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
+  ideSkipProject := (scalaVersion.value == scala2_12) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
@@ -95,6 +95,7 @@ lazy val allAggregates = core.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
   zioServer.projectRefs ++
+  zhttpServer.projectRefs ++
   sttpClient.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
@@ -793,6 +794,18 @@ lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-se
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(zio, http4sServer, serverTests % Test)
 
+lazy val zhttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-zio-http-server",
+    libraryDependencies ++= Seq(
+      "io.d11" %% "zhttp" % "1.0.0.0-RC15"
+    )
+  )
+  .jvmPlatform(scalaVersions = List(scala2_13))
+  .dependsOn(zio)
+
+
 // client
 
 lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
@@ -918,7 +931,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .jvmPlatform(scalaVersions = scala2_12Versions)
+  .jvmPlatform(scalaVersions = List(scala2_13))
   .dependsOn(
     akkaHttpServer,
     http4sServer,
@@ -932,6 +945,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUiAkka,
     swaggerUiHttp4s,
     zioServer,
+    zhttpServer,
     sttpStubServer,
     playJson
   )
