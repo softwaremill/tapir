@@ -8,8 +8,9 @@ val scala2_12 = "2.12.13"
 val scala2_13 = "2.13.5"
 
 val allScalaVersions = List(scala2_12, scala2_13)
-val scala2_12Versions = List(scala2_12)
-val documentationScalaVersion = scala2_12 // Documentation depends on finatraServer, which is 2.12 only
+val codegenScalaVersions = List(scala2_12)
+val examplesScalaVersions = List(scala2_13)
+val documentationScalaVersion = scala2_13
 
 scalaVersion := scala2_12
 
@@ -639,7 +640,7 @@ lazy val swaggerUiFinatra: ProjectMatrix = (projectMatrix in file("docs/swagger-
       "org.webjars" % "swagger-ui" % Versions.swaggerUi
     )
   )
-  .jvmPlatform(scalaVersions = scala2_12Versions)
+  .jvmPlatform(scalaVersions = allScalaVersions)
 
 lazy val swaggerUiPlay: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-play"))
   .settings(commonJvmSettings)
@@ -737,10 +738,9 @@ lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-s
       "com.twitter" %% "inject-app" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-core" % Versions.finatra % Test classifier "tests",
       "com.twitter" %% "inject-modules" % Versions.finatra % Test classifier "tests"
-    ),
-    dependencyOverrides += "org.scalatest" %% "scalatest" % "3.1.2" // TODO: finatra testing utilities are not compatible with newer scalatest
+    )
   )
-  .jvmPlatform(scalaVersions = scala2_12Versions)
+  .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, serverTests % Test)
 
 lazy val finatraServerCats: ProjectMatrix =
@@ -754,7 +754,7 @@ lazy val finatraServerCats: ProjectMatrix =
         "io.catbird" %% "catbird-effect" % Versions.catbird
       )
     )
-    .jvmPlatform(scalaVersions = scala2_12Versions)
+    .jvmPlatform(scalaVersions = allScalaVersions)
     .dependsOn(finatraServer % "compile->compile;test->test", serverTests % Test)
 
 lazy val playServer: ProjectMatrix = (projectMatrix in file("server/play-server"))
@@ -875,7 +875,7 @@ import scala.collection.JavaConverters._
 lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
   .enablePlugins(SbtPlugin)
   .settings(commonSettings)
-  .jvmPlatform(scalaVersions = scala2_12Versions)
+  .jvmPlatform(scalaVersions = codegenScalaVersions)
   .settings(
     name := "sbt-openapi-codegen",
     organization := "com.softwaremill.sttp.tapir",
@@ -918,7 +918,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .jvmPlatform(scalaVersions = scala2_12Versions)
+  .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
     akkaHttpServer,
     http4sServer,
@@ -952,7 +952,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     libraryDependencies ++= loggerDependencies,
     publishArtifact := false
   )
-  .jvmPlatform(scalaVersions = scala2_12Versions)
+  .jvmPlatform(scalaVersions = examplesScalaVersions)
   .dependsOn(
     akkaHttpServer,
     http4sServer,
