@@ -12,7 +12,7 @@ val codegenScalaVersions = List(scala2_12)
 val examplesScalaVersions = List(scala2_13)
 val documentationScalaVersion = scala2_13
 
-scalaVersion := scala2_12
+scalaVersion := scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
@@ -31,7 +31,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       files1 ++ Seq(file("generated-doc/out"))
     }
   }.value,
-  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
+  ideSkipProject := (scalaVersion.value == scala2_12) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
