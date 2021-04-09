@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx.interpreters
 
-import cats.effect.{Async, ConcurrentEffect, Effect}
+import cats.effect.{Async, IO, LiftIO, Sync}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -25,8 +25,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     * @return A function, that given a router, will attach this endpoint to it
     */
   def route[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]])(implicit
-      endpointOptions: VertxCatsServerOptions[F],
-      effect: ConcurrentEffect[F]
+      endpointOptions: VertxCatsServerOptions[F]
   ): Router => Route =
     route(e.serverLogic(logic))
 
@@ -39,7 +38,6 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
       logic: I => F[O]
   )(implicit
       endpointOptions: VertxCatsServerOptions[F],
-      effect: ConcurrentEffect[F],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
   ): Router => Route =
@@ -52,16 +50,15 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
   def route[F[_], I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
   )(implicit
-      endpointOptions: VertxCatsServerOptions[F],
-      effect: ConcurrentEffect[F]
+      endpointOptions: VertxCatsServerOptions[F]
   ): Router => Route = { router =>
     import sttp.tapir.server.vertx.streams.fs2._
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
   }
 
-  private def endpointHandler[F[_], I, E, O, A, S: ReadStreamCompatible](
+  private def endpointHandler[F[_]: Async: LiftIO, I, E, O, A, S: ReadStreamCompatible](
       e: ServerEndpoint[I, E, O, _, F]
-  )(implicit serverOptions: VertxCatsServerOptions[F], effect: Effect[F]): Handler[RoutingContext] = { rc =>
+  )(implicit serverOptions: VertxCatsServerOptions[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     val fFromVFuture = new CatsFFromVFuture[F]
     val interpreter = new ServerInterpreter(
@@ -85,7 +82,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     ()
   }
 
-  private[vertx] def monadError[F[_]](implicit F: Effect[F]): MonadError[F] = new MonadError[F] {
+  private[vertx] def monadError[F[_]](implicit F: Sync[F]): MonadError[F] = new MonadError[F] {
     override def unit[T](t: T): F[T] = F.pure(t)
     override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
     override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
@@ -95,7 +92,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     override def eval[T](t: => T): F[T] = F.delay(t)
     override def suspend[T](t: => F[T]): F[T] = F.defer(t)
     override def flatten[T](ffa: F[F[T]]): F[T] = F.flatten(ffa)
-    override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guarantee(f)(e)
+    override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guaranteeCase(f)(_ => e)
   }
 
   private[vertx] class CatsFFromVFuture[F[_]: Async] extends FromVFuture[F] {

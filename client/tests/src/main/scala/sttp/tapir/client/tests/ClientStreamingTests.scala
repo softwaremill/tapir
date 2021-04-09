@@ -1,5 +1,6 @@
 package sttp.tapir.client.tests
 
+import cats.effect.unsafe.implicits.global
 import sttp.capabilities.Streams
 import sttp.tapir.DecodeResult
 import sttp.tapir.tests.{in_stream_out_stream, not_existing_endpoint}

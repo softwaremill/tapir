@@ -1,5 +1,6 @@
 package sttp.tapir.client.tests
 
+import cats.effect.unsafe.implicits.global
 import sttp.tapir.tests._
 
 trait ClientMultipartTests { this: ClientTests[Any] =>

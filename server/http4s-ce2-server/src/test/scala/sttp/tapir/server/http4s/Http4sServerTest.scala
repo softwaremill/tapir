@@ -2,7 +2,6 @@ package sttp.tapir.server.http4s
 
 import cats.effect._
 import cats.syntax.all._
-import cats.effect.unsafe.implicits.global
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
@@ -38,6 +37,8 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     def randomUUID = Some(UUID.randomUUID().toString)
     val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
+
+    import interpreter.timer
 
     def additionalTests(): List[Test] = List(
       Test("should work with a router and routes in a context") {

@@ -1,6 +1,7 @@
 package sttp.tapir.client.tests
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import sttp.capabilities.{Streams, WebSockets}
 import sttp.tapir._
 import sttp.tapir.json.circe._
@@ -43,7 +44,9 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
 
     test("web sockets, client-terminated echo using fragmented frames") {
       send(
-        endpoint.get.in("ws" / "echo" / "fragmented").out(webSocketBody[String, CodecFormat.TextPlain, WebSocketFrame, CodecFormat.TextPlain].apply(streams)),
+        endpoint.get
+          .in("ws" / "echo" / "fragmented")
+          .out(webSocketBody[String, CodecFormat.TextPlain, WebSocketFrame, CodecFormat.TextPlain].apply(streams)),
         port,
         (),
         "ws"

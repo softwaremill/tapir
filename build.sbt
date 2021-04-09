@@ -34,7 +34,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
-  scalacOptions += "-Ywarn-macros:after"
+  scalacOptions += "-Ywarn-macros:after",
+  evictionErrorLevel := Level.Info
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
@@ -137,12 +138,12 @@ lazy val rootProject = (project in file("."))
   .settings(
     publishArtifact := false,
     name := "tapir",
-    testJVM := (test in Test).all(filterProject(p => !p.contains("JS"))).value,
-    testJS := (test in Test).all(filterProject(_.contains("JS"))).value,
-    testDocs := (test in Test).all(filterProject(p => p.contains("Docs") || p.contains("openapi") || p.contains("asyncapi"))).value,
-    testServers := (test in Test).all(filterProject(p => p.contains("Server"))).value,
-    testClients := (test in Test).all(filterProject(p => p.contains("Client"))).value,
-    testOther := (test in Test)
+    testJVM := (Test / test).all(filterProject(p => !p.contains("JS"))).value,
+    testJS := (Test / test).all(filterProject(_.contains("JS"))).value,
+    testDocs := (Test / test).all(filterProject(p => p.contains("Docs") || p.contains("openapi") || p.contains("asyncapi"))).value,
+    testServers := (Test / test).all(filterProject(p => p.contains("Server"))).value,
+    testClients := (Test / test).all(filterProject(p => p.contains("Client"))).value,
+    testOther := (Test / test)
       .all(
         filterProject(p =>
           !p.contains("Server") && !p.contains("Client") && !p.contains("Docs") && !p.contains("openapi") && !p.contains("asyncapi")
@@ -155,14 +156,14 @@ lazy val rootProject = (project in file("."))
 // start a test server before running tests of a client interpreter; this is required both for JS tests run inside a
 // nodejs/browser environment, as well as for JVM tests where akka-http isn't available (e.g. dotty).
 val clientTestServerSettings = Seq(
-  test in Test := (test in Test)
-    .dependsOn(startClientTestServer in clientTestServer2_13)
+  Test / test := (Test / test)
+    .dependsOn(clientTestServer2_13 / startClientTestServer)
     .value,
-  testOnly in Test := (testOnly in Test)
-    .dependsOn(startClientTestServer in clientTestServer2_13)
+  Test / testOnly := (Test / testOnly)
+    .dependsOn(clientTestServer2_13 / startClientTestServer)
     .evaluated,
-  testOptions in Test += Tests.Setup(() => {
-    val port = (clientTestServerPort in clientTestServer2_13).value
+  Test / testOptions += Tests.Setup(() => {
+    val port = (clientTestServer2_13 / clientTestServerPort).value
     PollingUtils.waitUntilServerAvailable(new URL(s"http://localhost:$port"))
   })
 )
@@ -171,16 +172,16 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
   .settings(commonJvmSettings)
   .settings(
     name := "testing-server",
-    skip in publish := true,
+    publish / skip := true,
     libraryDependencies ++= loggerDependencies ++ Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s
     ),
     // the test server needs to be started before running any client tests
-    mainClass in reStart := Some("sttp.tapir.client.tests.HttpServer"),
-    reStartArgs in reStart := Seq(s"${(clientTestServerPort in Test).value}"),
-    fullClasspath in reStart := (fullClasspath in Test).value,
+    reStart / mainClass := Some("sttp.tapir.client.tests.HttpServer"),
+    reStart / reStartArgs := Seq(s"${(Test / clientTestServerPort).value}"),
+    reStart / fullClasspath := (reStart / fullClasspath).value,
     clientTestServerPort := 51823,
     startClientTestServer := reStart.toTask("").value
   )
@@ -205,8 +206,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       scalaTestPlusScalaCheck.value % Test,
       "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.5.0" % Test
     ),
-    unmanagedSourceDirectories in Compile += {
-      val sourceDir = (sourceDirectory in Compile).value
+    Compile / unmanagedSourceDirectories += {
+      val sourceDir = (Compile / sourceDirectory).value
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, n)) if n >= 13 => sourceDir / "scala-2.13+"
         case _                       => sourceDir / "scala-2.13-"
@@ -214,8 +215,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     },
     // Until https://youtrack.jetbrains.com/issue/SCL-18636 is fixed and IntelliJ properly imports projects with
     // generated sources, they are explicitly added to git. See also below: commented out plugin.
-    unmanagedSourceDirectories in Compile += {
-      (sourceDirectory in Compile).value / "boilerplate-gen"
+    Compile / unmanagedSourceDirectories += {
+      (Compile / sourceDirectory).value / "boilerplate-gen"
     }
   )
   .jvmPlatform(
@@ -748,11 +749,7 @@ lazy val finatraServerCats: ProjectMatrix =
     .settings(commonJvmSettings)
     .settings(
       name := "tapir-finatra-server-cats",
-      libraryDependencies ++= Seq(
-        "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-        "io.catbird" %% "catbird-finagle" % Versions.catbird,
-        "io.catbird" %% "catbird-effect" % Versions.catbird
-      )
+      libraryDependencies ++= Seq("org.typelevel" %% "cats-effect" % Versions.catsEffect)
     )
     .jvmPlatform(scalaVersions = scala2_12Versions)
     .dependsOn(finatraServer % "compile->compile;test->test", serverTests % Test)

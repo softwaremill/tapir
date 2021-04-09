@@ -10,7 +10,7 @@ private[http4s] class CatsMonadError[F[_]](implicit F: Sync[F]) extends MonadErr
   override def error[T](t: Throwable): F[T] = F.raiseError(t)
   override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
   override def eval[T](t: => T): F[T] = F.delay(t)
-  override def suspend[T](t: => F[T]): F[T] = F.defer(t)
+  override def suspend[T](t: => F[T]): F[T] = F.suspend(t)
   override def flatten[T](ffa: F[F[T]]): F[T] = F.flatten(ffa)
-  override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guaranteeCase(f)(_ => e)
+  override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guarantee(f)(e)
 }

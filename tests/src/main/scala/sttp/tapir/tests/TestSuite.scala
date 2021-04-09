@@ -1,13 +1,11 @@
 package sttp.tapir.tests
 
-import cats.effect.{ContextShift, IO, Resource}
+import cats.effect.{IO, Resource}
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
+import cats.effect.unsafe.implicits.global
 
 trait TestSuite extends AnyFunSuite with BeforeAndAfterAll {
-
-  implicit lazy val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
-
   def tests: Resource[IO, List[Test]]
   def testNameFilter: Option[String] = None // define to run a single test (temporarily for debugging)
 
