@@ -1,7 +1,10 @@
 package sttp.tapir.client.tests
 
 import cats.effect._
+import cats.effect.std.Queue
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
+import fs2.{Pipe, Stream}
 import org.http4s.dsl.io._
 import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
@@ -9,9 +12,9 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._
-import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.{multipart, _}
+import org.typelevel.ci.CIString
 import scodec.bits.ByteVector
 import sttp.tapir.client.tests.HttpServer._
 
@@ -30,10 +33,6 @@ class HttpServer(port: Port) {
 
   private val logger = org.log4s.getLogger
 
-  implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit private val timer: Timer[IO] = IO.timer(ec)
-
   private var stopServer: IO[Unit] = _
 
   //
@@ -50,23 +49,25 @@ class HttpServer(port: Port) {
       if (f == "papaya") {
         Accepted("29")
       } else {
-        Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
+        Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header.Raw(CIString("X-Role"), f.length.toString))
       }
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
     case _ @GET -> Root / "api" / "unit"                                   => Ok("{}")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ GET -> Root / "api" / "echo" / "headers" =>
-      val headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse))
-      val filteredHeaders = r.headers.find(_.name.value.equalsIgnoreCase("Cookie")) match {
-        case Some(c) => headers.filter(_.name.value.equalsIgnoreCase("Cookie")) :+ Header("Set-Cookie", c.value.reverse)
+      val headers = r.headers.headers.map(h => Header.Raw(CIString(h.name.toString), h.value.reverse))
+      val filteredHeaders: List[Header.Raw] = r.headers.headers.find(_.name.toString.equalsIgnoreCase("Cookie")) match {
+        case Some(c) => headers.filter(_.name.toString.equalsIgnoreCase("Cookie")) :+ Header.Raw(CIString("Set-Cookie"), c.value.reverse)
         case None    => headers
       }
-      Ok(headers = filteredHeaders: _*)
+      okOnlyHeaders(filteredHeaders.map(x => x: Header.ToRaw))
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
-      Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
+      okOnlyHeaders(r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header.Raw(CIString("hh"), v): Header.ToRaw))
     case r @ GET -> Root / "api" / "echo" / "param-to-upper-header" =>
-      Ok(headers = r.uri.multiParams.map { case (k, v) => Header(k.toUpperCase(), v.headOption.getOrElse("?")) }.toSeq: _*)
+      okOnlyHeaders(r.uri.multiParams.map { case (k, v) =>
+        Header.Raw(CIString(k.toUpperCase()), v.headOption.getOrElse("?")): Header.ToRaw
+      }.toSeq)
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
         val parts: Vector[multipart.Part[IO]] = mp.parts
@@ -78,22 +79,22 @@ class HttpServer(port: Port) {
       }
     case r @ POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))
     case r @ GET -> Root =>
-      r.headers.get(CaseInsensitiveString("X-Role")) match {
-        case None    => Ok()
-        case Some(h) => Ok("Role: " + h.value)
+      r.headers.get(CIString("X-Role")) match {
+        case None     => Ok()
+        case Some(hs) => Ok("Role: " + hs.head.value)
       }
 
     case r @ GET -> Root / "secret" =>
-      r.headers.get(CaseInsensitiveString("Location")) match {
-        case None    => BadRequest()
-        case Some(h) => Ok("Location: " + h.value)
+      r.headers.get(CIString("Location")) match {
+        case None     => BadRequest()
+        case Some(hs) => Ok("Location: " + hs.head.value)
       }
 
     case DELETE -> Root / "api" / "delete" => Ok()
 
     case r @ GET -> Root / "auth" :? apiKeyOptParam(ak) =>
-      val authHeader = r.headers.get(CaseInsensitiveString("Authorization")).map(_.value)
-      val xApiKey = r.headers.get(CaseInsensitiveString("X-Api-Key")).map(_.value)
+      val authHeader = r.headers.get(CIString("Authorization")).map(_.head.value)
+      val xApiKey = r.headers.get(CIString("X-Api-Key")).map(_.head.value)
       Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; Query=$ak")
 
     case GET -> Root / "mapping" :? numParam(v) =>
@@ -102,7 +103,7 @@ class HttpServer(port: Port) {
     case _ @GET -> Root / "status" :? statusOutParam(status) =>
       status match {
         case 204 => NoContent()
-        case 200 => Ok(`Content-Type`(MediaType.text.plain))
+        case 200 => Ok.headers(`Content-Type`(MediaType.text.plain))
         case _   => BadRequest()
       }
 
@@ -116,11 +117,11 @@ class HttpServer(port: Port) {
           }
         }
 
-      fs2.concurrent.Queue
+      Queue
         .unbounded[IO, WebSocketFrame]
         .flatMap { q =>
-          val d = q.dequeue.through(echoReply)
-          val e = q.enqueue
+          val d = Stream.repeatEval(q.take).through(echoReply)
+          val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
           WebSocketBuilder[IO].build(d, e)
         }
 
@@ -134,11 +135,11 @@ class HttpServer(port: Port) {
           )
         }
 
-      fs2.concurrent.Queue
+      Queue
         .unbounded[IO, WebSocketFrame]
         .flatMap { q =>
-          val d = q.dequeue.through(echoReply)
-          val e = q.enqueue
+          val d = Stream.repeatEval(q.take).through(echoReply)
+          val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
           WebSocketBuilder[IO].build(d, e)
         }
 
@@ -155,8 +156,12 @@ class HttpServer(port: Port) {
       }
   }
 
+  private def okOnlyHeaders(headers: Seq[Header.ToRaw]): IO[Response[IO]] = IO.pure {
+    Response(headers = Headers(headers))
+  }
+
   private def fromAcceptHeader(r: Request[IO])(f: PartialFunction[String, IO[Response[IO]]]): IO[Response[IO]] =
-    r.headers.get(Accept).map(h => f(h.value)).getOrElse(NotAcceptable())
+    r.headers.get[Accept].map(h => f(h.values.head.toString())).getOrElse(NotAcceptable())
 
   private val organizationXml = Ok("<name>sml-xml</name>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
   private val organizationJson = Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
@@ -168,7 +173,7 @@ class HttpServer(port: Port) {
   //
 
   def start(): Unit = {
-    val (_, _stopServer) = BlazeServerBuilder[IO](ec)
+    val (_, _stopServer) = BlazeServerBuilder[IO](ExecutionContext.global)
       .bindHttp(port)
       .withHttpApp(app)
       .resource

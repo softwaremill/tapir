@@ -1,6 +1,6 @@
 package sttp.tapir.redoc.http4s
 
-import cats.effect.{ContextShift, Sync}
+import cats.effect.Sync
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers._
 import org.http4s.{Charset, HttpRoutes, MediaType}
@@ -33,17 +33,17 @@ class RedocHttp4s(
     rawHtml.replace("{{docsPath}}", yamlName).replace("{{title}}", title).replace("{{redocVersion}}", redocVersion)
   }
 
-  def routes[F[_]: ContextShift: Sync]: HttpRoutes[F] = {
+  def routes[F[_]: Sync]: HttpRoutes[F] = {
     val dsl = Http4sDsl[F]
     import dsl._
 
-    val rootPath = contextPath.foldLeft(Root: Path)(_ / _)
+    val rootPath = contextPath.foldLeft(Root: Path)(_ / Path.Segment(_))
 
     HttpRoutes.of[F] {
       case GET -> `rootPath` / "" =>
         Ok(html, `Content-Type`(MediaType.text.html, Charset.`UTF-8`))
       case req @ GET -> `rootPath` =>
-        PermanentRedirect(Location(req.uri.withPath(req.uri.path.concat("/"))))
+        PermanentRedirect(Location(req.uri.withPath(req.uri.path / Path.Segment(""))))
       case GET -> `rootPath` / `yamlName` =>
         Ok(yaml, `Content-Type`(MediaType.text.yaml, Charset.`UTF-8`))
     }

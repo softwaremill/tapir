@@ -1,7 +1,7 @@
 package sttp.tapir.client.sttp
 
 import akka.actor.ActorSystem
-import cats.effect.{ContextShift, IO}
+import cats.effect.IO
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.client3._
@@ -12,7 +12,6 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import scala.concurrent.ExecutionContext
 
 abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends ClientTests[R] {
-  implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.Implicits.global)
   implicit val actorSystem = ActorSystem("tests")
   val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
   def wsToPipe: WebSocketToPipe[R]
