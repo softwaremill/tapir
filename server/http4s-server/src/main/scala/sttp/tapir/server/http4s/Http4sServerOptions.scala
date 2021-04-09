@@ -74,7 +74,7 @@ object Http4sServerOptions {
     ec => _ => cs.evalOn(ec)(sync.delay(Defaults.createTempFile()))
 
   object Log {
-    def defaultServerLog[F[_]: Sync]: ServerLog[F[Unit]] =
+    def defaultServerLog[F[_]: Sync]: DefaultServerLog[F[Unit]] =
       DefaultServerLog[F[Unit]](
         doLogWhenHandled = debugLog[F],
         doLogAllDecodeFailures = debugLog[F],
