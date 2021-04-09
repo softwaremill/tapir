@@ -478,6 +478,20 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   )
   .dependsOn(core)
 
+// metrics
+
+lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file ("metrics/prometheus-metrics"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-prometheus-metrics",
+    libraryDependencies ++= Seq(
+      "io.prometheus" % "simpleclient_common" % "0.10.0",
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core)
+
 // apispec
 
 lazy val apispecModel: ProjectMatrix = (projectMatrix in file("apispec/apispec-model"))
@@ -929,7 +943,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUiHttp4s,
     zioServer,
     sttpStubServer,
-    playJson
+    playJson,
+    prometheusMetrics
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))

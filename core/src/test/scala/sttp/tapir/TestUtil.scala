@@ -1,7 +1,47 @@
 package sttp.tapir
 
+import sttp.capabilities.Streams
+import sttp.model.HasHeaders
+import sttp.monad.MonadError
 import sttp.tapir.SchemaType.SProductField
+import sttp.tapir.internal.NoStreams
+import sttp.tapir.server.interpreter.{RequestBody, ToResponseBody}
+
+import java.nio.charset.Charset
 
 object TestUtil {
   def field[T, U](_name: FieldName, _schema: Schema[U]): SchemaType.SProductField[T] = SProductField[T, U](_name, _schema, _ => None)
+
+  type Id[X] = X
+
+  object TestRequestBody extends RequestBody[Id, Nothing] {
+    override val streams: Streams[Nothing] = NoStreams
+    override def toRaw[R](bodyType: RawBodyType[R]): Id[R] = ???
+    override def toStream(): streams.BinaryStream = ???
+  }
+
+  object TestToResponseBody extends ToResponseBody[Unit, Nothing] {
+    override val streams: Streams[Nothing] = NoStreams
+    override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): Unit = ()
+    override def fromStreamValue(
+        v: streams.BinaryStream,
+        headers: HasHeaders,
+        format: CodecFormat,
+        charset: Option[Charset]
+    ): Unit = ???
+    override def fromWebSocketPipe[REQ, RESP](
+        pipe: streams.Pipe[REQ, RESP],
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+    ): Unit = ???
+  }
+
+  implicit val idMonadError: MonadError[Id] = new MonadError[Id] {
+    override def unit[T](t: T): Id[T] = t
+    override def map[T, T2](fa: Id[T])(f: T => T2): Id[T2] = f(fa)
+    override def flatMap[T, T2](fa: Id[T])(f: T => Id[T2]): Id[T2] = f(fa)
+    override def error[T](t: Throwable): Id[T] = throw t
+    override protected def handleWrappedError[T](rt: Id[T])(h: PartialFunction[Throwable, Id[T]]): Id[T] = rt
+    override def ensure[T](f: Id[T], e: => Id[Unit]): Id[T] = try f
+    finally e
+  }
 }
