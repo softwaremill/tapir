@@ -1,7 +1,5 @@
 package sttp.tapir.server.vertx.streams
 
-import cats.effect.concurrent.Deferred
-import cats.effect.concurrent.Ref
 import cats.effect.syntax.concurrent._
 import cats.effect.ConcurrentEffect
 import cats.effect.ExitCase
@@ -20,6 +18,7 @@ import sttp.tapir.server.vertx.streams.ReadStreamState._
 import sttp.tapir.server.vertx.VertxCatsServerOptions
 
 import scala.collection.immutable.{Queue => SQueue}
+import cats.effect.{ Deferred, Ref }
 
 object fs2 {
 
