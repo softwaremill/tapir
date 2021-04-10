@@ -354,8 +354,9 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     * An example use-case is defining an endpoint with fully-defined errors, and with authorization logic built-in.
     * Such an endpoint can be then extended by multiple other endpoints.
     */
-  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[I, U, Unit, E, O, R, F] =
-    new PartialServerEndpoint[I, U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[U, Unit, E, O, R, F] =
+    new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+      type T = I
       override def tInput: EndpointInput[I] = outer.input
       override def partialLogic: MonadError[F] => I => F[Either[E, U]] = _ => f
     }
@@ -365,8 +366,9 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     */
   def serverLogicForCurrentRecoverErrors[U, F[_]](
       f: I => F[U]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[I, U, Unit, E, O, R, F] =
-    new PartialServerEndpoint[I, U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[U, Unit, E, O, R, F] =
+    new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+      type T = I
       override def tInput: EndpointInput[I] = outer.input
       override def partialLogic: MonadError[F] => I => F[Either[E, U]] = recoverErrors(f)
     }

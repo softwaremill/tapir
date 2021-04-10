@@ -26,7 +26,7 @@ object PartialServerLogicAkka extends App {
     }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
-  val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Future] = endpoint
+  val secureEndpoint: PartialServerEndpoint[User, Unit, Int, Unit, Any, Future] = endpoint
     .in(header[String]("X-AUTH-TOKEN"))
     .errorOut(plainBody[Int])
     .serverLogicForCurrent(auth)
