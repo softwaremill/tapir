@@ -19,8 +19,8 @@ import scala.reflect.ClassTag
 
 class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
     extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route] {
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
+  override def route(
+      e: ServerEndpoint[AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): Route = {
     implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(

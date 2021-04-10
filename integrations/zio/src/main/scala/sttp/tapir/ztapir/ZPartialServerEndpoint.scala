@@ -4,7 +4,7 @@ import sttp.tapir.internal.{ParamsAsAny, mkCombine, _}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.ParamConcat
 import sttp.tapir.{EndpointInfo, EndpointInfoOps, EndpointInput, EndpointInputsOps, EndpointMetaOps, EndpointOutput, EndpointOutputsOps}
-import zio.ZIO
+import zio.{RIO, ZIO}
 
 /** An endpoint, with some of the server logic already provided, and some left unspecified.
   * See [[RichZEndpoint.zServerLogicForCurrent]].
@@ -27,14 +27,15 @@ import zio.ZIO
 abstract class ZPartialServerEndpoint[R, U, I, E, O](val endpoint: ZEndpoint[I, E, O])
     extends EndpointInputsOps[I, E, O, Nothing]
     with EndpointOutputsOps[I, E, O, Nothing]
-    with EndpointInfoOps[I, E, O, Nothing]
-    with EndpointMetaOps[I, E, O, Nothing] { outer =>
+    with EndpointInfoOps[Nothing]
+    with EndpointMetaOps { outer =>
   // original type of the partial input (transformed into U)
   type T
   protected def tInput: EndpointInput[T]
   protected def partialLogic: T => ZIO[R, E, U]
 
   override type EndpointType[_I, _E, _O, -_R] = ZPartialServerEndpoint[R, U, _I, _E, _O]
+  override type ThisType[-_R] = ZPartialServerEndpoint[R, U, I, E, O]
 
   override def input: EndpointInput[I] = endpoint.input
   def errorOutput: EndpointOutput[E] = endpoint.errorOutput
@@ -70,8 +71,8 @@ abstract class ZPartialServerEndpoint[R, U, I, E, O](val endpoint: ZEndpoint[I, 
       }
     }
 
-  def serverLogic[R0](g: ((U, I)) => ZIO[R0, E, O]): ZServerEndpoint[R with R0, (T, I), E, O] =
-    ServerEndpoint(
+  def serverLogic[R0](g: ((U, I)) => ZIO[R0, E, O]): ZServerEndpoint[R with R0] =
+    ServerEndpoint[(T, I), E, O, Any, RIO[R with R0, *]](
       endpoint.prependIn(tInput): ZEndpoint[(T, I), E, O],
       _ => { case (t, i) =>
         partialLogic(t).flatMap(u => g((u, i))).either

@@ -23,8 +23,8 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
 
   private val taskFromVFuture = new RioFromVFuture[Any]
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, ZioStreams, Task],
+  override def route(
+      e: ServerEndpoint[ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route = {
     implicit val options: VertxZioServerOptions[Task] =

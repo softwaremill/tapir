@@ -7,7 +7,7 @@ import sttp.tapir.server.vertx.routing.PathMapping.{RouteDefinition, createRoute
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 
 trait CommonServerInterpreter {
-  protected def mountWithDefaultHandlers[F[_], I, E, O, C, S: ReadStreamCompatible](e: ServerEndpoint[I, E, O, C, F])(
+  protected def mountWithDefaultHandlers[F[_], C, S: ReadStreamCompatible](e: ServerEndpoint[C, F])(
       router: Router,
       routeDef: RouteDefinition
   ): Route =

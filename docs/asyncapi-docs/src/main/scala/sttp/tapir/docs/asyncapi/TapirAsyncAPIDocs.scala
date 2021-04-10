@@ -34,7 +34,7 @@ trait TapirAsyncAPIDocs {
       AsyncAPIInterpreter.toAsyncAPI(es, info, servers)
   }
 
-  implicit class RichOpenAPIServerEndpoints[F[_]](ses: Iterable[ServerEndpoint[_, _, _, _, F]]) {
+  implicit class RichOpenAPIServerEndpoints[F[_]](ses: Iterable[ServerEndpoint[_, F]]) {
     @deprecated("Use AsyncAPIInterpreter.serverEndpointsToAsyncAPI", since = "0.17.1")
     def toAsyncAPI(title: String, version: String)(implicit options: AsyncAPIDocsOptions): AsyncAPI =
       AsyncAPIInterpreter.serverEndpointsToAsyncAPI(ses, Info(title, version), Nil)

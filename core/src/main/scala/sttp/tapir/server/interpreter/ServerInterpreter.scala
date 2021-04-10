@@ -14,10 +14,10 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     toResponseBody: ToResponseBody[B, S],
     interceptors: List[Interceptor[F, B]]
 ) {
-  def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] =
+  def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[R, F]): F[Option[ServerResponse[B]]] =
     apply(request, List(se))
 
-  def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[B]]] =
+  def apply(request: ServerRequest, ses: List[ServerEndpoint[R, F]]): F[Option[ServerResponse[B]]] =
     callInterceptors(interceptors, request, Nil, (request2, eis) => apply(request2, ses, eis))
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
@@ -37,7 +37,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
 
   private def apply(
       request: ServerRequest,
-      ses: List[ServerEndpoint[_, _, _, R, F]],
+      ses: List[ServerEndpoint[R, F]],
       endpointInterceptors: List[EndpointInterceptor[F, B]]
   ): F[Option[ServerResponse[B]]] =
     ses match {
@@ -49,12 +49,12 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         }
     }
 
-  private def apply[I, E, O](
+  private def apply(
       request: ServerRequest,
-      se: ServerEndpoint[I, E, O, R, F],
+      se: ServerEndpoint[R, F],
       endpointInterceptors: List[EndpointInterceptor[F, B]]
   ): F[Option[ServerResponse[B]]] = {
-    def valueToResponse(i: I): F[ServerResponse[B]] = {
+    def valueToResponse(i: se.I): F[ServerResponse[B]] = {
       se.logic(implicitly)(i)
         .map {
           case Right(result) => outputToResponse(request, defaultSuccessStatusCode, se.endpoint.output, result)
@@ -68,7 +68,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case values: DecodeBasicInputsResult.Values =>
         InputValue(se.endpoint.input, values) match {
           case InputValueResult.Value(params, _) =>
-            callInterceptorsOnDecodeSuccess(request, endpointInterceptors, se.endpoint, params.asAny.asInstanceOf[I], valueToResponse)
+            callInterceptorsOnDecodeSuccess(request, endpointInterceptors, se.endpoint, params.asAny.asInstanceOf[se.I], valueToResponse)
               .map(Some(_))
           case InputValueResult.Failure(input, failure) =>
             callInterceptorsOnDecodeFailure(request, endpointInterceptors, se.endpoint, input, failure)

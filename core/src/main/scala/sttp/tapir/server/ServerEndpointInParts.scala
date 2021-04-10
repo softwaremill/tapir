@@ -26,8 +26,8 @@ import scala.reflect.ClassTag
   * @tparam F The effect type used in the provided server logic.
   */
 abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: Endpoint[I, E, O, R])
-    extends EndpointInfoOps[I, E, O, R]
-    with EndpointMetaOps[I, E, O, R] { outer =>
+    extends EndpointInfoOps[R]
+    with EndpointMetaOps { outer =>
 
   /** Part of the input, consumed by `logicFragment`.
     */
@@ -35,7 +35,7 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
   protected def splitInput: I => (T, IR)
   protected def logicFragment: MonadError[F] => T => F[Either[E, U]]
 
-  override type EndpointType[_I, _E, _O, -_R] = ServerEndpointInParts[U, IR, _I, _E, _O, _R, F]
+  override type ThisType[-_R] = ServerEndpointInParts[U, IR, I, E, O, _R, F]
   override def input: EndpointInput[I] = endpoint.input
   override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
   override def output: EndpointOutput[O] = endpoint.output
@@ -53,20 +53,20 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
   /** Complete the server logic for this endpoint, given the result of applying the partial server logic, and
     * the remaining input.
     */
-  def andThen(remainingLogic: ((U, IR)) => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] = andThenM(_ => remainingLogic)
+  def andThen(remainingLogic: ((U, IR)) => F[Either[E, O]]): ServerEndpoint[R, F] = andThenM(_ => remainingLogic)
 
   /** Same as [[andThen]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
     * endpoint errors.
     */
   def andThenRecoverErrors(
       remainingLogic: ((U, IR)) => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, R, F] =
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[R, F] =
     andThenM(recoverErrors(remainingLogic))
 
-  private def andThenM(remainingLogic: MonadError[F] => ((U, IR)) => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] =
+  private def andThenM(remainingLogic: MonadError[F] => ((U, IR)) => F[Either[E, O]]): ServerEndpoint[R, F] =
     ServerEndpoint(
       endpoint,
-      { implicit monad => i =>
+      { implicit monad => (i: I) =>
         {
           val (t, r): (T, IR) = splitInput(i)
           logicFragment(monad)(t).flatMap {

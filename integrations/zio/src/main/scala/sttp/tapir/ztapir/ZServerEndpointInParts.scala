@@ -23,8 +23,8 @@ import zio.ZIO
   * @tparam O Output parameter types.
   */
 abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[I, E, O])
-    extends EndpointInfoOps[I, E, O, Nothing]
-    with EndpointMetaOps[I, E, O, Nothing] { outer =>
+    extends EndpointInfoOps[Nothing]
+    with EndpointMetaOps { outer =>
 
   /** Part of the input, consumed by `logicFragment`.
     */
@@ -32,7 +32,7 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
   protected def splitInput: I => (T, J)
   protected def logicFragment: T => ZIO[R, E, U]
 
-  override type EndpointType[_I, _E, _O, -_R] = ZServerEndpointInParts[R, U, J, _I, _E, _O]
+  override type ThisType[-_R] = ZServerEndpointInParts[R, U, J, I, E, O]
   override def input: EndpointInput[I] = endpoint.input
   override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
   override def output: EndpointOutput[O] = endpoint.output
@@ -50,10 +50,10 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
   /** Complete the server logic for this endpoint, given the result of applying the partial server logic, and
     * the remaining input.
     */
-  def andThen[R2 <: R](remainingLogic: ((U, J)) => ZIO[R2, E, O]): ZServerEndpoint[R2, I, E, O] =
+  def andThen[R2 <: R](remainingLogic: ((U, J)) => ZIO[R2, E, O]): ZServerEndpoint[R2] =
     ServerEndpoint(
       endpoint,
-      { _ => i =>
+      { _ => i: I =>
         {
           val (t, j): (T, J) = splitInput(i)
           logicFragment(t).flatMap(u => remainingLogic((u, j))).either

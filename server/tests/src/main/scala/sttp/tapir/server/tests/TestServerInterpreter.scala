@@ -11,7 +11,7 @@ import scala.reflect.ClassTag
 
 trait TestServerInterpreter[F[_], +R, ROUTE] {
   implicit lazy val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
-  def route[I, E, O](e: ServerEndpoint[I, E, O, R, F], decodeFailureHandler: Option[DecodeFailureHandler] = None): ROUTE
+  def route(e: ServerEndpoint[R, F], decodeFailureHandler: Option[DecodeFailureHandler] = None): ROUTE
   def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, R], fn: I => F[O])(implicit eClassTag: ClassTag[E]): ROUTE
   def server(routes: NonEmptyList[ROUTE]): Resource[IO, Port]
 }

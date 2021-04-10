@@ -298,7 +298,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, List.empty))
     implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, 0d))
 
-    val _: ServerEndpoint[(String, Int, Double), String, Result, Any, Future] = endpoint
+    val _: ServerEndpoint[Any, Future] = endpoint
       .in(query[String]("x"))
       .in(query[Int]("y"))
       .in(query[Double]("z"))

@@ -31,12 +31,13 @@ import scala.reflect.ClassTag
 abstract class PartialServerEndpoint[T, U, I, E, O, -R, F[_]](partialEndpoint: Endpoint[I, E, O, R])
     extends EndpointInputsOps[I, E, O, R]
     with EndpointOutputsOps[I, E, O, R]
-    with EndpointInfoOps[I, E, O, R]
-    with EndpointMetaOps[I, E, O, R] { outer =>
+    with EndpointInfoOps[R]
+    with EndpointMetaOps { outer =>
   protected def tInput: EndpointInput[T]
   protected def partialLogic: MonadError[F] => T => F[Either[E, U]]
 
   override type EndpointType[_I, _E, _O, -_R] = PartialServerEndpoint[T, U, _I, _E, _O, _R, F]
+  override type ThisType[-_R] = PartialServerEndpoint[T, U, I, E, O, _R, F]
 
   def endpoint: Endpoint[(T, I), E, O, R] = partialEndpoint.prependIn(tInput)
 
@@ -88,14 +89,14 @@ abstract class PartialServerEndpoint[T, U, I, E, O, -R, F[_]](partialEndpoint: E
         }
     }
 
-  def serverLogic(g: ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, R, F] = serverLogicM(_ => g)
+  def serverLogic(g: ((U, I)) => F[Either[E, O]]): ServerEndpoint[R, F] = serverLogicM(_ => g)
 
   def serverLogicRecoverErrors(
       g: ((U, I)) => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[(T, I), E, O, R, F] =
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[R, F] =
     serverLogicM(recoverErrors(g))
 
-  private def serverLogicM(g: MonadError[F] => ((U, I)) => F[Either[E, O]]): ServerEndpoint[(T, I), E, O, R, F] =
+  private def serverLogicM(g: MonadError[F] => ((U, I)) => F[Either[E, O]]): ServerEndpoint[R, F] =
     ServerEndpoint[(T, I), E, O, R, F](
       endpoint,
       (m: MonadError[F]) => { case (t, i) =>

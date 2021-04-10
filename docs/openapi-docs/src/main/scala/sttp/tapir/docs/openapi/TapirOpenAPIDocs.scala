@@ -26,7 +26,7 @@ trait TapirOpenAPIDocs {
       OpenAPIDocsInterpreter.toOpenAPI(es, info)
   }
 
-  implicit class RichOpenAPIServerEndpoints[F[_]](serverEndpoints: Iterable[ServerEndpoint[_, _, _, _, F]]) {
+  implicit class RichOpenAPIServerEndpoints[F[_]](serverEndpoints: Iterable[ServerEndpoint[_, F]]) {
     @deprecated("Use OpenAPIDocsInterpreter.serverEndpointsToOpenAPI", since = "0.17.1")
     def toOpenAPI(title: String, version: String)(implicit options: OpenAPIDocsOptions): OpenAPI =
       OpenAPIDocsInterpreter.serverEndpointsToOpenAPI(serverEndpoints, Info(title, version))
