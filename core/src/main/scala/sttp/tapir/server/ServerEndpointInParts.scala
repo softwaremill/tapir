@@ -18,32 +18,35 @@ import scala.reflect.ClassTag
   *
   * @tparam U The type of the value returned by the partial server logic.
   * @tparam IR Remaining input parameter types, for which logic has yet to be provided.
-  * @tparam I Entire input parameter types. `I = T + R`, where `T` is the part of the input consumed by the partial
-  *           logic, and converted to `U`.
   * @tparam E Error output parameter types.
   * @tparam O Output parameter types.
   * @tparam R The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
   * @tparam F The effect type used in the provided server logic.
   */
-abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: Endpoint[I, E, O, R])
-    extends EndpointInfoOps[R]
-    with EndpointMetaOps { outer =>
+abstract class ServerEndpointInParts[U, IR, E, O, -R, F[_]] extends EndpointInfoOps[R] with EndpointMetaOps { outer =>
 
-  /** Part of the input, consumed by `logicFragment`.
-    */
+  /** Entire input parameter types. `I = T + IR`, where `T` is the part of the input consumed by the partial logic, and converted to `U`. */
+  protected type I
+
+  /** Part of the input, consumed by `logicFragment`. */
   protected type T
+
+  def endpoint: Endpoint[I, E, O, R]
+
   protected def splitInput: I => (T, IR)
   protected def logicFragment: MonadError[F] => T => F[Either[E, U]]
 
-  override type ThisType[-_R] = ServerEndpointInParts[U, IR, I, E, O, _R, F]
+  override type ThisType[-_R] = ServerEndpointInParts[U, IR, E, O, _R, F]
   override def input: EndpointInput[I] = endpoint.input
   override def errorOutput: EndpointOutput[E] = endpoint.errorOutput
   override def output: EndpointOutput[O] = endpoint.output
   override def info: EndpointInfo = endpoint.info
 
-  override private[tapir] def withInfo(info: EndpointInfo): ServerEndpointInParts[U, IR, I, E, O, R, F] =
-    new ServerEndpointInParts[U, IR, I, E, O, R, F](endpoint.info(info)) {
+  override private[tapir] def withInfo(info: EndpointInfo): ServerEndpointInParts[U, IR, E, O, R, F] =
+    new ServerEndpointInParts[U, IR, E, O, R, F] {
+      override type I = outer.I
       override type T = outer.T
+      override def endpoint: Endpoint[I, E, O, R] = outer.endpoint.info(info)
       override def splitInput: I => (outer.T, IR) = outer.splitInput
       override def logicFragment: MonadError[F] => T => F[Either[E, U]] = outer.logicFragment
     }
@@ -86,7 +89,7 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
   )(implicit
       rMinusT2: ParamSubtract.Aux[IR, T2, R2],
       uu2Concat: ParamConcat.Aux[U, V, UV]
-  ): ServerEndpointInParts[UV, R2, I, E, O, R, F] = andThenPartM(_ => nextPart)
+  ): ServerEndpointInParts[UV, R2, E, O, R, F] = andThenPartM(_ => nextPart)
 
   /** Same as [[andThenPart]], but requires `E` to be a throwable, and coverts failed effects of type `E` to
     * endpoint errors.
@@ -98,16 +101,18 @@ abstract class ServerEndpointInParts[U, IR, I, E, O, -R, F[_]](val endpoint: End
       uu2Concat: ParamConcat.Aux[U, V, UV],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
-  ): ServerEndpointInParts[UV, R2, I, E, O, R, F] = andThenPartM(recoverErrors(nextPart))
+  ): ServerEndpointInParts[UV, R2, E, O, R, F] = andThenPartM(recoverErrors(nextPart))
 
   private def andThenPartM[T2, R2, V, UV](
       part2: MonadError[F] => T2 => F[Either[E, V]]
   )(implicit
       rMinusT2: ParamSubtract.Aux[IR, T2, R2],
       uu2Concat: ParamConcat.Aux[U, V, UV]
-  ): ServerEndpointInParts[UV, R2, I, E, O, R, F] =
-    new ServerEndpointInParts[UV, R2, I, E, O, R, F](endpoint) {
+  ): ServerEndpointInParts[UV, R2, E, O, R, F] =
+    new ServerEndpointInParts[UV, R2, E, O, R, F] {
+      override type I = outer.I
       override type T = (outer.T, T2)
+      override def endpoint: Endpoint[outer.I, E, O, R] = outer.endpoint
 
       override def splitInput: I => ((outer.T, T2), R2) =
         i => {

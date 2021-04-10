@@ -308,10 +308,14 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     */
   def serverLogicPart[T, IR, U, F[_]](
       f: T => F[Either[E, U]]
-  )(implicit iMinusT: ParamSubtract.Aux[I, T, IR]): ServerEndpointInParts[U, IR, I, E, O, R, F] = {
+  )(implicit iMinusT: ParamSubtract.Aux[I, T, IR]): ServerEndpointInParts[U, IR, E, O, R, F] = {
+    type _I = I
     type _T = T
-    new ServerEndpointInParts[U, IR, I, E, O, R, F](this) {
+    val e = this
+    new ServerEndpointInParts[U, IR, E, O, R, F] {
+      override type I = _I
       override type T = _T
+      override def endpoint: Endpoint[I, E, O, R] = e
       override def splitInput: I => (T, IR) = i => split(i)(iMinusT)
       override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = _ => f
     }
@@ -326,10 +330,14 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E],
       iMinusR: ParamSubtract.Aux[I, T, IR]
-  ): ServerEndpointInParts[U, IR, I, E, O, R, F] = {
+  ): ServerEndpointInParts[U, IR, E, O, R, F] = {
+    type _I = I
     type _T = T
-    new ServerEndpointInParts[U, IR, I, E, O, R, F](this) {
+    val e = this
+    new ServerEndpointInParts[U, IR, E, O, R, F] {
+      override type I = _I
       override type T = _T
+      override def endpoint: Endpoint[I, E, O, R] = e
       override def splitInput: I => (T, IR) = i => split(i)(iMinusR)
       override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = recoverErrors[_T, E, U, F](f)
     }
