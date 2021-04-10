@@ -8,7 +8,7 @@ endpoints and their collections in a server setting.
 ## Defining an endpoint together with the server logic
 
 It's possible to combine an endpoint description with the server logic in a single object,
-`ServerEndpoint[I, E, O, S, F]`. Such an endpoint contains not only an endpoint of type `Endpoint[I, E, O, S]`, but
+`ServerEndpoint[R, F]`. Such an endpoint contains not only an endpoint of type `Endpoint[I, E, O, R]`, but
 also a logic function `I => F[Either[E, O]]`, for some effect `F`.
 
 The book example can be more concisely written as follows:
@@ -20,7 +20,7 @@ import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 import scala.concurrent.Future
 import akka.http.scaladsl.server.Route
 
-val countCharactersServerEndpoint: ServerEndpoint[String, Unit, Int, Any, Future] =
+val countCharactersServerEndpoint: ServerEndpoint[Any, Future] =
   endpoint.in(stringBody).out(plainBody[Int]).serverLogic { s =>
     Future.successful[Either[Unit, Int]](Right(s.length))
   }
@@ -130,7 +130,7 @@ def auth(token: String): Future[Either[Int, User]] = Future {
   else Left(1001) // error code
 }
 
-val secureEndpoint: PartialServerEndpoint[String, User, Unit, Int, Unit, Any, Future] = endpoint
+val secureEndpoint: PartialServerEndpoint[User, Unit, Int, Unit, Any, Future] = endpoint
   .in(header[String]("X-AUTH-TOKEN"))
   .errorOut(plainBody[Int])
   .serverLogicForCurrent(auth)
