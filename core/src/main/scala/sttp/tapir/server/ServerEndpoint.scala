@@ -3,7 +3,7 @@ package sttp.tapir.server
 import sttp.monad.MonadError
 import sttp.tapir.{Endpoint, EndpointInfo, EndpointInfoOps, EndpointInput, EndpointMetaOps, EndpointOutput}
 
-/** An [[Endpoint]] together with a matching function, implementing the endpoint's logic.
+/** An [[Endpoint]] together with a function implementing the endpoint's logic, of a matching shape.
   * @tparam R The capabilities that are required by this endpoint's inputs/outputs. `Any`, if no requirements.
   * @tparam F The effect type used in the provided server logic.
   */
