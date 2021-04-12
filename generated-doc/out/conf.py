@@ -178,11 +178,11 @@ highlight_language = 'scala'
 
 # configure edit on github: https://docs.readthedocs.io/en/latest/guides/vcs.html
 html_context = {
-    "display_github": True, # Integrate GitHub
-    "github_user": "softwaremill", # Username
-    "github_repo": "tapir", # Repo name
-    "github_version": "master", # Version
-    "conf_py_path": "/doc/", # Path in the checkout to the docs root
+    'display_github': True, # Integrate GitHub
+    'github_user': 'softwaremill', # Username
+    'github_repo': 'tapir', # Repo name
+    'github_version': 'master', # Version
+    'conf_py_path': '/doc/', # Path in the checkout to the docs root
 }
 
 # app setup hook
