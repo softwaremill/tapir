@@ -56,17 +56,18 @@ class HttpServer(port: Port) {
     case _ @GET -> Root / "api" / "unit"                                   => Ok("{}")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ GET -> Root / "api" / "echo" / "headers" =>
-      val headers = r.headers.headers.map(h => Header.Raw(CIString(h.name.toString), h.value.reverse))
-      val filteredHeaders: List[Header.Raw] = r.headers.headers.find(_.name.toString.equalsIgnoreCase("Cookie")) match {
-        case Some(c) => headers.filter(_.name.toString.equalsIgnoreCase("Cookie")) :+ Header.Raw(CIString("Set-Cookie"), c.value.reverse)
+      val headers = r.headers.headers.map(h => h.copy(value = h.value.reverse))
+      val filteredHeaders: Header.ToRaw = r.headers.headers.find(_.name == CIString("Cookie")) match {
+        case Some(c) => headers.filter(_.name == CIString("Cookie")) :+ Header.Raw(CIString("Set-Cookie"), c.value.reverse)
         case None    => headers
       }
-      okOnlyHeaders(filteredHeaders.map(x => x: Header.ToRaw))
+
+      okOnlyHeaders(List(filteredHeaders))
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
-      okOnlyHeaders(r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header.Raw(CIString("hh"), v): Header.ToRaw))
+      okOnlyHeaders(r.uri.multiParams.getOrElse("qq", Nil).reverse.map("hh" -> _: Header.ToRaw))
     case r @ GET -> Root / "api" / "echo" / "param-to-upper-header" =>
       okOnlyHeaders(r.uri.multiParams.map { case (k, v) =>
-        Header.Raw(CIString(k.toUpperCase()), v.headOption.getOrElse("?")): Header.ToRaw
+        k -> v.headOption.getOrElse("?"): Header.ToRaw
       }.toSeq)
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
@@ -156,9 +157,7 @@ class HttpServer(port: Port) {
       }
   }
 
-  private def okOnlyHeaders(headers: Seq[Header.ToRaw]): IO[Response[IO]] = IO.pure {
-    Response(headers = Headers(headers))
-  }
+  private def okOnlyHeaders(headers: Seq[Header.ToRaw]): IO[Response[IO]] = IO.pure(Response(headers = Headers(headers)))
 
   private def fromAcceptHeader(r: Request[IO])(f: PartialFunction[String, IO[Response[IO]]]): IO[Response[IO]] =
     r.headers.get[Accept].map(h => f(h.values.head.toString())).getOrElse(NotAcceptable())
