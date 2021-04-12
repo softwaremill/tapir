@@ -1,7 +1,7 @@
 # Working with JSON
 
-Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a 
-third-party library to perform the actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe), 
+Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a
+third-party library to perform the actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe),
 [µPickle](http://www.lihaoyi.com/upickle/), [Spray JSON](https://github.com/spray/spray-json),
 [Play JSON](https://github.com/playframework/play-json), [Tethys JSON](https://github.com/tethys-json/tethys),
 [Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala), and [Json4s](https://github.com/json4s/json4s) are
