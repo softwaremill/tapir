@@ -170,11 +170,16 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'tapir', u'tapir documentation',
-     author, 'tapir', 'Typed API descRiptions',
+     author, 'tapir', 'Declarative, type-safe web endpoints library',
      'Scala'),
 ]
 
 highlight_language = 'scala'
+
+# configure edit on github: https://docs.readthedocs.io/en/latest/guides/vcs.html
+html_context = {
+    "conf_py_path": "/doc/", # Path in the checkout to the docs root
+}
 
 # app setup hook
 def setup(app):
