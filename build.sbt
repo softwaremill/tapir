@@ -681,7 +681,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2-ce2" % Versions.sttp
     )
   )
   .dependsOn(tests)
@@ -707,7 +707,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
+      "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -773,7 +773,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
@@ -817,7 +817,7 @@ lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-cli
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-client" % Versions.http4s % Test,
-      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
+      "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -836,8 +836,8 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     settings = commonJvmSettings ++ Seq(
       libraryDependencies ++= loggerDependencies.map(_ % Test) ++ Seq(
         "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test,
-        "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp % Test,
-        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
+        "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2-ce2" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional,
         "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
         "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
       )
@@ -907,9 +907,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2-ce2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats-ce2" % Versions.sttp,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala
     ),
     libraryDependencies ++= loggerDependencies,

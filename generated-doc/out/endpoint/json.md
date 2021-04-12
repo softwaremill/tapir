@@ -1,9 +1,11 @@
 # Working with JSON
 
-Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a 
-third-party library to perform the actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe), 
-[µPickle](http://www.lihaoyi.com/upickle/), [Spray JSON](https://github.com/spray/spray-json) and 
-[Play JSON](https://github.com/playframework/play-json) are supported.
+Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a
+third-party library to perform the actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe),
+[µPickle](http://www.lihaoyi.com/upickle/), [Spray JSON](https://github.com/spray/spray-json),
+[Play JSON](https://github.com/playframework/play-json), [Tethys JSON](https://github.com/tethys-json/tethys),
+[Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala), and [Json4s](https://github.com/json4s/json4s) are
+supported.
 
 All of the integrations, when imported into scope, define a `jsonBody[T]` method. This method depends on 
 library-specific implicits being in scope, and derives from them a json codec. The derivation also requires implicit
@@ -193,7 +195,7 @@ Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type y
 To use [json4s](https://github.com/json4s/json4s) add the following dependencies to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json4s" % "0.18.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-json-json4s" % "0.18.0-M4"
 ```
 
 And one of the implementations:
