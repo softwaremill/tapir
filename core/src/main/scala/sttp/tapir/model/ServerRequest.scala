@@ -5,7 +5,7 @@ import sttp.model.{ContentTypeRange, QueryParams, RequestMetadata}
 
 import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
-import scala.concurrent.duration.Deadline
+import scala.concurrent.duration.{Deadline, Duration, FiniteDuration, NANOSECONDS}
 
 trait ServerRequest extends RequestMetadata {
   def protocol: String
@@ -17,7 +17,7 @@ trait ServerRequest extends RequestMetadata {
   def queryParameters: QueryParams
 
   lazy val acceptsContentTypes: Either[String, Seq[ContentTypeRange]] = Accepts.parse(headers)
-  val timestamp: Deadline = Deadline.now
+  val requestStart: Deadline = Deadline.now
 }
 
 case class ConnectionInfo(local: Option[InetSocketAddress], remote: Option[InetSocketAddress], secure: Option[Boolean])

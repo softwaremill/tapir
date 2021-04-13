@@ -31,12 +31,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
       .in(jsonBody[Person])
       .out(stringBody)
       .errorOut(stringBody)
-      .serverLogic { p =>
-        Future.successful {
-          Thread.sleep(10000 + (math.random() * 100).toInt)
-          if (p.name == "Jacob") Right("Welcome") else Left("Unauthorized")
-        }
-      }
+      .serverLogic { p => Future.successful { if (p.name == "Jacob") Right("Welcome") else Left("Unauthorized") } }
 
   implicit val monad: FutureMonad = new FutureMonad()
 
@@ -51,7 +46,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
       .help("HTTP responses")
       .labelNames("path", "method", "status")
       .register(collectorRegistry)
-  ).onResponse { (req, res, counter) => // this callback will be executed after request processing
+  ).onResponse { (_, req, res, counter) => // this callback will be executed after request processing
     Future {
       val path = req.uri.pathSegments.toString
       val method = req.method.method
@@ -60,9 +55,9 @@ object PrometheusMetricsExample extends App with StrictLogging {
     }
   }
 
-  val prometheusMetrics = PrometheusMetrics(collectorRegistry)
+  val prometheusMetrics = PrometheusMetrics("tapir", collectorRegistry)
     // default metric collecting all requests and custom one
-    .withRequestsTotal
+    .withRequestsTotal()
     .withCustom(responsesTotal)
 
   implicit val serverOptions: AkkaHttpServerOptions =

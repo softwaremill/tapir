@@ -32,7 +32,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { name =>
       if (name == "Jacob") Right(()) else Left(())
     }
-    val metrics = PrometheusMetrics(new CollectorRegistry()).withRequestsTotal
+    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withRequestsTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
 
     // when
@@ -43,7 +43,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     //then
     collectorRegistryCodec
       .encode(metrics.registry)
-      .contains("tapir_requests_total{path=\"person\",method=\"GET\",} 3.0") shouldBe true
+      .contains("tapir_requests_total{path=\"/person\",method=\"GET\",} 3.0") shouldBe true
   }
 
   "default metrics" should "collect requests active" in {
@@ -53,7 +53,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       idMonadError.unit(Right(()))
     }
 
-    val metrics = PrometheusMetrics(new CollectorRegistry()).withRequestsActive
+    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withRequestsActive()
     val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
 
     // when
@@ -64,32 +64,13 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     // then
     collectorRegistryCodec
       .encode(metrics.registry)
-      .contains("tapir_requests_active{path=\"person\",method=\"GET\",} 1.0") shouldBe true
+      .contains("tapir_requests_active{path=\"/person\",method=\"GET\",} 1.0") shouldBe true
 
     ScalaFutures.whenReady(request, Timeout(Span(1, Second))) { _ =>
       collectorRegistryCodec
         .encode(metrics.registry)
-        .contains("tapir_requests_active{path=\"person\",method=\"GET\",} 0.0") shouldBe true
+        .contains("tapir_requests_active{path=\"/person\",method=\"GET\",} 0.0") shouldBe true
     }
-  }
-
-  "default metrics" should "collect request failures" in {
-    // given
-    val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { name =>
-      if (name == "Jacob") Right(()) else Left(())
-    }
-    val metrics = PrometheusMetrics(new CollectorRegistry()).withRequestsFailure
-    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
-
-    // when
-    interpreter.apply(testRequest(""), serverEp)
-    interpreter.apply(testRequest(""), serverEp)
-    interpreter.apply(testRequest(""), serverEp)
-
-    // then
-    collectorRegistryCodec
-      .encode(metrics.registry)
-      .contains("tapir_requests_failure_total{path=\"person\",method=\"GET\",} 3.0")
   }
 
   "default metrics" should "collect responses total" in {
@@ -97,7 +78,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { name =>
       if (name == "Jacob") Right(()) else Left(())
     }
-    val metrics = PrometheusMetrics(new CollectorRegistry()).withResponsesTotal
+    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
 
     // when
@@ -107,8 +88,8 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     val encoded = collectorRegistryCodec.encode(metrics.registry)
-    encoded.contains("tapir_responses_total{path=\"person\",method=\"GET\",status=\"2xx\",} 2.0") shouldBe true
-    encoded.contains("tapir_responses_total{path=\"person\",method=\"GET\",status=\"4xx\",} 1.0") shouldBe true
+    encoded.contains("tapir_responses_total{path=\"/person\",method=\"GET\",status=\"2xx\",} 2.0") shouldBe true
+    encoded.contains("tapir_responses_total{path=\"/person\",method=\"GET\",status=\"4xx\",} 1.0") shouldBe true
   }
 
   "default metrics" should "collect responses duration" in {
@@ -120,7 +101,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       }
     }
 
-    val metrics = PrometheusMetrics(new CollectorRegistry()).withResponsesDuration
+    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesDuration()
     val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
 
     // when
@@ -132,21 +113,39 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val encoded = collectorRegistryCodec.encode(metrics.registry)
 
     // no response in less than 100ms
-    encoded.contains("tapir_responses_duration_bucket{path=\"person\",method=\"GET\",status=\"2xx\",le=\"0.1\",} 0.0") shouldBe true
+    encoded.contains("tapir_responses_duration_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",le=\"0.1\",} 0.0") shouldBe true
 
     // two under 250ms
     encoded.contains(
-      "tapir_responses_duration_bucket{path=\"person\",method=\"GET\",status=\"2xx\",le=\"0.25\",} 2.0"
+      "tapir_responses_duration_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",le=\"0.25\",} 2.0"
     ) shouldBe true
 
     // all under 500ms
-    encoded.contains("tapir_responses_duration_bucket{path=\"person\",method=\"GET\",status=\"2xx\",le=\"0.5\",} 3.0") shouldBe true
+    encoded.contains("tapir_responses_duration_bucket{path=\"/person\",method=\"GET\",status=\"2xx\",le=\"0.5\",} 3.0") shouldBe true
+  }
+
+  "default metrics" should "customize labels" in {
+    // given
+    val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { name =>
+      if (name == "Jacob") Right(()) else Left(())
+    }
+
+    val labels = PrometheusLabels(forRequest = Seq("key" -> { case (_, _) => "value" }), forResponse = Seq())
+
+    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal(labels)
+    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
+
+    // when
+    interpreter.apply(testRequest("Jacob"), serverEp)
+
+    // then
+    collectorRegistryCodec.encode(metrics.registry).contains("tapir_responses_total{key=\"value\",} 1.0") shouldBe true
   }
 
   "interceptor" should "not collect metrics from prometheus endpoint" in {
     // given
     val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { _ => idMonadError.unit(Right(())) }
-    val metrics = PrometheusMetrics(new CollectorRegistry()).withResponsesTotal
+    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
     val ses = List(metrics.metricsServerEndpoint, serverEp)
 
@@ -175,7 +174,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       ): String = ""
     }
 
-    val metrics = PrometheusMetrics(new CollectorRegistry()).withResponsesTotal
+    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, toResponseBody, List(metrics.metricsInterceptor()))
 
@@ -193,12 +192,27 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   }
 
   "metrics" should "be unique" in {
-    PrometheusMetrics(new CollectorRegistry())
+    PrometheusMetrics("tapir", new CollectorRegistry())
       .withCustom(Metric[Id, Int](0))
       .withCustom(Metric[Id, Int](0))
       .metrics
       .size shouldBe 1
   }
+
+//  "metrics" should "be collected on exception" in {
+//    // given
+//    val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { _ => throw new RuntimeException("Ups") }
+//    val metrics = PrometheusMetrics(new CollectorRegistry()).withResponsesTotal
+//    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler)))
+//    val ses = List(metrics.metricsServerEndpoint, serverEp)
+//
+//    // when
+//    val response = interpreter.apply(testRequest("Jacob"), serverEp)
+//
+//    // then
+//    val r = collectorRegistryCodec.encode(metrics.registry)
+//    println(r)
+//  }
 
 }
 

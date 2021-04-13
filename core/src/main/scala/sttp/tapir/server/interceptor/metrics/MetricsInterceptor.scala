@@ -19,15 +19,14 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
     if (ignoreEndpoints.contains(endpoint)) next(None)
     else {
       for {
-        _ <- collectMetrics { case Metric(m, Some(onRequest), _, _) => onRequest(request, m) }
+        _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(endpoint, request, m) }
         response <- next(None)
-        _ <- collectMetrics { case Metric(m, _, Some(onResponse), _) => onResponse(request, response, m) }
+        _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(endpoint, request, response, m) }
       } yield response
     }
   }
 
-  /** Collects metrics when request matches `Endpoint`. First collects `onDecodeFailure` metric,
-    * then, if there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage.
+  /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage.
     */
   override def onDecodeFailure(
       request: ServerRequest,
@@ -42,13 +41,12 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
         case _: DecodeResult.Mismatch => next(None)
         case _ =>
           for {
-            _ <- collectMetrics { case Metric(m, _, _, Some(onDecodeFailure)) => onDecodeFailure(request, m) }
             r <- next(None)
             _ <- r match {
               case Some(response) =>
                 for {
-                  _ <- collectMetrics { case Metric(m, Some(onRequest), _, _) => onRequest(request, m) }
-                  _ <- collectMetrics { case Metric(m, _, Some(onResponse), _) => onResponse(request, response, m) }
+                  _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(endpoint, request, m) }
+                  _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(endpoint, request, response, m) }
                 } yield ()
               case None => monad.unit(r)
             }

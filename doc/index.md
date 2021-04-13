@@ -142,6 +142,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    server/vertx
    server/options
    server/logic
+   server/observability
    server/errors
    server/debugging
 

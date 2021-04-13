@@ -63,6 +63,7 @@ lazy val allAggregates = core.projectRefs ++
   newtype.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
+  prometheusMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
@@ -97,6 +98,7 @@ lazy val allAggregates = core.projectRefs ++
   zioServer.projectRefs ++
   sttpClient.projectRefs ++
   playClient.projectRefs ++
+  http4sClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
   playground.projectRefs ++
@@ -1031,5 +1033,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServer,
     zio,
     zioServer,
-    derevo
+    derevo,
+    prometheusMetrics
   )
