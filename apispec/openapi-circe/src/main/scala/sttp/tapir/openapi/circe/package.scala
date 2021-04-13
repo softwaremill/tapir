@@ -47,6 +47,11 @@ trait TapirOpenAPICirceEncoders {
 
       Json.obj(fields.toSeq: _*)
     }
+  implicit val encoderResponses: Encoder[Responses] = Encoder.instance { resp =>
+    val extensions = resp.extensions.map(_.asJson).flatMap(_.asObject).getOrElse(JsonObject.empty)
+    val respJson = resp.responses.asJson
+    respJson.asObject.map(_.deepMerge(extensions).asJson).getOrElse(respJson)
+  }
   implicit val encoderOperation: Encoder[Operation] = {
     // this is needed to override the encoding of `security: List[SecurityRequirement]`. An empty security requirement
     // should be represented as an empty object (`{}`), not `null`, which is the default encoding of `ListMap`s.
@@ -54,6 +59,11 @@ trait TapirOpenAPICirceEncoders {
     deriveEncoder[Operation].mapJsonObject(expandExtensions)
   }
   implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem].mapJsonObject(expandExtensions)
+  implicit val encoderPaths: Encoder[Paths] = Encoder.instance { paths =>
+    val extensions = paths.extensions.map(_.asJson).flatMap(_.asObject).getOrElse(JsonObject.empty)
+    val pathItems = paths.pathItems.asJson
+    pathItems.asObject.map(_.deepMerge(extensions).asJson).getOrElse(pathItems)
+  }
   implicit val encoderComponents: Encoder[Components] = deriveEncoder[Components].mapJsonObject(expandExtensions)
   implicit val encoderServerVariable: Encoder[ServerVariable] = deriveEncoder[ServerVariable].mapJsonObject(expandExtensions)
   implicit val encoderServer: Encoder[Server] = deriveEncoder[Server].mapJsonObject(expandExtensions)

@@ -7,7 +7,7 @@ import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
 import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.{SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
-import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, ResponsesKey}
+import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, Responses, ResponsesKey}
 
 import scala.collection.immutable.ListMap
 
@@ -51,7 +51,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       e.info.name.getOrElse(defaultId),
       parameters.toList.map(Right(_)),
       body.headOption,
-      responses,
+      Responses(responses),
       if (e.info.deprecated) Some(true) else None,
       operationSecurity(e),
     )

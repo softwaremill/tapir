@@ -9,18 +9,19 @@ case class OpenAPI(
     info: Info,
     tags: List[Tag],
     servers: List[Server],
-    paths: ListMap[String, PathItem], // TODO extensions [path itself could be extended]
+    paths: Paths,
     components: Option[Components],
     security: List[SecurityRequirement],
     extensions: Option[ListMap[String, ExtensionValue]] = None
 ) {
   def addPathItem(path: String, pathItem: PathItem): OpenAPI = {
-    val pathItem2 = paths.get(path) match {
+    val pathItem2 = paths.pathItems.get(path) match {
       case None           => pathItem
       case Some(existing) => existing.mergeWith(pathItem)
     }
-
-    copy(paths = paths + (path -> pathItem2))
+    val newPathItems = paths.pathItems + (path -> pathItem2)
+    val newPath = paths.copy(pathItems = newPathItems)
+    copy(paths = newPath)
   }
 
   def servers(s: List[Server]): OpenAPI = copy(servers = s)
@@ -76,6 +77,11 @@ case class Components(
     extensions: Option[ListMap[String, ExtensionValue]] = None
 )
 
+case class Paths(
+    pathItems: ListMap[String, PathItem],
+    extensions: Option[ListMap[String, ExtensionValue]] = None
+)
+
 // todo: $ref
 case class PathItem(
     summary: Option[String] = None,
@@ -118,7 +124,7 @@ case class Operation(
     operationId: String,
     parameters: List[ReferenceOr[Parameter]] = List.empty,
     requestBody: Option[ReferenceOr[RequestBody]] = None,
-    responses: ListMap[ResponsesKey, ReferenceOr[Response]] = ListMap.empty, // TODO extensions [can be itself extended]
+    responses: Responses = Responses(ListMap.empty),
     deprecated: Option[Boolean] = None,
     security: List[SecurityRequirement] = List.empty,
     servers: List[Server] = List.empty,
@@ -151,7 +157,7 @@ object ParameterIn extends Enumeration {
   val Cookie: Value = Value("cookie")
 }
 
-object ParameterStyle extends Enumeration { // TODO extensions
+object ParameterStyle extends Enumeration {
   type ParameterStyle = Value
 
   val Simple: Value = Value("simple")
@@ -196,6 +202,11 @@ case class Response(
     description: String,
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     content: ListMap[String, MediaType] = ListMap.empty,
+    extensions: Option[ListMap[String, ExtensionValue]] = None
+)
+
+case class Responses(
+    responses: ListMap[ResponsesKey, ReferenceOr[Response]],
     extensions: Option[ListMap[String, ExtensionValue]] = None
 )
 

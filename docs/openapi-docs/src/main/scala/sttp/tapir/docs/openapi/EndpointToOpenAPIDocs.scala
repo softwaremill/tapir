@@ -29,7 +29,7 @@ private[openapi] object EndpointToOpenAPIDocs {
       info = info,
       tags = List.empty,
       servers = List.empty,
-      paths = ListMap.empty,
+      paths = Paths(ListMap.empty),
       components = componentsCreator.components,
       security = List.empty
     )
