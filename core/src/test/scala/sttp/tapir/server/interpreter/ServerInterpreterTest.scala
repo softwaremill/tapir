@@ -7,7 +7,15 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
-import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestInterceptor, ValuedEndpointOutput}
+import sttp.tapir.server.interceptor.{
+  DecodeFailureContext,
+  DecodeSuccessContext,
+  EndpointHandler,
+  EndpointInterceptor,
+  RequestHandler,
+  RequestInterceptor,
+  Responder
+}
 import sttp.model._
 import sttp.model.Uri._
 
@@ -52,25 +60,18 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     var callTrail: List[String] = Nil
 
     class AddToTrailInterceptor(prefix: String) extends EndpointInterceptor[Id, Unit] {
-      override def onDecodeSuccess[I](
-          request: ServerRequest,
-          endpoint: Endpoint[I, _, _, _],
-          i: I,
-          next: Option[ValuedEndpointOutput[_]] => Id[ServerResponse[Unit]]
-      )(implicit monad: MonadError[Id]): Id[ServerResponse[Unit]] = {
-        callTrail ::= s"$prefix success"
-        next(None)
-      }
-      override def onDecodeFailure(
-          request: ServerRequest,
-          endpoint: Endpoint[_, _, _, _],
-          failure: DecodeResult.Failure,
-          failingInput: EndpointInput[_],
-          next: Option[ValuedEndpointOutput[_]] => Id[Option[ServerResponse[Unit]]]
-      )(implicit monad: MonadError[Id]): Id[Option[ServerResponse[Unit]]] = {
-        callTrail ::= s"$prefix failure"
-        next(None)
-      }
+      override def apply(responder: Responder[Id, Unit], endpointHandler: EndpointHandler[Id, Unit]): EndpointHandler[Id, Unit] =
+        new EndpointHandler[Id, Unit] {
+          override def onDecodeSuccess[I](ctx: DecodeSuccessContext[Id, I])(implicit monad: MonadError[Id]): Id[ServerResponse[Unit]] = {
+            callTrail ::= s"$prefix success"
+            endpointHandler.onDecodeSuccess(ctx)
+          }
+
+          override def onDecodeFailure(ctx: DecodeFailureContext)(implicit monad: MonadError[Id]): Id[Option[ServerResponse[Unit]]] = {
+            callTrail ::= s"$prefix failure"
+            endpointHandler.onDecodeFailure(ctx)
+          }
+        }
     }
 
     val testRequest = new ServerRequest {
@@ -87,12 +88,14 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     // given
     val interceptor1 = new AddToTrailInterceptor("1")
     val interceptor2 = new RequestInterceptor[Id, Unit] {
-      override def onRequest(
-          request: ServerRequest,
-          next: (ServerRequest, EndpointInterceptor[Id, Unit]) => Id[Option[ServerResponse[Unit]]]
-      ): Id[Option[ServerResponse[Unit]]] = {
-        callTrail ::= "2 request"
-        next(request, new AddToTrailInterceptor("2"))
+      override def apply(
+          responder: Responder[Id, Unit],
+          requestHandler: EndpointInterceptor[Id, Unit] => RequestHandler[Id, Unit]
+      ): RequestHandler[Id, Unit] = new RequestHandler[Id, Unit] {
+        override def apply(request: ServerRequest): Id[Option[ServerResponse[Unit]]] = {
+          callTrail ::= "2 request"
+          requestHandler(new AddToTrailInterceptor("2")).apply(request)
+        }
       }
     }
     val interceptor3 = new AddToTrailInterceptor("3")
