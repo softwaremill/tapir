@@ -9,9 +9,10 @@ case class OpenAPI(
     info: Info,
     tags: List[Tag],
     servers: List[Server],
-    paths: ListMap[String, PathItem],
+    paths: ListMap[String, PathItem], // TODO extensions [path itself could be extended]
     components: Option[Components],
-    security: List[SecurityRequirement]
+    security: List[SecurityRequirement],
+    // TODO: extensions
 ) {
   def addPathItem(path: String, pathItem: PathItem): OpenAPI = {
     val pathItem2 = paths.get(path) match {
@@ -33,29 +34,46 @@ case class Info(
     description: Option[String] = None,
     termsOfService: Option[String] = None,
     contact: Option[Contact] = None,
-    license: Option[License] = None
+    license: Option[License] = None,
+    // TODO extensions
 )
 
-case class Contact(name: Option[String], email: Option[String], url: Option[String])
-case class License(name: String, url: Option[String])
+case class Contact(
+    name: Option[String],
+    email: Option[String],
+    url: Option[String],
+    // TODO extensions
+)
+case class License(
+    name: String,
+    url: Option[String],
+    // TODO extensions
+)
 
 case class Server(
     url: String,
     description: Option[String] = None,
-    variables: Option[ListMap[String, ServerVariable]] = None
+    variables: Option[ListMap[String, ServerVariable]] = None,
+    // TODO extensions
 ) {
   def description(d: String): Server = copy(description = Some(d))
   def variables(vars: (String, ServerVariable)*): Server = copy(variables = Some(ListMap(vars: _*)))
 }
 
-case class ServerVariable(enum: Option[List[String]], default: String, description: Option[String]) {
+case class ServerVariable(
+    enum: Option[List[String]],
+    default: String,
+    description: Option[String],
+    // TODO extensions
+) {
   require(`enum`.fold(true)(_.contains(default)), "ServerVariable#default must be one of the values in enum if enum is defined")
 }
 
 // todo: responses, parameters, examples, requestBodies, headers, links, callbacks
 case class Components(
     schemas: ListMap[String, ReferenceOr[Schema]],
-    securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]]
+    securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]],
+    // TODO extensions
 )
 
 // todo: $ref
@@ -71,7 +89,8 @@ case class PathItem(
     patch: Option[Operation] = None,
     trace: Option[Operation] = None,
     servers: List[Server] = List.empty,
-    parameters: List[ReferenceOr[Parameter]] = List.empty
+    parameters: List[ReferenceOr[Parameter]] = List.empty,
+    // TODO extensions
 ) {
   def mergeWith(other: PathItem): PathItem = {
     PathItem(
@@ -99,10 +118,11 @@ case class Operation(
     operationId: String,
     parameters: List[ReferenceOr[Parameter]] = List.empty,
     requestBody: Option[ReferenceOr[RequestBody]] = None,
-    responses: ListMap[ResponsesKey, ReferenceOr[Response]] = ListMap.empty,
+    responses: ListMap[ResponsesKey, ReferenceOr[Response]] = ListMap.empty, // TODO extensions [can be itself extended]
     deprecated: Option[Boolean] = None,
     security: List[SecurityRequirement] = List.empty,
-    servers: List[Server] = List.empty
+    servers: List[Server] = List.empty,
+    // TODO extensions
 )
 
 case class Parameter(
@@ -118,7 +138,8 @@ case class Parameter(
     schema: ReferenceOr[Schema],
     example: Option[ExampleValue] = None,
     examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
-    content: ListMap[String, MediaType] = ListMap.empty
+    content: ListMap[String, MediaType] = ListMap.empty,
+    // TODO extensions
 )
 
 object ParameterIn extends Enumeration {
@@ -130,7 +151,7 @@ object ParameterIn extends Enumeration {
   val Cookie: Value = Value("cookie")
 }
 
-object ParameterStyle extends Enumeration {
+object ParameterStyle extends Enumeration { // TODO extensions
   type ParameterStyle = Value
 
   val Simple: Value = Value("simple")
@@ -142,13 +163,19 @@ object ParameterStyle extends Enumeration {
   val DeepObject: Value = Value("deepObject")
 }
 
-case class RequestBody(description: Option[String], content: ListMap[String, MediaType], required: Option[Boolean])
+case class RequestBody(
+    description: Option[String],
+    content: ListMap[String, MediaType],
+    required: Option[Boolean],
+    // TODO extensions
+)
 
 case class MediaType(
     schema: Option[ReferenceOr[Schema]] = None,
     example: Option[ExampleValue] = None,
     examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
-    encoding: ListMap[String, Encoding] = ListMap.empty
+    encoding: ListMap[String, Encoding] = ListMap.empty,
+    // TODO extensions
 )
 
 case class Encoding(
@@ -167,7 +194,8 @@ case class ResponsesCodeKey(code: Int) extends ResponsesKey
 case class Response(
     description: String,
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
-    content: ListMap[String, MediaType] = ListMap.empty
+    content: ListMap[String, MediaType] = ListMap.empty,
+    // TODO extensions
 )
 
 object Response {
@@ -178,7 +206,8 @@ case class Example(
     summary: Option[String] = None,
     description: Option[String] = None,
     value: Option[ExampleValue] = None,
-    externalValue: Option[String] = None
+    externalValue: Option[String] = None,
+    // TODO extensions
 )
 
 case class Header(

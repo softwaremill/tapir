@@ -11,6 +11,11 @@ sealed trait ExampleValue
 case class ExampleSingleValue(value: String) extends ExampleValue
 case class ExampleMultipleValue(values: List[String]) extends ExampleValue
 
-case class Tag(name: String, description: Option[String] = None, externalDocs: Option[ExternalDocumentation] = None)
+case class Tag(
+  name: String,
+  description: Option[String] = None,
+  externalDocs: Option[ExternalDocumentation] = None,
+  // TODO extensions
+)
 
 case class ExternalDocumentation(url: String, description: Option[String] = None)
