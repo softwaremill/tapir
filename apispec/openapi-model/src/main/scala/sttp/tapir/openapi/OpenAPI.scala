@@ -183,7 +183,8 @@ case class Encoding(
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     style: Option[ParameterStyle.ParameterStyle] = None,
     explode: Option[Boolean] = None,
-    allowReserved: Option[Boolean] = None
+    allowReserved: Option[Boolean] = None,
+    extensions: Option[ListMap[String, ExtensionValue]] = None
 )
 
 sealed trait ResponsesKey
