@@ -1,5 +1,7 @@
 package sttp.tapir.apispec
 
+import scala.collection.immutable.ListMap
+
 case class Reference($ref: String)
 
 object Reference {
@@ -15,7 +17,9 @@ case class Tag(
   name: String,
   description: Option[String] = None,
   externalDocs: Option[ExternalDocumentation] = None,
-  // TODO extensions
+  extensions: Option[ListMap[String, ExtensionValue]] = None
 )
 
 case class ExternalDocumentation(url: String, description: Option[String] = None)
+
+final case class ExtensionValue(value: String)

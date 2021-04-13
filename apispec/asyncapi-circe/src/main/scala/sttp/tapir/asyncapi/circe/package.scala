@@ -4,21 +4,7 @@ import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Encoder, Json}
-import sttp.tapir.apispec.{
-  Discriminator,
-  ExampleMultipleValue,
-  ExampleSingleValue,
-  ExampleValue,
-  ExternalDocumentation,
-  OAuthFlow,
-  OAuthFlows,
-  Reference,
-  ReferenceOr,
-  Schema,
-  SchemaType,
-  SecurityScheme,
-  Tag
-}
+import sttp.tapir.apispec.{Discriminator, ExampleMultipleValue, ExampleSingleValue, ExampleValue, ExtensionValue, ExternalDocumentation, OAuthFlow, OAuthFlows, Reference, ReferenceOr, Schema, SchemaType, SecurityScheme, Tag}
 
 import scala.collection.immutable.ListMap
 
@@ -32,6 +18,7 @@ trait TapirAsyncAPICirceEncoders {
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
+  implicit val extensionValue: Encoder[ExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
   implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveEncoder[OAuthFlow]
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveEncoder[OAuthFlows]
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveEncoder[SecurityScheme]
