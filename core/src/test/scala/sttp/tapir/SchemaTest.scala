@@ -164,4 +164,8 @@ class SchemaTest extends AnyFlatSpec with Matchers {
     coproduct2.discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
   }
 
+  it should "propagate format for optional schemas" in {
+    implicitly[Schema[Option[Double]]].format shouldBe Some("double")
+  }
+
 }

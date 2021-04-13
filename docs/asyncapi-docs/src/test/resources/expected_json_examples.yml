@@ -30,11 +30,13 @@ components:
         $ref: '#/components/schemas/Fruit'
       contentType: application/json
       examples:
-        - f: apple
+        - payload:
+            - f: apple
     integer:
       payload:
         type: integer
       contentType: application/json
       examples:
-        - 10
-        - 42
+        - payload:
+            - 10
+            - 42

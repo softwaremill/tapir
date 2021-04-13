@@ -57,11 +57,12 @@ object Http4sServerOptions {
       additionalInterceptors: List[Interceptor[G, Http4sResponseBody[F]]] = Nil,
       unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]] =
         new UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]().some,
-      decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
+      decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler,
+      blockingExecutionContext: ExecutionContext = ExecutionContext.Implicits.global
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
-      defaultCreateFile[G].apply(ExecutionContext.Implicits.global),
-      ExecutionContext.Implicits.global,
+      defaultCreateFile[G].apply(blockingExecutionContext),
+      blockingExecutionContext,
       8192,
       exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
         serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
@@ -74,7 +75,7 @@ object Http4sServerOptions {
     ec => _ => cs.evalOn(ec)(sync.delay(Defaults.createTempFile()))
 
   object Log {
-    def defaultServerLog[F[_]: Sync]: ServerLog[F[Unit]] =
+    def defaultServerLog[F[_]: Sync]: DefaultServerLog[F[Unit]] =
       DefaultServerLog[F[Unit]](
         doLogWhenHandled = debugLog[F],
         doLogAllDecodeFailures = debugLog[F],

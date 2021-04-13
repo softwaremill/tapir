@@ -50,6 +50,7 @@ case class Schema[T](
     Schema(
       schemaType = SOption(this)(identity),
       isOptional = true,
+      format = format,
       deprecated = deprecated
     )
 
