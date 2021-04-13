@@ -26,7 +26,7 @@ class CreateServerTest[F[_], +R, ROUTE](interpreter: TestServerInterpreter[F, R,
     )(runTest)
   }
 
-  def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(runTest: Uri => IO[Assertion]): Test = {
+  def testServerLogic[I, E, O](e: ServerEndpoint[R, F], testNameSuffix: String = "")(runTest: Uri => IO[Assertion]): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
       NonEmptyList.of(interpreter.route(e))

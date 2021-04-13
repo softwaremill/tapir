@@ -34,11 +34,11 @@ trait AkkaHttpServerInterpreter {
   )(logic: I => Future[O])(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], serverOptions: AkkaHttpServerOptions): Route =
     toRoute(e.serverLogicRecoverErrors(logic))
 
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future])(implicit
+  def toRoute[I, E, O](se: ServerEndpoint[AkkaStreams with WebSockets, Future])(implicit
       serverOptions: AkkaHttpServerOptions
   ): Route = toRoute(List(se))
 
-  def toRoute(ses: List[ServerEndpoint[_, _, _, AkkaStreams with WebSockets, Future]])(implicit
+  def toRoute(ses: List[ServerEndpoint[AkkaStreams with WebSockets, Future]])(implicit
       serverOptions: AkkaHttpServerOptions
   ): Route = {
     extractRequestContext { ctx =>

@@ -7,10 +7,10 @@ import sttp.tapir.internal._
 
 package object ztapir extends Tapir {
   type ZEndpoint[I, E, O] = Endpoint[I, E, O, Any]
-  type ZServerEndpoint[R, I, E, O] = ServerEndpoint[I, E, O, Any, RIO[R, *]]
+  type ZServerEndpoint[R] = ServerEndpoint[Any, RIO[R, *]]
 
   implicit class RichZEndpoint[I, E, O](e: ZEndpoint[I, E, O]) {
-    def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O] = ServerEndpoint(e, _ => logic(_).either)
+    def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R] = ServerEndpoint(e, _ => logic(_: I).either)
 
     /** Combine this endpoint description with a function, which implements a part of the server-side logic.
       *
@@ -69,10 +69,10 @@ package object ztapir extends Tapir {
       }
   }
 
-  implicit class RichZServiceEndpoint[R, I, E, O](zse: ZServerEndpoint[R, I, E, O]) {
+  implicit class RichZServiceEndpoint[R, I, E, O](zse: ZServerEndpoint[R]) {
 
     /** Extends the environment so that it can be made uniform across multiple endpoints.
       */
-    def widen[R2 <: R]: ZServerEndpoint[R2, I, E, O] = zse.asInstanceOf[ZServerEndpoint[R2, I, E, O]] // this is fine
+    def widen[R2 <: R]: ZServerEndpoint[R2] = zse.asInstanceOf[ZServerEndpoint[R2]] // this is fine
   }
 }

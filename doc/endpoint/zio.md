@@ -72,8 +72,8 @@ trait Component2
 type Service1 = Has[Component1]
 type Service2 = Has[Component2]
 
-val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit] = ???                              
-val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit] = ???
+val serverEndpoint1: ZServerEndpoint[Service1] = ???                              
+val serverEndpoint2: ZServerEndpoint[Service2] = ???
 
 type Env = Service1 with Service2
 val routes: HttpRoutes[RIO[Env with Clock, *]] = 

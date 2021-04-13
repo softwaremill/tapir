@@ -12,7 +12,7 @@ object RenderPathTemplate {
   }
 
   def apply(
-      e: EndpointMetaOps[_, _, _, _]
+      e: EndpointMetaOps
   )(renderPathParam: RenderPathParam, renderQueryParam: Option[RenderQueryParam], includeAuth: Boolean): String = {
     import sttp.tapir.internal._
 

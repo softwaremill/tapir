@@ -19,8 +19,8 @@ class CatsVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter
 
   private val ioFromVFuture = new CatsFFromVFuture[IO]
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Fs2Streams[IO], IO],
+  override def route(
+      e: ServerEndpoint[Fs2Streams[IO], IO],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route = {
     implicit val options: VertxCatsServerOptions[IO] =

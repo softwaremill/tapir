@@ -24,7 +24,7 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
   ): Router => Route =
     route(ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]](e, _ => logic(_).either))
 
-  def route[R, I, E, O](e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]])(implicit
+  def route[R](e: ServerEndpoint[ZioStreams, RIO[R, *]])(implicit
       endpointOptions: VertxZioServerOptions[RIO[R, *]],
       runtime: Runtime[R]
   ): Router => Route = { router =>
@@ -42,8 +42,8 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
   ): Router => Route =
     route(e.serverLogicRecoverErrors(logic))
 
-  private def endpointHandler[R, I, E, O, A](
-      e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
+  private def endpointHandler[R](
+      e: ServerEndpoint[ZioStreams, RIO[R, *]]
   )(implicit runtime: Runtime[R], serverOptions: VertxZioServerOptions[RIO[R, *]]): Handler[RoutingContext] = { rc =>
     val fromVFuture = new RioFromVFuture[R]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Unit, ZioStreams](

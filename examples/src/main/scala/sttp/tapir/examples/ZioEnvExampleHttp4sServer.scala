@@ -51,7 +51,7 @@ object ZioEnvExampleHttp4sServer extends App {
     ZHttp4sServerInterpreter.from(petEndpoint)(petId => PetService.find(petId)).toRoutes
 
   // Same as above, but combining endpoint description with server logic:
-  val petServerEndpoint: ZServerEndpoint[PetService, Int, String, Pet] = petEndpoint.zServerLogic(petId => PetService.find(petId))
+  val petServerEndpoint: ZServerEndpoint[PetService] = petEndpoint.zServerLogic(petId => PetService.find(petId))
   val petServerRoutes: HttpRoutes[RIO[PetService with Clock, *]] = ZHttp4sServerInterpreter.from(List(petServerEndpoint)).toRoutes
 
   // Documentation

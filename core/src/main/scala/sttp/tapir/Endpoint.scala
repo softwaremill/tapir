@@ -12,7 +12,11 @@ import sttp.tapir.typelevel.{FnComponents, ParamConcat, ParamSubtract}
 import scala.collection.immutable.Nil
 import scala.reflect.ClassTag
 
-/** @tparam I Input parameter types.
+/** A description of an endpoint, with input parameters of type `I`, error-output parameters of type `E` and
+  * success-output parameters of type `O`. The endpoint requires that server/client interpreters meet the capabilities
+  * specified by `R` (if any).
+  *
+  * @tparam I Input parameter types.
   * @tparam E Error output parameter types.
   * @tparam O Output parameter types.
   * @tparam R The capabilities that are required by this endpoint's inputs/outputs. This might be `Any` (no
@@ -24,11 +28,12 @@ case class Endpoint[I, E, O, -R](input: EndpointInput[I], errorOutput: EndpointO
     extends EndpointInputsOps[I, E, O, R]
     with EndpointErrorOutputsOps[I, E, O, R]
     with EndpointOutputsOps[I, E, O, R]
-    with EndpointInfoOps[I, E, O, R]
-    with EndpointMetaOps[I, E, O, R]
+    with EndpointInfoOps[R]
+    with EndpointMetaOps
     with EndpointServerLogicOps[I, E, O, R] { outer =>
 
   override type EndpointType[_I, _E, _O, -_R] = Endpoint[_I, _E, _O, _R]
+  override type ThisType[-_R] = Endpoint[I, E, O, _R]
   override private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): Endpoint[I2, E, O, R with R2] = this.copy(input = input)
   override private[tapir] def withErrorOutput[E2, R2](errorOutput: EndpointOutput[E2]): Endpoint[I, E2, O, R with R2] =
     this.copy(errorOutput = errorOutput)
@@ -183,26 +188,25 @@ trait EndpointOutputsOps[I, E, O, -R] {
   }
 }
 
-trait EndpointInfoOps[I, E, O, -R] {
-  type EndpointType[_I, _E, _O, -_R]
+trait EndpointInfoOps[-R] {
+  type ThisType[-_R]
   def info: EndpointInfo
-  private[tapir] def withInfo(info: EndpointInfo): EndpointType[I, E, O, R]
+  private[tapir] def withInfo(info: EndpointInfo): ThisType[R]
 
-  def name(n: String): EndpointType[I, E, O, R] = withInfo(info.name(n))
-  def summary(s: String): EndpointType[I, E, O, R] = withInfo(info.summary(s))
-  def description(d: String): EndpointType[I, E, O, R] = withInfo(info.description(d))
-  def tags(ts: List[String]): EndpointType[I, E, O, R] = withInfo(info.tags(ts))
-  def tag(t: String): EndpointType[I, E, O, R] = withInfo(info.tag(t))
-  def deprecated(): EndpointType[I, E, O, R] = withInfo(info.deprecated(true))
+  def name(n: String): ThisType[R] = withInfo(info.name(n))
+  def summary(s: String): ThisType[R] = withInfo(info.summary(s))
+  def description(d: String): ThisType[R] = withInfo(info.description(d))
+  def tags(ts: List[String]): ThisType[R] = withInfo(info.tags(ts))
+  def tag(t: String): ThisType[R] = withInfo(info.tag(t))
+  def deprecated(): ThisType[R] = withInfo(info.deprecated(true))
 
-  def info(i: EndpointInfo): EndpointType[I, E, O, R] = withInfo(i)
+  def info(i: EndpointInfo): ThisType[R] = withInfo(i)
 }
 
-trait EndpointMetaOps[I, E, O, -R] {
-  type EndpointType[_I, _E, _O, -_R]
-  def input: EndpointInput[I]
-  def errorOutput: EndpointOutput[E]
-  def output: EndpointOutput[O]
+trait EndpointMetaOps {
+  def input: EndpointInput[_]
+  def errorOutput: EndpointOutput[_]
+  def output: EndpointOutput[_]
   def info: EndpointInfo
 
   /** Basic information about the endpoint, excluding mapping information, with inputs sorted (first the method, then
@@ -271,14 +275,14 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     * returned [[ServerEndpoint]] value (except for endpoint meta-data). To provide the logic in parts, see
     * [[serverLogicPart]] and [[serverLogicForCurrent]].
     */
-  def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[I, E, O, R, F] = ServerEndpoint(this, _ => f)
+  def serverLogic[F[_]](f: I => F[Either[E, O]]): ServerEndpoint[R, F] = ServerEndpoint(this, _ => f)
 
   /** Same as [[serverLogic]], but requires `E` to be a throwable, and coverts failed effects of type `E` to endpoint
     * errors.
     */
   def serverLogicRecoverErrors[F[_]](
       f: I => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[I, E, O, R, F] =
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): ServerEndpoint[R, F] =
     ServerEndpoint(this, recoverErrors[I, E, O, F](f))
 
   /** Combine this endpoint description with a function, which implements a part of the server-side logic. The
@@ -304,10 +308,14 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     */
   def serverLogicPart[T, IR, U, F[_]](
       f: T => F[Either[E, U]]
-  )(implicit iMinusT: ParamSubtract.Aux[I, T, IR]): ServerEndpointInParts[U, IR, I, E, O, R, F] = {
+  )(implicit iMinusT: ParamSubtract.Aux[I, T, IR]): ServerEndpointInParts[U, IR, E, O, R, F] = {
+    type _I = I
     type _T = T
-    new ServerEndpointInParts[U, IR, I, E, O, R, F](this) {
+    val e = this
+    new ServerEndpointInParts[U, IR, E, O, R, F] {
+      override type I = _I
       override type T = _T
+      override def endpoint: Endpoint[I, E, O, R] = e
       override def splitInput: I => (T, IR) = i => split(i)(iMinusT)
       override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = _ => f
     }
@@ -322,10 +330,14 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E],
       iMinusR: ParamSubtract.Aux[I, T, IR]
-  ): ServerEndpointInParts[U, IR, I, E, O, R, F] = {
+  ): ServerEndpointInParts[U, IR, E, O, R, F] = {
+    type _I = I
     type _T = T
-    new ServerEndpointInParts[U, IR, I, E, O, R, F](this) {
+    val e = this
+    new ServerEndpointInParts[U, IR, E, O, R, F] {
+      override type I = _I
       override type T = _T
+      override def endpoint: Endpoint[I, E, O, R] = e
       override def splitInput: I => (T, IR) = i => split(i)(iMinusR)
       override def logicFragment: MonadError[F] => _T => F[Either[E, U]] = recoverErrors[_T, E, U, F](f)
     }
@@ -350,8 +362,9 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     * An example use-case is defining an endpoint with fully-defined errors, and with authorization logic built-in.
     * Such an endpoint can be then extended by multiple other endpoints.
     */
-  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[I, U, Unit, E, O, R, F] =
-    new PartialServerEndpoint[I, U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+  def serverLogicForCurrent[U, F[_]](f: I => F[Either[E, U]]): PartialServerEndpoint[U, Unit, E, O, R, F] =
+    new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+      type T = I
       override def tInput: EndpointInput[I] = outer.input
       override def partialLogic: MonadError[F] => I => F[Either[E, U]] = _ => f
     }
@@ -361,8 +374,9 @@ trait EndpointServerLogicOps[I, E, O, -R] { outer: Endpoint[I, E, O, R] =>
     */
   def serverLogicForCurrentRecoverErrors[U, F[_]](
       f: I => F[U]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[I, U, Unit, E, O, R, F] =
-    new PartialServerEndpoint[I, U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): PartialServerEndpoint[U, Unit, E, O, R, F] =
+    new PartialServerEndpoint[U, Unit, E, O, R, F](this.copy(input = emptyInput)) {
+      type T = I
       override def tInput: EndpointInput[I] = outer.input
       override def partialLogic: MonadError[F] => I => F[Either[E, U]] = recoverErrors(f)
     }

@@ -20,8 +20,8 @@ import scala.reflect.ClassTag
 class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestServerInterpreter[Future, Any, Router.Routes] {
   import actorSystem.dispatcher
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future],
+  override def route(
+      e: ServerEndpoint[Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =

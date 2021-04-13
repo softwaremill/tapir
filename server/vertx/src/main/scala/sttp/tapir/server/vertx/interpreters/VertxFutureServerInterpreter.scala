@@ -62,10 +62,9 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit endpointOptions: VertxFutureServerOptions): Router => Route = {
-    router =>
-      mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
-        .handler(endpointHandler(e, endpointOptions))
+  def route(e: ServerEndpoint[Any, Future])(implicit endpointOptions: VertxFutureServerOptions): Router => Route = { router =>
+    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
+      .handler(endpointHandler(e, endpointOptions))
   }
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
@@ -73,15 +72,15 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def blockingRoute[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future]
+  def blockingRoute(
+      e: ServerEndpoint[Any, Future]
   )(implicit endpointOptions: VertxFutureServerOptions): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .blockingHandler(endpointHandler(e, endpointOptions))
   }
 
-  private def endpointHandler[I, E, O, A](
-      e: ServerEndpoint[I, E, O, Any, Future],
+  private def endpointHandler[A](
+      e: ServerEndpoint[Any, Future],
       serverOptions: VertxFutureServerOptions
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)

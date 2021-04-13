@@ -18,8 +18,8 @@ import scala.concurrent.Future
 class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route] {
   import VertxTestServerInterpreter._
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, Future],
+  override def route(
+      e: ServerEndpoint[Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler]
   ): Router => Route = {
     implicit val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(decodeFailureHandler =

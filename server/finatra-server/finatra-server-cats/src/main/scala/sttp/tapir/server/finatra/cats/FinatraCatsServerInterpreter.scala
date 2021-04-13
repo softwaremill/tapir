@@ -26,8 +26,8 @@ trait FinatraCatsServerInterpreter extends Logging {
     toRoute(e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoute[I, E, O, F[_]](
-      e: ServerEndpoint[I, E, O, Any, F]
+  def toRoute[F[_]](
+      e: ServerEndpoint[Any, F]
   )(implicit serverOptions: FinatraServerOptions, eff: Effect[F]): FinatraRoute = {
     FinatraServerInterpreter.toRoute(e.endpoint.serverLogic(i => eff.toIO(e.logic(new CatsMonadError)(i)).to[Rerunnable].run))
   }

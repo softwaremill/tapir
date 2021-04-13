@@ -58,7 +58,7 @@ trait Http4sServerInterpreter {
 
   //
 
-  def toHttp[I, E, O, F[_], G[_]](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G])(
+  def toHttp[F[_], G[_]](se: ServerEndpoint[Fs2Streams[F] with WebSockets, G])(
       t: F ~> G
   )(implicit
       serverOptions: Http4sServerOptions[F, G],
@@ -68,15 +68,15 @@ trait Http4sServerInterpreter {
       timer: Timer[F]
   ): Http[OptionT[G, *], F] = toHttp(List(se))(t)
 
-  def toRoutes[I, E, O, F[_]](
-      se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]
+  def toRoutes[F[_]](
+      se: ServerEndpoint[Fs2Streams[F] with WebSockets, F]
   )(implicit serverOptions: Http4sServerOptions[F, F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = toRoutes(
     List(se)
   )
 
   //
 
-  def toRoutes[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]])(implicit
+  def toRoutes[F[_]](serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, F]])(implicit
       serverOptions: Http4sServerOptions[F, F],
       fs: Concurrent[F],
       fcs: ContextShift[F],
@@ -85,7 +85,7 @@ trait Http4sServerInterpreter {
 
   //
 
-  def toHttp[F[_], G[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]])(t: F ~> G)(implicit
+  def toHttp[F[_], G[_]](serverEndpoints: List[ServerEndpoint[Fs2Streams[F] with WebSockets, G]])(t: F ~> G)(implicit
       serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],

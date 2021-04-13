@@ -268,7 +268,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     case class User1(x: String, y: Int)
     case class User2(z: Double)
     case class Result(u1: User1, u2: User2, a: String)
-    val base: PartialServerEndpoint[(String, Int), User1, Unit, String, Unit, Any, Future] = endpoint
+    val base: PartialServerEndpoint[User1, Unit, String, Unit, Any, Future] = endpoint
       .errorOut(stringBody)
       .in(query[String]("x"))
       .in(query[Int]("y"))
@@ -298,7 +298,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, List.empty))
     implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, 0d))
 
-    val _: ServerEndpoint[(String, Int, Double), String, Result, Any, Future] = endpoint
+    val _: ServerEndpoint[Any, Future] = endpoint
       .in(query[String]("x"))
       .in(query[Int]("y"))
       .in(query[Double]("z"))
@@ -312,7 +312,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   "PartialServerEndpoint" should "include all inputs when recovering the endpoint" in {
-    val pe: PartialServerEndpoint[String, String, Unit, Int, Unit, Any, Future] =
+    val pe: PartialServerEndpoint[String, Unit, Int, Unit, Any, Future] =
       endpoint
         .in("secure")
         .in(query[String]("token"))

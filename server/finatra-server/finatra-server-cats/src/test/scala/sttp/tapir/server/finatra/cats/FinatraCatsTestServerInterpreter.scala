@@ -17,8 +17,8 @@ class FinatraCatsTestServerInterpreter extends TestServerInterpreter[IO, Any, Fi
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Any, IO],
+  override def route(
+      e: ServerEndpoint[Any, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =

@@ -23,8 +23,8 @@ class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[I
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
 
-  override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
+  override def route(
+      e: ServerEndpoint[Fs2Streams[IO] with WebSockets, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): HttpRoutes[IO] = {
     implicit val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions

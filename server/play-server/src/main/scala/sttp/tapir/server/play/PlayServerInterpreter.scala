@@ -31,12 +31,12 @@ trait PlayServerInterpreter {
     toRoutes(e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoutes[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+  def toRoutes(e: ServerEndpoint[Any, Future])(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
     toRoutes(List(e))
   }
 
   def toRoutes[I, E, O](
-      serverEndpoints: List[ServerEndpoint[_, _, _, Any, Future]]
+      serverEndpoints: List[ServerEndpoint[Any, Future]]
   )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
     implicit val ec: ExecutionContextExecutor = mat.executionContext
     implicit val monad: FutureMonad = new FutureMonad()

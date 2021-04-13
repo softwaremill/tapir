@@ -13,12 +13,12 @@ trait ZHttp4sServerInterpreter {
   ): ServerEndpointsToRoutes[R] =
     from[R, I, E, O](e.zServerLogic(logic))
 
-  def from[R, I, E, O](se: ZServerEndpoint[R, I, E, O])(implicit
+  def from[R, I, E, O](se: ZServerEndpoint[R])(implicit
       serverOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]]
   ): ServerEndpointsToRoutes[R] = from[R](List(se))
 
   def from[R](
-      serverEndpoints: List[ZServerEndpoint[R, _, _, _]]
+      serverEndpoints: List[ZServerEndpoint[R]]
   )(implicit serverOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]]): ServerEndpointsToRoutes[R] =
     new ServerEndpointsToRoutes[R](serverEndpoints, serverOptions)
 
@@ -26,7 +26,7 @@ trait ZHttp4sServerInterpreter {
   // to explicitly provide the env type (R) as a type argument - so that it's not automatically inferred to include
   // Clock
   class ServerEndpointsToRoutes[R](
-      serverEndpoints: List[ZServerEndpoint[R, _, _, _]],
+      serverEndpoints: List[ZServerEndpoint[R]],
       serverOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]]
   ) {
     def toRoutes: HttpRoutes[RIO[R with Clock, *]] = {

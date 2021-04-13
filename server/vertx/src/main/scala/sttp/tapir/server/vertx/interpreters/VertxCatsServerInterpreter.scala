@@ -49,8 +49,8 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[F[_], I, E, O](
-      e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
+  def route[F[_]](
+      e: ServerEndpoint[Fs2Streams[F], F]
   )(implicit
       endpointOptions: VertxCatsServerOptions[F],
       effect: ConcurrentEffect[F]
@@ -59,8 +59,8 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
   }
 
-  private def endpointHandler[F[_], I, E, O, A, S: ReadStreamCompatible](
-      e: ServerEndpoint[I, E, O, _, F]
+  private def endpointHandler[F[_], A, S: ReadStreamCompatible](
+      e: ServerEndpoint[_, F]
   )(implicit serverOptions: VertxCatsServerOptions[F], effect: Effect[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     val fFromVFuture = new CatsFFromVFuture[F]

@@ -33,7 +33,7 @@ object ZioExampleHttp4sServer extends App {
     .toRoutes
 
   // Same as above, but combining endpoint description with server logic:
-  val petServerEndpoint: ZServerEndpoint[Any, Int, String, Pet] = petEndpoint.zServerLogic { petId =>
+  val petServerEndpoint: ZServerEndpoint[Any] = petEndpoint.zServerLogic { petId =>
     if (petId == 35) {
       UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
     } else {
