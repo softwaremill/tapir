@@ -10,7 +10,7 @@ class ExceptionInterceptor[F[_], B](handler: ExceptionHandler) extends EndpointI
     override def onDecodeSuccess[I](ctx: DecodeSuccessContext[F, I])(implicit monad: MonadError[F]): F[ServerResponse[B]] = {
       monad.handleError(decodeHandler.onDecodeSuccess(ctx)) { case e: Exception =>
         handler(ExceptionContext(e, ctx.endpoint, ctx.request)) match {
-          case Some(value) => responder(value)
+          case Some(value) => responder(ctx.request, value)
           case None        => monad.error(e)
         }
       }
@@ -19,7 +19,7 @@ class ExceptionInterceptor[F[_], B](handler: ExceptionHandler) extends EndpointI
     override def onDecodeFailure(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] = {
       monad.handleError(decodeHandler.onDecodeFailure(ctx)) { case e: Exception =>
         handler(ExceptionContext(e, ctx.endpoint, ctx.request)) match {
-          case Some(value) => responder(value).map(Some(_))
+          case Some(value) => responder(ctx.request, value).map(Some(_))
           case None        => monad.error(e)
         }
       }

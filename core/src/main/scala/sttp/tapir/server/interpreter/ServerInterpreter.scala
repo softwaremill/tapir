@@ -18,7 +18,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     apply(request, List(se))
 
   def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[B]]] =
-    callInterceptors(interceptors, Nil, responder(request, defaultSuccessStatusCode), ses).apply(request)
+    callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request)
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
   private def callInterceptors(
@@ -62,7 +62,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
 
     def endpointHandler(defaultStatusCode: StatusCode): EndpointHandler[F, B] = endpointInterceptors.foldRight(defaultEndpointHandler) {
       case (int, hand) =>
-        int(responder(request, defaultStatusCode), hand)
+        int(responder(defaultStatusCode), hand)
     }
 
     decodeBody(decodedBasicInputs).flatMap {
@@ -111,19 +111,19 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       serverEndpoint
         .logic(implicitly)(i)
         .flatMap {
-          case Right(result) => responder(request, defaultSuccessStatusCode)(ValuedEndpointOutput(serverEndpoint.output, result))
-          case Left(err)     => responder(request, defaultErrorStatusCode)(ValuedEndpointOutput(serverEndpoint.errorOutput, err))
+          case Right(result) => responder(defaultSuccessStatusCode)(request, ValuedEndpointOutput(serverEndpoint.output, result))
+          case Left(err)     => responder(defaultErrorStatusCode)(request, ValuedEndpointOutput(serverEndpoint.errorOutput, err))
         }
 
     override def onDecodeFailure(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] =
       (None: Option[ServerResponse[B]]).unit(monad)
   }
 
-  private def responder(request: ServerRequest, defaultStatusCode: StatusCode): Responder[F, B] = new Responder[F, B] {
-    override def apply[O](valuedEndpointOutput: ValuedEndpointOutput[O]): F[ServerResponse[B]] = {
+  private def responder(defaultStatusCode: StatusCode): Responder[F, B] = new Responder[F, B] {
+    override def apply[O](request: ServerRequest, output: ValuedEndpointOutput[O]): F[ServerResponse[B]] = {
       val outputValues =
         new EncodeOutputs(toResponseBody, request.acceptsContentTypes.getOrElse(Nil))
-          .apply(valuedEndpointOutput.output, ParamsAsAny(valuedEndpointOutput.value), OutputValues.empty)
+          .apply(output.output, ParamsAsAny(output.value), OutputValues.empty)
       val statusCode = outputValues.statusCode.getOrElse(defaultStatusCode)
 
       val headers = outputValues.headers

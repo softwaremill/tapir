@@ -13,7 +13,7 @@ class DecodeFailureInterceptor[F[_], B](handler: DecodeFailureHandler) extends E
     override def onDecodeFailure(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] = {
       handler(ctx) match {
         case None               => decodeHandler.onDecodeFailure(ctx)
-        case Some(valuedOutput) => responder(valuedOutput).map(Some(_))
+        case Some(valuedOutput) => responder(ctx.request, valuedOutput).map(Some(_))
       }
     }
   }

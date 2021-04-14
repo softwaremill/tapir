@@ -21,9 +21,9 @@ class UnsupportedMediaTypeInterceptor[F[_], B] extends EndpointInterceptor[F, B]
             val hasMatchingRepresentation = ctx.endpoint.output.supportedMediaTypes.exists(mt => ranges.exists(mt.matches))
 
             if (hasMatchingRepresentation) endpointHandler.onDecodeSuccess(ctx)
-            else responder(ValuedEndpointOutput(statusCode(StatusCode.UnsupportedMediaType), ()))
+            else responder(ctx.request, ValuedEndpointOutput(statusCode(StatusCode.UnsupportedMediaType), ()))
 
-          case Left(_) => responder(ValuedEndpointOutput(statusCode(StatusCode.BadRequest), ()))
+          case Left(_) => responder(ctx.request, ValuedEndpointOutput(statusCode(StatusCode.BadRequest), ()))
         }
       }
 
