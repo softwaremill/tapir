@@ -5,10 +5,14 @@ import sttp.monad.syntax._
 import sttp.tapir.metrics.Metric
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.{EndpointInterceptor, ValuedEndpointOutput}
+import sttp.tapir.server.interpreter.ServerResponseListener
+import sttp.tapir.server.interpreter.ServerResponseListenerSyntax._
 import sttp.tapir.{DecodeResult, Endpoint, EndpointInput}
 
-class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])(implicit monad: MonadError[F])
-    extends EndpointInterceptor[F, B] {
+class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])(implicit
+    monad: MonadError[F],
+    listener: ServerResponseListener[F, B]
+) extends EndpointInterceptor[F, B] {
 
   override def onDecodeSuccess[I](
       request: ServerRequest,
@@ -20,8 +24,11 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
     else {
       for {
         _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(endpoint, request, m) }
-        response <- next(None)
-        _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(endpoint, request, response, m) }
+        response <- next(None).map(r =>
+          r.listen {
+            collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(endpoint, request, r, m) }
+          }
+        )
       } yield response
     }
   }
@@ -41,16 +48,15 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
         case _: DecodeResult.Mismatch => next(None)
         case _ =>
           for {
-            r <- next(None)
-            _ <- r match {
-              case Some(response) =>
+            response <- next(None).map(_.map { r =>
+              r.listen {
                 for {
                   _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(endpoint, request, m) }
-                  _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(endpoint, request, response, m) }
+                  _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(endpoint, request, r, m) }
                 } yield ()
-              case None => monad.unit(r)
-            }
-          } yield r
+              }
+            })
+          } yield response
       }
     }
   }

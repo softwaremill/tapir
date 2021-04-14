@@ -11,6 +11,7 @@ import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interpreter.ServerResponseListener
 
 import java.io.StringWriter
 import scala.concurrent.duration.Deadline
@@ -39,7 +40,9 @@ case class PrometheusMetrics[F[_]](
   def metricsServerEndpoint: ServerEndpoint[Unit, Unit, CollectorRegistry, Any, F] =
     metricsEp.serverLogic { _ => monad.unit(Right(registry)) }
 
-  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): Interceptor[F, B] =
+  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty)(implicit
+      listener: ServerResponseListener[F, B]
+  ): Interceptor[F, B] =
     new MetricsInterceptor[F, B](metrics.toList, ignoreEndpoints :+ metricsEp)
 }
 

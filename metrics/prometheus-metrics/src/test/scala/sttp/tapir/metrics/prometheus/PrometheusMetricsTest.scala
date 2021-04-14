@@ -16,9 +16,11 @@ import sttp.tapir.internal.NoStreams
 import sttp.tapir.metrics.Metric
 import sttp.tapir.metrics.prometheus.PrometheusMetrics._
 import sttp.tapir.metrics.prometheus.PrometheusMetricsTest._
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interpreter.{ServerInterpreter, ToResponseBody}
+import sttp.tapir.server.interceptor.DecodeFailureContext
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interpreter.{ServerInterpreter, ServerResponseListener, ToResponseBody}
 
 import java.nio.charset.Charset
 import scala.collection.immutable
@@ -79,17 +81,22 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       if (name == "Jacob") Right(()) else Left(())
     }
     val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
-    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
+    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](
+      TestRequestBody,
+      TestToResponseBody,
+      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.handler))
+    )
 
     // when
     interpreter.apply(testRequest("Jacob"), serverEp)
     interpreter.apply(testRequest("Jacob"), serverEp)
     interpreter.apply(testRequest("Mike"), serverEp)
+    interpreter.apply(testRequest(""), serverEp)
 
     // then
     val encoded = collectorRegistryCodec.encode(metrics.registry)
     encoded.contains("tapir_responses_total{path=\"/person\",method=\"GET\",status=\"2xx\",} 2.0") shouldBe true
-    encoded.contains("tapir_responses_total{path=\"/person\",method=\"GET\",status=\"4xx\",} 1.0") shouldBe true
+    encoded.contains("tapir_responses_total{path=\"/person\",method=\"GET\",status=\"4xx\",} 2.0") shouldBe true
   }
 
   "default metrics" should "collect responses duration" in {
@@ -217,6 +224,20 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 }
 
 object PrometheusMetricsTest {
+
+  implicit val listenerUnit: ServerResponseListener[Id, Unit] = new ServerResponseListener[Id, Unit] {
+    override def listen(r: ServerResponse[Unit])(cb: => Id[Unit]): ServerResponse[Unit] = {
+      cb
+      r
+    }
+  }
+
+  implicit val listenerString: ServerResponseListener[Id, String] = new ServerResponseListener[Id, String] {
+    override def listen(r: ServerResponse[String])(cb: => Id[Unit]): ServerResponse[String] = {
+      cb
+      r
+    }
+  }
 
   val testEndpoint: Endpoint[String, Unit, Unit, Any] = endpoint
     .in("person")

@@ -14,7 +14,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.metrics.Metric
 import sttp.tapir.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
+import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions, _}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
