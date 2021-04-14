@@ -48,7 +48,7 @@ trait TapirOpenAPICirceEncoders {
       Json.obj(fields.toSeq: _*)
     }
   implicit val encoderResponses: Encoder[Responses] = Encoder.instance { resp =>
-    val extensions = resp.extensions.map(_.asJson).flatMap(_.asObject).getOrElse(JsonObject.empty)
+    val extensions = resp.extensions.asJsonObject
     val respJson = resp.responses.asJson
     respJson.asObject.map(_.deepMerge(extensions).asJson).getOrElse(respJson)
   }
@@ -60,7 +60,7 @@ trait TapirOpenAPICirceEncoders {
   }
   implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem].mapJsonObject(expandExtensions)
   implicit val encoderPaths: Encoder[Paths] = Encoder.instance { paths =>
-    val extensions = paths.extensions.map(_.asJson).flatMap(_.asObject).getOrElse(JsonObject.empty)
+    val extensions = paths.extensions.asJsonObject
     val pathItems = paths.pathItems.asJson
     pathItems.asObject.map(_.deepMerge(extensions).asJson).getOrElse(pathItems)
   }

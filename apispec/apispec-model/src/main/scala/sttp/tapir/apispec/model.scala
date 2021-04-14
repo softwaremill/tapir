@@ -17,7 +17,7 @@ case class Tag(
   name: String,
   description: Option[String] = None,
   externalDocs: Option[ExternalDocumentation] = None,
-  extensions: Option[ListMap[String, ExtensionValue]] = None
+  extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class ExternalDocumentation(url: String, description: Option[String] = None)

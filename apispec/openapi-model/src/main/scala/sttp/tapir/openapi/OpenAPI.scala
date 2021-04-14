@@ -12,7 +12,7 @@ case class OpenAPI(
     paths: Paths,
     components: Option[Components],
     security: List[SecurityRequirement],
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def addPathItem(path: String, pathItem: PathItem): OpenAPI = {
     val pathItem2 = paths.pathItems.get(path) match {
@@ -36,26 +36,26 @@ case class Info(
     termsOfService: Option[String] = None,
     contact: Option[Contact] = None,
     license: Option[License] = None,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Contact(
     name: Option[String],
     email: Option[String],
     url: Option[String],
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 case class License(
     name: String,
     url: Option[String],
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Server(
     url: String,
     description: Option[String] = None,
     variables: Option[ListMap[String, ServerVariable]] = None,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def description(d: String): Server = copy(description = Some(d))
   def variables(vars: (String, ServerVariable)*): Server = copy(variables = Some(ListMap(vars: _*)))
@@ -65,7 +65,7 @@ case class ServerVariable(
     enum: Option[List[String]],
     default: String,
     description: Option[String],
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   require(`enum`.fold(true)(_.contains(default)), "ServerVariable#default must be one of the values in enum if enum is defined")
 }
@@ -74,12 +74,12 @@ case class ServerVariable(
 case class Components(
     schemas: ListMap[String, ReferenceOr[Schema]],
     securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]],
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Paths(
     pathItems: ListMap[String, PathItem],
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 // todo: $ref
@@ -96,7 +96,7 @@ case class PathItem(
     trace: Option[Operation] = None,
     servers: List[Server] = List.empty,
     parameters: List[ReferenceOr[Parameter]] = List.empty,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def mergeWith(other: PathItem): PathItem = {
     PathItem(
@@ -128,7 +128,7 @@ case class Operation(
     deprecated: Option[Boolean] = None,
     security: List[SecurityRequirement] = List.empty,
     servers: List[Server] = List.empty,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Parameter(
@@ -145,7 +145,7 @@ case class Parameter(
     example: Option[ExampleValue] = None,
     examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
     content: ListMap[String, MediaType] = ListMap.empty,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 object ParameterIn extends Enumeration {
@@ -173,7 +173,7 @@ case class RequestBody(
     description: Option[String],
     content: ListMap[String, MediaType],
     required: Option[Boolean],
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class MediaType(
@@ -181,7 +181,7 @@ case class MediaType(
     example: Option[ExampleValue] = None,
     examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
     encoding: ListMap[String, Encoding] = ListMap.empty,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Encoding(
@@ -190,7 +190,7 @@ case class Encoding(
     style: Option[ParameterStyle.ParameterStyle] = None,
     explode: Option[Boolean] = None,
     allowReserved: Option[Boolean] = None,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 sealed trait ResponsesKey
@@ -202,12 +202,12 @@ case class Response(
     description: String,
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     content: ListMap[String, MediaType] = ListMap.empty,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Responses(
     responses: ListMap[ResponsesKey, ReferenceOr[Response]],
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 object Response {
@@ -219,7 +219,7 @@ case class Example(
     description: Option[String] = None,
     value: Option[ExampleValue] = None,
     externalValue: Option[String] = None,
-    extensions: Option[ListMap[String, ExtensionValue]] = None
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Header(
