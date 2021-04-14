@@ -61,8 +61,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     val decodedBasicInputs = DecodeBasicInputs(se.endpoint.input, request)
 
     def endpointHandler(defaultStatusCode: StatusCode): EndpointHandler[F, B] = endpointInterceptors.foldRight(defaultEndpointHandler) {
-      case (int, hand) =>
-        int(responder(defaultStatusCode), hand)
+      case (interceptor, handler) => interceptor(responder(defaultStatusCode), handler)
     }
 
     decodeBody(decodedBasicInputs).flatMap {
