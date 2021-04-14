@@ -91,7 +91,7 @@ trait TapirOpenAPICirceEncoders {
     val extensions = jsonObject("extensions")
     val jsonWithoutExt = jsonObject.filterKeys(_ != "extensions")
     extensions.flatMap(_.asObject).map(extObject =>
-      jsonWithoutExt.deepMerge(extObject)
+      extObject.deepMerge(jsonWithoutExt)
     ).getOrElse(jsonWithoutExt)
   }
 }

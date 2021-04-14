@@ -24,9 +24,10 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
     val outputs = output.asBasicOutputsList
     val statusCodes = outputs.map { case (sc, _) => sc }.distinct
     val outputsByStatusCode = outputs.groupBy { case (sc, _) => sc }.mapValues(_.flatMap { case (_, output) => output })
+    val extensions = outputs.flatMap(_._2.flatMap(_.info.extensions))
     statusCodes.flatMap { sc =>
       val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
-      outputsToResponse(sc, outputsByStatusCode.getOrElse(sc, List())).map(response => (responseKey, Right(response)))
+      outputsToResponse(sc, outputsByStatusCode.getOrElse(sc, List())).map(response => (responseKey, Right(response.copy(extensions = Extensions.fromIterable(extensions)))))
     } match {
       case responses if responses.isEmpty => defaultResponse.map(defaultResponseKey -> Right(_)).toIterable.toListMap
       case responses                      => responses.toListMap
@@ -38,9 +39,9 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
     val headers = collectHeaders(outputs)
 
     val statusCodeDescriptions = outputs.flatMap {
-      case EndpointOutput.StatusCode(possibleCodes, _, _)                          => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
-      case EndpointOutput.FixedStatusCode(_, _, EndpointIO.Info(Some(desc), _, _)) => Vector(desc)
-      case _                                                                       => Vector()
+      case EndpointOutput.StatusCode(possibleCodes, _, _)                             => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
+      case EndpointOutput.FixedStatusCode(_, _, EndpointIO.Info(Some(desc), _, _, _)) => Vector(desc)
+      case _                                                                          => Vector()
     }
 
     val description = bodies.headOption.flatMap { case (desc, _) => desc }.getOrElse(statusCodeDescriptions.headOption.getOrElse(""))

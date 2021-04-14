@@ -346,7 +346,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
       emptyInput,
       EndpointOutput.Void(),
       emptyOutput,
-      EndpointInfo(None, None, None, Vector.empty, deprecated = false)
+      EndpointInfo(None, None, None, Vector.empty, deprecated = false, Vector.empty)
     )
 
   val endpoint: Endpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
