@@ -3,13 +3,14 @@ package sttp.tapir.server.http4s
 import cats.data.{Kleisli, NonEmptyList}
 import cats.effect.{ContextShift, IO, Resource, Timer}
 import cats.syntax.all._
+import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{HttpRoutes, Request, Response}
-import org.http4s.server.blaze.BlazeServerBuilder
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
 import sttp.tapir.server.tests.TestServerInterpreter
@@ -18,19 +19,22 @@ import sttp.tapir.tests.Port
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO]] {
+class Http4sTestServerInterpreter
+    extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO], Http4sResponseBody[IO]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None,
+      interceptors: List[Interceptor[IO, Http4sResponseBody[IO]]] = Nil
   ): HttpRoutes[IO] = {
     implicit val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
       .customInterceptors(
         exceptionHandler = Some(DefaultExceptionHandler),
         serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
+        additionalInterceptors = interceptors,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
     Http4sServerInterpreter.toRoutes(e)

@@ -40,14 +40,17 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
             case _: DecodeResult.Mismatch => endpointHandler.onDecodeFailure(ctx)
             case _ =>
               for {
-                response <- endpointHandler
-                  .onDecodeFailure(ctx)
+                response <- endpointHandler.onDecodeFailure(ctx)
                   .map(_.map { r =>
                     r.listen {
-                      for {
-                        _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
-                        _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, r, m) }
-                      } yield ()
+                      collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
+                        .flatMap { _ => collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, r, m) } }
+
+                      // todo
+//                      for {
+//                        _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
+//                        _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, r, m) }
+//                      } yield ()
                     }
                   })
               } yield response

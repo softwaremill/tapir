@@ -14,9 +14,9 @@ import sttp.tapir.tests.{Fruit, Test}
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.fs2.Fs2Streams
 
-abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
+abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
-    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE],
+    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE, B],
     val streams: S
 )(implicit
     m: MonadError[F]

@@ -19,6 +19,7 @@ import sttp.tapir.server.tests.{
   CreateServerTest,
   ServerAuthenticationTests,
   ServerBasicTests,
+  ServerMetricsTest,
   ServerStreamingTests,
   ServerWebSocketTests,
   backendResource
@@ -39,7 +40,10 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     actorSystemResource.map { implicit actorSystem =>
+
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
+      implicit val responseListener: AkkaServerResponseListener = new AkkaServerResponseListener()
+
       val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
       val createServerTest = new CreateServerTest(interpreter)
 
@@ -90,6 +94,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
         new ServerAuthenticationTests(backend, createServerTest).tests() ++
+        new ServerMetricsTest(backend, createServerTest).tests() ++
         additionalTests()
     }
   }

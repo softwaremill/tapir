@@ -6,26 +6,31 @@ import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.util.Future
 import sttp.tapir.Endpoint
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Port
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, FinatraRoute] {
+class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, FinatraRoute, FinatraContent] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None,
+      interceptors: List[Interceptor[Future, FinatraContent]] = Nil
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
-      FinatraServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      FinatraServerOptions.customInterceptors(
+        additionalInterceptors = interceptors,
+        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
+      )
     FinatraServerInterpreter.toRoute(e)
   }
 

@@ -9,21 +9,24 @@ import cats.effect.{IO, Resource}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
-import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
+import sttp.tapir.server.{ServerEndpoint, akkahttp}
 import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
-    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route] {
+    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route, AkkaResponseBody] {
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None,
+      interceptors: List[Interceptor[Future, akkahttp.AkkaResponseBody]] = Nil
   ): Route = {
     implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
+      additionalInterceptors = interceptors,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     AkkaHttpServerInterpreter.toRoute(e)

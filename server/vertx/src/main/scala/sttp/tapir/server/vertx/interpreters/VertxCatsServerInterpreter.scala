@@ -64,7 +64,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
   )(implicit serverOptions: VertxCatsServerOptions[F], effect: Effect[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     val fFromVFuture = new CatsFFromVFuture[F]
-    val interpreter = new ServerInterpreter(
+    val interpreter: ServerInterpreter[Nothing, F, RoutingContext => Unit, S] = new ServerInterpreter(
       new VertxRequestBody(rc, serverOptions, fFromVFuture),
       new VertxToResponseBody(serverOptions),
       serverOptions.interceptors

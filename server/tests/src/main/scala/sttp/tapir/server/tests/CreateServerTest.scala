@@ -10,19 +10,21 @@ import sttp.model._
 import sttp.tapir._
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.tests._
 
-class CreateServerTest[F[_], +R, ROUTE](interpreter: TestServerInterpreter[F, R, ROUTE]) extends StrictLogging {
+class CreateServerTest[F[_], +R, ROUTE, B](interpreter: TestServerInterpreter[F, R, ROUTE, B]) extends StrictLogging {
   def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None,
+      interceptors: List[Interceptor[F, B]] = Nil
   )(
       fn: I => F[Either[E, O]]
   )(runTest: Uri => IO[Assertion]): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e.serverLogic(fn), decodeFailureHandler))
+      NonEmptyList.of(interpreter.route(e.serverLogic(fn), decodeFailureHandler, interceptors))
     )(runTest)
   }
 
