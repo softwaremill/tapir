@@ -13,6 +13,10 @@ trait DecodeFailureHandler {
   /** Given the context in which a decode failure occurred (the request, the input and the failure), returns an optional
     * response to the request. `None` indicates that no action should be taken, and the request might be passed
     * for decoding to other endpoints.
+    *
+    * Inputs are decoded in the following order: method, path, query, headers, body. Hence, if there's a decode failure
+    * on a query parameter, any method & path inputs of the input must have matched and must have been decoded
+    * successfully.
     */
   def apply(ctx: DecodeFailureContext): Option[ValuedEndpointOutput[_]]
 }

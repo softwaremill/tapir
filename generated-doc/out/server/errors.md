@@ -106,10 +106,12 @@ import sttp.model.{Header, StatusCode}
 import io.circe.generic.auto._
 
 implicit val ec = scala.concurrent.ExecutionContext.global
+
 case class MyFailure(msg: String)
+
 def myFailureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
   ValuedEndpointOutput(statusCode.and(headers).and(jsonBody[MyFailure]), (c, hs, MyFailure(m)))
-  
+
 val myDecodeFailureHandler = DefaultDecodeFailureHandler.handler.copy(
   response = myFailureResponse
 )
