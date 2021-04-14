@@ -5,6 +5,7 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
+import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.openapi.VerifyYamlTest._
@@ -444,6 +445,26 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       )
       .toYaml
 
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml using double quoted style") {
+    val ep = endpoint.get.description("first line:\nsecond line")
+
+    val expectedYaml = load("expected_double_quoted.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, "String style", "1.0").toYaml(DoubleQuoted)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml using literal style") {
+    val ep = endpoint.get.description("first line:\nsecond line")
+
+    val expectedYaml = load("expected_literal.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, "String style", "1.0").toYaml(Literal)
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }

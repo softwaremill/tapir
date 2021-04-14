@@ -24,7 +24,7 @@ private[akkahttp] class AkkaServerRequest(ctx: RequestContext) extends ServerReq
 
     run(ctx.unmatchedPath, Nil)
   }
-  override lazy val queryParameters: QueryParams = QueryParams.fromSeq(ctx.request.uri.query())
+  override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(ctx.request.uri.query().toMultiMap)
   override lazy val method: Method = Method(ctx.request.method.value.toUpperCase)
   override lazy val uri: Uri = Uri.unsafeParse(ctx.request.uri.toString())
 

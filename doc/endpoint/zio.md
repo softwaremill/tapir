@@ -11,7 +11,7 @@ You'll need the following dependencies:
 "com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "@VERSION@"
 ```
 
-Next, instead of the usual `import sttp.tapir._`, you should import:
+Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
 
 ```scala mdoc:compile-only
 import sttp.tapir.ztapir._
