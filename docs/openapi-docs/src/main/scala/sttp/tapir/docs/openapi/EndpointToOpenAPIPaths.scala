@@ -79,7 +79,14 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
       case EndpointIO.Body(_, codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.isOptional), Extensions.fromIterable(info.extensions)))
+        Right(
+          RequestBody(
+            info.description,
+            codecToMediaType(codec, info.examples),
+            Some(!codec.schema.isOptional),
+            Extensions.fromIterable(info.extensions)
+          )
+        )
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
         Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true), Extensions.fromIterable(info.extensions)))
     }
