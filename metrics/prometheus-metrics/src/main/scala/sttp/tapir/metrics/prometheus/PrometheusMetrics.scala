@@ -40,9 +40,7 @@ case class PrometheusMetrics[F[_]](
   def metricsServerEndpoint: ServerEndpoint[Unit, Unit, CollectorRegistry, Any, F] =
     metricsEp.serverLogic { _ => monad.unit(Right(registry)) }
 
-  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty)(implicit
-      listener: BodyListener[F, B]
-  ): Interceptor[F, B] =
+  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty)(implicit l: BodyListener[F, B]): Interceptor[F, B] =
     new MetricsInterceptor[F, B](metrics.toList, ignoreEndpoints :+ metricsEp)
 }
 

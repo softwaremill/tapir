@@ -16,16 +16,26 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
 
   override def apply(responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
-      override def onDecodeSuccess[I](ctx: DecodeSuccessContext[F, I])(implicit monad: MonadError[F]): F[ServerResponse[B]] =
+      override def onDecodeSuccess[I](ctx: DecodeSuccessContext[F, I])(implicit monad: MonadError[F]): F[ServerResponse[B]] = {
+
+        def collectOnResponse(r: ServerResponse[_]): F[Unit] =
+          collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, r, m) }
+
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeSuccess(ctx)
         else {
           for {
             _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
             response <- endpointHandler.onDecodeSuccess(ctx)
-          } yield response.copy(body = response.body.map(_.listen {
-            collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, m) }
-          }))
+          } yield response.copy(body = {
+            response.body match {
+              case Some(body) => Some(body.listen { collectOnResponse(response) })
+              case None => // unit responses
+                collectOnResponse(response)
+                None
+            }
+          })
         }
+      }
 
       /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage.
         */

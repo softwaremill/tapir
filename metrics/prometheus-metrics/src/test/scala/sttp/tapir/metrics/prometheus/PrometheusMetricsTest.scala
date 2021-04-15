@@ -51,12 +51,12 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect requests active" in {
     // given
     val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { _ =>
-      Thread.sleep(100)
-      idMonadError.unit(Right(()))
+//      Thread.sleep(100)
+      idMonadError.unit(Right(Thread.sleep(100)))
     }
 
     val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withRequestsActive()
-    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()))
+    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor()(listenerUnit)))
 
     // when
     val request = Future { interpreter.apply(testRequest("Jacob"), serverEp) }
@@ -169,7 +169,6 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
   "metrics server endpoint" should "return encoded registry" in {
     // given
-
     val toResponseBody: ToResponseBody[String, Nothing] = new ToResponseBody[String, Nothing] {
       override val streams: capabilities.Streams[Nothing] = NoStreams
       override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): String =
@@ -233,7 +232,7 @@ object PrometheusMetricsTest {
   implicit val listenerUnit: BodyListener[Id, Unit] = new BodyListener[Id, Unit] {
     override def listen(body: Unit)(cb: => Id[Unit]): Unit = {
       cb
-      body
+      ()
     }
   }
 
