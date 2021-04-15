@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.18.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.18.0-M5"
 ```
 
 and import the object:
@@ -117,6 +117,32 @@ The interpreter can be configured by providing an implicit `Http4sServerOptions`
 [server options](options.md) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.
+
+Because of typeclass constraints, some parameters of `Http4sServerOptions.customInterceptors` values cannot be provided 
+as default parameters. For example, to customise the default decode failure handler, so that it returns 
+`400 Bad Request` on path capture errors (when decoding a path capture fails), you'll need to provide the following 
+configuration:
+
+```scala
+import cats.effect._
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
+
+implicit val cs: ContextShift[IO] = ???
+implicit val t: Timer[IO] = ???
+
+implicit val options: Http4sServerOptions[IO, IO] = Http4sServerOptions.customInterceptors[IO, IO](
+  exceptionHandler = Some(DefaultExceptionHandler),
+  serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
+  decodeFailureHandler = DefaultDecodeFailureHandler(
+    DefaultDecodeFailureHandler
+      .respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
+    DefaultDecodeFailureHandler.FailureMessages.failureMessage,
+    DefaultDecodeFailureHandler.failureResponse
+  )
+)
+```
 
 ## Defining an endpoint together with the server logic
 
