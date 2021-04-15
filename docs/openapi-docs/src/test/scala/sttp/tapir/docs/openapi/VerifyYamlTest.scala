@@ -191,6 +191,18 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  // #1168
+  test("should unfold options") {
+    val e = endpoint.post.in(jsonBody[ObjectWithOption])
+
+    val expectedYaml = load("expected_unfolded_option.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should differentiate when a generic type is used multiple times") {
     val expectedYaml = load("expected_generic.yml")
 
@@ -475,4 +487,5 @@ object VerifyYamlTest {
   case class G[T](data: T)
   case class ObjectWrapper(value: FruitAmount)
   case class ObjectWithList(data: List[FruitAmount])
+  case class ObjectWithOption(data: Option[FruitAmount])
 }

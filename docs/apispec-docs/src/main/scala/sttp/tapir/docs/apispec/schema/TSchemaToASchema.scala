@@ -39,11 +39,12 @@ private[schema] class TSchemaToASchema(
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
-      case TSchemaType.SOption(el)    => apply(el)
-      case TSchemaType.SBinary()      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
-      case TSchemaType.SDate()        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
-      case TSchemaType.SDateTime()    => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
-      case TSchemaType.SRef(fullName) => Left(objectToSchemaReference.map(fullName))
+      case TSchemaType.SOption(TSchema(el: TSchemaType.SObject[_], _, _, _, _, _, _, _)) => Left(objectToSchemaReference.map(el.info))
+      case TSchemaType.SOption(el)                                                       => apply(el)
+      case TSchemaType.SBinary()                                                         => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
+      case TSchemaType.SDate()                                                           => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
+      case TSchemaType.SDateTime()                                                       => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
+      case TSchemaType.SRef(fullName)                                                    => Left(objectToSchemaReference.map(fullName))
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           ASchema.apply(
