@@ -3,11 +3,11 @@ package sttp.tapir.server.finatra.cats
 import cats.data.NonEmptyList
 import cats.effect.{ContextShift, IO, Resource, Timer}
 import sttp.tapir.Endpoint
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.{FinatraContent, FinatraRoute, FinatraServerOptions, FinatraTestServerInterpreter}
+import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.tests.Port
 
 import scala.concurrent.ExecutionContext
@@ -24,9 +24,7 @@ class FinatraCatsTestServerInterpreter extends TestServerInterpreter[IO, Any, Fi
       interceptors: List[Interceptor[IO, FinatraContent]] = Nil
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
-      FinatraServerOptions.customInterceptors(
-//        additionalInterceptors = interceptors, todo
-        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      FinatraServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
     FinatraCatsServerInterpreter.toRoute(e)
   }
 

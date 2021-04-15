@@ -5,13 +5,13 @@ import sttp.monad.syntax._
 import sttp.tapir.metrics.Metric
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
-import sttp.tapir.server.interpreter.ServerResponseListener
-import sttp.tapir.server.interpreter.ServerResponseListenerSyntax._
+import sttp.tapir.server.interpreter.BodyListener
+import sttp.tapir.server.interpreter.BodyListenerSyntax._
 import sttp.tapir.{DecodeResult, Endpoint}
 
 class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])(implicit
     monad: MonadError[F],
-    listener: ServerResponseListener[F, B]
+    listener: BodyListener[F, B]
 ) extends EndpointInterceptor[F, B] {
 
   override def apply(responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
@@ -21,14 +21,10 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
         else {
           for {
             _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
-            response <- endpointHandler
-              .onDecodeSuccess(ctx)
-              .map(r =>
-                r.listen {
-                  collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, r, m) }
-                }
-              )
-          } yield response
+            response <- endpointHandler.onDecodeSuccess(ctx)
+          } yield response.copy(body = response.body.map(_.listen {
+            collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, m) }
+          }))
         }
 
       /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage.
@@ -41,19 +37,14 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
             case _ =>
               for {
                 response <- endpointHandler.onDecodeFailure(ctx)
-                  .map(_.map { r =>
-                    r.listen {
-                      collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
-                        .flatMap { _ => collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, r, m) } }
-
-                      // todo
-//                      for {
-//                        _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
-//                        _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, r, m) }
-//                      } yield ()
-                    }
-                  })
-              } yield response
+              } yield response.map(r =>
+                r.copy(body = r.body.map(_.listen {
+                  for {
+                    _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
+                    _ <- collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, r, m) }
+                  } yield ()
+                }))
+              )
           }
         }
     }

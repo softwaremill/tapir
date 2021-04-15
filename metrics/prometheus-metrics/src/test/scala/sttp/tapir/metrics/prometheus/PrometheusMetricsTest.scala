@@ -16,11 +16,11 @@ import sttp.tapir.internal.NoStreams
 import sttp.tapir.metrics.Metric
 import sttp.tapir.metrics.prometheus.PrometheusMetrics._
 import sttp.tapir.metrics.prometheus.PrometheusMetricsTest._
-import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interpreter.{ServerInterpreter, ServerResponseListener, ToResponseBody}
+import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter, ToResponseBody}
 
 import java.nio.charset.Charset
 import scala.collection.immutable
@@ -61,7 +61,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     // when
     val request = Future { interpreter.apply(testRequest("Jacob"), serverEp) }
 
-    Thread.sleep(10)
+    Thread.sleep(50)
 
     // then
     collectorRegistryCodec
@@ -206,36 +206,41 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       .size shouldBe 1
   }
 
-//  "metrics" should "be collected on exception" in {
-//    // given
-//    val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { _ => throw new RuntimeException("Ups") }
-//    val metrics = PrometheusMetrics(new CollectorRegistry()).withResponsesTotal
-//    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler)))
-//    val ses = List(metrics.metricsServerEndpoint, serverEp)
-//
-//    // when
-//    val response = interpreter.apply(testRequest("Jacob"), serverEp)
-//
-//    // then
-//    val r = collectorRegistryCodec.encode(metrics.registry)
-//    println(r)
-//  }
+  "metrics" should "be collected on exception" in {
+    // given
+    val serverEp: ServerEndpoint[String, Unit, Unit, Any, Id] = testEndpoint.serverLogic { _ => throw new RuntimeException("Ups") }
+    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
+    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](
+      TestRequestBody,
+      TestToResponseBody,
+      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler))
+    )
+
+    // when
+    interpreter.apply(testRequest("Jacob"), serverEp)
+
+    // then
+    val r = collectorRegistryCodec.encode(metrics.registry)
+    println(r)
+  }
 
 }
 
 object PrometheusMetricsTest {
 
-  implicit val listenerUnit: ServerResponseListener[Id, Unit] = new ServerResponseListener[Id, Unit] {
-    override def listen(r: ServerResponse[Unit])(cb: => Id[Unit]): ServerResponse[Unit] = {
+  import sttp.tapir.TestUtil._
+
+  implicit val listenerUnit: BodyListener[Id, Unit] = new BodyListener[Id, Unit] {
+    override def listen(body: Unit)(cb: => Id[Unit]): Unit = {
       cb
-      r
+      body
     }
   }
 
-  implicit val listenerString: ServerResponseListener[Id, String] = new ServerResponseListener[Id, String] {
-    override def listen(r: ServerResponse[String])(cb: => Id[Unit]): ServerResponse[String] = {
+  implicit val listenerString: BodyListener[Id, String] = new BodyListener[Id, String] {
+    override def listen(body: String)(cb: => Id[Unit]): String = {
       cb
-      r
+      body
     }
   }
 
