@@ -1,0 +1,100 @@
+openapi: 3.0.3
+info:
+  title: title
+  version: '1.0'
+paths:
+  /path-hello/{world}:
+    post:
+      operationId: postPath-helloWorld
+      parameters:
+        - name: world
+          in: path
+          required: true
+          schema:
+            type: string
+          x-path: 22
+        - name: hi
+          in: query
+          required: true
+          schema:
+            type: string
+          x-query: 33
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Book'
+        required: true
+        x-request:
+          string: a
+          int: 1
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          x-response: foo
+        default:
+          description: ''
+          content:
+            text/plain:
+              schema:
+                type: string
+          x-error: error-extension
+      x-endpoint-level-string: world
+      x-endpoint-level-int: 11
+      x-endpoint-obj:
+        string: '42.42'
+        int: 42
+components:
+  schemas:
+    Book:
+      required:
+        - title
+        - genre
+        - year
+        - author
+      type: object
+      properties:
+        title:
+          type: string
+        genre:
+          $ref: '#/components/schemas/Genre'
+        year:
+          type: integer
+        author:
+          $ref: '#/components/schemas/Author'
+    Genre:
+      required:
+        - name
+        - description
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+    Author:
+      required:
+        - name
+        - country
+      type: object
+      properties:
+        name:
+          type: string
+        country:
+          $ref: '#/components/schemas/Country'
+    Country:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+x-root-bool: true
+x-root-obj:
+  - 1
+  - 2
+  - 4
