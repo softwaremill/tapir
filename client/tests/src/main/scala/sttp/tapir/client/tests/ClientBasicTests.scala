@@ -94,6 +94,9 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       Right((("1", "2"), "3", "4"))
     )
 
+    testClient(out_json_or_default_json.name("person"), "person", Right(Person("mary", 20)))
+    testClient(out_json_or_default_json.name("org"), "org", Right(Organization("work")))
+
     testClient(out_no_content_or_ok_empty_output.name("204"), 204, Right(()))
     testClient(out_no_content_or_ok_empty_output.name("200"), 200, Right(()))
 
