@@ -29,13 +29,9 @@ class ToObjectSchema(val referenceEnums: SObjectInfo => Boolean) {
   private def productSchemas[T](s: TSchema[T], st: TSchemaType.SProduct[T]): List[ObjectSchema] = {
     (st.info -> s: ObjectSchema) +: st.fields
       .flatMap(a =>
-        a.schema match {
-          case s @ TSchema(_, _, _, _, _, _, _, v) =>
-            v.traversePrimitives { case Validator.Enum(_, _, Some(info)) => Vector(info) } match {
-              case info +: _ if referenceEnums(info) => List(info -> s: ObjectSchema)
-              case _                                 => apply(a.schema)
-            }
-          case _ => apply(a.schema)
+        a.schema.validator.traversePrimitives { case Validator.Enum(_, _, Some(info)) => Vector(info) } match {
+          case info +: _ if referenceEnums(info) => List(info -> a.schema: ObjectSchema)
+          case _                                 => apply(a.schema)
         }
       )
   }
