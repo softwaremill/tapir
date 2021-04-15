@@ -62,39 +62,40 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         )
       case o @ EndpointOutput.OneOf(mappings, mapping) =>
         val enc = encodedM[Any](mapping)
-
         val applicableMappings = mappings.filter(_.appliesTo(enc))
         require(applicableMappings.nonEmpty, s"OneOf output without applicable mapping ${o.show}")
 
-        // #1164: there might be multiple applicable mappings, for the same content type - e.g. when there's a default
-        // mapping. We need to take the first defined into account.
-        val bodyMappings: Seq[(MediaType, OneOfMapping[_])] = applicableMappings
-          .flatMap(sm =>
-            sm.output.traverseOutputs {
-              case EndpointIO.Body(bodyType, codec, _) =>
-                Vector[(MediaType, OneOfMapping[_])](
-                  codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())) -> sm
-                )
-              case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
-                Vector[(MediaType, OneOfMapping[_])](
-                  codec.format.mediaType.copy(charset = charset.map(_.name())) -> sm
-                )
-            }
-          )
-
-        val sm = {
-          if (bodyMappings.nonEmpty) {
-            val mediaTypes = bodyMappings.map(_._1)
-            MediaType
-              .bestMatch(mediaTypes, acceptsContentTypes)
-              .flatMap(mt => bodyMappings.find(_._1 == mt).map(_._2))
-              .getOrElse(applicableMappings.head)
-          } else applicableMappings.head
-        }
-        apply(sm.output, ParamsAsAny(enc), sm.statusCode.map(ov.withStatusCode).getOrElse(ov))
+        val chosenMapping = chooseOneOfMapping(applicableMappings)
+        apply(chosenMapping.output, ParamsAsAny(enc), chosenMapping.statusCode.map(ov.withStatusCode).getOrElse(ov))
 
       case EndpointOutput.MappedPair(wrapped, mapping) => apply(wrapped, ParamsAsAny(encodedM[Any](mapping)), ov)
     }
+  }
+
+  private def chooseOneOfMapping(mappings: Seq[OneOfMapping[_]]): OneOfMapping[_] = {
+    // #1164: there might be multiple applicable mappings, for the same content type - e.g. when there's a default
+    // mapping. We need to take the first defined into account.
+    val bodyMappings: Seq[(MediaType, OneOfMapping[_])] = mappings
+      .flatMap(om =>
+        om.output.traverseOutputs {
+          case EndpointIO.Body(bodyType, codec, _) =>
+            Vector[(MediaType, OneOfMapping[_])](
+              codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())) -> om
+            )
+          case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+            Vector[(MediaType, OneOfMapping[_])](
+              codec.format.mediaType.copy(charset = charset.map(_.name())) -> om
+            )
+        }
+      )
+
+    if (bodyMappings.nonEmpty) {
+      val mediaTypes = bodyMappings.map(_._1)
+      MediaType
+        .bestMatch(mediaTypes, acceptsContentTypes)
+        .flatMap(mt => bodyMappings.find(_._1 == mt).map(_._2))
+        .getOrElse(mappings.head)
+    } else mappings.head
   }
 }
 
