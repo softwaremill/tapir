@@ -11,7 +11,7 @@ private[schema] class TSchemaToASchema(
     objectToSchemaReference: ObjectToSchemaReference,
     referenceEnums: SObjectInfo => Boolean
 ) {
-  def apply(schema: TSchema[_]): ReferenceOr[ASchema] = {
+  def apply[T](schema: TSchema[T]): ReferenceOr[ASchema] = {
     val result = schema.schemaType match {
       case TSchemaType.SInteger() => Right(ASchema(SchemaType.Integer))
       case TSchemaType.SNumber()  => Right(ASchema(SchemaType.Number))
