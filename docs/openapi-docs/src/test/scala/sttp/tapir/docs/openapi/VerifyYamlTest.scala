@@ -503,8 +503,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
       endpoint.post
         .in("path-hello" / path[String]("world").extension("x-path", 22))
         .in(query[String]("hi").extension("x-query", 33))
-        .in(jsonBody[Book].extension("x-request", MyExtension("a", 1)))
-        .out(jsonBody[Book].extension("x-response", List("array-0", "array-1")).extension("x-response", "foo"))
+        .in(jsonBody[FruitAmount].extension("x-request", MyExtension("a", 1)))
+        .out(jsonBody[FruitAmount].extension("x-response", List("array-0", "array-1")).extension("x-response", "foo"))
         .errorOut(stringBody.extension("x-error", "error-extension"))
         .extension("x-endpoint-level-string", "world")
         .extension("x-endpoint-level-int", 11)

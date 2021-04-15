@@ -23,7 +23,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Book'
+              $ref: '#/components/schemas/FruitAmount'
         required: true
         x-request:
           string: a
@@ -34,7 +34,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Book'
+                $ref: '#/components/schemas/FruitAmount'
           x-response: foo
         default:
           description: ''
@@ -50,49 +50,16 @@ paths:
         int: 42
 components:
   schemas:
-    Book:
+    FruitAmount:
       required:
-        - title
-        - genre
-        - year
-        - author
+        - fruit
+        - amount
       type: object
       properties:
-        title:
+        fruit:
           type: string
-        genre:
-          $ref: '#/components/schemas/Genre'
-        year:
+        amount:
           type: integer
-        author:
-          $ref: '#/components/schemas/Author'
-    Genre:
-      required:
-        - name
-        - description
-      type: object
-      properties:
-        name:
-          type: string
-        description:
-          type: string
-    Author:
-      required:
-        - name
-        - country
-      type: object
-      properties:
-        name:
-          type: string
-        country:
-          $ref: '#/components/schemas/Country'
-    Country:
-      required:
-        - name
-      type: object
-      properties:
-        name:
-          type: string
 x-root-bool: true
 x-root-list:
   - 1
