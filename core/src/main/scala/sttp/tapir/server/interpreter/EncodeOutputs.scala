@@ -66,7 +66,9 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
         val applicableMappings = mappings.filter(_.appliesTo(enc))
         require(applicableMappings.nonEmpty, s"OneOf output without applicable mapping ${o.show}")
 
-        val bodyMappings: Map[MediaType, OneOfMapping[_]] = applicableMappings
+        // #1164: there might be multiple applicable mappings, for the same content type - e.g. when there's a default
+        // mapping. We need to take the first defined into account.
+        val bodyMappings: Seq[(MediaType, OneOfMapping[_])] = applicableMappings
           .flatMap(sm =>
             sm.output.traverseOutputs {
               case EndpointIO.Body(bodyType, codec, _) =>
@@ -79,14 +81,13 @@ class EncodeOutputs[B, S](rawToResponseBody: ToResponseBody[B, S], acceptsConten
                 )
             }
           )
-          .toMap
 
         val sm = {
           if (bodyMappings.nonEmpty) {
-            val mediaTypes = bodyMappings.keys.toVector
+            val mediaTypes = bodyMappings.map(_._1)
             MediaType
               .bestMatch(mediaTypes, acceptsContentTypes)
-              .flatMap(bodyMappings.get)
+              .flatMap(mt => bodyMappings.find(_._1 == mt).map(_._2))
               .getOrElse(applicableMappings.head)
           } else applicableMappings.head
         }

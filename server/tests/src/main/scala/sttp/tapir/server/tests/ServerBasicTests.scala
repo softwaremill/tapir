@@ -600,6 +600,18 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.get(uri"$baseUri?p1=x").send(backend).map(_.body shouldBe Right("x")) >>
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
     },
+    testServer(out_json_or_default_json)(entityType =>
+      pureResult((if (entityType == "person") Person("mary", 20) else Organization("work")).asRight[Unit])
+    ) { baseUri =>
+      basicRequest.get(uri"$baseUri/entity/person").send(backend).map { r =>
+        r.code shouldBe StatusCode.Created
+        r.body.right.get should include("mary")
+      } >>
+        basicRequest.get(uri"$baseUri/entity/org").send(backend).map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body.right.get should include("work")
+        }
+    },
     //
     testServer(endpoint, "handle exceptions")(_ => throw new RuntimeException()) { baseUri =>
       basicRequest.get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
