@@ -94,7 +94,7 @@ components:
         name:
           type: string
 x-root-bool: true
-x-root-obj:
+x-root-list:
   - 1
   - 2
   - 4
