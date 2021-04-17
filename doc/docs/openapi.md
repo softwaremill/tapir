@@ -81,6 +81,36 @@ Options can be customised by providing an implicit instance of `OpenAPIDocsOptio
   `SObjectInfo` input parameter is a unique identifier of object in the schema. 
   By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
 
+## OpenAPI Specification Extensions
+
+It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
+There are `.extension` methods available on Input/Output parameters and on `endpoint`:
+
+```scala
+case class MyExtension(string: String, int: Int)
+
+val sampleEndpoint =
+  endpoint.post
+    .in("path-hello" / path[String]("world").extension("x-path", 22))
+    .in(query[String]("hi").extension("x-query", 33))
+    .in(jsonBody[FruitAmount].extension("x-request", MyExtension("a", 1)))
+    .out(jsonBody[FruitAmount].extension("x-response", List("array-0", "array-1")).extension("x-response", "foo"))
+    .errorOut(stringBody.extension("x-error", "error-extension"))
+    .extension("x-endpoint-level-string", "world")
+    .extension("x-endpoint-level-int", 11)
+    .extension("x-endpoint-obj", MyExtension("42.42", 42))
+
+val rootExtensions = List(
+  DocsExtension.of("x-root-bool", true),
+  DocsExtension.of("x-root-list", List(1, 2, 4))
+)
+
+val openAPIYaml = OpenAPIDocsInterpreter.toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions).toYaml
+```
+
+However, to add extensions to other unusual places (like, `License` or `Server`, etc.) you should modify the `OpenAPI`
+object manually or using f.e. [Quicklens](https://github.com/softwaremill/quicklens)
+
 ## Exposing OpenAPI documentation
 
 Exposing the OpenAPI documentation can be very application-specific. However, tapir contains modules which contain
