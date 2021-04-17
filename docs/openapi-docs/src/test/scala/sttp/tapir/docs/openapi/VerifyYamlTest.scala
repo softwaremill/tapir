@@ -511,8 +511,8 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
         .extension("x-endpoint-obj", MyExtension("42.42", 42))
 
     val rootExtensions = List(
-      Extension.of("x-root-bool", true),
-      Extension.of("x-root-list", List(1, 2, 4))
+      DocsExtension.of("x-root-bool", true),
+      DocsExtension.of("x-root-list", List(1, 2, 4))
     )
 
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions).toYaml

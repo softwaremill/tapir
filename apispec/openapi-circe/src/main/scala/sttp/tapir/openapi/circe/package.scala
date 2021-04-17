@@ -11,7 +11,7 @@ import sttp.tapir.apispec.{
   ExampleMultipleValue,
   ExampleSingleValue,
   ExampleValue,
-  ExtensionValue,
+  DocsExtensionValue,
   ExternalDocumentation,
   OAuthFlow,
   OAuthFlows,
@@ -35,7 +35,7 @@ trait TapirOpenAPICirceEncoders {
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
-  implicit val extensionValue: Encoder[ExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
+  implicit val extensionValue: Encoder[DocsExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
   implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveWithExtensions[OAuthFlow]
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveWithExtensions[OAuthFlows]
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveWithExtensions[SecurityScheme]
@@ -65,7 +65,7 @@ trait TapirOpenAPICirceEncoders {
       Json.obj(fields.toSeq: _*)
     }
   implicit val encoderResponses: Encoder[Responses] = Encoder.instance { resp =>
-    val extensions = resp.extensions.asJsonObject
+    val extensions = resp.docsExtensions.asJsonObject
     val respJson = resp.responses.asJson
     respJson.asObject.map(_.deepMerge(extensions).asJson).getOrElse(respJson)
   }
@@ -77,7 +77,7 @@ trait TapirOpenAPICirceEncoders {
   }
   implicit val encoderPathItem: Encoder[PathItem] = deriveWithExtensions[PathItem]
   implicit val encoderPaths: Encoder[Paths] = Encoder.instance { paths =>
-    val extensions = paths.extensions.asJsonObject
+    val extensions = paths.docsExtensions.asJsonObject
     val pathItems = paths.pathItems.asJson
     pathItems.asObject.map(_.deepMerge(extensions).asJson).getOrElse(pathItems)
   }
@@ -104,9 +104,39 @@ trait TapirOpenAPICirceEncoders {
       Json.obj(properties: _*)
   }
 
+  /*
+      Openapi extensions are arbitrary key-value data that could be added to some of models in specifications, such
+      as `OpenAPI` itself, `License`, `Parameter`, etc.
+
+      The key could be any string (that starts with 'x-' by convention) and value is arbitrary Json (string, object,
+      array, etc.)
+
+      To be able to encode such arbitrary data and apply it to the final Json it passed through the `docsExtensions` field
+      in models and moved (or expanded) to the object level while encoding
+
+      Example:
+
+      ```
+      case class License(
+         name: String,
+         url: Option[String],
+         docsExtensions: ListMap[String, ExtensionValue] = ListMap.empty
+      )
+
+      val licenseWithExtension = License("hello", None, ListMap("x-foo", ExtensionValue("42"))
+      ```
+
+      Applying the transformation below we end up with the following schema in the specification:
+
+      ```
+      license:
+        name: hello
+        x-foo: 42
+      ```
+   */
   private def expandExtensions(jsonObject: JsonObject): JsonObject = {
-    val extensions = jsonObject("extensions")
-    val jsonWithoutExt = jsonObject.filterKeys(_ != "extensions")
+    val extensions = jsonObject("docsExtensions")
+    val jsonWithoutExt = jsonObject.filterKeys(_ != "docsExtensions")
     extensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
   }
 

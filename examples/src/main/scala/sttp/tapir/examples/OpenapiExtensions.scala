@@ -26,8 +26,8 @@ object OpenapiExtensions extends App {
       .extension("x-endpoint-obj", MyExt("42.42", 42))
 
   val rootExtensions = List(
-    Extension.of("x-root-bool", true),
-    Extension.of("x-root-obj", MyExt("string", 33))
+    DocsExtension.of("x-root-bool", true),
+    DocsExtension.of("x-root-obj", MyExt("string", 33))
   )
 
   val openapi = OpenAPIDocsInterpreter.toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions)

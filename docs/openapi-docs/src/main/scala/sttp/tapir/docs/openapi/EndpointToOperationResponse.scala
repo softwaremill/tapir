@@ -24,11 +24,11 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
     val outputs = output.asBasicOutputsList
     val statusCodes = outputs.map { case (sc, _) => sc }.distinct
     val outputsByStatusCode = outputs.groupBy { case (sc, _) => sc }.mapValues(_.flatMap { case (_, output) => output })
-    val extensions = outputs.flatMap(_._2.flatMap(_.info.extensions))
+    val docsExtensions = outputs.flatMap(_._2.flatMap(_.info.docsExtensions))
     statusCodes.flatMap { sc =>
       val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
       outputsToResponse(sc, outputsByStatusCode.getOrElse(sc, List())).map(response =>
-        (responseKey, Right(response.copy(extensions = Extensions.fromIterable(extensions))))
+        (responseKey, Right(response.copy(docsExtensions = DocsExtensions.fromIterable(docsExtensions))))
       )
     } match {
       case responses if responses.isEmpty => defaultResponse.map(defaultResponseKey -> Right(_)).toIterable.toListMap

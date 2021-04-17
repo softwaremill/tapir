@@ -474,14 +474,14 @@ object EndpointIO {
     def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
   }
 
-  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean, extensions: Vector[Extension[_]]) {
+  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean, docsExtensions: Vector[DocsExtension[_]]) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
     def example(t: T): Info[T] = example(Example.of(t))
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
-    def extension[A: JsonCodec](key: String, value: A): Info[T] = copy(extensions = extensions :+ Extension.of(key, value))
+    def extension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 
     def map[U](codec: Mapping[T, U]): Info[U] =
       Info(
@@ -490,11 +490,11 @@ object EndpointIO {
           Example(ee, name, summary)
         },
         deprecated,
-        extensions
+        docsExtensions
       )
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, extensions = Vector.empty)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
   }
 }
 

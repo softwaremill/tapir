@@ -376,7 +376,7 @@ case class EndpointInfo(
     description: Option[String],
     tags: Vector[String],
     deprecated: Boolean,
-    extensions: Vector[Extension[_]]
+    docsExtensions: Vector[DocsExtension[_]]
 ) {
   def name(n: String): EndpointInfo = this.copy(name = Some(n))
   def summary(s: String): EndpointInfo = copy(summary = Some(s))
@@ -384,5 +384,5 @@ case class EndpointInfo(
   def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
   def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
   def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
-  def extension[A: JsonCodec](key: String, value: A) = copy(extensions = extensions :+ Extension.of(key, value))
+  def extension[A: JsonCodec](key: String, value: A) = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 }
