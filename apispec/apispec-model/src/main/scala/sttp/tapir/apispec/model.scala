@@ -14,12 +14,16 @@ case class ExampleSingleValue(value: String) extends ExampleValue
 case class ExampleMultipleValue(values: List[String]) extends ExampleValue
 
 case class Tag(
-  name: String,
-  description: Option[String] = None,
-  externalDocs: Option[ExternalDocumentation] = None,
-  docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+    name: String,
+    description: Option[String] = None,
+    externalDocs: Option[ExternalDocumentation] = None,
+    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
 )
 
-case class ExternalDocumentation(url: String, description: Option[String] = None)
+case class ExternalDocumentation(
+    url: String,
+    description: Option[String] = None,
+    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+)
 
 case class DocsExtensionValue(value: String)
