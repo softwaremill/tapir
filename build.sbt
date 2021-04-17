@@ -96,6 +96,7 @@ lazy val allAggregates = core.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
   zioServer.projectRefs ++
+  http4sClient.projectRefs ++
   sttpClient.projectRefs ++
   playClient.projectRefs ++
   tests.projectRefs ++
