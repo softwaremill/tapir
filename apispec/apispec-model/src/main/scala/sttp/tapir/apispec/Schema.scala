@@ -31,7 +31,7 @@ case class Schema(
     minItems: Option[Int] = None,
     maxItems: Option[Int] = None,
     enum: Option[List[String]] = None,
-    extensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
 )
 
 case class Discriminator(propertyName: String, mapping: Option[ListMap[String, String]])
