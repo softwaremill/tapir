@@ -16,14 +16,14 @@ object OpenapiExtensions extends App {
 
   val sampleEndpoint =
     endpoint.post
-      .in("hello" / path[String]("world").extension("x-path", 22))
-      .in(query[String]("hi").extension("x-query", 33))
-      .in(jsonBody[Sample].extension("x-request", MyExt("a", 1)))
-      .out(jsonBody[Sample].example(Sample(false, "bar", 42)).extension("x-response", "foo"))
+      .in("hello" / path[String]("world").docsExtension("x-path", 22))
+      .in(query[String]("hi").docsExtension("x-query", 33))
+      .in(jsonBody[Sample].docsExtension("x-request", MyExt("a", 1)))
+      .out(jsonBody[Sample].example(Sample(false, "bar", 42)).docsExtension("x-response", "foo"))
       .errorOut(stringBody)
-      .extension("x-endpoint-level-string", "world")
-      .extension("x-endpoint-level-int", 11)
-      .extension("x-endpoint-obj", MyExt("42.42", 42))
+      .docsExtension("x-endpoint-level-string", "world")
+      .docsExtension("x-endpoint-level-int", 11)
+      .docsExtension("x-endpoint-obj", MyExt("42.42", 42))
 
   val rootExtensions = List(
     DocsExtension.of("x-root-bool", true),

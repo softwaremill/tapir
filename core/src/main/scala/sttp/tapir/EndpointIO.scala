@@ -66,7 +66,7 @@ object EndpointTransput {
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
     def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
-    def extension[A: JsonCodec](key: String, value: A): ThisType[T] = copyWith(codec, info.extension(key, value))
+    def docsExtension[A: JsonCodec](key: String, value: A): ThisType[T] = copyWith(codec, info.docsExtension(key, value))
   }
 
   sealed trait Pair[T] extends EndpointTransput[T] {
@@ -481,7 +481,7 @@ object EndpointIO {
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
-    def extension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
+    def docsExtension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 
     def map[U](codec: Mapping[T, U]): Info[U] =
       Info(

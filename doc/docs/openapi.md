@@ -84,7 +84,7 @@ Options can be customised by providing an implicit instance of `OpenAPIDocsOptio
 ## OpenAPI Specification Extensions
 
 It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
-There are `.extension` methods available on Input/Output parameters and on `endpoint`:
+There are `.docsExtension` methods available on Input/Output parameters and on `endpoint`:
 
 ```scala
 case class MyExtension(string: String, int: Int)
@@ -92,13 +92,13 @@ case class MyExtension(string: String, int: Int)
 val sampleEndpoint =
   endpoint.post
     .in("path-hello" / path[String]("world").extension("x-path", 22))
-    .in(query[String]("hi").extension("x-query", 33))
-    .in(jsonBody[FruitAmount].extension("x-request", MyExtension("a", 1)))
-    .out(jsonBody[FruitAmount].extension("x-response", List("array-0", "array-1")).extension("x-response", "foo"))
-    .errorOut(stringBody.extension("x-error", "error-extension"))
-    .extension("x-endpoint-level-string", "world")
-    .extension("x-endpoint-level-int", 11)
-    .extension("x-endpoint-obj", MyExtension("42.42", 42))
+    .in(query[String]("hi").docsExtension("x-query", 33))
+    .in(jsonBody[FruitAmount].docsExtension("x-request", MyExtension("a", 1)))
+    .out(jsonBody[FruitAmount].docsExtension("x-response", List("array-0", "array-1")).docsExtension("x-response", "foo"))
+    .errorOut(stringBody.docsExtension("x-error", "error-extension"))
+    .docsExtension("x-endpoint-level-string", "world")
+    .docsExtension("x-endpoint-level-int", 11)
+    .docsExtension("x-endpoint-obj", MyExtension("42.42", 42))
 
 val rootExtensions = List(
   DocsExtension.of("x-root-bool", true),

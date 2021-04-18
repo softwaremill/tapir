@@ -65,9 +65,9 @@ trait TapirOpenAPICirceEncoders {
       Json.obj(fields.toSeq: _*)
     }
   implicit val encoderResponses: Encoder[Responses] = Encoder.instance { resp =>
-    val extensions = resp.docsExtensions.asJsonObject
+    val docsExtensions = resp.docsExtensions.asJsonObject
     val respJson = resp.responses.asJson
-    respJson.asObject.map(_.deepMerge(extensions).asJson).getOrElse(respJson)
+    respJson.asObject.map(_.deepMerge(docsExtensions).asJson).getOrElse(respJson)
   }
   implicit val encoderOperation: Encoder[Operation] = {
     // this is needed to override the encoding of `security: List[SecurityRequirement]`. An empty security requirement
@@ -77,9 +77,9 @@ trait TapirOpenAPICirceEncoders {
   }
   implicit val encoderPathItem: Encoder[PathItem] = deriveWithExtensions[PathItem]
   implicit val encoderPaths: Encoder[Paths] = Encoder.instance { paths =>
-    val extensions = paths.docsExtensions.asJsonObject
+    val docsExtensions = paths.docsExtensions.asJsonObject
     val pathItems = paths.pathItems.asJson
-    pathItems.asObject.map(_.deepMerge(extensions).asJson).getOrElse(pathItems)
+    pathItems.asObject.map(_.deepMerge(docsExtensions).asJson).getOrElse(pathItems)
   }
   implicit val encoderComponents: Encoder[Components] = deriveWithExtensions[Components]
   implicit val encoderServerVariable: Encoder[ServerVariable] = deriveWithExtensions[ServerVariable]
@@ -135,9 +135,9 @@ trait TapirOpenAPICirceEncoders {
       ```
    */
   private def expandExtensions(jsonObject: JsonObject): JsonObject = {
-    val extensions = jsonObject("docsExtensions")
+    val docsExtensions = jsonObject("docsExtensions")
     val jsonWithoutExt = jsonObject.filterKeys(_ != "docsExtensions")
-    extensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
+    docsExtensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
   }
 
   private def deriveWithExtensions[A](implicit encode: Lazy[DerivedAsObjectEncoder[A]]) = {

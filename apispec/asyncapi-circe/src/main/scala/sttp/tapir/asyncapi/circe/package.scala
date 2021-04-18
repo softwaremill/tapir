@@ -162,9 +162,9 @@ trait TapirAsyncAPICirceEncoders {
 
   // Take a look at sttp.tapir.openapi.TapirOpenAPICirceEncoders.expandExtensions for explanation
   private def expandExtensions(jsonObject: JsonObject): JsonObject = {
-    val extensions = jsonObject("docsExtensions")
+    val docsExtensions = jsonObject("docsExtensions")
     val jsonWithoutExt = jsonObject.filterKeys(_ != "docsExtensions")
-    extensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
+    docsExtensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
   }
 
   private def deriveWithExtensions[A](implicit encode: Lazy[DerivedAsObjectEncoder[A]]) = {
