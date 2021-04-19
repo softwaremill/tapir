@@ -19,7 +19,7 @@ private[openapi] object EndpointInputToParameterConverter {
       schema = schema,
       example = examples.singleExample,
       examples = examples.multipleExamples,
-      docsExtensions = DocsExtensions.fromIterable(query.info.docsExtensions)
+      extensions = DocsExtensions.fromIterable(query.info.docsExtensions)
     )
   }
 
@@ -33,7 +33,7 @@ private[openapi] object EndpointInputToParameterConverter {
       schema = schema,
       example = examples.singleExample,
       examples = examples.multipleExamples,
-      docsExtensions = DocsExtensions.fromIterable(pathCapture.info.docsExtensions)
+      extensions = DocsExtensions.fromIterable(pathCapture.info.docsExtensions)
     )
   }
 
@@ -48,7 +48,7 @@ private[openapi] object EndpointInputToParameterConverter {
       schema = schema,
       example = examples.singleExample,
       examples = examples.multipleExamples,
-      docsExtensions = DocsExtensions.fromIterable(header.info.docsExtensions)
+      extensions = DocsExtensions.fromIterable(header.info.docsExtensions)
     )
   }
 
@@ -67,7 +67,7 @@ private[openapi] object EndpointInputToParameterConverter {
       schema = schema,
       example = examples.singleExample,
       examples = examples.multipleExamples,
-      docsExtensions = DocsExtensions.fromIterable(header.info.docsExtensions)
+      extensions = DocsExtensions.fromIterable(header.info.docsExtensions)
     )
   }
 
@@ -82,7 +82,7 @@ private[openapi] object EndpointInputToParameterConverter {
       schema = schema,
       example = examples.singleExample,
       examples = examples.multipleExamples,
-      docsExtensions = DocsExtensions.fromIterable(cookie.info.docsExtensions)
+      extensions = DocsExtensions.fromIterable(cookie.info.docsExtensions)
     )
   }
 }

@@ -11,7 +11,7 @@ case class SecurityScheme(
     bearerFormat: Option[String],
     flows: Option[OAuthFlows],
     openIdConnectUrl: Option[String],
-    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class OAuthFlows(
@@ -19,7 +19,7 @@ case class OAuthFlows(
     password: Option[OAuthFlow] = None,
     clientCredentials: Option[OAuthFlow] = None,
     authorizationCode: Option[OAuthFlow] = None,
-    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class OAuthFlow(
@@ -27,5 +27,5 @@ case class OAuthFlow(
     tokenUrl: Option[String],
     refreshUrl: Option[String],
     scopes: ListMap[String, String],
-    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )

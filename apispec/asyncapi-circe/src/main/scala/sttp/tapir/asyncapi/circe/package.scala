@@ -11,7 +11,7 @@ import sttp.tapir.apispec.{
   ExampleMultipleValue,
   ExampleSingleValue,
   ExampleValue,
-  DocsExtensionValue,
+  ExtensionValue,
   ExternalDocumentation,
   OAuthFlow,
   OAuthFlows,
@@ -35,7 +35,7 @@ trait TapirAsyncAPICirceEncoders {
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
-  implicit val docsExtensionValue: Encoder[DocsExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
+  implicit val docsExtensionValue: Encoder[ExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
   implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveWithExtensions[OAuthFlow]
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveWithExtensions[OAuthFlows]
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveWithExtensions[SecurityScheme]
@@ -162,9 +162,9 @@ trait TapirAsyncAPICirceEncoders {
 
   // Take a look at sttp.tapir.openapi.TapirOpenAPICirceEncoders.expandExtensions for explanation
   private def expandExtensions(jsonObject: JsonObject): JsonObject = {
-    val docsExtensions = jsonObject("docsExtensions")
-    val jsonWithoutExt = jsonObject.filterKeys(_ != "docsExtensions")
-    docsExtensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
+    val extensions = jsonObject("extensions")
+    val jsonWithoutExt = jsonObject.filterKeys(_ != "extensions")
+    extensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
   }
 
   private def deriveWithExtensions[A](implicit encode: Lazy[DerivedAsObjectEncoder[A]]) = {

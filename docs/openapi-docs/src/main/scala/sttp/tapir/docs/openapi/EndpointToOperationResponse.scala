@@ -28,7 +28,7 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
     statusCodes.flatMap { sc =>
       val responseKey = sc.map(c => ResponsesCodeKey(c.code)).getOrElse(defaultResponseKey)
       outputsToResponse(sc, outputsByStatusCode.getOrElse(sc, List())).map(response =>
-        (responseKey, Right(response.copy(docsExtensions = DocsExtensions.fromIterable(docsExtensions))))
+        (responseKey, Right(response.copy(extensions = DocsExtensions.fromIterable(docsExtensions))))
       )
     } match {
       case responses if responses.isEmpty => defaultResponse.map(defaultResponseKey -> Right(_)).toIterable.toListMap

@@ -11,7 +11,7 @@ import sttp.tapir.apispec.{
   ExampleMultipleValue,
   ExampleSingleValue,
   ExampleValue,
-  DocsExtensionValue,
+  ExtensionValue,
   ExternalDocumentation,
   OAuthFlow,
   OAuthFlows,
@@ -35,7 +35,7 @@ trait TapirOpenAPICirceEncoders {
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
-  implicit val docsExtensionValue: Encoder[DocsExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
+  implicit val extensionValue: Encoder[ExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
   implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveWithExtensions[OAuthFlow]
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveWithExtensions[OAuthFlows]
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveWithExtensions[SecurityScheme]
@@ -65,9 +65,9 @@ trait TapirOpenAPICirceEncoders {
       Json.obj(fields.toSeq: _*)
     }
   implicit val encoderResponses: Encoder[Responses] = Encoder.instance { resp =>
-    val docsExtensions = resp.docsExtensions.asJsonObject
+    val extensions = resp.extensions.asJsonObject
     val respJson = resp.responses.asJson
-    respJson.asObject.map(_.deepMerge(docsExtensions).asJson).getOrElse(respJson)
+    respJson.asObject.map(_.deepMerge(extensions).asJson).getOrElse(respJson)
   }
   implicit val encoderOperation: Encoder[Operation] = {
     // this is needed to override the encoding of `security: List[SecurityRequirement]`. An empty security requirement
@@ -77,9 +77,9 @@ trait TapirOpenAPICirceEncoders {
   }
   implicit val encoderPathItem: Encoder[PathItem] = deriveWithExtensions[PathItem]
   implicit val encoderPaths: Encoder[Paths] = Encoder.instance { paths =>
-    val docsExtensions = paths.docsExtensions.asJsonObject
+    val extensions = paths.extensions.asJsonObject
     val pathItems = paths.pathItems.asJson
-    pathItems.asObject.map(_.deepMerge(docsExtensions).asJson).getOrElse(pathItems)
+    pathItems.asObject.map(_.deepMerge(extensions).asJson).getOrElse(pathItems)
   }
   implicit val encoderComponents: Encoder[Components] = deriveWithExtensions[Components]
   implicit val encoderServerVariable: Encoder[ServerVariable] = deriveWithExtensions[ServerVariable]
@@ -111,7 +111,7 @@ trait TapirOpenAPICirceEncoders {
       The key could be any string (that starts with 'x-' by convention) and value is arbitrary Json (string, object,
       array, etc.)
 
-      To be able to encode such arbitrary data and apply it to the final Json it passed through the `docsExtensions` field
+      To be able to encode such arbitrary data and apply it to the final Json it passed through the `extensions` field
       in models and moved (or expanded) to the object level while encoding
 
       Example:
@@ -120,7 +120,7 @@ trait TapirOpenAPICirceEncoders {
       case class License(
          name: String,
          url: Option[String],
-         docsExtensions: ListMap[String, ExtensionValue] = ListMap.empty
+         extensions: ListMap[String, ExtensionValue] = ListMap.empty
       )
 
       val licenseWithExtension = License("hello", None, ListMap("x-foo", ExtensionValue("42"))
@@ -135,9 +135,9 @@ trait TapirOpenAPICirceEncoders {
       ```
    */
   private def expandExtensions(jsonObject: JsonObject): JsonObject = {
-    val docsExtensions = jsonObject("docsExtensions")
-    val jsonWithoutExt = jsonObject.filterKeys(_ != "docsExtensions")
-    docsExtensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
+    val extensions = jsonObject("extensions")
+    val jsonWithoutExt = jsonObject.filterKeys(_ != "extensions")
+    extensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
   }
 
   private def deriveWithExtensions[A](implicit encode: Lazy[DerivedAsObjectEncoder[A]]) = {

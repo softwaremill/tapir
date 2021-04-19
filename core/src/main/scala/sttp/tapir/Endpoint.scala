@@ -384,5 +384,6 @@ case class EndpointInfo(
   def tags(ts: List[String]): EndpointInfo = copy(tags = tags ++ ts)
   def tag(t: String): EndpointInfo = copy(tags = tags :+ t)
   def deprecated(d: Boolean): EndpointInfo = copy(deprecated = d)
-  def docsExtension[A: JsonCodec](key: String, value: A) = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
+  def docsExtension[A: JsonCodec](key: String, value: A): EndpointInfo =
+    copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 }

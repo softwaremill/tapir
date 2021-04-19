@@ -54,7 +54,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       Responses(responses),
       if (e.info.deprecated) Some(true) else None,
       operationSecurity(e),
-      docsExtensions = DocsExtensions.fromIterable(e.info.docsExtensions)
+      extensions = DocsExtensions.fromIterable(e.info.docsExtensions)
     )
   }
 
@@ -88,7 +88,14 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
           )
         )
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true), DocsExtensions.fromIterable(info.docsExtensions)))
+        Right(
+          RequestBody(
+            info.description,
+            codecToMediaType(codec, info.examples),
+            Some(true),
+            DocsExtensions.fromIterable(info.docsExtensions)
+          )
+        )
     }
   }
 

@@ -9,7 +9,12 @@ import sttp.tapir.openapi._
 import scala.collection.immutable.ListMap
 
 private[openapi] object EndpointToOpenAPIDocs {
-  def toOpenAPI(api: Info, es: Iterable[Endpoint[_, _, _, _]], options: OpenAPIDocsOptions, docsExtensions: List[DocsExtension[_]]): OpenAPI = {
+  def toOpenAPI(
+      api: Info,
+      es: Iterable[Endpoint[_, _, _, _]],
+      options: OpenAPIDocsOptions,
+      docsExtensions: List[DocsExtension[_]]
+  ): OpenAPI = {
     val es2 = es.filter(e => findWebSocket(e).isEmpty).map(nameAllPathCapturesInEndpoint)
     val toObjectSchema = new ToObjectSchema(options.referenceEnums)
     val (keyToSchema, schemas) = new SchemasForEndpoints(es2, options.schemaName, toObjectSchema).apply()
@@ -32,7 +37,7 @@ private[openapi] object EndpointToOpenAPIDocs {
       paths = Paths(ListMap.empty),
       components = componentsCreator.components,
       security = List.empty,
-      docsExtensions = DocsExtensions.fromIterable(docsExtensions)
+      extensions = DocsExtensions.fromIterable(docsExtensions)
     )
   }
 }

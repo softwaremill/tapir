@@ -17,13 +17,13 @@ case class Tag(
     name: String,
     description: Option[String] = None,
     externalDocs: Option[ExternalDocumentation] = None,
-    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class ExternalDocumentation(
     url: String,
     description: Option[String] = None,
-    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
-case class DocsExtensionValue(value: String)
+case class ExtensionValue(value: String)
