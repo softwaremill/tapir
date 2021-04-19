@@ -8,6 +8,8 @@ import sttp.tapir.DecodeResult.{Error, Value}
 import sttp.tapir.SchemaType._
 import sttp.tapir._
 
+import scala.collection.immutable.ListMap
+
 trait TapirJsonCirce {
   def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(circeCodec[T])
 
@@ -31,16 +33,16 @@ trait TapirJsonCirce {
     Schema(
       SCoproduct(
         SObjectInfo("io.circe.Json"),
-        List.empty,
+        ListMap.empty,
         None
-      )
+      )(_ => None)
     )
 
   implicit val schemaForCirceJsonObject: Schema[JsonObject] =
     Schema(
       SProduct(
         SObjectInfo("io.circe.JsonObject"),
-        Iterable.empty
+        Nil
       )
     )
 }

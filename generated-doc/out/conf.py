@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'tapir'
-copyright = u'2020, SoftwareMill'
+copyright = u'2021, SoftwareMill'
 author = u'SoftwareMill'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -170,11 +170,20 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'tapir', u'tapir documentation',
-     author, 'tapir', 'Typed API descRiptions',
+     author, 'tapir', 'Declarative, type-safe web endpoints library',
      'Scala'),
 ]
 
 highlight_language = 'scala'
+
+# configure edit on github: https://docs.readthedocs.io/en/latest/guides/vcs.html
+html_context = {
+    'display_github': True, # Integrate GitHub
+    'github_user': 'softwaremill', # Username
+    'github_repo': 'tapir', # Repo name
+    'github_version': 'master', # Version
+    'conf_py_path': '/doc/', # Path in the checkout to the docs root
+}
 
 # app setup hook
 def setup(app):

@@ -14,6 +14,7 @@ interpreted as:
   Currently supported:
   * [sttp](client/sttp.md).
   * [Play](client/play.md).
+  * [Http4s](client/http4s.md).
 * documentation. Currently supported:
   * [OpenAPI](docs/openapi.md).
   * [AsyncAPI](docs/asyncapi.md).
@@ -79,9 +80,10 @@ val booksListingRoute: Route = AkkaHttpServerInterpreter
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = SttpClientInterpreter
-  .toRequest(booksListing, Some(uri"http://localhost:8080"))
-  .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
+  SttpClientInterpreter
+    .toRequest(booksListing, Some(uri"http://localhost:8080"))
+    .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
 
 ## Other sttp projects
@@ -118,7 +120,9 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/statuscodes
    endpoint/codecs
    endpoint/customtypes
+   endpoint/schemas
    endpoint/validation
+   endpoint/contenttype
    endpoint/json
    endpoint/forms
    endpoint/auth
@@ -147,6 +151,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    
    client/sttp
    client/play
+   client/http4s
 
 .. toctree::
    :maxdepth: 2

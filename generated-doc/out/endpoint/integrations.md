@@ -6,7 +6,7 @@ The `tapir-cats` module contains additional instances for some [cats](https://ty
 datatypes as well as additional syntax:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.17.16"
+"com.softwaremill.sttp.tapir" %% "tapir-cats" % "0.18.0-M7"
 ```
 
 - `import sttp.tapir.integ.cats.codec._` - brings schema, validator and codec instances
@@ -19,7 +19,7 @@ If you use [refined](https://github.com/fthomas/refined), the `tapir-refined` mo
 validators for `T Refined P` as long as a codec for `T` already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.17.16"
+"com.softwaremill.sttp.tapir" %% "tapir-refined" % "0.18.0-M7"
 ```
 
 You'll need to extend the `sttp.tapir.codec.refined.TapirCodecRefined`
@@ -40,7 +40,7 @@ The `tapir-enumeratum` module provides schemas, validators and codecs for [Enume
 enumerations. To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.17.16"
+"com.softwaremill.sttp.tapir" %% "tapir-enumeratum" % "0.18.0-M7"
 ```
 
 Then, `import sttp.tapir.codec.enumeratum`, or extends the `sttp.tapir.codec.enumeratum.TapirCodecEnumeratum` trait.
@@ -78,7 +78,7 @@ If you use [scala-newtype](https://github.com/estatico/scala-newtype), the `tapi
 schemas for a types with a `@newtype` and `@newsubtype` annotations as long as a codec and schema for its underlying value already exists:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "0.17.16"
+"com.softwaremill.sttp.tapir" %% "tapir-newtype" % "0.18.0-M7"
 ```
 
 Then, `import sttp.tapir.codec.newtype._`, or extend the `sttp.tapir.codec.enumeratum.TapirCodecNewType` trait to bring the implicit values into scope.
@@ -90,7 +90,7 @@ For details refer to [derevo documentation](https://github.com/tofu-tf/derevo#in
 To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "0.17.16"
+"com.softwaremill.sttp.tapir" %% "tapir-derevo" % "0.18.0-M7"
 ```
 
 Then you can derive schema for your ADT along with other typeclasses besides ADT declaration itself:
@@ -113,3 +113,21 @@ object Currency {
 
 The annotation will simply generate a `Schema[T]` for your type `T` and put it into companion object.
 Generation rules are the same as in `Schema.derived[T]`.
+
+This will also work for newtypes — [estatico](https://github.com/estatico/scala-newtype) or [supertagged](https://github.com/rudogma/scala-supertagged):
+
+```scala
+import derevo.derive
+import sttp.tapir.derevo.schema
+import io.estatico.newtype.macros.newtype
+
+object types {
+  
+  @derive(schema)
+  @newtype
+  case class Amount(i: Int)
+}
+```
+
+Resulting schema will be equivalent to `implicitly[Schema[Int]].map(i => Some(types.Amount(i)))`.
+Note that due to limitations of the `derevo` library one can't provide custom description for generated schema.

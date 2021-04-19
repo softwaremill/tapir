@@ -2,29 +2,29 @@ package sttp.tapir.codec.enumeratum
 
 import enumeratum._
 import enumeratum.values._
-import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.SchemaType.{SInteger, SString}
-import sttp.tapir.{DecodeResult, Schema, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.SchemaType.{SInteger, SObjectInfo, SString}
+import sttp.tapir.{DecodeResult, Schema, Validator}
 
 class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
   import TapirCodecEnumeratumTest._
 
   it should "find schema for enumeratum enum entries" in {
-    implicitly[Schema[TestEnumEntry]].schemaType shouldBe SString
+    implicitly[Schema[TestEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestIntEnumEntry]].schemaType shouldBe SInteger
+    implicitly[Schema[TestIntEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestIntEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestLongEnumEntry]].schemaType shouldBe SInteger
+    implicitly[Schema[TestLongEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestLongEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestShortEnumEntry]].schemaType shouldBe SInteger
+    implicitly[Schema[TestShortEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestShortEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestStringEnumEntry]].schemaType shouldBe SString
+    implicitly[Schema[TestStringEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestStringEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestByteEnumEntry]].schemaType shouldBe SInteger
+    implicitly[Schema[TestByteEnumEntry]].schemaType shouldBe SInteger()
     implicitly[Schema[TestByteEnumEntry]].isOptional shouldBe false
-    implicitly[Schema[TestCharEnumEntry]].schemaType shouldBe SString
+    implicitly[Schema[TestCharEnumEntry]].schemaType shouldBe SString()
     implicitly[Schema[TestCharEnumEntry]].isOptional shouldBe false
   }
 
@@ -40,23 +40,31 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
 
   private def testEnumValidator[E <: EnumEntry](validator: Validator[E])(implicit enum: Enum[E]) = {
     enum.values.foreach { v =>
-      validator.validate(v) shouldBe Nil
+      validator(v) shouldBe Nil
       validator match {
-        case Validator.Enum(_, Some(encode)) => encode(v) shouldBe Some(v.entryName)
-        case a                               => fail(s"Expected enum validator with encode function: got $a")
+        case Validator.Enum(_, Some(encode), info) =>
+          encode(v) shouldBe Some(v.entryName)
+          info shouldBe Some(SObjectInfo(fullName(`enum`)))
+        case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }
 
-  private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE])(implicit enum: E) = {
+  private def testValueEnumValidator[T, EE <: ValueEnumEntry[T], E <: ValueEnum[T, EE]](validator: Validator[EE])(implicit
+      enum: E
+  ) = {
     enum.values.foreach { v =>
-      validator.validate(v) shouldBe Nil
+      validator(v) shouldBe Nil
       validator match {
-        case Validator.Enum(_, Some(encode)) => encode(v) shouldBe Some(v.value)
-        case a                               => fail(s"Expected enum validator with encode function: got $a")
+        case Validator.Enum(_, Some(encode), info) =>
+          encode(v) shouldBe Some(v.value)
+          info shouldBe Some(SObjectInfo(fullName(`enum`)))
+        case a => fail(s"Expected enum validator with encode function: got $a")
       }
     }
   }
+
+  private def fullName[E](e: E) = s"$className${e.getClass.getSimpleName}".replace("$", ".")
 
   it should "find correct plain codec for enumeratum enum entries" in {
     testEnumPlainCodec(implicitly[PlainCodec[TestEnumEntry]])
@@ -84,6 +92,8 @@ class TapirCodecEnumeratumTest extends AnyFlatSpec with Matchers {
 }
 
 object TapirCodecEnumeratumTest {
+  private val className = this.getClass.getName
+
   sealed trait TestEnumEntry extends EnumEntry
 
   object TestEnumEntry extends Enum[TestEnumEntry] {

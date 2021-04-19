@@ -4,10 +4,10 @@ import sttp.model.Method
 import sttp.tapir._
 import sttp.tapir.internal._
 import sttp.tapir.apispec.{ReferenceOr, SecurityRequirement}
-import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType, _}
+import sttp.tapir.apispec.{Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.{SecuritySchemes, namedPathComponents}
 import sttp.tapir.docs.apispec.schema.Schemas
-import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, ResponsesKey}
+import sttp.tapir.openapi.{Operation, PathItem, RequestBody, Response, Responses, ResponsesKey}
 
 import scala.collection.immutable.ListMap
 
@@ -26,8 +26,6 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
 
     val operation = Some(endpointToOperation(defaultId, e, inputs))
     val pathItem = PathItem(
-      None,
-      None,
       get = if (method == GET) operation else None,
       put = if (method == PUT) operation else None,
       post = if (method == POST) operation else None,
@@ -35,9 +33,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       options = if (method == OPTIONS) operation else None,
       head = if (method == HEAD) operation else None,
       patch = if (method == PATCH) operation else None,
-      trace = if (method == TRACE) operation else None,
-      servers = List.empty,
-      parameters = List.empty
+      trace = if (method == TRACE) operation else None
     )
 
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), pathItem)
@@ -55,10 +51,10 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       e.info.name.getOrElse(defaultId),
       parameters.toList.map(Right(_)),
       body.headOption,
-      responses,
+      Responses(responses),
       if (e.info.deprecated) Some(true) else None,
       operationSecurity(e),
-      List.empty
+      extensions = DocsExtensions.fromIterable(e.info.docsExtensions)
     )
   }
 
@@ -83,9 +79,23 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
   private def operationInputBody(inputs: Vector[EndpointInput.Basic[_]]) = {
     inputs.collect {
       case EndpointIO.Body(_, codec, info) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(!codec.schema.isOptional)))
+        Right(
+          RequestBody(
+            info.description,
+            codecToMediaType(codec, info.examples),
+            Some(!codec.schema.isOptional),
+            DocsExtensions.fromIterable(info.docsExtensions)
+          )
+        )
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
-        Right(RequestBody(info.description, codecToMediaType(codec, info.examples), Some(true)))
+        Right(
+          RequestBody(
+            info.description,
+            codecToMediaType(codec, info.examples),
+            Some(true),
+            DocsExtensions.fromIterable(info.docsExtensions)
+          )
+        )
     }
   }
 

@@ -9,7 +9,8 @@ import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOpti
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
 import sttp.client3._
-import sttp.tapir.server.{DecodeFailureHandling, ServerDefaults}
+import sttp.tapir.server.interceptor.ValuedEndpointOutput
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 
 object CustomErrorsOnDecodeFailureAkkaServer extends App {
   // corresponds to: GET /?amount=...
@@ -18,14 +19,14 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
   // by default, decoding errors will be returned as a 400 response with body e.g. "Invalid value for: query parameter amount"
   // the defaults are defined in ServerDefaults
   // this can be customised by setting the appropriate option in the server options, passed implicitly to toRoute
-  implicit val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
+  implicit val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
     decodeFailureHandler = ctx => {
-      ctx.input match {
+      ctx.failingInput match {
         // when defining how a decode failure should be handled, we need to describe the output to be used, and
         // a value for this output
-        case EndpointInput.Query(_, _, _) => DecodeFailureHandling.response(stringBody)("Incorrect format!!!")
+        case EndpointInput.Query(_, _, _) => Some(ValuedEndpointOutput(stringBody, "Incorrect format!!!"))
         // in other cases, using the default behavior
-        case _ => ServerDefaults.decodeFailureHandler(ctx)
+        case _ => DefaultDecodeFailureHandler.handler(ctx)
       }
     }
   )

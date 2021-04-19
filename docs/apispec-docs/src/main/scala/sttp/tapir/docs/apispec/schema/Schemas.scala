@@ -7,14 +7,16 @@ class Schemas(
     tschemaToASchema: TSchemaToASchema,
     objectToSchemaReference: ObjectToSchemaReference
 ) {
-  def apply[T](codec: Codec[T, _, _]): ReferenceOr[ASchema] = apply(TypeData(codec))
+  def apply[T](codec: Codec[T, _, _]): ReferenceOr[ASchema] = apply(codec.schema)
 
-  def apply(typeData: TypeData[_]): ReferenceOr[ASchema] = {
-    typeData.schema.schemaType match {
-      case TSchemaType.SArray(TSchema(o: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
+  def apply(schema: TSchema[_]): ReferenceOr[ASchema] = {
+    schema.schemaType match {
+      case TSchemaType.SArray(TSchema(o: TSchemaType.SObject[_], _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(o.info)))))
-      case o: TSchemaType.SObject => Left(objectToSchemaReference.map(o.info))
-      case _                      => tschemaToASchema(typeData)
+      case TSchemaType.SOption(ts @ TSchema(_: TSchemaType.SObject[_], _, _, _, _, _, _, _)) =>
+        apply(ts)
+      case o: TSchemaType.SObject[_] => Left(objectToSchemaReference.map(o.info))
+      case _                         => tschemaToASchema(schema)
     }
   }
 }

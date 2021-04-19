@@ -1,6 +1,6 @@
 package sttp.tapir.openapi
 
-import sttp.tapir.apispec.{ExampleValue, ReferenceOr, Schema, SecurityRequirement, SecurityScheme, Tag}
+import sttp.tapir.apispec.{ExampleValue, ExtensionValue, ReferenceOr, Schema, SecurityRequirement, SecurityScheme, Tag}
 
 import scala.collection.immutable.ListMap
 
@@ -9,17 +9,19 @@ case class OpenAPI(
     info: Info,
     tags: List[Tag],
     servers: List[Server],
-    paths: ListMap[String, PathItem],
+    paths: Paths,
     components: Option[Components],
-    security: List[SecurityRequirement]
+    security: List[SecurityRequirement],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def addPathItem(path: String, pathItem: PathItem): OpenAPI = {
-    val pathItem2 = paths.get(path) match {
+    val pathItem2 = paths.pathItems.get(path) match {
       case None           => pathItem
       case Some(existing) => existing.mergeWith(pathItem)
     }
-
-    copy(paths = paths + (path -> pathItem2))
+    val newPathItems = paths.pathItems + (path -> pathItem2)
+    val newPath = paths.copy(pathItems = newPathItems)
+    copy(paths = newPath)
   }
 
   def servers(s: List[Server]): OpenAPI = copy(servers = s)
@@ -33,45 +35,68 @@ case class Info(
     description: Option[String] = None,
     termsOfService: Option[String] = None,
     contact: Option[Contact] = None,
-    license: Option[License] = None
+    license: Option[License] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
-case class Contact(name: Option[String], email: Option[String], url: Option[String])
-case class License(name: String, url: Option[String])
+case class Contact(
+    name: Option[String],
+    email: Option[String],
+    url: Option[String],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
+case class License(
+    name: String,
+    url: Option[String],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
 case class Server(
     url: String,
     description: Option[String] = None,
-    variables: Option[ListMap[String, ServerVariable]] = None
+    variables: Option[ListMap[String, ServerVariable]] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def description(d: String): Server = copy(description = Some(d))
   def variables(vars: (String, ServerVariable)*): Server = copy(variables = Some(ListMap(vars: _*)))
 }
 
-case class ServerVariable(enum: Option[List[String]], default: String, description: Option[String]) {
+case class ServerVariable(
+    enum: Option[List[String]],
+    default: String,
+    description: Option[String],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+) {
   require(`enum`.fold(true)(_.contains(default)), "ServerVariable#default must be one of the values in enum if enum is defined")
 }
 
 // todo: responses, parameters, examples, requestBodies, headers, links, callbacks
 case class Components(
     schemas: ListMap[String, ReferenceOr[Schema]],
-    securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]]
+    securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
+
+case class Paths(
+    pathItems: ListMap[String, PathItem],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 // todo: $ref
 case class PathItem(
-    summary: Option[String],
-    description: Option[String],
-    get: Option[Operation],
-    put: Option[Operation],
-    post: Option[Operation],
-    delete: Option[Operation],
-    options: Option[Operation],
-    head: Option[Operation],
-    patch: Option[Operation],
-    trace: Option[Operation],
-    servers: List[Server],
-    parameters: List[ReferenceOr[Parameter]]
+    summary: Option[String] = None,
+    description: Option[String] = None,
+    get: Option[Operation] = None,
+    put: Option[Operation] = None,
+    post: Option[Operation] = None,
+    delete: Option[Operation] = None,
+    options: Option[Operation] = None,
+    head: Option[Operation] = None,
+    patch: Option[Operation] = None,
+    trace: Option[Operation] = None,
+    servers: List[Server] = List.empty,
+    parameters: List[ReferenceOr[Parameter]] = List.empty,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def mergeWith(other: PathItem): PathItem = {
     PathItem(
@@ -93,32 +118,34 @@ case class PathItem(
 
 // todo: external docs, callbacks, security
 case class Operation(
-    tags: List[String],
-    summary: Option[String],
-    description: Option[String],
+    tags: List[String] = List.empty,
+    summary: Option[String] = None,
+    description: Option[String] = None,
     operationId: String,
-    parameters: List[ReferenceOr[Parameter]],
-    requestBody: Option[ReferenceOr[RequestBody]],
-    responses: ListMap[ResponsesKey, ReferenceOr[Response]],
-    deprecated: Option[Boolean],
-    security: List[SecurityRequirement],
-    servers: List[Server]
+    parameters: List[ReferenceOr[Parameter]] = List.empty,
+    requestBody: Option[ReferenceOr[RequestBody]] = None,
+    responses: Responses = Responses(ListMap.empty),
+    deprecated: Option[Boolean] = None,
+    security: List[SecurityRequirement] = List.empty,
+    servers: List[Server] = List.empty,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Parameter(
     name: String,
     in: ParameterIn.ParameterIn,
-    description: Option[String],
-    required: Option[Boolean],
-    deprecated: Option[Boolean],
-    allowEmptyValue: Option[Boolean],
-    style: Option[ParameterStyle.ParameterStyle],
-    explode: Option[Boolean],
-    allowReserved: Option[Boolean],
+    description: Option[String] = None,
+    required: Option[Boolean] = None,
+    deprecated: Option[Boolean] = None,
+    allowEmptyValue: Option[Boolean] = None,
+    style: Option[ParameterStyle.ParameterStyle] = None,
+    explode: Option[Boolean] = None,
+    allowReserved: Option[Boolean] = None,
     schema: ReferenceOr[Schema],
-    example: Option[ExampleValue],
-    examples: ListMap[String, ReferenceOr[Example]],
-    content: ListMap[String, MediaType]
+    example: Option[ExampleValue] = None,
+    examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
+    content: ListMap[String, MediaType] = ListMap.empty,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 object ParameterIn extends Enumeration {
@@ -142,21 +169,28 @@ object ParameterStyle extends Enumeration {
   val DeepObject: Value = Value("deepObject")
 }
 
-case class RequestBody(description: Option[String], content: ListMap[String, MediaType], required: Option[Boolean])
+case class RequestBody(
+    description: Option[String],
+    content: ListMap[String, MediaType],
+    required: Option[Boolean],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
 case class MediaType(
-    schema: Option[ReferenceOr[Schema]],
-    example: Option[ExampleValue],
-    examples: ListMap[String, ReferenceOr[Example]],
-    encoding: ListMap[String, Encoding]
+    schema: Option[ReferenceOr[Schema]] = None,
+    example: Option[ExampleValue] = None,
+    examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
+    encoding: ListMap[String, Encoding] = ListMap.empty,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Encoding(
-    contentType: Option[String],
-    headers: ListMap[String, ReferenceOr[Header]],
-    style: Option[ParameterStyle.ParameterStyle],
-    explode: Option[Boolean],
-    allowReserved: Option[Boolean]
+    contentType: Option[String] = None,
+    headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
+    style: Option[ParameterStyle.ParameterStyle] = None,
+    explode: Option[Boolean] = None,
+    allowReserved: Option[Boolean] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 sealed trait ResponsesKey
@@ -164,28 +198,40 @@ case object ResponsesDefaultKey extends ResponsesKey
 case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
-case class Response(description: String, headers: ListMap[String, ReferenceOr[Header]], content: ListMap[String, MediaType]) {
+case class Response(
+    description: String,
+    headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
+    content: ListMap[String, MediaType] = ListMap.empty,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
-  def merge(other: Response): Response =
-    Response(
-      description,
-      headers ++ other.headers,
-      content ++ other.content
-    )
+case class Responses(
+    responses: ListMap[ResponsesKey, ReferenceOr[Response]],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
+
+object Response {
+  val Empty: Response = Response("", ListMap.empty, ListMap.empty)
 }
 
-case class Example(summary: Option[String], description: Option[String], value: Option[ExampleValue], externalValue: Option[String])
+case class Example(
+    summary: Option[String] = None,
+    description: Option[String] = None,
+    value: Option[ExampleValue] = None,
+    externalValue: Option[String] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
 case class Header(
-    description: Option[String],
-    required: Option[Boolean],
-    deprecated: Option[Boolean],
-    allowEmptyValue: Option[Boolean],
-    style: Option[ParameterStyle.ParameterStyle],
-    explode: Option[Boolean],
-    allowReserved: Option[Boolean],
-    schema: Option[ReferenceOr[Schema]],
-    example: Option[ExampleValue],
-    examples: ListMap[String, ReferenceOr[Example]],
-    content: ListMap[String, MediaType]
+    description: Option[String] = None,
+    required: Option[Boolean] = None,
+    deprecated: Option[Boolean] = None,
+    allowEmptyValue: Option[Boolean] = None,
+    style: Option[ParameterStyle.ParameterStyle] = None,
+    explode: Option[Boolean] = None,
+    allowReserved: Option[Boolean] = None,
+    schema: Option[ReferenceOr[Schema]] = None,
+    example: Option[ExampleValue] = None,
+    examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
+    content: ListMap[String, MediaType] = ListMap.empty
 )

@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.17.16"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.18.0-M7"
 ```
 
 and import the object:
@@ -87,12 +87,62 @@ The capability can be added to the classpath independently of the interpreter th
 The interpreter supports web sockets, with pipes of type `Pipe[F, REQ, RESP]`. See [web sockets](../endpoint/websockets.md) 
 for more details.
 
+## Server Sent Events
+
+The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
+
+For example, to define an endpoint that returns event stream:
+
+```scala
+import cats.effect.IO
+import sttp.model.sse.ServerSentEvent
+import sttp.tapir._
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
+
+import cats.effect.{ContextShift, Timer}
+
+val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
+
+implicit val cs: ContextShift[IO] = ???
+implicit val t: Timer[IO] = ???
+
+val routes = Http4sServerInterpreter.toRoutes(sseEndpoint)(_ =>
+  IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
+)
+```
+
 ## Configuration
 
-The interpreter can be configured by providing an implicit `Http4sServerOptions` value and status mappers, see
+The interpreter can be configured by providing an implicit `Http4sServerOptions` value, see
 [server options](options.md) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.
+
+Because of typeclass constraints, some parameters of `Http4sServerOptions.customInterceptors` values cannot be provided 
+as default parameters. For example, to customise the default decode failure handler, so that it returns 
+`400 Bad Request` on path capture errors (when decoding a path capture fails), you'll need to provide the following 
+configuration:
+
+```scala
+import cats.effect._
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
+import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
+
+implicit val cs: ContextShift[IO] = ???
+implicit val t: Timer[IO] = ???
+
+implicit val options: Http4sServerOptions[IO, IO] = Http4sServerOptions.customInterceptors[IO, IO](
+  exceptionHandler = Some(DefaultExceptionHandler),
+  serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
+  decodeFailureHandler = DefaultDecodeFailureHandler(
+    DefaultDecodeFailureHandler
+      .respond(_, badRequestOnPathErrorIfPathShapeMatches = false, badRequestOnPathInvalidIfPathShapeMatches = true),
+    DefaultDecodeFailureHandler.FailureMessages.failureMessage,
+    DefaultDecodeFailureHandler.failureResponse
+  )
+)
+```
 
 ## Defining an endpoint together with the server logic
 

@@ -17,7 +17,7 @@ import sttp.tapir.Tapir
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
 
-abstract class EndpointAnnotations(val c: blackbox.Context) extends Tapir {
+abstract class EndpointAnnotations(val c: blackbox.Context) {
   import c.universe._
 
   protected val headerType = c.weakTypeOf[header]

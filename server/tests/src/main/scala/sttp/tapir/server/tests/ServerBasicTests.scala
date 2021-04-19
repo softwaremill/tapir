@@ -4,6 +4,7 @@ import cats.data.NonEmptyList
 import cats.effect.IO
 import cats.implicits._
 import io.circe.generic.auto._
+import org.scalatest
 import org.scalatest.matchers.should.Matchers._
 import sttp.client3._
 import sttp.model._
@@ -13,7 +14,14 @@ import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults}
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.tests.MultipleMediaTypes.{
+  organizationHtmlIso,
+  organizationHtmlUtf8,
+  organizationJson,
+  organizationXml,
+  out_json_xml_text_common_schema
+}
 import sttp.tapir.tests.TestUtil._
 import sttp.tapir.tests._
 
@@ -592,7 +600,68 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.get(uri"$baseUri?p1=x").send(backend).map(_.body shouldBe Right("x")) >>
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
     },
+    testServer(out_json_or_default_json)(entityType =>
+      pureResult((if (entityType == "person") Person("mary", 20) else Organization("work")).asRight[Unit])
+    ) { baseUri =>
+      basicRequest.get(uri"$baseUri/entity/person").send(backend).map { r =>
+        r.code shouldBe StatusCode.Created
+        r.body.right.get should include("mary")
+      } >>
+        basicRequest.get(uri"$baseUri/entity/org").send(backend).map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body.right.get should include("work")
+        }
+    },
     //
+    testServer(endpoint, "handle exceptions")(_ => throw new RuntimeException()) { baseUri =>
+      basicRequest.get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
+    },
+    testServer(out_json_xml_text_common_schema)(_ => pureResult(Organization("sml").asRight[Unit])) { baseUri =>
+      def ok(body: String) = (StatusCode.Ok, body.asRight[String])
+      def unsupportedMediaType() = (StatusCode.UnsupportedMediaType, "".asLeft[String])
+      def badRequest() = (StatusCode.BadRequest, "".asLeft[String])
+
+      val cases: Map[(String, String), (StatusCode, Either[String, String])] = Map(
+        ("application/json", "*") -> ok(organizationJson),
+        ("application/xml", "*") -> ok(organizationXml),
+        ("text/html", "*") -> ok(organizationHtmlUtf8),
+        ("text/html;q=0.123, application/json;q=0.124, application/xml;q=0.125", "*") -> ok(organizationXml),
+        ("application/xml, application/json", "*") -> ok(organizationXml),
+        ("application/json, application/xml", "*") -> ok(organizationJson),
+        ("application/xml;q=0.5, application/json;q=0.9", "*") -> ok(organizationJson),
+        ("application/json;q=0.5, application/xml;q=0.5", "*") -> ok(organizationJson),
+        ("application/json, application/xml, text/*;q=0.1", "iso-8859-1") -> ok(organizationHtmlIso),
+        ("text/*;q=0.5, application/*", "*") -> ok(organizationJson),
+        ("text/*;q=0.5, application/xml;q=0.3", "utf-8") -> ok(organizationHtmlUtf8),
+        ("text/html", "utf-8;q=0.9, iso-8859-1;q=0.5") -> ok(organizationHtmlUtf8),
+        ("text/html", "utf-8;q=0.5, iso-8859-1;q=0.9") -> ok(organizationHtmlIso),
+        ("text/html", "utf-8, iso-8859-1") -> ok(organizationHtmlUtf8),
+        ("text/html", "iso-8859-1, utf-8") -> ok(organizationHtmlIso),
+        ("*/*", "iso-8859-1") -> ok(organizationHtmlIso),
+        ("*/*", "*;q=0.5, iso-8859-1") -> ok(organizationHtmlIso),
+        //
+        ("text/html", "iso-8859-5") -> unsupportedMediaType(),
+        ("text/csv", "*") -> unsupportedMediaType(),
+        // in case of an invalid accepts header, the first mapping should be used
+        ("text/html;(q)=xxx", "utf-8") -> ok(organizationJson)
+      )
+
+      cases.foldLeft(IO(scalatest.Assertions.succeed))((prev, next) => {
+        val ((accept, acceptCharset), (code, body)) = next
+        prev >> basicRequest
+          .get(uri"$baseUri/content-negotiation/organization")
+          .header(HeaderNames.Accept, accept)
+          .header(HeaderNames.AcceptCharset, acceptCharset)
+          .send(backend)
+          .map { response =>
+            response.code shouldBe code
+            response.body shouldBe body
+          }
+      })
+    },
+    testServer(in_root_path, testNameSuffix = "accepts header without output body")(_ => pureResult(().asRight[Unit])) { baseUri =>
+      basicRequest.header(HeaderNames.Accept, "text/plain").get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.Ok)
+    },
     testServer(
       "recover errors from exceptions",
       NonEmptyList.of(
@@ -757,16 +826,19 @@ class ServerBasicTests[F[_], ROUTE](
         basicRequest.post(uri"$baseUri/api/echo").body("test string body").response(asByteArray).send(backend).map { r =>
           r.body.map(_.length) shouldBe Right(128)
           r.body.map(_.foreach(b => b shouldBe 0))
-          r.headers.map(_.name) should contain(HeaderNames.ContentLength)
+          r.headers.map(_.name.toLowerCase) should contain(HeaderNames.ContentLength.toLowerCase)
           r.header(HeaderNames.ContentLength) shouldBe Some("128")
         }
     }
   )
 
   val decodeFailureHandlerBadRequestOnPathFailure: DecodeFailureHandler =
-    ServerDefaults.decodeFailureHandler.copy(
-      respond = ServerDefaults.FailureHandling
-        .respond(_, badRequestOnPathErrorIfPathShapeMatches = true, badRequestOnPathInvalidIfPathShapeMatches = true)
+    DefaultDecodeFailureHandler.handler.copy(
+      respond = DefaultDecodeFailureHandler.respond(
+        _,
+        badRequestOnPathErrorIfPathShapeMatches = true,
+        badRequestOnPathInvalidIfPathShapeMatches = true
+      )
     )
 
   def throwFruits(name: String): F[String] =

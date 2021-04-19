@@ -17,7 +17,7 @@ import io.vertx.core.streams.ReadStream
 import io.vertx.core.Handler
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.server.vertx.streams.ReadStreamState._
-import sttp.tapir.server.vertx.VertxEffectfulEndpointOptions
+import sttp.tapir.server.vertx.VertxCatsServerOptions
 
 import scala.collection.immutable.{Queue => SQueue}
 
@@ -31,13 +31,11 @@ object fs2 {
       dfd.get
   }
 
-  implicit def fs2ReadStreamCompatible[F[_]](implicit opts: VertxEffectfulEndpointOptions, F: ConcurrentEffect[F]) =
+  implicit def fs2ReadStreamCompatible[F[_]](implicit opts: VertxCatsServerOptions[F], F: ConcurrentEffect[F]) =
     new ReadStreamCompatible[Fs2Streams[F]] {
-      override type Capability = Fs2Streams[F]
+      override val streams: Fs2Streams[F] = Fs2Streams[F]
 
-      override val streams: Capability = Fs2Streams[F]
-
-      override def asReadStream(stream: Capability#BinaryStream): ReadStream[Buffer] =
+      override def asReadStream(stream: streams.BinaryStream): ReadStream[Buffer] =
         F.toIO(for {
           promise <- Deferred[F, Unit]
           state <- Ref.of(StreamState.empty[F](promise))
@@ -109,7 +107,7 @@ object fs2 {
             self
         }).unsafeRunSync()
 
-      override def fromReadStream(readStream: ReadStream[Buffer]): Capability#BinaryStream =
+      override def fromReadStream(readStream: ReadStream[Buffer]): streams.BinaryStream =
         F.toIO(for {
           stateRef <- Ref.of(ReadStreamState[F, Chunk[Byte]](Queued(SQueue.empty), Queued(SQueue.empty)))
           stream = Stream.unfoldChunkEval[F, Unit, Byte](()) { _ =>

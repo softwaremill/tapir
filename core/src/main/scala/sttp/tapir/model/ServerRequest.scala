@@ -1,17 +1,21 @@
 package sttp.tapir.model
 
-import java.net.{InetSocketAddress, URI}
+import sttp.model.headers.Accepts
+import sttp.model.{ContentTypeRange, QueryParams, RequestMetadata}
 
-import sttp.model.Method
+import java.net.InetSocketAddress
+import scala.collection.immutable.Seq
 
-trait ServerRequest {
-  def method: Method
+trait ServerRequest extends RequestMetadata {
   def protocol: String
-  def uri: URI
   def connectionInfo: ConnectionInfo
-  def headers: Seq[(String, String)]
-  def header(name: String): Option[String]
   def underlying: Any
+
+  /** Can differ from `uri.path`, if the endpoint is deployed in a context */
+  def pathSegments: List[String]
+  def queryParameters: QueryParams
+
+  lazy val acceptsContentTypes: Either[String, Seq[ContentTypeRange]] = Accepts.parse(headers)
 }
 
 case class ConnectionInfo(local: Option[InetSocketAddress], remote: Option[InetSocketAddress], secure: Option[Boolean])

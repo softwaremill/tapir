@@ -1,45 +1,56 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
-import sttp.tapir.docs.apispec.ValidatorUtil.{asPrimitiveValidators, elementValidator, fieldValidator}
 import sttp.tapir.docs.apispec.{exampleValue, rawToString}
+import sttp.tapir.internal.{IterableToListMap, _}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
-/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve references.
-  */
+/** Converts a tapir schema to an OpenAPI/AsyncAPI schema, using the given map to resolve references. */
 private[schema] class TSchemaToASchema(
-    objectToSchemaReference: ObjectToSchemaReference
+    objectToSchemaReference: ObjectToSchemaReference,
+    referenceEnums: SObjectInfo => Boolean
 ) {
-  def apply(typeData: TypeData[_]): ReferenceOr[ASchema] = {
-    val result = typeData.schema.schemaType match {
-      case TSchemaType.SInteger => Right(ASchema(SchemaType.Integer))
-      case TSchemaType.SNumber  => Right(ASchema(SchemaType.Number))
-      case TSchemaType.SBoolean => Right(ASchema(SchemaType.Boolean))
-      case TSchemaType.SString  => Right(ASchema(SchemaType.String))
+  def apply[T](schema: TSchema[T]): ReferenceOr[ASchema] = {
+    val result = schema.schemaType match {
+      case TSchemaType.SInteger() => Right(ASchema(SchemaType.Integer))
+      case TSchemaType.SNumber()  => Right(ASchema(SchemaType.Number))
+      case TSchemaType.SBoolean() => Right(ASchema(SchemaType.Boolean))
+      case TSchemaType.SString()  => Right(ASchema(SchemaType.String))
       case p @ TSchemaType.SProduct(_, fields) =>
         Right(
           ASchema(SchemaType.Object).copy(
-            required = p.required.map(_.encodedName).toList,
-            properties = fields.map {
-              case (fieldName, TSchema(s: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
-                fieldName.encodedName -> Left(objectToSchemaReference.map(s.info))
-              case (fieldName, fieldSchema) =>
-                fieldName.encodedName -> apply(TypeData(fieldSchema, fieldValidator(typeData.validator, fieldName.name)))
+            required = p.required.map(_.encodedName),
+            properties = fields.map { f =>
+              f.schema match {
+                case TSchema(s: TSchemaType.SObject[_], _, _, _, _, _, _, _) =>
+                  f.name.encodedName -> Left(objectToSchemaReference.map(s.info))
+                case schema @ TSchema(_, _, _, _, _, _, _, v) =>
+                  v.traversePrimitives { case Validator.Enum(_, _, Some(info)) => Vector(info) } match {
+                    case info +: _ if referenceEnums(info) => f.name.encodedName -> Left(objectToSchemaReference.map(info))
+                    case _                                 => f.name.encodedName -> apply(schema)
+                  }
+                case schema => f.name.encodedName -> apply(schema)
+              }
             }.toListMap
           )
         )
-      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject, _, _, _, _, _, _, _)) =>
+      case TSchemaType.SArray(TSchema(el: TSchemaType.SObject[_], _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
-        Right(ASchema(SchemaType.Array).copy(items = Some(apply(TypeData(el, elementValidator(typeData.validator))))))
-      case TSchemaType.SBinary        => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
-      case TSchemaType.SDate          => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
-      case TSchemaType.SDateTime      => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
-      case TSchemaType.SRef(fullName) => Left(objectToSchemaReference.map(fullName))
+        Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
+      case TSchemaType.SOption(TSchema(el: TSchemaType.SObject[_], _, _, _, _, _, _, _)) => Left(objectToSchemaReference.map(el.info))
+      case TSchemaType.SOption(el)                                                       => apply(el)
+      case TSchemaType.SBinary()                                                         => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
+      case TSchemaType.SDate()                                                           => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Date))
+      case TSchemaType.SDateTime()                                                       => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.DateTime))
+      case TSchemaType.SRef(fullName)                                                    => Left(objectToSchemaReference.map(fullName))
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           ASchema.apply(
-            schemas.collect { case TSchema(s: TSchemaType.SProduct, _, _, _, _, _, _, _) => Left(objectToSchemaReference.map(s.info)) },
+            schemas.values.toList.collect { case TSchema(s: TSchemaType.SProduct[_], _, _, _, _, _, _, _) =>
+              Left(objectToSchemaReference.map(s.info))
+            },
             d.map(tDiscriminatorToADiscriminator)
           )
         )
@@ -48,24 +59,21 @@ private[schema] class TSchemaToASchema(
           ASchema(SchemaType.Object).copy(
             required = List.empty,
             additionalProperties = Some(valueSchema.schemaType match {
-              case so: TSchemaType.SObject => Left(objectToSchemaReference.map(so.info))
-              case _                       => apply(TypeData(valueSchema, elementValidator(typeData.validator)))
+              case so: TSchemaType.SObject[_] => Left(objectToSchemaReference.map(so.info))
+              case _                          => apply(valueSchema)
             })
           )
         )
     }
 
-    val primitiveValidators = typeData.schema.schemaType match {
-      case TSchemaType.SArray(_) => asPrimitiveValidators(typeData.validator, unwrapCollections = false)
-      case _                     => asPrimitiveValidators(typeData.validator, unwrapCollections = true)
-    }
-    val wholeNumbers = typeData.schema.schemaType match {
-      case TSchemaType.SInteger => true
-      case _                    => false
+    val primitiveValidators = schema.validator.asPrimitiveValidators
+    val wholeNumbers = schema.schemaType match {
+      case TSchemaType.SInteger() => true
+      case _                      => false
     }
 
     result
-      .map(addMetadata(_, typeData.schema))
+      .map(addMetadata(_, schema))
       .map(addConstraints(_, primitiveValidators, wholeNumbers))
   }
 
@@ -102,8 +110,8 @@ private[schema] class TSchemaToASchema(
       case Validator.MaxLength(value) => oschema.copy(maxLength = Some(value))
       case Validator.MinSize(value)   => oschema.copy(minItems = Some(value))
       case Validator.MaxSize(value)   => oschema.copy(maxItems = Some(value))
-      case Validator.Enum(_, None)    => oschema
-      case Validator.Enum(v, Some(encode)) =>
+      case Validator.Enum(_, None, _) => oschema
+      case Validator.Enum(v, Some(encode), _) =>
         val values = v.flatMap(x => encode(x).map(rawToString))
         oschema.copy(enum = if (values.nonEmpty) Some(values) else None)
     }
@@ -113,12 +121,12 @@ private[schema] class TSchemaToASchema(
     if (wholeNumber) BigDecimal(vIsNumeric.toLong(v)) else BigDecimal(vIsNumeric.toDouble(v))
   }
 
-  private def tDiscriminatorToADiscriminator(discriminator: TSchemaType.Discriminator): Discriminator = {
+  private def tDiscriminatorToADiscriminator(discriminator: TSchemaType.SDiscriminator): Discriminator = {
     val schemas = Some(
-      discriminator.mappingOverride.map { case (k, TSchemaType.SRef(fullName)) =>
+      discriminator.mapping.map { case (k, TSchemaType.SRef(fullName)) =>
         k -> objectToSchemaReference.map(fullName).$ref
       }.toListMap
     )
-    Discriminator(discriminator.propertyName, schemas)
+    Discriminator(discriminator.name.encodedName, schemas)
   }
 }

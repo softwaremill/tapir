@@ -113,3 +113,21 @@ object Currency {
 
 The annotation will simply generate a `Schema[T]` for your type `T` and put it into companion object.
 Generation rules are the same as in `Schema.derived[T]`.
+
+This will also work for newtypes — [estatico](https://github.com/estatico/scala-newtype) or [supertagged](https://github.com/rudogma/scala-supertagged):
+
+```scala
+import derevo.derive
+import sttp.tapir.derevo.schema
+import io.estatico.newtype.macros.newtype
+
+object types {
+  
+  @derive(schema)
+  @newtype
+  case class Amount(i: Int)
+}
+```
+
+Resulting schema will be equivalent to `implicitly[Schema[Int]].map(i => Some(types.Amount(i)))`.
+Note that due to limitations of the `derevo` library one can't provide custom description for generated schema.

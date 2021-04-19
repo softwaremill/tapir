@@ -13,29 +13,30 @@ class ModifyFunctorInstancesTest extends AnyFlatSpec with Matchers with ModifyFu
 
   it should "modify elements in NonEmptyList" in {
     implicitly[Schema[NonEmptyListWrapper]]
-      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString).format("xyz"))
+      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
   }
 
   it should "modify elements in NonEmptySet" in {
     implicitly[Typeclass[NonEmptySetWrapper]]
-      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString).format("xyz"))
+      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
   }
 
   it should "modify elements in Chain" in {
     implicitly[Schema[ChainWrapper]]
-      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString).format("xyz"))
+      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
   }
 
   it should "modify elements in NonEmptyChain" in {
     implicitly[Schema[NonEmptyChainWrapper]]
-      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString).format("xyz"))
+      .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
   }
 
   implicit class CollectionSchemaMatcher[A](schema: Schema[A]) {
     def shouldContainACollectionElementWithSchema[B](fieldName: String, elemSchema: Schema[B]): Assertion =
       inside(schema.schemaType) {
-        case SProduct(_, List((FieldName(name, _), Schema(SArray(s), _, _, _, _, _, _, _)))) if name == fieldName =>
-          s shouldBe (elemSchema)
+        case SProduct(_, List(f)) if f.name.name == fieldName =>
+          f.schema.schemaType shouldBe a[SArray[_, _]]
+          f.schema.schemaType.asInstanceOf[SArray[_, _]].element shouldBe elemSchema
       }
   }
 }

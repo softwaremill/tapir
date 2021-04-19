@@ -6,8 +6,9 @@ import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.util.Future
 import sttp.tapir.Endpoint
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Port
 
 import scala.concurrent.ExecutionContext
@@ -24,7 +25,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
-      FinatraServerOptions.default.copy(decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler))
+      FinatraServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
     FinatraServerInterpreter.toRoute(e)
   }
 

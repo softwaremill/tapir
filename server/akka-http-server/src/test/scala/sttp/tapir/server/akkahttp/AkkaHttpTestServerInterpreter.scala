@@ -9,7 +9,8 @@ import cats.effect.{IO, Resource}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
-import sttp.tapir.server.{DecodeFailureHandler, ServerDefaults, ServerEndpoint}
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -22,8 +23,8 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
       e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None
   ): Route = {
-    implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default.copy(
-      decodeFailureHandler = decodeFailureHandler.getOrElse(ServerDefaults.decodeFailureHandler)
+    implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
+      decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     AkkaHttpServerInterpreter.toRoute(e)
   }

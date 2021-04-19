@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.17.16"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-client" % "0.18.0-M7"
 ```
 
 To make requests using an endpoint definition using the [sttp client](https://github.com/softwaremill/sttp), import:
@@ -38,7 +38,7 @@ for example usage.
 
 ## Web sockets
 
-To interpret a web socket enddpoint, an additional streams-specific import is needed, so that the interpreter can
+To interpret a web socket endpoint, an additional streams-specific import is needed, so that the interpreter can
 convert sttp's `WebSocket` instance into a pipe. This logic is looked up via the `WebSocketToPipe` implicit.
 
 The required imports are as follows:
@@ -53,5 +53,15 @@ with dependencies on akka-streams and fs2 being marked as optional (hence these 
 
 ## Scala.JS
 
-The client interpreter also supports Scala.JS, the request must then be send using the 
+In this case add the following dependencies (note the [`%%%`](https://www.scala-js.org/doc/project/dependencies.html) 
+instead of the usual `%%`):
+
+```scala
+"com.softwaremill.sttp.tapir" %%% "tapir-sttp-client" % "0.18.0-M7"
+"io.github.cquiroz" %%% "scala-java-time" % "2.2.0" // implementations of java.time classes for Scala.JS
+```
+
+The client interpreter also supports Scala.JS, the request must then be sent using the
 [sttp client Scala.JS Fetch backend](https://sttp.softwaremill.com/en/latest/backends/javascript/fetch.html).
+
+You can check the [`SttpClientTests`](https://github.com/softwaremill/tapir/blob/master/client/sttp-client/src/test/scalajs/sttp/tapir/client/sttp/SttpClientTests.scala) for a working example.

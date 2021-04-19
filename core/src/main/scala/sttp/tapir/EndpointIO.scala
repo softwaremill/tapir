@@ -3,6 +3,7 @@ package sttp.tapir
 import java.nio.charset.Charset
 import sttp.capabilities.Streams
 import sttp.model.{Header, Method}
+import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
@@ -10,7 +11,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 import sttp.ws.WebSocketFrame
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{Seq, ListMap}
 import scala.concurrent.duration.FiniteDuration
 
 /** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
@@ -52,14 +53,20 @@ object EndpointTransput {
 
     def schema(s: Schema[T]): ThisType[T] = copyWith(codec.schema(s), info)
     def schema(s: Option[Schema[T]]): ThisType[T] = copyWith(codec.schema(s), info)
-    def modifySchema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.modifySchema(modify), info)
+    def schema(modify: Schema[T] => Schema[T]): ThisType[T] = copyWith(codec.schema(modify), info)
+
+    def validateOption[U](v: Validator[U])(implicit tIsOptionU: T =:= Option[U]): ThisType[T] =
+      schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
+    def validateIterable[C[X] <: Iterable[X], U](v: Validator[U])(implicit tIsCU: T =:= C[U]): ThisType[T] =
+      schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 
     def description(d: String): ThisType[T] = copyWith(codec, info.description(d))
-    def default(d: T): ThisType[T] = copyWith(codec.modifySchema(_.default(d, Some(codec.encode(d)))), info)
+    def default(d: T): ThisType[T] = copyWith(codec.schema(_.default(d, Some(codec.encode(d)))), info)
     def example(t: T): ThisType[T] = copyWith(codec, info.example(t))
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
     def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
+    def docsExtension[A: JsonCodec](key: String, value: A): ThisType[T] = copyWith(codec, info.docsExtension(key, value))
   }
 
   sealed trait Pair[T] extends EndpointTransput[T] {
@@ -116,7 +123,7 @@ object EndpointInput {
     override private[tapir] type L = String
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[String, U, TextPlain], i: Info[U]): PathCapture[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.validator)
+    override def show: String = addValidatorShow(s"/[${name.getOrElse("")}]", codec.schema)
 
     def name(n: String): PathCapture[T] = copy(name = Some(n))
   }
@@ -134,7 +141,7 @@ object EndpointInput {
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Query[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"?$name", codec.validator)
+    override def show: String = addValidatorShow(s"?$name", codec.schema)
   }
 
   case class QueryParams[T](codec: Codec[sttp.model.QueryParams, T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -151,7 +158,7 @@ object EndpointInput {
     override private[tapir] type L = Option[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[Option[String], U, TextPlain], i: Info[U]): Cookie[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"{cookie $name}", codec.validator)
+    override def show: String = addValidatorShow(s"{cookie $name}", codec.schema)
   }
 
   case class ExtractFromRequest[T](codec: Codec[ServerRequest, T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -262,13 +269,8 @@ sealed trait EndpointOutput[T] extends EndpointTransput[T] {
 }
 
 object EndpointOutput {
-  sealed trait Single[T] extends EndpointOutput[T] {
-    private[tapir] def _mapping: Mapping[_, T]
-  }
-
-  sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T] {
-    override private[tapir] def _mapping: Mapping[_, T] = codec
-  }
+  sealed trait Single[T] extends EndpointOutput[T]
+  sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
 
   //
 
@@ -315,22 +317,24 @@ object EndpointOutput {
     override def show: String = wrapped.show
   }
 
-  /** Specifies that for `statusCode`, the given `output` should be used.
+  /** Specifies a correspondence between `statusCode` and `output`.
+    *
+    * A single status code can have multiple mappings, with different body content types. The mapping can then be
+    * chosen based on content type negotiation, or the content type header.
     *
     * The `appliesTo` function should determine, whether a runtime value matches the type `O`.
     * This check cannot be in general done by checking the run-time class of the value, due to type erasure (if `O` has
     * type parameters).
     */
-  case class StatusMapping[O] private[tapir] (
+  case class OneOfMapping[O] private[tapir] (
       statusCode: Option[sttp.model.StatusCode],
       output: EndpointOutput[O],
       appliesTo: Any => Boolean
   )
 
-  case class OneOf[O, T](mappings: Seq[StatusMapping[_ <: O]], codec: Mapping[O, T]) extends Single[T] {
+  case class OneOf[O, T](mappings: Seq[OneOfMapping[_ <: O]], mapping: Mapping[O, T]) extends Single[T] {
     override private[tapir] type ThisType[X] = OneOf[O, X]
-    override private[tapir] def _mapping: Mapping[_, T] = codec
-    override def map[U](mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](codec = codec.map(mapping))
+    override def map[U](_mapping: Mapping[T, U]): OneOf[O, U] = copy[O, U](mapping = mapping.map(_mapping))
     override def show: String = showOneOf(mappings.map(_.output.show))
   }
 
@@ -349,7 +353,6 @@ object EndpointOutput {
 
   case class MappedPair[T, U, TU, V](output: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointOutput.Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
-    override private[tapir] def _mapping: Mapping[_, V] = mapping
     override def show: String = output.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](output, mapping.map(m))
   }
@@ -391,7 +394,7 @@ object EndpointIO {
         case _                               => ""
       }
       val format = codec.format.mediaType
-      addValidatorShow(s"{body as $format$charset}", codec.validator)
+      addValidatorShow(s"{body as $format$charset}", codec.schema)
     }
   }
 
@@ -422,7 +425,7 @@ object EndpointIO {
     override private[tapir] type L = List[String]
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[List[String], U, TextPlain], i: Info[U]): Header[U] = copy(codec = c, info = i)
-    override def show: String = addValidatorShow(s"{header $name}", codec.validator)
+    override def show: String = addValidatorShow(s"{header $name}", codec.schema)
   }
 
   case class Headers[T](codec: Codec[List[sttp.model.Header], T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -446,7 +449,6 @@ object EndpointIO {
 
   case class MappedPair[T, U, TU, V](io: Pair[T, U, TU], mapping: Mapping[TU, V]) extends EndpointIO.Single[V] {
     override private[tapir] type ThisType[X] = MappedPair[T, U, TU, X]
-    override private[tapir] def _mapping: Mapping[_, V] = mapping
     override def show: String = io.show
     override def map[W](m: Mapping[V, W]): MappedPair[T, U, TU, W] = copy[T, U, TU, W](io, mapping.map(m))
   }
@@ -472,13 +474,14 @@ object EndpointIO {
     def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
   }
 
-  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean) {
+  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean, docsExtensions: Vector[DocsExtension[_]]) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
     def example(t: T): Info[T] = example(Example.of(t))
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
+    def docsExtension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 
     def map[U](codec: Mapping[T, U]): Info[U] =
       Info(
@@ -486,11 +489,12 @@ object EndpointIO {
         examples.map(e => e.copy(value = codec.decode(e.value))).collect { case Example(DecodeResult.Value(ee), name, summary) =>
           Example(ee, name, summary)
         },
-        deprecated
+        deprecated,
+        docsExtensions
       )
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
   }
 }
 
@@ -550,11 +554,11 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
 
   def requestsSchema(s: Schema[REQ]): ThisType[T] = copy(requests = requests.schema(s))
   def requestsSchema(s: Option[Schema[REQ]]): ThisType[T] = copy(requests = requests.schema(s))
-  def modifyRequestsSchema(modify: Schema[REQ] => Schema[REQ]): ThisType[T] = copy(requests = requests.modifySchema(modify))
+  def requestsSchema(modify: Schema[REQ] => Schema[REQ]): ThisType[T] = copy(requests = requests.schema(modify))
 
   def responsesSchema(s: Schema[RESP]): ThisType[T] = copy(responses = responses.schema(s))
   def responsesSchema(s: Option[Schema[RESP]]): ThisType[T] = copy(responses = responses.schema(s))
-  def modifyResponsesSchema(modify: Schema[RESP] => Schema[RESP]): ThisType[T] = copy(responses = responses.modifySchema(modify))
+  def responsesSchema(modify: Schema[RESP] => Schema[RESP]): ThisType[T] = copy(responses = responses.schema(modify))
 
   def requestsDescription(d: String): ThisType[T] = copy(requestsInfo = requestsInfo.description(d))
   def requestsExample(e: REQ): ThisType[T] = copy(requestsInfo = requestsInfo.example(e))

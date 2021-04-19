@@ -1,14 +1,17 @@
 package sttp.tapir.asyncapi
 
+import io.circe.generic.encoding.DerivedAsObjectEncoder
 import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
-import io.circe.{Encoder, Json}
+import io.circe.{Encoder, Json, JsonObject}
+import shapeless.Lazy
 import sttp.tapir.apispec.{
   Discriminator,
   ExampleMultipleValue,
   ExampleSingleValue,
   ExampleValue,
+  ExtensionValue,
   ExternalDocumentation,
   OAuthFlow,
   OAuthFlows,
@@ -32,19 +35,20 @@ trait TapirAsyncAPICirceEncoders {
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
-  implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveEncoder[OAuthFlow]
-  implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveEncoder[OAuthFlows]
-  implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveEncoder[SecurityScheme]
+  implicit val docsExtensionValue: Encoder[ExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
+  implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveWithExtensions[OAuthFlow]
+  implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveWithExtensions[OAuthFlows]
+  implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveWithExtensions[SecurityScheme]
   implicit val encoderExampleValue: Encoder[ExampleValue] = {
     case ExampleSingleValue(value)    => parse(value).getOrElse(Json.fromString(value))
     case ExampleMultipleValue(values) => Json.arr(values.map(v => parse(v).getOrElse(Json.fromString(v))): _*)
   }
   implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.encodeEnumeration(SchemaType)
-  implicit val encoderSchema: Encoder[Schema] = deriveEncoder[Schema]
+  implicit val encoderSchema: Encoder[Schema] = deriveWithExtensions[Schema]
   implicit val encoderReference: Encoder[Reference] = deriveEncoder[Reference]
   implicit val encoderDiscriminator: Encoder[Discriminator] = deriveEncoder[Discriminator]
-  implicit val encoderExternalDocumentation: Encoder[ExternalDocumentation] = deriveEncoder[ExternalDocumentation]
-  implicit val encoderTag: Encoder[Tag] = deriveEncoder[Tag]
+  implicit val encoderExternalDocumentation: Encoder[ExternalDocumentation] = deriveWithExtensions[ExternalDocumentation]
+  implicit val encoderTag: Encoder[Tag] = deriveWithExtensions[Tag]
 
   implicit val encoderAnyValue: Encoder[AnyValue] = (av: AnyValue) => {
     parse(av.value).getOrElse(Json.fromString(av.value))
@@ -154,5 +158,16 @@ trait TapirAsyncAPICirceEncoders {
     case m: ListMap[String, V] =>
       val properties = m.mapValues(v => implicitly[Encoder[V]].apply(v)).toList
       Json.obj(properties: _*)
+  }
+
+  // Take a look at sttp.tapir.openapi.TapirOpenAPICirceEncoders.expandExtensions for explanation
+  private def expandExtensions(jsonObject: JsonObject): JsonObject = {
+    val extensions = jsonObject("extensions")
+    val jsonWithoutExt = jsonObject.filterKeys(_ != "extensions")
+    extensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
+  }
+
+  private def deriveWithExtensions[A](implicit encode: Lazy[DerivedAsObjectEncoder[A]]) = {
+    deriveEncoder[A].mapJsonObject(expandExtensions)
   }
 }

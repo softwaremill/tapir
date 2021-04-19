@@ -1,12 +1,12 @@
 package sttp.tapir
 
-import java.nio.charset.Charset
-
-import sttp.model.{Method, StatusCode}
+import sttp.model.{MediaType, Method, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.EndpointOutput.WebSocketBodyWrapper
 import sttp.tapir.typelevel.{BinaryTupleOp, ParamConcat, ParamSubtract}
 
+import java.nio.charset.{Charset, StandardCharsets}
+import scala.collection.immutable
 import scala.reflect.ClassTag
 import scala.util.{Failure, Success, Try}
 
@@ -192,6 +192,23 @@ package object internal {
         Vector(b.bodyType)
       }.headOption
     }
+
+    def supportedMediaTypes: Vector[MediaType] = traverseOutputs {
+      case EndpointIO.Body(bodyType, codec, _) =>
+        Vector(codec.format.mediaType.copy(charset = charset(bodyType).map(_.name())))
+      case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, _, charset)) =>
+        Vector(codec.format.mediaType.copy(charset = charset.map(_.name())))
+    }
+
+    def hasBodyMatchingContent(content: MediaType): Boolean = {
+      val contentToMatch = content match {
+        // default for text https://tools.ietf.org/html/rfc2616#section-3.7.1, other types has no defaults
+        case m @ MediaType("text", _, None, _) => m.charset(StandardCharsets.ISO_8859_1.name())
+        case m                                 => m
+      }
+
+      supportedMediaTypes.exists(_ == contentToMatch)
+    }
   }
 
   implicit class RichBasicEndpointOutputs(outputs: Vector[EndpointOutput.Basic[_]]) {
@@ -209,11 +226,9 @@ package object internal {
       }
   }
 
-  def addValidatorShow(s: String, v: Validator[_]): String = {
-    v.show match {
-      case None     => s
-      case Some(sv) => s"$s($sv)"
-    }
+  def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {
+    case None     => s
+    case Some(sv) => s"$s($sv)"
   }
 
   def showMultiple(et: Vector[EndpointTransput[_]]): String = {
@@ -224,7 +239,7 @@ package object internal {
     if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
   }
 
-  def showOneOf(mappings: Seq[String]): String = s"status one of(${mappings.mkString("|")})"
+  def showOneOf(mappings: Seq[String]): String = s"one of(${mappings.mkString("|")})"
 
   def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {
@@ -266,5 +281,34 @@ package object internal {
   implicit class RichVector[T](c: Vector[T]) {
     def headAndTail: Option[(T, Vector[T])] = if (c.isEmpty) None else Some((c.head, c.tail))
     def initAndLast: Option[(Vector[T], T)] = if (c.isEmpty) None else Some((c.init, c.last))
+  }
+
+  implicit class IterableToListMap[A](xs: Iterable[A]) {
+    def toListMap[T, U](implicit ev: A <:< (T, U)): immutable.ListMap[T, U] = {
+      val b = immutable.ListMap.newBuilder[T, U]
+      for (x <- xs)
+        b += x
+
+      b.result()
+    }
+  }
+
+  implicit class ValidatorSyntax(v: Validator[_]) {
+
+    def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {
+      def toPrimitives(v: Validator[_]): Seq[Validator.Primitive[_]] = {
+        v match {
+          case Validator.Mapped(wrapped, _) => toPrimitives(wrapped)
+          case Validator.All(validators)    => validators.flatMap(toPrimitives)
+          case Validator.Any(validators)    => validators.flatMap(toPrimitives)
+          case Validator.Custom(_, _)       => Nil
+          case bv: Validator.Primitive[_]   => List(bv)
+        }
+      }
+      toPrimitives(v)
+    }
+
+    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] =
+      asPrimitiveValidators.collect(handle).flatten.toVector
   }
 }

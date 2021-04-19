@@ -1,6 +1,6 @@
 # Validation
 
-Tapir supports validation for primitive/base types. Validation of composite values, whole data structures, business 
+Tapir supports validation for primitive types. Validation of composite values, whole data structures, business 
 rules enforcement etc. should be done as part of the [server logic](../server/logic.md) of the endpoint, using the 
 dedicated error output (the `E` in `Endpoint[I, E, O, S]`) to report errors. 
 
@@ -32,45 +32,21 @@ val e = endpoint.in(
     .validate(Validator.max(100)))
 ``` 
 
-Validation rules added using the built-in validators are translated to [OpenAPI](../openapi.md) documentation.
+For optional/iterable inputs/outputs, to validate the contained value(s), use:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+
+query[Option[Int]]("item").validateOption(Validator.min(0))
+query[List[Int]]("item").validateIterable(Validator.min(0)) // validates each repeated parameter
+```
+
+Validation rules added using the built-in validators are translated to [OpenAPI](../docs/openapi.md) documentation.
 
 ## Validation rules and automatic codec derivation
 
-As validators are parts of schemas, they are looked up as part of the with implicit `Schema[T]` values. 
-
-While they can be manually defined, tapir provides tools to derive automatically schemas for custom types 
-(traits and case classes).
-
-## Custom type validation
-
-Note that to validate a nested member of a case class, it needs to have a unique type (that is, not an `Int`, as 
-providing an implicit `Validator[Int]` would validate all ints in the hierarchy), as schema lookup is type-driven.
-
-To introduce unique types for primitive values, you can use value classes or [type tagging](https://github.com/softwaremill/scala-common#tagging).
-
-For example, to support an integer wrapped in a value type in a json body, we need to provide Circe encoders and 
-decoders (if that's the json library that we are using), schema information with validator:
- 
-```scala mdoc:silent:reset-object
-import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import io.circe.{ Encoder, Decoder }
-import io.circe.generic.semiauto._
-
-case class Amount(v: Int) extends AnyVal
-case class FruitAmount(fruit: String, amount: Amount)
-
-implicit val amountSchema: Schema[Amount] = Schema(SchemaType.SInteger).validate(Validator.min(1).contramap(_.v))
-implicit val amountEncoder: Encoder[Amount] = Encoder.encodeInt.contramap(_.v)
-implicit val amountDecoder: Decoder[Amount] = Decoder.decodeInt.map(Amount.apply)
-
-implicit val decoder: Decoder[FruitAmount] = deriveDecoder[FruitAmount]
-implicit val encoder: Encoder[FruitAmount] = deriveEncoder[FruitAmount]
-
-val e: Endpoint[FruitAmount, Unit, Unit, Nothing] =
-  endpoint.in(jsonBody[FruitAmount])
-```
+As validators are parts of schemas, they are looked up as part of the implicit `Schema[T]` values. When 
+[customising schemas](schemas.md), use the `.validate` method on the schema to add a validator.
 
 ## Decode failures
 
@@ -83,11 +59,11 @@ To customise error messages that are returned upon validation/decode failures by
 
 ## Enum validators
 
-Validators for enumerations can be created using the `Validator.enum` method, which either:
+Validators for enumerations can be created using:
 
-* takes a type parameter, which should be an abstract, sealed base type, and using a macro determines the possible 
-  implementations
-* takes the list of possible values
+* `Validator.derivedEnum`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
+  macro determines the possible values
+* `Validator.enum`, which takes the list of possible values
 
 To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
 converts the enum value to a raw type (typically a string). This method is inferred *only* if the validator is directly 
@@ -107,7 +83,7 @@ implicit def plainCodecForColor: PlainCodec[Color] = {
       case "red"  => Red
       case "blue" => Blue
     })(_.toString.toLowerCase)
-    .validate(Validator.enum)
+    .validate(Validator.derivedEnum)
 }
 ```
 
@@ -115,12 +91,12 @@ If the enum is nested within an object, regardless of whether the codec for that
 we need to specify the encode function by hand:
 
 ```scala mdoc:silent
-implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.enum.encode(_.toString.toLowerCase))
+implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
 ```
 
-Like other validators/schemas, enum schemas need to be added to a codec manually or through an implicit value, if the 
-codec and validator is automatically derived. 
+Like other validators/schemas, enum schemas need to be added to a codec manually, or through an implicit value if the 
+codec is automatically derived. 
 
 ## Next
 
-Read on about [json support](json.md).
+Read on about [content types](contenttype.md).

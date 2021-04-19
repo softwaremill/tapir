@@ -1,6 +1,7 @@
 package sttp.tapir.generic.internal
 
 import sttp.tapir.Schema
+import sttp.tapir.generic.Configuration
 
 import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
@@ -10,7 +11,9 @@ object OneOfMacro {
 
   def oneOfMacro[E: c.WeakTypeTag, V: c.WeakTypeTag](
       c: blackbox.Context
-  )(extractor: c.Expr[E => V], asString: c.Expr[V => String])(mapping: c.Expr[(V, Schema[_])]*): c.Expr[Schema[E]] = {
+  )(extractor: c.Expr[E => V], asString: c.Expr[V => String])(
+      mapping: c.Expr[(V, Schema[_])]*
+  )(conf: c.Expr[Configuration]): c.Expr[Schema[E]] = {
     import c.universe._
 
     @tailrec
@@ -47,13 +50,22 @@ object OneOfMacro {
 
     val schemaForE =
       q"""{
+            import _root_.sttp.tapir.internal._
+            import _root_.sttp.tapir.Schema
             import _root_.sttp.tapir.Schema._
             import _root_.sttp.tapir.SchemaType._
-            val rawMapping = _root_.scala.collection.immutable.Map(..$mapping)
-            val discriminator = _root_.sttp.tapir.SchemaType.Discriminator($name, rawMapping.map { case (k, sf) => $asString.apply(k) -> _root_.sttp.tapir.SchemaType.SRef(sf.schemaType.asInstanceOf[_root_.sttp.tapir.SchemaType.SObject].info)})
-            _root_.sttp.tapir.Schema(_root_.sttp.tapir.SchemaType.SCoproduct(_root_.sttp.tapir.SchemaType.SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(
-        weakTypeE
-      )}), rawMapping.values.toList, _root_.scala.Some(discriminator)))
+            import _root_.scala.collection.immutable.{List, Map}
+            val mappingAsList = List(..$mapping)
+            val mappingAsMap = mappingAsList.toMap
+            val discriminator = SDiscriminator(_root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)), mappingAsMap.map { case (k, sf) => 
+              $asString.apply(k) -> SRef(sf.schemaType.asInstanceOf[SObject[_]].info)
+            })
+            val info = SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)})
+            // cast needed because of Scala 2.12
+            val subtypes = (mappingAsList.map(_._2).map(s => s.schemaType.asInstanceOf[SObject[_]].info -> s): List[(SObjectInfo, Schema[_])]).toListMap
+            Schema(SCoproduct(info, subtypes, _root_.scala.Some(discriminator))(
+              e => mappingAsMap.get($extractor(e)).map(_.schemaType.asInstanceOf[SObject[_]].info)
+            ))
           }"""
 
     Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)

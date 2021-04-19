@@ -76,9 +76,10 @@ val booksListingRoute: Route = AkkaHttpServerInterpreter
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
-val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = SttpClientInterpreter
-  .toRequest(booksListing, Some(uri"http://localhost:8080"))
-  .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
+val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
+  SttpClientInterpreter
+    .toRequest(booksListing, Some(uri"http://localhost:8080"))
+    .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```
 
 ## Documentation
@@ -89,13 +90,13 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 
 Add the following dependency:
 
-```scala
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.17.16"
+```sbt
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.18.0-M7"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
 
-```scala
+```sbt
 scalacOptions += "-Ypartial-unification"
 ```
 
@@ -113,7 +114,7 @@ Sidenote for scala 2.12.4 and higher: if you encounter an issue with compiling y
 a `StackOverflowException` related to [this](https://github.com/scala/bug/issues/10604) scala bug, 
 please increase your stack memory. Example:
 
-```
+```shell
 sbt -J-Xss4M clean compile
 ```
 
@@ -144,10 +145,12 @@ causes another problem: out of memory when running JS tests for multiple modules
 * test single JS projects
 * use CI (GitHub Actions) to test all projects - the `.github/workflows/ci.yml` enumerates them one by one
 
+You can test only server/client/doc/other projects using `testServers`, `testClients`, `testDocs` and `testOther`.
+
 ## Commercial Support
 
 We offer commercial support for tapir and related technologies, as well as development services. [Contact us](https://softwaremill.com) to learn more about our offer!
 
 ## Copyright
 
-Copyright (C) 2018-2020 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2021 SoftwareMill [https://softwaremill.com](https://softwaremill.com).

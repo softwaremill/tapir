@@ -3,8 +3,9 @@ package sttp.tapir.generic.internal
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{FieldName, Schema, SchemaType, Validator, deprecated, description, default, encodedName, encodedExample, format, generic, validate}
+import sttp.tapir.{FieldName, Schema, SchemaType, default, deprecated, description, encodedExample, encodedName, format, validate}
 import SchemaMagnoliaDerivation.deriveCache
+import sttp.tapir.internal.IterableToListMap
 
 import scala.collection.mutable
 
@@ -14,25 +15,26 @@ trait SchemaMagnoliaDerivation {
 
   def combine[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withCache(ctx.typeName, ctx.annotations) {
-      val validator = productValidator(ctx)
       val result =
         if (ctx.isValueClass) {
-          Schema[T](schemaType = ctx.parameters.head.typeclass.schemaType, validator = validator)
+          Schema[T](schemaType = ctx.parameters.head.typeclass.schemaType.asInstanceOf[SchemaType[T]])
         } else {
-          Schema[T](schemaType = productSchemaType(ctx), validator = validator)
+          Schema[T](schemaType = productSchemaType(ctx))
         }
       enrichSchema(result, ctx.annotations)
     }
   }
 
-  private def productSchemaType[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): SProduct = SProduct(
-    typeNameToObjectInfo(ctx.typeName, ctx.annotations),
-    ctx.parameters.map { p =>
-      val schema = enrichSchema(p.typeclass, p.annotations)
-      val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
-      (FieldName(p.label, encodedName), schema)
-    }.toList
-  )
+  private def productSchemaType[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): SProduct[T] =
+    SProduct(
+      typeNameToObjectInfo(ctx.typeName, ctx.annotations),
+      ctx.parameters.map { p =>
+        val pSchema = enrichSchema(p.typeclass, p.annotations)
+        val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
+
+        SProductField[T, p.PType](FieldName(p.label, encodedName), pSchema, t => Some(p.dereference(t)))
+      }.toList
+    )
 
   private def typeNameToObjectInfo(typeName: TypeName, annotations: Seq[Any]): SchemaType.SObjectInfo = {
     def allTypeArguments(tn: TypeName): Seq[TypeName] = tn.typeArguments.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
@@ -50,86 +52,52 @@ trait SchemaMagnoliaDerivation {
 
   private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
     annotations.foldLeft(schema) {
-      case (schema, ann: description) => schema.description(ann.text)
+      case (schema, ann: description)    => schema.description(ann.text)
       case (schema, ann: encodedExample) => schema.encodedExample(ann.example)
-      case (schema, ann: default[X])  => schema.default(ann.default)
-      case (schema, ann: validate[X]) => schema.validate(ann.v)
-      case (schema, ann: format)      => schema.format(ann.format)
-      case (schema, _: deprecated)    => schema.deprecated(true)
-      case (schema, _)                => schema
+      case (schema, ann: default[X])     => schema.default(ann.default)
+      case (schema, ann: validate[X])    => schema.validate(ann.v)
+      case (schema, ann: format)         => schema.format(ann.format)
+      case (schema, _: deprecated)       => schema.deprecated(true)
+      case (schema, _)                   => schema
     }
   }
 
   def dispatch[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withCache(ctx.typeName, ctx.annotations) {
-      val baseCoproduct = SCoproduct(typeNameToObjectInfo(ctx.typeName, ctx.annotations), ctx.subtypes.map(_.typeclass).toList, None)
+      val baseCoproduct = SCoproduct(
+        typeNameToObjectInfo(ctx.typeName, ctx.annotations),
+        ctx.subtypes.map(s => typeNameToObjectInfo(s.typeName, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap,
+        None
+      )((t: T) => ctx.dispatch(t) { v => Some(typeNameToObjectInfo(v.typeName, v.annotations)) })
       val coproduct = genericDerivationConfig.discriminator match {
         case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
         case None    => baseCoproduct
       }
-      Schema(schemaType = coproduct, validator = coproductValidator(ctx))
+      Schema(schemaType = coproduct)
     }
-  }
-
-  private def productValidator[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
-    // type parameters & Nil/List instead of None/Some are needed because of 2.12
-    val fieldValidators = ctx.parameters.toList.flatMap { p =>
-      val pValidator = p.typeclass.validator
-      if (pValidator == Validator.pass) Nil: List[(String, Validator.ProductField[T])]
-      else
-        List(p.label -> new Validator.ProductField[T] {
-          override type FieldType = p.PType
-          override def name: FieldName =
-            FieldName(p.label, getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label)))
-          override def get(t: T): FieldType = p.dereference(t)
-          override def validator: Validator[FieldType] = pValidator
-        }): List[(String, Validator.ProductField[T])]
-    }
-
-    if (fieldValidators.isEmpty) Validator.pass
-    else Validator.Product(fieldValidators.toMap)
-  }
-
-  private def coproductValidator[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Validator[T] = {
-    Validator.Coproduct(new generic.SealedTrait[Validator, T] {
-      override def dispatch(t: T): Validator[T] = ctx.dispatch(t) { v => v.typeclass.validator.asInstanceOf[Validator[T]] }
-
-      override def subtypes: Map[String, Validator[Any]] =
-        ctx.subtypes.map(st => st.typeName.full -> st.typeclass.validator.asInstanceOf[Validator[scala.Any]]).toMap
-    })
   }
 
   /** To avoid recursive loops, we keep track of the fully qualified names of types for which derivation is in
     * progress using a mutable Set.
-    *
-    * We also store all recursive validator references (in a mutable map), which have to be filled in when the top-most
-    * recursive validator is generated.
     */
   private def withCache[T](typeName: TypeName, annotations: Seq[Any])(f: => Schema[T]): Schema[T] = {
     val cacheKey = typeName.full
-    var cache = deriveCache.get()
-    val newCache = cache == null
+    var inProgress = deriveCache.get()
+    val newCache = inProgress == null
     if (newCache) {
-      cache = (mutable.Set[String](), mutable.Map[String, Validator.Ref[_]]())
-      deriveCache.set(cache)
+      inProgress = mutable.Set[String]()
+      deriveCache.set(inProgress)
     }
 
-    val (inProgress, validatorRefs) = cache
-
     if (inProgress.contains(cacheKey)) {
-      val validator = Validator.Ref[T]()
-      validatorRefs.put(cacheKey, validator)
-      Schema[T](SRef(typeNameToObjectInfo(typeName, annotations)), validator = validator)
+      Schema[T](SRef(typeNameToObjectInfo(typeName, annotations)))
     } else {
       try {
         inProgress.add(cacheKey)
         val schema = f
-        // filling in recursive validators, if there has been a reference
-        validatorRefs.get(cacheKey).foreach(ref => ref.asInstanceOf[Validator.Ref[T]].set(schema.validator))
         schema
       } finally {
         inProgress.remove(cacheKey)
-        validatorRefs.remove(cacheKey)
         if (newCache) {
           deriveCache.remove()
         }
@@ -139,5 +107,5 @@ trait SchemaMagnoliaDerivation {
 }
 
 object SchemaMagnoliaDerivation {
-  private[internal] val deriveCache: ThreadLocal[(mutable.Set[String], mutable.Map[String, Validator.Ref[_]])] = new ThreadLocal()
+  private[internal] val deriveCache: ThreadLocal[mutable.Set[String]] = new ThreadLocal()
 }

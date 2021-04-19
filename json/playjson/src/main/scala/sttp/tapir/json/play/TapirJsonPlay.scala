@@ -7,6 +7,7 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
 
+import scala.collection.immutable.ListMap
 import scala.util.{Failure, Success, Try}
 
 trait TapirJsonPlay {
@@ -41,16 +42,16 @@ trait TapirJsonPlay {
     Schema(
       SCoproduct(
         SObjectInfo("play.api.libs.json.JsValue"),
-        List.empty,
+        ListMap.empty,
         None
-      )
+      )(_ => None)
     )
 
   implicit val schemaForPlayJsObject: Schema[JsObject] =
     Schema(
       SProduct(
         SObjectInfo("play.api.libs.json.JsObject"),
-        Iterable.empty
+        Nil
       )
     )
 }

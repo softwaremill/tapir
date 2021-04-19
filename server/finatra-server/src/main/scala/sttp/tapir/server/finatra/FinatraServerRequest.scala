@@ -1,17 +1,20 @@
 package sttp.tapir.server.finatra
 
-import java.net.URI
-
 import com.twitter.finagle.http.Request
-import sttp.model.Method
+import io.netty.handler.codec.http.QueryStringDecoder
+import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
+import scala.collection.immutable.Seq
+
 class FinatraServerRequest(request: Request) extends ServerRequest {
-  override def method: Method = Method(request.method.toString)
-  override def protocol: String = request.version.toString
-  override def uri: URI = new URI(request.uri)
-  override def connectionInfo: ConnectionInfo = ConnectionInfo(None, Some(request.remoteSocketAddress), None)
-  override def headers: Seq[(String, String)] = request.headerMap.toList
-  override def header(name: String): Option[String] = request.headerMap.get(name)
+  override lazy val method: Method = Method(request.method.toString.toUpperCase)
+  override lazy val protocol: String = request.version.toString
+  override lazy val uri: Uri = Uri.unsafeParse(request.uri)
+  override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, Some(request.remoteSocketAddress), None)
+  override lazy val headers: Seq[Header] = request.headerMap.toList.map { case (k, v) => Header(k, v) }
+  override lazy val queryParameters: QueryParams =
+    QueryParams.fromMultiMap(request.params.keys.toList.map(k => k -> request.params.getAll(k).toList).toMap)
+  override lazy val pathSegments: List[String] = request.path.dropWhile(_ == '/').split("/").toList.map(QueryStringDecoder.decodeComponent)
   override def underlying: Any = request
 }
