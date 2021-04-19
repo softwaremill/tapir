@@ -18,7 +18,7 @@ import akka.http.scaladsl.server.Route
   import io.prometheus.client.CollectorRegistry
   import sttp.monad.FutureMonad
   import sttp.tapir.metrics.prometheus.PrometheusMetrics
-  import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions, _}
+  import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
