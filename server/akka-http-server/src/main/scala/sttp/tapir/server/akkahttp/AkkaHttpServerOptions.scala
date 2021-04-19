@@ -1,16 +1,17 @@
 package sttp.tapir.server.akkahttp
 
-import java.io.File
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
 import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 
+import java.io.File
 import scala.concurrent.Future
 
 case class AkkaHttpServerOptions(
@@ -42,6 +43,7 @@ object AkkaHttpServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      metricsInterceptor: Option[MetricsInterceptor[Future, AkkaResponseBody]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[LoggingAdapter => Future[Unit]]] = Some(Log.defaultServerLog),
       additionalInterceptors: List[Interceptor[Future, AkkaResponseBody]] = Nil,
@@ -52,7 +54,8 @@ object AkkaHttpServerOptions {
   ): AkkaHttpServerOptions =
     AkkaHttpServerOptions(
       defaultCreateFile,
-      exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
         serverLog.map(Log.serverLogInterceptor).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++

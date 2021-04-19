@@ -5,8 +5,8 @@ import cats.effect.{ContextShift, IO, Resource, Timer}
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.{FinatraContent, FinatraRoute, FinatraServerOptions, FinatraTestServerInterpreter}
-import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -21,7 +21,7 @@ class FinatraCatsTestServerInterpreter extends TestServerInterpreter[IO, Any, Fi
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      interceptors: List[Interceptor[IO, FinatraContent]] = Nil
+      metricsInterceptor: Option[MetricsInterceptor[IO, FinatraContent]] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
       FinatraServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))

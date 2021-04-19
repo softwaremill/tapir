@@ -8,9 +8,9 @@ import org.scalatest.Assertion
 import sttp.client3._
 import sttp.model._
 import sttp.tapir._
-import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.Interceptor
+import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 import sttp.tapir.tests._
 
 class CreateServerTest[F[_], +R, ROUTE, B](interpreter: TestServerInterpreter[F, R, ROUTE, B]) extends StrictLogging {
@@ -18,13 +18,13 @@ class CreateServerTest[F[_], +R, ROUTE, B](interpreter: TestServerInterpreter[F,
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      interceptors: List[Interceptor[F, B]] = Nil
+      metricsInterceptor: Option[MetricsInterceptor[F, B]] = None
   )(
       fn: I => F[Either[E, O]]
   )(runTest: Uri => IO[Assertion]): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e.serverLogic(fn), decodeFailureHandler, interceptors))
+      NonEmptyList.of(interpreter.route(e.serverLogic(fn), decodeFailureHandler, metricsInterceptor))
     )(runTest)
   }
 

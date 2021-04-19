@@ -8,8 +8,8 @@ import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -24,11 +24,11 @@ class CatsVertxTestServerInterpreter(vertx: Vertx)
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO], IO],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      interceptors: List[Interceptor[IO, RoutingContext => Unit]] = Nil
+      metricsInterceptor: Option[MetricsInterceptor[IO, RoutingContext => Unit]] = None
   ): Router => Route = {
     implicit val options: VertxCatsServerOptions[IO] =
       VertxCatsServerOptions.customInterceptors(
-        additionalInterceptors = interceptors,
+        metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
     VertxCatsServerInterpreter.route(e)

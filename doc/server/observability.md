@@ -39,6 +39,11 @@ For example, using `AkkaServerInterpeter`:
 ```
 
 Labels for default metrics can be customized, any attribute from `Endpoint`, `ServerRequest` and `ServerResponse` could be used, for example:
+```scala mdoc:invisible
+  import io.prometheus.client.CollectorRegistry
+  import sttp.tapir.metrics.prometheus.PrometheusMetrics
+```
+
 ```scala mdoc:compile-only
   import sttp.tapir.metrics.prometheus.PrometheusMetrics.PrometheusLabels
 

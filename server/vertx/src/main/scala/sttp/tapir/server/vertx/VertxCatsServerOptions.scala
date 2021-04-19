@@ -9,6 +9,7 @@ import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 
 import java.io.File
 
@@ -45,6 +46,7 @@ object VertxCatsServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors[F[_]: Applicative](
+      metricsInterceptor: Option[MetricsInterceptor[F, RoutingContext => Unit]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[F, RoutingContext => Unit]] = Nil,
@@ -55,7 +57,8 @@ object VertxCatsServerOptions {
     VertxCatsServerOptions(
       File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
       maxQueueSizeForReadStream = 16,
-      exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, F, RoutingContext => Unit](_, (_, _) => Applicative[F].unit)).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++

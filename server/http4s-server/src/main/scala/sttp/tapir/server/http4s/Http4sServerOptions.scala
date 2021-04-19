@@ -5,11 +5,12 @@ import cats.effect.{ContextShift, Sync}
 import cats.implicits.catsSyntaxOptionId
 import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 
 import java.io.File
 import scala.concurrent.ExecutionContext
@@ -54,6 +55,7 @@ object Http4sServerOptions {
   def customInterceptors[F[_], G[_]: Sync: ContextShift](
       exceptionHandler: Option[ExceptionHandler],
       serverLog: Option[ServerLog[G[Unit]]],
+      metricsInterceptor: Option[MetricsInterceptor[G, Http4sResponseBody[F]]] = None,
       additionalInterceptors: List[Interceptor[G, Http4sResponseBody[F]]] = Nil,
       unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]] =
         new UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]().some,
@@ -64,7 +66,8 @@ object Http4sServerOptions {
       defaultCreateFile[G].apply(blockingExecutionContext),
       blockingExecutionContext,
       8192,
-      exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
         serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++

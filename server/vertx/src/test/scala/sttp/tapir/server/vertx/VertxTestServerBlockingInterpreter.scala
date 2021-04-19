@@ -4,8 +4,8 @@ import io.vertx.core.Vertx
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -14,10 +14,10 @@ class VertxTestServerBlockingInterpreter(vertx: Vertx) extends VertxTestServerIn
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      interceptors: List[Interceptor[Future, RoutingContext => Unit]] = Nil
+      metricsInterceptor: Option[MetricsInterceptor[Future, RoutingContext => Unit]] = None
   ): Router => Route = {
     implicit val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(
-      additionalInterceptors = interceptors,
+      metricsInterceptor = metricsInterceptor,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     VertxFutureServerInterpreter.blockingRoute(e)

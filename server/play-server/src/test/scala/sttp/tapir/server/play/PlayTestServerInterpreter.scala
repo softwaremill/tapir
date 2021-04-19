@@ -11,8 +11,8 @@ import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -25,11 +25,11 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestS
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      interceptors: List[Interceptor[Future, HttpEntity]] = Nil
+      metricsInterceptor: Option[MetricsInterceptor[Future, HttpEntity]] = None
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =
       PlayServerOptions.customInterceptors(
-        additionalInterceptors = interceptors,
+        metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
     PlayServerInterpreter.toRoutes(e)

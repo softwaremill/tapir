@@ -56,22 +56,23 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
 
       val metrics = new MetricsInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
 
-      testServer(endpoint.out(stringWs).name("metrics"), interceptors = List(metrics))((_: Unit) => pureResult(stringEcho.asRight[Unit])) {
-        baseUri =>
-          basicRequest
-            .response(asWebSocket { ws: WebSocket[IO] =>
-              for {
-                _ <- ws.sendText("test1")
-                m <- ws.receiveText()
-              } yield List(m)
-            })
-            .get(baseUri.scheme("ws"))
-            .send(backend)
-            .map { r =>
-              r.body shouldBe Right(List("echo: test1"))
-              reqCounter.metric.value shouldBe 1
-              resCounter.metric.value shouldBe 1
-            }
+      testServer(endpoint.out(stringWs).name("metrics"), metricsInterceptor = metrics.some)((_: Unit) =>
+        pureResult(stringEcho.asRight[Unit])
+      ) { baseUri =>
+        basicRequest
+          .response(asWebSocket { ws: WebSocket[IO] =>
+            for {
+              _ <- ws.sendText("test1")
+              m <- ws.receiveText()
+            } yield List(m)
+          })
+          .get(baseUri.scheme("ws"))
+          .send(backend)
+          .map { r =>
+            r.body shouldBe Right(List("echo: test1"))
+            reqCounter.metric.value shouldBe 1
+            resCounter.metric.value shouldBe 1
+          }
       }
     },
     testServer(endpoint.out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](streams)), "json client-terminated echo")(

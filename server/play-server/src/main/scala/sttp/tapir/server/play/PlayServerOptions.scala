@@ -10,6 +10,7 @@ import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,6 +46,7 @@ object PlayServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      metricsInterceptor: Option[MetricsInterceptor[Future, HttpEntity]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(defaultServerLog),
       additionalInterceptors: List[Interceptor[Future, HttpEntity]] = Nil,
@@ -58,7 +60,8 @@ object PlayServerOptions {
       DefaultActionBuilder.apply(PlayBodyParsers.apply().anyContent),
       PlayBodyParsers.apply(),
       decodeFailureHandler,
-      exceptionHandler.map(new ExceptionInterceptor[Future, HttpEntity](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[Future, HttpEntity](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, Future, HttpEntity](_, (_, _) => Future.successful(()))).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++

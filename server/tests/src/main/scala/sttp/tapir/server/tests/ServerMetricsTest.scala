@@ -27,7 +27,7 @@ class ServerMetricsTest[F[_], ROUTE, B](
 
       val metrics = new MetricsInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
 
-      testServer(in_json_out_json.name("metrics"), interceptors = List(metrics))(f =>
+      testServer(in_json_out_json.name("metrics"), metricsInterceptor = metrics.some)(f =>
         (if (f.fruit == "apple") Right(f) else Left(())).unit
       ) { baseUri =>
         basicRequest // onDecodeSuccess path
@@ -52,7 +52,7 @@ class ServerMetricsTest[F[_], ROUTE, B](
       val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, c) => c.++() }
       val metrics = new MetricsInterceptor[F, B](List(resCounter), Seq.empty)
 
-      testServer(in_input_stream_out_input_stream.name("metrics"), interceptors = List(metrics))(is =>
+      testServer(in_input_stream_out_input_stream.name("metrics"), metricsInterceptor = metrics.some)(is =>
         (new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit].unit
       ) { baseUri =>
         basicRequest
@@ -68,12 +68,28 @@ class ServerMetricsTest[F[_], ROUTE, B](
       val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, c) => c.++() }
       val metrics = new MetricsInterceptor[F, B](List(resCounter), Seq.empty)
 
-      testServer(in_empty_out_empty.name("metrics"), interceptors = List(metrics))(_ => ().asRight[Unit].unit) { baseUri =>
+      testServer(in_empty_out_empty.name("metrics"), metricsInterceptor = metrics.some)(_ => ().asRight[Unit].unit) { baseUri =>
         basicRequest
           .post(uri"$baseUri/api/empty")
           .send(backend)
           .map { r =>
             r.body shouldBe Right("")
+            resCounter.metric.value shouldBe 1
+          }
+      }
+    }, {
+      val reqCounter = Metric[Counter](new Counter()).onRequest { (_, _, c) => c.++() }
+      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, c) => c.++() }
+      val metrics = new MetricsInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
+
+      testServer(in_empty_out_empty.name("metrics on exception"), metricsInterceptor = metrics.some)(_ =>
+        throw new RuntimeException("Ups")
+      ) { baseUri =>
+        basicRequest
+          .post(uri"$baseUri/api/empty")
+          .send(backend)
+          .map { _ =>
+            reqCounter.metric.value shouldBe 1
             resCounter.metric.value shouldBe 1
           }
       }
