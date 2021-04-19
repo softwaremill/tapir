@@ -23,17 +23,17 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: 
 
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeSuccess(ctx)
         else {
-          for {
+          val res = for {
             _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
             response <- endpointHandler.onDecodeSuccess(ctx)
-          } yield response.copy(body = {
-            response.body match {
-              case Some(body) => Some(body.listen { collectOnResponse(response) })
-              case None => // unit responses
-                collectOnResponse(response)
-                None
-            }
-          })
+          } yield response
+
+          res.map {
+            case sr @ ServerResponse(_, _, Some(body)) => sr.copy(body = Some(body.listen { collectOnResponse(sr) }))
+            case sr @ ServerResponse(_, _, None) =>
+              collectOnResponse(sr)
+              sr
+          }
         }
       }
 

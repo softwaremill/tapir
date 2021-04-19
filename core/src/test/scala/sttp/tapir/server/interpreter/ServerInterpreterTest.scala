@@ -58,7 +58,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val interceptor3 = new AddToTrailInterceptor("3")
 
     val interpreter =
-      new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(interceptor1, interceptor2, interceptor3))
+      new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, UnitToResponseBody, List(interceptor1, interceptor2, interceptor3))
 
     // when
     interpreter.apply(testRequest, endpoint.in(query[String]("x")).serverLogic[Id](_ => Right(())))

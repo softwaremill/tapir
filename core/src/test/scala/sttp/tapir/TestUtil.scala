@@ -1,5 +1,6 @@
 package sttp.tapir
 
+import sttp.capabilities
 import sttp.capabilities.Streams
 import sttp.model.HasHeaders
 import sttp.monad.MonadError
@@ -20,7 +21,7 @@ object TestUtil {
     override def toStream(): streams.BinaryStream = ???
   }
 
-  object TestToResponseBody extends ToResponseBody[Unit, Nothing] {
+  object UnitToResponseBody extends ToResponseBody[Unit, Nothing] {
     override val streams: Streams[Nothing] = NoStreams
     override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): Unit = ()
     override def fromStreamValue(
@@ -33,6 +34,17 @@ object TestUtil {
         pipe: streams.Pipe[REQ, RESP],
         o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
     ): Unit = ???
+  }
+
+  object StringToResponseBody extends ToResponseBody[String, Nothing] {
+    override val streams: capabilities.Streams[Nothing] = NoStreams
+    override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): String =
+      v.asInstanceOf[String]
+    override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): String = ""
+    override def fromWebSocketPipe[REQ, RESP](
+        pipe: streams.Pipe[REQ, RESP],
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+    ): String = ""
   }
 
   implicit val idMonadError: MonadError[Id] = new MonadError[Id] {
