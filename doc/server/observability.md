@@ -14,13 +14,14 @@ Request metrics are labeled by path and method. Response labels are additionally
 
 For example, using `AkkaServerInterpeter`:
 ```scala mdoc:compile-only
-import akka.http.scaladsl.server.Route
+  import akka.http.scaladsl.server.Route
   import io.prometheus.client.CollectorRegistry
   import sttp.monad.FutureMonad
   import sttp.tapir.metrics.prometheus.PrometheusMetrics
   import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
   import scala.concurrent.ExecutionContext.Implicits.global
+  import scala.concurrent.Future
 
   implicit val monad: FutureMonad = new FutureMonad()
 
@@ -32,15 +33,19 @@ import akka.http.scaladsl.server.Route
   implicit val serverOptions: AkkaHttpServerOptions =
     AkkaHttpServerOptions.customInterceptors(additionalInterceptors = List(prometheusMetrics.metricsInterceptor()))
 
-  val routes: Route = AkkaHttpServerInterpreter.toRoute(prometheusMetrics.metricsServerEndpoint)
+  val routes: Route = AkkaHttpServerInterpreter.toRoute(prometheusMetrics.metricsEndpoint.serverLogic { _ =>
+    Future.successful(Right(prometheusMetrics.registry).withLeft[Unit])
+  })
 ```
 
 Labels for default metrics can be customized, any attribute from `Endpoint`, `ServerRequest` and `ServerResponse` could be used, for example:
 ```scala mdoc:compile-only
-val labels = PrometheusLabels(
+  import sttp.tapir.metrics.prometheus.PrometheusMetrics.PrometheusLabels
+
+  val labels = PrometheusLabels(
     forRequest = Seq("protocol" -> { case (_, req) => req.protocol }),
     forResponse = Seq()
   )
 
-  val prometheusMetrics = PrometheusMetrics("tapir", collectorRegistry).withRequestsTotal(labels)
+  val prometheusMetrics = PrometheusMetrics("tapir", CollectorRegistry.defaultRegistry).withRequestsTotal(labels)
 ```

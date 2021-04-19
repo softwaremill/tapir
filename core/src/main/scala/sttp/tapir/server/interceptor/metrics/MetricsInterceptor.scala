@@ -21,19 +21,10 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[_]], ignoreEndpoints: Seq
           for {
             _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
             response <- endpointHandler.onDecodeSuccess(ctx)
-          } yield withBodyOnComplete(response) {
-            collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, m) }
-          }
-        }
-
-      private def withBodyOnComplete(
-          sr: ServerResponse[B]
-      )(cb: => F[Unit])(implicit bodyListener: BodyListener[F, B]): ServerResponse[B] =
-        sr match {
-          case sr @ ServerResponse(_, _, Some(body)) => sr.copy(body = Some(body.onComplete { cb }))
-          case sr @ ServerResponse(_, _, None) =>
-            cb
-            sr
+            responseWithMetrics <- withBodyOnComplete(response) {
+              collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, m) }
+            }
+          } yield responseWithMetrics
         }
 
       /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage.
@@ -48,14 +39,17 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[_]], ignoreEndpoints: Seq
             case _ =>
               for {
                 response <- endpointHandler.onDecodeFailure(ctx)
-                _ <-
-                  if (response.isDefined) collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
-                  else monad.unit(())
-              } yield response.map(sr =>
-                withBodyOnComplete(sr) {
-                  collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, sr, m) }
+                responseWithMetrics <- response match {
+                  case Some(response) =>
+                    for {
+                      _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
+                      res <- withBodyOnComplete(response) {
+                        collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, m) }
+                      }
+                    } yield Some(res)
+                  case None => monad.unit(None)
                 }
-              )
+              } yield responseWithMetrics
           }
         }
     }
@@ -70,5 +64,13 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[_]], ignoreEndpoints: Seq
     }
     collect(metrics)
   }
+
+  private def withBodyOnComplete(
+      sr: ServerResponse[B]
+  )(cb: => F[Unit])(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
+    sr match {
+      case sr @ ServerResponse(_, _, Some(body)) => body.onComplete(cb).map(b => sr.copy(body = Some(b)))
+      case sr @ ServerResponse(_, _, None)       => cb.map(_ => sr)
+    }
 
 }

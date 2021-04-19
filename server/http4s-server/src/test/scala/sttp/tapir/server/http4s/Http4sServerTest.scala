@@ -110,13 +110,12 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       }
     )
 
-//    new ServerBasicTests(backend, createServerTest, interpreter).tests() ++
-//      new ServerStreamingTests(backend, createServerTest, Fs2Streams[IO]).tests() ++
-//      new ServerWebSocketTests(backend, createServerTest, Fs2Streams[IO]) {
-//        override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
-//      }.tests() ++
-//      new ServerAuthenticationTests(backend, createServerTest).tests() ++
-      new ServerMetricsTest(backend, createServerTest).tests()
-//    ++ additionalTests()
+    new ServerBasicTests(backend, createServerTest, interpreter).tests() ++
+      new ServerStreamingTests(backend, createServerTest, Fs2Streams[IO]).tests() ++
+      new ServerWebSocketTests(backend, createServerTest, Fs2Streams[IO]) {
+        override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
+      }.tests() ++
+      new ServerAuthenticationTests(backend, createServerTest).tests() ++
+      new ServerMetricsTest(backend, createServerTest).tests() ++ additionalTests()
   }
 }

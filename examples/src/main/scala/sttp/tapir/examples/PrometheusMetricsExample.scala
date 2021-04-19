@@ -56,7 +56,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
     .withCustom(responsesTotal)
 
   val metricsEndpoint: ServerEndpoint[Unit, Unit, CollectorRegistry, Any, Future] =
-    prometheusMetrics.metricsEp.serverLogic { _ =>
+    prometheusMetrics.metricsEndpoint.serverLogic { _ =>
       Future.successful(Right(prometheusMetrics.registry).withLeft[Unit])
     }
 

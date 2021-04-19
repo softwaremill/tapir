@@ -8,6 +8,7 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.metrics.Metric
 import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.tests.ServerMetricsTest.Counter
 import sttp.tapir.tests.TestUtil.inputStreamToByteArray
 import sttp.tapir.tests.{Test, _}
 
@@ -18,10 +19,6 @@ class ServerMetricsTest[F[_], ROUTE, B](
     createServerTest: CreateServerTest[F, Any, ROUTE, B]
 )(implicit m: MonadError[F]) {
   import createServerTest._
-
-  class Counter(var value: Int = 0) {
-    def ++(): Unit = value += 1
-  }
 
   def tests(): List[Test] = List(
     {
@@ -82,4 +79,10 @@ class ServerMetricsTest[F[_], ROUTE, B](
       }
     }
   )
+}
+
+object ServerMetricsTest {
+  class Counter(var value: Int = 0) {
+    def ++(): Unit = value += 1
+  }
 }

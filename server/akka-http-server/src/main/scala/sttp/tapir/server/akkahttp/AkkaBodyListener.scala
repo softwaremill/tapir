@@ -8,11 +8,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 class AkkaBodyListener extends BodyListener[Future, AkkaResponseBody] {
-  override def onComplete(body: AkkaResponseBody)(cb: => Future[Unit]): AkkaResponseBody =
+  override def onComplete(body: AkkaResponseBody)(cb: => Future[Unit]): Future[AkkaResponseBody] =
     body match {
-      case ws @ Left(_) =>
-        cb
-        ws
-      case Right(r) => Right(r.transformDataBytes(Flow[ByteString].watchTermination() { case (_, f) => f.flatMap(_ => cb) }))
+      case ws @ Left(_) => cb.map(_ => ws)
+      case Right(r) =>
+        Future.successful(Right(r.transformDataBytes(Flow[ByteString].watchTermination() { case (_, f) => f.flatMap(_ => cb) })))
     }
 }
