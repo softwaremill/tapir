@@ -10,14 +10,22 @@ case class SecurityScheme(
     scheme: Option[String],
     bearerFormat: Option[String],
     flows: Option[OAuthFlows],
-    openIdConnectUrl: Option[String]
+    openIdConnectUrl: Option[String],
+    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
 )
 
 case class OAuthFlows(
     `implicit`: Option[OAuthFlow] = None,
     password: Option[OAuthFlow] = None,
     clientCredentials: Option[OAuthFlow] = None,
-    authorizationCode: Option[OAuthFlow] = None
+    authorizationCode: Option[OAuthFlow] = None,
+    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
 )
 
-case class OAuthFlow(authorizationUrl: String, tokenUrl: Option[String], refreshUrl: Option[String], scopes: ListMap[String, String])
+case class OAuthFlow(
+    authorizationUrl: String,
+    tokenUrl: Option[String],
+    refreshUrl: Option[String],
+    scopes: ListMap[String, String],
+    docsExtensions: ListMap[String, DocsExtensionValue] = ListMap.empty
+)
