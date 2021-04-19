@@ -23,7 +23,9 @@ class UnsupportedMediaTypeInterceptor[F[_], B] extends EndpointInterceptor[F, B]
             if (hasMatchingRepresentation) endpointHandler.onDecodeSuccess(ctx)
             else responder(ctx.request, ValuedEndpointOutput(statusCode(StatusCode.UnsupportedMediaType), ()))
 
-          case Left(_) => responder(ctx.request, ValuedEndpointOutput(statusCode(StatusCode.BadRequest), ()))
+          case Left(_) =>
+            // we're forgiving, if we can't parse the accepts header, we try to return any response
+            endpointHandler.onDecodeSuccess(ctx)
         }
       }
 
