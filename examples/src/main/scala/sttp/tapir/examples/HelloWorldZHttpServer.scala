@@ -15,7 +15,19 @@ object HelloWorldZHttpServer extends App {
       .errorOut(plainBody[String].map(err => new Throwable(err))(_.getMessage))
       .out(stringBody)
 
-  val app = ZHttpInterpreter.convert(helloWorld)(name => ZIO.succeed(s"Hello $name"))
+
+  val add: Endpoint[(Int, Int), Throwable, String, Any] =
+    endpoint
+      .get
+      .in("add")
+      .in(path[Int]("x"))
+      .in(path[Int]("y"))
+      .errorOut(plainBody[String].map(err => new Throwable(err))(_.getMessage))
+      .out(stringBody)
+
+  val app =
+    ZHttpInterpreter.toHttp(helloWorld)(name => ZIO.succeed(s"Hello $name")) <>
+      ZHttpInterpreter.toHttp(add) { case (x, y) => ZIO.succeed(s"Adding up ${x + y}") }
 
 
 

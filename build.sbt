@@ -798,8 +798,9 @@ lazy val zhttpServer: ProjectMatrix = (projectMatrix in file("server/zio-http"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http-server",
+    resolvers += "Sonatype Snapshots Nexus" at "https://s01.oss.sonatype.org/content/repositories/snapshots",
     libraryDependencies ++= Seq(
-      "io.d11" %% "zhttp" % "1.0.0.0-RC15"
+      "io.d11" %% "zhttp" % "1.0.0.0-RC15+16-2f2dd77b-SNAPSHOT"
     )
   )
   .jvmPlatform(scalaVersions = List(scala2_13))
