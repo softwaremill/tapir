@@ -6,7 +6,7 @@ import sttp.model.HasHeaders
 import sttp.monad.MonadError
 import sttp.tapir.SchemaType.SProductField
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.server.interpreter.{RequestBody, ToResponseBody}
+import sttp.tapir.server.interpreter.{BodyListener, RequestBody, ToResponseBody}
 
 import java.nio.charset.Charset
 
@@ -55,5 +55,19 @@ object TestUtil {
     override protected def handleWrappedError[T](rt: Id[T])(h: PartialFunction[Throwable, Id[T]]): Id[T] = rt
     override def ensure[T](f: Id[T], e: => Id[Unit]): Id[T] = try f
     finally e
+  }
+
+  implicit val unitBodyListener: BodyListener[Id, Unit] = new BodyListener[Id, Unit] {
+    override def onComplete(body: Unit)(cb: => Id[Unit]): Unit = {
+      cb
+      ()
+    }
+  }
+
+  implicit val stringBodyListener: BodyListener[Id, String] = new BodyListener[Id, String] {
+    override def onComplete(body: String)(cb: => Id[Unit]): String = {
+      cb
+      body
+    }
   }
 }

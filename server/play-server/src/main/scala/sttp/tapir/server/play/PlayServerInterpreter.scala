@@ -9,7 +9,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.DecodeFailureContext
-import sttp.tapir.server.interpreter.{DecodeBasicInputs, DecodeBasicInputsResult, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, ServerInterpreter}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.reflect.ClassTag
@@ -55,6 +55,7 @@ trait PlayServerInterpreter {
 
       override def apply(v1: RequestHeader): Handler = {
         serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
+          implicit val bodyListener: BodyListener[Future, HttpEntity] = new PlayBodyListener
           val serverRequest = new PlayServerRequest(request)
           val interpreter = new ServerInterpreter[Any, Future, HttpEntity, Nothing](
             new PlayRequestBody(request, serverOptions),

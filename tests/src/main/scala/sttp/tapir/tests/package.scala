@@ -97,6 +97,8 @@ package object tests {
   val in_input_stream_out_input_stream: Endpoint[InputStream, Unit, InputStream, Any] =
     endpoint.post.in("api" / "echo").in(inputStreamBody).out(inputStreamBody).name("echo input stream")
 
+  val in_empty_out_empty: Endpoint[Unit, Unit, Unit, Any] = endpoint.post.in("api" / "empty").in(emptyInput).out(emptyOutput)
+
   val in_string_out_stream_with_header: Endpoint[String, Unit, (InputStream, Option[Long]), Any] =
     endpoint.post
       .in("api" / "echo")

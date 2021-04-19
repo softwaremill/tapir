@@ -1,7 +1,6 @@
 package sttp.tapir.server.finatra
 
 import cats.effect.{IO, Resource}
-import com.twitter.util.Future
 import sttp.monad.MonadError
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.tests.{CreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerMetricsTest, backendResource}
@@ -14,7 +13,6 @@ class FinatraServerTest extends TestSuite {
     val createServerTest = new CreateServerTest(interpreter)
 
     implicit val m: MonadError[com.twitter.util.Future] = FutureMonadError
-    implicit val l: FinatraBodyListener[Future] = new FinatraBodyListener[Future]
 
     new ServerBasicTests(backend, createServerTest, interpreter).tests() ++
       new ServerAuthenticationTests(backend, createServerTest).tests() ++

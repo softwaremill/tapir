@@ -40,9 +40,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     actorSystemResource.map { implicit actorSystem =>
-
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
-      implicit val responseListener: AkkaBodyListener = new AkkaBodyListener()
 
       val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
       val createServerTest = new CreateServerTest(interpreter)

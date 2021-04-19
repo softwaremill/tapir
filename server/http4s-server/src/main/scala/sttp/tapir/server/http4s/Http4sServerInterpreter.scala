@@ -3,14 +3,14 @@ package sttp.tapir.server.http4s
 import cats.arrow.FunctionK
 import cats.data.{Kleisli, OptionT}
 import cats.effect.{Concurrent, ContextShift, Sync, Timer}
-import cats.syntax.all._
+import cats.implicits._
 import cats.~>
 import fs2.Pipe
 import fs2.concurrent.Queue
+import org.http4s._
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
-import org.http4s._
 import org.log4s.{Logger, getLogger}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -18,7 +18,7 @@ import sttp.model.{Header => SttpHeader}
 import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.reflect.ClassTag
 
@@ -93,6 +93,7 @@ trait Http4sServerInterpreter {
       timer: Timer[F]
   ): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
+    implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4SBodyListener[F, G]
 
     Kleisli { (req: Request[F]) =>
       val serverRequest = new Http4sServerRequest(req)

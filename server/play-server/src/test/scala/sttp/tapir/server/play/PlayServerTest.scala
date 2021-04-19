@@ -14,7 +14,6 @@ class PlayServerTest extends TestSuite {
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     actorSystemResource.map { implicit actorSystem =>
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
-      implicit val l: PlayBodyListener = new PlayBodyListener
 
       val interpreter = new PlayTestServerInterpreter()(actorSystem)
       val createServerTest = new CreateServerTest(interpreter)

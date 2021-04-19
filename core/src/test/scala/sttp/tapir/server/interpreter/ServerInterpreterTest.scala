@@ -19,14 +19,18 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     class AddToTrailInterceptor(prefix: String) extends EndpointInterceptor[Id, Unit] {
       override def apply(responder: Responder[Id, Unit], endpointHandler: EndpointHandler[Id, Unit]): EndpointHandler[Id, Unit] =
         new EndpointHandler[Id, Unit] {
-          override def onDecodeSuccess[I](ctx: DecodeSuccessContext[Id, I])(implicit monad: MonadError[Id]): Id[ServerResponse[Unit]] = {
+          override def onDecodeSuccess[I](
+              ctx: DecodeSuccessContext[Id, I]
+          )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, Unit]): Id[ServerResponse[Unit]] = {
             callTrail ::= s"$prefix success"
-            endpointHandler.onDecodeSuccess(ctx)(TestUtil.idMonadError)
+            endpointHandler.onDecodeSuccess(ctx)(idMonadError, unitBodyListener)
           }
 
-          override def onDecodeFailure(ctx: DecodeFailureContext)(implicit monad: MonadError[Id]): Id[Option[ServerResponse[Unit]]] = {
+          override def onDecodeFailure(
+              ctx: DecodeFailureContext
+          )(implicit monad: MonadError[Id], bodyListener: BodyListener[Id, Unit]): Id[Option[ServerResponse[Unit]]] = {
             callTrail ::= s"$prefix failure"
-            endpointHandler.onDecodeFailure(ctx)(TestUtil.idMonadError)
+            endpointHandler.onDecodeFailure(ctx)(idMonadError, unitBodyListener)
           }
         }
     }

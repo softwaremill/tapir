@@ -5,11 +5,11 @@ import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.vertx.VertxFutureServerOptions
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
+import sttp.tapir.server.vertx.{VertxBodyListener, VertxFutureServerOptions}
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
@@ -86,6 +86,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = serverOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
+    implicit val bodyListener: BodyListener[Future, RoutingContext => Unit] = new VertxBodyListener[Future]
     val interpreter = new ServerInterpreter[Any, Future, RoutingContext => Unit, Nothing](
       new VertxRequestBody[Future, Nothing](rc, serverOptions, FutureFromVFuture),
       new VertxToResponseBody[Future, Nothing](serverOptions),

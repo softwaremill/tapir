@@ -7,13 +7,11 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Second, Span}
-import sttp.capabilities
 import sttp.model.Uri._
 import sttp.model._
 import sttp.monad.syntax._
 import sttp.tapir.TestUtil._
 import sttp.tapir._
-import sttp.tapir.internal.NoStreams
 import sttp.tapir.metrics.Metric
 import sttp.tapir.metrics.prometheus.PrometheusMetrics._
 import sttp.tapir.metrics.prometheus.PrometheusMetricsTest._
@@ -21,9 +19,8 @@ import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
-import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter, ToResponseBody}
+import sttp.tapir.server.interpreter.ServerInterpreter
 
-import java.nio.charset.Charset
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -152,7 +149,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
-    val ses = List(metrics.metricsServerEndpoint, serverEp)
+    val ses = List(metrics.metricsEp.serverLogic { _ => idMonadError.unit(Right(metrics.registry).withLeft[Unit]) }, serverEp)
 
     // when
     interpreter.apply(getMetricsRequest, ses)
@@ -173,7 +170,10 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // when
     for {
-      response <- interpreter.apply(getMetricsRequest, metrics.metricsServerEndpoint)
+      response <- interpreter.apply(
+        getMetricsRequest,
+        metrics.metricsEp.serverLogic { _ => idMonadError.unit(Right(metrics.registry).withLeft[Unit]) }
+      )
     } yield {
       // then
       response.body.map { b =>
@@ -186,8 +186,8 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
   "metrics" should "be unique" in {
     PrometheusMetrics("tapir", new CollectorRegistry())
-      .withCustom(Metric[Id, Int](0))
-      .withCustom(Metric[Id, Int](0))
+      .withCustom(Metric[Int](0))
+      .withCustom(Metric[Int](0))
       .metrics
       .size shouldBe 1
   }
@@ -215,20 +215,6 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 object PrometheusMetricsTest {
 
   import sttp.tapir.TestUtil._
-
-  implicit val listenerUnit: BodyListener[Id, Unit] = new BodyListener[Id, Unit] {
-    override def listen(body: Unit)(cb: => Id[Unit]): Unit = {
-      cb
-      ()
-    }
-  }
-
-  implicit val listenerString: BodyListener[Id, String] = new BodyListener[Id, String] {
-    override def listen(body: String)(cb: => Id[Unit]): String = {
-      cb
-      body
-    }
-  }
 
   val testEndpoint: Endpoint[String, String, String, Any] = endpoint
     .in("person")

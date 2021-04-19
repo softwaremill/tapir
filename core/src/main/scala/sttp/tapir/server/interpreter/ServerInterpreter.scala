@@ -13,7 +13,7 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
     interceptors: List[Interceptor[F, B]]
-) {
+)(implicit bodyListener: BodyListener[F, B]) {
   def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] =
     apply(request, List(se))
 
@@ -103,7 +103,9 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
     }
 
   private val defaultEndpointHandler: EndpointHandler[F, B] = new EndpointHandler[F, B] {
-    override def onDecodeSuccess[I](ctx: DecodeSuccessContext[F, I])(implicit monad: MonadError[F]): F[ServerResponse[B]] =
+    override def onDecodeSuccess[I](
+        ctx: DecodeSuccessContext[F, I]
+    )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
       runLogic(ctx.serverEndpoint, ctx.i, ctx.request)
 
     private def runLogic[I, E, O](serverEndpoint: ServerEndpoint[I, E, O, _, F], i: I, request: ServerRequest): F[ServerResponse[B]] =
@@ -114,7 +116,9 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
           case Left(err)     => responder(defaultErrorStatusCode)(request, ValuedEndpointOutput(serverEndpoint.errorOutput, err))
         }
 
-    override def onDecodeFailure(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] =
+    override def onDecodeFailure(
+        ctx: DecodeFailureContext
+    )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] =
       (None: Option[ServerResponse[B]]).unit(monad)
   }
 

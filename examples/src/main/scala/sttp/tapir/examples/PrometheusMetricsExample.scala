@@ -7,16 +7,14 @@ import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
 import io.prometheus.client.{CollectorRegistry, Counter}
-import sttp.monad.FutureMonad
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.metrics.Metric
 import sttp.tapir.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions, _}
+import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -33,12 +31,10 @@ object PrometheusMetricsExample extends App with StrictLogging {
       .errorOut(stringBody)
       .serverLogic { p => Future.successful { if (p.name == "Jacob") Right("Welcome") else Left("Unauthorized") } }
 
-  implicit val monad: FutureMonad = new FutureMonad()
-
   val collectorRegistry = CollectorRegistry.defaultRegistry
 
   // Metric for counting responses labeled by path, method and status code
-  val responsesTotal = Metric[Future, Counter](
+  val responsesTotal = Metric[Counter](
     Counter
       .build()
       .namespace("tapir")
@@ -47,18 +43,22 @@ object PrometheusMetricsExample extends App with StrictLogging {
       .labelNames("path", "method", "status")
       .register(collectorRegistry)
   ).onResponse { (_, req, res, counter) => // this callback will be executed after request processing
-    Future {
-      val path = req.uri.pathSegments.toString
-      val method = req.method.method
-      val status = res.code.toString()
-      counter.labels(path, method, status).inc()
-    }
+    val path = req.uri.pathSegments.toString
+    val method = req.method.method
+    val status = res.code.toString()
+    counter.labels(path, method, status).inc()
+
   }
 
   val prometheusMetrics = PrometheusMetrics("tapir", collectorRegistry)
     // default metric collecting all requests and custom one
     .withRequestsTotal()
     .withCustom(responsesTotal)
+
+  val metricsEndpoint: ServerEndpoint[Unit, Unit, CollectorRegistry, Any, Future] =
+    prometheusMetrics.metricsEp.serverLogic { _ =>
+      Future.successful(Right(prometheusMetrics.registry).withLeft[Unit])
+    }
 
   implicit val serverOptions: AkkaHttpServerOptions =
     AkkaHttpServerOptions.customInterceptors(
@@ -69,7 +69,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
   val routes: Route = concat(
     AkkaHttpServerInterpreter.toRoute(personEndpoint),
     // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `CollectorRegistry` to plain text response
-    AkkaHttpServerInterpreter.toRoute(prometheusMetrics.metricsServerEndpoint)
+    AkkaHttpServerInterpreter.toRoute(metricsEndpoint)
   )
 
   implicit val actorSystem: ActorSystem = ActorSystem()

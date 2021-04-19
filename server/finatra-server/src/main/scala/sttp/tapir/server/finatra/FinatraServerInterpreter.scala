@@ -32,7 +32,7 @@ trait FinatraServerInterpreter extends Logging {
         new FinatraRequestBody(request, serverOptions),
         new FinatraToResponseBody,
         serverOptions.interceptors
-      )(FutureMonadError)
+      )(FutureMonadError, new FinatraBodyListener[Future]())
 
       serverInterpreter(serverRequest, se).map {
         case None => Response(Status.NotFound)
