@@ -8,7 +8,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.mockserver.SttpMockServerClient
 
-object MockServerExample extends App {
+object    MockServerExample extends App {
   val backend = TryHttpURLConnectionBackend()
 
   case class SampleIn(name: String, age: Int)

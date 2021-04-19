@@ -5,14 +5,15 @@ import io.circe.syntax._
 import sttp.client3._
 import sttp.client3.testing._
 import sttp.model.Uri.UriContext
-import sttp.model.{MediaType, StatusCode, Uri}
-import sttp.tapir.client.sttp.SttpClientInterpreter
+import sttp.model.{ContentTypeRange, HasHeaders, Header, Headers, MediaType, StatusCode, Uri}
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
-import sttp.tapir.server.internal.{EncodeOutputBody, EncodeOutputs, OutputValues}
 import sttp.tapir.{CodecFormat, Endpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.mockserver.impl.JsonCodecs._
 import java.nio.charset.Charset
 import io.circe.parser._
+import sttp.tapir.client.sttp.SttpClientInterpreter
+import sttp.tapir.server.interpreter.{EncodeOutputs, OutputValues, ToResponseBody}
+import scala.collection.immutable.Seq
 
 class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: SttpBackend[F, Any]) {
 
@@ -49,16 +50,16 @@ object SttpMockServerClient {
 
       val response = {
         val responseValue = expectedOutput.merge
-        val encodeOutputBody: EncodeOutputBody[Any, Any, Nothing] = new EncodeOutputBody[Any, Any, Nothing] {
-          override val streams: NoStreams.type = NoStreams
-          override def rawValueToBody[T](v: T, format: CodecFormat, bodyType: RawBodyType[T]): Any = v
-          override def streamValueToBody(v: Nothing, format: CodecFormat, charset: Option[Charset]): Any = v
-          override def webSocketPipeToBody[REQ, RESP](
+        val toResponseBody: ToResponseBody[Any, Nothing] = new ToResponseBody[Any, Nothing] {
+          override val streams: NoStreams = NoStreams
+          override def fromRawValue[RAW](v: RAW, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[RAW]): Any = v
+          override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
+          override def fromWebSocketPipe[REQ, RESP](
               pipe: streams.Pipe[REQ, RESP],
               o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
-          ): Any = pipe //impossible
+          ): Any = pipe // impossible
         }
-        new EncodeOutputs[Any, Any, Nothing](encodeOutputBody)
+        new EncodeOutputs[Any, Nothing](toResponseBody, Seq(ContentTypeRange.AnyRange))
           .apply(
             expectedOutput.fold(
               _ => endpoint.errorOutput,
@@ -74,11 +75,11 @@ object SttpMockServerClient {
           method = request.method,
           path = request.uri,
           body = requestBody,
-          headers = if (request.headers.isEmpty) None else Some(request.headers.groupBy(_.name).mapValues(_.toList.map(_.value)).toMap)
+          headers = headersToMultiMapOpt(request.headers)
         ),
         httpResponse = ExpectationResponseDefinition(
-          body = response.body.map(_.merge.toString),
-          headers = if (response.headers.isEmpty) None else Some(response.headers.groupBy(_._1).mapValues(_.map(_._2).toList).toMap),
+          body = response.body.map(_.apply(Headers(response.headers)).toString),
+          headers = headersToMultiMapOpt(response.headers),
           statusCode = response.statusCode.getOrElse(statusCode)
         )
       )
@@ -96,6 +97,10 @@ object SttpMockServerClient {
         )
       }
     }
+
+    private def headersToMultiMapOpt(headers: Seq[Header]): Option[Map[String, List[String]]] =
+      if (headers.isEmpty) None
+      else Some(headers.groupBy(_.name).map { case (name, values) => name -> values.map(_.value).toList })
 
     private val printer = Printer.noSpaces.copy(dropNullValues = true)
 
