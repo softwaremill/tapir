@@ -16,6 +16,7 @@ import scodec.bits.ByteVector
 import sttp.tapir.client.tests.HttpServer._
 
 import scala.concurrent.ExecutionContext
+import cats.effect.Temporal
 
 object HttpServer {
   type Port = Int
@@ -32,7 +33,7 @@ class HttpServer(port: Port) {
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit private val timer: Timer[IO] = IO.timer(ec)
+  implicit private val timer: Temporal[IO] = IO.timer(ec)
 
   private var stopServer: IO[Unit] = _
 

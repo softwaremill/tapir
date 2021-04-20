@@ -95,7 +95,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     override def eval[T](t: => T): F[T] = F.delay(t)
     override def suspend[T](t: => F[T]): F[T] = F.defer(t)
     override def flatten[T](ffa: F[F[T]]): F[T] = F.flatten(ffa)
-    override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guarantee(f)(e)
+    override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guarantee(f, e)
   }
 
   private[vertx] class CatsFFromVFuture[F[_]: Async] extends FromVFuture[F] {
@@ -104,7 +104,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
 
   implicit class VertxFutureToCatsF[A](f: => Future[A]) {
     def asF[F[_]: Async]: F[A] = {
-      Async[F].async { cb =>
+      Async[F].async_ { cb =>
         f.onComplete({ handler =>
           if (handler.succeeded()) {
             cb(Right(handler.result()))
