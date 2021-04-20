@@ -27,7 +27,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
   object TestRequestBody extends RequestBody[Id, Nothing] {
     override val streams: Streams[Nothing] = NoStreams
-    override def toRaw[R](bodyType: RawBodyType[R]): Id[R] = ???
+    override def toRaw[R](bodyType: RawBodyType[R]): Id[RawValue[R]] = ???
     override def toStream(): streams.BinaryStream = ???
   }
 

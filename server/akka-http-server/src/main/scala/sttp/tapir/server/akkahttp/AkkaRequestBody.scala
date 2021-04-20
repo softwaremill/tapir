@@ -9,10 +9,10 @@ import akka.util.ByteString
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interpreter.RequestBody
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{RawBodyType, RawPart}
 
-import java.io.ByteArrayInputStream
+import java.io.{ByteArrayInputStream, File}
 import scala.concurrent.{ExecutionContext, Future}
 
 private[akkahttp] class AkkaRequestBody(ctx: RequestContext, request: ServerRequest, serverOptions: AkkaHttpServerOptions)(implicit
@@ -20,26 +20,28 @@ private[akkahttp] class AkkaRequestBody(ctx: RequestContext, request: ServerRequ
     ec: ExecutionContext
 ) extends RequestBody[Future, AkkaStreams] {
   override val streams: AkkaStreams = AkkaStreams
-  override def toRaw[R](bodyType: RawBodyType[R]): Future[R] = toRawFromEntity(ctx.request.entity, bodyType)
+  override def toRaw[R](bodyType: RawBodyType[R]): Future[RawValue[R]] = toRawFromEntity(ctx.request.entity, bodyType)
   override def toStream(): streams.BinaryStream = ctx.request.entity.dataBytes
 
-  private def toRawFromEntity[R](body: HttpEntity, bodyType: RawBodyType[R]): Future[R] = {
+  private def toRawFromEntity[R](body: HttpEntity, bodyType: RawBodyType[R]): Future[RawValue[R]] = {
     bodyType match {
-      case RawBodyType.StringBody(_)   => implicitly[FromEntityUnmarshaller[String]].apply(body)
-      case RawBodyType.ByteArrayBody   => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body)
-      case RawBodyType.ByteBufferBody  => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(_.asByteBuffer)
-      case RawBodyType.InputStreamBody => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(new ByteArrayInputStream(_))
+      case RawBodyType.StringBody(_)  => implicitly[FromEntityUnmarshaller[String]].apply(body).map(RawValue(_))
+      case RawBodyType.ByteArrayBody  => implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(RawValue(_))
+      case RawBodyType.ByteBufferBody => implicitly[FromEntityUnmarshaller[ByteString]].apply(body).map(b => RawValue(b.asByteBuffer))
+      case RawBodyType.InputStreamBody =>
+        implicitly[FromEntityUnmarshaller[Array[Byte]]].apply(body).map(b => RawValue(new ByteArrayInputStream(b)))
       case RawBodyType.FileBody =>
         serverOptions
           .createFile(request)
-          .flatMap(file => body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => file))
+          .flatMap(file => body.dataBytes.runWith(FileIO.toPath(file.toPath)).map(_ => RawValue(file, Seq(file))))
       case m: RawBodyType.MultipartBody =>
         implicitly[FromEntityUnmarshaller[Multipart.FormData]].apply(body).flatMap { fd =>
           fd.parts
             .mapConcat(part => m.partType(part.name).map((part, _)).toList)
             .mapAsync[RawPart](1) { case (part, codecMeta) => toRawPart(part, codecMeta) }
             .runWith[Future[scala.collection.immutable.Seq[RawPart]]](Sink.seq)
-            .asInstanceOf[Future[R]]
+            .map(RawValue.fromParts)
+            .asInstanceOf[Future[RawValue[R]]]
         }
     }
   }
@@ -49,7 +51,7 @@ private[akkahttp] class AkkaRequestBody(ctx: RequestContext, request: ServerRequ
       .map(r =>
         Part(
           part.name,
-          r,
+          r.value,
           otherDispositionParams = part.additionalDispositionParams,
           headers = part.additionalHeaders.map(h => Header(h.name, h.value))
         ).contentType(part.entity.contentType.toString())

@@ -1,7 +1,8 @@
 package sttp.tapir.server.interpreter
 
 import sttp.capabilities.Streams
-import sttp.tapir.RawBodyType
+import sttp.model.Part
+import sttp.tapir.{RawBodyType, RawPart}
 
 import java.io.File
 
@@ -13,3 +14,7 @@ trait RequestBody[F[_], S] {
 
 case class RawValue[R](value: R, tmpFiles: Seq[File] = Nil)
 
+object RawValue {
+  def fromParts(parts: Seq[RawPart]): RawValue[Seq[RawPart]] =
+    RawValue(parts, parts collect { case _ @Part(_, f, _, _) if f.isInstanceOf[File] => f.asInstanceOf[File] })
+}

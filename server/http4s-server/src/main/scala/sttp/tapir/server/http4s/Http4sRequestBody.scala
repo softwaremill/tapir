@@ -49,15 +49,10 @@ private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( /
               .map { case (part, codecMeta) => toRawPart(part, codecMeta).asInstanceOf[F[RawPart]] }
 
             val rawParts: F[RawValue[Vector[RawPart]]] = rawPartsF.sequence.map { parts =>
-              RawValue(
-                parts,
-                parts collect {
-                  case _ @Part(_, f, _, _) if f.isInstanceOf[File] => f.asInstanceOf[File]
-                }
-              )
+              RawValue(parts, parts collect { case _ @Part(_, f, _, _) if f.isInstanceOf[File] => f.asInstanceOf[File] })
             }
 
-            rawParts.asInstanceOf[F[RawValue[R]]] // R is Seq[RawPart]
+            rawParts.asInstanceOf[F[RawValue[R]]] // R is Vector[RawPart]
         })
     }
   }
