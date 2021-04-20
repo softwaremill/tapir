@@ -85,7 +85,8 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
         values.bodyInputWithIndex match {
           case Some((Left(bodyInput @ EndpointIO.Body(_, codec, _)), _)) =>
             requestBody.toRaw(bodyInput.bodyType).map { v =>
-              codec.decode(v) match {
+              println(v.tmpFiles)
+              codec.decode(v.value) match {
                 case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
                 case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
               }
