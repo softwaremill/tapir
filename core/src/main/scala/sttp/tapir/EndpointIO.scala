@@ -569,6 +569,11 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
   def responsesExamples(examples: List[RESP]): ThisType[T] =
     copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None))))
 
+  def requestsDocsExtension[A: JsonCodec](key: String, value: A): ThisType[T] =
+    copy(requestsInfo = requestsInfo.docsExtension(key, value))
+  def responsesDocsExtension[A: JsonCodec](key: String, value: A): ThisType[T] =
+    copy(responsesInfo = responsesInfo.docsExtension(key, value))
+
   /** @param c If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses`
     *          codecs decode will always have `finalFragment` set to `true`.
     *          Note that only some interpreters expose fragmented frames.

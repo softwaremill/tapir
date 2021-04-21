@@ -53,8 +53,8 @@ trait TapirAsyncAPICirceEncoders {
   implicit val encoderAnyValue: Encoder[AnyValue] = (av: AnyValue) => {
     parse(av.value).getOrElse(Json.fromString(av.value))
   }
-  implicit val encoderCorrelationId: Encoder[CorrelationId] = deriveEncoder[CorrelationId]
-  implicit val encoderParameter: Encoder[Parameter] = deriveEncoder[Parameter]
+  implicit val encoderCorrelationId: Encoder[CorrelationId] = deriveWithExtensions[CorrelationId]
+  implicit val encoderParameter: Encoder[Parameter] = deriveWithExtensions[Parameter]
 
   implicit val encoderMessageBinding: Encoder[List[MessageBinding]] = {
     implicit val encoderHttpMessageBinding: Encoder[HttpMessageBinding] = deriveEncoder[HttpMessageBinding]
@@ -128,24 +128,24 @@ trait TapirAsyncAPICirceEncoders {
     case Some(Right(s)) => encoderReferenceOr[Schema].apply(s)
   }
 
-  implicit val encoderMessageTrait: Encoder[MessageTrait] = deriveEncoder[MessageTrait]
-  implicit val encoderSingleMessage: Encoder[SingleMessage] = deriveEncoder[SingleMessage]
+  implicit val encoderMessageTrait: Encoder[MessageTrait] = deriveWithExtensions[MessageTrait]
+  implicit val encoderSingleMessage: Encoder[SingleMessage] = deriveWithExtensions[SingleMessage]
   implicit val encoderOneOfMessage: Encoder[OneOfMessage] = deriveEncoder[OneOfMessage]
   implicit val encoderMessage: Encoder[Message] = {
     case s: SingleMessage => encoderSingleMessage.apply(s)
     case o: OneOfMessage  => encoderOneOfMessage.apply(o)
   }
 
-  implicit val encoderOperationTrait: Encoder[OperationTrait] = deriveEncoder[OperationTrait]
-  implicit val encoderOperation: Encoder[Operation] = deriveEncoder[Operation]
-  implicit val encoderChannelItem: Encoder[ChannelItem] = deriveEncoder[ChannelItem]
-  implicit val encoderComponents: Encoder[Components] = deriveEncoder[Components]
-  implicit val encoderServerVariable: Encoder[ServerVariable] = deriveEncoder[ServerVariable]
-  implicit val encoderServer: Encoder[Server] = deriveEncoder[Server]
-  implicit val encoderContact: Encoder[Contact] = deriveEncoder[Contact]
-  implicit val encoderLicense: Encoder[License] = deriveEncoder[License]
-  implicit val encoderInfo: Encoder[Info] = deriveEncoder[Info]
-  implicit val encoderOpenAPI: Encoder[AsyncAPI] = deriveEncoder[AsyncAPI]
+  implicit val encoderOperationTrait: Encoder[OperationTrait] = deriveWithExtensions[OperationTrait]
+  implicit val encoderOperation: Encoder[Operation] = deriveWithExtensions[Operation]
+  implicit val encoderChannelItem: Encoder[ChannelItem] = deriveWithExtensions[ChannelItem]
+  implicit val encoderComponents: Encoder[Components] = deriveWithExtensions[Components]
+  implicit val encoderServerVariable: Encoder[ServerVariable] = deriveWithExtensions[ServerVariable]
+  implicit val encoderServer: Encoder[Server] = deriveWithExtensions[Server]
+  implicit val encoderContact: Encoder[Contact] = deriveWithExtensions[Contact]
+  implicit val encoderLicense: Encoder[License] = deriveWithExtensions[License]
+  implicit val encoderInfo: Encoder[Info] = deriveWithExtensions[Info]
+  implicit val encoderAsyncAPI: Encoder[AsyncAPI] = deriveWithExtensions[AsyncAPI]
 
   implicit def encodeList[T: Encoder]: Encoder[List[T]] = {
     case Nil        => Json.Null
