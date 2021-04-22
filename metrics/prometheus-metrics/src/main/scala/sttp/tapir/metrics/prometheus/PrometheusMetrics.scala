@@ -7,8 +7,7 @@ import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir._
 import sttp.tapir.metrics.Metric
 import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.interceptor.Interceptor
-import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 import java.io.StringWriter
 import scala.concurrent.duration.Deadline
@@ -32,8 +31,8 @@ case class PrometheusMetrics(
     copy(metrics = metrics + responsesDuration(registry, namespace, labels))
   def withCustom(m: Metric[_]): PrometheusMetrics = copy(metrics = metrics + m)
 
-  def metricsInterceptor[F[_], B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): Interceptor[F, B] =
-    new MetricsInterceptor[F, B](metrics.toList, ignoreEndpoints :+ metricsEndpoint)
+  def metricsInterceptor[F[_], B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F, B] =
+    new MetricsRequestInterceptor[F, B](metrics.toList, ignoreEndpoints :+ metricsEndpoint)
 }
 
 object PrometheusMetrics {
@@ -85,7 +84,7 @@ object PrometheusMetrics {
         .create()
         .register(registry)
     ).onRequest { (ep, req, gauge) => gauge.labels(labels.forRequest(ep, req): _*).inc() }
-      .onResponse { (ep, req, _, gauge) => gauge.labels(labels.forRequest(ep, req): _*).dec() }
+      .onResponse { (ep, req, _, _, gauge) => gauge.labels(labels.forRequest(ep, req): _*).dec() }
 
   def responsesTotal(registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[Counter] =
     Metric[Counter](
@@ -96,7 +95,7 @@ object PrometheusMetrics {
         .help("HTTP responses")
         .labelNames(labels.forRequestNames ++ labels.forResponseNames: _*)
         .register(registry)
-    ).onResponse { (ep, req, res, counter) => counter.labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*).inc() }
+    ).onResponse { (ep, req, res, _, counter) => counter.labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*).inc() }
 
   def responsesDuration(registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[Histogram] =
     Metric[Histogram](
@@ -107,10 +106,10 @@ object PrometheusMetrics {
         .help("HTTP responses duration")
         .labelNames(labels.forRequestNames ++ labels.forResponseNames: _*)
         .register(registry)
-    ).onResponse { (ep, req, res, histogram) =>
+    ).onResponse { (ep, req, res, reqStart, histogram) =>
       histogram
         .labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*)
-        .observe((Deadline.now - req.requestStart).toMillis.toDouble / 1000.0)
+        .observe((Deadline.now - reqStart).toMillis.toDouble / 1000.0)
 
     }
 

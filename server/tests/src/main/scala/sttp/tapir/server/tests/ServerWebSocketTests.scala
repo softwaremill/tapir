@@ -12,7 +12,7 @@ import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.metrics.Metric
-import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interceptor.metrics.{MetricsEndpointInterceptor, MetricsRequestInterceptor}
 import sttp.tapir.server.tests.ServerMetricsTest.Counter
 import sttp.tapir.tests.{Fruit, Test}
 import sttp.ws.{WebSocket, WebSocketFrame}
@@ -52,9 +52,9 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
     }, {
 
       val reqCounter = Metric[Counter](new Counter()).onRequest { (_, _, c) => c.++() }
-      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, c) => c.++() }
+      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, _, c) => c.++() }
 
-      val metrics = new MetricsInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
+      val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
 
       testServer(endpoint.out(stringWs).name("metrics"), metricsInterceptor = metrics.some)((_: Unit) =>
         pureResult(stringEcho.asRight[Unit])

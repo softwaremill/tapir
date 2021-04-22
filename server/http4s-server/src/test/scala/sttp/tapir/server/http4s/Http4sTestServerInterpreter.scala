@@ -12,7 +12,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
-import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -28,7 +28,7 @@ class Http4sTestServerInterpreter
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsInterceptor[IO, Http4sResponseBody[IO]]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[IO, Http4sResponseBody[IO]]] = None
   ): HttpRoutes[IO] = {
     implicit val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
       .customInterceptors(

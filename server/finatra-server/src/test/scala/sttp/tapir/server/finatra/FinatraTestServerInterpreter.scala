@@ -8,7 +8,7 @@ import com.twitter.util.Future
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interceptor.metrics.MetricsEndpointInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -24,7 +24,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsInterceptor[Future, FinatraContent]] = None
+      metricsInterceptor: Option[MetricsEndpointInterceptor[Future, FinatraContent]] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
       FinatraServerOptions.customInterceptors(

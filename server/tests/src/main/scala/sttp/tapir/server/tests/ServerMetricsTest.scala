@@ -7,7 +7,7 @@ import sttp.client3.{SttpBackend, _}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.metrics.Metric
-import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interceptor.metrics.{MetricsEndpointInterceptor, MetricsRequestInterceptor}
 import sttp.tapir.server.tests.ServerMetricsTest.Counter
 import sttp.tapir.tests.TestUtil.inputStreamToByteArray
 import sttp.tapir.tests.{Test, _}
@@ -23,9 +23,9 @@ class ServerMetricsTest[F[_], ROUTE, B](
   def tests(): List[Test] = List(
     {
       val reqCounter = Metric[Counter](new Counter()).onRequest { (_, _, c) => c.++() }
-      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, c) => c.++() }
+      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, _, c) => c.++() }
 
-      val metrics = new MetricsInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
+      val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
 
       testServer(in_json_out_json.name("metrics"), metricsInterceptor = metrics.some)(f =>
         (if (f.fruit == "apple") Right(f) else Left(())).unit
@@ -49,8 +49,8 @@ class ServerMetricsTest[F[_], ROUTE, B](
           }
       }
     }, {
-      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, c) => c.++() }
-      val metrics = new MetricsInterceptor[F, B](List(resCounter), Seq.empty)
+      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, _, c) => c.++() }
+      val metrics = new MetricsRequestInterceptor[F, B](List(resCounter), Seq.empty)
 
       testServer(in_input_stream_out_input_stream.name("metrics"), metricsInterceptor = metrics.some)(is =>
         (new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit].unit
@@ -65,8 +65,8 @@ class ServerMetricsTest[F[_], ROUTE, B](
           }
       }
     }, {
-      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, c) => c.++() }
-      val metrics = new MetricsInterceptor[F, B](List(resCounter), Seq.empty)
+      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, _, c) => c.++() }
+      val metrics = new MetricsRequestInterceptor[F, B](List(resCounter), Seq.empty)
 
       testServer(in_empty_out_empty.name("metrics"), metricsInterceptor = metrics.some)(_ => ().asRight[Unit].unit) { baseUri =>
         basicRequest
@@ -79,8 +79,8 @@ class ServerMetricsTest[F[_], ROUTE, B](
       }
     }, {
       val reqCounter = Metric[Counter](new Counter()).onRequest { (_, _, c) => c.++() }
-      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, c) => c.++() }
-      val metrics = new MetricsInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
+      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, _, c) => c.++() }
+      val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
 
       testServer(in_empty_out_empty.name("metrics on exception"), metricsInterceptor = metrics.some)(_ =>
         throw new RuntimeException("Ups")

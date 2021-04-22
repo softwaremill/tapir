@@ -3,13 +3,29 @@ package sttp.tapir.server.interceptor.metrics
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.metrics.Metric
-import sttp.tapir.model.ServerResponse
+import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.interpreter.BodyListenerSyntax._
 import sttp.tapir.{DecodeResult, Endpoint}
 
-class MetricsInterceptor[F[_], B](metrics: List[Metric[_]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]]) extends EndpointInterceptor[F, B] {
+import scala.concurrent.duration.Deadline
+
+class MetricsRequestInterceptor[F[_], B](metrics: List[Metric[_]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])
+    extends RequestInterceptor[F, B] {
+
+  override def apply(responder: Responder[F, B], requestHandler: EndpointInterceptor[F, B] => RequestHandler[F, B]): RequestHandler[F, B] =
+    (request: ServerRequest) => {
+      val requestStart = Deadline.now
+      requestHandler(new MetricsEndpointInterceptor[F, B](metrics, ignoreEndpoints, requestStart)).apply(request)
+    }
+}
+
+private[metrics] class MetricsEndpointInterceptor[F[_], B](
+    metrics: List[Metric[_]],
+    ignoreEndpoints: Seq[Endpoint[_, _, _, _]],
+    requestStart: Deadline
+) extends EndpointInterceptor[F, B] {
 
   override def apply(responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
@@ -22,7 +38,7 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[_]], ignoreEndpoints: Seq
             _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
             response <- endpointHandler.onDecodeSuccess(ctx)
             responseWithMetrics <- withBodyOnComplete(response) {
-              collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, m) }
+              collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, requestStart, m) }
             }
           } yield responseWithMetrics
         }
@@ -44,7 +60,9 @@ class MetricsInterceptor[F[_], B](metrics: List[Metric[_]], ignoreEndpoints: Seq
                     for {
                       _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
                       res <- withBodyOnComplete(response) {
-                        collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, m) }
+                        collectMetrics { case Metric(m, _, Some(onResponse)) =>
+                          onResponse(ctx.endpoint, ctx.request, response, requestStart, m)
+                        }
                       }
                     } yield Some(res)
                   case None => monad.unit(None)

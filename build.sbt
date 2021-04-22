@@ -497,7 +497,7 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file ("metrics/pro
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core)
+  .dependsOn(core % "compile->compile;test->test")
 
 // apispec
 

@@ -10,7 +10,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import zio.interop.catz._
@@ -27,7 +27,7 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsInterceptor[Task, RoutingContext => Unit]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[Task, RoutingContext => Unit]] = None
   ): Router => Route = {
     implicit val options: VertxZioServerOptions[Task] =
       VertxZioServerOptions.customInterceptors(

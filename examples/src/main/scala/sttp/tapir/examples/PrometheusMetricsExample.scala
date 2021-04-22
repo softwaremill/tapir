@@ -42,7 +42,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
       .help("HTTP responses")
       .labelNames("path", "method", "status")
       .register(collectorRegistry)
-  ).onResponse { (_, req, res, counter) => // this callback will be executed after request processing
+  ).onResponse { (_, req, res, _, counter) => // this callback will be executed after request processing
     val path = req.uri.pathSegments.toString
     val method = req.method.method
     val status = res.code.toString()
@@ -63,7 +63,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
   implicit val serverOptions: AkkaHttpServerOptions =
     AkkaHttpServerOptions.customInterceptors(
       // Adds an interceptor which collects metrics by executing callbacks
-      additionalInterceptors = List(prometheusMetrics.metricsInterceptor())
+      metricsInterceptor = Some(prometheusMetrics.metricsInterceptor())
     )
 
   val routes: Route = concat(

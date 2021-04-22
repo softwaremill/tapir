@@ -11,7 +11,7 @@ import sttp.capabilities.akka.AkkaStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -23,7 +23,7 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsInterceptor[Future, AkkaResponseBody]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, AkkaResponseBody]] = None
   ): Route = {
     implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
       metricsInterceptor = metricsInterceptor,

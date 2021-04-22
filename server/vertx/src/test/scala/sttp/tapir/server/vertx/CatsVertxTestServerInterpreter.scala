@@ -9,7 +9,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.metrics.MetricsInterceptor
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -24,7 +24,7 @@ class CatsVertxTestServerInterpreter(vertx: Vertx)
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO], IO],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsInterceptor[IO, RoutingContext => Unit]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[IO, RoutingContext => Unit]] = None
   ): Router => Route = {
     implicit val options: VertxCatsServerOptions[IO] =
       VertxCatsServerOptions.customInterceptors(

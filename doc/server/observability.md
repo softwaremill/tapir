@@ -31,7 +31,7 @@ For example, using `AkkaServerInterpeter`:
     .withResponsesDuration()
 
   implicit val serverOptions: AkkaHttpServerOptions =
-    AkkaHttpServerOptions.customInterceptors(additionalInterceptors = List(prometheusMetrics.metricsInterceptor()))
+    AkkaHttpServerOptions.customInterceptors(metricsInterceptor = Some(prometheusMetrics.metricsInterceptor()))
 
   val routes: Route = AkkaHttpServerInterpreter.toRoute(prometheusMetrics.metricsEndpoint.serverLogic { _ =>
     Future.successful(Right(prometheusMetrics.registry).withLeft[Unit])
