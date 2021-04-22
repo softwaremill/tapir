@@ -2,9 +2,8 @@ package sttp.tapir.server.interpreter
 
 import sttp.capabilities.Streams
 import sttp.model.Part
+import sttp.tapir.model.SttpFile
 import sttp.tapir.{RawBodyType, RawPart}
-
-import java.io.File
 
 trait RequestBody[F[_], S] {
   val streams: Streams[S]
@@ -12,9 +11,9 @@ trait RequestBody[F[_], S] {
   def toStream(): streams.BinaryStream
 }
 
-case class RawValue[R](value: R, tmpFiles: Seq[File] = Nil)
+case class RawValue[R](value: R, createdFiles: Seq[SttpFile] = Nil)
 
 object RawValue {
   def fromParts(parts: Seq[RawPart]): RawValue[Seq[RawPart]] =
-    RawValue(parts, parts collect { case _ @Part(_, f, _, _) if f.isInstanceOf[File] => f.asInstanceOf[File] })
+    RawValue(parts, parts collect { case _ @Part(_, f, _, _) if f.isInstanceOf[SttpFile] => f.asInstanceOf[SttpFile] })
 }

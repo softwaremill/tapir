@@ -4,14 +4,13 @@ import cats.Applicative
 import cats.effect.{ContextShift, Sync}
 import cats.implicits.catsSyntaxOptionId
 import sttp.tapir.Defaults
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.model.{ServerRequest, SttpFile}
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 
-import java.io.File
 import scala.concurrent.ExecutionContext
 
 /** @tparam F The effect type used for response body streams. Usually the same as `G`.
@@ -19,7 +18,8 @@ import scala.concurrent.ExecutionContext
   *           Usually the same as `F`.
   */
 case class Http4sServerOptions[F[_], G[_]](
-    createFile: ServerRequest => G[File],
+    createFile: ServerRequest => G[SttpFile],
+    deleteFiles: Seq[SttpFile] => G[Unit],
     blockingExecutionContext: ExecutionContext,
     ioChunkSize: Int,
     interceptors: List[Interceptor[G, Http4sResponseBody[F]]]
@@ -62,6 +62,7 @@ object Http4sServerOptions {
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
       defaultCreateFile[G].apply(blockingExecutionContext),
+      defaultDeleteFiles[G].apply(blockingExecutionContext),
       blockingExecutionContext,
       8192,
       exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
@@ -71,8 +72,11 @@ object Http4sServerOptions {
         List(new DecodeFailureInterceptor[G, Http4sResponseBody[F]](decodeFailureHandler))
     )
 
-  def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => ServerRequest => F[File] =
-    ec => _ => cs.evalOn(ec)(sync.delay(Defaults.createTempFile()))
+  def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => ServerRequest => F[SttpFile] =
+    ec => _ => cs.evalOn(ec)(sync.delay(SttpFile.fromFile(Defaults.createTempFile())))
+
+  def defaultDeleteFiles[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => Seq[SttpFile] => F[Unit] =
+    ec => files => cs.evalOn(ec)(sync.delay(files.foreach(_.toFile.delete())))
 
   object Log {
     def defaultServerLog[F[_]: Sync]: DefaultServerLog[F[Unit]] =

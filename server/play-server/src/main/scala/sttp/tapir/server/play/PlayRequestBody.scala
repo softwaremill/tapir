@@ -7,6 +7,7 @@ import play.core.parsers.Multipart
 import sttp.capabilities.Streams
 import sttp.model.Part
 import sttp.tapir.internal._
+import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.{RawBodyType, RawPart}
 
@@ -40,7 +41,7 @@ private[play] class PlayRequestBody(request: Request[RawBuffer], serverOptions: 
         Future(java.nio.file.Files.write(serverOptions.temporaryFileCreator.create().path, body.toArray))
           .map { p =>
             val file = p.toFile
-            RawValue(file, Seq(file))
+            RawValue(file, Seq(SttpFile.fromFile(file)))
           }
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)
     }

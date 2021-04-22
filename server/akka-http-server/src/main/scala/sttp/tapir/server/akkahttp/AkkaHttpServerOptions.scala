@@ -1,20 +1,20 @@
 package sttp.tapir.server.akkahttp
 
-import java.io.File
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
 import sttp.tapir.Defaults
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.model.{ServerRequest, SttpFile}
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 
 import scala.concurrent.Future
 
 case class AkkaHttpServerOptions(
-    createFile: ServerRequest => Future[File],
+    createFile: ServerRequest => Future[SttpFile],
+    deleteFiles: Seq[SttpFile] => Future[Unit],
     interceptors: List[Interceptor[Future, AkkaResponseBody]]
 ) {
   def prependInterceptor(i: Interceptor[Future, AkkaResponseBody]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
@@ -52,6 +52,7 @@ object AkkaHttpServerOptions {
   ): AkkaHttpServerOptions =
     AkkaHttpServerOptions(
       defaultCreateFile,
+      Defaults.deleteFiles(),
       exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
         serverLog.map(Log.serverLogInterceptor).toList ++
         additionalInterceptors ++
@@ -59,9 +60,9 @@ object AkkaHttpServerOptions {
         List(new DecodeFailureInterceptor[Future, AkkaResponseBody](decodeFailureHandler))
     )
 
-  val defaultCreateFile: ServerRequest => Future[File] = { _ =>
+  val defaultCreateFile: ServerRequest => Future[SttpFile] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
-    Future(Defaults.createTempFile())
+    Future(SttpFile.fromFile(Defaults.createTempFile()))
   }
 
   object Log {
