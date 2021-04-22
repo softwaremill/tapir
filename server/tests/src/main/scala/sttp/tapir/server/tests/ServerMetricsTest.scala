@@ -2,12 +2,13 @@ package sttp.tapir.server.tests
 
 import cats.effect.IO
 import cats.implicits._
+import org.scalatest.Assertion
 import org.scalatest.matchers.should.Matchers._
 import sttp.client3.{SttpBackend, _}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.metrics.Metric
-import sttp.tapir.server.interceptor.metrics.{MetricsEndpointInterceptor, MetricsRequestInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.ServerMetricsTest.Counter
 import sttp.tapir.tests.TestUtil.inputStreamToByteArray
 import sttp.tapir.tests.{Test, _}
@@ -43,9 +44,10 @@ class ServerMetricsTest[F[_], ROUTE, B](
           .body("""{"invalid":"body",}""")
           .send(backend)
           .map { _ =>
-            Thread.sleep(100)
-            reqCounter.metric.value shouldBe 2
-            resCounter.metric.value shouldBe 2
+            wait(200) {
+              reqCounter.metric.value shouldBe 2
+              resCounter.metric.value shouldBe 2
+            }
           }
       }
     }, {
@@ -60,8 +62,10 @@ class ServerMetricsTest[F[_], ROUTE, B](
           .body("okoń")
           .send(backend)
           .map { r =>
-            r.body shouldBe Right("okoń")
-            resCounter.metric.value shouldBe 1
+            wait(200) {
+              r.body shouldBe Right("okoń")
+              resCounter.metric.value shouldBe 1
+            }
           }
       }
     }, {
@@ -73,8 +77,10 @@ class ServerMetricsTest[F[_], ROUTE, B](
           .post(uri"$baseUri/api/empty")
           .send(backend)
           .map { r =>
-            r.body shouldBe Right("")
-            resCounter.metric.value shouldBe 1
+            wait(200) {
+              r.body shouldBe Right("")
+              resCounter.metric.value shouldBe 1
+            }
           }
       }
     }, {
@@ -89,12 +95,19 @@ class ServerMetricsTest[F[_], ROUTE, B](
           .post(uri"$baseUri/api/empty")
           .send(backend)
           .map { _ =>
-            reqCounter.metric.value shouldBe 1
-            resCounter.metric.value shouldBe 1
+            wait(200) {
+              reqCounter.metric.value shouldBe 1
+              resCounter.metric.value shouldBe 1
+            }
           }
       }
     }
   )
+
+  private def wait(ms: Int)(cb: => Assertion): Assertion = {
+    Thread.sleep(ms)
+    cb
+  }
 }
 
 object ServerMetricsTest {
