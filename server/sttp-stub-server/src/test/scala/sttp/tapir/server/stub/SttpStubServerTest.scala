@@ -168,7 +168,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     // when
     val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
-      .whenRequestMatchesServerEndpoint(endpoint)
+      .whenRequestMatchesEndpointThenLogic(endpoint)
       .whenAnyRequest
       .thenRespondServerError()
 
@@ -196,7 +196,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     // when
     val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
-      .whenRequestMatchesServerEndpoint(endpoint, List(interceptor))
+      .whenRequestMatchesEndpointThenLogic(endpoint, List(interceptor))
       .whenAnyRequest
       .thenRespondServerError()
 

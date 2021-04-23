@@ -26,13 +26,13 @@ trait SttpStubServer {
     def whenInputMatchesEndpoint[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[I, E, O] =
       new TypeAwareWhenRequest(endpoint, whenInputMatches(endpoint)(inputMatcher))
 
-    def whenRequestMatchesServerEndpoint[I, E, O](
+    def whenRequestMatchesEndpointThenLogic[I, E, O](
         endpoint: ServerEndpoint[I, E, O, R, F],
         interceptors: List[Interceptor[F, Any]] = Nil
     ): SttpBackendStub[F, R] =
       whenRequestMatches(endpoint.endpoint).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
 
-    def whenInputMatchesServerEndpoint[I, E, O](endpoint: ServerEndpoint[I, E, O, R, F], interceptors: List[Interceptor[F, Any]] = Nil)(
+    def whenInputMatchesEndpointThenLogic[I, E, O](endpoint: ServerEndpoint[I, E, O, R, F], interceptors: List[Interceptor[F, Any]] = Nil)(
         inputMatcher: I => Boolean
     ): SttpBackendStub[F, R] =
       whenInputMatches(endpoint.endpoint)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
