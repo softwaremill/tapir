@@ -11,7 +11,7 @@ trait ZTapir {
   type ZServerEndpoint[R, I, E, O] = ServerEndpoint[I, E, O, Any, RIO[R, *]]
 
   implicit class RichZEndpoint[I, E, O](e: ZEndpoint[I, E, O]) {
-    def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O] = ServerEndpoint(e, _ => logic(_).either)
+    def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O] = ServerEndpoint(e, _ => logic(_).either.resurrect)
 
     /** Combine this endpoint description with a function, which implements a part of the server-side logic.
       *
