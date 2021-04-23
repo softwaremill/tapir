@@ -59,7 +59,8 @@ trait PlayServerInterpreter {
           val interpreter = new ServerInterpreter[Any, Future, HttpEntity, Nothing](
             new PlayRequestBody(request, serverOptions),
             new PlayToResponseBody,
-            serverOptions.interceptors
+            serverOptions.interceptors,
+            serverOptions.deleteFile
           )
 
           interpreter(serverRequest, serverEndpoints).map {

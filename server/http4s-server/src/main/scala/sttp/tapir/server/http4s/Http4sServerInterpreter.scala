@@ -99,7 +99,8 @@ trait Http4sServerInterpreter {
       val interpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, G, Http4sResponseBody[F], Fs2Streams[F]](
         new Http4sRequestBody[F, G](req, serverRequest, serverOptions, t),
         new Http4sToResponseBody[F, G](serverOptions),
-        serverOptions.interceptors
+        serverOptions.interceptors,
+        serverOptions.deleteFile
       )
 
       OptionT(interpreter(serverRequest, serverEndpoints).flatMap {

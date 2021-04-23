@@ -2,17 +2,20 @@ package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
+import sttp.tapir.Defaults
+import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
-import zio.RIO
+import zio.{RIO, Task}
 
 import java.io.File
 
 final case class VertxZioServerOptions[F[_]](
-    uploadDirectory: File,
+    uploadDirectory: SttpFile,
+    deleteFile: SttpFile => F[Unit],
     maxQueueSizeForReadStream: Int,
     interceptors: List[Interceptor[F, RoutingContext => Unit]]
 ) extends VertxServerOptions[F] {
@@ -53,7 +56,8 @@ object VertxZioServerOptions {
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): VertxZioServerOptions[RIO[R, *]] = {
     VertxZioServerOptions(
-      File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
+      SttpFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
+      file => Task[Unit](Defaults.deleteFile()(file)),
       maxQueueSizeForReadStream = 16,
       exceptionHandler.map(new ExceptionInterceptor[RIO[R, *], RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, RIO[R, *], RoutingContext => Unit](_, (_, _) => RIO.unit)).toList ++

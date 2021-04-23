@@ -1,17 +1,20 @@
 package sttp.tapir.server.finatra
 
-import java.io.{File, FileOutputStream}
 import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
 import sttp.tapir.Defaults
+import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 
+import java.io.FileOutputStream
+
 case class FinatraServerOptions(
-    createFile: Array[Byte] => Future[File],
+    createFile: Array[Byte] => Future[SttpFile],
+    deleteFile: SttpFile => Future[Unit],
     interceptors: List[Interceptor[Future, FinatraContent]]
 )
 
@@ -45,6 +48,7 @@ object FinatraServerOptions extends Logging {
   ): FinatraServerOptions =
     FinatraServerOptions(
       defaultCreateFile(futurePool),
+      defaultDeleteFile(futurePool),
       exceptionHandler.map(new ExceptionInterceptor[Future, FinatraContent](_)).toList ++
         serverLog.map(sl => new ServerLogInterceptor[Unit, Future, FinatraContent](sl, (_: Unit, _) => Future.Done)).toList ++
         additionalInterceptors ++
@@ -54,14 +58,20 @@ object FinatraServerOptions extends Logging {
 
   implicit val default: FinatraServerOptions = customInterceptors()
 
-  def defaultCreateFile(futurePool: FuturePool)(bytes: Array[Byte]): Future[File] = {
+  def defaultCreateFile(futurePool: FuturePool)(bytes: Array[Byte]): Future[SttpFile] = {
     // TODO: Make this streaming
     futurePool {
       val file = Defaults.createTempFile()
       val outputStream = new FileOutputStream(file)
       outputStream.write(bytes)
       outputStream.close()
-      file
+      SttpFile.fromFile(file)
+    }
+  }
+
+  def defaultDeleteFile(futurePool: FuturePool): SttpFile => Future[Unit] = file => {
+    futurePool {
+      Defaults.deleteFile()(file)
     }
   }
 

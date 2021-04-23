@@ -89,7 +89,8 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     val interpreter = new ServerInterpreter[Any, Future, RoutingContext => Unit, Nothing](
       new VertxRequestBody[Future, Nothing](rc, serverOptions, FutureFromVFuture),
       new VertxToResponseBody[Future, Nothing](serverOptions),
-      serverOptions.interceptors
+      serverOptions.interceptors,
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 

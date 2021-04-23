@@ -49,7 +49,8 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Unit, ZioStreams](
       new VertxRequestBody[RIO[R, *], ZioStreams](rc, serverOptions, fromVFuture),
       new VertxToResponseBody(serverOptions),
-      serverOptions.interceptors
+      serverOptions.interceptors,
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 

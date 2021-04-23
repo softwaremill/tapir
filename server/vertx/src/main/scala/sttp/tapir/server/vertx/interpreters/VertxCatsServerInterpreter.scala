@@ -67,7 +67,8 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     val interpreter = new ServerInterpreter(
       new VertxRequestBody(rc, serverOptions, fFromVFuture),
       new VertxToResponseBody(serverOptions),
-      serverOptions.interceptors
+      serverOptions.interceptors,
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 

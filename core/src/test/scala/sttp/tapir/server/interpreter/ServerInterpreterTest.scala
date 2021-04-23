@@ -27,7 +27,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
 
   object TestRequestBody extends RequestBody[Id, Nothing] {
     override val streams: Streams[Nothing] = NoStreams
-    override def toRaw[R](bodyType: RawBodyType[R]): Id[R] = ???
+    override def toRaw[R](bodyType: RawBodyType[R]): Id[RawValue[R]] = ???
     override def toStream(): streams.BinaryStream = ???
   }
 
@@ -101,7 +101,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val interceptor3 = new AddToTrailInterceptor("3")
 
     val interpreter =
-      new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(interceptor1, interceptor2, interceptor3))
+      new ServerInterpreter[Any, Id, Unit, Nothing](TestRequestBody, TestToResponseBody, List(interceptor1, interceptor2, interceptor3), _ => ())
 
     // when
     interpreter.apply(testRequest, endpoint.in(query[String]("x")).serverLogic[Id](_ => Right(())))

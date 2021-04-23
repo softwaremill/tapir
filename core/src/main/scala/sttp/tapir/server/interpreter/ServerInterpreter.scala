@@ -4,16 +4,17 @@ import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.model.{ServerRequest, ServerResponse, SttpFile}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
 import sttp.tapir.{DecodeResult, EndpointIO, StreamBodyIO}
 
-class ServerInterpreter[R, F[_]: MonadError, B, S](
+class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
-    interceptors: List[Interceptor[F, B]]
-) {
+    interceptors: List[Interceptor[F, B]],
+    deleteFile: SttpFile => F[Unit]
+)(implicit m: MonadError[F]) {
   def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] =
     apply(request, List(se))
 
@@ -84,10 +85,13 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       case values: DecodeBasicInputsResult.Values =>
         values.bodyInputWithIndex match {
           case Some((Left(bodyInput @ EndpointIO.Body(_, codec, _)), _)) =>
-            requestBody.toRaw(bodyInput.bodyType).map { v =>
-              codec.decode(v) match {
-                case DecodeResult.Value(bodyV)     => values.setBodyInputValue(bodyV)
-                case failure: DecodeResult.Failure => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult
+            requestBody.toRaw(bodyInput.bodyType).flatMap { v =>
+              codec.decode(v.value) match {
+                case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
+                case failure: DecodeResult.Failure =>
+                  v.createdFiles
+                    .foldLeft(m.unit(()))((u, f) => u.flatMap(_ => deleteFile(f)))
+                    .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
               }
             }
 
