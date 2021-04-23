@@ -1,17 +1,20 @@
 package sttp.tapir.server.stub
 
 import io.circe.generic.auto._
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import sttp.client3._
 import sttp.client3.monad._
 import sttp.client3.testing.SttpBackendStub
 import sttp.model.{Header, MediaType, StatusCode}
-import sttp.tapir._
-import sttp.tapir.json.circe._
-import sttp.tapir.generic.auto._
-import org.scalatest.flatspec.AnyFlatSpec
-import org.scalatest.matchers.should.Matchers
 import sttp.monad.MonadError
+import sttp.tapir._
 import sttp.tapir.client.sttp._
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, Responder}
 
 class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
@@ -97,9 +100,9 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
       .apply(idMonad)
-      .whenInputMatches(endpoint) { amount => amount > 0 }
+      .whenInputMatchesEndpoint(endpoint) { amount => amount > 0 }
       .thenSuccess(ResponseWrapper(1.0))
-      .whenInputMatches(endpoint) { amount => amount <= 0 }
+      .whenInputMatchesEndpoint(endpoint) { amount => amount <= 0 }
       .generic
       .thenRespondServerError()
 
@@ -120,7 +123,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
       .apply(idMonad)
-      .whenInputMatches(endpoint) { body => body > 2 }
+      .whenInputMatchesEndpoint(endpoint) { body => body > 2 }
       .thenSuccess(42)
       .whenAnyRequest
       .thenRespondServerError()
@@ -153,6 +156,53 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
       SttpClientInterpreter.toRequestThrowDecodeFailures(endpoint, Some(uri"http://test.com")).apply(-1).send(backend)
 
     response shouldBe Response(Left(()), StatusCode.BadRequest)
+  }
+
+  it should "stub server endpoint" in {
+    // given
+    val endpoint: ServerEndpoint[Unit, Unit, String, Any, Identity] = sttp.tapir.endpoint
+      .in("api" / "hello")
+      .out(stringBody)
+      .get
+      .serverLogic { _ => idMonad.unit(Right("hello")) }
+
+    // when
+    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
+      .whenRequestMatchesServerEndpoint(endpoint)
+      .whenAnyRequest
+      .thenRespondServerError()
+
+    // then
+    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/hello").send(backend).body shouldBe Right("hello")
+    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/unknown").send(backend).code shouldBe StatusCode.InternalServerError
+  }
+
+  it should "stub server endpoint with interceptors" in {
+    // given
+    val endpoint: ServerEndpoint[Unit, Unit, String, Any, Identity] = sttp.tapir.endpoint
+      .in("api" / "hello")
+      .out(stringBody)
+      .get
+      .serverLogic { _ => idMonad.unit(Right("hello")) }
+
+    var x = 0
+
+    val interceptor: RequestInterceptor[Identity, Any] =
+      (_: Responder[Identity, Any], requestHandler: EndpointInterceptor[Identity, Any] => RequestHandler[Identity, Any]) =>
+        (request: ServerRequest) => {
+          x = 10
+          requestHandler(EndpointInterceptor.noop).apply(request)
+        }
+
+    // when
+    val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)
+      .whenRequestMatchesServerEndpoint(endpoint, List(interceptor))
+      .whenAnyRequest
+      .thenRespondServerError()
+
+    // then
+    sttp.client3.basicRequest.get(uri"http://abc.xyz/api/hello").send(backend).body shouldBe Right("hello")
+    x shouldBe 10
   }
 }
 

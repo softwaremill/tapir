@@ -9,11 +9,11 @@ import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
 import sttp.tapir.{DecodeResult, EndpointIO, StreamBodyIO}
 
-class ServerInterpreter[R, F[_]: MonadError, B, S](
+class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
     interceptors: List[Interceptor[F, B]]
-) {
+)(implicit m: MonadError[F]) {
   def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] =
     apply(request, List(se))
 
