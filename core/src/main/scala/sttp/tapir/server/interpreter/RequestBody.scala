@@ -15,5 +15,5 @@ case class RawValue[R](value: R, createdFiles: Seq[SttpFile] = Nil)
 
 object RawValue {
   def fromParts(parts: Seq[RawPart]): RawValue[Seq[RawPart]] =
-    RawValue(parts, parts collect { case _ @Part(_, f, _, _) if f.isInstanceOf[SttpFile] => f.asInstanceOf[SttpFile] })
+    RawValue(parts, parts collect { case _ @Part(_, f: SttpFile, _, _) => f })
 }
