@@ -73,6 +73,13 @@ Options can be customised by providing an implicit instance of `AsyncAPIDocsOpti
   `SObjectInfo` input parameter is a unique identifier of object in the schema.
   By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
 
+## AsyncAPI Specification Extensions
+
+AsyncAPI supports adding [extensions](https://www.asyncapi.com/docs/specifications/2.0.0#specificationExtensions)
+as well as OpenAPI. There is `docsExtension` method available on parameters and endpoints. There are
+`requestsDocsExtension` and `responsesDocsExtension` methods on `websocketBody`. Take a look at
+**OpenAPI Specification Extensions** section of [documentation](../docs/openapi.md) to get a feeling on how to use it.
+
 ## Exposing AsyncAPI documentation
 
 AsyncAPI documentation can be exposed through the [AsyncAPI playground](https://playground.asyncapi.io).
