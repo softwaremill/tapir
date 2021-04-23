@@ -14,7 +14,7 @@ import java.io.FileOutputStream
 
 case class FinatraServerOptions(
     createFile: Array[Byte] => Future[SttpFile],
-    deleteFiles: Seq[SttpFile] => Future[Unit],
+    deleteFile: SttpFile => Future[Unit],
     interceptors: List[Interceptor[Future, FinatraContent]]
 )
 
@@ -48,7 +48,7 @@ object FinatraServerOptions extends Logging {
   ): FinatraServerOptions =
     FinatraServerOptions(
       defaultCreateFile(futurePool),
-      files => Future(files.foreach(_.toFile.delete())),
+      defaultDeleteFile(futurePool),
       exceptionHandler.map(new ExceptionInterceptor[Future, FinatraContent](_)).toList ++
         serverLog.map(sl => new ServerLogInterceptor[Unit, Future, FinatraContent](sl, (_: Unit, _) => Future.Done)).toList ++
         additionalInterceptors ++
@@ -66,6 +66,12 @@ object FinatraServerOptions extends Logging {
       outputStream.write(bytes)
       outputStream.close()
       SttpFile.fromFile(file)
+    }
+  }
+
+  def defaultDeleteFile(futurePool: FuturePool): SttpFile => Future[Unit] = file => {
+    futurePool {
+      Defaults.deleteFile()(file)
     }
   }
 

@@ -60,7 +60,7 @@ trait PlayServerInterpreter {
             new PlayRequestBody(request, serverOptions),
             new PlayToResponseBody,
             serverOptions.interceptors,
-            serverOptions.deleteFiles
+            serverOptions.deleteFile
           )
 
           interpreter(serverRequest, serverEndpoints).map {

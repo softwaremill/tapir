@@ -50,7 +50,7 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
       new VertxRequestBody[RIO[R, *], ZioStreams](rc, serverOptions, fromVFuture),
       new VertxToResponseBody(serverOptions),
       serverOptions.interceptors,
-      serverOptions.deleteFiles
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 

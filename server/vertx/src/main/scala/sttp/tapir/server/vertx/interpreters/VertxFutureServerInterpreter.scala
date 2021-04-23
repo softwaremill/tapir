@@ -90,7 +90,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
       new VertxRequestBody[Future, Nothing](rc, serverOptions, FutureFromVFuture),
       new VertxToResponseBody[Future, Nothing](serverOptions),
       serverOptions.interceptors,
-      serverOptions.deleteFiles
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 

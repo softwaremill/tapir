@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
   */
 case class Http4sServerOptions[F[_], G[_]](
     createFile: ServerRequest => G[SttpFile],
-    deleteFiles: Seq[SttpFile] => G[Unit],
+    deleteFile: SttpFile => G[Unit],
     blockingExecutionContext: ExecutionContext,
     ioChunkSize: Int,
     interceptors: List[Interceptor[G, Http4sResponseBody[F]]]
@@ -62,7 +62,7 @@ object Http4sServerOptions {
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
       defaultCreateFile[G].apply(blockingExecutionContext),
-      defaultDeleteFiles[G].apply(blockingExecutionContext),
+      defaultDeleteFile[G].apply(blockingExecutionContext),
       blockingExecutionContext,
       8192,
       exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
@@ -75,8 +75,8 @@ object Http4sServerOptions {
   def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => ServerRequest => F[SttpFile] =
     ec => _ => cs.evalOn(ec)(sync.delay(SttpFile.fromFile(Defaults.createTempFile())))
 
-  def defaultDeleteFiles[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => Seq[SttpFile] => F[Unit] =
-    ec => files => cs.evalOn(ec)(sync.delay(files.foreach(_.toFile.delete())))
+  def defaultDeleteFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => SttpFile => F[Unit] =
+    ec => file => cs.evalOn(ec)(sync.delay(Defaults.deleteFile()(file)))
 
   object Log {
     def defaultServerLog[F[_]: Sync]: DefaultServerLog[F[Unit]] =

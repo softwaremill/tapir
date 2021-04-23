@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 case class AkkaHttpServerOptions(
     createFile: ServerRequest => Future[SttpFile],
-    deleteFiles: Seq[SttpFile] => Future[Unit],
+    deleteFile: SttpFile => Future[Unit],
     interceptors: List[Interceptor[Future, AkkaResponseBody]]
 ) {
   def prependInterceptor(i: Interceptor[Future, AkkaResponseBody]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
@@ -52,7 +52,7 @@ object AkkaHttpServerOptions {
   ): AkkaHttpServerOptions =
     AkkaHttpServerOptions(
       defaultCreateFile,
-      Defaults.deleteFiles(),
+      defaultDeleteFile,
       exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
         serverLog.map(Log.serverLogInterceptor).toList ++
         additionalInterceptors ++
@@ -63,6 +63,11 @@ object AkkaHttpServerOptions {
   val defaultCreateFile: ServerRequest => Future[SttpFile] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(SttpFile.fromFile(Defaults.createTempFile()))
+  }
+
+  val defaultDeleteFile: SttpFile => Future[Unit] = file => {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future(Defaults.deleteFile()(file))
   }
 
   object Log {

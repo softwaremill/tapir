@@ -8,7 +8,7 @@ import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 
 trait VertxServerOptions[F[_]] {
   def uploadDirectory: SttpFile
-  def deleteFiles: Seq[SttpFile] => F[Unit]
+  def deleteFile: SttpFile => F[Unit]
   def interceptors: List[Interceptor[F, RoutingContext => Unit]]
 }
 

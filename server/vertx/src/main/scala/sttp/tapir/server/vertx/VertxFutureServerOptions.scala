@@ -16,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 final case class VertxFutureServerOptions(
     uploadDirectory: SttpFile,
-    deleteFiles: Seq[SttpFile] => Future[Unit],
+    deleteFile: SttpFile => Future[Unit],
     interceptors: List[Interceptor[Future, RoutingContext => Unit]],
     private val specificExecutionContext: Option[ExecutionContext]
 ) extends VertxServerOptions[Future] {
@@ -64,7 +64,7 @@ object VertxFutureServerOptions {
   ): VertxFutureServerOptions = {
     VertxFutureServerOptions(
       SttpFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
-      Defaults.deleteFiles(),
+      defaultDeleteFile,
       exceptionHandler.map(new ExceptionInterceptor[Future, RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, Future, RoutingContext => Unit](_, (_, _) => Future.successful(()))).toList ++
         additionalInterceptors ++
@@ -72,6 +72,11 @@ object VertxFutureServerOptions {
         List(new DecodeFailureInterceptor[Future, RoutingContext => Unit](decodeFailureHandler)),
       None
     )
+  }
+
+  val defaultDeleteFile: SttpFile => Future[Unit] = file => {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future(Defaults.deleteFile()(file))
   }
 
   implicit val default: VertxFutureServerOptions = customInterceptors()

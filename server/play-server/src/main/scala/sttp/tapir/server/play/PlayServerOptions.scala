@@ -17,7 +17,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class PlayServerOptions(
     temporaryFileCreator: TemporaryFileCreator,
-    deleteFiles: Seq[SttpFile] => Future[Unit],
+    deleteFile: SttpFile => Future[Unit],
     defaultActionBuilder: ActionBuilder[Request, AnyContent],
     playBodyParsers: PlayBodyParsers,
     decodeFailureHandler: DecodeFailureHandler,
@@ -58,7 +58,7 @@ object PlayServerOptions {
   )(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions =
     PlayServerOptions(
       SingletonTemporaryFileCreator,
-      Defaults.deleteFiles(),
+      defaultDeleteFile,
       DefaultActionBuilder.apply(PlayBodyParsers.apply().anyContent),
       PlayBodyParsers.apply(),
       decodeFailureHandler,
@@ -68,6 +68,11 @@ object PlayServerOptions {
         unsupportedMediaTypeInterceptor.toList ++
         List(new DecodeFailureInterceptor[Future, HttpEntity](decodeFailureHandler))
     )
+
+  val defaultDeleteFile: SttpFile => Future[Unit] = file => {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future(Defaults.deleteFile()(file))
+  }
 
   lazy val defaultServerLog: ServerLog[Unit] = DefaultServerLog(
     doLogWhenHandled = debugLog,

@@ -5,6 +5,7 @@ import cats.effect.Sync
 import cats.implicits.catsSyntaxOptionId
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
+import sttp.tapir.Defaults
 import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
@@ -16,7 +17,7 @@ import java.io.File
 
 final case class VertxCatsServerOptions[F[_]](
     uploadDirectory: SttpFile,
-    deleteFiles: Seq[SttpFile] => F[Unit],
+    deleteFile: SttpFile => F[Unit],
     maxQueueSizeForReadStream: Int,
     interceptors: List[Interceptor[F, RoutingContext => Unit]]
 ) extends VertxServerOptions[F] {
@@ -57,7 +58,7 @@ object VertxCatsServerOptions {
   ): VertxCatsServerOptions[F] = {
     VertxCatsServerOptions(
       SttpFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
-      files => Sync[F].delay(files.foreach(_.toFile.delete())),
+      file => Sync[F].delay(Defaults.deleteFile()(file)),
       maxQueueSizeForReadStream = 16,
       exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, F, RoutingContext => Unit](_, (_, _) => Applicative[F].unit)).toList ++

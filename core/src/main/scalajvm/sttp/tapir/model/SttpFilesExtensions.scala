@@ -1,20 +1,10 @@
 package sttp.tapir.model
 
 import java.nio.file.{Files, Path}
-import scala.io.Source
 
 trait SttpFileExtensions { self: SttpFile =>
-
   def toPath: Path = underlying.asInstanceOf[Path]
   def toFile: java.io.File = toPath.toFile
-
-  def readAsString: String = {
-    val s = Source.fromFile(toFile, "UTF-8");
-    try s.getLines().mkString("\n")
-    finally s.close()
-  }
-
-  def readAsByteArray: Array[Byte] = Files.readAllBytes(toPath)
 }
 
 trait SttpFileCompanionExtensions {

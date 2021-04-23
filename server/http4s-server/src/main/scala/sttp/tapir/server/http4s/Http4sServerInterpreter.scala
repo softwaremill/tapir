@@ -100,7 +100,7 @@ trait Http4sServerInterpreter {
         new Http4sRequestBody[F, G](req, serverRequest, serverOptions, t),
         new Http4sToResponseBody[F, G](serverOptions),
         serverOptions.interceptors,
-        serverOptions.deleteFiles
+        serverOptions.deleteFile
       )
 
       OptionT(interpreter(serverRequest, serverEndpoints).flatMap {

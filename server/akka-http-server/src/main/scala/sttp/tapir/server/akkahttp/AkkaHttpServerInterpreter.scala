@@ -50,7 +50,7 @@ trait AkkaHttpServerInterpreter {
             new AkkaRequestBody(ctx, serverRequest, serverOptions),
             new AkkaToResponseBody,
             serverOptions.interceptors,
-            serverOptions.deleteFiles
+            serverOptions.deleteFile
           )
 
           onSuccess(interpreter(serverRequest, ses)) {
