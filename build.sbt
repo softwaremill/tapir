@@ -69,6 +69,7 @@ lazy val allAggregates = core.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
+  circeJson.projectRefs ++
   apispecModel.projectRefs ++
   openapiModel.projectRefs ++
   openapiCirce.projectRefs ++
@@ -474,6 +475,22 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
     libraryDependencies ++= Seq(
       "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.7.2",
       "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.7.2" % Test,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
+lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-zio",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-json" % Versions.zioJson,
       scalaTest.value % Test
     )
   )
@@ -1021,5 +1038,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServer,
     zio,
     zioServer,
-    derevo
+    derevo,
+    zioJson
   )
