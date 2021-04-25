@@ -1,14 +1,15 @@
 package sttp.tapir.server.mockserver
 
-import io.circe.Printer
+import io.circe.{JsonObject, Printer}
 import io.circe.syntax._
 import sttp.client3._
 import sttp.client3.testing._
 import sttp.model.Uri.UriContext
 import sttp.model.{ContentTypeRange, HasHeaders, Header, Headers, MediaType, StatusCode, Uri}
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
-import sttp.tapir.{CodecFormat, Endpoint, RawBodyType, WebSocketBodyOutput}
+import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.mockserver.impl.JsonCodecs._
+import cats.syntax.either._
 import java.nio.charset.Charset
 import io.circe.parser._
 import sttp.tapir.client.sttp.SttpClientInterpreter
@@ -17,11 +18,59 @@ import scala.collection.immutable.Seq
 
 class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: SttpBackend[F, Any]) {
 
+  import SttpMockServerClient._
+
+  private val F = backend.responseMonad
+
   def whenInputMatches[E, I, O](
       endpoint: Endpoint[I, E, O, Any]
   )(input: I): SttpMockServerClient.TypeAwareWhenRequest[F, I, E, O] =
     new SttpMockServerClient.TypeAwareWhenRequest[F, I, E, O](endpoint, input, baseUri)(backend)
 
+  def verifyRequest[E, I, O](
+      endpoint: Endpoint[I, E, O, Any],
+      times: VerificationTimes = VerificationTimes.exactlyOnce
+  )(input: I): F[ExpectationMatched] = {
+
+    val verifyExpectationRequest = VerifyExpectationRequest(
+      httpRequest = toExpectationRequest(endpoint, input),
+      times = times.toDefinition
+    )
+
+    val responseF = basicRequest
+      .put(uri"$baseUri/mockserver/verify")
+      .contentType(MediaType.ApplicationJson)
+      .body(printer.print(verifyExpectationRequest.asJson))
+      .send(backend)
+
+    F.flatMap(responseF) { response =>
+      handleResponse(response)(
+        onBadRequest = MockServerException.IncorrectRequestFormat,
+        onNotAcceptable = MockServerException.InvalidExpectation
+      )(onSuccess = _ => Right(ExpectationMatched))
+        .fold(F.error, F.unit)
+    }
+  }
+
+  def clear: F[Unit] = {
+    val responseF = basicRequest
+      .put(uri"$baseUri/mockserver/clear")
+      .send(backend)
+
+    F.flatMap(responseF) {
+      handleSimpleResponse(_).fold(F.error, F.unit)
+    }
+  }
+
+  def reset: F[Unit] = {
+    val responseF = basicRequest
+      .put(uri"$baseUri/mockserver/reset")
+      .send(backend)
+
+    F.flatMap(responseF) {
+      handleSimpleResponse(_).fold(F.error, F.unit)
+    }
+  }
 }
 
 object SttpMockServerClient {
@@ -44,44 +93,12 @@ object SttpMockServerClient {
         expectedOutput: Either[E, O],
         statusCode: StatusCode
     ): F[List[Expectation]] = {
-      val request = SttpClientInterpreter.toRequest(endpoint, None).apply(input)
 
-      val requestBody = Option(new String(request.forceBodyAsByteArray)).filter(_.nonEmpty)
-
-      val response = {
-        val responseValue = expectedOutput.merge
-        val toResponseBody: ToResponseBody[Any, Nothing] = new ToResponseBody[Any, Nothing] {
-          override val streams: NoStreams = NoStreams
-          override def fromRawValue[RAW](v: RAW, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[RAW]): Any = v
-          override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
-          override def fromWebSocketPipe[REQ, RESP](
-              pipe: streams.Pipe[REQ, RESP],
-              o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
-          ): Any = pipe // impossible
-        }
-        new EncodeOutputs[Any, Nothing](toResponseBody, Seq(ContentTypeRange.AnyRange))
-          .apply(
-            expectedOutput.fold(
-              _ => endpoint.errorOutput,
-              _ => endpoint.output
-            ),
-            ParamsAsAny(responseValue),
-            OutputValues.empty
-          )
-      }
+      val outputValues = toOutputValues(endpoint)(expectedOutput)
 
       val createExpectationRequest: CreateExpectationRequest = CreateExpectationRequest(
-        httpRequest = ExpectationRequestDefinition(
-          method = request.method,
-          path = request.uri,
-          body = requestBody,
-          headers = headersToMultiMapOpt(request.headers)
-        ),
-        httpResponse = ExpectationResponseDefinition(
-          body = response.body.map(_.apply(Headers(response.headers)).toString),
-          headers = headersToMultiMapOpt(response.headers),
-          statusCode = response.statusCode.getOrElse(statusCode)
-        )
+        httpRequest = toExpectationRequest(endpoint, input),
+        httpResponse = toExpectationResponse(outputValues, statusCode)
       )
 
       val responseF = basicRequest
@@ -91,18 +108,96 @@ object SttpMockServerClient {
         .send(backend)
 
       F.flatMap(responseF) { response =>
-        response.body.fold(
-          errorBody => F.error(new RuntimeException(errorBody)),
-          body => decode[List[Expectation]](body).fold(F.error, F.unit)
-        )
+        handleResponse(response)(
+          onBadRequest = MockServerException.IncorrectRequestFormat,
+          onNotAcceptable = MockServerException.InvalidExpectation
+        )(onSuccess = body => decode[List[Expectation]](body))
+          .fold(F.error, F.unit)
       }
     }
 
-    private def headersToMultiMapOpt(headers: Seq[Header]): Option[Map[String, List[String]]] =
-      if (headers.isEmpty) None
-      else Some(headers.groupBy(_.name).map { case (name, values) => name -> values.map(_.value).toList })
+  }
 
-    private val printer = Printer.noSpaces.copy(dropNullValues = true)
+  private def toExpectationRequest[E, I, O](endpoint: Endpoint[I, E, O, Any], input: I): ExpectationRequestDefinition = {
+    val request = SttpClientInterpreter.toRequest(endpoint, None).apply(input)
+    ExpectationRequestDefinition(
+      method = request.method,
+      path = request.uri,
+      body = toExpectationBody(request),
+      headers = headersToMultiMapOpt(request.headers)
+    )
+  }
 
+  private def toExpectationResponse[E, I, O](outputValues: OutputValues[Any], statusCode: StatusCode): ExpectationResponseDefinition = {
+    ExpectationResponseDefinition(
+      body = outputValues.body.map(_.apply(Headers(outputValues.headers)).toString),
+      headers = headersToMultiMapOpt(outputValues.headers),
+      statusCode = outputValues.statusCode.getOrElse(statusCode)
+    )
+  }
+
+  private def toExpectationBody[E, O](request: Request[DecodeResult[Either[E, O]], Any]): Option[ExpectationBodyDefinition] = {
+    val requestBody = Option(new String(request.forceBodyAsByteArray)).filter(_.nonEmpty)
+
+    for {
+      body <- requestBody
+      contentTypeRaw <- (request: HasHeaders).contentType
+      contentType <- MediaType.parse(contentTypeRaw).toOption
+    } yield contentType match {
+      case MediaType.ApplicationJson =>
+        ExpectationBodyDefinition.Json(
+          json = decode[JsonObject](body).valueOr(throw _), // todo: probably it should not throw if tapir interprets correctly
+          matchType = ExpectationBodyDefinition.JsonMatchType.Strict
+        )
+      case other => ExpectationBodyDefinition.Plain(body, other)
+    }
+  }
+
+  private def toOutputValues[E, I, O](
+      endpoint: Endpoint[I, E, O, Any]
+  )(expectedOutput: Either[E, O]): OutputValues[Any] = {
+
+    val responseValue = expectedOutput.merge
+    val toResponseBody: ToResponseBody[Any, Nothing] = new ToResponseBody[Any, Nothing] {
+      override val streams: NoStreams = NoStreams
+      override def fromRawValue[RAW](v: RAW, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[RAW]): Any = v
+      override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
+      override def fromWebSocketPipe[REQ, RESP](
+          pipe: streams.Pipe[REQ, RESP],
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+      ): Any = pipe // impossible
+    }
+    new EncodeOutputs[Any, Nothing](toResponseBody, Seq(ContentTypeRange.AnyRange))
+      .apply(
+        expectedOutput.fold(
+          _ => endpoint.errorOutput,
+          _ => endpoint.output
+        ),
+        ParamsAsAny(responseValue),
+        OutputValues.empty
+      )
+  }
+
+  private def headersToMultiMapOpt(headers: Seq[Header]): Option[Map[String, List[String]]] =
+    if (headers.isEmpty) None
+    else Some(headers.groupBy(_.name).map { case (name, values) => name -> values.map(_.value).toList })
+
+  private val printer = Printer.noSpaces.copy(dropNullValues = true)
+
+  private def handleSimpleResponse(response: Response[Either[String, String]]): Either[Throwable, Unit] = {
+    response.body.left.map(error => MockServerException.UnexpectedError(response.code, error)).map(_ => ())
+  }
+
+  private def handleResponse[A](response: Response[Either[String, String]])(
+      onBadRequest: String => Throwable,
+      onNotAcceptable: String => Throwable
+  )(onSuccess: String => Either[Throwable, A]): Either[Throwable, A] = {
+    response.body.left
+      .map { errorBody =>
+        if (response.code == StatusCode.BadRequest) onBadRequest(errorBody)
+        else if (response.code == StatusCode.NotAcceptable) onNotAcceptable(errorBody)
+        else MockServerException.UnexpectedError(response.code, errorBody)
+      }
+      .flatMap(onSuccess)
   }
 }

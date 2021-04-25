@@ -6,9 +6,14 @@ import sttp.tapir._
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.mockserver.SttpMockServerClient
+import sttp.tapir.server.mockserver.{SttpMockServerClient, VerificationTimes}
 
-object    MockServerExample extends App {
+/** @note - run the following docker command to setup mock-server locally
+  * {{{
+  *   docker run -d --name tapir-mock-server --rm -p 1080:1080 mockserver/mockserver
+  * }}}
+  */
+object MockServerExample extends App {
   val backend = TryHttpURLConnectionBackend()
 
   case class SampleIn(name: String, age: Int)
@@ -39,4 +44,12 @@ object    MockServerExample extends App {
     .send(backend)
 
   println(s"Got result $result")
+
+  val verifyResult = mockServerClient.verifyRequest(sampleEndpoint, times = VerificationTimes.atLeastOnce)(sampleIn)
+
+  println(s"Got verification result: $verifyResult")
+
+  val clearResult = mockServerClient.clear
+
+  println(s"Got clearing result: $clearResult")
 }
