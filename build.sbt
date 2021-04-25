@@ -484,6 +484,22 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   )
   .dependsOn(core)
 
+lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio-json"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-zio",
+    libraryDependencies ++= Seq(
+      "dev.zio" %%% "zio-json" % Versions.zioJson,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
 // apispec
 
 lazy val apispecModel: ProjectMatrix = (projectMatrix in file("apispec/apispec-model"))
