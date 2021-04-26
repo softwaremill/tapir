@@ -31,7 +31,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp: ServerEndpoint[String, String, String, Any, Id] = testEndpoint.serverLogic { name => testEndpointLogic(name) }
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withRequestsTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
+      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     interpreter.apply(testRequest("Jacob"), serverEp)
@@ -52,7 +52,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     }
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withRequestsActive()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
+      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     val response = Future { interpreter.apply(testRequest("Jacob"), serverEp) }
@@ -78,7 +78,8 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](
       TestRequestBody,
       UnitToResponseBody,
-      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.handler))
+      List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.handler)),
+      _ => ()
     )
 
     // when
@@ -104,7 +105,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesDuration()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
+      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     interpreter.apply(testRequest("Jacob"), waitServerEp(100))
@@ -133,7 +134,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal(labels)
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
+      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     interpreter.apply(testRequest("Jacob"), serverEp)
@@ -147,7 +148,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp: ServerEndpoint[String, String, String, Any, Id] = testEndpoint.serverLogic { name => testEndpointLogic(name) }
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
+      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
     val ses = List(
       metrics.metricsEndpoint.serverLogic { _ => idMonadError.unit(Right(metrics.registry).asInstanceOf[Either[Unit, CollectorRegistry]]) },
       serverEp
@@ -168,7 +169,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     // given
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
+      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     for {
@@ -195,7 +196,8 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val interpreter = new ServerInterpreter[Any, Id, String, Nothing](
       TestRequestBody,
       StringToResponseBody,
-      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler))
+      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler)),
+      _ => ()
     )
 
     // when

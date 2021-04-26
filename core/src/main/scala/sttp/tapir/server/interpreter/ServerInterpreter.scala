@@ -99,7 +99,7 @@ class ServerInterpreter[R, F[_], B, S](
                 case DecodeResult.Value(bodyV) => (values.setBodyInputValue(bodyV): DecodeBasicInputsResult).unit
                 case failure: DecodeResult.Failure =>
                   v.createdFiles
-                    .foldLeft(m.unit(()))((u, f) => u.flatMap(_ => deleteFile(f)))
+                    .foldLeft(monad.unit(()))((u, f) => u.flatMap(_ => deleteFile(f)))
                     .map(_ => DecodeBasicInputsResult.Failure(bodyInput, failure): DecodeBasicInputsResult)
               }
             }

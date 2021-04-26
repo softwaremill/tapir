@@ -51,7 +51,6 @@ object VertxCatsServerOptions {
     */
   def customInterceptors[F[_]: Sync](
       metricsInterceptor: Option[MetricsRequestInterceptor[F, RoutingContext => Unit]] = None,
-  def customInterceptors[F[_]: Sync](
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[F, RoutingContext => Unit]] = Nil,

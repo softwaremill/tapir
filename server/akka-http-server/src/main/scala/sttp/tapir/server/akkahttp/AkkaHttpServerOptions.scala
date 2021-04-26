@@ -3,7 +3,7 @@ package sttp.tapir.server.akkahttp
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
 import sttp.tapir.Defaults
-import sttp.tapir.model.ServerRequest
+import sttp.tapir.model.{ServerRequest, SttpFile}
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}

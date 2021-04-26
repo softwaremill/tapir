@@ -6,7 +6,7 @@ import sttp.model.HasHeaders
 import sttp.monad.MonadError
 import sttp.tapir.SchemaType.SProductField
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.server.interpreter.{BodyListener, RequestBody, ToResponseBody}
+import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ToResponseBody}
 
 import java.nio.charset.Charset
 import scala.util.{Success, Try}
@@ -18,7 +18,7 @@ object TestUtil {
 
   object TestRequestBody extends RequestBody[Id, Nothing] {
     override val streams: Streams[Nothing] = NoStreams
-    override def toRaw[R](bodyType: RawBodyType[R]): Id[R] = ???
+    override def toRaw[R](bodyType: RawBodyType[R]): Id[RawValue[R]] = ???
     override def toStream(): streams.BinaryStream = ???
   }
 
