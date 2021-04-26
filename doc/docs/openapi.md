@@ -91,7 +91,7 @@ case class MyExtension(string: String, int: Int)
 
 val sampleEndpoint =
   endpoint.post
-    .in("path-hello" / path[String]("world").extension("x-path", 22))
+    .in("path-hello" / path[String]("world").docsExtension("x-path", 22))
     .in(query[String]("hi").docsExtension("x-query", 33))
     .in(jsonBody[FruitAmount].docsExtension("x-request", MyExtension("a", 1)))
     .out(jsonBody[FruitAmount].docsExtension("x-response", List("array-0", "array-1")).docsExtension("x-response", "foo"))
