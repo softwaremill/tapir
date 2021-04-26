@@ -1,17 +1,18 @@
 package sttp.tapir.server.play
 
-import java.io.ByteArrayInputStream
-import java.nio.charset.Charset
 import akka.stream.Materializer
 import akka.util.ByteString
 import play.api.mvc.{RawBuffer, Request}
 import play.core.parsers.Multipart
 import sttp.capabilities.Streams
 import sttp.model.Part
-import sttp.tapir.{RawBodyType, RawPart}
 import sttp.tapir.internal._
-import sttp.tapir.server.interpreter.RequestBody
+import sttp.tapir.model.SttpFile
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.{RawBodyType, RawPart}
 
+import java.io.ByteArrayInputStream
+import java.nio.charset.Charset
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
@@ -20,7 +21,7 @@ private[play] class PlayRequestBody(request: Request[RawBuffer], serverOptions: 
 
   override val streams: Streams[Nothing] = NoStreams
 
-  override def toRaw[R](bodyType: RawBodyType[R]): Future[R] = {
+  override def toRaw[R](bodyType: RawBodyType[R]): Future[RawValue[R]] = {
     val body = request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))
     val charset = request.charset.map(Charset.forName)
     toRaw(bodyType, charset, body)
@@ -30,22 +31,25 @@ private[play] class PlayRequestBody(request: Request[RawBuffer], serverOptions: 
 
   private def toRaw[R](bodyType: RawBodyType[R], charset: Option[Charset], body: ByteString)(implicit
       mat: Materializer
-  ): Future[R] = {
+  ): Future[RawValue[R]] = {
     bodyType match {
-      case RawBodyType.StringBody(defaultCharset) => Future(new String(body.toArray, charset.getOrElse(defaultCharset)))
-      case RawBodyType.ByteArrayBody              => Future(body.toArray)
-      case RawBodyType.ByteBufferBody             => Future(body.toByteBuffer)
-      case RawBodyType.InputStreamBody            => Future(body.toArray).map(new ByteArrayInputStream(_))
+      case RawBodyType.StringBody(defaultCharset) => Future(RawValue(new String(body.toArray, charset.getOrElse(defaultCharset))))
+      case RawBodyType.ByteArrayBody              => Future(RawValue(body.toArray))
+      case RawBodyType.ByteBufferBody             => Future(RawValue(body.toByteBuffer))
+      case RawBodyType.InputStreamBody            => Future(RawValue(new ByteArrayInputStream(body.toArray)))
       case RawBodyType.FileBody =>
         Future(java.nio.file.Files.write(serverOptions.temporaryFileCreator.create().path, body.toArray))
-          .map(p => p.toFile)
+          .map { p =>
+            val file = p.toFile
+            RawValue(file, Seq(SttpFile.fromFile(file)))
+          }
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m, body)
     }
   }
 
   private def multiPartRequestToRawBody[R](request: Request[RawBuffer], m: RawBodyType.MultipartBody, body: ByteString)(implicit
       mat: Materializer
-  ): Future[Seq[RawPart]] = {
+  ): Future[RawValue[Seq[RawPart]]] = {
     val bodyParser = serverOptions.playBodyParsers.multipartFormData(
       Multipart.handleFilePartAsTemporaryFile(serverOptions.temporaryFileCreator)
     )
@@ -58,7 +62,7 @@ private[play] class PlayRequestBody(request: Request[RawBuffer], serverOptions: 
             m.partType(key).get,
             charset(m.partType(key).get),
             ByteString(value.flatMap(_.getBytes).toArray)
-          ).map(body => Part(key, body).asInstanceOf[RawPart])
+          ).map(body => Part(key, body.value))
         }.toSeq
 
         val fileParts = value.files.map(f => {
@@ -67,11 +71,11 @@ private[play] class PlayRequestBody(request: Request[RawBuffer], serverOptions: 
             charset(m.partType(f.key).get),
             ByteString.apply(java.nio.file.Files.readAllBytes(f.ref.path))
           ).map(body =>
-            Part(f.key, body, Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename), Nil)
+            Part(f.key, body.value, Map(f.key -> f.dispositionType, Part.FileNameDispositionParam -> f.filename), Nil)
               .asInstanceOf[RawPart]
           )
         })
-        Future.sequence(dataParts ++ fileParts)
+        Future.sequence(dataParts ++ fileParts).map(RawValue.fromParts)
     }
   }
 }

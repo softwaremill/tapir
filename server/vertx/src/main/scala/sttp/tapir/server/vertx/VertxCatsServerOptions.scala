@@ -1,9 +1,12 @@
 package sttp.tapir.server.vertx
 
 import cats.Applicative
+import cats.effect.Sync
 import cats.implicits.catsSyntaxOptionId
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
+import sttp.tapir.Defaults
+import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
@@ -14,7 +17,8 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import java.io.File
 
 final case class VertxCatsServerOptions[F[_]](
-    uploadDirectory: File,
+    uploadDirectory: SttpFile,
+    deleteFile: SttpFile => F[Unit],
     maxQueueSizeForReadStream: Int,
     interceptors: List[Interceptor[F, RoutingContext => Unit]]
 ) extends VertxServerOptions[F] {
@@ -45,8 +49,9 @@ object VertxCatsServerOptions {
     *                                        header.
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
-  def customInterceptors[F[_]: Applicative](
+  def customInterceptors[F[_]: Sync](
       metricsInterceptor: Option[MetricsRequestInterceptor[F, RoutingContext => Unit]] = None,
+  def customInterceptors[F[_]: Sync](
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[F, RoutingContext => Unit]] = Nil,
@@ -55,7 +60,8 @@ object VertxCatsServerOptions {
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): VertxCatsServerOptions[F] = {
     VertxCatsServerOptions(
-      File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
+      SttpFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
+      file => Sync[F].delay(Defaults.deleteFile()(file)),
       maxQueueSizeForReadStream = 16,
       metricsInterceptor.toList ++
         exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
@@ -66,5 +72,5 @@ object VertxCatsServerOptions {
     )
   }
 
-  implicit def default[F[_]: Applicative]: VertxCatsServerOptions[F] = customInterceptors()
+  implicit def default[F[_]: Sync]: VertxCatsServerOptions[F] = customInterceptors()
 }

@@ -21,12 +21,16 @@ class UnsupportedMediaTypeInterceptor[F[_], B] extends EndpointInterceptor[F, B]
         ctx.request.acceptsContentTypes match {
           case _ @(Right(Nil) | Right(ContentTypeRange.AnyRange :: Nil)) => endpointHandler.onDecodeSuccess(ctx)
           case Right(ranges) =>
-            val hasMatchingRepresentation = ctx.endpoint.output.supportedMediaTypes.exists(mt => ranges.exists(mt.matches))
+            val supportedMediaTypes = ctx.endpoint.output.supportedMediaTypes
+            // empty supported media types -> no body is defined, so the accepts header can be ignored
+            val hasMatchingRepresentation = supportedMediaTypes.exists(mt => ranges.exists(mt.matches)) || supportedMediaTypes.isEmpty
 
             if (hasMatchingRepresentation) endpointHandler.onDecodeSuccess(ctx)
             else responder(ctx.request, ValuedEndpointOutput(statusCode(StatusCode.UnsupportedMediaType), ()))
 
-          case Left(_) => responder(ctx.request, ValuedEndpointOutput(statusCode(StatusCode.BadRequest), ()))
+          case Left(_) =>
+            // we're forgiving, if we can't parse the accepts header, we try to return any response
+            endpointHandler.onDecodeSuccess(ctx)
         }
       }
 

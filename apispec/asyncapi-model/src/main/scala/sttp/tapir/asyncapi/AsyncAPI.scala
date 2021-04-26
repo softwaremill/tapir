@@ -1,6 +1,15 @@
 package sttp.tapir.asyncapi
 
-import sttp.tapir.apispec.{ExampleValue, ExternalDocumentation, ReferenceOr, Schema, SecurityRequirement, SecurityScheme, Tag}
+import sttp.tapir.apispec.{
+  ExampleValue,
+  ExtensionValue,
+  ExternalDocumentation,
+  ReferenceOr,
+  Schema,
+  SecurityRequirement,
+  SecurityScheme,
+  Tag
+}
 
 import scala.collection.immutable.ListMap
 
@@ -12,7 +21,8 @@ case class AsyncAPI(
     channels: ListMap[String, ReferenceOr[ChannelItem]],
     components: Option[Components],
     tags: List[Tag],
-    externalDocs: Option[ExternalDocumentation]
+    externalDocs: Option[ExternalDocumentation],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def id(id: String): AsyncAPI = copy(id = Some(id))
   def servers(s: ListMap[String, Server]): AsyncAPI = copy(servers = s)
@@ -25,12 +35,22 @@ case class Info(
     description: Option[String] = None,
     termsOfService: Option[String] = None,
     contact: Option[Contact] = None,
-    license: Option[License] = None
+    license: Option[License] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
-case class Contact(name: Option[String] = None, url: Option[String] = None, email: Option[String] = None)
+case class Contact(
+    name: Option[String] = None,
+    url: Option[String] = None,
+    email: Option[String] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
-case class License(name: String, url: Option[String] = None)
+case class License(
+    name: String,
+    url: Option[String] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
 case class Server(
     url: String,
@@ -39,16 +59,24 @@ case class Server(
     description: Option[String] = None,
     variables: ListMap[String, ServerVariable] = ListMap.empty,
     security: List[SecurityRequirement] = Nil,
-    bindings: List[ServerBinding] = Nil
+    bindings: List[ServerBinding] = Nil,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
-case class ServerVariable(enum: List[String], default: Option[String], description: Option[String], examples: List[String])
+case class ServerVariable(
+    enum: List[String],
+    default: Option[String],
+    description: Option[String],
+    examples: List[String],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
 case class ChannelItem(
     description: Option[String],
     subscribe: Option[Operation],
     publish: Option[Operation],
     parameters: ListMap[String, ReferenceOr[Parameter]],
-    bindings: List[ChannelBinding]
+    bindings: List[ChannelBinding],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 case class Operation(
     operationId: Option[String],
@@ -58,7 +86,8 @@ case class Operation(
     externalDocs: Option[ExternalDocumentation],
     bindings: List[OperationBinding],
     traits: List[OperationTrait],
-    message: Option[ReferenceOr[Message]]
+    message: Option[ReferenceOr[Message]],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class OperationTrait(
@@ -67,10 +96,16 @@ case class OperationTrait(
     description: Option[String],
     tags: List[Tag],
     externalDocs: Option[ExternalDocumentation],
-    bindings: List[OperationBinding]
+    bindings: List[OperationBinding],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
-case class Parameter(description: Option[String], schema: Option[Schema], location: Option[String])
+case class Parameter(
+    description: Option[String],
+    schema: Option[Schema],
+    location: Option[String],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
 sealed trait ServerBinding
 case class HttpServerBinding() extends ServerBinding
@@ -110,7 +145,8 @@ case class SingleMessage(
     externalDocs: Option[ExternalDocumentation],
     bindings: List[MessageBinding],
     examples: List[Map[String, List[ExampleValue]]],
-    traits: List[ReferenceOr[MessageTrait]]
+    traits: List[ReferenceOr[MessageTrait]],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) extends Message
 
 case class MessageTrait(
@@ -125,7 +161,8 @@ case class MessageTrait(
     tags: List[Tag],
     externalDocs: Option[ExternalDocumentation],
     bindings: List[MessageBinding],
-    examples: ListMap[String, ExampleValue]
+    examples: ListMap[String, ExampleValue],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 // TODO: serverBindings, channelBindings, operationBindings, messageBindings
@@ -136,9 +173,10 @@ case class Components(
     parameters: ListMap[String, ReferenceOr[Parameter]],
     correlationIds: ListMap[String, ReferenceOr[CorrelationId]],
     operationTraits: ListMap[String, ReferenceOr[OperationTrait]],
-    messageTraits: ListMap[String, ReferenceOr[MessageTrait]]
+    messageTraits: ListMap[String, ReferenceOr[MessageTrait]],
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
-case class CorrelationId(description: Option[String], location: String)
+case class CorrelationId(description: Option[String], location: String, extensions: ListMap[String, ExtensionValue] = ListMap.empty)
 
 case class AnyValue(value: String)

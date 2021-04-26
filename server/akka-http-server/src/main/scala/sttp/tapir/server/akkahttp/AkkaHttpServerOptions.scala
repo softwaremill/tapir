@@ -11,11 +11,11 @@ import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, Excepti
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
-import java.io.File
 import scala.concurrent.Future
 
 case class AkkaHttpServerOptions(
-    createFile: ServerRequest => Future[File],
+    createFile: ServerRequest => Future[SttpFile],
+    deleteFile: SttpFile => Future[Unit],
     interceptors: List[Interceptor[Future, AkkaResponseBody]]
 ) {
   def prependInterceptor(i: Interceptor[Future, AkkaResponseBody]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
@@ -54,6 +54,7 @@ object AkkaHttpServerOptions {
   ): AkkaHttpServerOptions =
     AkkaHttpServerOptions(
       defaultCreateFile,
+      defaultDeleteFile,
       metricsInterceptor.toList ++
         exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
         serverLog.map(Log.serverLogInterceptor).toList ++
@@ -62,9 +63,14 @@ object AkkaHttpServerOptions {
         List(new DecodeFailureInterceptor[Future, AkkaResponseBody](decodeFailureHandler))
     )
 
-  val defaultCreateFile: ServerRequest => Future[File] = { _ =>
+  val defaultCreateFile: ServerRequest => Future[SttpFile] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
-    Future(Defaults.createTempFile())
+    Future(SttpFile.fromFile(Defaults.createTempFile()))
+  }
+
+  val defaultDeleteFile: SttpFile => Future[Unit] = file => {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future(Defaults.deleteFile()(file))
   }
 
   object Log {

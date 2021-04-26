@@ -5,6 +5,8 @@ import play.api.Logger
 import play.api.http.HttpEntity
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
+import sttp.tapir.Defaults
+import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
@@ -16,6 +18,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class PlayServerOptions(
     temporaryFileCreator: TemporaryFileCreator,
+    deleteFile: SttpFile => Future[Unit],
     defaultActionBuilder: ActionBuilder[Request, AnyContent],
     playBodyParsers: PlayBodyParsers,
     decodeFailureHandler: DecodeFailureHandler,
@@ -57,6 +60,7 @@ object PlayServerOptions {
   )(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions =
     PlayServerOptions(
       SingletonTemporaryFileCreator,
+      defaultDeleteFile,
       DefaultActionBuilder.apply(PlayBodyParsers.apply().anyContent),
       PlayBodyParsers.apply(),
       decodeFailureHandler,
@@ -67,6 +71,11 @@ object PlayServerOptions {
         unsupportedMediaTypeInterceptor.toList ++
         List(new DecodeFailureInterceptor[Future, HttpEntity](decodeFailureHandler))
     )
+
+  val defaultDeleteFile: SttpFile => Future[Unit] = file => {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future(Defaults.deleteFile()(file))
+  }
 
   lazy val defaultServerLog: ServerLog[Unit] = DefaultServerLog(
     doLogWhenHandled = debugLog,

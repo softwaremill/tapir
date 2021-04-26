@@ -3,6 +3,7 @@ package sttp.tapir
 import java.nio.charset.Charset
 import sttp.capabilities.Streams
 import sttp.model.{Header, Method}
+import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
@@ -10,7 +11,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 import sttp.ws.WebSocketFrame
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{Seq, ListMap}
 import scala.concurrent.duration.FiniteDuration
 
 /** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
@@ -65,6 +66,7 @@ object EndpointTransput {
     def example(example: Example[T]): ThisType[T] = copyWith(codec, info.example(example))
     def examples(examples: List[Example[T]]): ThisType[T] = copyWith(codec, info.examples(examples))
     def deprecated(): ThisType[T] = copyWith(codec, info.deprecated(true))
+    def docsExtension[A: JsonCodec](key: String, value: A): ThisType[T] = copyWith(codec, info.docsExtension(key, value))
   }
 
   sealed trait Pair[T] extends EndpointTransput[T] {
@@ -472,13 +474,14 @@ object EndpointIO {
     def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
   }
 
-  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean) {
+  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean, docsExtensions: Vector[DocsExtension[_]]) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
     def example(t: T): Info[T] = example(Example.of(t))
     def example(example: Example[T]): Info[T] = copy(examples = examples :+ example)
     def examples(ts: List[Example[T]]): Info[T] = copy(examples = ts)
     def deprecated(d: Boolean): Info[T] = copy(deprecated = d)
+    def docsExtension[A: JsonCodec](key: String, value: A): Info[T] = copy(docsExtensions = docsExtensions :+ DocsExtension.of(key, value))
 
     def map[U](codec: Mapping[T, U]): Info[U] =
       Info(
@@ -486,11 +489,12 @@ object EndpointIO {
         examples.map(e => e.copy(value = codec.decode(e.value))).collect { case Example(DecodeResult.Value(ee), name, summary) =>
           Example(ee, name, summary)
         },
-        deprecated
+        deprecated,
+        docsExtensions
       )
   }
   object Info {
-    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false)
+    def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
   }
 }
 
@@ -564,6 +568,11 @@ case class WebSocketBodyOutput[PIPE_REQ_RESP, REQ, RESP, T, S](
   def responsesExample(e: RESP): ThisType[T] = copy(responsesInfo = responsesInfo.example(e))
   def responsesExamples(examples: List[RESP]): ThisType[T] =
     copy(responsesInfo = responsesInfo.examples(examples.map(Example(_, None, None))))
+
+  def requestsDocsExtension[A: JsonCodec](key: String, value: A): ThisType[T] =
+    copy(requestsInfo = requestsInfo.docsExtension(key, value))
+  def responsesDocsExtension[A: JsonCodec](key: String, value: A): ThisType[T] =
+    copy(responsesInfo = responsesInfo.docsExtension(key, value))
 
   /** @param c If `true`, fragmented frames will be concatenated, and the data frames that the `requests` & `responses`
     *          codecs decode will always have `finalFragment` set to `true`.

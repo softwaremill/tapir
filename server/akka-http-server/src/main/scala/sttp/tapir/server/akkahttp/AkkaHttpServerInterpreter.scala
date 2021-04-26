@@ -50,7 +50,8 @@ trait AkkaHttpServerInterpreter {
           val interpreter = new ServerInterpreter(
             new AkkaRequestBody(ctx, serverRequest, serverOptions),
             new AkkaToResponseBody,
-            serverOptions.interceptors
+            serverOptions.interceptors,
+            serverOptions.deleteFile
           )
 
           onSuccess(interpreter(serverRequest, ses)) {
