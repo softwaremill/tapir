@@ -8,10 +8,7 @@ sealed trait TestError
 object TestError {
   case object SomeError extends TestError
 
-  implicit val schema: Schema[TestError] =
-    Schema.schemaForString.map(value => if (value == "SomeError") Some(SomeError: TestError) else None)(_.toString)
-
-  implicit val codec: Codec[String, TestError, TextPlain] = Codec.anyStringCodec(CodecFormat.TextPlain()) {
+  implicit val codec: Codec[String, TestError, TextPlain] = Codec.string.mapDecode {
     case "SomeError" => DecodeResult.Value(SomeError: TestError)
     case value       => DecodeResult.Error(value, new RuntimeException(s"Unable to decode value $value"))
   }(_.toString)

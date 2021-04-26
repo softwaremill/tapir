@@ -25,24 +25,19 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
   private val exampleRequestBody = new RequestBody[TestEffect, RequestBodyType] {
     override val streams: Streams[RequestBodyType] = null.asInstanceOf[Streams[RequestBodyType]]
-
     override def toRaw[R](bodyType: RawBodyType[R]): TestEffect[RawValue[R]] = ???
-
     override def toStream(): streams.BinaryStream = ???
   }
 
   private val exampleToResponse: ToResponseBody[ResponseBodyType, RequestBodyType] = new ToResponseBody[ResponseBodyType, RequestBodyType] {
     override val streams: Streams[RequestBodyType] = null.asInstanceOf[Streams[RequestBodyType]]
-
     override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ResponseBodyType = "Sample body"
-
     override def fromStreamValue(
         v: streams.BinaryStream,
         headers: HasHeaders,
         format: CodecFormat,
         charset: Option[Charset]
     ): ResponseBodyType = ???
-
     override def fromWebSocketPipe[REQ, RESP](
         pipe: streams.Pipe[REQ, RESP],
         o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, RequestBodyType]
@@ -51,20 +46,12 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
   private val testRequest: ServerRequest = new ServerRequest {
     override def protocol: String = ???
-
     override def connectionInfo: ConnectionInfo = ???
-
     override def underlying: Any = ???
-
-    /** Can differ from `uri.path`, if the endpoint is deployed in a context */
     override def pathSegments: List[String] = List("foo", "bar")
-
     override def queryParameters: QueryParams = QueryParams()
-
     override def method: Method = ???
-
     override def uri: Uri = ???
-
     override def headers: scala.collection.immutable.Seq[Header] = scala.collection.immutable.Seq(Header("X-User-Name", "John"))
   }
 
@@ -85,9 +72,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
   private val testZServerLogicErrorHandling = testM("zServerLogic error handling") {
     val testEndpoint: Endpoint[Unit, TestError, String, Any] = endpoint.in("foo" / "bar").errorOut(plainBody[TestError]).out(stringBody)
 
-    def logic(input: Unit): ZIO[Any, TestError, String] = {
-      ZIO(10 / 0).orDie.map(_.toString)
-    }
+    def logic(input: Unit): ZIO[Any, TestError, String] = ZIO(10 / 0).orDie.map(_.toString)
     val serverEndpoint: ZServerEndpoint[Any, Unit, TestError, String] = testEndpoint.zServerLogic(logic)
 
     interpreter[Unit, TestError, String](testRequest, serverEndpoint)
