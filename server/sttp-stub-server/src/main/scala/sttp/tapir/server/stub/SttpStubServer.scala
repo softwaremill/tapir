@@ -180,7 +180,7 @@ object SttpStubServer {
 
   private def requestBody[F[_]](): RequestBody[F, Nothing] = new RequestBody[F, Nothing] {
     override val streams: Streams[Nothing] = NoStreams
-    override def toRaw[R](bodyType: RawBodyType[R]): F[R] = ???
+    override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = ???
     override def toStream(): streams.BinaryStream = ???
   }
 }
