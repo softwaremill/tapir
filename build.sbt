@@ -328,10 +328,12 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
   .settings(commonSettings)
   .settings(
     name := "tapir-zio",
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-streams" % Versions.zio,
-      scalaTest.value % Test,
+      "dev.zio" %% "zio-test" % Versions.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
     )
   )
