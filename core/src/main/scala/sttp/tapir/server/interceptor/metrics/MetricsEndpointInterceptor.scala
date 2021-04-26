@@ -2,85 +2,101 @@ package sttp.tapir.server.interceptor.metrics
 
 import sttp.monad.MonadError
 import sttp.monad.syntax._
-import sttp.tapir.metrics.Metric
+import sttp.tapir.metrics.{EndpointMetric, Metric}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.interpreter.BodyListenerSyntax._
 import sttp.tapir.{DecodeResult, Endpoint}
 
-import scala.concurrent.duration.Deadline
-
-class MetricsRequestInterceptor[F[_], B](metrics: List[Metric[_]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])
+class MetricsRequestInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])
     extends RequestInterceptor[F, B] {
 
   override def apply(responder: Responder[F, B], requestHandler: EndpointInterceptor[F, B] => RequestHandler[F, B]): RequestHandler[F, B] =
-    (request: ServerRequest) => {
-      val requestStart = Deadline.now
-      requestHandler(new MetricsEndpointInterceptor[F, B](metrics, ignoreEndpoints, requestStart)).apply(request)
+    new RequestHandler[F, B] {
+      override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] =
+        metrics
+          .foldLeft(monad.unit(List.empty[EndpointMetric[F]])) { (mAcc, metric) =>
+            for {
+              metrics <- mAcc
+              endpointMetric <- metric match {
+                case Metric(m, onRequest) => onRequest(request, m, monad)
+              }
+            } yield metrics :+ endpointMetric
+          }
+          .flatMap { endpointMetrics =>
+            requestHandler(new MetricsEndpointInterceptor[F, B](endpointMetrics, ignoreEndpoints)).apply(request)
+          }
     }
 }
 
 private[metrics] class MetricsEndpointInterceptor[F[_], B](
-    metrics: List[Metric[_]],
-    ignoreEndpoints: Seq[Endpoint[_, _, _, _]],
-    requestStart: Deadline
+    endpointMetrics: List[EndpointMetric[F]],
+    ignoreEndpoints: Seq[Endpoint[_, _, _, _]]
 ) extends EndpointInterceptor[F, B] {
 
   override def apply(responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[I](
           ctx: DecodeSuccessContext[F, I]
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeSuccess(ctx)
         else {
-          for {
-            _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
+          val responseWithMetrics: F[ServerResponse[B]] = for {
+            _ <- collectMetrics { case EndpointMetric(Some(onRequest), _, _) => onRequest(ctx.endpoint) }
             response <- endpointHandler.onDecodeSuccess(ctx)
-            responseWithMetrics <- withBodyOnComplete(response) {
-              collectMetrics { case Metric(m, _, Some(onResponse)) => onResponse(ctx.endpoint, ctx.request, response, requestStart, m) }
+            withMetrics <- withBodyOnComplete(response) {
+              collectMetrics { case EndpointMetric(_, Some(onResponse), _) => onResponse(ctx.endpoint, response) }
             }
-          } yield responseWithMetrics
+          } yield withMetrics
+
+          responseWithMetrics.handleError { case e: Exception =>
+            collectMetrics { case EndpointMetric(_, _, Some(onException)) => onException(ctx.endpoint, e) }.flatMap(_ => monad.error(e))
+          }
         }
+      }
 
       /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage.
         */
       override def onDecodeFailure(
           ctx: DecodeFailureContext
-      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] =
+      )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {
         if (ignoreEndpoints.contains(ctx.endpoint)) endpointHandler.onDecodeFailure(ctx)
         else {
           ctx.failure match {
             case _: DecodeResult.Mismatch => endpointHandler.onDecodeFailure(ctx)
             case _ =>
-              for {
+              val responseWithMetrics: F[Option[ServerResponse[B]]] = for {
                 response <- endpointHandler.onDecodeFailure(ctx)
-                responseWithMetrics <- response match {
+                withMetrics <- response match {
                   case Some(response) =>
                     for {
-                      _ <- collectMetrics { case Metric(m, Some(onRequest), _) => onRequest(ctx.endpoint, ctx.request, m) }
+                      _ <- collectMetrics { case EndpointMetric(Some(onRequest), _, _) => onRequest(ctx.endpoint) }
                       res <- withBodyOnComplete(response) {
-                        collectMetrics { case Metric(m, _, Some(onResponse)) =>
-                          onResponse(ctx.endpoint, ctx.request, response, requestStart, m)
-                        }
+                        collectMetrics { case EndpointMetric(_, Some(onResponse), _) => onResponse(ctx.endpoint, response) }
                       }
                     } yield Some(res)
                   case None => monad.unit(None)
                 }
-              } yield responseWithMetrics
+              } yield withMetrics
+
+              responseWithMetrics.handleError { case e: Exception =>
+                collectMetrics { case EndpointMetric(_, _, Some(onException)) => onException(ctx.endpoint, e) }.flatMap(_ => monad.error(e))
+              }
           }
         }
+      }
     }
 
-  private def collectMetrics(pf: PartialFunction[Metric[_], Unit])(implicit monad: MonadError[F]): F[Unit] = {
-    def collect(metrics: List[Metric[_]]): F[Unit] = {
+  private def collectMetrics(pf: PartialFunction[EndpointMetric[F], F[Unit]])(implicit monad: MonadError[F]): F[Unit] = {
+    def collect(metrics: List[EndpointMetric[F]]): F[Unit] = {
       metrics match {
         case Nil                            => ().unit
-        case m :: tail if pf.isDefinedAt(m) => monad.eval(pf(m)).flatMap(_ => collect(tail))
+        case m :: tail if pf.isDefinedAt(m) => pf(m).flatMap(_ => collect(tail))
         case _ :: tail                      => collect(tail)
       }
     }
-    collect(metrics)
+    collect(endpointMetrics)
   }
 
   private def withBodyOnComplete(

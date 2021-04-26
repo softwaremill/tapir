@@ -9,11 +9,11 @@ import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
 import sttp.tapir.{DecodeResult, EndpointIO, StreamBodyIO}
 
-class ServerInterpreter[R, F[_]: MonadError, B, S](
+class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
     interceptors: List[Interceptor[F, B]]
-)(implicit bodyListener: BodyListener[F, B]) {
+)(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
   def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] =
     apply(request, List(se))
 
@@ -28,11 +28,20 @@ class ServerInterpreter[R, F[_]: MonadError, B, S](
       ses: List[ServerEndpoint[_, _, _, R, F]]
   ): RequestHandler[F, B] = {
     is match {
-      case Nil => (request: ServerRequest) => firstNotNone(request, ses, eisAcc.reverse)
+      case Nil =>
+        new RequestHandler[F, B] {
+          override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] =
+            firstNotNone(request, ses, eisAcc.reverse)
+        }
       case (i: RequestInterceptor[F, B]) :: tail =>
         i(
           responder,
-          { ei => (request: ServerRequest) => callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request) }
+          { ei =>
+            new RequestHandler[F, B] {
+              override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] =
+                callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request)
+            }
+          }
         )
       case (ei: EndpointInterceptor[F, B]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, ses)
     }

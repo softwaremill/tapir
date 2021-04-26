@@ -11,9 +11,8 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.metrics.Metric
-import sttp.tapir.server.interceptor.metrics.{MetricsEndpointInterceptor, MetricsRequestInterceptor}
-import sttp.tapir.server.tests.ServerMetricsTest.Counter
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.{Fruit, Test}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
@@ -51,9 +50,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
         .map(_.body shouldBe Right(List("echo: test1", "echo: test2")))
     }, {
 
-      val reqCounter = Metric[Counter](new Counter()).onRequest { (_, _, c) => c.++() }
-      val resCounter = Metric[Counter](new Counter()).onResponse { (_, _, _, _, c) => c.++() }
-
+      val reqCounter = newRequestCounter[F]
+      val resCounter = newResponseCounter[F]
       val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
 
       testServer(endpoint.out(stringWs).name("metrics"), metricsInterceptor = metrics.some)((_: Unit) =>

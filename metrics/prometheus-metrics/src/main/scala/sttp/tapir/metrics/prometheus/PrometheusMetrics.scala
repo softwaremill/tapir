@@ -5,34 +5,34 @@ import io.prometheus.client.exporter.common.TextFormat
 import io.prometheus.client.{CollectorRegistry, Counter, Gauge, Histogram}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir._
-import sttp.tapir.metrics.Metric
+import sttp.tapir.metrics.{EndpointMetric, Metric}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 import java.io.StringWriter
-import scala.concurrent.duration.Deadline
+import java.time.{Duration, Instant}
 
-case class PrometheusMetrics(
+case class PrometheusMetrics[F[_]](
     namespace: String,
     registry: CollectorRegistry,
-    metrics: Set[Metric[_]] = Set.empty[Metric[_]]
+    metrics: List[Metric[F, _]] = List.empty[Metric[F, _]]
 ) {
   import PrometheusMetrics._
 
   lazy val metricsEndpoint: Endpoint[Unit, Unit, CollectorRegistry, Any] = endpoint.get.in("metrics").out(plainBody[CollectorRegistry])
 
-  def withRequestsTotal(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics =
-    copy(metrics = metrics + requestsTotal(registry, namespace, labels))
-  def withRequestsActive(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics =
-    copy(metrics = metrics + requestsActive(registry, namespace, labels))
-  def withResponsesTotal(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics =
-    copy(metrics = metrics + responsesTotal(registry, namespace, labels))
-  def withResponsesDuration(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics =
-    copy(metrics = metrics + responsesDuration(registry, namespace, labels))
-  def withCustom(m: Metric[_]): PrometheusMetrics = copy(metrics = metrics + m)
+  def withRequestsTotal(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+    copy(metrics = metrics :+ requestsTotal(registry, namespace, labels))
+  def withRequestsActive(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+    copy(metrics = metrics :+ requestsActive(registry, namespace, labels))
+  def withResponsesTotal(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+    copy(metrics = metrics :+ responsesTotal(registry, namespace, labels))
+  def withResponsesDuration(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+    copy(metrics = metrics :+ responsesDuration(registry, namespace, labels))
+  def withCustom(m: Metric[F, _]): PrometheusMetrics[F] = copy(metrics = metrics :+ m)
 
-  def metricsInterceptor[F[_], B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F, B] =
-    new MetricsRequestInterceptor[F, B](metrics.toList, ignoreEndpoints :+ metricsEndpoint)
+  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F, B] =
+    new MetricsRequestInterceptor[F, B](metrics, ignoreEndpoints :+ metricsEndpoint)
 }
 
 object PrometheusMetrics {
@@ -47,11 +47,11 @@ object PrometheusMetrics {
       output.toString
     })
 
-  def withDefaultMetrics(namespace: String = "tapir", labels: PrometheusLabels = DefaultLabels): PrometheusMetrics =
+  def withDefaultMetrics[F[_]](namespace: String = "tapir", labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
     PrometheusMetrics(
       namespace,
       defaultRegistry,
-      Set(
+      List(
         requestsTotal(defaultRegistry, namespace, labels),
         requestsActive(defaultRegistry, namespace, labels),
         responsesTotal(defaultRegistry, namespace, labels),
@@ -59,8 +59,8 @@ object PrometheusMetrics {
       )
     )
 
-  def requestsTotal(registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[Counter] =
-    Metric[Counter](
+  def requestsTotal[F[_]](registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[F, Counter] =
+    Metric[F, Counter](
       Counter
         .build()
         .namespace(namespace)
@@ -68,13 +68,16 @@ object PrometheusMetrics {
         .help("Total HTTP requests")
         .labelNames(labels.forRequestNames: _*)
         .create()
-        .register(registry)
-    ).onRequest { (ep, req, counter) =>
-      counter.labels(labels.forRequest(ep, req): _*).inc()
-    }
+        .register(registry),
+      onRequest = { (req, counter, m) =>
+        m.unit {
+          EndpointMetric().onRequest { ep => m.eval(counter.labels(labels.forRequest(ep, req): _*).inc()) }
+        }
+      }
+    )
 
-  def requestsActive(registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[Gauge] =
-    Metric[Gauge](
+  def requestsActive[F[_]](registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[F, Gauge] =
+    Metric[F, Gauge](
       Gauge
         .build()
         .namespace(namespace)
@@ -82,36 +85,56 @@ object PrometheusMetrics {
         .help("Active HTTP requests")
         .labelNames(labels.forRequestNames: _*)
         .create()
-        .register(registry)
-    ).onRequest { (ep, req, gauge) => gauge.labels(labels.forRequest(ep, req): _*).inc() }
-      .onResponse { (ep, req, _, _, gauge) => gauge.labels(labels.forRequest(ep, req): _*).dec() }
+        .register(registry),
+      onRequest = { (req, gauge, m) =>
+        m.unit {
+          EndpointMetric()
+            .onRequest { ep => m.eval(gauge.labels(labels.forRequest(ep, req): _*).inc()) }
+            .onResponse { (ep, _) => m.eval(gauge.labels(labels.forRequest(ep, req): _*).dec()) }
+        }
+      }
+    )
 
-  def responsesTotal(registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[Counter] =
-    Metric[Counter](
+  def responsesTotal[F[_]](registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[F, Counter] =
+    Metric[F, Counter](
       Counter
         .build()
         .namespace(namespace)
         .name("responses_total")
         .help("HTTP responses")
         .labelNames(labels.forRequestNames ++ labels.forResponseNames: _*)
-        .register(registry)
-    ).onResponse { (ep, req, res, _, counter) => counter.labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*).inc() }
+        .register(registry),
+      onRequest = { (req, counter, m) =>
+        m.unit {
+          EndpointMetric()
+            .onResponse { (ep, res) => m.eval(counter.labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*).inc()) }
+        }
+      }
+    )
 
-  def responsesDuration(registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[Histogram] =
-    Metric[Histogram](
+  def responsesDuration[F[_]](registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[F, Histogram] =
+    Metric[F, Histogram](
       Histogram
         .build()
         .namespace(namespace)
         .name("responses_duration")
         .help("HTTP responses duration")
         .labelNames(labels.forRequestNames ++ labels.forResponseNames: _*)
-        .register(registry)
-    ).onResponse { (ep, req, res, reqStart, histogram) =>
-      histogram
-        .labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*)
-        .observe((Deadline.now - reqStart).toMillis.toDouble / 1000.0)
-
-    }
+        .register(registry),
+      onRequest = { (req, histogram, m) =>
+        m.unit {
+          val requestStart = Instant.now()
+          EndpointMetric()
+            .onResponse { (ep, res) =>
+              m.eval(
+                histogram
+                  .labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*)
+                  .observe(Duration.between(requestStart, Instant.now()).toMillis.toDouble / 1000.0)
+              )
+            }
+        }
+      }
+    )
 
   case class PrometheusLabels(
       forRequest: Seq[(String, (Endpoint[_, _, _, _], ServerRequest) => String)],

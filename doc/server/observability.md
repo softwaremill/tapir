@@ -25,7 +25,7 @@ For example, using `AkkaServerInterpeter`:
 
   implicit val monad: FutureMonad = new FutureMonad()
 
-  val prometheusMetrics = PrometheusMetrics("tapir", CollectorRegistry.defaultRegistry)
+  val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry)
     .withRequestsTotal()
     .withResponsesTotal()
     .withResponsesDuration()
@@ -42,6 +42,7 @@ Labels for default metrics can be customized, any attribute from `Endpoint`, `Se
 ```scala mdoc:invisible
   import io.prometheus.client.CollectorRegistry
   import sttp.tapir.metrics.prometheus.PrometheusMetrics
+  import scala.concurrent.Future
 ```
 
 ```scala mdoc:compile-only
@@ -52,5 +53,5 @@ Labels for default metrics can be customized, any attribute from `Endpoint`, `Se
     forResponse = Seq()
   )
 
-  val prometheusMetrics = PrometheusMetrics("tapir", CollectorRegistry.defaultRegistry).withRequestsTotal(labels)
+  val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry).withRequestsTotal(labels)
 ```

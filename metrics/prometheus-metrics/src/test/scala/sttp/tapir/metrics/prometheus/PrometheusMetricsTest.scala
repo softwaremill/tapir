@@ -12,7 +12,6 @@ import sttp.model._
 import sttp.monad.syntax._
 import sttp.tapir.TestUtil._
 import sttp.tapir._
-import sttp.tapir.metrics.Metric
 import sttp.tapir.metrics.prometheus.PrometheusMetrics._
 import sttp.tapir.metrics.prometheus.PrometheusMetricsTest._
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
@@ -30,7 +29,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect requests total" in {
     // given
     val serverEp: ServerEndpoint[String, String, String, Any, Id] = testEndpoint.serverLogic { name => testEndpointLogic(name) }
-    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withRequestsTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withRequestsTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
 
@@ -51,7 +50,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       Thread.sleep(900)
       testEndpointLogic(name)
     }
-    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withRequestsActive()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withRequestsActive()
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
 
@@ -75,7 +74,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "default metrics" should "collect responses total" in {
     // given
     val serverEp: ServerEndpoint[String, String, String, Any, Id] = testEndpoint.serverLogic { name => testEndpointLogic(name) }
-    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](
       TestRequestBody,
       UnitToResponseBody,
@@ -103,7 +102,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       }
     }
 
-    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesDuration()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesDuration()
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
 
@@ -132,7 +131,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp: ServerEndpoint[String, String, String, Any, Id] = testEndpoint.serverLogic { name => testEndpointLogic(name) }
     val labels = PrometheusLabels(forRequest = Seq("key" -> { case (_, _) => "value" }), forResponse = Seq())
 
-    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal(labels)
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal(labels)
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
 
@@ -146,10 +145,13 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
   "interceptor" should "not collect metrics from prometheus endpoint" in {
     // given
     val serverEp: ServerEndpoint[String, String, String, Any, Id] = testEndpoint.serverLogic { name => testEndpointLogic(name) }
-    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
-    val ses = List(metrics.metricsEndpoint.serverLogic { _ => idMonadError.unit(Right(metrics.registry).asInstanceOf[Either[Unit, CollectorRegistry]]) }, serverEp)
+    val ses = List(
+      metrics.metricsEndpoint.serverLogic { _ => idMonadError.unit(Right(metrics.registry).asInstanceOf[Either[Unit, CollectorRegistry]]) },
+      serverEp
+    )
 
     // when
     interpreter.apply(getMetricsRequest, ses)
@@ -164,7 +166,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
   "metrics server endpoint" should "return encoded registry" in {
     // given
-    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()))
 
@@ -172,7 +174,9 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     for {
       response <- interpreter.apply(
         getMetricsRequest,
-        metrics.metricsEndpoint.serverLogic { _ => idMonadError.unit(Right(metrics.registry).asInstanceOf[Either[Unit, CollectorRegistry]]) }
+        metrics.metricsEndpoint.serverLogic { _ =>
+          idMonadError.unit(Right(metrics.registry).asInstanceOf[Either[Unit, CollectorRegistry]])
+        }
       )
     } yield {
       // then
@@ -184,18 +188,10 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     }
   }
 
-  "metrics" should "be unique" in {
-    PrometheusMetrics("tapir", new CollectorRegistry())
-      .withCustom(Metric[Int](0))
-      .withCustom(Metric[Int](0))
-      .metrics
-      .size shouldBe 1
-  }
-
-  "metrics" should "be collected on exception" in {
+  "metrics" should "be collected on exception when response from exception handler" in {
     // given
     val serverEp: ServerEndpoint[String, String, String, Any, Id] = testEndpoint.serverLogic { _ => throw new RuntimeException("Ups") }
-    val metrics = PrometheusMetrics("tapir", new CollectorRegistry()).withResponsesTotal()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter = new ServerInterpreter[Any, Id, String, Nothing](
       TestRequestBody,
       StringToResponseBody,

@@ -53,9 +53,9 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
           responder: Responder[Id, Unit],
           requestHandler: EndpointInterceptor[Id, Unit] => RequestHandler[Id, Unit]
       ): RequestHandler[Id, Unit] = new RequestHandler[Id, Unit] {
-        override def apply(request: ServerRequest): Id[Option[ServerResponse[Unit]]] = {
+        override def apply(request: ServerRequest)(implicit monad: MonadError[Id]): Id[Option[ServerResponse[Unit]]] = {
           callTrail ::= "2 request"
-          requestHandler(new AddToTrailInterceptor("2")).apply(request)
+          requestHandler(new AddToTrailInterceptor("2")).apply(request)(monad)
         }
       }
     }
