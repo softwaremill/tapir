@@ -21,23 +21,23 @@ trait SttpStubServer {
 
   implicit class RichSttpBackendStub[F[_], R](val stub: SttpBackendStub[F, R]) {
     def whenRequestMatchesEndpoint[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[_, E, O] =
-      new TypeAwareWhenRequest(endpoint, whenRequestMatches(endpoint))
+      new TypeAwareWhenRequest(endpoint, _whenRequestMatches(endpoint))
 
-    def whenInputMatchesEndpoint[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[I, E, O] =
-      new TypeAwareWhenRequest(endpoint, whenInputMatches(endpoint)(inputMatcher))
+    def whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[I, E, O] =
+      new TypeAwareWhenRequest(endpoint, _whenInputMatches(endpoint)(inputMatcher))
 
     def whenRequestMatchesEndpointThenLogic[I, E, O](
         endpoint: ServerEndpoint[I, E, O, R, F],
         interceptors: List[Interceptor[F, Any]] = Nil
     ): SttpBackendStub[F, R] =
-      whenRequestMatches(endpoint.endpoint).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
+      _whenRequestMatches(endpoint.endpoint).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
 
-    def whenInputMatchesEndpointThenLogic[I, E, O](endpoint: ServerEndpoint[I, E, O, R, F], interceptors: List[Interceptor[F, Any]] = Nil)(
+    def whenInputMatchesThenLogic[I, E, O](endpoint: ServerEndpoint[I, E, O, R, F], interceptors: List[Interceptor[F, Any]] = Nil)(
         inputMatcher: I => Boolean
     ): SttpBackendStub[F, R] =
-      whenInputMatches(endpoint.endpoint)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
+      _whenInputMatches(endpoint.endpoint)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
 
-    private def whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): stub.WhenRequest = {
+    private def _whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): stub.WhenRequest = {
       new stub.WhenRequest(req =>
         DecodeBasicInputs(endpoint.input, new SttpRequest(req)) match {
           case _: DecodeBasicInputsResult.Failure => false
@@ -46,7 +46,7 @@ trait SttpStubServer {
       )
     }
 
-    private def whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): stub.WhenRequest = {
+    private def _whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): stub.WhenRequest = {
       new stub.WhenRequest(req =>
         decodeBody(req, DecodeBasicInputs(endpoint.input, new SttpRequest(req))) match {
           case _: DecodeBasicInputsResult.Failure => false
@@ -101,7 +101,10 @@ trait SttpStubServer {
         )
       }
 
-      val interpreter = new ServerInterpreter[R, F, Any, Nothing](requestBody[F](), toResponseBody, interceptors)(stub.responseMonad)
+      val interpreter =
+        new ServerInterpreter[R, F, Any, Nothing](requestBody[F](), toResponseBody, interceptors, _ => stub.responseMonad.unit(()))(
+          stub.responseMonad
+        )
       val sRequest = new SttpRequest(req)
       stub.responseMonad.map(interpreter.apply(sRequest, endpoint)) {
         case Some(sResponse) => toResponse(sRequest, sResponse)

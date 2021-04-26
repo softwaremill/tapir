@@ -100,9 +100,9 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
       .apply(idMonad)
-      .whenInputMatchesEndpoint(endpoint) { amount => amount > 0 }
+      .whenInputMatches(endpoint) { amount => amount > 0 }
       .thenSuccess(ResponseWrapper(1.0))
-      .whenInputMatchesEndpoint(endpoint) { amount => amount <= 0 }
+      .whenInputMatches(endpoint) { amount => amount <= 0 }
       .generic
       .thenRespondServerError()
 
@@ -123,7 +123,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     val backend: SttpBackendStub[Identity, Any] = SttpBackendStub
       .apply(idMonad)
-      .whenInputMatchesEndpoint(endpoint) { body => body > 2 }
+      .whenInputMatches(endpoint) { body => body > 2 }
       .thenSuccess(42)
       .whenAnyRequest
       .thenRespondServerError()
