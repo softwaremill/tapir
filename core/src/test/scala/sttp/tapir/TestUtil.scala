@@ -9,6 +9,7 @@ import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.interpreter.{BodyListener, RequestBody, ToResponseBody}
 
 import java.nio.charset.Charset
+import scala.util.{Success, Try}
 
 object TestUtil {
   def field[T, U](_name: FieldName, _schema: Schema[U]): SchemaType.SProductField[T] = SProductField[T, U](_name, _schema, _ => None)
@@ -58,15 +59,15 @@ object TestUtil {
   }
 
   implicit val unitBodyListener: BodyListener[Id, Unit] = new BodyListener[Id, Unit] {
-    override def onComplete(body: Unit)(cb: => Id[Unit]): Unit = {
-      cb
+    override def onComplete(body: Unit)(cb: Try[Unit] => Id[Unit]): Unit = {
+      cb(Success(()))
       ()
     }
   }
 
   implicit val stringBodyListener: BodyListener[Id, String] = new BodyListener[Id, String] {
-    override def onComplete(body: String)(cb: => Id[Unit]): String = {
-      cb
+    override def onComplete(body: String)(cb: Try[Unit] => Id[Unit]): String = {
+      cb(Success(()))
       body
     }
   }

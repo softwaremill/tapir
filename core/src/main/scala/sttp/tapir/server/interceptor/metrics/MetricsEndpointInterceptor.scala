@@ -9,6 +9,8 @@ import sttp.tapir.server.interpreter.BodyListener
 import sttp.tapir.server.interpreter.BodyListenerSyntax._
 import sttp.tapir.{DecodeResult, Endpoint}
 
+import scala.util.{Success, Try}
+
 class MetricsRequestInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])
     extends RequestInterceptor[F, B] {
 
@@ -46,7 +48,8 @@ private[metrics] class MetricsEndpointInterceptor[F[_], B](
             _ <- collectMetrics { case EndpointMetric(Some(onRequest), _, _) => onRequest(ctx.endpoint) }
             response <- endpointHandler.onDecodeSuccess(ctx)
             withMetrics <- withBodyOnComplete(response) {
-              collectMetrics { case EndpointMetric(_, Some(onResponse), _) => onResponse(ctx.endpoint, response) }
+              case Success(_) => collectMetrics { case EndpointMetric(_, Some(onResponse), _) => onResponse(ctx.endpoint, response) }
+              case _          => ().unit
             }
           } yield withMetrics
 
@@ -73,7 +76,9 @@ private[metrics] class MetricsEndpointInterceptor[F[_], B](
                     for {
                       _ <- collectMetrics { case EndpointMetric(Some(onRequest), _, _) => onRequest(ctx.endpoint) }
                       res <- withBodyOnComplete(response) {
-                        collectMetrics { case EndpointMetric(_, Some(onResponse), _) => onResponse(ctx.endpoint, response) }
+                        case Success(_) =>
+                          collectMetrics { case EndpointMetric(_, Some(onResponse), _) => onResponse(ctx.endpoint, response) }
+                        case _ => ().unit
                       }
                     } yield Some(res)
                   case None => monad.unit(None)
@@ -101,10 +106,10 @@ private[metrics] class MetricsEndpointInterceptor[F[_], B](
 
   private def withBodyOnComplete(
       sr: ServerResponse[B]
-  )(cb: => F[Unit])(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
+  )(cb: Try[Unit] => F[Unit])(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] =
     sr match {
       case sr @ ServerResponse(_, _, Some(body)) => body.onComplete(cb).map(b => sr.copy(body = Some(b)))
-      case sr @ ServerResponse(_, _, None)       => cb.map(_ => sr)
+      case sr @ ServerResponse(_, _, None)       => cb(Success(())).map(_ => sr)
     }
 
 }

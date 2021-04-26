@@ -1,18 +1,23 @@
 # Observability
 
-Metrics collection is possible by extending `Metric` and adding `MetricsInterceptor` to server options.
-`Metric` provides three callback methods which are called in certain points of request processing:
+Metrics collection is possible by creating `Metric` instances and adding them to server options via `MetricsInterceptor`. 
+Certain endpoints can be ignored by adding their definitions to `ignoreEndpoints` list.
+`Metric` wraps an aggregation object (like counter or gauge), and requires a function
+returning `EndpointMetric` with metric collection logic. There are three callbacks in `EndpointMetric`:
 
-1. `onRequest` - after successful request decoding
-2. `onResponse` - after response is assembled
+1. `onRequest` - called after successful request decoding
+2. `onResponse` - called after response is assembled
+3. `onException` - called after exception is thrown (this callback will be ignored if exception handling is done
+   with `ExceptionInterceptor` returning some default response, `onResponse` will be invoked then)
 
 ## Prometheus metrics
 
-`PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances.
-It provides several ready to use metrics as well as endpoint definition and codec for exposing them to Prometheus.
-Request metrics are labeled by path and method. Response labels are additionally labelled by status code group.
+`PrometheusMetrics` encapsulates `CollectorReqistry` and `Metric` instances. It provides several ready to use metrics as
+well as endpoint definition and codec for exposing them to Prometheus. Request metrics are labeled by path and method.
+Response labels are additionally labelled by status code group.
 
 For example, using `AkkaServerInterpeter`:
+
 ```scala mdoc:compile-only
   import akka.http.scaladsl.server.Route
   import io.prometheus.client.CollectorRegistry
@@ -38,7 +43,9 @@ For example, using `AkkaServerInterpeter`:
   })
 ```
 
-Labels for default metrics can be customized, any attribute from `Endpoint`, `ServerRequest` and `ServerResponse` could be used, for example:
+Labels for default metrics can be customized, any attribute from `Endpoint`, `ServerRequest` and `ServerResponse` could
+be used, for example:
+
 ```scala mdoc:invisible
   import io.prometheus.client.CollectorRegistry
   import sttp.tapir.metrics.prometheus.PrometheusMetrics
