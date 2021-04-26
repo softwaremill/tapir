@@ -50,14 +50,16 @@ val backend = SttpBackendStub
   .thenSuccess(ResponseWrapper(1.0))
 ```
 
-A stub which executes an endpoint's server logic can also be created:
+A stub which executes an endpoint's server logic can also be created (here with an identity effect, but any supported
+effect can be used):
 
 ```scala mdoc:silent
+import sttp.client3.Identity
 import sttp.client3.monad.IdMonad
 
-val backend = SttpBackendStub
+val anotherBackend = SttpBackendStub
   .apply(IdMonad)
-  .whenRequestMatchesEndpointThenLogic(endpoint.serverLogic(_ => ResponseWrapper(1.0))
+  .whenRequestMatchesEndpointThenLogic(endpoint.serverLogic[Identity](_ => Right(ResponseWrapper(1.0))))
 ```
 
 ## Black box testing
