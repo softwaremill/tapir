@@ -29,20 +29,11 @@ class ServerInterpreter[R, F[_], B, S](
       ses: List[ServerEndpoint[_, _, _, R, F]]
   ): RequestHandler[F, B] = {
     is match {
-      case Nil =>
-        new RequestHandler[F, B] {
-          override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] =
-            firstNotNone(request, ses, eisAcc.reverse)
-        }
+      case Nil => RequestHandler.of { (request, _) => firstNotNone(request, ses, eisAcc.reverse) }
       case (i: RequestInterceptor[F, B]) :: tail =>
         i(
           responder,
-          { ei =>
-            new RequestHandler[F, B] {
-              override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] =
-                callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request)
-            }
-          }
+          { ei => RequestHandler.of { (request, _) => callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request) } }
         )
       case (ei: EndpointInterceptor[F, B]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, ses)
     }

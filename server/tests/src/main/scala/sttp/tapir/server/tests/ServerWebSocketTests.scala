@@ -68,8 +68,8 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
           .send(backend)
           .map { r =>
             r.body shouldBe Right(List("echo: test1"))
-            reqCounter.metric.value shouldBe 1
-            resCounter.metric.value shouldBe 1
+            reqCounter.metric.value.get() shouldBe 1
+            resCounter.metric.value.get() shouldBe 1
           }
       }
     },

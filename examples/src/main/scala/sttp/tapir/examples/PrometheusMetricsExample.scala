@@ -6,12 +6,11 @@ import akka.http.scaladsl.server.Directives.concat
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
-import io.prometheus.client.{CollectorRegistry, Counter}
+import io.prometheus.client.CollectorRegistry
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.metrics.{EndpointMetric, Metric}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
@@ -33,34 +32,9 @@ object PrometheusMetricsExample extends App with StrictLogging {
 
   val collectorRegistry = CollectorRegistry.defaultRegistry
 
-  // Metric for counting responses labeled by path, method and status code
-  val responsesTotal = Metric[Future, Counter](
-    Counter
-      .build()
-      .namespace("tapir")
-      .name("responses_total")
-      .help("HTTP responses")
-      .labelNames("path", "method", "status")
-      .register(collectorRegistry),
-    onRequest = { (req, counter, _) =>
-      Future.successful(
-        EndpointMetric()
-          .onResponse { (_, res) =>
-            Future.successful {
-              val path = req.uri.pathSegments.toString
-              val method = req.method.method
-              val status = res.code.toString()
-              counter.labels(path, method, status).inc()
-            }
-          }
-      )
-    }
-  )
-
-  val prometheusMetrics = PrometheusMetrics("tapir", collectorRegistry)
-    // default metric collecting all requests and custom one
+  val prometheusMetrics = PrometheusMetrics[Future]("tapir", collectorRegistry)
     .withRequestsTotal()
-    .withCustom(responsesTotal)
+    .withResponsesTotal()
 
   val metricsEndpoint: ServerEndpoint[Unit, Unit, CollectorRegistry, Any, Future] =
     prometheusMetrics.metricsEndpoint.serverLogic { _ =>

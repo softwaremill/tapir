@@ -2,7 +2,7 @@ package sttp.tapir.server.tests
 
 import cats.effect.IO
 import cats.implicits._
-import org.scalatest.Assertion
+import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.matchers.should.Matchers._
 import sttp.client3.{SttpBackend, _}
 import sttp.monad.MonadError
@@ -14,6 +14,7 @@ import sttp.tapir.tests.TestUtil.inputStreamToByteArray
 import sttp.tapir.tests.{Test, _}
 
 import java.io.{ByteArrayInputStream, InputStream}
+import java.util.concurrent.atomic.AtomicInteger
 
 class ServerMetricsTest[F[_], ROUTE, B](
     backend: SttpBackend[IO, Any],
@@ -36,16 +37,16 @@ class ServerMetricsTest[F[_], ROUTE, B](
           .send(backend)
           .map { r =>
             r.body shouldBe Right("""{"fruit":"apple","amount":1}""")
-            reqCounter.metric.value shouldBe 1
-            resCounter.metric.value shouldBe 1
+            reqCounter.metric.value.get() shouldBe 1
+            resCounter.metric.value.get() shouldBe 1
           } >> basicRequest // onDecodeFailure path
           .post(uri"$baseUri/api/echo")
           .body("""{"invalid":"body",}""")
           .send(backend)
           .map { _ =>
-            wait(200) {
-              reqCounter.metric.value shouldBe 2
-              resCounter.metric.value shouldBe 2
+            eventually {
+              reqCounter.metric.value.get() shouldBe 2
+              resCounter.metric.value.get() shouldBe 2
             }
           }
       }
@@ -61,9 +62,9 @@ class ServerMetricsTest[F[_], ROUTE, B](
           .body("okoń")
           .send(backend)
           .map { r =>
-            wait(200) {
-              r.body shouldBe Right("okoń")
-              resCounter.metric.value shouldBe 1
+            r.body shouldBe Right("okoń")
+            eventually {
+              resCounter.metric.value.get() shouldBe 1
             }
           }
       }
@@ -71,14 +72,14 @@ class ServerMetricsTest[F[_], ROUTE, B](
       val resCounter = newResponseCounter[F]
       val metrics = new MetricsRequestInterceptor[F, B](List(resCounter), Seq.empty)
 
-      testServer(in_empty_out_empty.name("metrics"), metricsInterceptor = metrics.some)(_ => ().asRight[Unit].unit) { baseUri =>
+      testServer(in_root_path.name("metrics"), metricsInterceptor = metrics.some)(_ => ().asRight[Unit].unit) { baseUri =>
         basicRequest
-          .post(uri"$baseUri/api/empty")
+          .get(uri"$baseUri")
           .send(backend)
           .map { r =>
-            wait(200) {
-              r.body shouldBe Right("")
-              resCounter.metric.value shouldBe 1
+            r.body shouldBe Right("")
+            eventually {
+              resCounter.metric.value.get() shouldBe 1
             }
           }
       }
@@ -87,31 +88,27 @@ class ServerMetricsTest[F[_], ROUTE, B](
       val resCounter = newResponseCounter[F]
       val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
 
-      testServer(in_empty_out_empty.name("metrics on exception"), metricsInterceptor = metrics.some)(_ =>
+      testServer(in_root_path.name("metrics on exception"), metricsInterceptor = metrics.some) { _ =>
+        Thread.sleep(100)
         throw new RuntimeException("Ups")
-      ) { baseUri =>
+      } { baseUri =>
         basicRequest
-          .post(uri"$baseUri/api/empty")
+          .get(uri"$baseUri")
           .send(backend)
           .map { _ =>
-            wait(200) {
-              reqCounter.metric.value shouldBe 1
-              resCounter.metric.value shouldBe 1
+            eventually {
+              reqCounter.metric.value.get() shouldBe 1
+              resCounter.metric.value.get() shouldBe 1
             }
           }
       }
     }
   )
-
-  private def wait(ms: Int)(cb: => Assertion): Assertion = {
-    Thread.sleep(ms)
-    cb
-  }
 }
 
 object ServerMetricsTest {
-  class Counter(var value: Int = 0) {
-    def ++(): Unit = value += 1
+  case class Counter(value: AtomicInteger = new AtomicInteger(0)) {
+    def ++(): Unit = value.incrementAndGet()
   }
 
   def newRequestCounter[F[_]]: Metric[F, Counter] =

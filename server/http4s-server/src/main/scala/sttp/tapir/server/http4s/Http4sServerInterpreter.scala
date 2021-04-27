@@ -99,7 +99,7 @@ trait Http4sServerInterpreter {
       timer: Timer[F]
   ): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
-    implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4SBodyListener[F, G](gToF)
+    implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)
 
     Kleisli { (req: Request[F]) =>
       val serverRequest = new Http4sServerRequest(req)

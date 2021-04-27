@@ -8,7 +8,7 @@ import sttp.tapir.server.interpreter.BodyListener
 
 import scala.util.{Failure, Success, Try}
 
-class Http4SBodyListener[F[_], G[_]](gToF: G ~> F)(implicit m: MonadError[G], a: Applicative[F])
+class Http4sBodyListener[F[_], G[_]](gToF: G ~> F)(implicit m: MonadError[G], a: Applicative[F])
     extends BodyListener[G, Http4sResponseBody[F]] {
   override def onComplete(body: Http4sResponseBody[F])(cb: Try[Unit] => G[Unit]): G[Http4sResponseBody[F]] = {
     body match {

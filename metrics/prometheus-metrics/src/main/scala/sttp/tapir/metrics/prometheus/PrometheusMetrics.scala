@@ -91,6 +91,7 @@ object PrometheusMetrics {
           EndpointMetric()
             .onRequest { ep => m.eval(gauge.labels(labels.forRequest(ep, req): _*).inc()) }
             .onResponse { (ep, _) => m.eval(gauge.labels(labels.forRequest(ep, req): _*).dec()) }
+            .onException { (ep, _) => m.eval(gauge.labels(labels.forRequest(ep, req): _*).dec()) }
         }
       }
     )
@@ -108,6 +109,7 @@ object PrometheusMetrics {
         m.unit {
           EndpointMetric()
             .onResponse { (ep, res) => m.eval(counter.labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*).inc()) }
+            .onException { (ep, _) => m.eval(counter.labels(labels.forRequest(ep, req) :+ "5xx": _*).inc()) }
         }
       }
     )
