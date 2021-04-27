@@ -14,8 +14,8 @@ There are three callbacks in `EndpointMetric`:
 
 1. `onRequest` - called after successful request decoding
 2. `onResponse` - called after response is assembled
-3. `onException` - called after exception is thrown (this callback will be ignored if exception handling is done
-   with `ExceptionInterceptor` returning some default response, `onResponse` will be invoked then)
+3. `onException` - called after exception is thrown (in underlying streamed body, and/or on any other exception when
+   there's no default response)
 
 ## Prometheus metrics
 
