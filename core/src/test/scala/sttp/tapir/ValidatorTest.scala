@@ -96,7 +96,7 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
 
   it should "validate with custom validator" in {
     val v = Validator.custom(
-      { x: Int =>
+      { (x: Int) =>
         if (x > 5) {
           List.empty
         } else {
@@ -108,11 +108,11 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
   }
 
   it should "validate enum" in {
-    Validator.derivedEnum[Color](Blue) shouldBe empty
+    Validator.derivedEnumeration[Color](Blue) shouldBe empty
   }
 
   it should "validate closed set of ints" in {
-    val v = Validator.enum(List(1, 2, 3, 4))
+    val v = Validator.enumeration(List(1, 2, 3, 4))
     v.apply(1) shouldBe empty
     v.apply(0) shouldBe List(ValidationError.Primitive(v, 0))
   }

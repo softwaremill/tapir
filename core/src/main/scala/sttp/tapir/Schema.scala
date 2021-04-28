@@ -1,12 +1,9 @@
 package sttp.tapir
 
-import magnolia.Magnolia
 import sttp.model.Part
 import sttp.tapir.SchemaType._
-import sttp.tapir.generic.{Configuration, Derived}
-import sttp.tapir.generic.internal.OneOfMacro.oneOfMacro
-import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
-import sttp.tapir.internal.{IterableToListMap, ModifySchemaMacro}
+import sttp.tapir.generic.Derived
+import sttp.tapir.internal.IterableToListMap
 
 import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal}
@@ -35,7 +32,7 @@ case class Schema[T](
     encodedExample: Option[Any] = None,
     deprecated: Boolean = false,
     validator: Validator[T] = Validator.pass[T]
-) {
+) extends SchemaMacros[T] {
 
   def map[TT](f: T => Option[TT])(g: TT => T): Schema[TT] = copy(
     schemaType = schemaType.contramap(g),
@@ -116,8 +113,6 @@ case class Schema[T](
 
   def modifyUnsafe[U](fields: String*)(modify: Schema[U] => Schema[U]): Schema[T] = modifyAtPath(fields.toList, modify)
 
-  def modify[U](path: T => U)(modification: Schema[U] => Schema[U]): Schema[T] = macro ModifySchemaMacro.modifyMacro[T, U]
-
   private def modifyAtPath[U](fieldPath: List[String], modify: Schema[U] => Schema[U]): Schema[T] =
     fieldPath match {
       case Nil => modify(this.asInstanceOf[Schema[U]]).asInstanceOf[Schema[T]] // we don't have type-polymorphic functions
@@ -179,7 +174,7 @@ case class Schema[T](
   }
 }
 
-object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPrioritySchema {
+object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompanionMacros {
   val ModifyCollectionElements = "each"
 
   /** Creates a schema for type `T`, where the low-level representation is a `String`. */
@@ -220,11 +215,6 @@ object Schema extends SchemaExtensions with SchemaMagnoliaDerivation with LowPri
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray
   implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = implicitly[Schema[T]].map(_ => None)(_.body)
-  implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = macro SchemaMapMacro.schemaForMap[V]
-
-  def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] =
-    macro oneOfMacro[E, V]
-  def derived[T]: Schema[T] = macro Magnolia.gen[T]
 }
 
 trait LowPrioritySchema {

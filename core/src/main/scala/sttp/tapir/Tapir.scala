@@ -8,7 +8,7 @@ import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.internal.{ModifyMacroSupport, OneOfMappingMacro}
+import sttp.tapir.internal.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
 import sttp.tapir.internal._
@@ -17,7 +17,7 @@ import sttp.ws.WebSocketFrame
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport {
+trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport with TapirMacros {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -233,22 +233,6 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     EndpointOutput.OneOf[T, T](firstCase +: otherCases.toList, Mapping.id)
 
   /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
-    * as a server) matches the runtime class of `T`.
-    *
-    * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this
-    * situation would give invalid results. In such cases, use [[oneOfMappingClassMatcher]],
-    * [[oneOfMappingValueMatcher]] or [[oneOfMappingFromMatchType]] instead.
-    *
-    * Should be used in [[oneOf]] output descriptions.
-    */
-  def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
-
-  @scala.deprecated("Use oneOfMapping", since = "0.18")
-  def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
-
-  /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
@@ -258,7 +242,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
       output: EndpointOutput[T],
       runtimeClass: Class[_]
   ): OneOfMapping[T] = {
-    OneOfMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
+    OneOfMapping(Some(statusCode), output, { (a: Any) => runtimeClass.isInstance(a) })
   }
 
   @scala.deprecated("Use oneOfMappingClassMatcher", since = "0.18")

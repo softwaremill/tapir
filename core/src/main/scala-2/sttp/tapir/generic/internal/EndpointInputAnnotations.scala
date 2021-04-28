@@ -1,9 +1,8 @@
 package sttp.tapir.generic.internal
 
 import sttp.model._
-import sttp.tapir.Codec
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.EndpointInput
+import sttp.tapir.{Codec, EndpointInput}
 import sttp.tapir.annotations._
 
 import scala.collection.mutable
@@ -35,7 +34,7 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
       .getOrElse(Nil)
 
     val fieldsWithIndex = util.fields.zipWithIndex
-    val fieldIdxToInputIdx = mutable.Map.empty[Int, Int]
+    val inputIdxToFieldIdx = mutable.Map.empty[Int, Int]
 
     val pathInputs = segments map { segment =>
       if (segment.startsWith("{") && segment.endsWith("}")) {
@@ -44,7 +43,7 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
           util.annotated(symbol, pathType) && symbol.name.toTermName.decodedName.toString == fieldName
         }) match {
           case Some((symbol, idx)) =>
-            fieldIdxToInputIdx += (fieldIdxToInputIdx.size -> idx)
+            inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> idx)
             val input = makePathInput(symbol)
             assignSchemaAnnotations(input, symbol, util)
           case None =>
@@ -59,7 +58,7 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
       util.annotated(s, pathType)
     }
 
-    if (fieldIdxToInputIdx.size != pathFields.size) {
+    if (inputIdxToFieldIdx.size != pathFields.size) {
       c.abort(c.enclosingPosition, "Not all fields from target case class with annotation @path are captured in path")
     }
 
@@ -83,13 +82,15 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
             "All fields in case class must be marked with request annotation from package sttp.tapir.annotations"
           )
         }
-      fieldIdxToInputIdx += (fieldIdxToInputIdx.size -> fieldIdx)
+      inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> fieldIdx)
       assignSchemaAnnotations(input, field, util)
     }
 
     val result = (pathInputs ::: nonPathInputs).reduceLeft { (left, right) => q"$left.and($right)" }
-    val mapper = mapToTargetFunc(fieldIdxToInputIdx, util)
-    c.Expr[EndpointInput[A]](q"$result.mapTo($mapper)")
+    val mapperTo = mapToTargetFunc(inputIdxToFieldIdx, util)
+    val mapperFrom = mapFromTargetFunc(inputIdxToFieldIdx, util)
+
+    c.Expr[EndpointInput[A]](q"$result.map($mapperTo)($mapperFrom)")
   }
 
   type StringCodec[T] = Codec[String, T, TextPlain]

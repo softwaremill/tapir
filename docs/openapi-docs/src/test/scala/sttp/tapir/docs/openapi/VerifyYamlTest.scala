@@ -24,7 +24,7 @@ import java.time.{Instant, LocalDateTime}
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
-    .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
+    .in(("fruit" / path[String] / "amount" / path[Int]).mapTo[FruitAmount])
     .in(query[String]("color"))
     .out(jsonBody[FruitAmount])
     .out(header[Int]("X-Role"))

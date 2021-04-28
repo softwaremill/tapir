@@ -56,20 +56,24 @@ The example code below will generate [enums](https://swagger.io/docs/specificati
 ```scala
 import sttp.tapir._
 
-trait EnumHelper { e: Enumeration =>
-    import io.circe._
+trait EnumHelper {
+  e: Enumeration =>
 
-    implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
-    implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
+  import io.circe._
 
-    // needs to be a def or lazy val so that the enumeration values are available!
-    implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enum(e.values.toList, v => Option(v)))
+  implicit val enumDecoder: Decoder[e.Value] = Decoder.decodeEnumeration(e)
+  implicit val enumEncoder: Encoder[e.Value] = Encoder.encodeEnumeration(e)
+
+  // needs to be a def or lazy val so that the enumeration values are available!
+  implicit def schemaForEnum: Schema[e.Value] = Schema.string.validate(Validator.enumeration(e.values.toList, v => Option(v)))
 }
+
 object Color extends Enumeration with EnumHelper {
-    type Color = Value
-    val Blue = Value("blue")
-    val Red   = Value("red")
+  type Color = Value
+  val Blue = Value("blue")
+  val Red = Value("red")
 }
+
 ``` 
 
 ## NewType integration

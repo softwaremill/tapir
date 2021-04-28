@@ -33,9 +33,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   }.value,
   ideSkipProject := (scalaVersion.value == scala2_12) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
-  Test / parallelExecution := false,
-  // remove false alarms about unused implicit definitions in macros
-  scalacOptions += "-Ywarn-macros:after"
+  Test / parallelExecution := false
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
@@ -117,7 +115,7 @@ val testOther = taskKey[Unit]("Test other projects")
 def filterProject(p: String => Boolean) =
   ScopeFilter(inProjects(allAggregates.filter(pr => p(display(pr.project))): _*))
 
-lazy val macroAnnotations = Seq(
+lazy val macros = Seq(
   libraryDependencies ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((2, 11 | 12)) => List(compilerPlugin("org.scalamacros" % "paradise" % "2.1.1" cross CrossVersion.patch))
@@ -129,6 +127,13 @@ lazy val macroAnnotations = Seq(
       case Some((2, y)) if y == 11 => Seq("-Xexperimental")
       case Some((2, y)) if y == 13 => Seq("-Ymacro-annotations")
       case _                       => Seq.empty[String]
+    }
+  },
+  // remove false alarms about unused implicit definitions in macros
+  scalacOptions ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, _)) => Seq("\"-Ywarn-macros:after\"")
+      case _            => Seq.empty[String]
     }
   }
 )
@@ -357,7 +362,7 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
 
 lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
   .settings(commonSettings)
-  .settings(macroAnnotations)
+  .settings(macros)
   .settings(
     name := "tapir-derevo",
     libraryDependencies ++= Seq(
@@ -370,7 +375,7 @@ lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
 
 lazy val newtype: ProjectMatrix = (projectMatrix in file("integrations/newtype"))
   .settings(commonSettings)
-  .settings(macroAnnotations)
+  .settings(macros)
   .settings(
     name := "tapir-newtype",
     libraryDependencies ++= Seq(
@@ -995,7 +1000,7 @@ compileDocumentation := {
 lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc")) // important: it must not be doc/
   .enablePlugins(MdocPlugin)
   .settings(commonSettings)
-  .settings(macroAnnotations)
+  .settings(macros)
   .settings(
     mdocIn := file("doc"),
     moduleName := "tapir-doc",

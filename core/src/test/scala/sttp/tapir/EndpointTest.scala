@@ -114,13 +114,13 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   it should "compile one-of empty output of a custom type" in {
     sealed trait Error
-    final case class BadRequest(message: String) extends Error
-    final case object NotFound extends Error
+    case class BadRequest(message: String) extends Error
+    case object NotFound extends Error
 
     endpoint.post
       .errorOut(
         sttp.tapir.oneOf(
-          oneOfMapping(StatusCode.BadRequest, stringBody.map(BadRequest)(_.message)),
+          oneOfMapping(StatusCode.BadRequest, stringBody.map(BadRequest(_))(_.message)),
           oneOfMapping(StatusCode.NotFound, emptyOutputAs(NotFound))
         )
       )

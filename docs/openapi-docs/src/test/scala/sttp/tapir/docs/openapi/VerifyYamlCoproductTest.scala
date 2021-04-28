@@ -136,7 +136,7 @@ object VerifyYamlCoproductTest {
     val Blue = Value("blue")
     val Red = Value("red")
 
-    implicit def schemaForEnum: Schema[Value] = Schema.string.validate(Validator.enum(values.toList, v => Option(v)))
+    implicit def schemaForEnum: Schema[Value] = Schema.string.validate(Validator.enumeration(values.toList, v => Option(v)))
   }
 
   sealed trait Shape {

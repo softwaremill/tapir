@@ -15,8 +15,8 @@ import sttp.tapir.EndpointInput.Auth._
 import sttp.tapir.RawBodyType.StringBody
 
 object JsonCodecs {
-  implicit val stringJsonCodec = new JsonCodecMock[String]
-  implicit val booleanJsonCodec = new JsonCodecMock[Boolean]
+  implicit val stringJsonCodec: JsonCodecMock[String] = new JsonCodecMock[String]
+  implicit val booleanJsonCodec: JsonCodecMock[Boolean] = new JsonCodecMock[Boolean]
 }
 
 final case class TapirRequestTest1(
@@ -118,7 +118,7 @@ final case class TapirResponseTest2(
     setCookies: List[CookieWithMeta]
 )
 
-class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
+class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
 
   "@endpointInput" should "derive correct input for @query, @cookie, @header" in {
     import JsonCodecs._
@@ -130,7 +130,7 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
       .and(header[Long]("header"))
       .and(header[Int]("another-header-name"))
       .and(anyJsonBody[String])
-      .mapTo(TapirRequestTest1.apply _)
+      .mapTo[TapirRequestTest1]
 
     compareTransputs(deriveEndpointInput[TapirRequestTest1], expectedInput) shouldBe true
   }
@@ -138,13 +138,13 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
   it should "derive correct input for dealised bodies" in {
     import JsonCodecs._
 
-    val expectedInput = anyJsonBody[Boolean].mapTo(TapirRequestTest2.apply _)
+    val expectedInput = anyJsonBody[Boolean].mapTo[TapirRequestTest2]
 
     compareTransputs(deriveEndpointInput[TapirRequestTest2], expectedInput) shouldBe true
   }
 
   it should "derive correct input for @queries, @headers, @cookies" in {
-    val expectedInput = queryParams.and(headers).and(cookies).mapTo(TapirRequestTest3.apply _)
+    val expectedInput = queryParams.and(headers).and(cookies).mapTo[TapirRequestTest3]
 
     compareTransputs(deriveEndpointInput[TapirRequestTest3], expectedInput) shouldBe true
   }
@@ -154,7 +154,7 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
       .apiKey(query[Int]("param1"), challenge = WWWAuthenticate.apiKey("api realm"))
       .and(TapirAuth.basic[UsernamePassword](challenge = WWWAuthenticate.basic("basic realm")))
       .and(TapirAuth.bearer[String](challenge = WWWAuthenticate.bearer("bearer realm")))
-      .mapTo(TapirRequestTest4.apply _)
+      .mapTo[TapirRequestTest4]
 
     compareTransputs(deriveEndpointInput[TapirRequestTest4], expectedInput) shouldBe true
   }
@@ -165,7 +165,7 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
       .securitySchemeName("secapi")
       .and(TapirAuth.basic[UsernamePassword]().securitySchemeName("secbasic"))
       .and(TapirAuth.bearer[String]().securitySchemeName("secbearer"))
-      .mapTo(TapirRequestTest7.apply _)
+      .mapTo[TapirRequestTest7]
 
     compareTransputs(deriveEndpointInput[TapirRequestTest7], expectedInput) shouldBe true
   }
@@ -174,7 +174,7 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
     val expectedInput = query[Int]("field1")
       .description("field-description")
       .and(cookie[Boolean]("cookie").deprecated())
-      .mapTo(TapirRequestTest5.apply _)
+      .mapTo[TapirRequestTest5]
 
     compareTransputs(deriveEndpointInput[TapirRequestTest5], expectedInput) shouldBe true
   }
@@ -189,9 +189,9 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
       .and(query[Int]("field1"))
       .and(query[Long]("field3"))
       .and(query[String]("field4"))
-      .mapTo { (field5, field2, field1, field3, field4) =>
+      .map { case (field5, field2, field1, field3, field4) =>
         TapirRequestTest6(field1, field2, field3, field4, field5)
-      }
+      }((t: TapirRequestTest6) => (t.field5, t.field2, t.field1, t.field3, t.field4))
 
     compareTransputs(derivedInput, expectedInput) shouldBe true
   }
@@ -305,13 +305,13 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
       .and(setCookie("cookie-name"))
       .and(anyJsonBody[String])
       .and(statusCode)
-      .mapTo(TapirResponseTest1)
+      .mapTo[TapirResponseTest1]
 
     compareTransputs(deriveEndpointOutput[TapirResponseTest1], expectedOutput) shouldBe true
   }
 
   it should "derive correct output for @headers, @cookies, @setCookies" in {
-    val expectedOutput = headers.and(cookies).and(setCookies).mapTo(TapirResponseTest2)
+    val expectedOutput = headers.and(cookies).and(setCookies).mapTo[TapirResponseTest2]
 
     compareTransputs(deriveEndpointOutput[TapirResponseTest2], expectedOutput) shouldBe true
   }
@@ -380,32 +380,35 @@ class EndpointIOMacroTest extends AnyFlatSpec with Matchers with Tapir {
         info1 == info2
       case (Cookie(name1, _, info1), Cookie(name2, _, info2)) =>
         name1 == name2 && info1 == info2
-      case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
-        info1 == info2
-      case (ApiKey(input1, challenge1, securitySchemeName1), ApiKey(input2, challenge2, securitySchemeName2)) =>
-        challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)
-      case (Http(scheme1, input1, challenge1, securitySchemeName1), Http(scheme2, input2, challenge2, securitySchemeName2)) =>
-        challenge1 == challenge2 && scheme1 == scheme2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)
-      case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
-        bodyType1 == bodyType2 && info1 == info2
-      case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>
-        h1 == h2 && info1 == info2
-      case (Header(name1, _, info1), Header(name2, _, info2)) =>
-        name1 == name2 && info1 == info2
-      case (Headers(_, info1), Headers(_, info2)) =>
-        info1 == info2
-      case (EndpointOutput.StatusCode(codes1, _, info1), EndpointOutput.StatusCode(codes2, _, info2)) =>
-        codes1 == codes2 && info1 == info2
-      case (EndpointIO.MappedPair(io1, _), EndpointIO.MappedPair(io2, _)) =>
-        compareTransputs(io1, io2)
-      case (EndpointOutput.MappedPair(io1, _), EndpointOutput.MappedPair(io2, _)) =>
-        compareTransputs(io1, io2)
-      case (EndpointIO.Pair(left1, right1, _, _), EndpointIO.Pair(left2, right2, _, _)) =>
-        compareTransputs(left1, left2) && compareTransputs(right1, right2)
-      case (EndpointOutput.Pair(left1, right1, _, _), EndpointOutput.Pair(left2, right2, _, _)) =>
-        compareTransputs(left1, left2) && compareTransputs(right1, right2)
-      case (_, _) =>
-        false
+      case (l, r) =>
+        (l, r) match {
+          case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
+            info1 == info2
+          case (ApiKey(input1, challenge1, securitySchemeName1), ApiKey(input2, challenge2, securitySchemeName2)) =>
+            challenge1 == challenge2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)
+          case (Http(scheme1, input1, challenge1, securitySchemeName1), Http(scheme2, input2, challenge2, securitySchemeName2)) =>
+            challenge1 == challenge2 && scheme1 == scheme2 && securitySchemeName1 == securitySchemeName2 && compareTransputs(input1, input2)
+          case (Body(bodyType1, _, info1), Body(bodyType2, _, info2)) =>
+            bodyType1 == bodyType2 && info1 == info2
+          case (FixedHeader(h1, _, info1), FixedHeader(h2, _, info2)) =>
+            h1 == h2 && info1 == info2
+          case (Header(name1, _, info1), Header(name2, _, info2)) =>
+            name1 == name2 && info1 == info2
+          case (Headers(_, info1), Headers(_, info2)) =>
+            info1 == info2
+          case (EndpointOutput.StatusCode(codes1, _, info1), EndpointOutput.StatusCode(codes2, _, info2)) =>
+            codes1 == codes2 && info1 == info2
+          case (EndpointIO.MappedPair(io1, _), EndpointIO.MappedPair(io2, _)) =>
+            compareTransputs(io1, io2)
+          case (EndpointOutput.MappedPair(io1, _), EndpointOutput.MappedPair(io2, _)) =>
+            compareTransputs(io1, io2)
+          case (EndpointIO.Pair(left1, right1, _, _), EndpointIO.Pair(left2, right2, _, _)) =>
+            compareTransputs(left1, left2) && compareTransputs(right1, right2)
+          case (EndpointOutput.Pair(left1, right1, _, _), EndpointOutput.Pair(left2, right2, _, _)) =>
+            compareTransputs(left1, left2) && compareTransputs(right1, right2)
+          case (_, _) =>
+            false
+        }
     }
 }
 

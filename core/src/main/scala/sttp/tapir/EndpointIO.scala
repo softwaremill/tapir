@@ -25,15 +25,12 @@ import scala.concurrent.duration.FiniteDuration
   * `EndpointTransput` >---                            ---> `EndpointIO`
   *                        \---> `EndpointOutput` >---/
   */
-sealed trait EndpointTransput[T] {
+sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   private[tapir] type ThisType[X]
 
   def map[U](mapping: Mapping[T, U]): ThisType[U]
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
-  }
 
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 
@@ -474,7 +471,12 @@ object EndpointIO {
     def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
   }
 
-  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean, docsExtensions: Vector[DocsExtension[_]]) {
+  case class Info[T](
+      description: Option[String],
+      examples: List[Example[T]],
+      deprecated: Boolean,
+      docsExtensions: Vector[DocsExtension[_]]
+  ) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
     def example(t: T): Info[T] = example(Example.of(t))

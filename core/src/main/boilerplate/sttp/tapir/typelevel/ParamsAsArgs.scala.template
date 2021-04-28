@@ -17,7 +17,7 @@ trait ParamsAsArgs[I] {
 
 object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
 
-  [2..#implicit def tuple1ToFn[[#A1#]]: Aux[Tuple1[[#A1#]], ([#A1#]) => ?] = new ParamsAsArgs[Tuple1[[#A1#]]] {
+  [2..#implicit def tuple1ToFn[[#A1#]]: Aux[Tuple1[[#A1#]], ([#A1#]) => *] = new ParamsAsArgs[Tuple1[[#A1#]]] {
       type FN[O] = ([#A1#]) => O
       override def toFn[R](f: Tuple1[[#A1#]] => R): ([#A1#]) => R = ([#a1#]) => f(Tuple1([#a1#]))
       override def paramAt(params: Tuple1[[#A1#]], i: Int): Any = params.productElement(i)

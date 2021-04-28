@@ -6,7 +6,7 @@ import enumeratum.{EnumEntry, _}
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.docs.openapi.VerifyYamlEnumTest._
+import sttp.tapir.docs.openapi.VerifyYamlEnumerationTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.circe.yaml._
@@ -14,7 +14,7 @@ import sttp.tapir.{Schema, Validator, _}
 
 import scala.collection.immutable
 
-class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
+class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
 
   test("should create component for enum using trait") {
 
@@ -23,8 +23,10 @@ class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
       case _                                    => false
     })
 
-    implicit val schemaForGame: Schema[Game] = Schema.string[Game].validate(Validator.derivedEnum[Game].encode(_.toString.toLowerCase))
-    implicit val schemaForEpisode: Schema[Episode] = Schema.string[Episode].validate(Validator.derivedEnum[Episode].encode(_.toString.toLowerCase))
+    implicit val schemaForGame: Schema[Game] =
+      Schema.string[Game].validate(Validator.derivedEnumeration[Game].encode(_.toString.toLowerCase))
+    implicit val schemaForEpisode: Schema[Episode] =
+      Schema.string[Episode].validate(Validator.derivedEnumeration[Episode].encode(_.toString.toLowerCase))
 
     val actualYaml = OpenAPIDocsInterpreter
       .toOpenAPI(Seq(endpoint.in("totalWar").out(jsonBody[TotalWar]), endpoint.in("callOfDuty").out(jsonBody[CallOfDuty])), "Games", "1.0")
@@ -76,7 +78,7 @@ class VerifyYamlEnumTest extends AnyFunSuite with Matchers {
   }
 }
 
-object VerifyYamlEnumTest {
+object VerifyYamlEnumerationTest {
   sealed trait Game
   case object Strategy extends Game
   case object Action extends Game

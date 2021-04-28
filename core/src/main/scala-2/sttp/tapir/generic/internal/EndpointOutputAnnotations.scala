@@ -42,8 +42,10 @@ class EndpointOutputAnnotations(override val c: blackbox.Context) extends Endpoi
     }
 
     val result = outputs.reduceLeft { (left, right) => q"$left.and($right)" }
-    val mapper = mapToTargetFunc(mutable.Map((0 until outputs.size).map(i => (i, i)): _*), util)
-    c.Expr[EndpointOutput[A]](q"$result.mapTo($mapper)")
+    val fieldIdxToInputIdx = mutable.Map((0 until outputs.size).map(i => (i, i)): _*)
+    val mapperTo = mapToTargetFunc(fieldIdxToInputIdx, util)
+    val mapperFrom = mapFromTargetFunc(fieldIdxToInputIdx, util)
+    c.Expr[EndpointOutput[A]](q"$result.map($mapperTo)($mapperFrom)")
   }
 
   def makeSetCookieOutput(field: c.Symbol)(altName: Option[String]): Tree =

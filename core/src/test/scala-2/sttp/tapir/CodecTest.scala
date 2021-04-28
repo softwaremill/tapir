@@ -4,8 +4,7 @@ import java.math.{BigDecimal => JBigDecimal}
 import java.time._
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
-import java.util.UUID
-
+import java.util.{Date, UUID}
 import com.fortysevendeg.scalacheck.datetime.jdk8.ArbitraryJdk8.{arbLocalDateJdk8, arbLocalDateTimeJdk8, genZonedDateTimeWithZone}
 import org.scalacheck.{Arbitrary, Gen}
 import org.scalatest.Assertion
@@ -20,7 +19,7 @@ import scala.reflect.ClassTag
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class CodecTest extends AnyFlatSpec with CodecTestExtensions with Matchers with Checkers {
+class CodecTest extends AnyFlatSpec with Matchers with Checkers {
 
   implicit val arbitraryUri: Arbitrary[Uri] = Arbitrary(for {
     scheme <- Gen.alphaLowerStr if scheme.nonEmpty
@@ -184,6 +183,14 @@ class CodecTest extends AnyFlatSpec with CodecTestExtensions with Matchers with 
 
     codec.decode(List("y")) shouldBe DecodeResult.Value("y")
     codec.decode(List("y", "z")) shouldBe DecodeResult.Multiple(List("y", "z"))
+  }
+
+  it should "correctly encode and decode Date" in {
+    // while Date works on Scala.js, ScalaCheck tests involving Date use java.util.Calendar which doesn't - hence here a normal test
+    val codec = implicitly[Codec[String, Date, TextPlain]]
+    val d = Date.from(Instant.ofEpochMilli(1619518169000L))
+    val encoded = codec.encode(d)
+    codec.decode(encoded) == Value(d) && Date.from(Instant.parse(encoded)) == d
   }
 
   def checkEncodeDecodeToString[T: Arbitrary](implicit c: Codec[String, T, TextPlain], ct: ClassTag[T]): Assertion =

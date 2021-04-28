@@ -12,7 +12,6 @@ import sttp.tapir.deprecated
 import sttp.tapir.description
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.Tapir
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
@@ -86,18 +85,36 @@ abstract class EndpointAnnotations(val c: blackbox.Context) {
     q"_root_.sttp.tapir.EndpointIO.Body(${c.untypecheck(ann.tree)}.bodyType, $codec, sttp.tapir.EndpointIO.Info.empty)"
   }
 
-  protected def mapToTargetFunc[A](fieldIdxToInputIdx: mutable.Map[Int, Int], util: CaseClassUtil[c.type, A]) = {
-    val funArgs = (0 until fieldIdxToInputIdx.size) map { idx =>
-      val name = TermName(s"arg$idx")
-      val field = util.fields(fieldIdxToInputIdx(idx))
-      q"val $name: ${field.asTerm.info}"
-    }
-    val inputIdxToFieldIdx = fieldIdxToInputIdx.map(_.swap)
-    val ctorArgs = (0 until inputIdxToFieldIdx.size) map { idx =>
-      TermName(s"arg${inputIdxToFieldIdx(idx)}")
-    }
+  protected def mapToTargetFunc[A](inputIdxToFieldIdx: mutable.Map[Int, Int], util: CaseClassUtil[c.type, A]): Tree = {
     val className = util.classSymbol.asType.name.toTermName
-    q"(..$funArgs) => $className(..$ctorArgs)"
+    if (inputIdxToFieldIdx.size > 1) {
+      val tupleTypeComponents = (0 until inputIdxToFieldIdx.size) map { idx =>
+        val field = util.fields(inputIdxToFieldIdx(idx))
+        q"${field.asTerm.info}"
+      }
+
+      val fieldIdxToInputIdx = inputIdxToFieldIdx.map(_.swap)
+
+      val tupleType = tq"(..$tupleTypeComponents)"
+      val ctorArgs = (0 until fieldIdxToInputIdx.size) map { idx =>
+        val fieldName = TermName(s"_${fieldIdxToInputIdx(idx) + 1}")
+        q"t.$fieldName"
+      }
+
+      q"(t: $tupleType) => $className(..$ctorArgs)"
+    } else {
+      q"(t: ${util.fields.head.info}) => $className(t)"
+    }
+  }
+
+  protected def mapFromTargetFunc[A](inputIdxToFieldIdx: mutable.Map[Int, Int], util: CaseClassUtil[c.type, A]): Tree = {
+    val tupleArgs = (0 until inputIdxToFieldIdx.size) map { idx =>
+      val field = util.fields(inputIdxToFieldIdx(idx))
+      val fieldName = TermName(s"${field.name}")
+      q"t.$fieldName"
+    }
+    val className = util.classSymbol.asType
+    q"(t: $className) => (..$tupleArgs)"
   }
 
   protected def assignSchemaAnnotations[A](input: Tree, field: Symbol, util: CaseClassUtil[c.type, A]): Tree = {
@@ -105,7 +122,7 @@ abstract class EndpointAnnotations(val c: blackbox.Context) {
       .extractArgFromAnnotation(field, descriptionType)
       .fold(input)(desc => q"$input.description($desc)")
     val inputWithDeprecation = if (util.annotated(field, deprecatedType)) {
-      q"$inputWithDescription.deprecated"
+      q"$inputWithDescription.deprecated()"
     } else {
       inputWithDescription
     }
