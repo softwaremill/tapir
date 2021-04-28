@@ -4,6 +4,7 @@ import sttp.model._
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.{Codec, EndpointInput}
 import sttp.tapir.annotations._
+import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox

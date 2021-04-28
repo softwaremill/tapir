@@ -120,12 +120,12 @@ of the `DecodeResult` trait.
 Mappings can also be done given an `Mapping[I, II]` instance. More on that in the secion on [codecs](codecs.md).
 
 Creating a mapping between a tuple and a case class is a common operation, hence there's also a 
-`mapTo(CaseClassCompanion)` method, which automatically provides the functions to construct/deconstruct the case class:
+`mapTo[CaseClass]` method, which automatically provides the functions to construct/deconstruct the case class:
 
 ```scala mdoc:silent:nest
 val paging: EndpointInput[Paging] = 
   query[UUID]("start").and(query[Option[Int]]("limit"))
-    .mapTo(Paging)
+    .mapTo[Paging]
 ```
 
 Mapping methods can also be called on an endpoint (which is useful if inputs/outputs are accumulated, for example).

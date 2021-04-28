@@ -1,0 +1,101 @@
+package sttp.tapir.internal
+
+import scala.reflect.macros.blackbox
+
+object MapToMacro {
+  def generateMapTo[THIS_TYPE[_], T: c.WeakTypeTag, CASE_CLASS: c.WeakTypeTag](c: blackbox.Context): c.Expr[THIS_TYPE[CASE_CLASS]] =
+    c.Expr[THIS_TYPE[CASE_CLASS]](generateDelegateMap[T, CASE_CLASS](c)("map"))
+
+  def generateMapInTo[RESULT, T: c.WeakTypeTag, CASE_CLASS: c.WeakTypeTag](c: blackbox.Context): c.Expr[RESULT] =
+    c.Expr[RESULT](generateDelegateMap[T, CASE_CLASS](c)("mapIn"))
+
+  def generateMapErrorOutTo[RESULT, T: c.WeakTypeTag, CASE_CLASS: c.WeakTypeTag](c: blackbox.Context): c.Expr[RESULT] =
+    c.Expr[RESULT](generateDelegateMap[T, CASE_CLASS](c)("mapErrorOut"))
+
+  def generateMapOutTo[RESULT, T: c.WeakTypeTag, CASE_CLASS: c.WeakTypeTag](c: blackbox.Context): c.Expr[RESULT] =
+    c.Expr[RESULT](generateDelegateMap[T, CASE_CLASS](c)("mapOut"))
+
+  private def generateDelegateMap[T: c.WeakTypeTag, CASE_CLASS: c.WeakTypeTag](
+      c: blackbox.Context
+  )(delegateTo: String): c.Tree = {
+    import c.universe._
+    val to = MapToMacro.tupleToCaseClass[T, CASE_CLASS](c)
+    val from = MapToMacro.tupleFromCaseClass[T, CASE_CLASS](c)
+
+    q"${c.prefix}.${TermName(delegateTo)}($to)($from)"
+  }
+
+  private def tupleToCaseClass[TUPLE: c.WeakTypeTag, CASE_CLASS: c.WeakTypeTag](c: blackbox.Context): c.Tree = {
+    import c.universe._
+
+    val caseClassUtil = new CaseClassUtil[c.type, CASE_CLASS](c, "mapTo mapping")
+    val tupleType = weakTypeOf[TUPLE]
+    val tupleTypeArgs = tupleType.dealias.typeArgs
+
+    if (caseClassUtil.fields.size == 1) {
+      verifySingleFieldCaseClass(c)(caseClassUtil, tupleType)
+      q"(t: ${tupleType.dealias}) => ${caseClassUtil.className}(t)"
+    } else {
+      verifyCaseClassMatchesTuple(c)(caseClassUtil, tupleType, tupleTypeArgs)
+      val ctorArgs = (1 to tupleTypeArgs.length).map(idx => q"t.${TermName(s"_$idx")}")
+      q"(t: ${tupleType.dealias}) => ${caseClassUtil.className}(..$ctorArgs)"
+    }
+  }
+
+  private def tupleFromCaseClass[TUPLE: c.WeakTypeTag, CASE_CLASS: c.WeakTypeTag](c: blackbox.Context): c.Tree = {
+    import c.universe._
+
+    val caseClassUtil = new CaseClassUtil[c.type, CASE_CLASS](c, "mapTo mapping")
+    val tupleType = weakTypeOf[TUPLE]
+
+    if (caseClassUtil.fields.size == 1) {
+      verifySingleFieldCaseClass(c)(caseClassUtil, tupleType)
+
+    } else {
+      verifyCaseClassMatchesTuple(c)(caseClassUtil, tupleType, tupleType.dealias.typeArgs)
+    }
+
+    val tupleArgs = caseClassUtil.fields.map(field => q"t.${TermName(s"${field.name}")}")
+    val classType = caseClassUtil.classSymbol.asType
+    q"(t: $classType) => (..$tupleArgs)"
+  }
+
+  private def verifySingleFieldCaseClass[CASE_CLASS](
+      c: blackbox.Context
+  )(caseClassUtil: CaseClassUtil[c.type, CASE_CLASS], tupleType: c.Type): Unit = {
+    val field = caseClassUtil.fields.head
+    if (!(field.info.resultType =:= tupleType)) {
+      c.abort(
+        c.enclosingPosition,
+        s"The type doesn't match the type of the case class field: $tupleType, $field"
+      )
+    }
+  }
+
+  private def verifyCaseClassMatchesTuple[CASE_CLASS](c: blackbox.Context)(
+      caseClassUtil: CaseClassUtil[c.type, CASE_CLASS],
+      tupleType: c.Type,
+      tupleTypeArgs: List[c.Type]
+  ): Unit = {
+    val tupleSymbol = tupleType.typeSymbol
+    if (!tupleSymbol.fullName.startsWith("scala.Tuple")) {
+      c.abort(c.enclosingPosition, s"Expected source type to be a tuple, but got: $tupleType")
+    }
+
+    if (caseClassUtil.fields.size != tupleTypeArgs.size) {
+      c.abort(
+        c.enclosingPosition,
+        s"The arity of the source type doesn't match the arity of the target type: $tupleType, ${caseClassUtil.t}"
+      )
+    }
+
+    caseClassUtil.fields.zip(tupleTypeArgs).foreach { case (caseClassField, tupleArg) =>
+      if (!(caseClassField.info.resultType =:= tupleArg)) {
+        c.abort(
+          c.enclosingPosition,
+          s"The type of the tuple field doesn't match the type of the case class field: $tupleArg, $caseClassField"
+        )
+      }
+    }
+  }
+}

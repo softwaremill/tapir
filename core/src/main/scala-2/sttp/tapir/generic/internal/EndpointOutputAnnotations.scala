@@ -6,6 +6,7 @@ import sttp.tapir.EndpointOutput
 import sttp.tapir.annotations.setCookie
 import sttp.tapir.annotations.setCookies
 import sttp.tapir.annotations.statusCode
+import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox

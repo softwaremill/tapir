@@ -332,4 +332,28 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       case _                                       => false
     } should have size (2)
   }
+
+  "mapTo" should "properly map between tuples and case classes of arity 1" in {
+    // given
+    case class Wrapper(i: Int)
+    val mapped = query[Int]("q1").mapTo[Wrapper]
+    val codec: Codec[List[String], Wrapper, CodecFormat.TextPlain] = mapped.codec
+
+    // when
+    codec.encode(Wrapper(10)) shouldBe (List("10"))
+    codec.decode(List("10")) shouldBe DecodeResult.Value(Wrapper(10))
+  }
+
+  "mapTo" should "properly map between tuples and case classes of arity 2" in {
+    // given
+    case class Wrapper(i: Int, s: String)
+    val mapped = query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
+    val mapping: Mapping[(Int, String), Wrapper] = mapped match {
+      case EndpointInput.MappedPair(_, m) => m.asInstanceOf[Mapping[(Int, String), Wrapper]]
+    }
+
+    // when
+    mapping.encode(Wrapper(10, "x")) shouldBe ((10, "x"))
+    mapping.decode((10, "x")) shouldBe DecodeResult.Value(Wrapper(10, "x"))
+  }
 }

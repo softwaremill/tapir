@@ -2,6 +2,7 @@ package sttp.tapir.generic.internal
 
 import sttp.tapir.{MultipartCodec, encodedName}
 import sttp.tapir.generic.Configuration
+import sttp.tapir.internal.CaseClassUtil
 
 import scala.annotation.tailrec
 import scala.reflect.macros.blackbox

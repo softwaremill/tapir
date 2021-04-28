@@ -1,11 +1,7 @@
 package sttp.tapir
 
-trait EndpointTransputMacros[T] { this: EndpointTransput[T] =>
-  def mapTo[CASE_CLASS]: ThisType[CASE_CLASS] = ???
+import sttp.tapir.internal.MapToMacro
 
-  /*
-    def mapTo[U]: ThisType[U] = {
-    map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
-  }
-   */
+trait EndpointTransputMacros[T] { this: EndpointTransput[T] =>
+  def mapTo[CASE_CLASS]: ThisType[CASE_CLASS] = macro MapToMacro.generateMapTo[ThisType, T, CASE_CLASS]
 }

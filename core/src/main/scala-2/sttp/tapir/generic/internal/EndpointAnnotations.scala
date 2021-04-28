@@ -12,6 +12,7 @@ import sttp.tapir.deprecated
 import sttp.tapir.description
 import sttp.tapir.Codec
 import sttp.tapir.CodecFormat.TextPlain
+import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
@@ -86,7 +87,7 @@ abstract class EndpointAnnotations(val c: blackbox.Context) {
   }
 
   protected def mapToTargetFunc[A](inputIdxToFieldIdx: mutable.Map[Int, Int], util: CaseClassUtil[c.type, A]): Tree = {
-    val className = util.classSymbol.asType.name.toTermName
+    val className = util.className
     if (inputIdxToFieldIdx.size > 1) {
       val tupleTypeComponents = (0 until inputIdxToFieldIdx.size) map { idx =>
         val field = util.fields(inputIdxToFieldIdx(idx))
@@ -113,8 +114,8 @@ abstract class EndpointAnnotations(val c: blackbox.Context) {
       val fieldName = TermName(s"${field.name}")
       q"t.$fieldName"
     }
-    val className = util.classSymbol.asType
-    q"(t: $className) => (..$tupleArgs)"
+    val classType = util.classSymbol.asType
+    q"(t: $classType) => (..$tupleArgs)"
   }
 
   protected def assignSchemaAnnotations[A](input: Tree, field: Symbol, util: CaseClassUtil[c.type, A]): Tree = {
