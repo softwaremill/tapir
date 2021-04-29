@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "0.18.0-M7"
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "0.18.0-M7"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "0.18.0-M8"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "0.18.0-M8"
 ```
 
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
@@ -72,6 +72,13 @@ Options can be customised by providing an implicit instance of `AsyncAPIDocsOpti
   This option can be applied to all enums in the schema, or only specific ones.
   `SObjectInfo` input parameter is a unique identifier of object in the schema.
   By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
+
+## AsyncAPI Specification Extensions
+
+AsyncAPI supports adding [extensions](https://www.asyncapi.com/docs/specifications/2.0.0#specificationExtensions)
+as well as OpenAPI. There is `docsExtension` method available on parameters and endpoints. There are
+`requestsDocsExtension` and `responsesDocsExtension` methods on `websocketBody`. Take a look at
+**OpenAPI Specification Extensions** section of [documentation](../docs/openapi.md) to get a feeling on how to use it.
 
 ## Exposing AsyncAPI documentation
 
