@@ -12,7 +12,6 @@ import sttp.tapir._
 import sttp.tapir.client.sttp._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.{EndpointInterceptor, RequestHandler, RequestInterceptor, Responder}
 
@@ -189,7 +188,7 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     val interceptor: RequestInterceptor[Identity, Any] =
       (_: Responder[Identity, Any], requestHandler: EndpointInterceptor[Identity, Any] => RequestHandler[Identity, Any]) =>
-        (request: ServerRequest) => {
+        RequestHandler.from { (request, _) =>
           x = 10
           requestHandler(EndpointInterceptor.noop).apply(request)
         }
