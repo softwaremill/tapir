@@ -70,7 +70,7 @@ lazy val allAggregates = core.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
-  circeJson.projectRefs ++
+  zioJson.projectRefs ++
   apispecModel.projectRefs ++
   openapiModel.projectRefs ++
   openapiCirce.projectRefs ++
@@ -507,7 +507,7 @@ lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
 
 // metrics
 
-lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file ("metrics/prometheus-metrics"))
+lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-metrics"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-prometheus-metrics",
