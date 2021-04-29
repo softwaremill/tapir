@@ -2,19 +2,18 @@ package sttp.tapir.server.finatra
 
 import com.twitter.util.logging.Logging
 import com.twitter.util.{Future, FuturePool}
-import sttp.tapir.Defaults
-import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.FileOutputStream
 
 case class FinatraServerOptions(
-    createFile: Array[Byte] => Future[SttpFile],
-    deleteFile: SttpFile => Future[Unit],
+    createFile: Array[Byte] => Future[TapirFile],
+    deleteFile: TapirFile => Future[Unit],
     interceptors: List[Interceptor[Future, FinatraContent]]
 )
 
@@ -58,22 +57,18 @@ object FinatraServerOptions extends Logging {
 
   implicit val default: FinatraServerOptions = customInterceptors()
 
-  def defaultCreateFile(futurePool: FuturePool)(bytes: Array[Byte]): Future[SttpFile] = {
+  def defaultCreateFile(futurePool: FuturePool)(bytes: Array[Byte]): Future[TapirFile] = {
     // TODO: Make this streaming
     futurePool {
       val file = Defaults.createTempFile()
       val outputStream = new FileOutputStream(file)
       outputStream.write(bytes)
       outputStream.close()
-      SttpFile.fromFile(file)
+      file: TapirFile
     }
   }
 
-  def defaultDeleteFile(futurePool: FuturePool): SttpFile => Future[Unit] = file => {
-    futurePool {
-      Defaults.deleteFile()(file)
-    }
-  }
+  def defaultDeleteFile(futurePool: FuturePool): TapirFile => Future[Unit] = file => { futurePool { Defaults.deleteFile()(file) } }
 
   private lazy val futurePool = FuturePool.unboundedPool
 

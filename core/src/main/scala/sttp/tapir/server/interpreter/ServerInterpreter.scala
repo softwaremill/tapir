@@ -4,16 +4,16 @@ import sttp.model.{Headers, StatusCode}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.internal.ParamsAsAny
-import sttp.tapir.model.{ServerRequest, ServerResponse, SttpFile}
+import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
-import sttp.tapir.{DecodeResult, EndpointIO, StreamBodyIO}
+import sttp.tapir.{DecodeResult, EndpointIO, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
     interceptors: List[Interceptor[F, B]],
-    deleteFile: SttpFile => F[Unit]
+    deleteFile: TapirFile => F[Unit]
 )(implicit m: MonadError[F]) {
   def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] =
     apply(request, List(se))

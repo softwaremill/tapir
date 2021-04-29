@@ -43,7 +43,7 @@ class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) 
       case RawBodyType.ByteArrayBody    => Future.value[R](asByteArray).map(RawValue(_))
       case RawBodyType.ByteBufferBody   => Future.value[R](asByteBuffer).map(RawValue(_))
       case RawBodyType.InputStreamBody  => Future.value[R](new ByteArrayInputStream(asByteArray)).map(RawValue(_))
-      case RawBodyType.FileBody         => serverOptions.createFile(asByteArray).map(file => RawValue(file.toFile, Seq(file)))
+      case RawBodyType.FileBody         => serverOptions.createFile(asByteArray).map(file => RawValue(file, Seq(file)))
       case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m).map(RawValue.fromParts)
     }
   }

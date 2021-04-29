@@ -3,13 +3,13 @@ package sttp.tapir.server.http4s
 import cats.Applicative
 import cats.effect.{ContextShift, Sync}
 import cats.implicits.catsSyntaxOptionId
-import sttp.tapir.Defaults
-import sttp.tapir.model.{ServerRequest, SttpFile}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.ExecutionContext
 
@@ -18,8 +18,8 @@ import scala.concurrent.ExecutionContext
   *           Usually the same as `F`.
   */
 case class Http4sServerOptions[F[_], G[_]](
-    createFile: ServerRequest => G[SttpFile],
-    deleteFile: SttpFile => G[Unit],
+    createFile: ServerRequest => G[TapirFile],
+    deleteFile: TapirFile => G[Unit],
     blockingExecutionContext: ExecutionContext,
     ioChunkSize: Int,
     interceptors: List[Interceptor[G, Http4sResponseBody[F]]]
@@ -72,10 +72,10 @@ object Http4sServerOptions {
         List(new DecodeFailureInterceptor[G, Http4sResponseBody[F]](decodeFailureHandler))
     )
 
-  def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => ServerRequest => F[SttpFile] =
-    ec => _ => cs.evalOn(ec)(sync.delay(SttpFile.fromFile(Defaults.createTempFile())))
+  def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => ServerRequest => F[TapirFile] =
+    ec => _ => cs.evalOn(ec)(sync.delay(Defaults.createTempFile()))
 
-  def defaultDeleteFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => SttpFile => F[Unit] =
+  def defaultDeleteFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => TapirFile => F[Unit] =
     ec => file => cs.evalOn(ec)(sync.delay(Defaults.deleteFile()(file)))
 
   object Log {
