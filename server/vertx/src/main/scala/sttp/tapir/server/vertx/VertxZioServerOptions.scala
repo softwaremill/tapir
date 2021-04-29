@@ -10,6 +10,8 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, Decode
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import zio.{RIO, Task}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import zio.RIO
 
 import java.io.File
 
@@ -47,6 +49,7 @@ object VertxZioServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors[R](
+      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[R, *], RoutingContext => Unit]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[RIO[R, *], RoutingContext => Unit]] = Nil,
@@ -59,7 +62,8 @@ object VertxZioServerOptions {
       SttpFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
       file => Task[Unit](Defaults.deleteFile()(file)),
       maxQueueSizeForReadStream = 16,
-      exceptionHandler.map(new ExceptionInterceptor[RIO[R, *], RoutingContext => Unit](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[RIO[R, *], RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, RIO[R, *], RoutingContext => Unit](_, (_, _) => RIO.unit)).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++

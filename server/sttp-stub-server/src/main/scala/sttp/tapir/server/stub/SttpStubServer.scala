@@ -16,6 +16,8 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
+import scala.util.{Success, Try}
+import sttp.monad.syntax._
 
 trait SttpStubServer {
 
@@ -103,7 +105,10 @@ trait SttpStubServer {
 
       val interpreter =
         new ServerInterpreter[R, F, Any, Nothing](requestBody[F](), toResponseBody, interceptors, _ => stub.responseMonad.unit(()))(
-          stub.responseMonad
+          stub.responseMonad,
+          new BodyListener[F, Any] {
+            override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = stub.responseMonad.map(cb(Success(())))(_ => body)
+          }
         )
       val sRequest = new SttpRequest(req)
       stub.responseMonad.map(interpreter.apply(sRequest, endpoint)) {
