@@ -2,13 +2,13 @@ package sttp.tapir.server.vertx
 
 import io.vertx.core.logging.Logger
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.model.SttpFile
+import sttp.tapir.TapirFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 
 trait VertxServerOptions[F[_]] {
-  def uploadDirectory: SttpFile
-  def deleteFile: SttpFile => F[Unit]
+  def uploadDirectory: TapirFile
+  def deleteFile: TapirFile => F[Unit]
   def interceptors: List[Interceptor[F, RoutingContext => Unit]]
 }
 
