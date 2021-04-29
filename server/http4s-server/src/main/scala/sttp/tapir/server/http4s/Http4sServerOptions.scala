@@ -4,17 +4,13 @@ import cats.Applicative
 import cats.effect.{ContextShift, Sync}
 import cats.implicits.catsSyntaxOptionId
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.Defaults
-import sttp.tapir.model.{ServerRequest, SttpFile}
-import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.{Defaults, TapirFile}
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.ExecutionContext
 

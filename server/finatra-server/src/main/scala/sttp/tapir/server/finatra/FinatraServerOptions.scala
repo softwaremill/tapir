@@ -8,8 +8,6 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, Decode
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-
-import java.io.{File, FileOutputStream}
 import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.FileOutputStream
