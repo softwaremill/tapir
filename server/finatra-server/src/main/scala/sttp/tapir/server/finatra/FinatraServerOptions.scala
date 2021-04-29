@@ -7,6 +7,9 @@ import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+
+import java.io.{File, FileOutputStream}
 import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.FileOutputStream
@@ -37,6 +40,7 @@ object FinatraServerOptions extends Logging {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, FinatraContent]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(defaultServerLog),
       additionalInterceptors: List[Interceptor[Future, FinatraContent]] = Nil,
@@ -48,7 +52,8 @@ object FinatraServerOptions extends Logging {
     FinatraServerOptions(
       defaultCreateFile(futurePool),
       defaultDeleteFile(futurePool),
-      exceptionHandler.map(new ExceptionInterceptor[Future, FinatraContent](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[Future, FinatraContent](_)).toList ++
         serverLog.map(sl => new ServerLogInterceptor[Unit, Future, FinatraContent](sl, (_: Unit, _) => Future.Done)).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++

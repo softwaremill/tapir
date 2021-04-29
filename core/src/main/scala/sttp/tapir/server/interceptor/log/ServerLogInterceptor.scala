@@ -3,7 +3,8 @@ package sttp.tapir.server.interceptor.log
 import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.{ServerRequest, ServerResponse}
-import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext, EndpointHandler, EndpointInterceptor, Responder}
+import sttp.tapir.server.interceptor._
+import sttp.tapir.server.interpreter.BodyListener
 
 /** @param toEffect Converts the interpreter-specific value representing the log effect, into an `F`-effect, which
   *                 can be composed with the result of processing a request.
@@ -12,7 +13,8 @@ import sttp.tapir.server.interceptor.{DecodeFailureContext, DecodeSuccessContext
 class ServerLogInterceptor[T, F[_], B](log: ServerLog[T], toEffect: (T, ServerRequest) => F[Unit]) extends EndpointInterceptor[F, B] {
   override def apply(responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] = new EndpointHandler[F, B] {
     override def onDecodeSuccess[I](ctx: DecodeSuccessContext[F, I])(implicit
-        monad: MonadError[F]
+        monad: MonadError[F],
+        bodyListener: BodyListener[F, B]
     ): F[ServerResponse[B]] = {
       decodeHandler
         .onDecodeSuccess(ctx)
@@ -24,7 +26,9 @@ class ServerLogInterceptor[T, F[_], B](log: ServerLog[T], toEffect: (T, ServerRe
         }
     }
 
-    override def onDecodeFailure(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] = {
+    override def onDecodeFailure(
+        ctx: DecodeFailureContext
+    )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {
       decodeHandler
         .onDecodeFailure(ctx)
         .flatMap {

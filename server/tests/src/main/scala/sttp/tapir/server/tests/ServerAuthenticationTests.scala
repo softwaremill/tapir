@@ -13,7 +13,7 @@ import sttp.model.Uri.QuerySegment
 import sttp.tapir.EndpointInput.WWWAuthenticate
 import sttp.tapir.model.UsernamePassword
 
-class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], serverTests: CreateServerTest[F, S, ROUTE])(implicit
+class ServerAuthenticationTests[F[_], S, ROUTE, B](backend: SttpBackend[IO, Any], serverTests: CreateServerTest[F, S, ROUTE, B])(implicit
     m: MonadError[F]
 ) extends Matchers {
   import serverTests._

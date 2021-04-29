@@ -9,7 +9,7 @@ import sttp.monad.MonadError
 import org.scalatest.matchers.should.Matchers._
 import sttp.model.{Header, HeaderNames}
 
-class ServerStreamingTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], serverTests: CreateServerTest[F, S, ROUTE], streams: Streams[S])(
+class ServerStreamingTests[F[_], S, ROUTE, B](backend: SttpBackend[IO, Any], serverTests: CreateServerTest[F, S, ROUTE, B], streams: Streams[S])(
     implicit m: MonadError[F]
 ) {
 

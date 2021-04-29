@@ -5,8 +5,8 @@ import cats.syntax.all._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
-import org.scalatest.{EitherValues, OptionValues}
 import org.scalatest.matchers.should.Matchers._
+import org.scalatest.{EitherValues, OptionValues}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
@@ -16,6 +16,7 @@ import sttp.tapir.server.tests.{
   CreateServerTest,
   ServerAuthenticationTests,
   ServerBasicTests,
+  ServerMetricsTest,
   ServerStreamingTests,
   ServerWebSocketTests,
   backendResource
@@ -32,6 +33,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
+
     val interpreter = new Http4sTestServerInterpreter()
     val createServerTest = new CreateServerTest(interpreter)
     def randomUUID = Some(UUID.randomUUID().toString)
@@ -114,6 +116,6 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
       new ServerAuthenticationTests(backend, createServerTest).tests() ++
-      additionalTests()
+      new ServerMetricsTest(backend, createServerTest).tests() ++ additionalTests()
   }
 }

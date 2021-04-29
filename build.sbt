@@ -64,11 +64,13 @@ lazy val allAggregates = core.projectRefs ++
   newtype.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
+  prometheusMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
+  zioJson.projectRefs ++
   apispecModel.projectRefs ++
   openapiModel.projectRefs ++
   openapiCirce.projectRefs ++
@@ -99,6 +101,7 @@ lazy val allAggregates = core.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
   playClient.projectRefs ++
+  http4sClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
   playground.projectRefs ++
@@ -485,6 +488,36 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
     settings = commonJsSettings
   )
   .dependsOn(core)
+
+lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-zio",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-json" % Versions.zioJson,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
+// metrics
+
+lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-metrics"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-prometheus-metrics",
+    libraryDependencies ++= Seq(
+      "io.prometheus" % "simpleclient_common" % "0.10.0",
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core % "compile->compile;test->test")
 
 // apispec
 
@@ -936,7 +969,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     swaggerUiHttp4s,
     zioServer,
     sttpStubServer,
-    playJson
+    playJson,
+    prometheusMetrics
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
@@ -1023,5 +1057,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServer,
     zio,
     zioServer,
-    derevo
+    derevo,
+    zioJson,
+    prometheusMetrics
   )

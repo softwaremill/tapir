@@ -9,6 +9,7 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, Decode
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.{Defaults, TapirFile}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 import scala.concurrent.Future
 
@@ -42,6 +43,7 @@ object AkkaHttpServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, AkkaResponseBody]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[LoggingAdapter => Future[Unit]]] = Some(Log.defaultServerLog),
       additionalInterceptors: List[Interceptor[Future, AkkaResponseBody]] = Nil,
@@ -53,7 +55,8 @@ object AkkaHttpServerOptions {
     AkkaHttpServerOptions(
       defaultCreateFile,
       defaultDeleteFile,
-      exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
         serverLog.map(Log.serverLogInterceptor).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++

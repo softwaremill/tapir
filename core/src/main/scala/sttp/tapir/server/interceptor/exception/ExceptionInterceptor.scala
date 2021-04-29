@@ -4,10 +4,13 @@ import sttp.monad.MonadError
 import sttp.monad.syntax._
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.interceptor._
+import sttp.tapir.server.interpreter.BodyListener
 
 class ExceptionInterceptor[F[_], B](handler: ExceptionHandler) extends EndpointInterceptor[F, B] {
   override def apply(responder: Responder[F, B], decodeHandler: EndpointHandler[F, B]): EndpointHandler[F, B] = new EndpointHandler[F, B] {
-    override def onDecodeSuccess[I](ctx: DecodeSuccessContext[F, I])(implicit monad: MonadError[F]): F[ServerResponse[B]] = {
+    override def onDecodeSuccess[I](
+        ctx: DecodeSuccessContext[F, I]
+    )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[ServerResponse[B]] = {
       monad.handleError(decodeHandler.onDecodeSuccess(ctx)) { case e: Exception =>
         handler(ExceptionContext(e, ctx.endpoint, ctx.request)) match {
           case Some(value) => responder(ctx.request, value)
@@ -16,7 +19,9 @@ class ExceptionInterceptor[F[_], B](handler: ExceptionHandler) extends EndpointI
       }
     }
 
-    override def onDecodeFailure(ctx: DecodeFailureContext)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] = {
+    override def onDecodeFailure(
+        ctx: DecodeFailureContext
+    )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {
       monad.handleError(decodeHandler.onDecodeFailure(ctx)) { case e: Exception =>
         handler(ExceptionContext(e, ctx.endpoint, ctx.request)) match {
           case Some(value) => responder(ctx.request, value).map(Some(_))
