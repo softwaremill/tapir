@@ -3,10 +3,12 @@ package sttp.tapir.metrics.prometheus
 import io.prometheus.client.CollectorRegistry.defaultRegistry
 import io.prometheus.client.exporter.common.TextFormat
 import io.prometheus.client.{CollectorRegistry, Counter, Gauge, Histogram}
+import sttp.monad.MonadError
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir._
 import sttp.tapir.metrics.{EndpointMetric, Metric}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 import java.io.StringWriter
@@ -19,7 +21,10 @@ case class PrometheusMetrics[F[_]](
 ) {
   import PrometheusMetrics._
 
-  lazy val metricsEndpoint: Endpoint[Unit, Unit, CollectorRegistry, Any] = endpoint.get.in("metrics").out(plainBody[CollectorRegistry])
+  lazy val metricsEndpoint: ServerEndpoint[Unit, Unit, CollectorRegistry, Any, F] = ServerEndpoint(
+    endpoint.get.in("metrics").out(plainBody[CollectorRegistry]),
+    (monad: MonadError[F]) => _ => monad.eval(Right(registry).withLeft[Unit])
+  )
 
   def withRequestsTotal(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
     copy(metrics = metrics :+ requestsTotal(registry, namespace, labels))
@@ -32,7 +37,7 @@ case class PrometheusMetrics[F[_]](
   def withCustom(m: Metric[F, _]): PrometheusMetrics[F] = copy(metrics = metrics :+ m)
 
   def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F, B] =
-    new MetricsRequestInterceptor[F, B](metrics, ignoreEndpoints :+ metricsEndpoint)
+    new MetricsRequestInterceptor[F, B](metrics, ignoreEndpoints :+ metricsEndpoint.endpoint)
 }
 
 object PrometheusMetrics {

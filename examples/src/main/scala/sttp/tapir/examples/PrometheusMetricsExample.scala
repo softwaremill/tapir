@@ -36,11 +36,6 @@ object PrometheusMetricsExample extends App with StrictLogging {
     .withRequestsTotal()
     .withResponsesTotal()
 
-  val metricsEndpoint: ServerEndpoint[Unit, Unit, CollectorRegistry, Any, Future] =
-    prometheusMetrics.metricsEndpoint.serverLogic { _ =>
-      Future.successful(Right(prometheusMetrics.registry).withLeft[Unit])
-    }
-
   implicit val serverOptions: AkkaHttpServerOptions =
     AkkaHttpServerOptions.customInterceptors(
       // Adds an interceptor which collects metrics by executing callbacks
@@ -50,7 +45,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
   val routes: Route = concat(
     AkkaHttpServerInterpreter.toRoute(personEndpoint),
     // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `CollectorRegistry` to plain text response
-    AkkaHttpServerInterpreter.toRoute(metricsEndpoint)
+    AkkaHttpServerInterpreter.toRoute(prometheusMetrics.metricsEndpoint)
   )
 
   implicit val actorSystem: ActorSystem = ActorSystem()

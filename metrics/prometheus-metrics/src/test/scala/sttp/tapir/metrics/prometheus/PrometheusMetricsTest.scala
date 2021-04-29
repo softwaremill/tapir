@@ -149,10 +149,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesTotal()
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
-    val ses = List(
-      metrics.metricsEndpoint.serverLogic { _ => idMonadError.unit(Right(metrics.registry).asInstanceOf[Either[Unit, CollectorRegistry]]) },
-      serverEp
-    )
+    val ses = List(metrics.metricsEndpoint, serverEp)
 
     // when
     interpreter.apply(getMetricsRequest, ses)
@@ -173,12 +170,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
     // when
     for {
-      response <- interpreter.apply(
-        getMetricsRequest,
-        metrics.metricsEndpoint.serverLogic { _ =>
-          idMonadError.unit(Right(metrics.registry).asInstanceOf[Either[Unit, CollectorRegistry]])
-        }
-      )
+      response <- interpreter.apply(getMetricsRequest, metrics.metricsEndpoint)
     } yield {
       // then
       response.body.map { b =>
@@ -204,8 +196,7 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(testRequest("Jacob"), serverEp)
 
     // then
-    val r = collectorRegistryCodec.encode(metrics.registry)
-    println(r)
+    collectorRegistryCodec.encode(metrics.registry)
   }
 
 }
