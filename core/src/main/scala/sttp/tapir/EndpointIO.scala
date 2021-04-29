@@ -8,7 +8,7 @@ import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.typelevel.{FnComponents, ParamConcat}
+import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
 import scala.collection.immutable.{Seq, ListMap}
