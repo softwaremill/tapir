@@ -93,7 +93,7 @@ object MapToMacro {
       if (!(caseClassField.info.resultType =:= tupleArg)) {
         c.abort(
           c.enclosingPosition,
-          s"The type of the tuple field doesn't match the type of the case class field: $tupleArg, $caseClassField"
+          s"The type of the tuple field doesn't match the type of the case class field ($caseClassField): $tupleArg, ${caseClassField.info.resultType}"
         )
       }
     }

@@ -189,8 +189,8 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       .and(query[Int]("field1"))
       .and(query[Long]("field3"))
       .and(query[String]("field4"))
-      .map { case (field5, field2, field1, field3, field4) =>
-        TapirRequestTest6(field1, field2, field3, field4, field5)
+      .map[TapirRequestTest6] { (t: (Int, Boolean, Int, Long, String)) =>
+        TapirRequestTest6(t._3, t._2, t._4, t._5, t._1)
       }((t: TapirRequestTest6) => (t.field5, t.field2, t.field1, t.field3, t.field4))
 
     compareTransputs(derivedInput, expectedInput) shouldBe true
@@ -380,7 +380,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
         info1 == info2
       case (Cookie(name1, _, info1), Cookie(name2, _, info2)) =>
         name1 == name2 && info1 == info2
-      case (l, r) =>
+      case (l, r) => // remove work-around after https://github.com/lampepfl/dotty/issues/12241 is fixed
         (l, r) match {
           case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
             info1 == info2
