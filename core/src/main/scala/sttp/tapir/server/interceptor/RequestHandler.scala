@@ -8,7 +8,7 @@ trait RequestHandler[F[_], B] {
 }
 
 object RequestHandler {
-  def of[F[_], B](f: (ServerRequest, MonadError[F]) => F[Option[ServerResponse[B]]]): RequestHandler[F, B] = new RequestHandler[F, B] {
+  def from[F[_], B](f: (ServerRequest, MonadError[F]) => F[Option[ServerResponse[B]]]): RequestHandler[F, B] = new RequestHandler[F, B] {
     override def apply(request: ServerRequest)(implicit monad: MonadError[F]): F[Option[ServerResponse[B]]] = f(request, monad)
   }
 }

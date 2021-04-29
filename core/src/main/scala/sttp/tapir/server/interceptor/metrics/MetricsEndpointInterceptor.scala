@@ -15,19 +15,19 @@ class MetricsRequestInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndp
     extends RequestInterceptor[F, B] {
 
   override def apply(responder: Responder[F, B], requestHandler: EndpointInterceptor[F, B] => RequestHandler[F, B]): RequestHandler[F, B] =
-    RequestHandler.of { (request, monad) =>
-      implicit val m: MonadError[F] = implicitly(monad)
+    RequestHandler.from { (request, monad) =>
+      implicit val m: MonadError[F] = monad
       metrics
-        .foldLeft(monad.unit(List.empty[EndpointMetric[F]])) { (mAcc, metric) =>
+        .foldLeft(List.empty[EndpointMetric[F]].unit) { (mAcc, metric) =>
           for {
             metrics <- mAcc
             endpointMetric <- metric match {
               case Metric(m, onRequest) => onRequest(request, m, monad)
             }
-          } yield metrics :+ endpointMetric
+          } yield endpointMetric :: metrics
         }
         .flatMap { endpointMetrics =>
-          requestHandler(new MetricsEndpointInterceptor[F, B](endpointMetrics, ignoreEndpoints)).apply(request)
+          requestHandler(new MetricsEndpointInterceptor[F, B](endpointMetrics.reverse, ignoreEndpoints)).apply(request)
         }
     }
 }
@@ -56,8 +56,7 @@ private[metrics] class MetricsEndpointInterceptor[F[_], B](
         }
       }
 
-      /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage.
-        */
+      /** If there's some `ServerResponse` collects `onResponse` as well as `onRequest` metric which was not collected in `onDecodeSuccess` stage. */
       override def onDecodeFailure(
           ctx: DecodeFailureContext
       )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]): F[Option[ServerResponse[B]]] = {

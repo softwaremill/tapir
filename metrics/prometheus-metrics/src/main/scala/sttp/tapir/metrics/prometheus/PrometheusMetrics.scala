@@ -71,7 +71,7 @@ object PrometheusMetrics {
         .register(registry),
       onRequest = { (req, counter, m) =>
         m.unit {
-          EndpointMetric().onRequest { ep => m.eval(counter.labels(labels.forRequest(ep, req): _*).inc()) }
+          EndpointMetric().onEndpointRequest { ep => m.eval(counter.labels(labels.forRequest(ep, req): _*).inc()) }
         }
       }
     )
@@ -89,7 +89,7 @@ object PrometheusMetrics {
       onRequest = { (req, gauge, m) =>
         m.unit {
           EndpointMetric()
-            .onRequest { ep => m.eval(gauge.labels(labels.forRequest(ep, req): _*).inc()) }
+            .onEndpointRequest { ep => m.eval(gauge.labels(labels.forRequest(ep, req): _*).inc()) }
             .onResponse { (ep, _) => m.eval(gauge.labels(labels.forRequest(ep, req): _*).dec()) }
             .onException { (ep, _) => m.eval(gauge.labels(labels.forRequest(ep, req): _*).dec()) }
         }

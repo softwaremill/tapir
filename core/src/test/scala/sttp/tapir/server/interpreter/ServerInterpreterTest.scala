@@ -52,7 +52,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
       override def apply(
           responder: Responder[Id, Unit],
           requestHandler: EndpointInterceptor[Id, Unit] => RequestHandler[Id, Unit]
-      ): RequestHandler[Id, Unit] = RequestHandler.of { (request, monad) =>
+      ): RequestHandler[Id, Unit] = RequestHandler.from { (request, monad) =>
         callTrail ::= "2 request"
         requestHandler(new AddToTrailInterceptor("2")).apply(request)(monad)
       }

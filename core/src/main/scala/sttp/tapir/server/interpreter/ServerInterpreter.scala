@@ -29,11 +29,11 @@ class ServerInterpreter[R, F[_], B, S](
       ses: List[ServerEndpoint[_, _, _, R, F]]
   ): RequestHandler[F, B] = {
     is match {
-      case Nil => RequestHandler.of { (request, _) => firstNotNone(request, ses, eisAcc.reverse) }
+      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse) }
       case (i: RequestInterceptor[F, B]) :: tail =>
         i(
           responder,
-          { ei => RequestHandler.of { (request, _) => callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request) } }
+          { ei => RequestHandler.from { (request, _) => callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request) } }
         )
       case (ei: EndpointInterceptor[F, B]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, ses)
     }
