@@ -10,6 +10,7 @@ import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 import java.io.File
 import scala.concurrent.{ExecutionContext, Future}
@@ -54,6 +55,7 @@ object VertxFutureServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, RoutingContext => Unit]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[Future, RoutingContext => Unit]] = Nil,
@@ -65,7 +67,8 @@ object VertxFutureServerOptions {
     VertxFutureServerOptions(
       SttpFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
       defaultDeleteFile,
-      exceptionHandler.map(new ExceptionInterceptor[Future, RoutingContext => Unit](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[Future, RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, Future, RoutingContext => Unit](_, (_, _) => Future.successful(()))).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++

@@ -86,12 +86,22 @@ Options can be customised by providing an implicit instance of `OpenAPIDocsOptio
 It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
 There are `.docsExtension` methods available on Input/Output parameters and on `endpoint`:
 
-```scala
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
+import sttp.tapir.openapi._
+import sttp.tapir.openapi.circe._
+import sttp.tapir.openapi.circe.yaml._
+import io.circe.generic.auto._
+
+case class FruitAmount(fruit: String, amount: Int)
+
 case class MyExtension(string: String, int: Int)
 
 val sampleEndpoint =
   endpoint.post
-    .in("path-hello" / path[String]("world").extension("x-path", 22))
+    .in("path-hello" / path[String]("world").docsExtension("x-path", 22))
     .in(query[String]("hi").docsExtension("x-query", 33))
     .in(jsonBody[FruitAmount].docsExtension("x-request", MyExtension("a", 1)))
     .out(jsonBody[FruitAmount].docsExtension("x-response", List("array-0", "array-1")).docsExtension("x-response", "foo"))

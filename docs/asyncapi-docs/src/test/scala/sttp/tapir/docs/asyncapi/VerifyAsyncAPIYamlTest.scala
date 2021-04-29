@@ -7,12 +7,13 @@ import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.asyncapi.Server
+import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
 import sttp.tapir.tests.{Fruit, FruitAmount}
 import sttp.tapir.{CodecFormat, auth, endpoint, header, query, webSocketBody}
 import sttp.tapir.json.circe._
+import sttp.tapir._
 
 import scala.io.Source
 
@@ -110,6 +111,31 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should apply asyncapi extensions in correct places") {
+    case class MyExtension(string: String, int: Int)
+
+    val sampleEndpoint =
+      endpoint.post
+        .in("path-hello" / path[String]("world").docsExtension("x-path", 22))
+        .out(
+          webSocketBody[FruitAmount, CodecFormat.Json, Fruit, CodecFormat.Json](AkkaStreams)
+            .requestsDocsExtension("x-request", List("array-0", "array-1"))
+            .responsesDocsExtension("x-response", "foo")
+        )
+        .docsExtension("x-endpoint-level-string", "world")
+        .docsExtension("x-endpoint-level-int", 11)
+        .docsExtension("x-endpoint-obj", MyExtension("42.42", 42))
+
+    val rootExtensions = List(
+      DocsExtension.of("x-root-bool", true),
+      DocsExtension.of("x-root-list", List(1, 2, 4))
+    )
+
+    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(sampleEndpoint, Info("title", "1.0"), Seq.empty, rootExtensions).toYaml
+
+    noIndentation(actualYaml) shouldBe loadYaml("expected_extensions.yml")
   }
 
   private def loadYaml(fileName: String): String = {

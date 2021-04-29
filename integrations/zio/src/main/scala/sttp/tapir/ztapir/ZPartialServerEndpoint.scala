@@ -74,7 +74,7 @@ abstract class ZPartialServerEndpoint[R, U, I, E, O](val endpoint: ZEndpoint[I, 
     ServerEndpoint(
       endpoint.prependIn(tInput): ZEndpoint[(T, I), E, O],
       _ => { case (t, i) =>
-        partialLogic(t).flatMap(u => g((u, i))).either
+        partialLogic(t).flatMap(u => g((u, i))).either.resurrect
       }
     )
 }
