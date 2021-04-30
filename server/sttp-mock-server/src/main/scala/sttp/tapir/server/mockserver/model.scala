@@ -72,12 +72,13 @@ case class ExpectationTimes(unlimited: Boolean, remainingTimes: Option[Int])
 
 case class ExpectationTimeToLive(unlimited: Boolean, timeToLive: Option[Int], timeUnit: Option[String])
 
-sealed trait VerificationTimes {
-  protected[mockserver] def toDefinition: VerificationTimesDefinition
+class VerificationTimes private (atMost: Option[Int], atLeast: Option[Int]) {
+  protected[mockserver] def toDefinition: VerificationTimesDefinition =
+    VerificationTimesDefinition(atMost, atLeast)
 }
 
 object VerificationTimes {
-  val never: VerificationTimes = Impl(atMost = Some(0), atLeast = None)
+  val never: VerificationTimes = new VerificationTimes(atMost = Some(0), atLeast = None)
 
   val exactlyOnce: VerificationTimes = exactly(times = 1)
 
@@ -85,13 +86,11 @@ object VerificationTimes {
 
   val atLeastOnce: VerificationTimes = atLeast(times = 1)
 
-  def exactly(times: Int): VerificationTimes = Impl(atMost = Some(times), atLeast = Some(times))
+  def apply(atMost: Int, atLeast: Int): VerificationTimes = new VerificationTimes(atMost = Some(atMost), atLeast = Some(atLeast))
 
-  def atMost(times: Int): VerificationTimes = Impl(atMost = Some(times), atLeast = None)
+  def exactly(times: Int): VerificationTimes = new VerificationTimes(atMost = Some(times), atLeast = Some(times))
 
-  def atLeast(times: Int): VerificationTimes = Impl(atMost = None, atLeast = Some(times))
+  def atMost(times: Int): VerificationTimes = new VerificationTimes(atMost = Some(times), atLeast = None)
 
-  final case class Impl(atMost: Option[Int], atLeast: Option[Int]) extends VerificationTimes {
-    override val toDefinition: VerificationTimesDefinition = VerificationTimesDefinition(atMost, atLeast)
-  }
+  def atLeast(times: Int): VerificationTimes = new VerificationTimes(atMost = None, atLeast = Some(times))
 }
