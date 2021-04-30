@@ -1,14 +1,14 @@
 # Observability
 
-Metrics collection is possible by creating `Metric` instances and adding them to server options via `MetricsInterceptor`.
-Certain endpoints can be ignored by adding their definitions to `ignoreEndpoints` list.
+Metrics collection is possible by creating `Metric` instances and adding them to server options via `MetricsInterceptor`
+. Certain endpoints can be ignored by adding their definitions to `ignoreEndpoints` list.
 
-`Metric` wraps an aggregation object (like a counter or gauge), and needs to implement the `onRequest` function,
-which returns an `EndpointMetric` instance.
+`Metric` wraps an aggregation object (like a counter or gauge), and needs to implement the `onRequest` function, which
+returns an `EndpointMetric` instance.
 
-`Metric.onRequest` is used to create the proper metric description. Any additional data  might be gathered there,
-like getting current timestamp and passing it down to `EndpointMetric` callbacks which are then executed in certain
-points of request processing.
+`Metric.onRequest` is used to create the proper metric description. Any additional data might be gathered there, like
+getting current timestamp and passing it down to `EndpointMetric` callbacks which are then executed in certain points of
+request processing.
 
 There are three callbacks in `EndpointMetric`:
 
@@ -18,6 +18,31 @@ There are three callbacks in `EndpointMetric`:
    observe end-of-body, use the provided `BodyListener`.
 3. `onException` - called after exception is thrown (in underlying streamed body, and/or on any other exception when
    there's no default response)
+
+### Labels
+
+By default, request metrics are labeled by path and method. Response labels are additionally labelled by status code
+group. For example GET endpoint like `http://h:p/api/persons?name=Mike` returning 200 response will be labeled
+as `path="api/persons", method="GET", status="2xx"`. Query params are omitted by default, but it's possible to include
+them as shown in example below.
+
+If the path contains captures, the label will include the path capture name instead of the actual value, e.g.
+`api/persons/{name}`.
+
+Labels for default metrics can be customized, any attribute from `Endpoint`, `ServerRequest` and `ServerResponse`
+could be used, for example:
+
+```scala mdoc:compile-only
+import sttp.tapir.metrics.MetricLabels
+
+val labels = MetricLabels(
+  forRequest = Seq(
+    "path" -> { case (ep, _) => ep.renderPathTemplate() },
+    "protocol" -> { case (_, req) => req.protocol }
+  ),
+  forResponse = Seq()
+)
+```
 
 ## Prometheus metrics
 
@@ -47,36 +72,6 @@ implicit val serverOptions: AkkaHttpServerOptions =
   AkkaHttpServerOptions.customInterceptors(metricsInterceptor = Some(prometheusMetrics.metricsInterceptor()))
 
 val routes: Route = AkkaHttpServerInterpreter.toRoute(prometheusMetrics.metricsEndpoint)
-```
-
-### Labels
-
-By default, request metrics are labeled by path and method. Response labels are additionally labelled by status code
-group. For example GET endpoint like `http://h:p/api/persons?name=Mike` returning 200 response will be labeled
-as `{path="api/persons", method="GET", status="2xx"}`. Query params are omitted by default, but it's possible to include
-them as shown in example below. 
-
-If the path contains captures, the label will include the path capture name instead of the actual value, e.g. 
-`api/persons/{name}`.
-
-Labels for default metrics can be customized, any attribute from `Endpoint`, `ServerRequest` and `ServerResponse`
-could be used, for example:
-
-```scala mdoc:compile-only
-import sttp.tapir.metrics.prometheus.PrometheusMetrics
-import sttp.tapir.metrics.prometheus.PrometheusMetrics.PrometheusLabels
-import io.prometheus.client.CollectorRegistry
-import scala.concurrent.Future
-
-val labels = PrometheusLabels(
-  forRequest = Seq(
-    "path" -> { case (ep, _) => ep.renderPathTemplate() },
-    "protocol" -> { case (_, req) => req.protocol }
-  ),
-  forResponse = Seq()
-)
-
-val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry).withRequestsTotal(labels)
 ```
 
 ### Custom metrics
@@ -114,4 +109,30 @@ val responsesTotal = Metric[Future, Counter](
 )
 
 val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.defaultRegistry).withCustom(responsesTotal)
+```
+
+## OpenTelemetry metrics
+
+OpenTelemetry metrics are vendor-agnostic and can be exported using one
+of [exporters](https://github.com/open-telemetry/opentelemetry-java/tree/main/exporters) from SDK. Currently, only
+Prometheus has its exporter for metrics, but the list will probably enlarge soon, since OpenTelemetry is aiming to unify
+observability vendors into single API.
+
+`OpenTelemetryMetrics` encapsulates metric instances and needs a `MetricProvider` from OpenTelemetry SDK to create
+default metrics, simply:
+
+```scala mdoc:compile-only
+import sttp.tapir.metrics.opentelemetry.OpenTelemetryMetrics
+import io.opentelemetry.api.metrics.MeterProvider
+import scala.concurrent.Future
+
+val provider: MeterProvider = ???
+
+val metrics = OpenTelemetryMetrics[Future](provider, "your-app-instrumentation")
+  .withRequestsTotal()
+  .withRequestsActive()
+  .withResponsesTotal()
+  .withResponsesDuration()
+
+val metricsInterceptor = metrics.metricsInterceptor() // add me to your server options
 ```

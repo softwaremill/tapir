@@ -6,8 +6,7 @@ import io.prometheus.client.{CollectorRegistry, Counter, Gauge, Histogram}
 import sttp.monad.MonadError
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir._
-import sttp.tapir.metrics.{EndpointMetric, Metric}
-import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.metrics.{EndpointMetric, Metric, MetricLabels}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
@@ -26,13 +25,13 @@ case class PrometheusMetrics[F[_]](
     (monad: MonadError[F]) => _ => monad.eval(Right(registry): Either[Unit, CollectorRegistry])
   )
 
-  def withRequestsTotal(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+  def withRequestsTotal(labels: MetricLabels = MetricLabels.Default): PrometheusMetrics[F] =
     copy(metrics = metrics :+ requestsTotal(registry, namespace, labels))
-  def withRequestsActive(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+  def withRequestsActive(labels: MetricLabels = MetricLabels.Default): PrometheusMetrics[F] =
     copy(metrics = metrics :+ requestsActive(registry, namespace, labels))
-  def withResponsesTotal(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+  def withResponsesTotal(labels: MetricLabels = MetricLabels.Default): PrometheusMetrics[F] =
     copy(metrics = metrics :+ responsesTotal(registry, namespace, labels))
-  def withResponsesDuration(labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+  def withResponsesDuration(labels: MetricLabels = MetricLabels.Default): PrometheusMetrics[F] =
     copy(metrics = metrics :+ responsesDuration(registry, namespace, labels))
   def withCustom(m: Metric[F, _]): PrometheusMetrics[F] = copy(metrics = metrics :+ m)
 
@@ -52,7 +51,7 @@ object PrometheusMetrics {
       output.toString
     })
 
-  def withDefaultMetrics[F[_]](namespace: String = "tapir", labels: PrometheusLabels = DefaultLabels): PrometheusMetrics[F] =
+  def withDefaultMetrics[F[_]](namespace: String = "tapir", labels: MetricLabels = MetricLabels.Default): PrometheusMetrics[F] =
     PrometheusMetrics(
       namespace,
       defaultRegistry,
@@ -64,7 +63,7 @@ object PrometheusMetrics {
       )
     )
 
-  def requestsTotal[F[_]](registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[F, Counter] =
+  def requestsTotal[F[_]](registry: CollectorRegistry, namespace: String, labels: MetricLabels): Metric[F, Counter] =
     Metric[F, Counter](
       Counter
         .build()
@@ -81,7 +80,7 @@ object PrometheusMetrics {
       }
     )
 
-  def requestsActive[F[_]](registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[F, Gauge] =
+  def requestsActive[F[_]](registry: CollectorRegistry, namespace: String, labels: MetricLabels): Metric[F, Gauge] =
     Metric[F, Gauge](
       Gauge
         .build()
@@ -101,25 +100,25 @@ object PrometheusMetrics {
       }
     )
 
-  def responsesTotal[F[_]](registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[F, Counter] =
+  def responsesTotal[F[_]](registry: CollectorRegistry, namespace: String, labels: MetricLabels): Metric[F, Counter] =
     Metric[F, Counter](
       Counter
         .build()
         .namespace(namespace)
         .name("responses_total")
-        .help("HTTP responses")
+        .help("Total HTTP responses")
         .labelNames(labels.forRequestNames ++ labels.forResponseNames: _*)
         .register(registry),
       onRequest = { (req, counter, m) =>
         m.unit {
           EndpointMetric()
             .onResponse { (ep, res) => m.eval(counter.labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*).inc()) }
-            .onException { (ep, _) => m.eval(counter.labels(labels.forRequest(ep, req) :+ "5xx": _*).inc()) }
+            .onException { (ep, ex) => m.eval(counter.labels(labels.forRequest(ep, req) ++ labels.forResponse(ex): _*).inc()) }
         }
       }
     )
 
-  def responsesDuration[F[_]](registry: CollectorRegistry, namespace: String, labels: PrometheusLabels): Metric[F, Histogram] =
+  def responsesDuration[F[_]](registry: CollectorRegistry, namespace: String, labels: MetricLabels): Metric[F, Histogram] =
     Metric[F, Histogram](
       Histogram
         .build()
@@ -139,38 +138,14 @@ object PrometheusMetrics {
                   .observe(Duration.between(requestStart, Instant.now()).toMillis.toDouble / 1000.0)
               )
             }
+            .onException { (ep, ex) =>
+              m.eval(
+                histogram
+                  .labels(labels.forRequest(ep, req) ++ labels.forResponse(ex): _*)
+                  .observe(Duration.between(requestStart, Instant.now()).toMillis.toDouble / 1000.0)
+              )
+            }
         }
       }
     )
-
-  case class PrometheusLabels(
-      forRequest: Seq[(String, (Endpoint[_, _, _, _], ServerRequest) => String)],
-      forResponse: Seq[(String, ServerResponse[_] => String)]
-  ) {
-    def forRequestNames: Seq[String] = forRequest.map { case (name, _) => name }
-    def forResponseNames: Seq[String] = forResponse.map { case (name, _) => name }
-    def forRequest(ep: Endpoint[_, _, _, _], req: ServerRequest): Seq[String] = forRequest.map { case (_, f) => f(ep, req) }
-    def forResponse(res: ServerResponse[_]): Seq[String] = forResponse.map { case (_, f) => f(res) }
-  }
-
-  /** Labels request by path and method, response by status code
-    */
-  lazy val DefaultLabels: PrometheusLabels = PrometheusLabels(
-    forRequest = Seq(
-      "path" -> { case (ep, _) => ep.renderPathTemplate(renderQueryParam = None) },
-      "method" -> { case (_, req) => req.method.method }
-    ),
-    forResponse = Seq(
-      "status" -> { res =>
-        res.code match {
-          case c if c.isInformational => "1xx"
-          case c if c.isSuccess       => "2xx"
-          case c if c.isRedirect      => "3xx"
-          case c if c.isClientError   => "4xx"
-          case c if c.isServerError   => "5xx"
-          case _                      => ""
-        }
-      }
-    )
-  )
 }
