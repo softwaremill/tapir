@@ -13,17 +13,18 @@ import java.time.{Duration, Instant}
 case class OpenTelemetryMetrics[F[_]](
     provider: MeterProvider,
     instrumentationName: String,
+    instrumentationVersion: String,
     metrics: List[Metric[F, _]] = List.empty[Metric[F, _]]
 ) {
 
   def withRequestsTotal(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
-    copy(metrics = metrics :+ requestsTotal(instrumentationName, provider, labels))
+    copy(metrics = metrics :+ requestsTotal(instrumentationName, instrumentationVersion, provider, labels))
   def withRequestsActive(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
-    copy(metrics = metrics :+ requestsActive(instrumentationName, provider, labels))
+    copy(metrics = metrics :+ requestsActive(instrumentationName, instrumentationVersion, provider, labels))
   def withResponsesTotal(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
-    copy(metrics = metrics :+ responsesTotal(instrumentationName, provider, labels))
+    copy(metrics = metrics :+ responsesTotal(instrumentationName, instrumentationVersion, provider, labels))
   def withResponsesDuration(labels: MetricLabels = MetricLabels.Default): OpenTelemetryMetrics[F] =
-    copy(metrics = metrics :+ responsesDuration(instrumentationName, provider, labels))
+    copy(metrics = metrics :+ responsesDuration(instrumentationName, instrumentationVersion, provider, labels))
   def withCustom(m: Metric[F, _]): OpenTelemetryMetrics[F] = copy(metrics = metrics :+ m)
 
   def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F, B] =
@@ -35,23 +36,30 @@ object OpenTelemetryMetrics {
   def withDefaultMetrics[F[_]](
       provider: MeterProvider,
       instrumentationName: String = "opentelemetry-instrumentation-tapir",
+      instrumentationVersion: String = "1.0.0",
       labels: MetricLabels = MetricLabels.Default
   ): OpenTelemetryMetrics[F] =
     OpenTelemetryMetrics(
       provider,
       instrumentationName,
+      instrumentationVersion,
       List(
-        requestsTotal(instrumentationName, provider, labels),
-        requestsActive(instrumentationName, provider, labels),
-        responsesTotal(instrumentationName, provider, labels),
-        responsesDuration(instrumentationName, provider, labels)
+        requestsTotal(instrumentationName, instrumentationVersion, provider, labels),
+        requestsActive(instrumentationName, instrumentationVersion, provider, labels),
+        responsesTotal(instrumentationName, instrumentationVersion, provider, labels),
+        responsesDuration(instrumentationName, instrumentationVersion, provider, labels)
       )
     )
 
-  def requestsTotal[F[_]](instrumentationName: String, provider: MeterProvider, labels: MetricLabels): Metric[F, LongCounter] =
+  def requestsTotal[F[_]](
+      instrumentationName: String,
+      instrumentationVersion: String,
+      provider: MeterProvider,
+      labels: MetricLabels
+  ): Metric[F, LongCounter] =
     Metric[F, LongCounter](
       provider
-        .get(instrumentationName)
+        .get(instrumentationName, instrumentationVersion)
         .longCounterBuilder("requests_total")
         .setDescription("Total HTTP requests")
         .setUnit("1")
@@ -65,10 +73,15 @@ object OpenTelemetryMetrics {
       }
     )
 
-  def requestsActive[F[_]](instrumentationName: String, provider: MeterProvider, labels: MetricLabels): Metric[F, LongUpDownCounter] =
+  def requestsActive[F[_]](
+      instrumentationName: String,
+      instrumentationVersion: String,
+      provider: MeterProvider,
+      labels: MetricLabels
+  ): Metric[F, LongUpDownCounter] =
     Metric[F, LongUpDownCounter](
       provider
-        .get(instrumentationName)
+        .get(instrumentationName, instrumentationVersion)
         .longUpDownCounterBuilder("requests_active")
         .setDescription("Active HTTP requests")
         .setUnit("1")
@@ -83,10 +96,15 @@ object OpenTelemetryMetrics {
       }
     )
 
-  def responsesTotal[F[_]](instrumentationName: String, provider: MeterProvider, labels: MetricLabels): Metric[F, LongCounter] =
+  def responsesTotal[F[_]](
+      instrumentationName: String,
+      instrumentationVersion: String,
+      provider: MeterProvider,
+      labels: MetricLabels
+  ): Metric[F, LongCounter] =
     Metric[F, LongCounter](
       provider
-        .get(instrumentationName)
+        .get(instrumentationName, instrumentationVersion)
         .longCounterBuilder("responses_total")
         .setDescription("Total HTTP responses")
         .setUnit("1")
@@ -110,10 +128,15 @@ object OpenTelemetryMetrics {
       }
     )
 
-  def responsesDuration[F[_]](instrumentationName: String, provider: MeterProvider, labels: MetricLabels): Metric[F, DoubleValueRecorder] =
+  def responsesDuration[F[_]](
+      instrumentationName: String,
+      instrumentationVersion: String,
+      provider: MeterProvider,
+      labels: MetricLabels
+  ): Metric[F, DoubleValueRecorder] =
     Metric[F, DoubleValueRecorder](
       provider
-        .get(instrumentationName)
+        .get(instrumentationName, instrumentationVersion)
         .doubleValueRecorderBuilder("responses_duration")
         .setDescription("HTTP responses duration")
         .setUnit("ms")
@@ -149,6 +172,4 @@ object OpenTelemetryMetrics {
     l2.forEach((n, v) => b.put(n, v))
     b.build()
   }
-
-  private val DefaultInstrumentationName = "opentelemetry-instrumentation-tapir"
 }

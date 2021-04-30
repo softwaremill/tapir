@@ -1,7 +1,7 @@
 # Observability
 
-Metrics collection is possible by creating `Metric` instances and adding them to server options via `MetricsInterceptor`
-. Certain endpoints can be ignored by adding their definitions to `ignoreEndpoints` list.
+Metrics collection is possible by creating `Metric` instances and adding them to server options via `MetricsInterceptor`. 
+Certain endpoints can be ignored by adding their definitions to `ignoreEndpoints` list.
 
 `Metric` wraps an aggregation object (like a counter or gauge), and needs to implement the `onRequest` function, which
 returns an `EndpointMetric` instance.
@@ -114,9 +114,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 ## OpenTelemetry metrics
 
 OpenTelemetry metrics are vendor-agnostic and can be exported using one
-of [exporters](https://github.com/open-telemetry/opentelemetry-java/tree/main/exporters) from SDK. Currently, only
-Prometheus has its exporter for metrics, but the list will probably enlarge soon, since OpenTelemetry is aiming to unify
-observability vendors into single API.
+of [exporters](https://github.com/open-telemetry/opentelemetry-java/tree/main/exporters) from SDK.
 
 `OpenTelemetryMetrics` encapsulates metric instances and needs a `MetricProvider` from OpenTelemetry SDK to create
 default metrics, simply:
