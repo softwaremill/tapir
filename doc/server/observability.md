@@ -126,7 +126,7 @@ import scala.concurrent.Future
 
 val provider: MeterProvider = ???
 
-val metrics = OpenTelemetryMetrics[Future](provider, "your-app-instrumentation")
+val metrics = OpenTelemetryMetrics[Future](provider, "your-app-instrumentation", "1.0.0")
   .withRequestsTotal()
   .withRequestsActive()
   .withResponsesTotal()
