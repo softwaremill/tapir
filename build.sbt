@@ -64,11 +64,13 @@ lazy val allAggregates = core.projectRefs ++
   newtype.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
+  prometheusMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
   uPickleJson.projectRefs ++
   tethysJson.projectRefs ++
+  zioJson.projectRefs ++
   apispecModel.projectRefs ++
   openapiModel.projectRefs ++
   openapiCirce.projectRefs ++
@@ -100,6 +102,7 @@ lazy val allAggregates = core.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
   playClient.projectRefs ++
+  http4sClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
   playground.projectRefs ++
@@ -265,12 +268,12 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.5.0",
+      "org.typelevel" %%% "cats-core" % "2.6.0",
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "org.typelevel" %%% "discipline-scalatest" % "2.1.3" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.5.0" % Test
+      "org.typelevel" %%% "discipline-scalatest" % "2.1.4" % Test,
+      "org.typelevel" %%% "cats-laws" % "2.6.0" % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -329,10 +332,12 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
   .settings(commonSettings)
   .settings(
     name := "tapir-zio",
+    testFrameworks += new TestFramework("zio.test.sbt.ZTestFramework"),
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio" % Versions.zio,
       "dev.zio" %% "zio-streams" % Versions.zio,
-      scalaTest.value % Test,
+      "dev.zio" %% "zio-test" % Versions.zio % Test,
+      "dev.zio" %% "zio-test-sbt" % Versions.zio % Test,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
     )
   )
@@ -473,8 +478,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.7.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.7.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.7.3",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.7.3" % Test,
       scalaTest.value % Test
     )
   )
@@ -484,6 +489,36 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
     settings = commonJsSettings
   )
   .dependsOn(core)
+
+lazy val zioJson: ProjectMatrix = (projectMatrix in file("json/zio"))
+  .settings(commonSettings)
+  .settings(
+    name := "tapir-json-zio",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio-json" % Versions.zioJson,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jsPlatform(
+    scalaVersions = allScalaVersions,
+    settings = commonJsSettings
+  )
+  .dependsOn(core)
+
+// metrics
+
+lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prometheus-metrics"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-prometheus-metrics",
+    libraryDependencies ++= Seq(
+      "io.prometheus" % "simpleclient_common" % "0.10.0",
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core % "compile->compile;test->test")
 
 // apispec
 
@@ -952,6 +987,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioServer,
     sttpStubServer,
     playJson,
+    prometheusMetrics,
     sttpMockServer
   )
 
@@ -1039,5 +1075,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     vertxServer,
     zio,
     zioServer,
-    derevo
+    derevo,
+    zioJson,
+    prometheusMetrics,
+    sttpMockServer
   )

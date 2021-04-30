@@ -31,8 +31,9 @@ trait FinatraServerInterpreter extends Logging {
       val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, Nothing](
         new FinatraRequestBody(request, serverOptions),
         new FinatraToResponseBody,
-        serverOptions.interceptors
-      )(FutureMonadError)
+        serverOptions.interceptors,
+        serverOptions.deleteFile
+      )(FutureMonadError, new FinatraBodyListener[Future]())
 
       serverInterpreter(serverRequest, se).map {
         case None => Response(Status.NotFound)

@@ -1,0 +1,64 @@
+asyncapi: 2.0.0
+info:
+  title: title
+  version: '1.0'
+channels:
+  /path-hello/{world}:
+    subscribe:
+      operationId: onPath-helloWorld
+      message:
+        $ref: '#/components/messages/Fruit'
+      x-response: foo
+    publish:
+      operationId: sendPath-helloWorld
+      message:
+        $ref: '#/components/messages/FruitAmount'
+      x-request:
+        - array-0
+        - array-1
+    parameters:
+      world:
+        schema:
+          type: string
+        x-path: 22
+    bindings:
+      ws:
+        method: POST
+    x-endpoint-level-string: world
+    x-endpoint-level-int: 11
+    x-endpoint-obj:
+      string: '42.42'
+      int: 42
+components:
+  schemas:
+    FruitAmount:
+      required:
+        - fruit
+        - amount
+      type: object
+      properties:
+        fruit:
+          type: string
+        amount:
+          type: integer
+    Fruit:
+      required:
+        - f
+      type: object
+      properties:
+        f:
+          type: string
+  messages:
+    FruitAmount:
+      payload:
+        $ref: '#/components/schemas/FruitAmount'
+      contentType: application/json
+    Fruit:
+      payload:
+        $ref: '#/components/schemas/Fruit'
+      contentType: application/json
+x-root-bool: true
+x-root-list:
+  - 1
+  - 2
+  - 4

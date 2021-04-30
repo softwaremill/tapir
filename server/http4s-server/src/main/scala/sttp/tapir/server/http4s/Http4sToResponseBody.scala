@@ -4,13 +4,13 @@ import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
 import cats.syntax.all._
 import fs2.{Chunk, Stream}
 import org.http4s
+import org.http4s._
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
-import org.http4s.{EntityBody, EntityEncoder, Header, Headers, multipart}
 import org.http4s.util.CaseInsensitiveString
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, Part, Header => SttpHeader}
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 import sttp.tapir.server.interpreter.ToResponseBody
+import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 

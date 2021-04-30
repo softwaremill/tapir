@@ -10,11 +10,14 @@ import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 case class PlayServerOptions(
     temporaryFileCreator: TemporaryFileCreator,
+    deleteFile: TapirFile => Future[Unit],
     defaultActionBuilder: ActionBuilder[Request, AnyContent],
     playBodyParsers: PlayBodyParsers,
     decodeFailureHandler: DecodeFailureHandler,
@@ -45,6 +48,7 @@ object PlayServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, HttpEntity]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(defaultServerLog),
       additionalInterceptors: List[Interceptor[Future, HttpEntity]] = Nil,
@@ -55,15 +59,22 @@ object PlayServerOptions {
   )(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions =
     PlayServerOptions(
       SingletonTemporaryFileCreator,
+      defaultDeleteFile,
       DefaultActionBuilder.apply(PlayBodyParsers.apply().anyContent),
       PlayBodyParsers.apply(),
       decodeFailureHandler,
-      exceptionHandler.map(new ExceptionInterceptor[Future, HttpEntity](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[Future, HttpEntity](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, Future, HttpEntity](_, (_, _) => Future.successful(()))).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++
         List(new DecodeFailureInterceptor[Future, HttpEntity](decodeFailureHandler))
     )
+
+  val defaultDeleteFile: TapirFile => Future[Unit] = file => {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future(Defaults.deleteFile()(file))
+  }
 
   lazy val defaultServerLog: ServerLog[Unit] = DefaultServerLog(
     doLogWhenHandled = debugLog,
