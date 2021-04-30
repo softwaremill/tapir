@@ -57,3 +57,75 @@ with which you application interacts, to steer their behaviors.
 
 To do that you might want to use well-known solutions like e.g. [wiremock](http://wiremock.org/) or [mock-server](https://www.mock-server.com/), 
 but if their api is described using tapir you might want to use [livestub](https://github.com/softwaremill/livestub), which combines nicely with the rest of the sttp ecosystem.
+
+
+### Black box testing with mock-server integration
+
+If you are writing integration tests for your application which communicates with some external systems  
+(e.g payment providers, SMS providers, etc.), you could stub them using tapir's integration
+with [mock-server](https://www.mock-server.com/)
+
+You would require the following dependency:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "@VERSION@"
+```
+
+And the following imports:
+
+```scala mdoc:silent
+import sttp.tapir.server.mockserver._
+``` 
+
+Given the following endpoint:
+
+```scala mdoc:silent
+import sttp.tapir._
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import io.circe.generic.auto._
+
+case class SampleIn(name: String, age: Int)
+
+case class SampleOut(greeting: String)
+
+val sampleJsonEndpoint = endpoint.post
+  .in("api" / "v1" / "json")
+  .in(header[String]("X-RequestId"))
+  .in(jsonBody[SampleIn])
+  .errorOut(stringBody)
+  .out(jsonBody[SampleOut])
+```
+
+.. and having any `SttpBackend` instance (for example, `TryHttpURLConnectionBackend` or with other arbitrary `F[_]`
+type),  
+convert any endpoint to **mock-server** expectation:
+
+```scala mdoc:silent
+import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
+
+val backend = TryHttpURLConnectionBackend()
+val mockServerClient = SttpMockServerClient(baseUri = uri"http://localhost:1080", backend)
+
+val in = "request-id-123" -> SampleIn("John", 23),
+val out = SampleOut("Hello, John!")
+
+val expectation = mockServerClient
+  .whenInputMatches(sampleJsonEndpoint)(in)
+  .thenSuccess(out)
+  .get
+```
+
+Then you my try to send requests to the mock-server as you would do with live integration:
+
+```scala mdoc:silent
+import sttp.tapir.client.sttp.SttpClientInterpreter
+
+val result = SttpClientInterpreter
+  .toRequest(endpoint, baseUri = Some(uri"http://localhost:1080"))
+  .apply(in)
+  .send(backend)
+  .get
+  
+result == out 
+```

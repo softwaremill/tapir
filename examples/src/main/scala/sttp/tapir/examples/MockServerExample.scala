@@ -6,7 +6,7 @@ import sttp.tapir._
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.mockserver.{SttpMockServerClient, VerificationTimes}
+import sttp.tapir.server.mockserver._
 
 /** @note - run the following docker command to setup mock-server locally
   * {{{
