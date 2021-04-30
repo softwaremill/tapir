@@ -149,7 +149,7 @@ endpoint input can be generated using macro `sttp.tapir.annotations.deriveEndpoi
 import sttp.tapir._
 
 val userInput: EndpointInput[User] =
-  query[String]("user").and(cookie[Long]("sessionId")).mapTo(User)
+  query[String]("user").and(cookie[Long]("sessionId")).mapTo[User]
 ```
 
 Following annotations are available in package `sttp.tapir.annotations` for describing both input and output values:
