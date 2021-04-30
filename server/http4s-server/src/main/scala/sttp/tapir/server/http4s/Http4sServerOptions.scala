@@ -3,22 +3,25 @@ package sttp.tapir.server.http4s
 import cats.Applicative
 import cats.effect.Sync
 import cats.implicits.catsSyntaxOptionId
-import sttp.tapir.Defaults
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.File
+import scala.concurrent.ExecutionContext
 
 /** @tparam F The effect type used for response body streams. Usually the same as `G`.
   * @tparam G The effect type used for representing arbitrary side-effects, such as creating files or logging.
   *           Usually the same as `F`.
   */
 case class Http4sServerOptions[F[_], G[_]](
-    createFile: ServerRequest => G[File],
+                                            createFile: ServerRequest => G[TapirFile],
+                                            deleteFile: TapirFile => G[Unit],
     ioChunkSize: Int,
     interceptors: List[Interceptor[G, Http4sResponseBody[F]]]
 ) {
@@ -52,6 +55,7 @@ object Http4sServerOptions {
   def customInterceptors[F[_], G[_]: Sync](
       exceptionHandler: Option[ExceptionHandler],
       serverLog: Option[ServerLog[G[Unit]]],
+      metricsInterceptor: Option[MetricsRequestInterceptor[G, Http4sResponseBody[F]]] = None,
       additionalInterceptors: List[Interceptor[G, Http4sResponseBody[F]]] = Nil,
       unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]] =
         new UnsupportedMediaTypeInterceptor[G, Http4sResponseBody[F]]().some,
@@ -59,8 +63,10 @@ object Http4sServerOptions {
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
       defaultCreateFile[G],
+      defaultDeleteFile[G]
       8192,
-      exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++
         serverLog.map(Log.serverLogInterceptor[F, G]).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++
@@ -68,6 +74,8 @@ object Http4sServerOptions {
     )
 
   def defaultCreateFile[F[_]](implicit sync: Sync[F]): ServerRequest => F[File] = _ => sync.blocking(Defaults.createTempFile())
+
+  def defaultDeleteFile[F[_]](implicit sync: Sync[F]): TapirFile => F[Unit] = file => sync.blocking(Defaults.deleteFile()(file))
 
   object Log {
     def defaultServerLog[F[_]: Sync]: DefaultServerLog[F[Unit]] =

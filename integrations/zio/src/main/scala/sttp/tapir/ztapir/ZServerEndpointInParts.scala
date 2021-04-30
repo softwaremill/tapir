@@ -56,7 +56,7 @@ abstract class ZServerEndpointInParts[R, U, J, I, E, O](val endpoint: ZEndpoint[
       { _ => i =>
         {
           val (t, j): (T, J) = splitInput(i)
-          logicFragment(t).flatMap(u => remainingLogic((u, j))).either
+          logicFragment(t).flatMap(u => remainingLogic((u, j))).either.resurrect
         }
       }
     )

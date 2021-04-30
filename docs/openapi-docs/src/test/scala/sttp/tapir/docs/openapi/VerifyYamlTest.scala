@@ -2,6 +2,7 @@ package sttp.tapir.docs.openapi
 
 import io.circe.Json
 import io.circe.generic.auto._
+import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
@@ -14,10 +15,10 @@ import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.openapi._
+import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.{Person, _}
-import sttp.tapir.{Endpoint, endpoint, _}
+import sttp.tapir.{Endpoint, endpoint, path, query, stringBody, _}
 
 import java.time.{Instant, LocalDateTime}
 
@@ -183,6 +184,33 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   test("should unfold arrays") {
     val e = endpoint.in(jsonBody[List[FruitAmount]]).out(stringBody)
     val expectedYaml = load("expected_unfolded_array.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  // #1168
+  test("should unfold options") {
+    val e = endpoint.post.in(jsonBody[ObjectWithOption])
+
+    val expectedYaml = load("expected_unfolded_option.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should unfold options with descriptions") {
+    implicit val objectWithOptionSchema: Schema[ObjectWithOption] = {
+      val base = implicitly[Derived[Schema[ObjectWithOption]]].value
+      base.modify(_.data)(_.description("Amount of fruits"))
+    }
+    val e = endpoint.post.in(jsonBody[ObjectWithOption])
+
+    val expectedYaml = load("expected_unfolded_option_description.yml")
 
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
@@ -447,6 +475,50 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("should match the expected yaml using double quoted style") {
+    val ep = endpoint.get.description("first line:\nsecond line")
+
+    val expectedYaml = load("expected_double_quoted.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, "String style", "1.0").toYaml(DoubleQuoted)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected yaml using literal style") {
+    val ep = endpoint.get.description("first line:\nsecond line")
+
+    val expectedYaml = load("expected_literal.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, "String style", "1.0").toYaml(Literal)
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should apply openapi extensions in correct places") {
+    case class MyExtension(string: String, int: Int)
+
+    val sampleEndpoint =
+      endpoint.post
+        .in("path-hello" / path[String]("world").docsExtension("x-path", 22))
+        .in(query[String]("hi").docsExtension("x-query", 33))
+        .in(jsonBody[FruitAmount].docsExtension("x-request", MyExtension("a", 1)))
+        .out(jsonBody[FruitAmount].docsExtension("x-response", List("array-0", "array-1")).docsExtension("x-response", "foo"))
+        .errorOut(stringBody.docsExtension("x-error", "error-extension"))
+        .docsExtension("x-endpoint-level-string", "world")
+        .docsExtension("x-endpoint-level-int", 11)
+        .docsExtension("x-endpoint-obj", MyExtension("42.42", 42))
+
+    val rootExtensions = List(
+      DocsExtension.of("x-root-bool", true),
+      DocsExtension.of("x-root-list", List(1, 2, 4))
+    )
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions).toYaml
+
+    noIndentation(actualYaml) shouldBe load("expected_extensions.yml")
+  }
 }
 
 object VerifyYamlTest {
@@ -454,4 +526,5 @@ object VerifyYamlTest {
   case class G[T](data: T)
   case class ObjectWrapper(value: FruitAmount)
   case class ObjectWithList(data: List[FruitAmount])
+  case class ObjectWithOption(data: Option[FruitAmount])
 }

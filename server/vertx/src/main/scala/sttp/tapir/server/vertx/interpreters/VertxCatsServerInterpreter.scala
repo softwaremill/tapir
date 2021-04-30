@@ -6,14 +6,14 @@ import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
-import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.streams.ReadStreamCompatible
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.Endpoint
-import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.vertx.VertxCatsServerOptions
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
+import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
+import sttp.tapir.server.vertx.streams.ReadStreamCompatible
+import sttp.tapir.server.vertx.{VertxBodyListener, VertxCatsServerOptions}
 
 import scala.reflect.ClassTag
 
@@ -60,11 +60,13 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
       e: ServerEndpoint[I, E, O, _, F]
   )(implicit serverOptions: VertxCatsServerOptions[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
+    implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
-    val interpreter = new ServerInterpreter(
+    val interpreter: ServerInterpreter[Nothing, F, RoutingContext => Unit, S] = new ServerInterpreter(
       new VertxRequestBody(rc, serverOptions, fFromVFuture),
       new VertxToResponseBody(serverOptions),
-      serverOptions.interceptors
+      serverOptions.interceptors,
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 

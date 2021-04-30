@@ -18,7 +18,8 @@ private[openapi] object EndpointInputToParameterConverter {
       deprecated = if (query.info.deprecated) Some(true) else None,
       schema = schema,
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(query.info.docsExtensions)
     )
   }
 
@@ -31,7 +32,8 @@ private[openapi] object EndpointInputToParameterConverter {
       required = Some(true),
       schema = schema,
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(pathCapture.info.docsExtensions)
     )
   }
 
@@ -45,7 +47,8 @@ private[openapi] object EndpointInputToParameterConverter {
       deprecated = if (header.info.deprecated) Some(true) else None,
       schema = schema,
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(header.info.docsExtensions)
     )
   }
 
@@ -63,7 +66,8 @@ private[openapi] object EndpointInputToParameterConverter {
       deprecated = if (header.info.deprecated) Some(true) else None,
       schema = schema,
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(header.info.docsExtensions)
     )
   }
 
@@ -77,7 +81,8 @@ private[openapi] object EndpointInputToParameterConverter {
       deprecated = if (cookie.info.deprecated) Some(true) else None,
       schema = schema,
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(cookie.info.docsExtensions)
     )
   }
 }

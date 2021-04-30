@@ -1,5 +1,7 @@
 package sttp.tapir.apispec
 
+import scala.collection.immutable.ListMap
+
 case class Reference($ref: String)
 
 object Reference {
@@ -11,6 +13,17 @@ sealed trait ExampleValue
 case class ExampleSingleValue(value: String) extends ExampleValue
 case class ExampleMultipleValue(values: List[String]) extends ExampleValue
 
-case class Tag(name: String, description: Option[String] = None, externalDocs: Option[ExternalDocumentation] = None)
+case class Tag(
+    name: String,
+    description: Option[String] = None,
+    externalDocs: Option[ExternalDocumentation] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
 
-case class ExternalDocumentation(url: String, description: Option[String] = None)
+case class ExternalDocumentation(
+    url: String,
+    description: Option[String] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+)
+
+case class ExtensionValue(value: String)

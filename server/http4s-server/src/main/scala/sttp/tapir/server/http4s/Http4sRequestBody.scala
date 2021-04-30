@@ -11,8 +11,10 @@ import org.http4s.{Charset, EntityDecoder, Request, multipart}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interpreter.RequestBody
-import sttp.tapir.{RawBodyType, RawPart}
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.{RawBodyType, RawPart, TapirFile}
+
+import java.io.ByteArrayInputStream
 
 private[http4s] class Http4sRequestBody[F[_]: Async, G[_]: Monad](
     request: Request[F],
@@ -21,22 +23,23 @@ private[http4s] class Http4sRequestBody[F[_]: Async, G[_]: Monad](
     t: F ~> G
 ) extends RequestBody[G, Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
-  override def toRaw[R](bodyType: RawBodyType[R]): G[R] = toRawFromStream(request.body, bodyType, request.charset)
+  override def toRaw[R](bodyType: RawBodyType[R]): G[RawValue[R]] = toRawFromStream(request.body, bodyType, request.charset)
   override def toStream(): streams.BinaryStream = request.body
 
-  private def toRawFromStream[R](body: fs2.Stream[F, Byte], bodyType: RawBodyType[R], charset: Option[Charset]): G[R] = {
+  private def toRawFromStream[R](body: fs2.Stream[F, Byte], bodyType: RawBodyType[R], charset: Option[Charset]): G[RawValue[R]] = {
     def asChunk: G[Chunk[Byte]] = t(body.compile.to(Chunk))
     def asByteArray: G[Array[Byte]] = t(body.compile.to(Chunk).map(_.toArray[Byte]))
 
     bodyType match {
-      case RawBodyType.StringBody(defaultCharset) => asByteArray.map(new String(_, charset.map(_.nioCharset).getOrElse(defaultCharset)))
-      case RawBodyType.ByteArrayBody              => asByteArray
-      case RawBodyType.ByteBufferBody             => asChunk.map(_.toByteBuffer)
-      case RawBodyType.InputStreamBody            => asByteArray.map(new ByteArrayInputStream(_))
+      case RawBodyType.StringBody(defaultCharset) =>
+        asByteArray.map(new String(_, charset.map(_.nioCharset).getOrElse(defaultCharset))).map(RawValue(_))
+      case RawBodyType.ByteArrayBody   => asByteArray.map(RawValue(_))
+      case RawBodyType.ByteBufferBody  => asChunk.map(c => RawValue(c.toByteBuffer))
+      case RawBodyType.InputStreamBody => asByteArray.map(b => RawValue(new ByteArrayInputStream(b)))
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
           val fileSink = Files[F].writeAll(file.toPath)
-          t(body.through(fileSink).compile.drain.map(_ => file))
+          t(body.through(fileSink).compile.drain.map(_ => RawValue(file, Seq(file))))
         }
       case m: RawBodyType.MultipartBody =>
         // TODO: use MultipartDecoder.mixedMultipart once available?
@@ -47,9 +50,11 @@ private[http4s] class Http4sRequestBody[F[_]: Async, G[_]: Monad](
               .flatMap(part => part.name.flatMap(name => m.partType(name)).map((part, _)).toList)
               .map { case (part, codecMeta) => toRawPart(part, codecMeta).asInstanceOf[F[RawPart]] }
 
-            val rawParts: F[Vector[RawPart]] = rawPartsF.sequence
+            val rawParts: F[RawValue[Vector[RawPart]]] = rawPartsF.sequence.map { parts =>
+              RawValue(parts, parts collect { case _ @Part(_, f: TapirFile, _, _) => f })
+            }
 
-            rawParts.asInstanceOf[F[R]] // R is Seq[RawPart]
+            rawParts.asInstanceOf[F[RawValue[R]]] // R is Vector[RawPart]
         })
     }
   }
@@ -61,7 +66,7 @@ private[http4s] class Http4sRequestBody[F[_]: Async, G[_]: Monad](
       .map(r =>
         Part(
           part.name.getOrElse(""),
-          r,
+          r.value,
           otherDispositionParams = dispositionParams.map { case (k, v) => k.toString -> v } - Part.NameDispositionParam,
           headers = part.headers.headers.map(h => Header(h.name.toString, h.value))
         )

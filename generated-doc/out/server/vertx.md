@@ -8,7 +8,7 @@ Vert.x interpreter can be used with different effect systems (cats-effect, ZIO) 
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M8"
 ```
 to use this interpreter with `Future`.
 
@@ -80,7 +80,7 @@ It's also possible to define an endpoint together with the server logic in a sin
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M8"
 "com.softwaremill.sttp.shared" %% "fs2" % "LatestVersion"
 ```
 to use this interpreter with Cats Effect typeclasses.
@@ -155,7 +155,7 @@ val attach = route(streamedResponse) { key =>
 
 Add the following dependency
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-vertx-server" % "0.18.0-M8"
 "com.softwaremill.sttp.shared" %% "zio" % "LatestVersion"
 ```
 to use this interpreter with ZIO.

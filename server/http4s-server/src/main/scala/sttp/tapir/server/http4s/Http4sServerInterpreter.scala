@@ -18,24 +18,24 @@ import sttp.model.{Header => SttpHeader}
 import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.reflect.ClassTag
 
 trait Http4sServerInterpreter {
   def toHttp[I, E, O, F[_]: Async, G[_]: Sync](
       e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets]
-  )(t: F ~> G)(logic: I => G[Either[E, O]])(implicit
+  )(fToG: F ~> G)(gToF: G ~> F)(logic: I => G[Either[E, O]])(implicit
       serverOptions: Http4sServerOptions[F, G]
   ): Http[OptionT[G, *], F] = toHttp(e.serverLogic(logic))(t)
 
   def toHttpRecoverErrors[I, E, O, F[_]: Async, G[_]: Sync](
       e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets]
-  )(t: F ~> G)(logic: I => G[O])(implicit
+  )(fToG: F ~> G)(gToF: G ~> F)(logic: I => G[O])(implicit
       serverOptions: Http4sServerOptions[F, G],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
-  ): Http[OptionT[G, *], F] = toHttp(e.serverLogicRecoverErrors(logic))(t)
+  ): Http[OptionT[G, *], F] = toHttp(e.serverLogicRecoverErrors(logic))(fToG)(gToF)
 
   def toRoutes[I, E, O, F[_]: Async](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(
       logic: I => F[Either[E, O]]
@@ -51,11 +51,9 @@ trait Http4sServerInterpreter {
 
   //
 
-  def toHttp[I, E, O, F[_]: Async, G[_]: Sync](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G])(
-      t: F ~> G
-  )(implicit
+  def toHttp[I, E, O, F[_]: Async, G[_]: Sync](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G])(fToG: F ~> G)(gToF: G ~> F)(implicit
       serverOptions: Http4sServerOptions[F, G]
-  ): Http[OptionT[G, *], F] = toHttp(List(se))(t)
+  ): Http[OptionT[G, *], F] = toHttp(List(se))(fToG)(gToF)
 
   def toRoutes[I, E, O, F[_]: Async](
       se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]
@@ -67,28 +65,33 @@ trait Http4sServerInterpreter {
 
   def toRoutes[F[_]: Async](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]])(implicit
       serverOptions: Http4sServerOptions[F, F]
-  ): HttpRoutes[F] = toHttp(serverEndpoints)(FunctionK.id[F])
+  ): HttpRoutes[F] = {
+    val identity = FunctionK.id[F]
+    toHttp(serverEndpoints)(identity)(identity)
+  }
 
   //
 
   def toHttp[F[_]: Async, G[_]: Sync](
       serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]]
-  )(t: F ~> G)(implicit
+  )(fToG: F ~> G)(gToF: G ~> F)(implicit
       serverOptions: Http4sServerOptions[F, G]
   ): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
+    implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)
 
     Kleisli { (req: Request[F]) =>
       val serverRequest = new Http4sServerRequest(req)
       val interpreter = new ServerInterpreter[Fs2Streams[F] with WebSockets, G, Http4sResponseBody[F], Fs2Streams[F]](
-        new Http4sRequestBody[F, G](req, serverRequest, serverOptions, t),
+        new Http4sRequestBody[F, G](req, serverRequest, serverOptions, fToG),
         new Http4sToResponseBody[F, G](serverOptions),
-        serverOptions.interceptors
+        serverOptions.interceptors,
+        serverOptions.deleteFile
       )
 
       OptionT(interpreter(serverRequest, serverEndpoints).flatMap {
         case None           => none.pure[G]
-        case Some(response) => t(serverResponseToHttp4s[F](response)).map(_.some)
+        case Some(response) => fToG(serverResponseToHttp4s[F](response)).map(_.some)
       })
     }
   }

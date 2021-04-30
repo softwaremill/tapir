@@ -81,6 +81,46 @@ Options can be customised by providing an implicit instance of `OpenAPIDocsOptio
   `SObjectInfo` input parameter is a unique identifier of object in the schema. 
   By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
 
+## OpenAPI Specification Extensions
+
+It's possible to extend specification with [extensions](https://swagger.io/docs/specification/openapi-extensions/).
+There are `.docsExtension` methods available on Input/Output parameters and on `endpoint`:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.json.circe._
+import sttp.tapir.generic.auto._
+import sttp.tapir.openapi._
+import sttp.tapir.openapi.circe._
+import sttp.tapir.openapi.circe.yaml._
+import io.circe.generic.auto._
+
+case class FruitAmount(fruit: String, amount: Int)
+
+case class MyExtension(string: String, int: Int)
+
+val sampleEndpoint =
+  endpoint.post
+    .in("path-hello" / path[String]("world").docsExtension("x-path", 22))
+    .in(query[String]("hi").docsExtension("x-query", 33))
+    .in(jsonBody[FruitAmount].docsExtension("x-request", MyExtension("a", 1)))
+    .out(jsonBody[FruitAmount].docsExtension("x-response", List("array-0", "array-1")).docsExtension("x-response", "foo"))
+    .errorOut(stringBody.docsExtension("x-error", "error-extension"))
+    .docsExtension("x-endpoint-level-string", "world")
+    .docsExtension("x-endpoint-level-int", 11)
+    .docsExtension("x-endpoint-obj", MyExtension("42.42", 42))
+
+val rootExtensions = List(
+  DocsExtension.of("x-root-bool", true),
+  DocsExtension.of("x-root-list", List(1, 2, 4))
+)
+
+val openAPIYaml = OpenAPIDocsInterpreter.toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions).toYaml
+```
+
+However, to add extensions to other unusual places (like, `License` or `Server`, etc.) you should modify the `OpenAPI`
+object manually or using f.e. [Quicklens](https://github.com/softwaremill/quicklens)
+
 ## Exposing OpenAPI documentation
 
 Exposing the OpenAPI documentation can be very application-specific. However, tapir contains modules which contain

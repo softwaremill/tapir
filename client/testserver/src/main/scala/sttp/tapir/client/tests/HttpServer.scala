@@ -144,6 +144,10 @@ class HttpServer(port: Port) {
           WebSocketBuilder[IO].build(d, e)
         }
 
+    case GET -> Root / "entity" / entityType =>
+      if (entityType == "person") Created("""{"name":"mary","age":20}""")
+      else Ok("""{"name":"work"}""")
+
     case r @ GET -> Root / "content-negotiation" / "organization" =>
       fromAcceptHeader(r) {
         case "application/json" => organizationJson

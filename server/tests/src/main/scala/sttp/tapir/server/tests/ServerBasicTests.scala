@@ -30,10 +30,10 @@ import java.nio.ByteBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class ServerBasicTests[F[_], ROUTE](
+class ServerBasicTests[F[_], ROUTE, B](
     backend: SttpBackend[IO, Any],
-    createServerTest: CreateServerTest[F, Any, ROUTE],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
+    createServerTest: CreateServerTest[F, Any, ROUTE, B],
+    serverInterpreter: TestServerInterpreter[F, Any, ROUTE, B],
     multipleValueHeaderSupport: Boolean = true,
     multipartInlineHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true
@@ -600,6 +600,18 @@ class ServerBasicTests[F[_], ROUTE](
       basicRequest.get(uri"$baseUri?p1=x").send(backend).map(_.body shouldBe Right("x")) >>
         basicRequest.get(uri"$baseUri").send(backend).map(_.body shouldBe Right("DEFAULT"))
     },
+    testServer(out_json_or_default_json)(entityType =>
+      pureResult((if (entityType == "person") Person("mary", 20) else Organization("work")).asRight[Unit])
+    ) { baseUri =>
+      basicRequest.get(uri"$baseUri/entity/person").send(backend).map { r =>
+        r.code shouldBe StatusCode.Created
+        r.body.right.get should include("mary")
+      } >>
+        basicRequest.get(uri"$baseUri/entity/org").send(backend).map { r =>
+          r.code shouldBe StatusCode.Ok
+          r.body.right.get should include("work")
+        }
+    },
     //
     testServer(endpoint, "handle exceptions")(_ => throw new RuntimeException()) { baseUri =>
       basicRequest.get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.InternalServerError)
@@ -630,8 +642,8 @@ class ServerBasicTests[F[_], ROUTE](
         //
         ("text/html", "iso-8859-5") -> unsupportedMediaType(),
         ("text/csv", "*") -> unsupportedMediaType(),
-        //
-        ("text/html;(q)=xxx", "utf-8") -> badRequest()
+        // in case of an invalid accepts header, the first mapping should be used
+        ("text/html;(q)=xxx", "utf-8") -> ok(organizationJson)
       )
 
       cases.foldLeft(IO(scalatest.Assertions.succeed))((prev, next) => {
@@ -646,6 +658,9 @@ class ServerBasicTests[F[_], ROUTE](
             response.body shouldBe body
           }
       })
+    },
+    testServer(in_root_path, testNameSuffix = "accepts header without output body")(_ => pureResult(().asRight[Unit])) { baseUri =>
+      basicRequest.header(HeaderNames.Accept, "text/plain").get(uri"$baseUri").send(backend).map(_.code shouldBe StatusCode.Ok)
     },
     testServer(
       "recover errors from exceptions",
