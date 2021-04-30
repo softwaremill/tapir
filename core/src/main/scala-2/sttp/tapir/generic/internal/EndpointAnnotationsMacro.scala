@@ -17,7 +17,7 @@ import sttp.tapir.internal.CaseClassUtil
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
 
-abstract class EndpointAnnotations(val c: blackbox.Context) {
+abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
   import c.universe._
 
   protected val headerType = c.weakTypeOf[header]
@@ -39,7 +39,7 @@ abstract class EndpointAnnotations(val c: blackbox.Context) {
   }
 
   type StringListCodec[T] = Codec[List[String], T, TextPlain]
-  val stringListConstructor = typeOf[StringListCodec[_]].typeConstructor
+  val stringListConstructor: c.universe.Type = typeOf[StringListCodec[_]].typeConstructor
 
   protected def makeHeaderIO(field: c.Symbol)(altName: Option[String]): Tree = {
     val name = altName.getOrElse(field.name.toTermName.decodedName.toString)

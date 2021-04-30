@@ -10,7 +10,7 @@ trait MatchType[T] {
   }
 }
 
-object MatchType extends GenericMatchType {
+object MatchType extends MatchTypeMacros {
 
   implicit val string: MatchType[String] = matchTypeFromPartial { case _: String => true }
   implicit val bool: MatchType[Boolean] = matchTypeFromPartial[Boolean] { case _: Boolean => true }

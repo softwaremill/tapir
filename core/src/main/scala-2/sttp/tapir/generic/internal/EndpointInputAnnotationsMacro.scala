@@ -1,15 +1,14 @@
 package sttp.tapir.generic.internal
 
 import sttp.model._
-import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.{Codec, EndpointInput}
+import sttp.tapir.EndpointInput
 import sttp.tapir.annotations._
 import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
 
-class EndpointInputAnnotations(override val c: blackbox.Context) extends EndpointAnnotations(c) {
+class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends EndpointAnnotationsMacro(c) {
   import c.universe._
 
   private val endpointInput = c.weakTypeOf[endpointInput]
@@ -20,7 +19,7 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
   private val bearerType = c.weakTypeOf[bearer]
   private val basicType = c.weakTypeOf[basic]
 
-  def deriveEndpointInput[A: c.WeakTypeTag]: c.Expr[EndpointInput[A]] = {
+  def generateEndpointInput[A: c.WeakTypeTag]: c.Expr[EndpointInput[A]] = {
     val util = new CaseClassUtil[c.type, A](c, "request endpoint")
     validateCaseClass(util)
 
@@ -93,12 +92,6 @@ class EndpointInputAnnotations(override val c: blackbox.Context) extends Endpoin
 
     c.Expr[EndpointInput[A]](q"$result.map($mapperTo)($mapperFrom)")
   }
-
-  type StringCodec[T] = Codec[String, T, TextPlain]
-  val stringConstructor = typeOf[StringCodec[_]].typeConstructor
-
-  type StringOptionCodec[T] = Codec[Option[String], T, TextPlain]
-  val stringOptionConstructor = typeOf[StringOptionCodec[_]].typeConstructor
 
   private def makeQueryInput(field: c.Symbol)(altName: Option[String]): Tree = {
     val name = altName.getOrElse(field.name.toTermName.decodedName.toString)

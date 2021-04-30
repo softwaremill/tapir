@@ -11,14 +11,14 @@ import sttp.tapir.internal.CaseClassUtil
 import scala.collection.mutable
 import scala.reflect.macros.blackbox
 
-class EndpointOutputAnnotations(override val c: blackbox.Context) extends EndpointAnnotations(c) {
+class EndpointOutputAnnotationsMacro(override val c: blackbox.Context) extends EndpointAnnotationsMacro(c) {
   import c.universe._
 
   private val setCookieType = c.weakTypeOf[setCookie]
   private val setCookiesType = c.weakTypeOf[setCookies]
   private val statusCodeType = c.weakTypeOf[statusCode]
 
-  def deriveEndpointOutput[A: c.WeakTypeTag]: c.Expr[EndpointOutput[A]] = {
+  def generateEndpointOutput[A: c.WeakTypeTag]: c.Expr[EndpointOutput[A]] = {
     val util = new CaseClassUtil[c.type, A](c, "response endpoint")
     validateCaseClass(util)
 
@@ -49,7 +49,7 @@ class EndpointOutputAnnotations(override val c: blackbox.Context) extends Endpoi
     c.Expr[EndpointOutput[A]](q"$result.map($mapperTo)($mapperFrom)")
   }
 
-  def makeSetCookieOutput(field: c.Symbol)(altName: Option[String]): Tree =
+  private def makeSetCookieOutput(field: c.Symbol)(altName: Option[String]): Tree =
     if (field.info.resultType =:= typeOf[CookieValueWithMeta]) {
       val name = altName.getOrElse(field.name.toTermName.decodedName.toString)
       q"setCookie($name)"
@@ -57,14 +57,14 @@ class EndpointOutputAnnotations(override val c: blackbox.Context) extends Endpoi
       c.abort(c.enclosingPosition, s"Annotation @setCookie can be applied only for field with type ${typeOf[CookieValueWithMeta]}")
     }
 
-  def makeSetCookiesOutput(field: c.Symbol): Tree =
+  private def makeSetCookiesOutput(field: c.Symbol): Tree =
     if (field.info.resultType =:= typeOf[List[CookieWithMeta]]) {
       q"setCookies"
     } else {
       c.abort(c.enclosingPosition, s"Annotation @setCookies can be applied only for field with type ${typeOf[List[CookieWithMeta]]}")
     }
 
-  def makeStatusCodeOutput(field: c.Symbol): Tree =
+  private def makeStatusCodeOutput(field: c.Symbol): Tree =
     if (field.info.resultType =:= typeOf[StatusCode]) {
       q"statusCode"
     } else {

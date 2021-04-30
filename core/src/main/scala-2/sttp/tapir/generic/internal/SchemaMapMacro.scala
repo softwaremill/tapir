@@ -8,7 +8,7 @@ object SchemaMapMacro {
   /*
     Extract name and generic type parameters of map value type for object info creation
    */
-  def schemaForMap[V: c.WeakTypeTag](
+  def generateSchemaForMap[V: c.WeakTypeTag](
       c: blackbox.Context
   )(schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[String, V]]] = {
     import c.universe._

@@ -8,7 +8,7 @@ import scala.reflect.ClassTag
 import scala.reflect.macros.blackbox
 
 object OneOfMappingMacro {
-  def classMatcherIfErasedSameAsType[O: c.WeakTypeTag](c: blackbox.Context)(
+  def generateClassMatcherIfErasedSameAsType[O: c.WeakTypeTag](c: blackbox.Context)(
       statusCode: c.Expr[StatusCode],
       output: c.Expr[EndpointOutput[O]]
   )(ct: c.Expr[ClassTag[O]]): c.Expr[OneOfMapping[O]] = {

@@ -1,12 +1,12 @@
 package sttp.tapir
 
-import sttp.tapir.generic.internal.EndpointInputAnnotations
-import sttp.tapir.generic.internal.EndpointOutputAnnotations
+import sttp.tapir.generic.internal.EndpointInputAnnotationsMacro
+import sttp.tapir.generic.internal.EndpointOutputAnnotationsMacro
 
 package object annotations {
   def deriveEndpointInput[A]: EndpointInput[A] =
-    macro EndpointInputAnnotations.deriveEndpointInput[A]
+    macro EndpointInputAnnotationsMacro.generateEndpointInput[A]
 
   def deriveEndpointOutput[A]: EndpointOutput[A] =
-    macro EndpointOutputAnnotations.deriveEndpointOutput[A]
+    macro EndpointOutputAnnotationsMacro.generateEndpointOutput[A]
 }

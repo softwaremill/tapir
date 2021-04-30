@@ -7,14 +7,7 @@ import sttp.tapir.internal.CaseClassUtil
 import scala.annotation.tailrec
 import scala.reflect.macros.blackbox
 
-trait MultipartCodecDerivation {
-  implicit def multipartCaseClassCodec[T <: Product with Serializable](implicit
-      conf: Configuration
-  ): MultipartCodec[T] =
-    macro MultipartCodecDerivation.generateForCaseClass[T]
-}
-
-object MultipartCodecDerivation {
+object MultipartCodecMacro {
   def generateForCaseClass[T: c.WeakTypeTag](
       c: blackbox.Context
   )(conf: c.Expr[Configuration]): c.Expr[MultipartCodec[T]] = {

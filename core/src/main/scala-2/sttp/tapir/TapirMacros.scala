@@ -18,9 +18,9 @@ trait TapirMacros {
     * Should be used in [[oneOf]] output descriptions.
     */
   def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
+    macro OneOfMappingMacro.generateClassMatcherIfErasedSameAsType[T]
 
   @scala.deprecated("Use oneOfMapping", since = "0.18")
   def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
+    macro OneOfMappingMacro.generateClassMatcherIfErasedSameAsType[T]
 }

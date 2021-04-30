@@ -6,5 +6,5 @@ import sttp.tapir.generic.internal.{MagnoliaDerivedMacro, SchemaMagnoliaDerivati
 package object auto extends SchemaDerivation
 
 trait SchemaDerivation extends SchemaMagnoliaDerivation {
-  implicit def schemaForCaseClass[T]: Derived[Schema[T]] = macro MagnoliaDerivedMacro.derivedGen[T]
+  implicit def schemaForCaseClass[T]: Derived[Schema[T]] = macro MagnoliaDerivedMacro.generateDerivedGen[T]
 }

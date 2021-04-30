@@ -1,10 +1,11 @@
-package sttp.tapir.typelevel
+package sttp.tapir.typelevel.internal
 
-import magnolia.{Magnolia, ReadOnlyCaseClass, ReadOnlyParam, SealedTrait}
+import magnolia.{ReadOnlyCaseClass, ReadOnlyParam, SealedTrait}
+import sttp.tapir.typelevel.MatchType
 
 import scala.reflect.ClassTag
 
-private[typelevel] trait GenericMatchType {
+private[typelevel] trait MatchTypeMagnoliaDerivation {
   type Typeclass[T] = MatchType[T]
 
   def combine[T: ClassTag](ctx: ReadOnlyCaseClass[Typeclass, T]): Typeclass[T] = {
@@ -28,5 +29,4 @@ private[typelevel] trait GenericMatchType {
     }
   }
 
-  implicit def gen[T]: MatchType[T] = macro Magnolia.gen[T]
 }

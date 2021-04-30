@@ -1,9 +1,8 @@
-package sttp.tapir.generic.internal
+package sttp.tapir
 
-import sttp.tapir.MultipartCodec
 import sttp.tapir.generic.Configuration
 
-trait MultipartCodecDerivation {
+trait MultipartCodecMacros {
   implicit def multipartCaseClassCodec[T <: Product with Serializable](implicit
       conf: Configuration
   ): MultipartCodec[T] = ??? // TODO

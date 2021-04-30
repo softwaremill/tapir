@@ -9,7 +9,7 @@ import scala.reflect.macros.blackbox
 object OneOfMacro {
   // http://onoffswitch.net/extracting-scala-method-names-objects-macros/
 
-  def oneOfMacro[E: c.WeakTypeTag, V: c.WeakTypeTag](
+  def generateOneOfUsingField[E: c.WeakTypeTag, V: c.WeakTypeTag](
       c: blackbox.Context
   )(extractor: c.Expr[E => V], asString: c.Expr[V => String])(
       mapping: c.Expr[(V, Schema[_])]*

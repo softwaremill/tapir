@@ -1,5 +1,5 @@
 package sttp.tapir.typelevel
 
-private[typelevel] trait GenericMatchType {
+trait MatchTypeMacros {
   implicit def gen[T]: MatchType[T] = ??? // TODO
 }

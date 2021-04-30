@@ -8,7 +8,7 @@ import scala.reflect.macros.blackbox
 object ModifySchemaMacro {
   private val ShapeInfo = "Path must have shape: _.field1.field2.each.field3.(...)"
 
-  def modifyMacro[T: c.WeakTypeTag, U: c.WeakTypeTag](
+  def generateModify[T: c.WeakTypeTag, U: c.WeakTypeTag](
       c: blackbox.Context
   )(path: c.Expr[T => U])(modification: c.Expr[Schema[U] => Schema[U]]): c.Tree =
     applyModification[T, U](c)(extractPathFromFunctionCall(c)(path), modification)
@@ -23,9 +23,8 @@ object ModifySchemaMacro {
      }"""
   }
 
-  /** Converts path to list of strings
-    */
-  def extractPathFromFunctionCall[T: c.WeakTypeTag, U: c.WeakTypeTag](c: blackbox.Context)(
+  /** Converts path to list of strings */
+  private def extractPathFromFunctionCall[T: c.WeakTypeTag, U: c.WeakTypeTag](c: blackbox.Context)(
       path: c.Expr[T => U]
   ): c.Expr[List[String]] = {
     import c.universe._
@@ -71,6 +70,4 @@ object ModifySchemaMacro {
         method.decodedName.toString
     }}")
   }
-
-  private[internal] def ignoredFromPath[T, U](path: T => U): List[String] = macro extractPathFromFunctionCall[T, U]
 }

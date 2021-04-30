@@ -6,14 +6,7 @@ import sttp.tapir.{Codec, CodecFormat, encodedName}
 
 import scala.reflect.macros.blackbox
 
-trait FormCodecDerivation {
-  implicit def formCaseClassCodec[T <: Product with Serializable](implicit
-      conf: Configuration
-  ): Codec[String, T, CodecFormat.XWwwFormUrlencoded] =
-    macro FormCodecMacros.generateForCaseClass[T]
-}
-
-object FormCodecMacros {
+object FormCodecMacro {
   // http://blog.echo.sh/2013/11/04/exploring-scala-macros-map-to-case-class-conversion.html
   def generateForCaseClass[T: c.WeakTypeTag](
       c: blackbox.Context
