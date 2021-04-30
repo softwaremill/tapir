@@ -380,7 +380,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
         info1 == info2
       case (Cookie(name1, _, info1), Cookie(name2, _, info2)) =>
         name1 == name2 && info1 == info2
-      case (l, r) => // remove work-around after https://github.com/lampepfl/dotty/issues/12241 is fixed
+      case (l, r) => // TODO: remove work-around after https://github.com/lampepfl/dotty/issues/12241 is fixed
         (l, r) match {
           case (ExtractFromRequest(_, info1), ExtractFromRequest(_, info2)) =>
             info1 == info2
