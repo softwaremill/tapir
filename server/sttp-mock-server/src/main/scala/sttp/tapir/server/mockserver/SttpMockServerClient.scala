@@ -5,15 +5,17 @@ import io.circe.syntax._
 import sttp.client3._
 import sttp.client3.testing._
 import sttp.model.Uri.UriContext
-import sttp.model.{ContentTypeRange, HasHeaders, Header, Headers, MediaType, StatusCode, Uri}
+import sttp.model.{ContentTypeRange, HasHeaders, Header, HeaderNames, Headers, MediaType, StatusCode, Uri}
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.server.mockserver.impl.JsonCodecs._
 import cats.syntax.either._
+
 import java.nio.charset.Charset
 import io.circe.parser._
 import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.tapir.server.interpreter.{EncodeOutputs, OutputValues, ToResponseBody}
+
 import scala.collection.immutable.Seq
 
 class SttpMockServerClient[F[_]] private[mockserver] (baseUri: Uri, backend: SttpBackend[F, Any]) {
@@ -130,26 +132,38 @@ object SttpMockServerClient {
 
   private def toExpectationResponse[E, I, O](outputValues: OutputValues[Any], statusCode: StatusCode): ExpectationResponseDefinition = {
     ExpectationResponseDefinition(
-      body = outputValues.body.map(_.apply(Headers(outputValues.headers)).toString),
-      headers = headersToMultiMapOpt(outputValues.headers),
-      statusCode = outputValues.statusCode.getOrElse(statusCode)
+      statusCode = outputValues.statusCode.getOrElse(statusCode),
+      body = toExpectationBody(outputValues),
+      headers = headersToMultiMapOpt(outputValues.headers)
     )
   }
 
   private def toExpectationBody[E, O](request: Request[DecodeResult[Either[E, O]], Any]): Option[ExpectationBodyDefinition] = {
-    val requestBody = Option(new String(request.forceBodyAsByteArray)).filter(_.nonEmpty)
-
     for {
-      body <- requestBody
+      body <- Option(new String(request.forceBodyAsByteArray))
+      if body.nonEmpty
       contentTypeRaw <- (request: HasHeaders).contentType
       contentType <- MediaType.parse(contentTypeRaw).toOption
-    } yield contentType match {
+    } yield stringToBodyDefinition(contentType)(body)
+  }
+
+  private def toExpectationBody(outputValues: OutputValues[Any]): Option[ExpectationBodyDefinition] = {
+    for {
+      body <- outputValues.body.map(_.apply(Headers(outputValues.headers)).toString)
+      if body.nonEmpty
+      contentTypeRaw <- outputValues.headers.find(_.name == HeaderNames.ContentType)
+      contentType <- MediaType.parse(contentTypeRaw.value).toOption
+    } yield stringToBodyDefinition(contentType)(body)
+  }
+
+  private def stringToBodyDefinition(contentType: MediaType)(body: String) = {
+    contentType match {
       case MediaType.ApplicationJson =>
-        ExpectationBodyDefinition.Json(
+        ExpectationBodyDefinition.JsonBodyDefinition(
           json = decode[JsonObject](body).valueOr(throw _), // todo: probably it should not throw if tapir interprets correctly
           matchType = ExpectationBodyDefinition.JsonMatchType.Strict
         )
-      case other => ExpectationBodyDefinition.Plain(body, other)
+      case other => ExpectationBodyDefinition.PlainBodyDefinition(body, other)
     }
   }
 

@@ -15,41 +15,65 @@ import sttp.tapir.server.mockserver.{SttpMockServerClient, VerificationTimes}
   */
 object MockServerExample extends App {
   val backend = TryHttpURLConnectionBackend()
+  val mockServerClient = SttpMockServerClient(baseUri = uri"http://localhost:1080", backend)
 
   case class SampleIn(name: String, age: Int)
 
   case class SampleOut(greeting: String)
 
-  val sampleEndpoint = endpoint.post
-    .in("api" / "v1" / "sample")
+  private def testEndpoint[I, E, O](endpoint: Endpoint[I, E, O, Any])(in: I, out: O): Unit = {
+    def sep(s: String): Unit = println(s * 20)
+
+    sep("")
+    println(s"Testing ${endpoint.showDetail}")
+    sep("")
+
+    val expectation = mockServerClient
+      .whenInputMatches(endpoint)(in)
+      .thenSuccess(out)
+      .get
+
+    println(s"Got expectation $expectation")
+    sep("")
+
+    val result = SttpClientInterpreter
+      .toRequest(endpoint, baseUri = Some(uri"http://localhost:1080"))
+      .apply(in)
+      .send(backend)
+      .get
+
+    println(s"Got result $result")
+    sep("")
+
+    val verifyResult = mockServerClient.verifyRequest(endpoint, times = VerificationTimes.atLeastOnce)(in).get
+
+    println(s"Got verification result: $verifyResult")
+    sep("-")
+  }
+
+  val samplePlainEndpoint = endpoint.post
+    .in("api" / "v1" / "plain")
+    .in(stringBody)
+    .out(stringBody)
+
+  val sampleJsonEndpoint = endpoint.post
+    .in("api" / "v1" / "json")
     .in(header[String]("X-RequestId"))
     .in(jsonBody[SampleIn])
     .errorOut(stringBody)
     .out(jsonBody[SampleOut])
 
-  val mockServerClient = SttpMockServerClient(baseUri = uri"http://localhost:1080", backend)
+  testEndpoint(samplePlainEndpoint)(
+    in = "Hello, world!",
+    out = "Hello to you!"
+  )
 
-  val sampleIn = "request-id-123" -> SampleIn("John", 23)
-  val sampleOut = SampleOut("Hello, John!")
+  testEndpoint(sampleJsonEndpoint)(
+    in = "request-id-123" -> SampleIn("John", 23),
+    out = SampleOut("Hello, John!")
+  )
 
-  val expectation = mockServerClient
-    .whenInputMatches(sampleEndpoint)(sampleIn)
-    .thenSuccess(sampleOut)
-
-  println(s"Got expectation $expectation")
-
-  val result = SttpClientInterpreter
-    .toRequest(sampleEndpoint, baseUri = Some(uri"http://localhost:1080"))
-    .apply(sampleIn)
-    .send(backend)
-
-  println(s"Got result $result")
-
-  val verifyResult = mockServerClient.verifyRequest(sampleEndpoint, times = VerificationTimes.atLeastOnce)(sampleIn)
-
-  println(s"Got verification result: $verifyResult")
-
-  val clearResult = mockServerClient.clear
+  val clearResult = mockServerClient.clear.get
 
   println(s"Got clearing result: $clearResult")
 }

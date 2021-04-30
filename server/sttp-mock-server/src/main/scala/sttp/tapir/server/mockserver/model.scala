@@ -36,8 +36,13 @@ object ExpectationBodyDefinition {
   private[mockserver] val PlainType: String = "STRING"
   private[mockserver] val JsonType: String = "JSON"
 
-  case class Plain(string: String, contentType: MediaType) extends ExpectationBodyDefinition
-  case class Json(json: JsonObject, matchType: JsonMatchType) extends ExpectationBodyDefinition
+  private[mockserver] val KnownTypes: List[String] = List(PlainType, JsonType)
+  private[mockserver] val KnownTypesString: String = KnownTypes.mkString("[", ", ", "]")
+
+  case class PlainBodyDefinition(string: String, contentType: MediaType) extends ExpectationBodyDefinition
+  case class JsonBodyDefinition(json: JsonObject, matchType: JsonMatchType) extends ExpectationBodyDefinition
+  // NOTE: for some reasons mock-server just returns the JSON body in httpResponse field...
+  case class RawJson(underlying: JsonObject) extends ExpectationBodyDefinition
 
   sealed trait JsonMatchType {
     def entryName: String
@@ -57,7 +62,11 @@ sealed trait ExpectationMatched
 
 case object ExpectationMatched extends ExpectationMatched
 
-case class ExpectationResponseDefinition(body: Option[String], headers: Option[Map[String, List[String]]], statusCode: StatusCode)
+case class ExpectationResponseDefinition(
+    statusCode: StatusCode,
+    body: Option[ExpectationBodyDefinition],
+    headers: Option[Map[String, List[String]]]
+)
 
 case class ExpectationTimes(unlimited: Boolean, remainingTimes: Option[Int])
 

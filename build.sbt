@@ -730,7 +730,9 @@ lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-moc
       "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
       "io.circe" %% "circe-core" % Versions.circe,
       "io.circe" %% "circe-parser" % Versions.circe,
-      "io.circe" %% "circe-generic" % Versions.circe
+      "io.circe" %% "circe-generic" % Versions.circe,
+      // test libs
+      "io.circe" %% "circe-literal" % Versions.circe % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)

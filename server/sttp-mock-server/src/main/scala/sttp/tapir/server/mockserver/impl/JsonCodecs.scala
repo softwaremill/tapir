@@ -1,6 +1,6 @@
 package sttp.tapir.server.mockserver.impl
 
-import io.circe.{Codec, Decoder, DecodingFailure, Encoder, Json, JsonObject}
+import io.circe.{Codec, CursorOp, Decoder, DecodingFailure, Encoder, Json, JsonObject}
 import io.circe.generic.semiauto.{deriveCodec, deriveDecoder, deriveEncoder}
 import io.circe.syntax._
 import sttp.model.{MediaType, Method, StatusCode, Uri}
@@ -37,36 +37,49 @@ private[mockserver] object JsonCodecs {
     case other                                      => Left(s"Unexpected json match type: $other")
   }
 
-  private implicit val plainBodyDefnEncoder: Encoder.AsObject[ExpectationBodyDefinition.Plain] =
-    deriveEncoder[ExpectationBodyDefinition.Plain].mapJsonObject(_.add("type", ExpectationBodyDefinition.PlainType.asJson))
+  private implicit val plainBodyDefnEncoder: Encoder.AsObject[ExpectationBodyDefinition.PlainBodyDefinition] =
+    deriveEncoder[ExpectationBodyDefinition.PlainBodyDefinition].mapJsonObject(_.add("type", ExpectationBodyDefinition.PlainType.asJson))
 
-  private implicit val jsonBodyDefnEncoder: Encoder.AsObject[ExpectationBodyDefinition.Json] =
-    deriveEncoder[ExpectationBodyDefinition.Json].mapJsonObject(
+  private implicit val jsonBodyDefnEncoder: Encoder.AsObject[ExpectationBodyDefinition.JsonBodyDefinition] =
+    deriveEncoder[ExpectationBodyDefinition.JsonBodyDefinition].mapJsonObject(
       _.add("type", ExpectationBodyDefinition.JsonType.asJson)
     )
 
   private implicit val expectationBodyDefinitionEncoder: Encoder[ExpectationBodyDefinition] =
     Encoder[Json].contramap[ExpectationBodyDefinition] {
-      case plain: ExpectationBodyDefinition.Plain => plainBodyDefnEncoder(plain)
-      case json: ExpectationBodyDefinition.Json   => jsonBodyDefnEncoder(json)
+      case plainDefn: ExpectationBodyDefinition.PlainBodyDefinition => plainBodyDefnEncoder(plainDefn)
+      case jsonDefn: ExpectationBodyDefinition.JsonBodyDefinition   => jsonBodyDefnEncoder(jsonDefn)
+      case rawJson: ExpectationBodyDefinition.RawJson               => rawJson.underlying.asJson
     }
 
-  private implicit val plainBodyDefnDecoder: Decoder[ExpectationBodyDefinition.Plain] = deriveDecoder[ExpectationBodyDefinition.Plain]
-  private implicit val jsonBodyDefnDecoder: Decoder[ExpectationBodyDefinition.Json] = deriveDecoder[ExpectationBodyDefinition.Json]
+  private implicit val plainBodyDefnDecoder: Decoder[ExpectationBodyDefinition.PlainBodyDefinition] =
+    deriveDecoder[ExpectationBodyDefinition.PlainBodyDefinition]
 
-  private implicit val expectationBodyDefinitionDecoder: Decoder[ExpectationBodyDefinition] =
+  private implicit val jsonBodyDefnDecoder: Decoder[ExpectationBodyDefinition.JsonBodyDefinition] =
+    deriveDecoder[ExpectationBodyDefinition.JsonBodyDefinition]
+
+  private implicit val expectationBodyDefinitionDecoder: Decoder[ExpectationBodyDefinition] = {
     Decoder[JsonObject]
       .emapTry { json =>
         json("type")
           .flatMap(_.asString)
-          .toRight(left = DecodingFailure("`type` field not found", Nil))
-          .flatMap {
+          .map {
             case ExpectationBodyDefinition.PlainType => plainBodyDefnDecoder.decodeJson(json.asJson)
             case ExpectationBodyDefinition.JsonType  => jsonBodyDefnDecoder.decodeJson(json.asJson)
-            case other                               => Left(DecodingFailure(s"Unknown body type: `$other`", Nil))
+            case other =>
+              Left(
+                DecodingFailure(
+                  message = s"Unexpected body type: `$other`, expected one of ${ExpectationBodyDefinition.KnownTypesString}",
+                  ops = List(CursorOp.DownField("type"))
+                )
+              )
+          }
+          .getOrElse {
+            Right(ExpectationBodyDefinition.RawJson(json))
           }
           .toTry
       }
+  }
 
   private implicit val expectationRequestDefinitionCodec: Codec[ExpectationRequestDefinition] = deriveCodec[ExpectationRequestDefinition]
   private implicit val expectationResponseDefinitionCodec: Codec[ExpectationResponseDefinition] = deriveCodec[ExpectationResponseDefinition]
