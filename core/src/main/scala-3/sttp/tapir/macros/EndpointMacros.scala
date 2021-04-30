@@ -1,4 +1,6 @@
-package sttp.tapir
+package sttp.tapir.macros
+
+import sttp.tapir.{EndpointErrorOutputsOps, EndpointInputsOps, EndpointOutputsOps}
 
 trait EndpointInputsMacros[I, E, O, -R] { this: EndpointInputsOps[I, E, O, R] =>
   def mapInTo[CASE_CLASS]: EndpointType[CASE_CLASS, E, O, R] = ??? // TODO

@@ -13,6 +13,7 @@ import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFo
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
+import sttp.tapir.macros.{FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 

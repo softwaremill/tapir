@@ -1,5 +1,6 @@
-package sttp.tapir
+package sttp.tapir.macros
 
+import sttp.tapir.Schema
 import sttp.tapir.generic.Configuration
 
 trait SchemaMacros[T] {

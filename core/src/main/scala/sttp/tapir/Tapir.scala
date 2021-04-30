@@ -12,6 +12,7 @@ import sttp.tapir.internal.ModifyMacroSupport
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.MatchType
 import sttp.tapir.internal._
+import sttp.tapir.macros.TapirMacros
 import sttp.ws.WebSocketFrame
 
 import scala.concurrent.duration.DurationInt

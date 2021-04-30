@@ -7,11 +7,12 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
+import sttp.tapir.macros.EndpointTransputMacros
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
-import scala.collection.immutable.{Seq, ListMap}
+import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
 /** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).

@@ -1,9 +1,9 @@
-package sttp.tapir
+package sttp.tapir.macros
 
 import magnolia.Magnolia
+import sttp.tapir.Schema
 import sttp.tapir.generic.Configuration
-import sttp.tapir.generic.internal.OneOfMacro
-import sttp.tapir.generic.internal.{SchemaMagnoliaDerivation, SchemaMapMacro}
+import sttp.tapir.generic.internal.{OneOfMacro, SchemaMagnoliaDerivation, SchemaMapMacro}
 import sttp.tapir.internal.ModifySchemaMacro
 
 trait SchemaMacros[T] {

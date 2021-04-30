@@ -7,6 +7,7 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.internal._
+import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros}
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint, ServerEndpointInParts}
 import sttp.tapir.typelevel.{ParamConcat, ParamSubtract}
 

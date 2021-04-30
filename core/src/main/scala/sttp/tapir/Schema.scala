@@ -4,6 +4,7 @@ import sttp.model.Part
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Derived
 import sttp.tapir.internal.IterableToListMap
+import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 
 import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal}

@@ -1,6 +1,7 @@
 package sttp.tapir
 
 import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.macros.ValidatorMacros
 
 import scala.collection.immutable
 

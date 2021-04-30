@@ -1,5 +1,6 @@
-package sttp.tapir
+package sttp.tapir.macros
 
+import sttp.tapir.EndpointTransput
 import sttp.tapir.internal.MapToMacro
 
 trait EndpointTransputMacros[T] { this: EndpointTransput[T] =>
