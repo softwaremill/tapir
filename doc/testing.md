@@ -70,26 +70,25 @@ with which your application interacts.
 To do that you might want to use well-known solutions like e.g. [wiremock](http://wiremock.org/) or [mock-server](https://www.mock-server.com/), 
 but if their api is described using tapir you might want to use [livestub](https://github.com/softwaremill/livestub), which combines nicely with the rest of the sttp ecosystem.
 
-
 ### Black box testing with mock-server integration
 
 If you are writing integration tests for your application which communicates with some external systems  
 (e.g payment providers, SMS providers, etc.), you could stub them using tapir's integration
 with [mock-server](https://www.mock-server.com/)
 
-You would require the following dependency:
+Add the following dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "@VERSION@"
 ```
 
-And the following imports:
+Imports:
 
 ```scala mdoc:silent
 import sttp.tapir.server.mockserver._
 ``` 
 
-Given the following endpoint:
+Then, given the following endpoint:
 
 ```scala mdoc:silent
 import sttp.tapir._
@@ -109,9 +108,8 @@ val sampleJsonEndpoint = endpoint.post
   .out(jsonBody[SampleOut])
 ```
 
-.. and having any `SttpBackend` instance (for example, `TryHttpURLConnectionBackend` or with other arbitrary `F[_]`
-type),  
-convert any endpoint to **mock-server** expectation:
+and having any `SttpBackend` instance (for example, `TryHttpURLConnectionBackend` or with any other, arbitrary effect 
+`F[_]` type), convert any endpoint to a **mock-server** expectation:
 
 ```scala mdoc:silent
 import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
@@ -128,7 +126,7 @@ val expectation = mockServerClient
   .get
 ```
 
-Then you my try to send requests to the mock-server as you would do with live integration:
+Then you can try to send requests to the mock-server as you would do with live integration:
 
 ```scala mdoc:silent
 import sttp.tapir.client.sttp.SttpClientInterpreter
