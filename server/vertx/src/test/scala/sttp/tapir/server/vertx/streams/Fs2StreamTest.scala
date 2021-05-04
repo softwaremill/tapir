@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx.streams
 
 import java.nio.ByteBuffer
 import cats.effect.{ContextShift, IO, Timer}
-import cats.effect.concurrent.Ref
+import cats.effect.concurrent.{Deferred, Ref}
 import cats.syntax.flatMap._
 import cats.syntax.option._
 import _root_.fs2.Stream
@@ -68,11 +68,11 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
       .unfoldChunkEval(0)({ num =>
         IO.delay(100.millis).as(((intAsBuffer(num), num + 1)).some)
       })
-      .interruptAfter(4.seconds)
 
     (for {
       ref <- Ref.of[IO, List[Int]](Nil)
-      readStream = fs2.fs2ReadStreamCompatible[IO].asReadStream(stream)
+      dfd <- Deferred[IO, Either[Throwable, Unit]]
+      readStream = fs2.fs2ReadStreamCompatible[IO].asReadStream(stream.interruptWhen(dfd))
       completed <- Ref[IO].of(false)
       _ <- IO.delay {
         readStream.handler { buffer =>
@@ -92,6 +92,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
       _ <- IO.delay(readStream.resume())
       snapshot3 <- eventually(ref.get)({ case list => list.length should be > snapshot2.length })
       _ = shouldIncreaseMonotonously(snapshot3)
+      _ <- dfd.complete(Right(()))
       _ <- eventually(completed.get)({ case true => () })
     } yield ()).unsafeRunSync()
   }
