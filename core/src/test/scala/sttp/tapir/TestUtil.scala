@@ -2,13 +2,18 @@ package sttp.tapir
 
 import sttp.capabilities
 import sttp.capabilities.Streams
-import sttp.model.HasHeaders
+import sttp.model.Uri._
+import sttp.model._
 import sttp.monad.MonadError
+import sttp.monad.syntax._
 import sttp.tapir.SchemaType.SProductField
 import sttp.tapir.internal.NoStreams
+import sttp.tapir.model.{ConnectionInfo, ServerRequest}
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ToResponseBody}
 
 import java.nio.charset.Charset
+import scala.collection.immutable
 import scala.util.{Success, Try}
 
 object TestUtil {
@@ -69,6 +74,32 @@ object TestUtil {
     override def onComplete(body: String)(cb: Try[Unit] => Id[Unit]): String = {
       cb(Success(()))
       body
+    }
+  }
+
+  case class PersonsApi(logic: String => Id[Either[String, String]] = PersonsApi.defaultLogic) {
+    def serverEp: ServerEndpoint[String, String, String, Any, Id] = endpoint
+      .in("person")
+      .in(query[String]("name"))
+      .out(stringBody)
+      .errorOut(stringBody)
+      .serverLogic(logic)
+  }
+
+  object PersonsApi {
+    val defaultLogic: String => Id[Either[String, String]] = name => (if (name == "Jacob") Right("hello") else Left(":(")).unit
+
+    val request: String => ServerRequest = name => {
+      new ServerRequest {
+        override def protocol: String = ""
+        override def connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
+        override def underlying: Any = ()
+        override def pathSegments: List[String] = List("person")
+        override def queryParameters: QueryParams = if (name == "") QueryParams.apply() else QueryParams.fromSeq(Seq(("name", name)))
+        override def method: Method = Method.GET
+        override def uri: Uri = uri"http://example.com/person"
+        override def headers: immutable.Seq[Header] = Nil
+      }
     }
   }
 }

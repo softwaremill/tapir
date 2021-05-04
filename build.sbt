@@ -65,6 +65,7 @@ lazy val allAggregates = core.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
   prometheusMetrics.projectRefs ++
+  opentelemetryMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
@@ -515,6 +516,20 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
     libraryDependencies ++= Seq(
       "io.prometheus" % "simpleclient_common" % "0.10.0",
       scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core % "compile->compile;test->test")
+
+lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/opentelemetry-metrics"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-opentelemetry-metrics",
+    libraryDependencies ++= Seq(
+      "io.opentelemetry" % "opentelemetry-api" % "1.1.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.1.0",
+      "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.1.0-alpha" % Test,
+      scalaTest.value % Test,
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -1078,5 +1093,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     derevo,
     zioJson,
     prometheusMetrics,
+    opentelemetryMetrics,
     sttpMockServer
   )
