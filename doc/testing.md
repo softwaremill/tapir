@@ -32,7 +32,7 @@ import io.circe.generic.auto._
 
 case class ResponseWrapper(value: Double)
 
-val endpoint = sttp.tapir.endpoint
+val e = sttp.tapir.endpoint
   .in("api" / "sometest4")
   .in(query[Int]("amount"))
   .post
@@ -46,7 +46,7 @@ import sttp.client3.monad.IdMonad
 
 val backend = SttpBackendStub
   .apply(IdMonad)
-  .whenRequestMatchesEndpoint(endpoint)
+  .whenRequestMatchesEndpoint(e)
   .thenSuccess(ResponseWrapper(1.0))
 ```
 
@@ -59,7 +59,7 @@ import sttp.client3.monad.IdMonad
 
 val anotherBackend = SttpBackendStub
   .apply(IdMonad)
-  .whenRequestMatchesEndpointThenLogic(endpoint.serverLogic[Identity](_ => Right(ResponseWrapper(1.0))))
+  .whenRequestMatchesEndpointThenLogic(e.serverLogic[Identity](_ => Right(ResponseWrapper(1.0))))
 ```
 
 ## Black box testing
@@ -111,13 +111,13 @@ val sampleJsonEndpoint = endpoint.post
 and having any `SttpBackend` instance (for example, `TryHttpURLConnectionBackend` or with any other, arbitrary effect 
 `F[_]` type), convert any endpoint to a **mock-server** expectation:
 
-```scala mdoc:silent
+```scala mdoc:compile-only
 import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
 
-val backend = TryHttpURLConnectionBackend()
-val mockServerClient = SttpMockServerClient(baseUri = uri"http://localhost:1080", backend)
+val testingBackend = TryHttpURLConnectionBackend()
+val mockServerClient = SttpMockServerClient(baseUri = uri"http://localhost:1080", testingBackend)
 
-val in = "request-id-123" -> SampleIn("John", 23),
+val in = "request-id-123" -> SampleIn("John", 23)
 val out = SampleOut("Hello, John!")
 
 val expectation = mockServerClient
@@ -128,13 +128,18 @@ val expectation = mockServerClient
 
 Then you can try to send requests to the mock-server as you would do with live integration:
 
-```scala mdoc:silent
+```scala mdoc:compile-only
 import sttp.tapir.client.sttp.SttpClientInterpreter
+import sttp.client3.{TryHttpURLConnectionBackend, UriContext}
+
+val testingBackend = TryHttpURLConnectionBackend()
+val in = "request-id-123" -> SampleIn("John", 23)
+val out = SampleOut("Hello, John!")
 
 val result = SttpClientInterpreter
-  .toRequest(endpoint, baseUri = Some(uri"http://localhost:1080"))
+  .toRequest(sampleJsonEndpoint, baseUri = Some(uri"http://localhost:1080"))
   .apply(in)
-  .send(backend)
+  .send(testingBackend)
   .get
   
 result == out 
