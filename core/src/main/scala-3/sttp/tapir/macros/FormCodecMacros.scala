@@ -1,14 +1,9 @@
 package sttp.tapir.macros
 
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, encodedName, Schema}
+import sttp.tapir.internal.{CaseClass, CaseClassField}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema, encodedName}
 
-import scala.compiletime.constValue
-import scala.compiletime.erasedValue
-import scala.compiletime.summonFrom
-import scala.compiletime.summonInline
-import scala.compiletime.summonAll
-import scala.deriving.Mirror
 import scala.quoted.*
 
 trait FormCodecMacros {
@@ -16,46 +11,22 @@ trait FormCodecMacros {
     ${FormCodecMacros.formCaseClassCodecImpl[T]('c)}
 }
 
-class CaseClass[Q <: Quotes, T: Type](using val q: Q) {
-  import q.reflect.*
-
-  val tpe = TypeRepr.of[T]
-  val symbol = tpe.typeSymbol
-
-  if !symbol.flags.is(Flags.Case) then
-    report.throwError(s"Form codec can only be derived for case classes, but got: ${summon[Type[T]]}")
-
-  def fields: List[CaseClassField[Q, T]] =
-    symbol.caseFields.zip(symbol.primaryConstructor.paramSymss.head).map { (caseField, constructorField) =>
-      new CaseClassField[Q, T](using q, summon[Type[T]])(caseField, constructorField, tpe.memberType(caseField))
-    }
-}
-
-class CaseClassField[Q <: Quotes, T](using val q: Q, t: Type[T])(val symbol: q.reflect.Symbol, constructorField: q.reflect.Symbol, val tpe: q.reflect.TypeRepr) {
-  import q.reflect.*
-
-  def name = symbol.name
-
-  def extractArgFromAnnotation(annSymbol: Symbol): Option[String] = constructorField.getAnnotation(annSymbol) map {
-    case Apply(_, List(Literal(c: Constant))) if c.value.isInstanceOf[String] => c.value.asInstanceOf[String]
-    case _ => report.throwError(s"Cannot extract annotation: $annSymbol, from field: $symbol, of type: ${summon[Type[T]]}")
-  }
-}
-
 object FormCodecMacros {
-
   def formCaseClassCodecImpl[T: Type](conf: Expr[Configuration])(using q: Quotes): Expr[Codec[String, T, CodecFormat.XWwwFormUrlencoded]] = {
     import quotes.reflect.*
     val caseClass = new CaseClass[q.type, T](using summon[Type[T]], q)
     val encodedNameAnnotationSymbol = TypeTree.of[encodedName].tpe.typeSymbol
 
+    def summonCodec[f: Type](field: CaseClassField[q.type, T]) = Expr.summon[Codec[List[String], f, CodecFormat.TextPlain]].getOrElse {
+      report.throwError(s"Cannot find Codec[List[String], T, CodecFormat.TextPlain]] for field: ${field}, of type: ${field.tpe}")
+    }
+
     def encodeDefBody(tTerm: Term): Term = {
       val fieldsEncode = caseClass.fields.map { field =>
         val encodedName = field.extractArgFromAnnotation(encodedNameAnnotationSymbol)
         val fieldEncode: Expr[List[(String, String)]] = field.tpe.asType match
-          case '[f] => val codec = Expr.summon[Codec[List[String], f, CodecFormat.TextPlain]].getOrElse {
-              report.throwError(s"Cannot find Codec[List[String], T, CodecFormat.TextPlain]] for field: ${field}, of type: ${field.tpe}")
-            }
+          case '[f] =>
+            val codec = summonCodec[f](field)
 
             '{
               val transformedName: String = ${Expr(encodedName)}.getOrElse($conf.toEncodedName(${Expr(field.name)}))
@@ -82,9 +53,8 @@ object FormCodecMacros {
       def fieldsDecode(paramsMap: Expr[Map[String, Seq[String]]]) = caseClass.fields.map { field =>
         val encodedName = field.extractArgFromAnnotation(encodedNameAnnotationSymbol)
         val fieldDecode = field.tpe.asType match
-          case '[f] => val codec = Expr.summon[Codec[List[String], f, CodecFormat.TextPlain]].getOrElse {
-              report.throwError(s"Cannot find Codec[List[String], T, CodecFormat.TextPlain]] for field: ${field}, of type: ${field.tpe}")
-            }
+          case '[f] =>
+            val codec = summonCodec[f](field)
 
             '{
               val transformedName = ${Expr(encodedName)}.getOrElse($conf.toEncodedName(${Expr(field.name)}))
@@ -97,19 +67,7 @@ object FormCodecMacros {
       '{
         val paramsMap: Map[String, Seq[String]] = ${paramsTerm.asExprOf[Seq[(String, String)]]}.groupBy(_._1).transform((_, v) => v.map(_._2))
         val decodeResults = List(${Varargs(fieldsDecode('paramsMap))}: _*)
-        DecodeResult.sequence(decodeResults).map { values =>
-          ${
-            Apply(
-              Select.unique(New(Inferred(caseClass.tpe)), "<init>"),
-              caseClass.symbol.caseFields.zipWithIndex.map { (field: Symbol, i: Int) =>
-                TypeApply(
-                  Select.unique('{values.apply(${Expr(i)})}.asTerm, "asInstanceOf"),
-                  List(Inferred(caseClass.tpe.memberType(field)))
-                )
-              }
-            ).asExprOf[T]
-          }
-        }
+        DecodeResult.sequence(decodeResults).map(values => ${caseClass.instanceFromValues('{values})})
       }.asTerm
     }
 
