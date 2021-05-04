@@ -94,6 +94,7 @@ lazy val allAggregates = core.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
   sttpStubServer.projectRefs ++
+  sttpMockServer.projectRefs ++
   finatraServer.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
@@ -771,6 +772,22 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, serverTests % "test", sttpClient)
 
+lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "sttp-mock-server",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-parser" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      // test libs
+      "io.circe" %% "circe-literal" % Versions.circe % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, serverTests % "test", sttpClient)
+
 lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -985,7 +1002,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioServer,
     sttpStubServer,
     playJson,
-    prometheusMetrics
+    prometheusMetrics,
+    sttpMockServer
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
@@ -1075,5 +1093,6 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     derevo,
     zioJson,
     prometheusMetrics,
-    opentelemetryMetrics
+    opentelemetryMetrics,
+    sttpMockServer
   )
