@@ -20,12 +20,9 @@ import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext
 
-object OAuth2GithubHttp4sServer extends App {
+object OAuth2GithubHttp4sServer extends IOApp {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit val timer: Timer[IO] = IO.timer(ec)
-  implicit val ce: ConcurrentEffect[IO] = IO.ioConcurrentEffect
 
   // github application details
   val clientId = "<put your client id here>"
@@ -109,20 +106,22 @@ object OAuth2GithubHttp4sServer extends App {
 
   val httpClient = AsyncHttpClientCatsBackend.resource[IO]()
 
-  // starting the server
-  httpClient
-    .use(backend =>
-      BlazeServerBuilder[IO](ec)
-        .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/" -> (secretPlaceRoute <+> loginRoute <+> loginGithubRoute(backend))).orNotFound)
-        .resource
-        .use { _ =>
-          IO {
-            println("Go to: http://localhost:8080")
-            println("Press any key to exit ...")
-            scala.io.StdIn.readLine()
+  override def run(args: List[String]): IO[ExitCode] = {
+    // starting the server
+    httpClient
+      .use(backend =>
+        BlazeServerBuilder[IO](ec)
+          .bindHttp(8080, "localhost")
+          .withHttpApp(Router("/" -> (secretPlaceRoute <+> loginRoute <+> loginGithubRoute(backend))).orNotFound)
+          .resource
+          .use { _ =>
+            IO {
+              println("Go to: http://localhost:8080")
+              println("Press any key to exit ...")
+              scala.io.StdIn.readLine()
+            }
           }
-        }
-    )
-    .unsafeRunSync()
+      )
+      .as(ExitCode.Success)
+  }
 }

@@ -10,6 +10,7 @@ import sttp.tapir.examples.UserAuthenticationLayer._
 import sttp.tapir.server.http4s.ztapir._
 import sttp.tapir.ztapir._
 import zio._
+import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.console._
 import zio.interop.catz._
@@ -56,7 +57,7 @@ object ZioPartialServerLogicHttp4s extends App {
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock, *]] =
+  val helloWorldRoutes: HttpRoutes[RIO[UserService & Console & Clock & Blocking, *]] =
     ZHttp4sServerInterpreter.from(List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic)).toRoutes
 
   // testing
@@ -89,8 +90,8 @@ object ZioPartialServerLogicHttp4s extends App {
 
   override def run(args: List[String]): URIO[ZEnv, ExitCode] =
     ZIO.runtime
-      .flatMap { implicit runtime: Runtime[ZEnv with UserService with Console] =>
-        BlazeServerBuilder[RIO[UserService with Console with Clock, *]](runtime.platform.executor.asEC)
+      .flatMap { implicit runtime: Runtime[ZEnv & UserService & Console] =>
+        BlazeServerBuilder[RIO[UserService & Console & Clock & Blocking, *]](runtime.platform.executor.asEC)
           .bindHttp(8080, "localhost")
           .withHttpApp(Router("/" -> helloWorldRoutes).orNotFound)
           .resource

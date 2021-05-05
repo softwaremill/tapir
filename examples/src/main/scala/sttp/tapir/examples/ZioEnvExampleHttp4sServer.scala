@@ -6,6 +6,7 @@ import org.http4s._
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
+import zio.blocking.Blocking
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
@@ -14,7 +15,7 @@ import sttp.tapir.ztapir._
 import zio.clock.Clock
 import zio.console.Console
 import zio.interop.catz._
-import zio.{App, ExitCode, Has, IO, RIO, UIO, URIO, ZEnv, ZIO, ZLayer}
+import zio.{&, App, ExitCode, Has, IO, RIO, UIO, URIO, ZEnv, ZIO, ZLayer}
 
 object ZioEnvExampleHttp4sServer extends App {
   // Domain classes, services, layers
@@ -47,12 +48,13 @@ object ZioEnvExampleHttp4sServer extends App {
   val petEndpoint: ZEndpoint[Int, String, Pet] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[PetService with Clock, *]] =
+  val petRoutes: HttpRoutes[RIO[PetService with Clock & Blocking, *]] =
     ZHttp4sServerInterpreter.from(petEndpoint)(petId => PetService.find(petId)).toRoutes
 
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[PetService, Int, String, Pet] = petEndpoint.zServerLogic(petId => PetService.find(petId))
-  val petServerRoutes: HttpRoutes[RIO[PetService with Clock, *]] = ZHttp4sServerInterpreter.from(List(petServerEndpoint)).toRoutes
+  val petServerRoutes: HttpRoutes[RIO[PetService with Clock & Blocking, *]] =
+    ZHttp4sServerInterpreter.from(List(petServerEndpoint)).toRoutes
 
   // Documentation
   val yaml: String = {
@@ -63,7 +65,7 @@ object ZioEnvExampleHttp4sServer extends App {
 
   // Starting the server
   val serve: ZIO[ZEnv with PetService, Throwable, Unit] = ZIO.runtime[ZEnv with PetService].flatMap { implicit runtime =>
-    BlazeServerBuilder[RIO[PetService with Clock, *]](runtime.platform.executor.asEC)
+    BlazeServerBuilder[RIO[PetService with Clock & Blocking, *]](runtime.platform.executor.asEC)
       .bindHttp(8080, "localhost")
       .withHttpApp(Router("/" -> (petRoutes <+> new SwaggerHttp4s(yaml).routes)).orNotFound)
       .serve
