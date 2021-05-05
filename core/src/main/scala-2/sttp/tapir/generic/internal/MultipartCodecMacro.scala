@@ -105,7 +105,7 @@ object MultipartCodecMacro {
         val fieldTypeName = field.typeSignature.typeSymbol.fullName
         if (fieldTypeName.startsWith("java.io.File")) {
           q"$base.fileName(o.$fieldName.getName)"
-        } else if (fieldTypeName.startsWith("java.io.File")) {
+        } else if (fieldTypeName.startsWith("java.nio.Path")) {
           q"$base.fileName(o.$fieldName.toFile.getName)"
         } else if (fieldTypeName.startsWith("org.scalajs.dom.raw.File")) {
           q"$base.fileName(o.$fieldName.name)"

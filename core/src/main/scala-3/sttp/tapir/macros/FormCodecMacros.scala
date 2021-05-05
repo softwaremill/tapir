@@ -7,7 +7,7 @@ import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema, encodedName}
 import scala.quoted.*
 
 trait FormCodecMacros {
-  implicit inline def formCaseClassCodec[T](using inline c: Configuration): Codec[String, T, CodecFormat.XWwwFormUrlencoded] =
+  inline given formCaseClassCodec[T](using inline c: Configuration): Codec[String, T, CodecFormat.XWwwFormUrlencoded] =
     ${FormCodecMacros.formCaseClassCodecImpl[T]('c)}
 }
 
