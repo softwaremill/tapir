@@ -3,7 +3,7 @@ package sttp.tapir.server.vertx.streams
 import _root_.fs2.{Chunk, Stream}
 import cats.effect.std.Dispatcher
 import cats.effect.unsafe.implicits.global
-import cats.effect.{IO, Outcome, Ref, Temporal}
+import cats.effect.{IO, Outcome, Ref, Temporal, Deferred}
 import cats.syntax.flatMap._
 import cats.syntax.option._
 import io.vertx.core.buffer.Buffer
