@@ -8,6 +8,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.apispec.ReferenceOr
 import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
@@ -21,6 +22,7 @@ import sttp.tapir.tests.{Person, _}
 import sttp.tapir.{Endpoint, endpoint, path, query, stringBody, _}
 
 import java.time.{Instant, LocalDateTime}
+import scala.collection.immutable.ListMap
 
 class VerifyYamlTest extends AnyFunSuite with Matchers {
   val all_the_way: Endpoint[(FruitAmount, String), Unit, (FruitAmount, Int), Any] = endpoint
@@ -518,6 +520,32 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions).toYaml
 
     noIndentation(actualYaml) shouldBe load("expected_extensions.yml")
+  }
+
+  test("should match the expected json with schema dialect") {
+    val expectedYaml = load("expected_with_schema_dialect.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint, Info("Fruits", "1.0"))
+      .jsonSchemaDialect(Some("https://json-schema.org/draft/2020-12/schema"))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("should match the expected json with webhooks") {
+    val expectedYaml = load("expected_webhooks.yml")
+    val responsesList = ListMap[ResponsesKey, ReferenceOr[Response]](ResponsesCodeKey(200) -> Right(Response(description = "Default description")))
+    val responses = Responses(responsesList)
+    val operation = Operation(operationId = "getRoot", responses = responses)
+    val pathItem = PathItem(get = Some(operation))
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint, Info("Fruits", "1.0"))
+      .webhooks(Some(Map("newPet" -> pathItem)))
+      .toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
   }
 }
 
