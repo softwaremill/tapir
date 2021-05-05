@@ -66,6 +66,7 @@ lazy val allAggregates = core.projectRefs ++
   circeJson.projectRefs ++
   jsoniterScala.projectRefs ++
   prometheusMetrics.projectRefs ++
+  opentelemetryMetrics.projectRefs ++
   json4s.projectRefs ++
   playJson.projectRefs ++
   sprayJson.projectRefs ++
@@ -94,6 +95,7 @@ lazy val allAggregates = core.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
   sttpStubServer.projectRefs ++
+  sttpMockServer.projectRefs ++
   finatraServer.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
@@ -520,6 +522,20 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core % "compile->compile;test->test")
 
+lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/opentelemetry-metrics"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-opentelemetry-metrics",
+    libraryDependencies ++= Seq(
+      "io.opentelemetry" % "opentelemetry-api" % "1.1.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.1.0",
+      "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.1.0-alpha" % Test,
+      scalaTest.value % Test,
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core % "compile->compile;test->test")
+
 // apispec
 
 lazy val apispecModel: ProjectMatrix = (projectMatrix in file("apispec/apispec-model"))
@@ -757,6 +773,22 @@ lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stu
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, serverTests % "test", sttpClient)
 
+lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-mock-server"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "sttp-mock-server",
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %%% "core" % Versions.sttp,
+      "io.circe" %% "circe-core" % Versions.circe,
+      "io.circe" %% "circe-parser" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      // test libs
+      "io.circe" %% "circe-literal" % Versions.circe % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, serverTests % "test", sttpClient)
+
 lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-server"))
   .settings(commonJvmSettings)
   .settings(
@@ -967,7 +999,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     zioServer,
     sttpStubServer,
     playJson,
-    prometheusMetrics
+    prometheusMetrics,
+    sttpMockServer
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
@@ -1056,5 +1089,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     zioServer,
     derevo,
     zioJson,
-    prometheusMetrics
+    prometheusMetrics,
+    opentelemetryMetrics,
+    sttpMockServer
   )
