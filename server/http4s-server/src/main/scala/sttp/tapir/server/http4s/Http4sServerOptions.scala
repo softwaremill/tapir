@@ -63,7 +63,7 @@ object Http4sServerOptions {
   ): Http4sServerOptions[F, G] =
     Http4sServerOptions(
       defaultCreateFile[G],
-      defaultDeleteFile[G]
+      defaultDeleteFile[G],
       8192,
       metricsInterceptor.toList ++
         exceptionHandler.map(new ExceptionInterceptor[G, Http4sResponseBody[F]](_)).toList ++

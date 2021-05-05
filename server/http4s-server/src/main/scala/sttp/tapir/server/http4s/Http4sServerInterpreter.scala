@@ -27,7 +27,7 @@ trait Http4sServerInterpreter {
       e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets]
   )(fToG: F ~> G)(gToF: G ~> F)(logic: I => G[Either[E, O]])(implicit
       serverOptions: Http4sServerOptions[F, G]
-  ): Http[OptionT[G, *], F] = toHttp(e.serverLogic(logic))(t)
+  ): Http[OptionT[G, *], F] = toHttp(e.serverLogic(logic))(fToG)(gToF)
 
   def toHttpRecoverErrors[I, E, O, F[_]: Async, G[_]: Sync](
       e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets]

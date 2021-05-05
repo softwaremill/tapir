@@ -717,7 +717,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2-ce2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp
     )
   )
   .dependsOn(tests)
@@ -743,7 +743,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -809,7 +809,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
-      "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )

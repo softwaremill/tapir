@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx.interpreters
 
-import cats.effect.{Async, IO, LiftIO, Sync}
+import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -12,7 +12,7 @@ import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.streams.ReadStreamCompatible
+import sttp.tapir.server.vertx.streams.fs2.fs2ReadStreamCompatible
 import sttp.tapir.server.vertx.{VertxBodyListener, VertxCatsServerOptions}
 
 import scala.reflect.ClassTag
@@ -24,7 +24,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]])(implicit
+  def route[F[_]: Async, I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]])(implicit
       endpointOptions: VertxCatsServerOptions[F]
   ): Router => Route =
     route(e.serverLogic(logic))
@@ -34,7 +34,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def routeRecoverErrors[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(
+  def routeRecoverErrors[F[_]: Async, I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(
       logic: I => F[O]
   )(implicit
       endpointOptions: VertxCatsServerOptions[F],
@@ -47,22 +47,20 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[F[_], I, E, O](
+  def route[F[_]: Async, I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
-  )(implicit
-      endpointOptions: VertxCatsServerOptions[F]
-  ): Router => Route = { router =>
-    import sttp.tapir.server.vertx.streams.fs2._
+  )(implicit endpointOptions: VertxCatsServerOptions[F]): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
   }
 
-  private def endpointHandler[F[_]: Async: LiftIO, I, E, O, A, S: ReadStreamCompatible](
-      e: ServerEndpoint[I, E, O, _, F]
+  private def endpointHandler[F[_]: Async, I, E, O, A](
+      e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
   )(implicit serverOptions: VertxCatsServerOptions[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
-    val interpreter: ServerInterpreter[Nothing, F, RoutingContext => Unit, S] = new ServerInterpreter(
+
+    val interpreter: ServerInterpreter[Nothing, F, RoutingContext => Unit, Fs2Streams[F]] = new ServerInterpreter(
       new VertxRequestBody(rc, serverOptions, fFromVFuture),
       new VertxToResponseBody(serverOptions),
       serverOptions.interceptors,
@@ -77,10 +75,9 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
       }
       .handleError { e => rc.fail(e) }
 
-    val cancelToken = effect.toIO(result).unsafeRunCancelable { _ => () }
-    rc.response.exceptionHandler { _ =>
-      cancelToken.unsafeRunSync()
-    }
+    val cancelToken = serverOptions.dispatcher.unsafeRunCancelable(result)
+
+    rc.response.exceptionHandler { _ => cancelToken() }
     ()
   }
 
@@ -103,7 +100,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
 
   implicit class VertxFutureToCatsF[A](f: => Future[A]) {
     def asF[F[_]: Async]: F[A] = {
-      Async[F].async { cb =>
+      Async[F].async_ { cb =>
         f.onComplete({ handler =>
           if (handler.succeeded()) {
             cb(Right(handler.result()))

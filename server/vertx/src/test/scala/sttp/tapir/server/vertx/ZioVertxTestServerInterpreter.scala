@@ -1,8 +1,8 @@
 package sttp.tapir.server.vertx
 
-import cats.arrow.FunctionK
 import cats.data.NonEmptyList
-import cats.effect.{ConcurrentEffect, IO, Resource}
+import cats.effect.std.Dispatcher
+import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -13,7 +13,6 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, Defaul
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
-import zio.interop.catz._
 import zio.{Runtime, Task}
 
 import scala.reflect.ClassTag
@@ -45,17 +44,13 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
-    val listenIO = taskFromVFuture(server.listen(0))
     routes.toList.foreach(_.apply(router))
-    Resource.make(listenIO)(s => taskFromVFuture(s.close).unit).map(_.actualPort()).mapK(zioToIo)
+    Dispatcher[IO].map { dispatcher =>
+      dispatcher.unsafeRunSync(VertxTestServerInterpreter.vertxFutureToIo(server.listen(0)).map(_.actualPort()))
+    }
   }
 }
 
 object ZioVertxTestServerInterpreter {
   implicit val runtime: Runtime[zio.ZEnv] = Runtime.default
-
-  val zioToIo: FunctionK[Task, IO] = new FunctionK[Task, IO] {
-    override def apply[A](fa: Task[A]): IO[A] =
-      ConcurrentEffect[Task].toIO(fa)
-  }
 }

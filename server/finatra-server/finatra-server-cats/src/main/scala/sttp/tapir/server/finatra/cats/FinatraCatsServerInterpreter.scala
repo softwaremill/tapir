@@ -1,6 +1,6 @@
 package sttp.tapir.server.finatra.cats
 
-import cats.effect.Effect
+import cats.effect
 import com.twitter.inject.Logging
 import io.catbird.util.Rerunnable
 import io.catbird.util.effect._
