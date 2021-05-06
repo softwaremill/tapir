@@ -23,15 +23,6 @@ excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
-  mimaPreviousArtifacts := {
-    val minorUnchanged = previousStableVersion.value.flatMap(CrossVersion.partialVersion) == CrossVersion.partialVersion(version.value)
-    val isRcOrMilestone = version.value.contains("M") || version.value.contains("RC")
-    if(minorUnchanged && !isRcOrMilestone)
-      previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
-    else
-      Set.empty
-  },
-  versionScheme := Some("early-semver"),
   updateDocs := Def.taskDyn {
     val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
     Def.task {
@@ -44,6 +35,18 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
   scalacOptions += "-Ywarn-macros:after"
+)
+
+val versioningSchemeSettings = Seq(
+  mimaPreviousArtifacts := {
+    val minorUnchanged = previousStableVersion.value.flatMap(CrossVersion.partialVersion) == CrossVersion.partialVersion(version.value)
+    val isRcOrMilestone = version.value.contains("M") || version.value.contains("RC")
+    if(minorUnchanged && !isRcOrMilestone)
+      previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
+    else
+      Set.empty
+  },
+  versionScheme := Some("early-semver"),
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
@@ -207,6 +210,7 @@ lazy val clientTestServer2_13 = clientTestServer.jvm(scala2_13)
 
 lazy val core: ProjectMatrix = (projectMatrix in file("core"))
   .settings(commonSettings)
+  .settings(versioningSchemeSettings)
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
