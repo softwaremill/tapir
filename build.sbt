@@ -30,7 +30,8 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       files1 ++ Seq(file("generated-doc/out"))
     }
   }.value,
-  ideSkipProject := (scalaVersion.value == scala2_12) || thisProjectRef.value.project.contains("JS"),
+  mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using versioningSchemeSettings
+  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
