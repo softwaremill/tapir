@@ -12,6 +12,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
+import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.tests.{
   CreateServerTest,
   ServerAuthenticationTests,

@@ -270,6 +270,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
     name := "tapir-cats",
     libraryDependencies ++= Seq(
       "org.typelevel" %%% "cats-core" % "2.6.0",
+      "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
@@ -384,8 +385,8 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-core" % Versions.circe,
       "io.circe" %%% "circe-parser" % Versions.circe,
+      "io.circe" %%% "circe-generic" % Versions.circe,
       scalaTest.value % Test,
-      "io.circe" %%% "circe-generic" % Versions.circe % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -762,7 +763,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, serverTests % Test)
+  .dependsOn(core, cats, serverTests % Test)
 
 lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stub-server"))
   .settings(commonJvmSettings)
@@ -860,6 +861,40 @@ lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-se
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(zio, http4sServer, serverTests % Test)
+
+// serverless
+
+lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambda"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-aws-lambda",
+    libraryDependencies ++= Seq(
+      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % "1.0.0"
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, cats, circeJson, tests)
+
+lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-aws-sam",
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-yaml" % Versions.circeYaml,
+      "io.circe" %% "circe-generic" % Versions.circe,
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core)
+
+lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
+  .enablePlugins(DockerPlugin)
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-aws-examples"
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(awsLambda, awsSam)
 
 // client
 
