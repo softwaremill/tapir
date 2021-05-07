@@ -8,7 +8,7 @@ paths:
       operationId: getRoot
       responses:
         '200':
-          description: ''
+          description: Default description
 webhooks:
   newPet:
     get:

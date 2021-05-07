@@ -25,7 +25,7 @@ import sttp.tapir.apispec.{
 
 import scala.collection.immutable.ListMap
 
-package object circe extends TapirOpenAPICirceEncoders
+package object circe extends TapirOpenAPICirceEncoders with TapirOpenAPICirceToYaml
 
 trait TapirOpenAPICirceEncoders {
   // note: these are strict val-s, order matters!
