@@ -4,7 +4,7 @@ import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.apispec.defaultSchemaName
 import sttp.tapir.docs.openapi.EndpointInputToDecodeFailureOutput.defaultBadRequestDescription
-import sttp.tapir.{EndpointInput, EndpointOutput, oneOf, oneOfMappingValueMatcher, stringBody}
+import sttp.tapir.{EndpointInput, EndpointOutput, statusCode, stringBody}
 
 case class OpenAPIDocsOptions(
     operationIdGenerator: (Vector[String], Method) => String,
@@ -27,9 +27,7 @@ object OpenAPIDocsOptions {
 
   val defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]] = input =>
     defaultBadRequestDescription(input).map { description =>
-      oneOf(
-        oneOfMappingValueMatcher(StatusCode.BadRequest, stringBody.description(description)) { case _ => true }
-      )
+      statusCode(StatusCode.BadRequest).and(stringBody.description(description))
     }
 
   implicit val default: OpenAPIDocsOptions = OpenAPIDocsOptions(defaultOperationIdGenerator)

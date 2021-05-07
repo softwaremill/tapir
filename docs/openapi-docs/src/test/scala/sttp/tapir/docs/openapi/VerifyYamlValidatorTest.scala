@@ -3,8 +3,6 @@ package sttp.tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.model.StatusCode
-import sttp.tapir
 import sttp.tapir.{endpoint, _}
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.generic.auto._
