@@ -1,5 +1,7 @@
 package sttp.tapir.openapi.circe
 
+import io.circe.Printer
+import io.circe.syntax.EncoderOps
 import sttp.tapir.apispec.ReferenceOr
 import sttp.tapir.openapi._
 import org.scalatest.funsuite.AnyFunSuite
@@ -11,13 +13,13 @@ import scala.io.Source
 class TapirOpenAPICirceTest extends AnyFunSuite with Matchers {
 
   test("should match the expected yaml with schema dialect") {
-    val expectedYaml = load("expected_with_schema_dialect.yml")
+    val expectedJson = load("expected_with_schema_dialect.json")
     val responsesList = ListMap[ResponsesKey, ReferenceOr[Response]](ResponsesCodeKey(200) -> Right(Response(description = "Default description")))
     val responses = Responses(responsesList)
     val operation = Operation(operationId = "getRoot", responses = responses)
     val pathItem = PathItem(get = Some(operation))
 
-    val actualYaml = OpenAPI(
+    val actualJson = OpenAPI(
       info = Info("Fruits", "1.0"),
       jsonSchemaDialect = Some("https://json-schema.org/draft/2020-12/schema"),
       tags = List.empty,
@@ -26,21 +28,21 @@ class TapirOpenAPICirceTest extends AnyFunSuite with Matchers {
       webhooks = None,
       components = None,
       security = List.empty)
-      .convertToYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
+      .asJson
+    val actualJsonNoIndent = noIndentation(Printer.spaces2.print(actualJson))
 
-    actualYamlNoIndent shouldBe expectedYaml
+    actualJsonNoIndent shouldBe expectedJson
   }
 
   test("should match the expected yaml with webhooks") {
-    val expectedYaml = load("expected_webhooks.yml")
+    val expectedJson = load("expected_webhooks.json")
     val responsesList = ListMap[ResponsesKey, ReferenceOr[Response]](ResponsesCodeKey(200) -> Right(Response(description = "Default description")))
     val responses = Responses(responsesList)
     val operation = Operation(operationId = "getRoot", responses = responses)
     val eitherPathItem = Right(PathItem(get = Some(operation)))
     val pathItem = PathItem(get = Some(operation))
 
-    val actualYaml = OpenAPI(
+    val actualJson= OpenAPI(
       info = Info("Fruits", "1.0"),
       jsonSchemaDialect = None,
       tags = List.empty,
@@ -49,10 +51,10 @@ class TapirOpenAPICirceTest extends AnyFunSuite with Matchers {
       webhooks = Some(Map("newPet" -> eitherPathItem)),
       components = None,
       security = List.empty)
-      .convertToYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
+      .asJson
+    val actualJsonNoIndent = noIndentation(Printer.spaces2.print(actualJson))
 
-    actualYamlNoIndent shouldBe expectedYaml
+    actualJsonNoIndent shouldBe expectedJson
   }
 
   private def load(fileName: String): String = {

@@ -563,7 +563,6 @@ lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-c
       "io.circe" %% "circe-core" % Versions.circe,
       "io.circe" %% "circe-parser" % Versions.circe,
       "io.circe" %% "circe-generic" % Versions.circe,
-      "io.circe" %% "circe-yaml" % Versions.circeYaml,
       scalaTest.value % Test
     ),
     name := "tapir-openapi-circe"
