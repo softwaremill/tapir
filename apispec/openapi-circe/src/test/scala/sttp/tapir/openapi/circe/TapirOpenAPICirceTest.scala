@@ -26,7 +26,7 @@ class TapirOpenAPICirceTest extends AnyFunSuite with Matchers {
       webhooks = None,
       components = None,
       security = List.empty)
-      .toYaml
+      .convertToYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -49,7 +49,7 @@ class TapirOpenAPICirceTest extends AnyFunSuite with Matchers {
       webhooks = Some(Map("newPet" -> eitherPathItem)),
       components = None,
       security = List.empty)
-      .toYaml
+      .convertToYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

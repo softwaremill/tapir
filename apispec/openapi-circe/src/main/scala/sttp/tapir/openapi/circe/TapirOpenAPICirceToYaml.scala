@@ -6,6 +6,6 @@ import sttp.tapir.openapi.OpenAPI
 
 trait TapirOpenAPICirceToYaml {
   implicit class RichOpenAPI(openAPI: OpenAPI) {
-    def toYaml: String = Printer(dropNullKeys = true, preserveOrder = true).pretty(openAPI.asJson)
+    def convertToYaml: String = Printer(dropNullKeys = true, preserveOrder = true).pretty(openAPI.asJson)
   }
 }
