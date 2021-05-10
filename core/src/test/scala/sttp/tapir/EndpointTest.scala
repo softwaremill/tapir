@@ -356,4 +356,25 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     mapping.encode(Wrapper(10, "x")) shouldBe ((10, "x"))
     mapping.decode((10, "x")) shouldBe DecodeResult.Value(Wrapper(10, "x"))
   }
+
+  "mapTo" should "fail on invalid field type" in {
+    assertDoesNotCompile("""
+      |case class Wrapper(i: Int, i2: Int)
+      |query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
+    """)
+  }
+
+  "mapTo" should "fail on redundant field" in {
+    assertDoesNotCompile("""
+      |case class Wrapper(i: Int, s: String, c: Char)
+      |query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
+    """)
+  }
+  
+  "mapTo" should "fail on missing field" in {
+    assertDoesNotCompile("""
+      |case class Wrapper(i: Int)
+      |query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
+    """)
+  }
 }

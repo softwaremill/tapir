@@ -2,8 +2,6 @@ package sttp.tapir.macros
 
 import sttp.tapir.EndpointTransput
 
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema}
-import scala.compiletime.constValue
 import scala.compiletime.erasedValue
 import scala.deriving.Mirror
 
@@ -24,6 +22,6 @@ trait EndpointTransputMacros[T] { this: EndpointTransput[T] =>
     inline (erasedValue[m.MirroredElemTypes], erasedValue[B]) match {
       case _: (B *: EmptyTuple, B) => ()
       case _: (B, B) => ()
-      case _ => scala.compiletime.error("Given case class does not match the endpoint transput.")//TODO improve message
+      case e => scala.compiletime.error("Given case class does not match the endpoint transput.")
     }
 }
