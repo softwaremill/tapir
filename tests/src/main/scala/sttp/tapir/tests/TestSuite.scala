@@ -8,7 +8,7 @@ trait TestSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   implicit lazy val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
 
-  def tests: Resource[IO, List[Test]]
+  def tests: Resource[IO, List[Test[_]]]
   def testNameFilter: Option[String] = None // define to run a single test (temporarily for debugging)
 
   // we need to register the tests when the class is constructed, as otherwise scalatest skips it

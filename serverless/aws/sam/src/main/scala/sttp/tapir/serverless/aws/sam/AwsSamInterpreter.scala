@@ -22,7 +22,19 @@ class AwsSamInterpreter {
     SamTemplate(
       Resources = ListMap(
         functionName -> FunctionResource(
-          FunctionProperties(options.imageUri, options.timeout.toSeconds, options.memorySize, ListMap.from(apiEvents))
+          options.source match {
+            case ImageSource(imageUri) =>
+              FunctionImageProperties(options.timeout.toSeconds, options.memorySize, ListMap.from(apiEvents), imageUri)
+            case cs @ CodeSource(_, _, _) =>
+              FunctionCodeProperties(
+                options.timeout.toSeconds,
+                options.memorySize,
+                ListMap.from(apiEvents),
+                cs.runtime,
+                cs.codeUri,
+                cs.handler
+              )
+          }
         ),
         httpApiName -> HttpResource(HttpProperties("$default"))
       ),
@@ -63,5 +75,4 @@ class AwsSamInterpreter {
 
     (name, method, "/" + idComponents.mkString("/"))
   }
-
 }

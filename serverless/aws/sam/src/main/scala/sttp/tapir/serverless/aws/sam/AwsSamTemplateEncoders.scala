@@ -3,6 +3,7 @@ package sttp.tapir.serverless.aws.sam
 import io.circe.generic.semiauto.deriveEncoder
 import io.circe.syntax.EncoderOps
 import io.circe.{Encoder, Json}
+
 import scala.collection.immutable.ListMap
 
 object AwsSamTemplateEncoders {
@@ -20,10 +21,12 @@ object AwsSamTemplateEncoders {
   }
 
   implicit val encoderHttpProperties: Encoder[HttpProperties] = deriveEncoder[HttpProperties]
-  implicit val encoderFunctionProperties: Encoder[FunctionProperties] = deriveEncoder[FunctionProperties]
+  implicit val encoderFunctionImageProperties: Encoder[FunctionImageProperties] = deriveEncoder[FunctionImageProperties]
+  implicit val encoderFunctionCodeProperties: Encoder[FunctionCodeProperties] = deriveEncoder[FunctionCodeProperties]
   implicit val encoderProperties: Encoder[Properties] = {
-    case v: HttpProperties     => v.asJson
-    case v: FunctionProperties => v.asJson
+    case v: HttpProperties          => v.asJson
+    case v: FunctionImageProperties => v.asJson
+    case v: FunctionCodeProperties  => v.asJson
   }
 
   implicit val encoderHttpResource: Encoder[HttpResource] = deriveEncoder[HttpResource]

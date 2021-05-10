@@ -1,6 +1,7 @@
 import java.net.URL
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.UpdateVersionInDocs
+import com.typesafe.sbt.packager.docker.ExecCmd
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
@@ -870,10 +871,12 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     name := "tapir-aws-lambda",
     libraryDependencies ++= Seq(
       "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % "1.0.0"
-    )
+    ),
+    assembly / assemblyJarName := "tapir-aws-lambda.jar",
+    Project.inConfig(Test)(baseAssemblySettings)
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, cats, circeJson, tests)
+  .dependsOn(core, cats, circeJson, awsSam, serverTests % Test)
 
 lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .settings(commonJvmSettings)
@@ -888,10 +891,27 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .dependsOn(core)
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
-  .enablePlugins(DockerPlugin)
+  .enablePlugins(JavaAppPackaging, DockerPlugin)
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-aws-examples"
+    libraryDependencies += "com.amazonaws" % "aws-java-sdk-lambda" % "1.11.1014"
+  )
+  .settings(
+    assembly / assemblyJarName := "examples.jar",
+    version := "1.0.0",
+    name := "tapir-aws-examples",
+    packageName in Docker := "tapir-aws-examples",
+    dockerBaseImage := "public.ecr.aws/lambda/java:11",
+    daemonUser in Docker := "daemon",
+    dockerUpdateLatest := true,
+    dockerCmd := List("com.softwaremill.sttp.tapir.serverless.aws.examples.HelloHandler::handleRequest"),
+//    dockerCommands := dockerCommands.value.filterNot {
+//      case ExecCmd("ENTRYPOINT", _) => true
+//      case _                        => false
+//    },
+    // https://hub.docker.com/r/amazon/aws-lambda-java
+    defaultLinuxInstallLocation in Docker := "/var/task",
+    dockerRepository := Some("localhost:5000")
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(awsLambda, awsSam)
