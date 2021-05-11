@@ -27,8 +27,8 @@ object ValidatorMacros {
       report.throwError("Can only enumerate values of a sealed trait, class or enum.")
     } else {
       val children = symbol.children.toList.sortBy(_.name)
-      
-      if (!children.forall(_.flags is Flags.Module) && !(symbol.flags is Flags.Enum)) {
+
+      if (children.exists(_.isClassDef)) {
         report.throwError("All children must be objects or enum cases.")
       } else {
         val instances = children.map(x => tpe.memberType(x).asType match { 
