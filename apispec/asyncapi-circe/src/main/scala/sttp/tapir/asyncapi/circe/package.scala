@@ -31,7 +31,15 @@ trait TapirAsyncAPICirceEncoders {
   // note: these are strict val-s, order matters!
 
   implicit def encoderReferenceOr[T: Encoder]: Encoder[ReferenceOr[T]] = {
-    case Left(Reference(ref)) => Json.obj(("$ref", Json.fromString(ref)))
+    case Left(Reference(ref, summary, description)) => (summary, description) match {
+      case (None, None) => Json.obj(("$ref", Json.fromString(ref)))
+      case (Some(s), None) => Json.obj(("$ref", Json.fromString(ref)), ("summary", Json.fromString(s)))
+      case (None, Some(d)) => Json.obj(("$ref", Json.fromString(ref)), ("description", Json.fromString(d)))
+      case (Some(s), Some(d)) => Json.obj(
+        ("$ref", Json.fromString(ref)),
+        ("summary", Json.fromString(s)),
+        ("description", Json.fromString(d)))
+    }
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 
