@@ -1,9 +1,9 @@
-import java.net.URL
 import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.UpdateVersionInDocs
-import com.typesafe.sbt.packager.docker.ExecCmd
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
+
+import java.net.URL
 
 val scala2_12 = "2.12.13"
 val scala2_13 = "2.13.5"
@@ -17,6 +17,7 @@ scalaVersion := scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
+lazy val generateSamTemplate = taskKey[Unit]("Generate sam template for lamdba interpreter tests")
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
@@ -251,7 +252,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
       "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum,
       "com.softwaremill.common" %%% "tagging" % "2.3.0",
       scalaTest.value,
-      "com.softwaremill.macwire" %% "macros" % "2.3.7" % "provided",
+      "com.softwaremill.macwire" %% "macros" % "2.3.7",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
     ),
     libraryDependencies ++= loggerDependencies
@@ -387,7 +388,7 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
       "io.circe" %%% "circe-core" % Versions.circe,
       "io.circe" %%% "circe-parser" % Versions.circe,
       "io.circe" %%% "circe-generic" % Versions.circe,
-      scalaTest.value % Test,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -531,7 +532,7 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
       "io.opentelemetry" % "opentelemetry-api" % "1.1.0",
       "io.opentelemetry" % "opentelemetry-sdk" % "1.1.0",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.1.0-alpha" % Test,
-      scalaTest.value % Test,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -867,16 +868,32 @@ lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-se
 
 lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambda"))
   .settings(commonJvmSettings)
+  .settings(name := "tapir-aws-lambda")
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, cats, circeJson, awsSam)
+
+lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/lambda-tests"))
+  .settings(commonJvmSettings)
   .settings(
-    name := "tapir-aws-lambda",
-    libraryDependencies ++= Seq(
-      "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % "1.0.0"
-    ),
-    assembly / assemblyJarName := "tapir-aws-lambda.jar",
-    Project.inConfig(Test)(baseAssemblySettings)
+    name := "tapir-aws-lambda-tests",
+    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % "1.0.0",
+    assembly / assemblyJarName := "tapir-aws-lambda-tests.jar",
+    assembly / test := {}, // no tests before building jar
+
+      assembly / assemblyMergeStrategy := {
+        case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
+        case x                                                    => (assembly / assemblyMergeStrategy).value(x)
+      },
+
+//    test := {
+//      generateSamTemplate.value
+//      assembly.value
+//    },
+
+    generateSamTemplate := (Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate").value
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, cats, circeJson, awsSam, serverTests % Test)
+  .dependsOn(core, cats, circeJson, awsLambda, awsSam, tests, serverTests)
 
 lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .settings(commonJvmSettings)
@@ -884,7 +901,7 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
     name := "tapir-aws-sam",
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
-      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %% "circe-generic" % Versions.circe
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)

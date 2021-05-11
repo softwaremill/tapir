@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda
+package sttp.tapir.serverless.aws.lambda.tests
 
 import cats.effect.IO
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
@@ -7,16 +7,16 @@ import io.circe.generic.auto._
 import io.circe.parser.decode
 import io.circe.syntax._
 import sttp.model.StatusCode
-import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.serverless.aws.lambda._
 
 import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets
 
-private[lambda] class AwsLambdaHttpTestHandler(eps: List[ServerEndpoint[_, _, _, Any, IO]]) extends RequestStreamHandler {
+object LambdaHandler extends RequestStreamHandler {
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 
     implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors[IO]()
-    val route: Route[IO] = AwsServerInterpreter.toRoute(eps)
+    val route: Route[IO] = AwsServerInterpreter.toRoute(allEndpoints.toList)
     val json = new String(input.readAllBytes(), StandardCharsets.UTF_8)
 
     (decode[AwsRequest](json) match {

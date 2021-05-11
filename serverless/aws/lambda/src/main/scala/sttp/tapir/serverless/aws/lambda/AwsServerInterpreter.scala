@@ -40,11 +40,14 @@ trait AwsServerInterpreter {
       )
 
       interpreter.apply(serverRequest, ses).map {
-        case None => AwsResponse(Nil, isBase64Encoded = false, StatusCode.NotFound.code, Map.empty, "")
+        case None => AwsResponse(Nil, isBase64Encoded = true, StatusCode.NotFound.code, Map.empty, "")
         case Some(res) =>
+          println(res)
           val cookies = res.cookies.collect { case Right(cookie) => cookie.value }.toList
           val headers = res.headers.map(h => h.name -> h.value).toMap
-          AwsResponse(cookies, isBase64Encoded = true, res.code.code, headers, res.body.getOrElse(""))
+          val awsRes = AwsResponse(cookies, isBase64Encoded = true, res.code.code, headers, res.body.getOrElse(""))
+          println(awsRes)
+          awsRes
       }
     }
   }
