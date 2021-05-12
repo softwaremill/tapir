@@ -107,8 +107,14 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v(0) shouldBe List(ValidationError.Custom(0, "X has to be greater than 5!"))
   }
 
-  it should "validate enum" in {
-    Validator.derivedEnumeration[Color](Blue) shouldBe empty
+  it should "validate coproduct enum" in {
+    Validator.derivedEnumeration[Color].possibleValues should contain theSameElementsAs List(Blue, Red)
+  }
+
+  it should "not compile for malformed coproduct enum" in {
+    assertDoesNotCompile("""
+      Validator.derivedEnumeration[InvalidColorEnum]
+    """)
   }
 
   it should "validate closed set of ints" in {
@@ -116,8 +122,15 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     v.apply(1) shouldBe empty
     v.apply(0) shouldBe List(ValidationError.Primitive(v, 0))
   }
+
 }
 
 sealed trait Color
-case object Blue extends Color
-case object Red extends Color
+case object Blue  extends Color
+case object Red   extends Color
+
+sealed trait InvalidColorEnum
+object InvalidColorEnum {
+  case object Blue          extends InvalidColorEnum
+  case class Red(s: String) extends InvalidColorEnum
+}
