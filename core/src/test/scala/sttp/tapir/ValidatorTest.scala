@@ -108,12 +108,12 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
   }
 
   it should "validate coproduct enum" in {
-    Validator.derivedEnumeration[Color](Blue) shouldBe empty
+    Validator.derivedEnumeration[Color].possibleValues should contain theSameElementsAs List(Blue, Red)
   }
 
   it should "not compile for malformed coproduct enum" in {
     assertDoesNotCompile("""
-      Validator.derivedEnumeration[InvalidColorEnum](InvalidColorEnum.Blue) shouldBe empty
+      Validator.derivedEnumeration[InvalidColorEnum]
     """)
   }
 

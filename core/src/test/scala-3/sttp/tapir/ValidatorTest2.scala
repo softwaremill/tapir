@@ -7,17 +7,13 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 class ValidatorTest2 extends AnyFlatSpec with Matchers {
-  it should "validate coproduct enum" in {
-    Validator.derivedEnumeration[Color](Blue) shouldBe empty
-  }
-
   it should "validate enum" in {
-    Validator.derivedEnumeration[ColorEnum](ColorEnum.Green) shouldBe empty
+    Validator.derivedEnumeration[ColorEnum].possibleValues should contain theSameElementsAs ColorEnum.values
   }
 
   it should "not compile for enum with parameter" in {
     assertDoesNotCompile("""
-      Validator.derivedEnumeration[ColorEnumWithParam](ColorEnumWithParam.Red) shouldBe empty
+      Validator.derivedEnumeration[ColorEnumWithParam]
     """)
   }
 
