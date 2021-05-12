@@ -111,16 +111,6 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
     Validator.derivedEnumeration[Color](Blue) shouldBe empty
   }
 
-  it should "validate enum" in {
-    Validator.derivedEnumeration[ColorEnum](ColorEnum.Green) shouldBe empty
-  }
-
-  it should "not compile for enum with parameter" in {
-    assertDoesNotCompile("""
-      Validator.derivedEnumeration[ColorEnumWithParam](ColorEnumWithParam.Red) shouldBe empty
-    """)
-  }
-
   it should "not compile for malformed coproduct enum" in {
     assertDoesNotCompile("""
       Validator.derivedEnumeration[InvalidColorEnum](InvalidColorEnum.Blue) shouldBe empty
@@ -138,16 +128,6 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
 sealed trait Color
 case object Blue  extends Color
 case object Red   extends Color
-
-enum ColorEnum { 
-  case Green  extends ColorEnum
-  case Pink   extends ColorEnum
-}
-
-enum ColorEnumWithParam {
-  case Red              extends ColorEnumWithParam
-  case Green(s: String) extends ColorEnumWithParam
-}
 
 sealed trait InvalidColorEnum
 object InvalidColorEnum {
