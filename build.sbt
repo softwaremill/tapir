@@ -879,21 +879,19 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % "1.0.0",
     assembly / assemblyJarName := "tapir-aws-lambda-tests.jar",
     assembly / test := {}, // no tests before building jar
-
-      assembly / assemblyMergeStrategy := {
-        case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
-        case x                                                    => (assembly / assemblyMergeStrategy).value(x)
-      },
-
+    assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
+      case x                                                    => (assembly / assemblyMergeStrategy).value(x)
+    },
 //    test := {
 //      generateSamTemplate.value
 //      assembly.value
 //    },
-
+    Test / parallelExecution := false,
     generateSamTemplate := (Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate").value
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, cats, circeJson, awsLambda, awsSam, tests, serverTests)
+  .dependsOn(core, cats, circeJson, awsLambda, awsSam, sttpStubServer, tests, serverTests)
 
 lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .settings(commonJvmSettings)

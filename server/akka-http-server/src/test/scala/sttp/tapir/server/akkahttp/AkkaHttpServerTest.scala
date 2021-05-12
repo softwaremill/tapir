@@ -16,7 +16,7 @@ import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.server.tests.{
-  CreateServerTest,
+  CreateTestServer,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerMetricsTest,
@@ -43,7 +43,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
 
       val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
-      val createServerTest = new CreateServerTest(interpreter)
+      val createTestServer = new CreateTestServer(backend, interpreter)
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
@@ -86,13 +86,13 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         }
       )
 
-      new ServerBasicTests(backend, createServerTest, interpreter).tests() ++
-        new ServerStreamingTests(backend, createServerTest, AkkaStreams).tests() ++
-        new ServerWebSocketTests(backend, createServerTest, AkkaStreams) {
+      new ServerBasicTests(createTestServer, interpreter).tests() ++
+        new ServerStreamingTests(createTestServer, AkkaStreams).tests() ++
+        new ServerWebSocketTests(createTestServer, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
-        new ServerAuthenticationTests(backend, createServerTest).tests() ++
-        new ServerMetricsTest(backend, createServerTest).tests() ++
+        new ServerAuthenticationTests(createTestServer).tests() ++
+        new ServerMetricsTest(createTestServer).tests() ++
         additionalTests()
     }
   }

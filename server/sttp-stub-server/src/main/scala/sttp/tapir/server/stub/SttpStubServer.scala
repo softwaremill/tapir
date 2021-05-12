@@ -17,7 +17,6 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
 import scala.util.{Success, Try}
-import sttp.monad.syntax._
 
 trait SttpStubServer {
 
@@ -38,6 +37,11 @@ trait SttpStubServer {
         inputMatcher: I => Boolean
     ): SttpBackendStub[F, R] =
       _whenInputMatches(endpoint.endpoint)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
+
+    def whenRequestMatchesEndpointThenInterpret[I, E, O](
+        endpoint: Endpoint[I, E, O, R],
+        interpret: Request[_, _] => F[Response[_]]
+    ): SttpBackendStub[F, R] = _whenRequestMatches(endpoint).thenRespondF(interpret(_))
 
     private def _whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): stub.WhenRequest = {
       new stub.WhenRequest(req =>

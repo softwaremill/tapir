@@ -18,25 +18,11 @@ class AwsLambdaHttpTest extends AnyFunSuite {
 
   private val baseUri: Uri = uri"http://localhost:3000"
 
-  testServer(empty_endpoint, "GET empty endpoint") { backend =>
-    basicRequest.get(baseUri).send(backend).map(_.body shouldBe Right(""))
-  }
-
-  testServer(empty_endpoint, "POST empty endpoint") { backend =>
-    basicRequest.post(baseUri).send(backend).map(_.body shouldBe Right(""))
-  }
-
-  testServer(empty_get_endpoint, "GET a GET endpoint") { backend =>
-    basicRequest.get(baseUri).send(backend).map(_.body shouldBe Right(""))
-  }
-
-  testServer(empty_get_endpoint, "POST a GET endpoint") { backend =>
-    basicRequest.post(baseUri).send(backend).map(_.body shouldBe Right(""))
-  }
-
   testServer(in_path_path_out_string_endpoint) { backend =>
     basicRequest.get(uri"$baseUri/fruit/orange/amount/20").send(backend).map { req =>
-      req.body.map(b => decode(b) shouldBe "orange 20").getOrElse(Assertions.fail())
+      req.body
+        .map(b => decode(b) shouldBe "orange 20")
+        .getOrElse(Assertions.fail())
     }
   }
 

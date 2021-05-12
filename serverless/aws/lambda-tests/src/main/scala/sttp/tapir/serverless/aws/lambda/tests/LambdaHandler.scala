@@ -16,6 +16,9 @@ object LambdaHandler extends RequestStreamHandler {
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 
     implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors[IO]()
+
+    allEndpoints.foreach(e => println(e.endpoint.showDetail))
+
     val route: Route[IO] = AwsServerInterpreter.toRoute(allEndpoints.toList)
     val json = new String(input.readAllBytes(), StandardCharsets.UTF_8)
 

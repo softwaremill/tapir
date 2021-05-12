@@ -4,7 +4,7 @@ import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
-import sttp.tapir.server.tests.{ServerAuthenticationTests, ServerBasicTests, ServerStreamingTests, CreateServerTest, backendResource}
+import sttp.tapir.server.tests.{ServerAuthenticationTests, ServerBasicTests, ServerStreamingTests, CreateTestServer, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 
 class CatsVertxServerTest extends TestSuite {
@@ -17,7 +17,7 @@ class CatsVertxServerTest extends TestSuite {
     vertxResource.map { implicit vertx =>
       implicit val m: MonadError[IO] = VertxCatsServerInterpreter.monadError[IO]
       val interpreter = new CatsVertxTestServerInterpreter(vertx)
-      val createServerTest = new CreateServerTest(interpreter)
+      val createServerTest = new CreateTestServer(interpreter)
 
       new ServerBasicTests(
         backend,
