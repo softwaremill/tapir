@@ -1,7 +1,5 @@
 package sttp.tapir
 
-import java.util.concurrent.TimeUnit
-
 import scala.concurrent.duration.Duration
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
