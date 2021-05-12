@@ -244,6 +244,14 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     input.codec.schema.applyValidation(Nil) shouldBe empty
   }
 
+  it should "map input and output" in {
+    case class Wrapper(s: String)
+
+    endpoint.in(query[String]("q1")).mapInTo[Wrapper]: Endpoint[Wrapper, Unit, Unit, Any]
+    endpoint.out(stringBody).mapOutTo[Wrapper]: Endpoint[Unit, Unit, Wrapper, Any]
+    endpoint.errorOut(stringBody).mapErrorOutTo[Wrapper]: Endpoint[Unit, Wrapper, Unit, Any]
+  }
+
   val httpMethodTestData = List(
     endpoint -> None,
     endpoint.in("api" / "cats" / path[String]).get -> Some(Method.GET),
