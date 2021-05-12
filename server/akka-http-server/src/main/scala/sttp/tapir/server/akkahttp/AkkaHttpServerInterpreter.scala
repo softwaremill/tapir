@@ -1,6 +1,6 @@
 package sttp.tapir.server.akkahttp
 
-import akka.http.scaladsl.model.{HttpResponse, StatusCode => AkkaStatusCode}
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives.{
   complete,
   extractExecutionContext,
@@ -64,7 +64,7 @@ trait AkkaHttpServerInterpreter {
   }
 
   private def serverResponseToAkka(response: ServerResponse[AkkaResponseBody]): Route = {
-    val statusCode = AkkaStatusCode.int2StatusCode(response.code.code)
+    val statusCode = StatusCodes.getForKey(response.code.code).getOrElse(StatusCodes.custom(response.code.code, ""))
     val akkaHeaders = parseHeadersOrThrowWithoutContentHeaders(response)
 
     response.body match {

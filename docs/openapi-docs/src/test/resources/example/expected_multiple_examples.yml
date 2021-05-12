@@ -79,6 +79,14 @@ paths:
                 value:
                   Organization:
                     name: acme
+        '400':
+          description: 'Invalid value for: query parameter current-person, Invalid
+                        value for: body, Invalid value for: header X-Forwarded-User, Invalid value
+                        for: cookie cookie-param'
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   schemas:
     Person:

@@ -479,8 +479,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.7.3",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.7.3" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.8.1",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.8.1" % Test,
       scalaTest.value % Test
     )
   )
@@ -526,8 +526,8 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.1.0",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.1.0",
+      "io.opentelemetry" % "opentelemetry-api" % "1.2.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.2.0",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.1.0-alpha" % Test,
       scalaTest.value % Test,
     )
