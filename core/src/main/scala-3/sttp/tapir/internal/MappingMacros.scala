@@ -24,6 +24,6 @@ object MappingMacros {
     inline (erasedValue[m.MirroredElemTypes], erasedValue[B]) match {
       case _: (B *: EmptyTuple, B) => ()
       case _: (B, B) => ()
-      case e => InlineUtils.reportIncorrectMapping[B, A]
+      case e => ComplietimeErrors.reportIncorrectMapping[B, A]
     }
 }

@@ -5,6 +5,11 @@ import sttp.tapir.EndpointOutput.OneOfMapping
 import sttp.tapir.{EndpointOutput, oneOf, oneOfMappingClassMatcher, oneOfMappingFromMatchType, oneOfMappingValueMatcher}
 
 import scala.reflect.ClassTag
+import scala.deriving.Mirror
+import scala.compiletime.constValue
+import scala.compiletime.erasedValue
+import scala.quoted.*
+import scala.reflect.classTag
 
 trait TapirMacros {
 
@@ -17,8 +22,33 @@ trait TapirMacros {
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] = ??? // TODO
+  inline def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] = 
+    ${ TapirMacros.oneOfMappingImpl[T]('statusCode, 'output, '{classTag[T]}) }
 
   @scala.deprecated("Use oneOfMapping", since = "0.18")
-  def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] = ??? // TODO
+  inline def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] = 
+    ${ TapirMacros.oneOfMappingImpl[T]('statusCode, 'output, '{classTag[T]}) }
+
+}
+
+object TapirMacros {
+  def oneOfMappingImpl[T: Type](statusCode: Expr[StatusCode], output: Expr[EndpointOutput[T]], ct: Expr[ClassTag[T]])(using Quotes): Expr[OneOfMapping[T]] = {
+    import quotes.reflect._
+
+    val t = TypeRepr.of[T]
+
+    val isAllowed: TypeRepr => Boolean = {
+      case _: AppliedType | _: AndOrType => false
+      case _ => true
+    }
+    
+    if (!isAllowed(t)) {
+      report.throwError(
+        s"Constructing oneOfMapping of type $t is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify " +
+          s"that the input matches the desired class. Please use oneOfMappingClassMatcher, oneOfMappingValueMatcher or oneOfMappingFromMatchType instead"
+      )
+    } else {
+      '{ sttp.tapir.oneOfMappingClassMatcher($statusCode, $output, $ct.runtimeClass) }
+    }
+  }
 }
