@@ -4,6 +4,8 @@ import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
 import java.net.URL
+import scala.concurrent.duration.DurationInt
+import scala.sys.process.Process
 
 val scala2_12 = "2.12.13"
 val scala2_13 = "2.13.5"
@@ -17,7 +19,6 @@ scalaVersion := scala2_13
 
 lazy val clientTestServerPort = settingKey[Int]("Port to run the client interpreter test server on")
 lazy val startClientTestServer = taskKey[Unit]("Start a http server used by client interpreter tests")
-lazy val generateSamTemplate = taskKey[Unit]("Generate sam template for lamdba interpreter tests")
 
 concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
@@ -102,6 +103,10 @@ lazy val allAggregates = core.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
   zioServer.projectRefs ++
+  awsLambda.projectRefs ++
+  awsLambdaTests.projectRefs ++
+  awsSam.projectRefs ++
+  awsExamples.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
   playClient.projectRefs ++
@@ -872,6 +877,9 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, cats, circeJson, awsSam)
 
+lazy val sam = Process("sam local start-api --warm-containers EAGER").run()
+lazy val samTemplate = taskKey[Unit]("Generate sam template for lambda tests")
+
 lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/lambda-tests"))
   .settings(commonJvmSettings)
   .settings(
@@ -883,12 +891,19 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
       case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
       case x                                                    => (assembly / assemblyMergeStrategy).value(x)
     },
-//    test := {
-//      generateSamTemplate.value
-//      assembly.value
-//    },
-    Test / parallelExecution := false,
-    generateSamTemplate := (Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate").value
+    samTemplate := (Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate").value,
+    Test / test := (Test / test)
+      .dependsOn(samTemplate)
+      .dependsOn(assembly)
+      .value,
+    Test / testOptions += Tests.Setup(() => {
+      val ok = PollingUtils.poll(10.seconds, 1.second) {
+        sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/health"))
+      }
+      if (!ok) sam.destroy()
+    }),
+    Test / testOptions += Tests.Cleanup(() => sam.destroy()),
+    Test / parallelExecution := false
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, cats, circeJson, awsLambda, awsSam, sttpStubServer, tests, serverTests)
@@ -903,7 +918,7 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core)
+  .dependsOn(core, tests % Test)
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
   .enablePlugins(JavaAppPackaging, DockerPlugin)

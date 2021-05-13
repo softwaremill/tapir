@@ -1,5 +1,8 @@
 package sttp.tapir.serverless.aws.sam
 
+import io.circe.syntax._
+import sttp.tapir.serverless.aws.sam.AwsSamTemplateEncoders._
+
 import scala.collection.immutable.ListMap
 
 case class SamTemplate(
@@ -7,7 +10,12 @@ case class SamTemplate(
     Transform: String = "AWS::Serverless-2016-10-31",
     Resources: ListMap[String, Resource],
     Outputs: ListMap[String, Output]
-)
+) {
+  def toYaml: String = {
+    val template: SamTemplate = this
+    Printer(dropNullKeys = true, preserveOrder = true, stringStyle = Printer.StringStyle.Plain).pretty(template.asJson)
+  }
+}
 
 trait Resource {
   def Properties: Properties

@@ -14,7 +14,7 @@ import sttp.tapir.server.tests.backendResource
 
 import java.util.Base64
 
-class AwsLambdaHttpTest extends AnyFunSuite {
+class AwsLambdaSamLocalHttpTest extends AnyFunSuite {
 
   private val baseUri: Uri = uri"http://localhost:3000"
 

@@ -4,6 +4,7 @@ import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
+import sttp.tapir.server.interceptor.log.ServerLogInterceptor
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 case class AwsServerOptions[F[_]](interceptors: List[Interceptor[F, String]]) {
@@ -12,10 +13,10 @@ case class AwsServerOptions[F[_]](interceptors: List[Interceptor[F, String]]) {
 }
 
 object AwsServerOptions {
-  def customInterceptors[F[_]](
+  def customInterceptors[F[_], T](
       metricsInterceptor: Option[MetricsRequestInterceptor[F, String]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
-      // todo log serverLog: Option[ServerLog[Context => F[Unit]]] = None,
+      serverLogInterceptor: Option[ServerLogInterceptor[T, F, String]] = None,
       additionalInterceptors: List[Interceptor[F, String]] = Nil,
       unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F, String]] = Some(
         new UnsupportedMediaTypeInterceptor[F, String]()
@@ -24,7 +25,7 @@ object AwsServerOptions {
   ): AwsServerOptions[F] = AwsServerOptions(
     metricsInterceptor.toList ++
       exceptionHandler.map(new ExceptionInterceptor[F, String](_)).toList ++
-      // todo log
+      serverLogInterceptor.toList ++
       additionalInterceptors ++
       unsupportedMediaTypeInterceptor.toList ++
       List(new DecodeFailureInterceptor[F, String](decodeFailureHandler))

@@ -21,8 +21,6 @@ class AwsLambdaStubHttpTest extends TestSuite {
         new ServerMetricsTest(createTestServer).tests()
     }
   )
-
-//  override def testNameFilter: Option[String] = Some("Endpoint(in: GET /api /echo /param-to-header ?qq, errout: -, out: {header hh})")
 }
 
 object AwsLambdaStubHttpTest {
