@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.lambda
 
 import cats.data.Kleisli
 import cats.effect.Sync
-import sttp.model.StatusCode
+import sttp.model.{Header, StatusCode}
 import sttp.monad.syntax._
 import sttp.tapir.Endpoint
 import sttp.tapir.integ.cats.CatsMonadError
@@ -42,12 +42,9 @@ trait AwsServerInterpreter {
       interpreter.apply(serverRequest, ses).map {
         case None => AwsResponse(Nil, isBase64Encoded = true, StatusCode.NotFound.code, Map.empty, "")
         case Some(res) =>
-          println(res)
           val cookies = res.cookies.collect { case Right(cookie) => cookie.value }.toList
-          val headers = res.headers.map(h => h.name -> h.value).toMap
-          val awsRes = AwsResponse(cookies, isBase64Encoded = true, res.code.code, headers, res.body.getOrElse(""))
-          println(awsRes)
-          awsRes
+          val headers = res.headers.groupMapReduce(_.name)(_.value)((v1, v2) => s"$v1,$v2")
+          AwsResponse(cookies, isBase64Encoded = true, res.code.code, headers, res.body.getOrElse(""))
       }
     }
   }

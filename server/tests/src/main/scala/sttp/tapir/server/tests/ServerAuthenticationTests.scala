@@ -1,6 +1,5 @@
 package sttp.tapir.server.tests
 
-import cats.effect.IO
 import cats.implicits._
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._

@@ -9,21 +9,15 @@ import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
+import akka.http.scaladsl.server.Route
+import sttp.capabilities.{WebSockets, akka}
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.model.sse.ServerSentEvent
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
-import sttp.tapir.server.tests.{
-  CreateTestServer,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerMetricsTest,
-  ServerStreamingTests,
-  ServerWebSocketTests,
-  backendResource
-}
+import sttp.tapir.server.tests.{CreateTestServer, ServerAuthenticationTests, ServerBasicTests, ServerFileMutltipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 
 import java.util.UUID
@@ -43,7 +37,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
 
       val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
-      val createTestServer = new CreateTestServer(backend, interpreter)
+      val createTestServer = new CreateTestServer(backend, interpreter).asInstanceOf[CreateTestServer[Future, AkkaStreams with WebSockets, Route, AkkaResponseBody]]
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
@@ -87,10 +81,11 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
       )
 
       new ServerBasicTests(createTestServer, interpreter).tests() ++
-        new ServerStreamingTests(createTestServer, AkkaStreams).tests() ++
+        new ServerFileMutltipartTests(createTestServer).tests() ++
         new ServerWebSocketTests(createTestServer, AkkaStreams) {
           override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = Flow.fromFunction(f)
         }.tests() ++
+        new ServerStreamingTests(createTestServer, AkkaStreams).tests() ++
         new ServerAuthenticationTests(createTestServer).tests() ++
         new ServerMetricsTest(createTestServer).tests() ++
         additionalTests()

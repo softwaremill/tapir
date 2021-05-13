@@ -8,9 +8,7 @@ import java.net.{InetSocketAddress, URLDecoder}
 private[lambda] class AwsServerRequest(request: AwsRequest) extends ServerRequest {
   private val sttpUri: Uri = {
     val queryString = if (request.rawQueryString.nonEmpty) "?" + request.rawQueryString else ""
-    val uri = Uri.unsafeParse(s"$protocol://${request.requestContext.domainName.getOrElse("")}${request.rawPath}$queryString")
-    println("GOT " + uri.toJavaUri.toString)
-    uri
+    Uri.unsafeParse(s"$protocol://${request.requestContext.domainName.getOrElse("")}${request.rawPath}$queryString")
   }
 
   override def protocol: String = request.headers.getOrElse("x-forwarded-proto", "http")

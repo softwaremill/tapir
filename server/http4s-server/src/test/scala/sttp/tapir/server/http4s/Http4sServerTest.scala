@@ -14,7 +14,7 @@ import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.server.tests.{CreateTestServer, ServerAuthenticationTests, ServerBasicTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.server.tests.{CreateTestServer, ServerAuthenticationTests, ServerBasicTests, ServerFileMutltipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
@@ -105,6 +105,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     )
 
     new ServerBasicTests(createTestServer, interpreter).tests() ++
+      new ServerFileMutltipartTests(createTestServer).tests() ++
       new ServerStreamingTests(createTestServer, Fs2Streams[IO]).tests() ++
       new ServerWebSocketTests(createTestServer, Fs2Streams[IO]) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)

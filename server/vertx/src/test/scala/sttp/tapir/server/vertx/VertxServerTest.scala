@@ -3,7 +3,14 @@ package sttp.tapir.server.vertx
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import sttp.monad.FutureMonad
-import sttp.tapir.server.tests.{CreateTestServer, ServerAuthenticationTests, ServerBasicTests, ServerMetricsTest, backendResource}
+import sttp.tapir.server.tests.{
+  CreateTestServer,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMutltipartTests,
+  ServerMetricsTest,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 
 import scala.concurrent.ExecutionContext
@@ -19,11 +26,11 @@ class VertxServerTest extends TestSuite {
       val interpreter = new VertxTestServerInterpreter(vertx)
       val createTestServer = new CreateTestServer(backend, interpreter)
 
-      new ServerBasicTests(
-        createTestServer,
-        interpreter,
-        multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
-      ).tests() ++
+      new ServerBasicTests(createTestServer, interpreter).tests() ++
+        new ServerFileMutltipartTests(
+          createTestServer,
+          multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
+        ).tests() ++
         new ServerAuthenticationTests(createTestServer).tests() ++
         new ServerMetricsTest(createTestServer).tests()
     }

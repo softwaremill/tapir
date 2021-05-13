@@ -16,7 +16,6 @@ import sttp.tapir.tests.{Fruit, Test}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
-    //                                                                      backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     createTestServer: TestServer[F, S with WebSockets, ROUTE, B],
     val streams: S
 )(implicit

@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.lambda.tests
 
 import cats.data.NonEmptyList
 import cats.effect.IO
-import org.scalatest.{Assertion, Assertions}
+import org.scalatest.Assertion
 import sttp.client3
 import sttp.client3.testing.SttpBackendStub
 import sttp.client3.{ByteArrayBody, ByteBufferBody, InputStreamBody, NoBody, Request, Response, StringBody, SttpBackend, _}
@@ -15,13 +15,12 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.stub._
 import sttp.tapir.server.tests.TestServer
 import sttp.tapir.serverless.aws.lambda._
-import sttp.tapir.serverless.aws.lambda.tests.LambdaStubTestServer._
+import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaStubTestServer._
 import sttp.tapir.tests.Test
 
 import java.util.Base64
-import scala.util.Random
 
-class LambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
+class AwsLambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
 
   override def testServer[I, E, O](
       e: Endpoint[I, E, O, Any],
@@ -36,13 +35,8 @@ class LambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
     val se: ServerEndpoint[I, E, O, Any, IO] = e.serverLogic(fn)
     val route: Route[IO] = AwsServerInterpreter.toRoute(se)
     val backend: SttpBackendStub[IO, Any] =
-      SttpBackendStub(catsMonadIO)
-        .whenRequestMatchesEndpointThenInterpret(
-          e,
-          request => route(sttpToAwsRequest(request)).map(awsToSttpResponse)
-        )
-        .whenAnyRequest
-        .thenRespondNotFound()
+      SttpBackendStub(catsMonadIO).whenAnyRequest
+        .thenRespondF { request => route(sttpToAwsRequest(request)).map(awsToSttpResponse) }
 
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
 
@@ -55,39 +49,40 @@ class LambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
     implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors()
     val route: Route[IO] = AwsServerInterpreter.toRoute(e)
     val backend =
-      SttpBackendStub(catsMonadIO).whenRequestMatchesEndpointThenInterpret(
-        e.endpoint,
-        request => {
-          val awsReq = sttpToAwsRequest(request)
-          route(awsReq).map { awsRes =>
-            println(awsReq)
-            println(awsRes)
-            val sttpRes = awsToSttpResponse(awsRes)
-            println(sttpRes)
-            sttpRes
-          }
-//          route(sttpToAwsRequest(request)).map(awsToSttpResponse)
-        }
-      )
+      SttpBackendStub(catsMonadIO)
+        .whenRequestMatchesEndpointThenInterpret(
+          e.endpoint,
+          request => route(sttpToAwsRequest(request)).map(awsToSttpResponse)
+        )
+        .whenAnyRequest
+        .thenRespondNotFound()
 
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
 
-    Test(name)(() => runTest(backend, uri"http://localhost:3000").unsafeRunSync())
+    Test(name)(runTest(backend, uri"http://localhost:3000").unsafeRunSync())
   }
 
   override def testServer(name: String, rs: => NonEmptyList[Route[IO]])(runTest: (SttpBackend[IO, Any], Uri) => IO[Assertion]): Test = {
-    Test("fail " + Random.nextInt())(() => Assertions.fail())
+    val backend: SttpBackendStub[IO, Any] = SttpBackendStub(catsMonadIO).whenAnyRequest
+      .thenRespondF { request =>
+        val responses: NonEmptyList[Response[String]] = rs.map { route =>
+          route(sttpToAwsRequest(request)).map(awsToSttpResponse).unsafeRunSync()
+        }
+        IO.pure(responses.find(_.code != StatusCode.NotFound).getOrElse(Response("", StatusCode.NotFound)))
+      }
+    Test(name)(runTest(backend, uri"http://localhost:3000").unsafeRunSync())
   }
 }
 
-object LambdaStubTestServer {
+object AwsLambdaStubTestServer {
   implicit val catsMonadIO: CatsMonadError[IO] = new CatsMonadError[IO]
 
   def sttpToAwsRequest(request: Request[_, _]): AwsRequest = {
-    println("CALLING: " + request.uri.toJavaUri.toString)
     AwsRequest(
       rawPath = request.uri.pathSegments.toString,
-      rawQueryString = request.uri.params.toMultiSeq.foldLeft("") { case (q, (name, values)) => s"$q$name=${values.mkString(",")}" },
+      rawQueryString = request.uri.params.toMultiSeq.foldLeft("") { case (q, (name, values)) =>
+        s"${if (q == "") "" else s"$q&"}${if (values.isEmpty) name else values.map(v => s"$name=$v").mkString("&")}"
+      },
       headers = request.headers.map(h => h.name -> h.value).toMap,
       requestContext = AwsRequestContext(
         domainName = Some("localhost:3000"),
@@ -100,12 +95,12 @@ object LambdaStubTestServer {
         )
       ),
       Some(request.body match {
-        case NoBody                     => ""
-        case StringBody(b, encoding, _) => new String(b)
-        case ByteArrayBody(b, _)        => new String(b)
-        case ByteBufferBody(b, _)       => new String(b.array())
-        case InputStreamBody(b, _)      => new String(b.readAllBytes())
-        case _                          => throw new UnsupportedOperationException
+        case NoBody                => ""
+        case StringBody(b, _, _)   => new String(b)
+        case ByteArrayBody(b, _)   => new String(b)
+        case ByteBufferBody(b, _)  => new String(b.array())
+        case InputStreamBody(b, _) => new String(b.readAllBytes())
+        case _                     => throw new UnsupportedOperationException
       }),
       isBase64Encoded = false
     )
@@ -116,6 +111,6 @@ object LambdaStubTestServer {
       new String(Base64.getDecoder.decode(response.body)),
       new StatusCode(response.statusCode),
       "",
-      response.headers.map { case (n, v) => Header(n, v) }.toSeq
+      response.headers.map { case (n, v) => v.split(",").map(Header(n, _)) }.flatten.toSeq
     )
 }
