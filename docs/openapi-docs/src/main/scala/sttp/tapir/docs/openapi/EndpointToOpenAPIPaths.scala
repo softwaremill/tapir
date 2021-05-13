@@ -48,7 +48,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       e.info.tags.toList,
       e.info.summary,
       e.info.description,
-      e.info.name.getOrElse(defaultId),
+      e.info.name.orElse(Some(defaultId)),
       parameters.toList.map(Right(_)),
       body.headOption,
       Responses(responses),
