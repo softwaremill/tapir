@@ -2,14 +2,12 @@ package sttp.tapir.macros
 
 import sttp.model.StatusCode
 import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.{EndpointOutput, oneOf, oneOfMappingClassMatcher, oneOfMappingFromMatchType, oneOfMappingValueMatcher}
+import sttp.tapir.EndpointOutput
 
 import scala.reflect.ClassTag
-import scala.deriving.Mirror
-import scala.compiletime.constValue
-import scala.compiletime.erasedValue
-import scala.quoted.*
 import scala.reflect.classTag
+
+import scala.quoted.*
 
 trait TapirMacros {
 

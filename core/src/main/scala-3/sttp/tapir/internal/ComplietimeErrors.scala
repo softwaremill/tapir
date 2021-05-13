@@ -9,9 +9,8 @@ object ComplietimeErrors {
     
     private def reportIncorrectMappingImpl[SOURCE: Type, TARGET: Type](using Quotes): Expr[Unit] = {
         import quotes.reflect.*
-        report.throwError(s"Failed to map ${Type.show[SOURCE]} into ${Type.show[TARGET]}")
         
-        
+        report.throwError(s"Failed to map ${Type.show[SOURCE]} into ${Type.show[TARGET]}") 
     }
 
 }
