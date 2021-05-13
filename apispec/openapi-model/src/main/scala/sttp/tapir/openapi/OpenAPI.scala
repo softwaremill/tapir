@@ -1,6 +1,6 @@
 package sttp.tapir.openapi
 
-import sttp.tapir.apispec.{ExampleValue, ExtensionValue, ReferenceOr, Schema, SecurityRequirement, SecurityScheme, Tag}
+import sttp.tapir.apispec.{ExampleValue, ExtensionValue, Reference, ReferenceOr, Schema, SecurityRequirement, SecurityScheme, Tag}
 
 import scala.collection.immutable.ListMap
 
@@ -84,7 +84,15 @@ case class Components(
     securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]],
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
-
+  def addSchema(key: String, schema: Schema) = copy(schemas = schemas.updated(key, Right(schema)))
+  def getLocalSchema(key: String) = schemas.get(key).flatMap(_.toOption)
+  def getReferenceToSchema(key: String): Option[Reference] =
+    schemas.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/schemas/$key")))
+  def addSecurityScheme(key: String, scheme: SecurityScheme) =
+    copy(securitySchemes = securitySchemes.updated(key, Right(scheme)))
+  def getLocalSecurityScheme(key: String) = securitySchemes.get(key).flatMap(_.toOption)
+  def getReferenceToSecurityScheme(key: String): Option[Reference] =
+    securitySchemes.get(key).map(refOr => refOr.fold(identity, _ => Reference(s"#/components/securitySchemes/$key")))
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
 
