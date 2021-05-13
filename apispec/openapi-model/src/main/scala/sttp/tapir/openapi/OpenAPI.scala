@@ -235,7 +235,7 @@ final case class Parameter(
   def withSchema(updated: Schema) = copy(schema = Some(Right(updated)))
   def withExample(updated: ExampleValue) = copy(example = Some(updated))
   def addExample(key: String, updated: ExampleValue) = copy(examples = examples.updated(key, updated))
-  def withMediaType(contentType: String, mediaType: MediaType) = copy(content = content.updated(contentType, mediaType))
+  def addMediaType(contentType: String, mediaType: MediaType) = copy(content = content.updated(contentType, mediaType))
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
 
@@ -385,7 +385,7 @@ final case class Header(
   def withSchema(updated: Schema) = copy(schema = Some(Right(updated)))
   def withExample(updated: ExampleValue) = copy(example = Some(updated))
   def addExample(key: String, updated: ExampleValue) = copy(examples = examples.updated(key, updated))
-  def withMediaType(contentType: String, mediaType: MediaType) = copy(content = content.updated(contentType, mediaType))
+  def addMediaType(contentType: String, mediaType: MediaType) = copy(content = content.updated(contentType, mediaType))
 }
 
 object Header {
