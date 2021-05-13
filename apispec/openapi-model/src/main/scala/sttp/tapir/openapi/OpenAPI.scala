@@ -4,7 +4,7 @@ import sttp.tapir.apispec.{ExampleValue, ExtensionValue, Reference, ReferenceOr,
 
 import scala.collection.immutable.ListMap
 
-case class OpenAPI(
+final case class OpenAPI(
     openapi: String = "3.0.3",
     info: Info,
     tags: List[Tag] = Nil,
@@ -25,7 +25,7 @@ case class OpenAPI(
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
 
-case class Info(
+final case class Info(
     title: String,
     version: String,
     description: Option[String] = None,
@@ -37,15 +37,20 @@ case class Info(
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
 
-case class Contact(
-    name: Option[String],
-    email: Option[String],
-    url: Option[String],
+final case class Contact(
+    name: Option[String] = None,
+    email: Option[String] = None,
+    url: Option[String] = None,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
-case class License(
+
+object Contact {
+  val Empty: Contact = Contact()
+}
+
+final case class License(
     name: String,
     url: Option[String],
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
@@ -53,7 +58,7 @@ case class License(
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
 
-case class Server(
+final case class Server(
     url: String,
     description: Option[String] = None,
     variables: Option[ListMap[String, ServerVariable]] = None,
@@ -66,7 +71,7 @@ case class Server(
   def variables(vars: (String, ServerVariable)*): Server = copy(variables = Some(ListMap(vars: _*)))
 }
 
-case class ServerVariable(
+final case class ServerVariable(
     enum: Option[List[String]],
     default: String,
     description: Option[String],
@@ -79,7 +84,7 @@ case class ServerVariable(
 }
 
 // todo: responses, parameters, examples, requestBodies, headers, links, callbacks
-case class Components(
+final case class Components(
     schemas: ListMap[String, ReferenceOr[Schema]],
     securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]],
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
@@ -100,7 +105,7 @@ object Components {
   val Empty: Components = Components(schemas = ListMap.empty, securitySchemes = ListMap.empty, extensions = ListMap.empty)
 }
 
-case class Paths(
+final case class Paths(
     pathItems: ListMap[String, PathItem],
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
@@ -121,7 +126,7 @@ object Paths {
 }
 
 // todo: $ref
-case class PathItem(
+final case class PathItem(
     summary: Option[String] = None,
     description: Option[String] = None,
     get: Option[Operation] = None,
@@ -172,7 +177,7 @@ case class PathItem(
 }
 
 // todo: external docs, callbacks, security
-case class Operation(
+final case class Operation(
     tags: List[String] = List.empty,
     summary: Option[String] = None,
     description: Option[String] = None,
@@ -204,7 +209,7 @@ object Operation {
   val Empty: Operation = Operation()
 }
 
-case class Parameter(
+final case class Parameter(
     name: String,
     in: ParameterIn.ParameterIn,
     description: Option[String] = None,
@@ -214,7 +219,7 @@ case class Parameter(
     style: Option[ParameterStyle.ParameterStyle] = None,
     explode: Option[Boolean] = None,
     allowReserved: Option[Boolean] = None,
-    schema: ReferenceOr[Schema],
+    schema: Option[ReferenceOr[Schema]],
     example: Option[ExampleValue] = None,
     examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
     content: ListMap[String, MediaType] = ListMap.empty,
@@ -224,10 +229,12 @@ case class Parameter(
   def withRequired = copy(required = Some(true))
   def withDeprecated = copy(deprecated = Some(true))
   def withAllowEmpty = copy(allowEmptyValue = Some(true))
+  def withStyle(updated: ParameterStyle.ParameterStyle) = copy(style = Some(updated))
   def withExplode = copy(explode = Some(true))
   def withAllowReserved = copy(allowReserved = Some(true))
-  def withSchema(updated: Schema) = copy(schema = Right(updated))
+  def withSchema(updated: Schema) = copy(schema = Some(Right(updated)))
   def withExample(updated: ExampleValue) = copy(example = Some(updated))
+  def addExample(key: String, updated: ExampleValue) = copy(examples = examples.updated(key, updated))
   def withMediaType(contentType: String, mediaType: MediaType) = copy(content = content.updated(contentType, mediaType))
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
@@ -253,7 +260,7 @@ object ParameterStyle extends Enumeration {
   val DeepObject: Value = Value("deepObject")
 }
 
-case class RequestBody(
+final case class RequestBody(
     description: Option[String] = None,
     content: ListMap[String, MediaType] = ListMap.empty,
     required: Option[Boolean] = None,
@@ -266,7 +273,7 @@ object RequestBody {
   val Empty: RequestBody = RequestBody()
 }
 
-case class MediaType(
+final case class MediaType(
     schema: Option[ReferenceOr[Schema]] = None,
     example: Option[ExampleValue] = None,
     examples: ListMap[String, ReferenceOr[Example]] = ListMap.empty,
@@ -275,6 +282,7 @@ case class MediaType(
 ) {
   def withSchema(updated: Schema) = copy(schema = Some(Right(updated)))
   def withExample(updated: ExampleValue) = copy(example = Some(updated))
+  def addExample(key: String, updated: ExampleValue) = copy(examples = examples.updated(key, updated))
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
 
@@ -282,7 +290,7 @@ object MediaType {
   val Empty: MediaType = MediaType()
 }
 
-case class Encoding(
+final case class Encoding(
     contentType: Option[String] = None,
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     style: Option[ParameterStyle.ParameterStyle] = None,
@@ -290,20 +298,31 @@ case class Encoding(
     allowReserved: Option[Boolean] = None,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
+  def withContentType(updated: String) = copy(contentType = Some(updated))
+  def addHeader(key: String, header: Header) = copy(headers = headers.updated(key, Right(header)))
+  def withStyle(updated: ParameterStyle.ParameterStyle) = copy(style = Some(updated))
+  def withExplode = copy(explode = Some(true))
+  def withAllowReserved = copy(allowReserved = Some(true))
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
+}
+
+object Encoding {
+  val Empty: Encoding = Encoding()
 }
 
 sealed trait ResponsesKey
 case object ResponsesDefaultKey extends ResponsesKey
-case class ResponsesCodeKey(code: Int) extends ResponsesKey
+final case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
-case class Response(
+final case class Response(
     description: Option[String] = None,
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     content: ListMap[String, MediaType] = ListMap.empty,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
+  def withDescription(updated: String) = copy(description = Some(updated))
+  def addHeader(key: String, header: Header) = copy(headers = headers.updated(key, Right(header)))
   def addMediaType(contentType: String, updated: MediaType) = copy(content = content.updated(contentType, updated))
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
@@ -312,7 +331,7 @@ object Response {
   val Empty: Response = Response(None, ListMap.empty, ListMap.empty)
 }
 
-case class Responses(
+final case class Responses(
     responses: ListMap[ResponsesKey, ReferenceOr[Response]],
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
@@ -325,7 +344,7 @@ object Responses {
   val Empty: Responses = Responses(ListMap.empty, ListMap.empty)
 }
 
-case class Example(
+final case class Example(
     summary: Option[String] = None,
     description: Option[String] = None,
     value: Option[ExampleValue] = None,
@@ -339,7 +358,11 @@ case class Example(
   def addExtension(key: String, value: ExtensionValue) = copy(extensions = extensions.updated(key, value))
 }
 
-case class Header(
+object Example {
+  val Empty: Example = Example()
+}
+
+final case class Header(
     description: Option[String] = None,
     required: Option[Boolean] = None,
     deprecated: Option[Boolean] = None,
@@ -353,5 +376,18 @@ case class Header(
     content: ListMap[String, MediaType] = ListMap.empty
 ) {
   def withDescription(updated: String) = copy(description = Some(updated))
+  def withRequired = copy(required = Some(true))
+  def withDeprecated = copy(deprecated = Some(true))
+  def withAllowEmpty = copy(allowEmptyValue = Some(true))
+  def withStyle(updated: ParameterStyle.ParameterStyle) = copy(style = Some(updated))
+  def withExplode = copy(explode = Some(true))
+  def withAllowReserved = copy(allowReserved = Some(true))
+  def withSchema(updated: Schema) = copy(schema = Some(Right(updated)))
+  def withExample(updated: ExampleValue) = copy(example = Some(updated))
+  def addExample(key: String, updated: ExampleValue) = copy(examples = examples.updated(key, updated))
+  def withMediaType(contentType: String, mediaType: MediaType) = copy(content = content.updated(contentType, mediaType))
+}
 
+object Header {
+  val Empty: Header = Header()
 }
