@@ -4,6 +4,7 @@ import sttp.model.{Header, Method, QueryParams, Uri}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 
 import java.net.{InetSocketAddress, URLDecoder}
+import scala.collection.immutable.Seq
 
 private[lambda] class AwsServerRequest(request: AwsRequest) extends ServerRequest {
   private val sttpUri: Uri = {
@@ -21,5 +22,8 @@ private[lambda] class AwsServerRequest(request: AwsRequest) extends ServerReques
   override def queryParameters: QueryParams = sttpUri.params
   override def method: Method = Method.unsafeApply(request.requestContext.http.method)
   override def uri: Uri = sttpUri
-  override def headers: Seq[Header] = request.headers.map { case (n, v) => Header(n, v) }.toSeq
+  override def headers: Seq[Header] = request.headers
+    .map { case (n, v) => Header(n, v) }
+    .toSeq
+    .asInstanceOf[scala.collection.immutable.Seq[Header]]
 }

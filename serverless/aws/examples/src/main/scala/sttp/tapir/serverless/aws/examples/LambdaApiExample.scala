@@ -9,10 +9,8 @@ import io.circe.parser.decode
 import io.circe.syntax._
 import sttp.model.StatusCode
 import sttp.tapir._
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.serverless.aws.examples.LambdaApiExample.{personEndpoint, route}
+import sttp.tapir.serverless.aws.examples.LambdaApiExample.{helloEndpoint, route}
 import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.sam.{AwsSamInterpreter, AwsSamOptions, CodeSource}
 
@@ -20,8 +18,11 @@ import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Files, Paths}
 
-/** Example assumes that you have `sam local` installed on your OS. Installation is simple and described here:
+/** Example assumes that you have `sam local` installed on your OS. Installation is described here:
   * https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html
+  *
+  * Select `awsExamples` project from sbt shell and run `assembly` task to build a fat jar with lambda handler.
+  * Then `runSamExample` to generate `template.yaml` and start up `sam local`.
   */
 class LambdaApiExample extends RequestStreamHandler {
 
@@ -36,7 +37,6 @@ class LambdaApiExample extends RequestStreamHandler {
       case Right(awsRequest) => route(awsRequest)
       case Left(_)           => IO.pure(AwsResponse(Nil, isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, ""))
     }).map { awsRes =>
-      println(awsRes.body)
       /** Write response to output */
       val writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8))
       writer.write(Printer.noSpaces.print(awsRes.asJson))
@@ -46,30 +46,26 @@ class LambdaApiExample extends RequestStreamHandler {
 }
 
 object LambdaApiExample {
-  case class Person(name: String)
 
-  val personEndpoint: ServerEndpoint[Person, Unit, String, Any, IO] = endpoint.post
-    .in("api" / "person")
-    .in(jsonBody[Person])
+  val helloEndpoint: ServerEndpoint[Unit, Unit, String, Any, IO] = endpoint.get
+    .in("api" / "hello")
     .out(stringBody)
-    .serverLogic { person => IO.pure(s"Hello ${person.name}!".asRight[Unit]) }
+    .serverLogic { _ => IO.pure("Hello!".asRight[Unit]) }
 
   implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
 
-  /** Persons api defined by our endpoint, it's a function `AwsRequest` -> `IO[AwsResponse]` */
-  val route: Route[IO] = AwsServerInterpreter.toRoute(personEndpoint)
+  val route: Route[IO] = AwsServerInterpreter.toRoute(helloEndpoint)
 }
 
 /** Before running the actual example we need to interpret our api as SAM template */
 object LambdaApiExampleSamTemplate extends App {
 
-  val jarPath = this.getClass.getProtectionDomain.getCodeSource.getLocation.getPath
-    .replace("classes/", "aws-examples.jar")
+  val jarPath = Paths.get("serverless/aws/examples/target/jvm-2.13/tapir-aws-examples.jar").toAbsolutePath.toString
 
   implicit val samOptions: AwsSamOptions = AwsSamOptions(
     "PersonsApi",
     source =
-      /** Specifying a fat jar build from our sources */
+      /** Specifying a fat jar build from example sources */
       CodeSource(
         runtime = "java11",
         codeUri = jarPath,
@@ -77,7 +73,7 @@ object LambdaApiExampleSamTemplate extends App {
       )
   )
 
-  val templateYaml = AwsSamInterpreter.toSamTemplate(personEndpoint).toYaml
+  val templateYaml = AwsSamInterpreter.toSamTemplate(helloEndpoint).toYaml
 
   /** Write template to file, it's required to run the example using sam local */
   Files.write(Paths.get("template.yaml"), templateYaml.getBytes(UTF_8))

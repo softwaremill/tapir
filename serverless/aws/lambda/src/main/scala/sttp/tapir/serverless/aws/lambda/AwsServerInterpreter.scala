@@ -40,11 +40,11 @@ trait AwsServerInterpreter {
       )
 
       interpreter.apply(serverRequest, ses).map {
-        case None => AwsResponse(Nil, isBase64Encoded = true, StatusCode.NotFound.code, Map.empty, "")
+        case None => AwsResponse(Nil, isBase64Encoded = serverOptions.encodeResponseBody, StatusCode.NotFound.code, Map.empty, "")
         case Some(res) =>
           val cookies = res.cookies.collect { case Right(cookie) => cookie.value }.toList
-          val headers = res.headers.groupMapReduce(_.name)(_.value)((v1, v2) => s"$v1,$v2")
-          AwsResponse(cookies, isBase64Encoded = true, res.code.code, headers, res.body.getOrElse(""))
+          val headers = res.headers.groupBy(_.name).map { case (n, v) => n -> v.map(_.value).mkString(",") }
+          AwsResponse(cookies, isBase64Encoded = serverOptions.encodeResponseBody, res.code.code, headers, res.body.getOrElse(""))
       }
     }
   }

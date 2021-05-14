@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets
 object LambdaHandler extends RequestStreamHandler {
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 
-    implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors()
+    implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
 
     allEndpoints.foreach(e => println(e.endpoint.showDetail))
 

@@ -12,8 +12,6 @@ import sttp.model.{Header, Uri}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.tests.backendResource
 
-import java.util.Base64
-
 class AwsLambdaSamLocalHttpTest extends AnyFunSuite {
 
   private val baseUri: Uri = uri"http://localhost:3000"
@@ -21,20 +19,14 @@ class AwsLambdaSamLocalHttpTest extends AnyFunSuite {
   testServer(in_path_path_out_string_endpoint) { backend =>
     basicRequest.get(uri"$baseUri/fruit/orange/amount/20").send(backend).map { req =>
       req.body
-        .map(b => decode(b) shouldBe "orange 20")
+        .map(_ shouldBe "orange 20")
         .getOrElse(Assertions.fail())
-    }
-  }
-
-  testServer(in_path_path_out_string_endpoint, "with URL encoding") { backend =>
-    basicRequest.get(uri"$baseUri/fruit/apple%2Fred/amount/20").send(backend).map { req =>
-      req.body.map(b => decode(b) shouldBe "apple/red 20").getOrElse(Assertions.fail())
     }
   }
 
   testServer(in_string_out_string_endpoint) { backend =>
     basicRequest.post(uri"$baseUri/api/echo/string").body("Sweet").send(backend).map { req =>
-      req.body.map(b => decode(b) shouldBe "Sweet").getOrElse(Assertions.fail())
+      req.body.map(_ shouldBe "Sweet").getOrElse(Assertions.fail())
     }
   }
 
@@ -45,7 +37,7 @@ class AwsLambdaSamLocalHttpTest extends AnyFunSuite {
       .send(backend)
       .map { req =>
         req.body
-          .map(b => decode(b) shouldBe """{"fruit":"orange","amount":11}""")
+          .map(_ shouldBe """{"fruit":"orange","amount":11}""")
           .getOrElse(Assertions.fail())
       }
   }
@@ -58,7 +50,16 @@ class AwsLambdaSamLocalHttpTest extends AnyFunSuite {
       .map(_.headers should contain allOf (Header.unsafeApply("X-Fruit", "apple"), Header.unsafeApply("Y-Fruit", "Orange")))
   }
 
-  private def decode(enc: String): String = new String(Base64.getDecoder.decode(enc))
+  testServer(in_input_stream_out_input_stream_endpoint) { backend =>
+    basicRequest.post(uri"$baseUri/api/echo/is").body("mango").send(backend).map(_.body shouldBe Right("mango"))
+  }
+
+  testServer(in_4query_out_4header_extended_endpoint) { backend =>
+    basicRequest
+      .get(uri"$baseUri?a=1&b=2&x=3&y=4")
+      .send(backend)
+      .map(_.headers.map(h => h.name -> h.value).toSet should contain allOf ("A" -> "1", "B" -> "2", "X" -> "3", "Y" -> "4"))
+  }
 
   private def testServer(t: ServerEndpoint[_, _, _, Any, IO], suffix: String = "")(
       f: SttpBackend[IO, Fs2Streams[IO] with WebSockets] => IO[Assertion]

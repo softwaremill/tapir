@@ -16,9 +16,8 @@ private[lambda] class AwsToResponseBody[F[_]](implicit options: AwsServerOptions
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): String = bodyType match {
     case RawBodyType.StringBody(charset) =>
-      println(options.encodeResponseBody)
       val str = v.asInstanceOf[String]
-      if (options.encodeResponseBody) Base64.getEncoder.encodeToString(str.getBytes(charset)) else new String(str.getBytes(charset))
+      if (options.encodeResponseBody) Base64.getEncoder.encodeToString(str.getBytes(charset)) else str
 
     case RawBodyType.ByteArrayBody =>
       val bytes = v.asInstanceOf[Array[Byte]]

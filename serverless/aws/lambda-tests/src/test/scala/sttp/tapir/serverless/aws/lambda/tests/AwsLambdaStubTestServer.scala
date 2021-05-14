@@ -12,7 +12,6 @@ import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.stub._
 import sttp.tapir.server.tests.TestServer
 import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaStubTestServer._
@@ -29,37 +28,23 @@ class AwsLambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, String]]
   )(fn: I => IO[Either[E, O]])(runTest: (SttpBackend[IO, Any], Uri) => IO[Assertion]): Test = {
     implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(
+      encodeResponseBody = false,
       metricsInterceptor = metricsInterceptor,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     val se: ServerEndpoint[I, E, O, Any, IO] = e.serverLogic(fn)
     val route: Route[IO] = AwsServerInterpreter.toRoute(se)
-    val backend: SttpBackendStub[IO, Any] =
-      SttpBackendStub(catsMonadIO).whenAnyRequest
-        .thenRespondF { request => route(sttpToAwsRequest(request)).map(awsToSttpResponse) }
-
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
-
-    Test(name)(runTest(backend, uri"http://localhost:3000").unsafeRunSync())
+    Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
   }
 
   override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, Any, IO], testNameSuffix: String)(
       runTest: (SttpBackend[IO, Any], Uri) => IO[Assertion]
   ): Test = {
-    implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors()
+    implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
     val route: Route[IO] = AwsServerInterpreter.toRoute(e)
-    val backend =
-      SttpBackendStub(catsMonadIO)
-        .whenRequestMatchesEndpointThenInterpret(
-          e.endpoint,
-          request => route(sttpToAwsRequest(request)).map(awsToSttpResponse)
-        )
-        .whenAnyRequest
-        .thenRespondNotFound()
-
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
-
-    Test(name)(runTest(backend, uri"http://localhost:3000").unsafeRunSync())
+    Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
   }
 
   override def testServer(name: String, rs: => NonEmptyList[Route[IO]])(runTest: (SttpBackend[IO, Any], Uri) => IO[Assertion]): Test = {
@@ -72,6 +57,11 @@ class AwsLambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
       }
     Test(name)(runTest(backend, uri"http://localhost:3000").unsafeRunSync())
   }
+
+  private def stubBackend(route: Route[IO]): SttpBackend[IO, Any] =
+    SttpBackendStub(catsMonadIO).whenAnyRequest.thenRespondF { request =>
+      route(sttpToAwsRequest(request)).map(awsToSttpResponse)
+    }
 }
 
 object AwsLambdaStubTestServer {
@@ -108,7 +98,7 @@ object AwsLambdaStubTestServer {
 
   def awsToSttpResponse(response: AwsResponse): Response[String] =
     client3.Response(
-      new String(Base64.getDecoder.decode(response.body)),
+      new String(response.body),
       new StatusCode(response.statusCode),
       "",
       response.headers.map { case (n, v) => v.split(",").map(Header(n, _)) }.flatten.toSeq

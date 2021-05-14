@@ -878,7 +878,6 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
   .dependsOn(core, cats, circeJson, awsSam)
 
 lazy val sam = Process("sam local start-api --warm-containers EAGER").run()
-lazy val samTemplate = taskKey[Unit]("Generate sam template for lambda tests")
 
 lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/lambda-tests"))
   .settings(commonJvmSettings)
@@ -891,16 +890,15 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
       case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
       case x                                                    => (assembly / assemblyMergeStrategy).value(x)
     },
-    samTemplate := (Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate").value,
     Test / test := (Test / test)
-      .dependsOn(samTemplate)
+      .dependsOn((Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate"))
       .dependsOn(assembly)
       .value,
     Test / testOptions += Tests.Setup(() => {
-      val ok = PollingUtils.poll(10.seconds, 1.second) {
+      val samReady = PollingUtils.poll(10.seconds, 1.second) {
         sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/health"))
       }
-      if (!ok) sam.destroy()
+      if (!samReady) sam.destroy()
     }),
     Test / testOptions += Tests.Cleanup(() => sam.destroy()),
     Test / parallelExecution := false
@@ -920,6 +918,8 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, tests % Test)
 
+lazy val runAwsExample = taskKey[Unit]("runs aws lambda example on sam local")
+
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
   .settings(commonJvmSettings)
   .settings(
@@ -927,7 +927,23 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
   )
   .settings(
     name := "tapir-aws-examples",
-    assembly / assemblyJarName := "aws-examples.jar"
+    assembly / assemblyJarName := "tapir-aws-examples.jar",
+    runAwsExample := {
+      val log = sLog.value
+      (Compile / runMain).toTask(" sttp.tapir.serverless.aws.examples.LambdaApiExampleSamTemplate").value
+      val samReady = PollingUtils.poll(10.seconds, 1.second) {
+        sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/api/hello"))
+      }
+      if (!samReady) {
+        sam.destroy()
+        log.info("Failed to start sam local-api, have your run sbt assembly?")
+      } else {
+        log.info("Lambda function is available under http://127.0.0.1:3000/api/hello ...")
+        log.info("Press any key to exit ...")
+        scala.io.StdIn.readLine()
+        sam.destroy()
+      }
+    }
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(awsLambda, awsSam)

@@ -6,7 +6,10 @@ import com.softwaremill.macwire.wireSet
 import sttp.model.Header
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.tests.TestUtil.inputStreamToByteArray
 import sttp.tapir.tests._
+
+import java.io.{ByteArrayInputStream, InputStream}
 
 package object tests {
 
@@ -26,6 +29,15 @@ package object tests {
   val in_headers_out_headers_endpoint: ServerEndpoint[List[Header], Unit, List[Header], Any, IO] = in_headers_out_headers.serverLogic {
     headers => IO.pure(headers.asRight[Unit])
   }
+
+  val in_input_stream_out_input_stream_endpoint: ServerEndpoint[InputStream, Unit, InputStream, Any, IO] =
+    in_input_stream_out_input_stream.in("is").serverLogic { is =>
+      IO.pure((new ByteArrayInputStream(inputStreamToByteArray(is)): InputStream).asRight[Unit])
+    }
+
+  val in_4query_out_4header_extended_endpoint
+      : ServerEndpoint[((String, String), String, String), Unit, ((String, String), String, String), Any, IO] =
+    in_4query_out_4header_extended.in("echo" / "query").serverLogic { in => IO.pure(in.asRight[Unit]) }
 
   val allEndpoints: Set[ServerEndpoint[_, _, _, Any, IO]] = wireSet[ServerEndpoint[_, _, _, Any, IO]]
 }

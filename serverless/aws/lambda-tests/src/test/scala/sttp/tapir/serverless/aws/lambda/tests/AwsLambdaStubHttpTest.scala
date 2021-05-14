@@ -31,6 +31,7 @@ object AwsLambdaStubHttpTest {
         metricsInterceptor: Option[MetricsRequestInterceptor[IO, String]]
     ): Route[IO] = {
       implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(
+        encodeResponseBody = false,
         metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
@@ -39,7 +40,7 @@ object AwsLambdaStubHttpTest {
     override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => IO[O])(implicit
         eClassTag: ClassTag[E]
     ): Route[IO] = {
-      implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors()
+      implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
       AwsServerInterpreter.toRouteRecoverErrors(e)(fn)
     }
     override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = ???

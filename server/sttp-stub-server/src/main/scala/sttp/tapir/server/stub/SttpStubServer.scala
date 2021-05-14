@@ -38,11 +38,6 @@ trait SttpStubServer {
     ): SttpBackendStub[F, R] =
       _whenInputMatches(endpoint.endpoint)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
 
-    def whenRequestMatchesEndpointThenInterpret[I, E, O](
-        endpoint: Endpoint[I, E, O, R],
-        interpret: Request[_, _] => F[Response[_]]
-    ): SttpBackendStub[F, R] = _whenRequestMatches(endpoint).thenRespondF(interpret(_))
-
     private def _whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): stub.WhenRequest = {
       new stub.WhenRequest(req =>
         DecodeBasicInputs(endpoint.input, new SttpRequest(req)) match {
