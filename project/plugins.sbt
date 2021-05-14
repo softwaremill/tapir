@@ -10,6 +10,4 @@ addSbtPlugin("com.eed3si9n" % "sbt-projectmatrix" % "0.8.0")
 addSbtPlugin("org.jetbrains.scala" % "sbt-ide-settings" % "1.1.1")
 addSbtPlugin("org.scala-js" % "sbt-scalajs" % "1.5.1")
 addSbtPlugin("io.spray" % "sbt-revolver" % "0.9.1")
-// serverless
-addSbtPlugin("com.typesafe.sbt" % "sbt-native-packager" % "1.7.6")
 addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.15.0")

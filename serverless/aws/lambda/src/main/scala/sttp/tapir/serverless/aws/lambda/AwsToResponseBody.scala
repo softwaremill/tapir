@@ -11,28 +11,28 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.util.Base64
 
-private[lambda] object AwsToResponseBody extends ToResponseBody[String, Nothing] {
+private[lambda] class AwsToResponseBody[F[_]](implicit options: AwsServerOptions[F]) extends ToResponseBody[String, Nothing] {
   override val streams: capabilities.Streams[Nothing] = NoStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): String = bodyType match {
     case RawBodyType.StringBody(charset) =>
+      println(options.encodeResponseBody)
       val str = v.asInstanceOf[String]
-      Base64.getEncoder.encodeToString(str.getBytes(charset))
+      if (options.encodeResponseBody) Base64.getEncoder.encodeToString(str.getBytes(charset)) else new String(str.getBytes(charset))
 
     case RawBodyType.ByteArrayBody =>
       val bytes = v.asInstanceOf[Array[Byte]]
-      Base64.getEncoder.encodeToString(bytes)
+      if (options.encodeResponseBody) Base64.getEncoder.encodeToString(bytes) else new String(bytes)
 
     case RawBodyType.ByteBufferBody =>
       val byteBuffer = v.asInstanceOf[ByteBuffer]
-      Base64.getEncoder.encodeToString(safeRead(byteBuffer))
+      if (options.encodeResponseBody) Base64.getEncoder.encodeToString(safeRead(byteBuffer)) else new String(safeRead(byteBuffer))
 
     case RawBodyType.InputStreamBody =>
       val stream = v.asInstanceOf[InputStream]
-      Base64.getEncoder.encodeToString(stream.readAllBytes())
+      if (options.encodeResponseBody) Base64.getEncoder.encodeToString(stream.readAllBytes()) else new String(stream.readAllBytes())
 
-    case RawBodyType.FileBody => throw new UnsupportedOperationException
-
+    case RawBodyType.FileBody         => throw new UnsupportedOperationException
     case _: RawBodyType.MultipartBody => throw new UnsupportedOperationException
   }
 

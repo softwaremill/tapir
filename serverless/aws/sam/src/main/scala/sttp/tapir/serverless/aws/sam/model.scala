@@ -8,8 +8,8 @@ import scala.collection.immutable.ListMap
 case class SamTemplate(
     AWSTemplateFormatVersion: String = "2010-09-09",
     Transform: String = "AWS::Serverless-2016-10-31",
-    Resources: ListMap[String, Resource],
-    Outputs: ListMap[String, Output]
+    Resources: Map[String, Resource],
+    Outputs: Map[String, Output]
 ) {
   def toYaml: String = {
     val template: SamTemplate = this
@@ -28,13 +28,13 @@ trait Properties
 trait FunctionProperties {
   val Timeout: Long
   val MemorySize: Int
-  val Events: ListMap[String, FunctionHttpApiEvent]
+  val Events: Map[String, FunctionHttpApiEvent]
 }
 
 case class FunctionImageProperties(
     Timeout: Long,
     MemorySize: Int,
-    Events: ListMap[String, FunctionHttpApiEvent],
+    Events: Map[String, FunctionHttpApiEvent],
     ImageUri: String,
     PackageType: String = "Image"
 ) extends Properties
@@ -43,7 +43,7 @@ case class FunctionImageProperties(
 case class FunctionCodeProperties(
     Timeout: Long,
     MemorySize: Int,
-    Events: ListMap[String, FunctionHttpApiEvent],
+    Events: Map[String, FunctionHttpApiEvent],
     Runtime: String,
     CodeUri: String,
     Handler: String
@@ -62,4 +62,4 @@ case class FunctionHttpApiEventProperties(
     PayloadFormatVersion: String = "2.0"
 )
 
-case class Output(Description: String, Value: ListMap[String, String])
+case class Output(Description: String, Value: Map[String, String])

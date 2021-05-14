@@ -884,7 +884,7 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda-tests",
-    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % "1.0.0",
+    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.lambdaInterface,
     assembly / assemblyJarName := "tapir-aws-lambda-tests.jar",
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {
@@ -921,27 +921,13 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .dependsOn(core, tests % Test)
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
-  .enablePlugins(JavaAppPackaging, DockerPlugin)
   .settings(commonJvmSettings)
   .settings(
-    libraryDependencies += "com.amazonaws" % "aws-java-sdk-lambda" % "1.11.1014"
+    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.lambdaInterface
   )
   .settings(
-    assembly / assemblyJarName := "examples.jar",
-    version := "1.0.0",
     name := "tapir-aws-examples",
-    packageName in Docker := "tapir-aws-examples",
-    dockerBaseImage := "public.ecr.aws/lambda/java:11",
-    daemonUser in Docker := "daemon",
-    dockerUpdateLatest := true,
-    dockerCmd := List("com.softwaremill.sttp.tapir.serverless.aws.examples.HelloHandler::handleRequest"),
-//    dockerCommands := dockerCommands.value.filterNot {
-//      case ExecCmd("ENTRYPOINT", _) => true
-//      case _                        => false
-//    },
-    // https://hub.docker.com/r/amazon/aws-lambda-java
-    defaultLinuxInstallLocation in Docker := "/var/task",
-    dockerRepository := Some("localhost:5000")
+    assembly / assemblyJarName := "aws-examples.jar"
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(awsLambda, awsSam)

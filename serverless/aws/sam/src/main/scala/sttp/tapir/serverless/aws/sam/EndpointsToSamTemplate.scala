@@ -4,30 +4,31 @@ import sttp.model.Method
 import sttp.tapir.internal._
 import sttp.tapir.{Endpoint, EndpointInput}
 
-import scala.collection.immutable.ListMap
-
 private[sam] object EndpointsToSamTemplate {
   def apply(es: List[Endpoint[_, _, _, _]])(implicit options: AwsSamOptions): SamTemplate = {
     val functionName = options.namePrefix + "Function"
     val httpApiName = options.namePrefix + "HttpApi"
 
-    val apiEvents = es.map(endpointNameMethodAndPath).map { case (name, method, path) =>
-      name -> FunctionHttpApiEvent(
-        FunctionHttpApiEventProperties(s"!Ref $httpApiName", method.map(_.method).getOrElse("ANY"), path, options.timeout.toMillis)
-      )
-    }
+    val apiEvents = es
+      .map(endpointNameMethodAndPath)
+      .map { case (name, method, path) =>
+        name -> FunctionHttpApiEvent(
+          FunctionHttpApiEventProperties(s"!Ref $httpApiName", method.map(_.method).getOrElse("ANY"), path, options.timeout.toMillis)
+        )
+      }
+      .toMap
 
     SamTemplate(
-      Resources = ListMap(
+      Resources = Map(
         functionName -> FunctionResource(
           options.source match {
             case ImageSource(imageUri) =>
-              FunctionImageProperties(options.timeout.toSeconds, options.memorySize, ListMap.from(apiEvents), imageUri)
+              FunctionImageProperties(options.timeout.toSeconds, options.memorySize, apiEvents, imageUri)
             case cs @ CodeSource(_, _, _) =>
               FunctionCodeProperties(
                 options.timeout.toSeconds,
                 options.memorySize,
-                ListMap.from(apiEvents),
+                apiEvents,
                 cs.runtime,
                 cs.codeUri,
                 cs.handler
@@ -36,10 +37,10 @@ private[sam] object EndpointsToSamTemplate {
         ),
         httpApiName -> HttpResource(HttpProperties("$default"))
       ),
-      Outputs = ListMap(
+      Outputs = Map(
         (options.namePrefix + "Url") -> Output(
           "Base URL of your endpoints",
-          ListMap("Fn::Sub" -> ("https://${" + httpApiName + "}.execute-api.${AWS::Region}.${AWS::URLSuffix}"))
+          Map("Fn::Sub" -> ("https://${" + httpApiName + "}.execute-api.${AWS::Region}.${AWS::URLSuffix}"))
         )
       )
     )

@@ -2,7 +2,7 @@ package sttp.tapir.serverless.aws.lambda
 
 import cats.data.Kleisli
 import cats.effect.Sync
-import sttp.model.{Header, StatusCode}
+import sttp.model.StatusCode
 import sttp.monad.syntax._
 import sttp.tapir.Endpoint
 import sttp.tapir.integ.cats.CatsMonadError
@@ -34,7 +34,7 @@ trait AwsServerInterpreter {
       val serverRequest = new AwsServerRequest(request)
       val interpreter = new ServerInterpreter[Any, F, String, Nothing](
         new AwsRequestBody[F](request),
-        AwsToResponseBody,
+        new AwsToResponseBody,
         serverOptions.interceptors,
         deleteFile = _ => ().unit // no file support
       )

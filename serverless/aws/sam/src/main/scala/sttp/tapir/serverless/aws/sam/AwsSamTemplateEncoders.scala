@@ -8,7 +8,7 @@ import scala.collection.immutable.ListMap
 
 object AwsSamTemplateEncoders {
   implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = { case m: ListMap[String, V] =>
-    val properties = m.view.mapValues(v => implicitly[Encoder[V]].apply(v)).toList
+    val properties = m.view.map { case (k, v) => k -> implicitly[Encoder[V]].apply(v) }.toList
     Json.obj(properties: _*)
   }
 

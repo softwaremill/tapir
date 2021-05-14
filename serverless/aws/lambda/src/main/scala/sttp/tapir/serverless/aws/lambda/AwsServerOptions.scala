@@ -7,13 +7,14 @@ import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, Excepti
 import sttp.tapir.server.interceptor.log.ServerLogInterceptor
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
-case class AwsServerOptions[F[_]](interceptors: List[Interceptor[F, String]]) {
+case class AwsServerOptions[F[_]](encodeResponseBody: Boolean = true, interceptors: List[Interceptor[F, String]]) {
   def prependInterceptor(i: Interceptor[F, String]): AwsServerOptions[F] = copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[F, String]): AwsServerOptions[F] = copy(interceptors = interceptors :+ i)
 }
 
 object AwsServerOptions {
   def customInterceptors[F[_], T](
+      encodeResponseBody: Boolean = true,
       metricsInterceptor: Option[MetricsRequestInterceptor[F, String]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLogInterceptor: Option[ServerLogInterceptor[T, F, String]] = None,
@@ -23,7 +24,8 @@ object AwsServerOptions {
       ),
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): AwsServerOptions[F] = AwsServerOptions(
-    metricsInterceptor.toList ++
+    encodeResponseBody,
+    interceptors = metricsInterceptor.toList ++
       exceptionHandler.map(new ExceptionInterceptor[F, String](_)).toList ++
       serverLogInterceptor.toList ++
       additionalInterceptors ++

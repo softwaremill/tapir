@@ -23,8 +23,6 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
 
     val actualYaml = AwsSamInterpreter.toSamTemplate(List(getPetEndpoint, addPetEndpoint)).toYaml
 
-    println(actualYaml)
-
     expectedYaml shouldBe noIndentation(actualYaml)
   }
 
@@ -38,8 +36,6 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
     )
 
     val actualYaml = AwsSamInterpreter.toSamTemplate(List(getPetEndpoint, addPetEndpoint)).toYaml
-
-    println(actualYaml)
 
     expectedYaml shouldBe noIndentation(actualYaml)
   }
