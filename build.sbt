@@ -273,7 +273,7 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "org.typelevel" %%% "discipline-scalatest" % "2.1.4" % Test,
+      "org.typelevel" %%% "discipline-scalatest" % "2.1.5" % Test,
       "org.typelevel" %%% "cats-laws" % "2.6.1" % Test
     )
   )
