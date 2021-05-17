@@ -17,8 +17,6 @@ import sttp.tapir.serverless.aws.lambda._
 import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaStubTestServer._
 import sttp.tapir.tests.Test
 
-import java.util.Base64
-
 class AwsLambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
 
   override def testServer[I, E, O](
@@ -101,6 +99,10 @@ object AwsLambdaStubTestServer {
       new String(response.body),
       new StatusCode(response.statusCode),
       "",
-      response.headers.map { case (n, v) => v.split(",").map(Header(n, _)) }.flatten.toSeq
+      response.headers
+        .map { case (n, v) => v.split(",").map(Header(n, _)) }
+        .flatten
+        .toSeq
+        .asInstanceOf[scala.collection.immutable.Seq[Header]]
     )
 }

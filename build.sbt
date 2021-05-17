@@ -894,8 +894,9 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     assembly / assemblyJarName := "tapir-aws-lambda-tests.jar",
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {
-      case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
-      case x                                                    => (assembly / assemblyMergeStrategy).value(x)
+      case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
+      case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
+      case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
     },
     Test / test := (Test / test)
       .dependsOn((Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate"))
