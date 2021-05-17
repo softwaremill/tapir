@@ -7,7 +7,7 @@ import java.nio.file.{Files, Paths}
 
 object LambdaSamTemplate extends App {
 
-  val jarPath = Paths.get("serverless/aws/examples/target/jvm-2.13/tapir-aws-examples.jar").toAbsolutePath.toString
+  val jarPath = Paths.get("serverless/aws/lambda-tests/target/jvm-2.13/tapir-aws-lambda-tests.jar").toAbsolutePath.toString
 
   implicit val samOptions: AwsSamOptions = AwsSamOptions(
     "Tests",

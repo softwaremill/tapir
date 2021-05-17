@@ -873,7 +873,14 @@ lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-se
 
 lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambda"))
   .settings(commonJvmSettings)
-  .settings(name := "tapir-aws-lambda")
+  .settings(
+    name := "tapir-aws-lambda",
+    libraryDependencies ++= loggerDependencies,
+    libraryDependencies ++= Seq(
+      "com.softwaremill.sttp.client3" %% "http4s-ce2-backend" % Versions.sttp,
+      "org.http4s" %% "http4s-blaze-client" % Versions.http4s
+    )
+  )
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, cats, circeJson, awsSam)
 
@@ -895,10 +902,14 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
       .dependsOn(assembly)
       .value,
     Test / testOptions += Tests.Setup(() => {
+      val log = sLog.value
       val samReady = PollingUtils.poll(10.seconds, 1.second) {
         sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/health"))
       }
-      if (!samReady) sam.destroy()
+      if (!samReady) {
+        sam.destroy()
+        log.err("Failed to start sam local-api")
+      }
     }),
     Test / testOptions += Tests.Cleanup(() => sam.destroy()),
     Test / parallelExecution := false
@@ -918,7 +929,7 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, tests % Test)
 
-lazy val runAwsExample = taskKey[Unit]("runs aws lambda example on sam local")
+lazy val runSamExample = taskKey[Unit]("runs aws lambda example on sam local")
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
   .settings(commonJvmSettings)
@@ -928,15 +939,15 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
   .settings(
     name := "tapir-aws-examples",
     assembly / assemblyJarName := "tapir-aws-examples.jar",
-    runAwsExample := {
+    runSamExample := {
       val log = sLog.value
       (Compile / runMain).toTask(" sttp.tapir.serverless.aws.examples.LambdaApiExampleSamTemplate").value
-      val samReady = PollingUtils.poll(10.seconds, 1.second) {
+      val samReady = PollingUtils.poll(20.seconds, 1.second) {
         sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/api/hello"))
       }
       if (!samReady) {
         sam.destroy()
-        log.info("Failed to start sam local-api, have your run sbt assembly?")
+        log.err("Failed to start sam local-api, have your run sbt assembly?")
       } else {
         log.info("Lambda function is available under http://127.0.0.1:3000/api/hello ...")
         log.info("Press any key to exit ...")
