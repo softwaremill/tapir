@@ -49,7 +49,7 @@ abstract class AwsLambdaRuntime[F[_]: ConcurrentEffect: ContextShift] extends St
               monad.error[RequestEvent](new RuntimeException(s"Missing lambda-runtime-aws-request-id header in request event $response"))
           }
         }
-        .handleError { e =>
+        .handleError { case e =>
           logger.error("Failed to fetch request event", e)
           monad.error(e)
         }

@@ -385,7 +385,7 @@ class ServerBasicTests[F[_], ROUTE, B](
         basicRequest.get(uri"$baseUri/api/echo/hello").send(backend).map(_.code shouldBe StatusCode.NotFound) >>
           basicRequest.get(uri"$baseUri/api/echo/").send(backend).map(_.code shouldBe StatusCode.NotFound)
     },
-    testServer(in_string_out_status, "custom status code")((_: String) => pureResult(StatusCode(470).asRight[Unit])) { baseUri =>
+    testServer(in_string_out_status, "custom status code")((_: String) => pureResult(StatusCode(470).asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?fruit=apple").send(backend).map(_.code shouldBe StatusCode(470))
     },
     testServer(in_string_out_status_from_string)((v: String) => pureResult((if (v == "apple") Right("x") else Left(10)).asRight[Unit])) {
