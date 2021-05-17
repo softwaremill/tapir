@@ -2,7 +2,7 @@ package sttp.tapir.swagger.http4s
 
 import java.util.Properties
 
-import cats.effect.{Blocker, ContextShift, Sync}
+import cats.effect.Sync
 import org.http4s.{HttpRoutes, StaticFile, Uri}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Location

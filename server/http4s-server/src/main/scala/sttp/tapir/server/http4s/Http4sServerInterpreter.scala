@@ -2,7 +2,7 @@ package sttp.tapir.server.http4s
 
 import cats.arrow.FunctionK
 import cats.data.{Kleisli, OptionT}
-import cats.effect.{Concurrent, ContextShift, Sync, Timer}
+import cats.effect.{Concurrent, Sync}
 import cats.implicits._
 import cats.~>
 import fs2.Pipe
@@ -21,6 +21,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.reflect.ClassTag
+import cats.effect.Temporal
 
 trait Http4sServerInterpreter {
   def toHttp[I, E, O, F[_], G[_]](
@@ -29,8 +30,7 @@ trait Http4sServerInterpreter {
       serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],
-      fcs: ContextShift[F],
-      timer: Timer[F]
+      timer: Temporal[F]
   ): Http[OptionT[G, *], F] = toHttp(e.serverLogic(logic))(fToG)(gToF)
 
   def toHttpRecoverErrors[I, E, O, F[_], G[_]](
@@ -39,25 +39,23 @@ trait Http4sServerInterpreter {
       serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],
-      fcs: ContextShift[F],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E],
-      timer: Timer[F]
+      timer: Temporal[F]
   ): Http[OptionT[G, *], F] = toHttp(e.serverLogicRecoverErrors(logic))(fToG)(gToF)
 
   def toRoutes[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(
       logic: I => F[Either[E, O]]
-  )(implicit serverOptions: Http4sServerOptions[F, F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = toRoutes(
+  )(implicit serverOptions: Http4sServerOptions[F, F], fs: Concurrent[F], timer: Temporal[F]): HttpRoutes[F] = toRoutes(
     e.serverLogic(logic)
   )
 
   def toRouteRecoverErrors[I, E, O, F[_]](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(logic: I => F[O])(implicit
       serverOptions: Http4sServerOptions[F, F],
       fs: Concurrent[F],
-      fcs: ContextShift[F],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E],
-      timer: Timer[F]
+      timer: Temporal[F]
   ): HttpRoutes[F] = toRoutes(e.serverLogicRecoverErrors(logic))
 
   //
@@ -66,13 +64,12 @@ trait Http4sServerInterpreter {
       serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],
-      fcs: ContextShift[F],
-      timer: Timer[F]
+      timer: Temporal[F]
   ): Http[OptionT[G, *], F] = toHttp(List(se))(fToG)(gToF)
 
   def toRoutes[I, E, O, F[_]](
       se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, F]
-  )(implicit serverOptions: Http4sServerOptions[F, F], fs: Concurrent[F], fcs: ContextShift[F], timer: Timer[F]): HttpRoutes[F] = toRoutes(
+  )(implicit serverOptions: Http4sServerOptions[F, F], fs: Concurrent[F], timer: Temporal[F]): HttpRoutes[F] = toRoutes(
     List(se)
   )
 
@@ -81,8 +78,7 @@ trait Http4sServerInterpreter {
   def toRoutes[F[_]](serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, F]])(implicit
       serverOptions: Http4sServerOptions[F, F],
       fs: Concurrent[F],
-      fcs: ContextShift[F],
-      timer: Timer[F]
+      timer: Temporal[F]
   ): HttpRoutes[F] = {
     val identity = FunctionK.id[F]
     toHttp(serverEndpoints)(identity)(identity)
@@ -95,8 +91,7 @@ trait Http4sServerInterpreter {
       serverOptions: Http4sServerOptions[F, G],
       gs: Sync[G],
       fs: Concurrent[F],
-      fcs: ContextShift[F],
-      timer: Timer[F]
+      timer: Temporal[F]
   ): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
     implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)

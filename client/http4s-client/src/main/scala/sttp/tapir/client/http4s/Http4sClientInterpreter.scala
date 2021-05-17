@@ -1,6 +1,6 @@
 package sttp.tapir.client.http4s
 
-import cats.effect.{Blocker, ContextShift, Effect}
+import cats.effect.Effect
 import org.http4s.{Request, Response}
 import sttp.tapir.{DecodeResult, Endpoint}
 
@@ -15,7 +15,6 @@ abstract class Http4sClientInterpreter[F[_]: ContextShift: Effect] {
     *  - a response parser that extracts the expected entity from the received `org.http4s.Response[F]`.
     */
   def toRequest[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[String])(implicit
-      blocker: Blocker,
       clientOptions: Http4sClientOptions
   ): I => (Request[F], Response[F] => F[DecodeResult[Either[E, O]]]) =
     new EndpointToHttp4sClient(blocker, clientOptions).toHttp4sRequest[I, E, O, R, F](e, baseUri)
@@ -29,7 +28,6 @@ abstract class Http4sClientInterpreter[F[_]: ContextShift: Effect] {
     *  - a response parser that extracts the expected entity from the received `org.http4s.Response[F]`.
     */
   def toRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[String])(implicit
-      blocker: Blocker,
       clientOptions: Http4sClientOptions
   ): I => (Request[F], Response[F] => F[Either[E, O]]) =
     new EndpointToHttp4sClient(blocker, clientOptions).toHttp4sRequestUnsafe[I, E, O, R, F](e, baseUri)

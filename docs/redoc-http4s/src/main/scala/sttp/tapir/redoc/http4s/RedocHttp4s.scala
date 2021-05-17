@@ -1,6 +1,6 @@
 package sttp.tapir.redoc.http4s
 
-import cats.effect.{ContextShift, Sync}
+import cats.effect.Sync
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers._
 import org.http4s.{Charset, HttpRoutes, MediaType}

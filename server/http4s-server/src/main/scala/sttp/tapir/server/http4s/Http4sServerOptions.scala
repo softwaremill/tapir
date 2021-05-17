@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s
 
 import cats.Applicative
-import cats.effect.{ContextShift, Sync}
+import cats.effect.Sync
 import cats.implicits.catsSyntaxOptionId
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.Interceptor
@@ -75,10 +75,10 @@ object Http4sServerOptions {
         List(new DecodeFailureInterceptor[G, Http4sResponseBody[F]](decodeFailureHandler))
     )
 
-  def defaultCreateFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => ServerRequest => F[TapirFile] =
+  def defaultCreateFile[F[_]](implicit sync: Sync[F]): ExecutionContext => ServerRequest => F[TapirFile] =
     ec => _ => cs.evalOn(ec)(sync.delay(Defaults.createTempFile()))
 
-  def defaultDeleteFile[F[_]](implicit sync: Sync[F], cs: ContextShift[F]): ExecutionContext => TapirFile => F[Unit] =
+  def defaultDeleteFile[F[_]](implicit sync: Sync[F]): ExecutionContext => TapirFile => F[Unit] =
     ec => file => cs.evalOn(ec)(sync.delay(Defaults.deleteFile()(file)))
 
   object Log {

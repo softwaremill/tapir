@@ -1,7 +1,7 @@
 package sttp.tapir.client.http4s
 
 import cats.Applicative
-import cats.effect.{Blocker, ContextShift, Effect, Sync}
+import cats.effect.{Effect, Sync}
 import cats.implicits._
 import fs2.Chunk
 import org.http4s._

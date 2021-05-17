@@ -1,6 +1,6 @@
 package sttp.tapir.server.http4s
 
-import cats.effect.{Blocker, ContextShift, Sync}
+import cats.effect.Sync
 import cats.syntax.all._
 import cats.~>
 import fs2.Chunk
