@@ -300,9 +300,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       Select.unique(tExpr.asTerm, field.name).asExprOf[Any]
     }
 
-    def sequence(s: Seq[Expr[Any]]): Expr[Seq[Any]] = '{List(${Varargs(s)}: _*)}
-
-    '{(t: T) => Tuple.fromArray(${sequence(tupleArgs('t))}.toArray).asInstanceOf[A]}
+    '{(t: T) => ${Expr.ofTupleFromSeq(tupleArgs('t))}.asInstanceOf[A]}
   }
 }
 
