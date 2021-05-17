@@ -13,10 +13,10 @@ import scala.deriving.Mirror
 
 package object annotations {
   inline def deriveEndpointInput[T <: Product]: EndpointInput[T] = ${AnnotationsMacrosDelegate.deriveEndpointInputImpl[T]}
-
-  def deriveEndpointOutput[A]: EndpointOutput[A] = ??? // TODO
+  inline def deriveEndpointOutput[T <: Product]: EndpointOutput[T] = ${AnnotationsMacrosDelegate.deriveEndpointOutputImpl[T]}
 }
 
 object AnnotationsMacrosDelegate {
   def deriveEndpointInputImpl[T <: Product: Type](using q: Quotes): Expr[EndpointInput[T]] = new AnnotationsMacros[T].deriveEndpointInputImpl
+  def deriveEndpointOutputImpl[T <: Product: Type](using q: Quotes): Expr[EndpointOutput[T]] = new AnnotationsMacros[T].deriveEndpointOutputImpl
 }

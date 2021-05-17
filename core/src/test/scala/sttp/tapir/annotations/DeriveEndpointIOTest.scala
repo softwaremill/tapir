@@ -398,13 +398,23 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
             info1 == info2
           case (EndpointOutput.StatusCode(codes1, _, info1), EndpointOutput.StatusCode(codes2, _, info2)) =>
             codes1 == codes2 && info1 == info2
+          // mapped pairs
           case (EndpointIO.MappedPair(io1, _), EndpointIO.MappedPair(io2, _)) =>
             compareTransputs(io1, io2)
           case (EndpointOutput.MappedPair(io1, _), EndpointOutput.MappedPair(io2, _)) =>
             compareTransputs(io1, io2)
+          case (EndpointOutput.MappedPair(io1, _), EndpointIO.MappedPair(io2, _)) =>
+            compareTransputs(io1, io2)
+          case (EndpointIO.MappedPair(io1, _), EndpointOutput.MappedPair(io2, _)) =>
+            compareTransputs(io1, io2)
+          // pairs
           case (EndpointIO.Pair(left1, right1, _, _), EndpointIO.Pair(left2, right2, _, _)) =>
             compareTransputs(left1, left2) && compareTransputs(right1, right2)
           case (EndpointOutput.Pair(left1, right1, _, _), EndpointOutput.Pair(left2, right2, _, _)) =>
+            compareTransputs(left1, left2) && compareTransputs(right1, right2)
+          case (EndpointOutput.Pair(left1, right1, _, _), EndpointIO.Pair(left2, right2, _, _)) =>
+            compareTransputs(left1, left2) && compareTransputs(right1, right2)
+          case (EndpointIO.Pair(left1, right1, _, _), EndpointOutput.Pair(left2, right2, _, _)) =>
             compareTransputs(left1, left2) && compareTransputs(right1, right2)
           case (_, _) =>
             false
