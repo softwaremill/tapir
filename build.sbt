@@ -276,13 +276,13 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.6.0",
+      "org.typelevel" %%% "cats-core" % "2.6.1",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect,
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
       "org.typelevel" %%% "discipline-scalatest" % "2.1.4" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.6.0" % Test
+      "org.typelevel" %%% "cats-laws" % "2.6.1" % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -487,8 +487,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.8.0",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.8.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.8.1",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.8.1" % Test,
       scalaTest.value % Test
     )
   )
@@ -534,8 +534,8 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.1.0",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.1.0",
+      "io.opentelemetry" % "opentelemetry-api" % "1.2.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.2.0",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.1.0-alpha" % Test,
       scalaTest.value % Test
     )

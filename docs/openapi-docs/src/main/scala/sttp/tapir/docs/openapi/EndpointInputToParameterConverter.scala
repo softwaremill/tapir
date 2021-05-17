@@ -4,8 +4,6 @@ import sttp.tapir.apispec.{ReferenceOr, Schema}
 import sttp.tapir.openapi.{Parameter, ParameterIn}
 import sttp.tapir.{Codec, EndpointIO, EndpointInput}
 
-import scala.collection.immutable.ListMap
-
 private[openapi] object EndpointInputToParameterConverter {
   def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema]): Parameter = {
     val examples = ExampleConverter.convertExamples(query.codec, query.info.examples)

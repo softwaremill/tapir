@@ -1,7 +1,7 @@
 package sttp.tapir.docs.openapi
 
 import sttp.tapir._
-import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType, _}
+import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.docs.apispec.schema.Schemas
 import sttp.tapir.internal._
@@ -9,10 +9,15 @@ import sttp.tapir.openapi._
 
 import scala.collection.immutable.ListMap
 
-private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codecToMediaType: CodecToMediaType) {
+private[openapi] class EndpointToOperationResponse(
+    objectSchemas: Schemas,
+    codecToMediaType: CodecToMediaType,
+    options: OpenAPIDocsOptions
+) {
   def apply(e: Endpoint[_, _, _, _]): ListMap[ResponsesKey, ReferenceOr[Response]] = {
     // There always needs to be at least a 200 empty response
     outputToResponses(e.output, ResponsesCodeKey(200), Some(Response.Empty)) ++
+      inputToDefaultErrorResponses(e.input) ++
       outputToResponses(e.errorOutput, ResponsesDefaultKey, None)
   }
 
@@ -91,4 +96,10 @@ private[openapi] class EndpointToOperationResponse(objectSchemas: Schemas, codec
         )
     })
   }
+
+  private def inputToDefaultErrorResponses(input: EndpointInput[_]): ListMap[ResponsesKey, ReferenceOr[Response]] =
+    options
+      .defaultDecodeFailureOutput(input)
+      .map(output => outputToResponses(output, ResponsesDefaultKey, None))
+      .getOrElse(ListMap())
 }

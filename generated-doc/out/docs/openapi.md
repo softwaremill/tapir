@@ -4,8 +4,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.18.0-M9"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.18.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.18.0-M10"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.18.0-M10"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -76,6 +76,13 @@ Options can be customised by providing an implicit instance of `OpenAPIDocsOptio
   This option can be applied to all enums in the schema, or only specific ones. 
   `SObjectInfo` input parameter is a unique identifier of object in the schema. 
   By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
+* `defaultDecodeFailureOutput`: if an endpoint does not define a Bad Request response in `errorOut`,
+  tapir will try to guess if decoding of inputs may fail, and add a 400 response if necessary.
+  You can override this option to customize the mapping of endpoint's inputs to a default error response.
+  If you'd like to disable this feature, just provide a function that always returns `None`:
+  ```scala
+  OpenAPIDocsOptions.default.copy(defaultDecodeFailureOutput = _ => None)
+  ```
 
 ## OpenAPI Specification Extensions
 
@@ -125,29 +132,29 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 
 ```scala
 // Akka HTTP
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.18.0-M9"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.18.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.18.0-M10"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.18.0-M10"
 
 // Finatra
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-finatra" % "0.18.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-finatra" % "0.18.0-M10"
 
 // HTTP4S
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.18.0-M9"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.18.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.18.0-M10"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.18.0-M10"
 
 // Play
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "0.18.0-M9"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "0.18.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "0.18.0-M10"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "0.18.0-M10"
 
 // Vert.x
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-vertx" % "0.18.0-M9"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-vertx" % "0.18.0-M10"
 ```
 
 Note: `tapir-swagger-ui-akka-http` transitively pulls some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.18.0-M9" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.18.0-M10" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Usage example for akka-http:
