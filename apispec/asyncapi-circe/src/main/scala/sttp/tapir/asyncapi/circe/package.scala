@@ -6,7 +6,22 @@ import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Encoder, Json, JsonObject}
 import shapeless.Lazy
-import sttp.tapir.apispec.{Discriminator, ExampleMultipleValue, ExampleSingleValue, ExampleValue, ExtensionValue, ExternalDocumentation, OAuthFlow, OAuthFlows, Reference, ReferenceOr, Schema, SchemaType, SecurityScheme, Tag}
+import sttp.tapir.apispec.{
+  Discriminator,
+  ExampleMultipleValue,
+  ExampleSingleValue,
+  ExampleValue,
+  ExtensionValue,
+  ExternalDocumentation,
+  OAuthFlow,
+  OAuthFlows,
+  Reference,
+  ReferenceOr,
+  Schema,
+  SchemaType,
+  SecurityScheme,
+  Tag
+}
 
 import scala.collection.immutable.ListMap
 
@@ -16,12 +31,7 @@ trait TapirAsyncAPICirceEncoders {
   // note: these are strict val-s, order matters!
 
   implicit def encoderReferenceOr[T: Encoder]: Encoder[ReferenceOr[T]] = {
-    case Left(Reference(ref, summary, description)) => {
-      val refList = List(("$ref", Json.fromString(ref)))
-      val refListWithSummary = refList ++ summary.map(s => ("summary", Json.fromString(s)))
-      val refListWithBothParameters = refListWithSummary ++ description.map(d => ("description", Json.fromString(d)))
-      Json.obj(refListWithBothParameters: _*)
-    }
+    case Left(Reference(ref)) => Json.obj(("$ref", Json.fromString(ref)))
     case Right(t)             => implicitly[Encoder[T]].apply(t)
   }
 

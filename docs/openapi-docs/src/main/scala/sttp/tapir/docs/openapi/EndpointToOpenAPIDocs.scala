@@ -37,9 +37,7 @@ private[openapi] object EndpointToOpenAPIDocs {
       paths = Paths(ListMap.empty),
       components = componentsCreator.components,
       security = List.empty,
-      extensions = DocsExtensions.fromIterable(docsExtensions),
-      jsonSchemaDialect = Option.empty,
-      webhooks = Option.empty
+      extensions = DocsExtensions.fromIterable(docsExtensions)
     )
   }
 }
