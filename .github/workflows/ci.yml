@@ -31,14 +31,14 @@ jobs:
           ~/.ivy2/cache
           ~/.coursier
         key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
-    - name: Compile
-      run: sbt -v compile compileDocumentation
     - name: Install sam cli
       run: |
-        wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
-        unzip aws-sam-cli-linux-x86_64.zip -d sam-installation
-        ./sam-installation/install
-        sam -- version
+        wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip > /dev/null
+        unzip aws-sam-cli-linux-x86_64.zip -d sam-installation > /dev/null
+        sudo ./sam-installation/install
+        sam --version
+    - name: Compile
+      run: sbt -v compile compileDocumentation
     - name: Test
       if: matrix.target-platform != 'JS'
 #      run: sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }}
