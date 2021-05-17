@@ -33,14 +33,23 @@ jobs:
         key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
     - name: Compile
       run: sbt -v compile compileDocumentation
+    - name: Install sam cli
+      run: |
+        wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+        unzip aws-sam-cli-linux-x86_64.zip -d sam-installation
+        ./sam-installation/install
+        sam -- version
     - name: Test
       if: matrix.target-platform != 'JS'
-      run: sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }}
+#      run: sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }}
+      run: |
+        sbt project awsLambdaTests
+        sbt test
       # Temporarily call JS tests for each subproject explicitly as a workaround until
       # https://github.com/scala-js/scala-js/issues/4317 has a solution
-    - name: Test Scala.js
-      if: matrix.target-platform == 'JS'
-      run: sbt coreJS/test coreJS2_12/test catsJS/test catsJS2_12/test enumeratumJS/test enumeratumJS2_12/test refinedJS/test refinedJS2_12/test circeJsonJS/test circeJsonJS2_12/test playJsonJS/test playJsonJS2_12/test uPickleJsonJS/test uPickleJsonJS2_12/test jsoniterScalaJS/test jsoniterScalaJS2_12/test sttpClientJS/test sttpClientJS2_12/test
+#    - name: Test Scala.js
+#      if: matrix.target-platform == 'JS'
+#      run: sbt coreJS/test coreJS2_12/test catsJS/test catsJS2_12/test enumeratumJS/test enumeratumJS2_12/test refinedJS/test refinedJS2_12/test circeJsonJS/test circeJsonJS2_12/test playJsonJS/test playJsonJS2_12/test uPickleJsonJS/test uPickleJsonJS2_12/test jsoniterScalaJS/test jsoniterScalaJS2_12/test sttpClientJS/test sttpClientJS2_12/test
     - name: Cleanup
       run: |
         rm -rf "$HOME/.ivy2/local" || true
