@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.StrictLogging
 import sttp.tapir.Schema
 import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
-// To make it working properly, set openApi parameter back to "3.0.1". Swagger currently is not supporting 3.1.0
 object BooksExampleSemiauto extends App with StrictLogging {
   type Limit = Option[Int]
   type AuthToken = String
