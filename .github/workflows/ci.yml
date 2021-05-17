@@ -33,8 +33,8 @@ jobs:
         key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
     - name: Install sam cli
       run: |
-        wget https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip > /dev/null
-        unzip aws-sam-cli-linux-x86_64.zip -d sam-installation > /dev/null
+        wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+        unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
         sudo ./sam-installation/install
         sam --version
     - name: Compile
@@ -42,9 +42,7 @@ jobs:
     - name: Test
       if: matrix.target-platform != 'JS'
 #      run: sbt -v mimaReportBinaryIssues test${{ matrix.target-platform }}
-      run: |
-        sbt project awsLambdaTests
-        sbt test
+      run: sbt awsLambdaTests/test
       # Temporarily call JS tests for each subproject explicitly as a workaround until
       # https://github.com/scala-js/scala-js/issues/4317 has a solution
 #    - name: Test Scala.js
