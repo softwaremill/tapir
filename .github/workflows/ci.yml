@@ -36,7 +36,6 @@ jobs:
         wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
         unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
         sudo ./sam-installation/install
-        docker pull -q amazon/aws-sam-cli-emulation-image-java11:rapid-1.23.0
         sam --version
     - name: Compile
       run: sbt -v compile compileDocumentation
