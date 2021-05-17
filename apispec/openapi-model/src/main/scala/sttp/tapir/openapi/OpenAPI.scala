@@ -5,11 +5,13 @@ import sttp.tapir.apispec.{ExampleValue, ExtensionValue, ReferenceOr, Schema, Se
 import scala.collection.immutable.ListMap
 
 case class OpenAPI(
-    openapi: String = "3.0.3",
+    openapi: String = "3.1.0",
     info: Info,
+    jsonSchemaDialect: Option[String],
     tags: List[Tag],
     servers: List[Server],
     paths: Paths,
+    webhooks: Option[Map[String, ReferenceOr[PathItem]]],
     components: Option[Components],
     security: List[SecurityRequirement],
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
@@ -27,6 +29,10 @@ case class OpenAPI(
   def servers(s: List[Server]): OpenAPI = copy(servers = s)
 
   def tags(t: List[Tag]): OpenAPI = copy(tags = t)
+
+  def jsonSchemaDialect(d: Option[String]): OpenAPI = copy(jsonSchemaDialect = d)
+
+  def webhooks(wh: Option[Map[String, ReferenceOr[PathItem]]]): OpenAPI = copy(webhooks = wh)
 }
 
 case class Info(
@@ -74,7 +80,8 @@ case class ServerVariable(
 case class Components(
     schemas: ListMap[String, ReferenceOr[Schema]],
     securitySchemes: ListMap[String, ReferenceOr[SecurityScheme]],
-    extensions: ListMap[String, ExtensionValue] = ListMap.empty
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty,
+    pathItems: ListMap[String, ReferenceOr[PathItem]] = ListMap.empty
 )
 
 case class Paths(
