@@ -18,7 +18,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
       .copy(description = Some("test"), default = Some(("f2", None)), isOptional = true)
   }
 
-    it should "modify product schema" in {
+  it should "modify product schema" in {
     val info1 = SObjectInfo("sttp.tapir.Person")
     val baseSchema = Schema(
       SProduct[Person](
