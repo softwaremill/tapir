@@ -31,7 +31,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     }
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using versioningSchemeSettings
-  ideSkipProject := (scalaVersion.value == scala2_13) || thisProjectRef.value.project.contains("JS"),
+  ideSkipProject := (scalaVersion.value == scala2_12) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
@@ -42,12 +42,12 @@ val versioningSchemeSettings = Seq(
   mimaPreviousArtifacts := {
     val minorUnchanged = previousStableVersion.value.flatMap(CrossVersion.partialVersion) == CrossVersion.partialVersion(version.value)
     val isRcOrMilestone = version.value.contains("M") || version.value.contains("RC")
-    if(minorUnchanged && !isRcOrMilestone)
+    if (minorUnchanged && !isRcOrMilestone)
       previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
     else
       Set.empty
   },
-  versionScheme := Some("early-semver"),
+  versionScheme := Some("early-semver")
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
