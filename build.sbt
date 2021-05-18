@@ -5,7 +5,7 @@ import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
 val scala2_12 = "2.12.13"
-val scala2_13 = "2.13.5"
+val scala2_13 = "2.13.6"
 
 val allScalaVersions = List(scala2_12, scala2_13)
 val codegenScalaVersions = List(scala2_12)
@@ -529,7 +529,7 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
       "io.opentelemetry" % "opentelemetry-api" % "1.2.0",
       "io.opentelemetry" % "opentelemetry-sdk" % "1.2.0",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.1.0-alpha" % Test,
-      scalaTest.value % Test,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
