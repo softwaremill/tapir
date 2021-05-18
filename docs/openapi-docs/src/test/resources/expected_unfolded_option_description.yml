@@ -13,8 +13,7 @@ paths:
               $ref: '#/components/schemas/ObjectWithOption'
         required: true
       responses:
-        '200':
-          description: ''
+        '200': {}
         '400':
           description: 'Invalid value for: body'
           content:

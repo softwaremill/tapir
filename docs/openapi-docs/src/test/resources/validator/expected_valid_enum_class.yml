@@ -16,8 +16,7 @@ paths:
               - blue
               - red
       responses:
-        '200':
-          description: ''
+        '200': {}
         '400':
           description: 'Invalid value for: query parameter color'
           content:

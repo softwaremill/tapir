@@ -8,5 +8,4 @@ paths:
       description: "first line:\nsecond line"
       operationId: "getRoot"
       responses:
-        '200':
-          description: ""
+        '200': {}

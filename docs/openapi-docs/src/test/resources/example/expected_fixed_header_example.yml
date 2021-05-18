@@ -14,8 +14,7 @@ paths:
             type: string
           example: application/json
       responses:
-        '200':
-          description: ''
+        '200': {}
         '400':
           description: 'Invalid value for: header Content-Type: application/json'
           content:

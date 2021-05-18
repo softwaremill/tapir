@@ -15,5 +15,4 @@ paths:
             default: tom
           example: alan
       responses:
-        '200':
-          description: ''
+        '200': {}

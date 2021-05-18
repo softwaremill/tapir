@@ -23,8 +23,7 @@ paths:
               type: integer
               format: int64
       responses:
-        '200':
-          description: ''
+        '200': {}
         '400':
           description: 'Invalid value for: query parameter foo, Invalid value for:
                         query parameter bar'

@@ -7,5 +7,4 @@ paths:
     get:
       operationId: getRoot
       responses:
-        '200':
-          description: ''
+        '200': {}

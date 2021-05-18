@@ -17,8 +17,7 @@ paths:
                   maximum: 10
         required: false
       responses:
-        '200':
-          description: ''
+        '200': {}
         '400':
           description: 'Invalid value for: body'
           content:

@@ -14,8 +14,7 @@ paths:
             type: integer
             minimum: 0
       responses:
-        '200':
-          description: ''
+        '200': {}
         '400':
           description: Description defined in options.
           content:

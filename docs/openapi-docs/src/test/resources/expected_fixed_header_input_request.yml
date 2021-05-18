@@ -14,8 +14,7 @@ paths:
             type: string
           example: Poland
       responses:
-        '200':
-          description: ''
+        '200': {}
         '400':
           description: 'Invalid value for: header Location: Poland'
           content:
