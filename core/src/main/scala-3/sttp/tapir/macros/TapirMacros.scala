@@ -35,6 +35,7 @@ object TapirMacros {
 
     val t = TypeRepr.of[T]
 
+    //substitute for `t =:= t.erasure` - https://github.com/lampepfl/dotty-feature-requests/issues/209
     val isAllowed: TypeRepr => Boolean = {
       case _: AppliedType | _: AndOrType => false
       case _ => true
