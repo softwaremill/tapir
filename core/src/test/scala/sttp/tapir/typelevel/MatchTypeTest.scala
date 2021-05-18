@@ -33,10 +33,12 @@ class MatchTypeTest extends AnyFlatSpec with MatchTypeTestExtensions with Matche
   }
 
   it should "provide implicit for all primitive class returning false for any other primitive type" in {
-    matcherAndTypes.permutations.foreach({ case (matcher, _) :: tl =>
-      tl.map(_._2).foreach { badValue =>
-        (matcher(badValue) shouldBe false) withClue (s"Matcher $matcher did not reject $badValue")
-      }
+    matcherAndTypes.permutations.foreach({
+      case (matcher, _) :: tl =>
+        tl.map(_._2).foreach { badValue =>
+          (matcher(badValue) shouldBe false) withClue (s"Matcher $matcher did not reject $badValue")
+        }
+      case _ => fail("impossible")
     })
   }
 

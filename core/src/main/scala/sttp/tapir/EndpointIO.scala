@@ -184,7 +184,7 @@ object EndpointInput {
     def single(scheme: String, realm: String = DefaultRealm): WWWAuthenticate = WWWAuthenticate(List(s"""$scheme realm="$realm""""))
   }
 
-  trait Auth[T] extends EndpointInput.Single[T] {
+  sealed trait Auth[T] extends EndpointInput.Single[T] {
     def input: EndpointInput.Single[T]
     def challenge: WWWAuthenticate
     def securitySchemeName: Option[String]
@@ -474,7 +474,12 @@ object EndpointIO {
     def of[T](t: T, name: Option[String] = None, summary: Option[String] = None): Example[T] = Example(t, name, summary)
   }
 
-  case class Info[T](description: Option[String], examples: List[Example[T]], deprecated: Boolean, docsExtensions: Vector[DocsExtension[_]]) {
+  case class Info[T](
+      description: Option[String],
+      examples: List[Example[T]],
+      deprecated: Boolean,
+      docsExtensions: Vector[DocsExtension[_]]
+  ) {
     def description(d: String): Info[T] = copy(description = Some(d))
     def example: Option[T] = examples.headOption.map(_.value)
     def example(t: T): Info[T] = example(Example.of(t))
