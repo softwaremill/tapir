@@ -7,6 +7,7 @@ import scala.quoted.*
 
 trait SchemaMacros[T] { this: Schema[T] =>
   inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ${ SchemaMacros.modifyImpl[T, U]('this)('path)('modification)}
+  // inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ???
 }
 
 object SchemaMacros {
@@ -70,10 +71,13 @@ object SchemaMacros {
   }
 }
 
-trait SchemaCompanionMacros {
-  implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = ??? // TODO
+import sttp.tapir.internal.SchemaMagnoliaDerivation
+import magnolia._
 
-  def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] =
-    ??? // TODO
-  def derived[T]: Schema[T] = ??? // TODO
+trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
+  // implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = ??? // TODO
+
+  // def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] =
+  //   ??? // TODO
+  // // def derived[T]: Schema[T] = 
 }
