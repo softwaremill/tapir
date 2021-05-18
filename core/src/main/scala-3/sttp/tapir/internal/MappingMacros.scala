@@ -24,6 +24,6 @@ object MappingMacros {
     inline (erasedValue[m.MirroredElemTypes], erasedValue[B]) match {
       case _: (B *: EmptyTuple, B) => ()
       case _: (B, B) => ()
-      case e => scala.compiletime.error("Given case class does not match the endpoint transput.")
+      case e => ComplietimeErrors.reportIncorrectMapping[B, A]
     }
 }

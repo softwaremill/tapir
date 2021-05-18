@@ -126,6 +126,19 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       )
   }
 
+  "oneOfMapping" should "not compile when the type erasure of `T` is different from `T`" in {
+    case class Wrapper[T](s: T)
+    
+    assertDoesNotCompile("""
+      endpoint.post
+        .errorOut(
+          sttp.tapir.oneOf(
+            oneOfMapping(StatusCode.BadRequest, stringBody.map(Wrapper(_))(_.s)),
+          )
+        )
+    """)
+  }
+
   def pairToTuple(input: EndpointInput[_]): Any =
     input match {
       case EndpointInput.Pair(left, right, _, _) => (pairToTuple(left), pairToTuple(right))

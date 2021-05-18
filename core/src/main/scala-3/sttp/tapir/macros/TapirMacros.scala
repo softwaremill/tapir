@@ -2,9 +2,12 @@ package sttp.tapir.macros
 
 import sttp.model.StatusCode
 import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.{EndpointOutput, oneOf, oneOfMappingClassMatcher, oneOfMappingFromMatchType, oneOfMappingValueMatcher}
+import sttp.tapir.EndpointOutput
 
 import scala.reflect.ClassTag
+import scala.reflect.classTag
+
+import scala.quoted.*
 
 trait TapirMacros {
 
@@ -17,8 +20,34 @@ trait TapirMacros {
     *
     * Should be used in [[oneOf]] output descriptions.
     */
-  def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] = ??? // TODO
+  inline def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] = 
+    ${ TapirMacros.oneOfMappingImpl[T]('statusCode, 'output, '{classTag[T]}) }
 
   @scala.deprecated("Use oneOfMapping", since = "0.18")
-  def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] = ??? // TODO
+  inline def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] = 
+    ${ TapirMacros.oneOfMappingImpl[T]('statusCode, 'output, '{classTag[T]}) }
+
+}
+
+object TapirMacros {
+  def oneOfMappingImpl[T: Type](statusCode: Expr[StatusCode], output: Expr[EndpointOutput[T]], ct: Expr[ClassTag[T]])(using Quotes): Expr[OneOfMapping[T]] = {
+    import quotes.reflect._
+
+    val t = TypeRepr.of[T]
+
+    //substitute for `t =:= t.erasure` - https://github.com/lampepfl/dotty-feature-requests/issues/209
+    val isAllowed: TypeRepr => Boolean = {
+      case _: AppliedType | _: AndOrType => false
+      case _ => true
+    }
+    
+    if (!isAllowed(t)) {
+      report.throwError(
+        s"Constructing oneOfMapping of type $t is not allowed because of type erasure. Using a runtime-class-based check it isn't possible to verify " +
+          s"that the input matches the desired class. Please use oneOfMappingClassMatcher, oneOfMappingValueMatcher or oneOfMappingFromMatchType instead"
+      )
+    } else {
+      '{ sttp.tapir.oneOfMappingClassMatcher($statusCode, $output, $ct.runtimeClass) }
+    }
+  }
 }
