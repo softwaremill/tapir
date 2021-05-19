@@ -5,15 +5,14 @@ import sttp.tapir.generic.Configuration
 import sttp.tapir.{FieldName, Schema, SchemaType, default, deprecated, description, encodedExample, encodedName, format, validate}
 import SchemaMagnoliaDerivation.deriveCache
 import sttp.tapir.internal.IterableToListMap
-import sttp.tapir.internal.ConfiguredDerivation
 
 import scala.collection.mutable
+import magnolia._
 
-trait SchemaMagnoliaDerivation extends ConfiguredDerivation[Schema] {
-    import magnolia._
+trait SchemaMagnoliaDerivation extends Derivation[Schema] {
   type Typeclass[T] = Schema[T]
 
-  def join[T](ctx: CaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
+  override def join[T](ctx: CaseClass[Schema, T]): Schema[T] = {
     withCache(ctx.typeInfo, ctx.annotations) {
       val result =
         if (ctx.isValueClass) {
@@ -25,12 +24,12 @@ trait SchemaMagnoliaDerivation extends ConfiguredDerivation[Schema] {
     }
   }
 
-  private def productSchemaType[T](ctx: CaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): SProduct[T] =
+  private def productSchemaType[T](ctx: CaseClass[Schema, T]): SProduct[T] =
     SProduct(
       typeNameToObjectInfo(ctx.typeInfo, ctx.annotations),
       ctx.params.map { p =>
         val pSchema = enrichSchema(p.typeclass, p.annotations)
-        val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
+        val encodedName = getEncodedName(p.annotations).getOrElse(p.label)
 
         SProductField[T, p.PType](FieldName(p.label, encodedName), pSchema, t => Some(p.deref(t)))
       }.toList
@@ -62,18 +61,15 @@ trait SchemaMagnoliaDerivation extends ConfiguredDerivation[Schema] {
     }
   }
 
-  def split[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
+  override def split[T](ctx: SealedTrait[Schema, T]): Schema[T] = {
     withCache(ctx.typeInfo, ctx.annotations) {
       val baseCoproduct = SCoproduct(
         typeNameToObjectInfo(ctx.typeInfo, ctx.annotations),
         ctx.subtypes.toList.map(s => typeNameToObjectInfo(s.typeInfo, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap,
         None
       )((t: T) => ctx.choose(t) { v => Some(typeNameToObjectInfo(v.typeInfo, v.annotations)) })
-      val coproduct = genericDerivationConfig.discriminator match {
-        case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
-        case None    => baseCoproduct
-      }
-      Schema(schemaType = coproduct)
+    
+      Schema(schemaType = baseCoproduct)
     }
   }
 

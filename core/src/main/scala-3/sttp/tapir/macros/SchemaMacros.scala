@@ -2,6 +2,8 @@ package sttp.tapir.macros
 
 import sttp.tapir.Schema
 import sttp.tapir.generic.Configuration
+import sttp.tapir.internal.SchemaMagnoliaDerivation
+import magnolia._
 
 import scala.quoted.*
 
@@ -71,13 +73,31 @@ object SchemaMacros {
   }
 }
 
-import sttp.tapir.internal.SchemaMagnoliaDerivation
-import magnolia._
-
 trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
-  // implicit def schemaForMap[V: Schema]: Schema[Map[String, V]] = ??? // TODO
+  implicit inline def schemaForMap[V: Schema]: Schema[Map[String, V]] = ${ SchemaCompanionMacros.generateSchemaForMap[V]('{ summon[Schema[V]] }) }
 
-  // def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] =
-  //   ??? // TODO
-  // // def derived[T]: Schema[T] = 
+  def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] = ??? //TODO
+}
+
+object SchemaCompanionMacros {
+  import sttp.tapir.SchemaType.*
+
+  def generateSchemaForMap[V: Type](schemaForV: Expr[Schema[V]])(using q: Quotes): Expr[Schema[Map[String, V]]] = {
+    import quotes.reflect.*
+    
+    def extractTypeArguments(tpe: TypeRepr): List[String] = {
+      def allTypeArguments(tr: TypeRepr): Seq[TypeRepr] = tr match {
+        case at: AppliedType => at.args.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
+        case _ => List.empty[TypeRepr]
+      }
+      
+      allTypeArguments(tpe).map(_.typeSymbol.name).toList
+    }
+
+    val tpe = TypeRepr.of[V]
+    val genericTypeParametersM = List(tpe.typeSymbol.name) ++ extractTypeArguments(tpe)
+
+    '{Schema(SOpenProduct[Map[String, V], V](SObjectInfo("Map", ${Expr(genericTypeParametersM)}), ${schemaForV})(identity))}
+  }
+
 }
