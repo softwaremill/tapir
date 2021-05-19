@@ -56,9 +56,9 @@ private[openapi] class EndpointToOperationResponse(
     val content = bodies.flatMap { case (_, content) => content }.toListMap
 
     if (bodies.nonEmpty || headers.nonEmpty) {
-      Some(Response(Some(description), headers.toListMap, content))
+      Some(Response(description, headers.toListMap, content))
     } else if (outputs.nonEmpty) {
-      Some(Response(Some(description)))
+      Some(Response(description))
     } else {
       None
     }

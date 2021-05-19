@@ -372,12 +372,12 @@ final case class ResponsesCodeKey(code: Int) extends ResponsesKey
 
 // todo: links
 final case class Response(
-    description: Option[String] = None,
+    description: String = "",
     headers: ListMap[String, ReferenceOr[Header]] = ListMap.empty,
     content: ListMap[String, MediaType] = ListMap.empty,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 ) {
-  def description(updated: String): Response = copy(description = Some(updated))
+  def description(updated: String): Response = copy(description = updated)
   def addHeader(key: String, header: Header): Response = copy(headers = headers.updated(key, Right(header)))
   def addMediaType(contentType: String, updated: MediaType): Response = copy(content = content.updated(contentType, updated))
   def headers(updated: ListMap[String, ReferenceOr[Header]]): Response = copy(headers = updated)
@@ -387,7 +387,7 @@ final case class Response(
 }
 
 object Response {
-  val Empty: Response = Response(None, ListMap.empty, ListMap.empty)
+  val Empty: Response = Response()
 }
 
 final case class Responses(
@@ -396,7 +396,8 @@ final case class Responses(
 ) {
   def responses(updated: ListMap[ResponsesKey, ReferenceOr[Response]]): Responses = copy(responses = updated)
   def extensions(updated: ListMap[String, ExtensionValue]): Responses = copy(extensions = updated)
-  def addResponse(status: Int, response: Response): Responses = copy(responses = responses.updated(ResponsesCodeKey(status), Right(response)))
+  def addResponse(status: Int, response: Response): Responses =
+    copy(responses = responses.updated(ResponsesCodeKey(status), Right(response)))
   def addDefault(response: Response): Responses = copy(responses = responses.updated(ResponsesDefaultKey, Right(response)))
   def addExtension(key: String, value: ExtensionValue): Responses = copy(extensions = extensions.updated(key, value))
 }
