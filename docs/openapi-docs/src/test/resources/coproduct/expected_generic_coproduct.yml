@@ -13,7 +13,8 @@ paths:
               $ref: '#/components/schemas/GenericEntity_String'
         required: true
       responses:
-        '200': {}
+        '200':
+          description: ''
         '400':
           description: 'Invalid value for: body'
           content:
@@ -30,7 +31,8 @@ paths:
               $ref: '#/components/schemas/GenericEntity_Int'
         required: true
       responses:
-        '200': {}
+        '200':
+          description: ''
         '400':
           description: 'Invalid value for: body'
           content:

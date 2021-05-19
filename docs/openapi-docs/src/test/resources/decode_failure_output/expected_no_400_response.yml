@@ -14,4 +14,5 @@ paths:
             type: integer
             minimum: 0
       responses:
-        '200': {}
+        '200':
+          description: ''

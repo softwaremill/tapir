@@ -13,7 +13,8 @@ paths:
               $ref: '#/components/schemas/Clause'
         required: true
       responses:
-        '200': {}
+        '200':
+          description: ''
         '400':
           description: 'Invalid value for: body'
           content:

@@ -14,7 +14,8 @@ paths:
             type: string
             pattern: apple|banana
       responses:
-        '200': {}
+        '200':
+          description: ''
         '400':
           description: 'Invalid value for: query parameter fruit'
           content:

@@ -13,7 +13,8 @@ paths:
               $ref: '#/components/schemas/G_String'
         required: true
       responses:
-        '200': {}
+        '200':
+          description: ''
         '400':
           description: 'Invalid value for: body'
           content:
@@ -30,7 +31,8 @@ paths:
               $ref: '#/components/schemas/G_Int'
         required: true
       responses:
-        '200': {}
+        '200':
+          description: ''
         '400':
           description: 'Invalid value for: body'
           content:

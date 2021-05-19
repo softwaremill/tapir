@@ -7,24 +7,29 @@ paths:
     get:
       operationId: getP1
       responses:
-        '200': {}
+        '200':
+          description: ''
   /p3:
     get:
       operationId: getP3
       responses:
-        '200': {}
+        '200':
+          description: ''
   /p2:
     get:
       operationId: getP2
       responses:
-        '200': {}
+        '200':
+          description: ''
   /p5:
     get:
       operationId: getP5
       responses:
-        '200': {}
+        '200':
+          description: ''
   /p4:
     get:
       operationId: getP4
       responses:
-        '200': {}
+        '200':
+          description: ''

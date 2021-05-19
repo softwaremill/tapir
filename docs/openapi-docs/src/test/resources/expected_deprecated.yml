@@ -7,5 +7,6 @@ paths:
     get:
       operationId: getApi
       responses:
-        '200': {}
+        '200':
+          description: ''
       deprecated: true

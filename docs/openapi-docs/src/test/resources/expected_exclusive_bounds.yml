@@ -17,7 +17,8 @@ paths:
             maximum: 42
             exclusiveMaximum: true
       responses:
-        '200': {}
+        '200':
+          description: ''
         '400':
           description: 'Invalid value for: query parameter num'
           content:
