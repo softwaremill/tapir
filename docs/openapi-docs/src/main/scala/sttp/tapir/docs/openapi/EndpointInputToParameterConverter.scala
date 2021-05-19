@@ -14,7 +14,7 @@ private[openapi] object EndpointInputToParameterConverter {
       description = query.info.description,
       required = Some(!query.codec.schema.isOptional),
       deprecated = if (query.info.deprecated) Some(true) else None,
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
       examples = examples.multipleExamples,
       extensions = DocsExtensions.fromIterable(query.info.docsExtensions)
@@ -28,7 +28,7 @@ private[openapi] object EndpointInputToParameterConverter {
       in = ParameterIn.Path,
       description = pathCapture.info.description,
       required = Some(true),
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
       examples = examples.multipleExamples,
       extensions = DocsExtensions.fromIterable(pathCapture.info.docsExtensions)
@@ -43,7 +43,7 @@ private[openapi] object EndpointInputToParameterConverter {
       description = header.info.description,
       required = Some(!header.codec.schema.isOptional),
       deprecated = if (header.info.deprecated) Some(true) else None,
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
       examples = examples.multipleExamples,
       extensions = DocsExtensions.fromIterable(header.info.docsExtensions)
@@ -62,7 +62,7 @@ private[openapi] object EndpointInputToParameterConverter {
       description = header.info.description,
       required = Some(true),
       deprecated = if (header.info.deprecated) Some(true) else None,
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
       examples = examples.multipleExamples,
       extensions = DocsExtensions.fromIterable(header.info.docsExtensions)
@@ -77,7 +77,7 @@ private[openapi] object EndpointInputToParameterConverter {
       description = cookie.info.description,
       required = Some(!cookie.codec.schema.isOptional),
       deprecated = if (cookie.info.deprecated) Some(true) else None,
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
       examples = examples.multipleExamples,
       extensions = DocsExtensions.fromIterable(cookie.info.docsExtensions)
