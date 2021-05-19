@@ -9,7 +9,6 @@ import scala.quoted.*
 
 trait SchemaMacros[T] { this: Schema[T] =>
   inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ${ SchemaMacros.modifyImpl[T, U]('this)('path)('modification)}
-  // inline def modify[U](inline path: T => U)(inline modification: Schema[U] => Schema[U]): Schema[T] = ???
 }
 
 object SchemaMacros {
@@ -24,9 +23,9 @@ object SchemaMacros {
     }
 
     def toPath(tree: Tree, acc: List[PathElement]): Seq[PathElement] = {
-      def typeSupported(quicklensType: String) =
+      def typeSupported(modifyType: String) =
         Seq("ModifyEach", "ModifyEither", "ModifyEachMap")
-          .exists(quicklensType.endsWith)
+          .exists(modifyType.endsWith)
       
       tree match {
         /** Field access */
