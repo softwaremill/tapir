@@ -106,6 +106,7 @@ lazy val allAggregates = core.projectRefs ++
   awsLambda.projectRefs ++
   awsLambdaTests.projectRefs ++
   awsSam.projectRefs ++
+  awsTerraform.projectRefs ++
   awsExamples.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
@@ -924,6 +925,19 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe
+    )
+  )
+  .jvmPlatform(scalaVersions = allScalaVersions)
+  .dependsOn(core, tests % Test)
+
+lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/terraform"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-aws-terraform",
+    libraryDependencies ++= Seq(
+      "io.circe" %% "circe-yaml" % Versions.circeYaml,
+      "io.circe" %% "circe-generic" % Versions.circe,
+      "io.circe" %% "circe-generic-extras" % Versions.circe
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
