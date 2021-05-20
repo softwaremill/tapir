@@ -9,14 +9,18 @@ import java.nio.file.{Files, Paths}
 
 object TerraformExample extends App {
 
-  val lambda = AwsLambdaFunction("ServerlessExample", "main.handler", "nodejs10.x", "terraform-example-kubinio", "v1.0.0/example.zip")
-  val methods = List.empty[TerraformAwsApiGatewayMethod]
+  val methods = List.empty[AwsTerraformApiGatewayMethod]
 
-  implicit val options: AwsTerraformOptions = AwsTerraformOptions("Tapir", "eu-central-1")
+  implicit val options: AwsTerraformOptions = AwsTerraformOptions(
+    awsRegion = "eu-central-1",
+    lambdaFunctionName = "Tapir",
+    apiGatewayName = "TapirApiGateway",
+    lambdaSource = S3Source("terraform-example-kubinio", "v1.0.0/example.zip", "nodejs10.x", "main.handler")
+  )
 
-  val lambdaJson = Printer.spaces2.print(lambda.asJson)
+  val lambdaJson = Printer.spaces2.print(options.asJson)
   val apiGatewayJson = Printer.spaces2.print(methods.asJson)
 
   Files.write(Paths.get("serverless/aws/terraform/example/lambda.tf.json"), lambdaJson.getBytes(UTF_8))
-//  Files.write(Paths.get("serverless/aws/terraform/example/api_gateway.json"), apiGatewayJson.getBytes(UTF_8))
+  Files.write(Paths.get("serverless/aws/terraform/example/api_gateway.tf.json"), apiGatewayJson.getBytes(UTF_8))
 }
