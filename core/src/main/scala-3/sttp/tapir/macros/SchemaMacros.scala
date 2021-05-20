@@ -32,14 +32,11 @@ object SchemaMacros {
         case Select(deep, ident) =>
           toPath(deep, PathElement.TermPathElement(ident) :: acc)
         /** Method call with no arguments and using clause */
-        case Apply(Apply(TypeApply(Ident(f), a), idents), b) if typeSupported(f) => {
+        case Apply(Apply(TypeApply(Ident(f), _), idents), _) if typeSupported(f) => {
            val newAcc = acc match {
             /** replace the term controlled by quicklens */
             case PathElement.TermPathElement(term, xargs @ _*) :: rest => PathElement.FunctorPathElement(f, term, xargs: _*) :: rest
-            case pathEl :: _ =>
-              report.throwError(s"Invalid use of path element $pathEl. $ShapeInfo, got: ${tree}")
-            case Nil =>
-              report.throwError(s"Invalid use of path element(Nil). $ShapeInfo, got: ${tree}")
+            case elements => report.throwError(s"Invalid use of path elements [${elements.mkString(", ")}]. $ShapeInfo, got: ${tree}")
           }
           
           idents.flatMap(toPath(_, newAcc))
