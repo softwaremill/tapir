@@ -45,7 +45,7 @@ object SchemaMacros {
           idents.flatMap(toPath(_, newAcc))
         }
 
-        /** Wild card from path */
+        /** The first segment from path (e.g. `_.age` -> `_`) */
         case i: Ident =>
           acc
         case t =>
