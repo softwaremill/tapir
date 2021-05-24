@@ -937,7 +937,8 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
     libraryDependencies ++= Seq(
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe,
-      "io.circe" %% "circe-generic-extras" % Versions.circe
+      "io.circe" %% "circe-literal" % Versions.circe,
+      "org.typelevel" %% "jawn-parser" % "1.0.0"
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -955,7 +956,7 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
     assembly / assemblyJarName := "tapir-aws-examples.jar",
     runSamExample := {
       val log = sLog.value
-      (Compile / runMain).toTask(" sttp.tapir.serverless.aws.examples.LambdaApiExampleSamTemplate").value
+      (Compile / runMain).toTask(" sttp.tapir.serverless.aws.examples.SamTemplateExample$").value
       val samReady = PollingUtils.poll(20.seconds, 1.second) {
         sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/api/hello"))
       }
@@ -971,7 +972,7 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
     }
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(awsLambda, awsSam)
+  .dependsOn(awsLambda, awsSam, awsTerraform)
 
 // client
 

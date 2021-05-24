@@ -10,13 +10,11 @@ import io.circe.syntax._
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.serverless.aws.examples.LambdaApiExample.{helloEndpoint, route}
+import sttp.tapir.serverless.aws.examples.LambdaApiExample.route
 import sttp.tapir.serverless.aws.lambda._
-import sttp.tapir.serverless.aws.sam.{AwsSamInterpreter, AwsSamOptions, CodeSource}
 
 import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets.UTF_8
-import java.nio.file.{Files, Paths}
 
 /** Example assumes that you have `sam local` installed on your OS. Installation is described here:
   * https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html
@@ -55,26 +53,4 @@ object LambdaApiExample {
   implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
 
   val route: Route[IO] = AwsServerInterpreter.toRoute(helloEndpoint)
-}
-
-/** Before running the actual example we need to interpret our api as SAM template */
-object LambdaApiExampleSamTemplate extends App {
-
-  val jarPath = Paths.get("serverless/aws/examples/target/jvm-2.13/tapir-aws-examples.jar").toAbsolutePath.toString
-
-  implicit val samOptions: AwsSamOptions = AwsSamOptions(
-    "PersonsApi",
-    source =
-      /** Specifying a fat jar build from example sources */
-      CodeSource(
-        runtime = "java11",
-        codeUri = jarPath,
-        handler = "sttp.tapir.serverless.aws.examples.LambdaApiExample::handleRequest"
-      )
-  )
-
-  val templateYaml = AwsSamInterpreter.toSamTemplate(helloEndpoint).toYaml
-
-  /** Write template to file, it's required to run the example using sam local */
-  Files.write(Paths.get("template.yaml"), templateYaml.getBytes(UTF_8))
 }

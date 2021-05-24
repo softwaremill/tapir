@@ -1,15 +1,17 @@
 package sttp.tapir.serverless.aws.terraform
 
+import io.circe.Json
+import io.circe.literal._
 import sttp.tapir.serverless.aws.terraform.AwsTerraformOptions.lambdaDefaultAssumeRolePolicy
 
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
 case class AwsTerraformOptions(
     awsRegion: String,
-    lambdaFunctionName: String,
+    functionName: String,
     apiGatewayName: String,
-    assumeRolePolicy: String = lambdaDefaultAssumeRolePolicy,
-    lambdaSource: FunctionSource,
+    assumeRolePolicy: Json = lambdaDefaultAssumeRolePolicy,
+    functionSource: FunctionSource,
     timeout: FiniteDuration = 10.seconds,
     memorySize: Int = 256
 )
@@ -17,7 +19,21 @@ case class AwsTerraformOptions(
 object AwsTerraformOptions {
   // grants no policies for lambda function - it cannot access any other AWS services
   private val lambdaDefaultAssumeRolePolicy =
-    "{\n  \"Version\": \"2012-10-17\",\n  \"Statement\": [\n    {\n      \"Action\": \"sts:AssumeRole\",\n      \"Principal\": {\n        \"Service\": \"lambda.amazonaws.com\"\n      },\n      \"Effect\": \"Allow\",\n      \"Sid\": \"\"\n    }\n  ]\n}"
+    json"""
+      {
+        "Version": "2012-10-17",
+        "Statement": [
+          {
+            "Action": "sts:AssumeRole",
+            "Principal": {
+              "Service": "lambda.amazonaws.com"
+            },
+            "Effect": "Allow",
+            "Sid": ""
+          }
+        ]
+      }
+    """
 }
 
 sealed trait FunctionSource

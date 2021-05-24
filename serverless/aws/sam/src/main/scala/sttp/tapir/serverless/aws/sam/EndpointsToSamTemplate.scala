@@ -49,15 +49,11 @@ private[sam] object EndpointsToSamTemplate {
   private def endpointNameMethodAndPath(e: Endpoint[_, _, _, _]): (String, Option[Method], String) = {
     val pathComponents = e.input
       .asVectorOfBasicInputs()
-      .collect {
-        case EndpointInput.PathCapture(name, _, _) => Left(name)
-        case EndpointInput.FixedPath(s, _, _)      => Right(s)
-      }
-      .foldLeft((Vector.empty[Either[String, String]], 0)) { case ((acc, c), component) =>
-        component match {
-          case Left(None)    => (acc :+ Left(s"param$c"), c + 1)
-          case Left(Some(p)) => (acc :+ Left(p), c)
-          case Right(p)      => (acc :+ Right(p), c)
+      .foldLeft((Vector.empty[Either[String, String]], 0)) { case ((acc, c), input) =>
+        input match {
+          case EndpointInput.PathCapture(name, _, _) => (acc :+ Left(name.getOrElse(s"param$c")), if (name.isEmpty) c + 1 else c)
+          case EndpointInput.FixedPath(p, _, _)      => (acc :+ Right(p), c)
+          case _                                     => (acc, c)
         }
       }
       ._1
