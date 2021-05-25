@@ -175,7 +175,7 @@ case class Schema[T](
   }
 }
 
-object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompanionMacros {
+object Schema extends SchemaExtensions with LowPrioritySchema {
   val ModifyCollectionElements = "each"
 
   /** Creates a schema for type `T`, where the low-level representation is a `String`. */
@@ -218,7 +218,7 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = implicitly[Schema[T]].map(_ => None)(_.body)
 }
 
-trait LowPrioritySchema {
+trait LowPrioritySchema extends SchemaCompanionMacros {
   implicit def derivedSchema[T](implicit derived: Derived[Schema[T]]): Schema[T] = derived.value
 }
 
