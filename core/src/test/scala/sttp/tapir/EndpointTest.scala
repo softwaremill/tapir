@@ -126,10 +126,10 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       )
   }
 
-  "oneOfMapping" should "not compile when the type erasure of `T` is different from `T`" in {
-    case class Wrapper[T](s: T)
-    
+  "oneOfMapping" should "not compile when the type erasure of `T` is different from `T`" in {    
     assertDoesNotCompile("""
+      case class Wrapper[T](s: T)
+
       endpoint.post
         .errorOut(
           sttp.tapir.oneOf(

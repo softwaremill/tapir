@@ -203,12 +203,12 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     implicitly[Schema[Person]].modify(_.age)(_.description("test")) shouldBe expected
   }
 
-  it should "work with custom naming configuration" in {
-    implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
-    val actual = implicitly[Schema[D]].modify(_.someFieldName)(_.description("something"))
-    actual.schemaType shouldBe SProduct[D](
-      SObjectInfo("sttp.tapir.generic.D"),
-      List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
-    )
-  }
+  // it should "work with custom naming configuration" in {
+  //   implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
+  //   val actual = implicitly[Schema[D]].modify(_.someFieldName)(_.description("something"))
+  //   actual.schemaType shouldBe SProduct[D](
+  //     SObjectInfo("sttp.tapir.generic.D"),
+  //     List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
+  //   )
+  // }
 }
