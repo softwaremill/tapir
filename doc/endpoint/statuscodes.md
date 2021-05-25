@@ -37,10 +37,10 @@ case object NoContent extends ErrorInfo
 // here we are defining an error output, but the same can be done for regular outputs
 val baseEndpoint = endpoint.errorOut(
   oneOf[ErrorInfo](
-    oneOfMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
-    oneOfMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
-    oneOfMapping(StatusCode.NoContent, emptyOutputAs(NoContent)),
-    oneOfDefaultMapping(jsonBody[Unknown].description("unknown"))
+    statusMapping(StatusCode.NotFound, jsonBody[NotFound].description("not found")),
+    statusMapping(StatusCode.Unauthorized, jsonBody[Unauthorized].description("unauthorized")),
+    statusMapping(StatusCode.NoContent, emptyOutputAs(NoContent)),
+    statusDefaultMapping(jsonBody[Unknown].description("unknown"))
   )
 )
 ```
@@ -74,9 +74,9 @@ case class NotFound(what: String) extends UserError
 
 val baseEndpoint = endpoint.errorOut(
   oneOf[Either[ServerError, UserError]](
-    oneOfMapping(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
-    oneOfMapping(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
-    oneOfMapping(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
+    statusMapping(StatusCode.NotFound, jsonBody[Right[ServerError, NotFound]].description("not found")),
+    statusMapping(StatusCode.BadRequest, jsonBody[Right[ServerError, BadRequest]].description("unauthorized")),
+    statusMapping(StatusCode.InternalServerError, jsonBody[Left[ServerError, UserError]].description("unauthorized")),
   )
 )
 ```
