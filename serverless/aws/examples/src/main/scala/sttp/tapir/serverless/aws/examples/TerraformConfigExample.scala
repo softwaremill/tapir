@@ -26,14 +26,9 @@ object TerraformConfigExample extends App {
     )
   )
 
-  /** lambda config is created using `AwsTerraformOptions` */
-  val lambdaConfig: String = Printer.spaces2.print(terraformOptions.asJson)
-
-  /** api gateway config is created using `Endpoint`s */
   val apiGateway: AwsTerraformApiGateway = AwsTerraformInterpreter.toTerraformConfig(helloEndpoint)
 
   val apiGatewayConfig = Printer.spaces2.print(apiGateway.asJson)
 
-  Files.write(Paths.get("serverless/aws/terraform/example/lambda.tf.json"), lambdaConfig.getBytes(UTF_8))
   Files.write(Paths.get("serverless/aws/terraform/example/api_gateway.tf.json"), apiGatewayConfig.getBytes(UTF_8))
 }

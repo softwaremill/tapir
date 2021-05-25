@@ -1,12 +1,18 @@
 package sttp.tapir.serverless.aws.terraform
 
 import io.circe.Json
+import sttp.tapir.serverless.aws.terraform.TerraformResource.{TapirApiGateway, terraformResource}
 
 import scala.concurrent.duration.FiniteDuration
 
 sealed trait TerraformResource {
   def json(): Json
-  protected def terraformResource[R](`type`: String, name: String, encoded: Json): Json =
+}
+
+private[terraform] object TerraformResource {
+  val TapirApiGateway = "TapirApiGateway"
+
+  def terraformResource[R](`type`: String, name: String, encoded: Json): Json =
     Json.fromFields(Seq(`type` -> Json.fromFields(Seq(name -> encoded))))
 }
 
@@ -55,7 +61,7 @@ case class AwsIamRole(assumeRolePolicy: String) extends TerraformResource {
   )
 }
 
-case class AwsLambdaPermission(apiGatewayName: String) extends TerraformResource {
+case object AwsLambdaPermission extends TerraformResource {
   override def json(): Json =
     terraformResource(
       "aws_lambda_permission",
@@ -66,7 +72,7 @@ case class AwsLambdaPermission(apiGatewayName: String) extends TerraformResource
           "action" -> Json.fromString("lambda:InvokeFunction"),
           "function_name" -> Json.fromString(s"$${aws_lambda_function.lambda.function_name}"),
           "principal" -> Json.fromString("apigateway.amazonaws.com"),
-          "source_arn" -> Json.fromString(s"$${aws_api_gateway_rest_api.$apiGatewayName.execution_arn}/*/*")
+          "source_arn" -> Json.fromString(s"$${aws_api_gateway_rest_api.$TapirApiGateway.execution_arn}/*/*")
         )
       )
     )
@@ -76,7 +82,7 @@ case class AwsApiGatewayRestApi(name: String, description: String) extends Terra
   override def json(): Json = {
     terraformResource(
       "aws_api_gateway_rest_api",
-      s"$name",
+      TapirApiGateway,
       Json.fromFields(
         Seq(
           "name" -> Json.fromString(name),
@@ -87,15 +93,18 @@ case class AwsApiGatewayRestApi(name: String, description: String) extends Terra
   }
 }
 
-case class AwsApiGatewayResource(name: String, restApiId: String, parentId: String, pathPart: String) extends TerraformResource {
+case class AwsApiGatewayResource(name: String, parentId: String, pathPart: String) extends TerraformResource {
   override def json(): Json =
     terraformResource(
       "aws_api_gateway_resource",
       name,
       Json.fromFields(
         Seq(
-          "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$restApiId.id}"),
-          "parent_id" -> Json.fromString(s"$${aws_api_gateway_resource.$parentId.id}"),
+          "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$TapirApiGateway.id}"),
+          "parent_id" -> Json.fromString(
+            if (parentId == TapirApiGateway) s"$${aws_api_gateway_rest_api.$TapirApiGateway.root_resource_id}"
+            else s"$${aws_api_gateway_resource.$parentId.id}"
+          ),
           "path_part" -> Json.fromString(pathPart)
         )
       )
@@ -104,7 +113,6 @@ case class AwsApiGatewayResource(name: String, restApiId: String, parentId: Stri
 
 case class AwsApiGatewayMethod(
     name: String,
-    restApiId: String,
     resourceId: String,
     httpMethod: String,
     requestParameters: Seq[(String, Boolean)]
@@ -114,7 +122,7 @@ case class AwsApiGatewayMethod(
     name,
     Json.fromFields(
       Seq(
-        "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$restApiId.id}"),
+        "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$TapirApiGateway.id}"),
         "resource_id" -> Json.fromString(s"$${aws_api_gateway_resource.$resourceId.id}"),
         "http_method" -> Json.fromString(httpMethod),
         "authorization" -> Json.fromString("NONE")
@@ -127,13 +135,13 @@ case class AwsApiGatewayMethod(
   )
 }
 
-case class AwsApiGatewayIntegration(name: String, restApiId: String) extends TerraformResource {
+case class AwsApiGatewayIntegration(name: String) extends TerraformResource {
   override def json(): Json = terraformResource(
     "aws_api_gateway_integration",
     name,
     Json.fromFields(
       Seq(
-        "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$restApiId.id}"),
+        "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$TapirApiGateway.id}"),
         "resource_id" -> Json.fromString(s"$${aws_api_gateway_method.$name.resource_id}"),
         "http_method" -> Json.fromString(s"$${aws_api_gateway_method.$name.http_method}"),
         "integration_http_method" -> Json.fromString("POST"),
@@ -144,17 +152,17 @@ case class AwsApiGatewayIntegration(name: String, restApiId: String) extends Ter
   )
 }
 
-case class AwsApiGatewayDeployment(name: String, restApiId: String, integrations: Seq[AwsApiGatewayIntegration]) extends TerraformResource {
+case class AwsApiGatewayDeployment(dependsOn: Seq[String]) extends TerraformResource {
   override def json(): Json =
     terraformResource(
       "aws_api_gateway_deployment",
-      name,
+      TapirApiGateway,
       Json.fromFields(
         Seq(
           "depends_on" -> Json.fromValues(
-            integrations.map { i => Json.fromString(s"aws_api_gateway_integration.${i.name}") }
+            dependsOn.map { d => Json.fromString(s"aws_api_gateway_integration.$d") }
           ),
-          "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$restApiId.id}"),
+          "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$TapirApiGateway.id}"),
           "stage_name" -> Json.fromString("test")
         )
       )

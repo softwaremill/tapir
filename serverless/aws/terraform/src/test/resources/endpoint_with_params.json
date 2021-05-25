@@ -1,0 +1,130 @@
+{
+  "terraform" : {
+    "required_providers" : {
+      "aws" : {
+        "source" : "hashicorp/aws"
+      }
+    }
+  },
+  "provider" : {
+    "aws" : [
+      {
+        "region" : "eu-central-1"
+      }
+    ]
+  },
+  "resource" : [
+    {
+      "aws_lambda_function" : {
+        "lambda" : {
+          "function_name" : "Tapir",
+          "role" : "${aws_iam_role.lambda_exec.arn}",
+          "timeout" : 10,
+          "memory_size" : 256,
+          "s3_bucket" : "bucket",
+          "s3_key" : "key",
+          "runtime" : "java11",
+          "handler" : "Handler::handleRequest"
+        }
+      }
+    },
+    {
+      "aws_iam_role" : {
+        "lambda_exec" : {
+          "name" : "lambda_exec_role",
+          "assume_role_policy" : "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Principal\":{\"Service\":\"lambda.amazonaws.com\"},\"Effect\":\"Allow\",\"Sid\":\"\"}]}"
+        }
+      }
+    },
+    {
+      "aws_lambda_permission" : {
+        "api_gateway_permission" : {
+          "statement_id" : "AllowAPIGatewayInvoke",
+          "action" : "lambda:InvokeFunction",
+          "function_name" : "${aws_lambda_function.lambda.function_name}",
+          "principal" : "apigateway.amazonaws.com",
+          "source_arn" : "${aws_api_gateway_rest_api.TapirApiGateway.execution_arn}/*/*"
+        }
+      }
+    },
+    {
+      "aws_api_gateway_rest_api" : {
+        "TapirApiGateway" : {
+          "name" : "TapirApiGateway",
+          "description" : "Serverless Application"
+        }
+      }
+    },
+    {
+      "aws_api_gateway_deployment" : {
+        "TapirApiGateway" : {
+          "depends_on" : [
+            "aws_api_gateway_integration.GetAccountsIdHistory"
+          ],
+          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
+          "stage_name" : "test"
+        }
+      }
+    },
+    {
+      "aws_api_gateway_resource" : {
+        "accounts" : {
+          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
+          "parent_id" : "${aws_api_gateway_rest_api.TapirApiGateway.root_resource_id}",
+          "path_part" : "accounts"
+        }
+      }
+    },
+    {
+      "aws_api_gateway_resource" : {
+        "accounts-id" : {
+          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
+          "parent_id" : "${aws_api_gateway_resource.accounts.id}",
+          "path_part" : "{id}"
+        }
+      }
+    },
+    {
+      "aws_api_gateway_resource" : {
+        "accounts-id-history" : {
+          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
+          "parent_id" : "${aws_api_gateway_resource.accounts-id.id}",
+          "path_part" : "history"
+        }
+      }
+    },
+    {
+      "aws_api_gateway_method" : {
+        "GetAccountsIdHistory" : {
+          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
+          "resource_id" : "${aws_api_gateway_resource.accounts-id-history.id}",
+          "http_method" : "GET",
+          "authorization" : "NONE",
+          "request_parameters" : {
+            "method.request.querystring.limit" : true,
+            "method.request.header.X-Account" : true,
+            "method.request.header.X-Secret" : true,
+            "method.request.path.id" : true
+          }
+        }
+      }
+    },
+    {
+      "aws_api_gateway_integration" : {
+        "GetAccountsIdHistory" : {
+          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
+          "resource_id" : "${aws_api_gateway_method.GetAccountsIdHistory.resource_id}",
+          "http_method" : "${aws_api_gateway_method.GetAccountsIdHistory.http_method}",
+          "integration_http_method" : "POST",
+          "type" : "AWS_PROXY",
+          "uri" : "${aws_lambda_function.lambda.invoke_arn}"
+        }
+      }
+    }
+  ],
+  "output" : {
+    "base_url" : {
+      "value" : "${aws_api_gateway_deployment.TapirApiGateway.invoke_url}"
+    }
+  }
+}

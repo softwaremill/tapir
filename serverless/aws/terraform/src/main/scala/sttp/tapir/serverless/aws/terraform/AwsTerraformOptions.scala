@@ -10,6 +10,7 @@ case class AwsTerraformOptions(
     awsRegion: String,
     functionName: String,
     apiGatewayName: String,
+    apiGatewayDescription: String = "Serverless Application",
     assumeRolePolicy: Json = lambdaDefaultAssumeRolePolicy,
     functionSource: FunctionSource,
     timeout: FiniteDuration = 10.seconds,
