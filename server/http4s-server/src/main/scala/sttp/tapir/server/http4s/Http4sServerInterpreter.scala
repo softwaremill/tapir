@@ -122,7 +122,7 @@ trait Http4sServerInterpreter {
       response: ServerResponse[Http4sResponseBody[F]]
   ): F[Response[F]] = {
     val statusCode = statusCodeToHttp4sStatus(response.code)
-    val headers = Headers(response.headers.map { case SttpHeader(k, v) => Header.Raw(CaseInsensitiveString(k), v) }.toList)
+    val headers = Headers(response.headers.map(header => Header.Raw(CaseInsensitiveString(header.name), header.value)).toList)
 
     response.body match {
       case Some(Left(pipeF)) =>

@@ -17,28 +17,28 @@ trait ParamsAsArgs[I] {
 
 object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
 
-  implicit def tuple2ToFn[A1, A2]: Aux[Tuple2[A1, A2], (A1, A2) => ?] = new ParamsAsArgs[Tuple2[A1, A2]] {
+  implicit def tuple2ToFn[A1, A2]: Aux[Tuple2[A1, A2], (A1, A2) => *] = new ParamsAsArgs[Tuple2[A1, A2]] {
     type FN[O] = (A1, A2) => O
     override def toFn[R](f: Tuple2[A1, A2] => R): (A1, A2) => R = (a1, a2) => f(Tuple2(a1, a2))
     override def paramAt(params: Tuple2[A1, A2], i: Int): Any = params.productElement(i)
     override def applyFn[R](f: (A1, A2) => R, args: Tuple2[A1, A2]): R = f(args._1, args._2)
     override def andThen[R, RR](f: (A1, A2) => R, m: R => RR): (A1, A2) => RR = (a1, a2) => m(f(a1, a2))
   }
-  implicit def tuple3ToFn[A1, A2, A3]: Aux[Tuple3[A1, A2, A3], (A1, A2, A3) => ?] = new ParamsAsArgs[Tuple3[A1, A2, A3]] {
+  implicit def tuple3ToFn[A1, A2, A3]: Aux[Tuple3[A1, A2, A3], (A1, A2, A3) => *] = new ParamsAsArgs[Tuple3[A1, A2, A3]] {
     type FN[O] = (A1, A2, A3) => O
     override def toFn[R](f: Tuple3[A1, A2, A3] => R): (A1, A2, A3) => R = (a1, a2, a3) => f(Tuple3(a1, a2, a3))
     override def paramAt(params: Tuple3[A1, A2, A3], i: Int): Any = params.productElement(i)
     override def applyFn[R](f: (A1, A2, A3) => R, args: Tuple3[A1, A2, A3]): R = f(args._1, args._2, args._3)
     override def andThen[R, RR](f: (A1, A2, A3) => R, m: R => RR): (A1, A2, A3) => RR = (a1, a2, a3) => m(f(a1, a2, a3))
   }
-  implicit def tuple4ToFn[A1, A2, A3, A4]: Aux[Tuple4[A1, A2, A3, A4], (A1, A2, A3, A4) => ?] = new ParamsAsArgs[Tuple4[A1, A2, A3, A4]] {
+  implicit def tuple4ToFn[A1, A2, A3, A4]: Aux[Tuple4[A1, A2, A3, A4], (A1, A2, A3, A4) => *] = new ParamsAsArgs[Tuple4[A1, A2, A3, A4]] {
     type FN[O] = (A1, A2, A3, A4) => O
     override def toFn[R](f: Tuple4[A1, A2, A3, A4] => R): (A1, A2, A3, A4) => R = (a1, a2, a3, a4) => f(Tuple4(a1, a2, a3, a4))
     override def paramAt(params: Tuple4[A1, A2, A3, A4], i: Int): Any = params.productElement(i)
     override def applyFn[R](f: (A1, A2, A3, A4) => R, args: Tuple4[A1, A2, A3, A4]): R = f(args._1, args._2, args._3, args._4)
     override def andThen[R, RR](f: (A1, A2, A3, A4) => R, m: R => RR): (A1, A2, A3, A4) => RR = (a1, a2, a3, a4) => m(f(a1, a2, a3, a4))
   }
-  implicit def tuple5ToFn[A1, A2, A3, A4, A5]: Aux[Tuple5[A1, A2, A3, A4, A5], (A1, A2, A3, A4, A5) => ?] =
+  implicit def tuple5ToFn[A1, A2, A3, A4, A5]: Aux[Tuple5[A1, A2, A3, A4, A5], (A1, A2, A3, A4, A5) => *] =
     new ParamsAsArgs[Tuple5[A1, A2, A3, A4, A5]] {
       type FN[O] = (A1, A2, A3, A4, A5) => O
       override def toFn[R](f: Tuple5[A1, A2, A3, A4, A5] => R): (A1, A2, A3, A4, A5) => R = (a1, a2, a3, a4, a5) =>
@@ -49,7 +49,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
       override def andThen[R, RR](f: (A1, A2, A3, A4, A5) => R, m: R => RR): (A1, A2, A3, A4, A5) => RR = (a1, a2, a3, a4, a5) =>
         m(f(a1, a2, a3, a4, a5))
     }
-  implicit def tuple6ToFn[A1, A2, A3, A4, A5, A6]: Aux[Tuple6[A1, A2, A3, A4, A5, A6], (A1, A2, A3, A4, A5, A6) => ?] =
+  implicit def tuple6ToFn[A1, A2, A3, A4, A5, A6]: Aux[Tuple6[A1, A2, A3, A4, A5, A6], (A1, A2, A3, A4, A5, A6) => *] =
     new ParamsAsArgs[Tuple6[A1, A2, A3, A4, A5, A6]] {
       type FN[O] = (A1, A2, A3, A4, A5, A6) => O
       override def toFn[R](f: Tuple6[A1, A2, A3, A4, A5, A6] => R): (A1, A2, A3, A4, A5, A6) => R = (a1, a2, a3, a4, a5, a6) =>
@@ -60,7 +60,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
       override def andThen[R, RR](f: (A1, A2, A3, A4, A5, A6) => R, m: R => RR): (A1, A2, A3, A4, A5, A6) => RR =
         (a1, a2, a3, a4, a5, a6) => m(f(a1, a2, a3, a4, a5, a6))
     }
-  implicit def tuple7ToFn[A1, A2, A3, A4, A5, A6, A7]: Aux[Tuple7[A1, A2, A3, A4, A5, A6, A7], (A1, A2, A3, A4, A5, A6, A7) => ?] =
+  implicit def tuple7ToFn[A1, A2, A3, A4, A5, A6, A7]: Aux[Tuple7[A1, A2, A3, A4, A5, A6, A7], (A1, A2, A3, A4, A5, A6, A7) => *] =
     new ParamsAsArgs[Tuple7[A1, A2, A3, A4, A5, A6, A7]] {
       type FN[O] = (A1, A2, A3, A4, A5, A6, A7) => O
       override def toFn[R](f: Tuple7[A1, A2, A3, A4, A5, A6, A7] => R): (A1, A2, A3, A4, A5, A6, A7) => R = (a1, a2, a3, a4, a5, a6, a7) =>
@@ -72,7 +72,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
         (a1, a2, a3, a4, a5, a6, a7) => m(f(a1, a2, a3, a4, a5, a6, a7))
     }
   implicit def tuple8ToFn[A1, A2, A3, A4, A5, A6, A7, A8]
-      : Aux[Tuple8[A1, A2, A3, A4, A5, A6, A7, A8], (A1, A2, A3, A4, A5, A6, A7, A8) => ?] =
+      : Aux[Tuple8[A1, A2, A3, A4, A5, A6, A7, A8], (A1, A2, A3, A4, A5, A6, A7, A8) => *] =
     new ParamsAsArgs[Tuple8[A1, A2, A3, A4, A5, A6, A7, A8]] {
       type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8) => O
       override def toFn[R](f: Tuple8[A1, A2, A3, A4, A5, A6, A7, A8] => R): (A1, A2, A3, A4, A5, A6, A7, A8) => R =
@@ -84,7 +84,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
         (a1, a2, a3, a4, a5, a6, a7, a8) => m(f(a1, a2, a3, a4, a5, a6, a7, a8))
     }
   implicit def tuple9ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9]
-      : Aux[Tuple9[A1, A2, A3, A4, A5, A6, A7, A8, A9], (A1, A2, A3, A4, A5, A6, A7, A8, A9) => ?] =
+      : Aux[Tuple9[A1, A2, A3, A4, A5, A6, A7, A8, A9], (A1, A2, A3, A4, A5, A6, A7, A8, A9) => *] =
     new ParamsAsArgs[Tuple9[A1, A2, A3, A4, A5, A6, A7, A8, A9]] {
       type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9) => O
       override def toFn[R](f: Tuple9[A1, A2, A3, A4, A5, A6, A7, A8, A9] => R): (A1, A2, A3, A4, A5, A6, A7, A8, A9) => R =
@@ -96,7 +96,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
         (a1, a2, a3, a4, a5, a6, a7, a8, a9) => m(f(a1, a2, a3, a4, a5, a6, a7, a8, a9))
     }
   implicit def tuple10ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]
-      : Aux[Tuple10[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10], (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10) => ?] =
+      : Aux[Tuple10[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10], (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10) => *] =
     new ParamsAsArgs[Tuple10[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10]] {
       type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10) => O
       override def toFn[R](f: Tuple10[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10] => R): (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10) => R =
@@ -113,7 +113,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
         m(f(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10))
     }
   implicit def tuple11ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]
-      : Aux[Tuple11[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11], (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11) => ?] =
+      : Aux[Tuple11[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11], (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11) => *] =
     new ParamsAsArgs[Tuple11[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11]] {
       type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11) => O
       override def toFn[R](
@@ -132,7 +132,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
         m(f(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11))
     }
   implicit def tuple12ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12]
-      : Aux[Tuple12[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12], (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12) => ?] =
+      : Aux[Tuple12[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12], (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12) => *] =
     new ParamsAsArgs[Tuple12[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12]] {
       type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12) => O
       override def toFn[R](
@@ -152,7 +152,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
     }
   implicit def tuple13ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13]: Aux[
     Tuple13[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13) => *
   ] = new ParamsAsArgs[Tuple13[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13) => O
     override def toFn[R](
@@ -172,7 +172,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple14ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14]: Aux[
     Tuple14[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14) => *
   ] = new ParamsAsArgs[Tuple14[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14) => O
     override def toFn[R](
@@ -194,7 +194,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple15ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15]: Aux[
     Tuple15[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15) => *
   ] = new ParamsAsArgs[Tuple15[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15) => O
     override def toFn[R](
@@ -233,7 +233,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple16ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16]: Aux[
     Tuple16[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16) => *
   ] = new ParamsAsArgs[Tuple16[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16) => O
     override def toFn[R](
@@ -273,7 +273,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple17ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17]: Aux[
     Tuple17[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17) => *
   ] = new ParamsAsArgs[Tuple17[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17) => O
     override def toFn[R](
@@ -314,7 +314,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple18ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18]: Aux[
     Tuple18[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18) => *
   ] = new ParamsAsArgs[Tuple18[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18) => O
     override def toFn[R](
@@ -356,7 +356,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple19ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19]: Aux[
     Tuple19[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19) => *
   ] = new ParamsAsArgs[Tuple19[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19) => O
     override def toFn[R](
@@ -401,7 +401,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple20ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20]: Aux[
     Tuple20[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20) => *
   ] = new ParamsAsArgs[Tuple20[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20) => O
     override def toFn[R](
@@ -447,7 +447,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple21ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21]: Aux[
     Tuple21[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21) => *
   ] = new ParamsAsArgs[Tuple21[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21) => O
     override def toFn[R](
@@ -494,7 +494,7 @@ object ParamsAsArgs extends LowPriorityParamsAsArgs1 {
   }
   implicit def tuple22ToFn[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22]: Aux[
     Tuple22[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22],
-    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22) => ?
+    (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22) => *
   ] = new ParamsAsArgs[Tuple22[A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22]] {
     type FN[O] = (A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22) => O
     override def toFn[R](
@@ -556,7 +556,7 @@ trait LowPriorityParamsAsArgs0 {
   @implicitNotFound(msg = "Expected arguments: ${I}")
   type Aux[I, _FN[_]] = ParamsAsArgs[I] { type FN[O] = _FN[O] }
 
-  implicit def singleToFn[A1]: Aux[A1, A1 => ?] = new ParamsAsArgs[A1] {
+  implicit def singleToFn[A1]: Aux[A1, A1 => *] = new ParamsAsArgs[A1] {
     type FN[O] = A1 => O
     override def toFn[R](f: A1 => R): A1 => R = a1 => f(a1)
     override def paramAt(params: A1, i: Int): Any = if (i == 0) params else throw new IndexOutOfBoundsException(i.toString)

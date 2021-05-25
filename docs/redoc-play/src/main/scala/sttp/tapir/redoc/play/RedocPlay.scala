@@ -33,6 +33,7 @@ class RedocPlay(
             Ok(html.redoc(title, s"/$contextPath/$yamlName", redocVersion))
           case `yamlName` =>
             Ok(yaml).as("text/yaml")
+          case f => NotFound(f)
         }
 
       }

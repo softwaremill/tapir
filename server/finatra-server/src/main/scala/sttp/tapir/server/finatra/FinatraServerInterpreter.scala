@@ -53,7 +53,7 @@ trait FinatraServerInterpreter extends Logging {
               Response(Version.Http11, status)
           }
 
-          response.headers.foreach { case Header(name, value) => responseWithContent.headerMap.add(name, value) }
+          response.headers.foreach(header => responseWithContent.headerMap.add(header.name, header.value))
 
           // If there's a content-type header in headers, override the content-type.
           response.contentType.foreach(ct => responseWithContent.contentType = ct)

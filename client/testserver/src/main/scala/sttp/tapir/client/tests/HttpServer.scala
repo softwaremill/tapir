@@ -126,12 +126,14 @@ class HttpServer(port: Port) {
 
     case GET -> Root / "ws" / "echo" / "fragmented" =>
       val echoReply: fs2.Pipe[IO, WebSocketFrame, WebSocketFrame] =
-        _.flatMap { case WebSocketFrame.Text(msg, _) =>
-          fs2.Stream(
-            WebSocketFrame.Text(s"fragmented frame with ", last = false),
-            WebSocketFrame.Continuation(ByteVector.view(s"echo: $msg".getBytes()), last = true),
-            WebSocketFrame.Close()
-          )
+        _.flatMap {
+          case WebSocketFrame.Text(msg, _) =>
+            fs2.Stream(
+              WebSocketFrame.Text(s"fragmented frame with ", last = false),
+              WebSocketFrame.Continuation(ByteVector.view(s"echo: $msg".getBytes()), last = true),
+              WebSocketFrame.Close()
+            )
+          case f => throw new IllegalArgumentException(s"Unsupported frame: $f")
         }
 
       fs2.concurrent.Queue
