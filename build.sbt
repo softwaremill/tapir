@@ -211,7 +211,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) => Seq(
-            "com.softwaremill.magnolia" %%% "magnolia-core" % "2.0.0-M4",
+            "com.softwaremill.magnolia" %%% "magnolia-core" % "2.0.0-M5",
           )
         case _ =>
           Seq(

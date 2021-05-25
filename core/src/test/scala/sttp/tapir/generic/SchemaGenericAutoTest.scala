@@ -24,9 +24,7 @@ import sttp.tapir.TestUtil.field
 import sttp.tapir.internal.IterableToListMap
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
-  private val stringSchema = implicitly[Schema[String]]
-  private val intSchema = implicitly[Schema[Int]]
-  private val longSchema = implicitly[Schema[Long]]
+  import SchemaGenericAutoTest._
 
   "Schema auto derivation" should "find schema for simple types" in {
     stringSchema.schemaType shouldBe SString()
@@ -75,25 +73,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     implicitly[Schema[A]].schemaType.asInstanceOf[SProduct[A]].required shouldBe List(FieldName("f1"), FieldName("f2"))
   }
 
-  val expectedDSchema: SProduct[D] =
-    SProduct[D](SObjectInfo("sttp.tapir.generic.D"), List(field(FieldName("someFieldName"), stringSchema)))
-
   it should "find schema for a simple case class and use identity naming transformation" in {
     implicitly[Schema[D]].schemaType shouldBe expectedDSchema
-  }
-
-  it should "find schema for a simple case class and use snake case naming transformation" in {
-    val expectedSnakeCaseNaming =
-      expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some_field_name"), stringSchema)))
-    implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
-    implicitly[Schema[D]].schemaType shouldBe expectedSnakeCaseNaming
-  }
-
-  it should "find schema for a simple case class and use kebab case naming transformation" in {
-    val expectedKebabCaseNaming =
-      expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some-field-name"), stringSchema)))
-    implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
-    implicitly[Schema[D]].schemaType shouldBe expectedKebabCaseNaming
   }
 
   it should "find schema for a nested case class" in {
@@ -188,20 +169,6 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     ).description("class I")
   }
 
-  it should "not transform names which are annotated with a custom name" in {
-    implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
-    val schema = implicitly[Schema[L]]
-    schema shouldBe Schema[L](
-      SProduct(
-        SObjectInfo("sttp.tapir.generic.L"),
-        List(
-          field(FieldName("firstField", "specialName"), intSchema),
-          field(FieldName("secondField", "second_field"), intSchema)
-        )
-      )
-    )
-  }
-
   it should "find the right schema for a case class with simple types" in {
     // given
     case class Test1(
@@ -235,37 +202,18 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
       )
     )
   }
+}
 
-  it should "generate one-of schema using the given discriminator" in {
-    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i")
+object SchemaGenericAutoTest {
+  private[generic] val stringSchema = implicitly[Schema[String]]
+  private[generic] val intSchema = implicitly[Schema[Int]]
+  private[generic] val longSchema = implicitly[Schema[Long]]
 
-    val schemaType = implicitly[Schema[Entity]].schemaType
-    schemaType shouldBe a[SCoproduct[Entity]]
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes shouldBe Map(
-      SObjectInfo("sttp.tapir.generic.Organization") -> Schema(
-        SProduct[Organization](
-          SObjectInfo("sttp.tapir.generic.Organization"),
-          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
-        )
-      ),
-      SObjectInfo("sttp.tapir.generic.Person") -> Schema(
-        SProduct[Person](
-          SObjectInfo("sttp.tapir.generic.Person"),
-          List(
-            field(FieldName("first"), Schema(SString())),
-            field(FieldName("age"), Schema(SInteger())),
-            field(FieldName("who_am_i"), Schema(SString()))
-          )
-        )
-      )
-    )
-
-    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
-  }
+  val expectedDSchema: SProduct[D] =
+    SProduct[D](SObjectInfo("sttp.tapir.generic.D"), List(field(FieldName("someFieldName"), stringSchema)))
 
   // comparing recursive schemas without validators
-  private def removeValidators[T](s: Schema[T]): Schema[T] = (s.schemaType match {
+  private[generic] def removeValidators[T](s: Schema[T]): Schema[T] = (s.schemaType match {
     case SProduct(info, fields) =>
       s.copy(schemaType =
         SProduct(

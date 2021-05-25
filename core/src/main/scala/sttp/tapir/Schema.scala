@@ -219,8 +219,7 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
 }
 
 trait LowPrioritySchema {
-  //FIXME "ambiguous implicit arguments: both given instance derived in trait Derivation and method derivedSchema in trait LowPrioritySchema"
-  // implicit def derivedSchema[T](implicit derived: Derived[Schema[T]]): Schema[T] = derived.value
+  implicit def derivedSchema[T](implicit derived: Derived[Schema[T]]): Schema[T] = derived.value
 }
 
 // annotations

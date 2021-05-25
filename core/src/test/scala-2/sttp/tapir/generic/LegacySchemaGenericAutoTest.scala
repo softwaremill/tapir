@@ -1,13 +1,32 @@
-package sttp.generic
+package sttp.tapir.generic
 
-import org.scalatest.flatspec.AsyncFlatSpec
-import org.scalatest.matchers.must.Matchers
-import sttp.tapir._
+import java.math.{BigDecimal => JBigDecimal}
 import sttp.tapir.SchemaType._
-import sttp.tapir.generic._
 import sttp.tapir.generic.auto._
+import sttp.tapir.{
+  FieldName,
+  Schema,
+  SchemaType,
+  Validator,
+  default,
+  deprecated,
+  description,
+  encodedExample,
+  encodedName,
+  format,
+  validate
+}
+
+import scala.concurrent.Future
+import org.scalatest.flatspec.AsyncFlatSpec
+import org.scalatest.matchers.should.Matchers
+import sttp.tapir.TestUtil.field
+import sttp.tapir.internal.IterableToListMap
 
 class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
+  import sttp.tapir.generic._
+  import sttp.tapir.generic.SchemaGenericAutoTest._
+
   it should "find schema for value classes" in {
     implicitly[Schema[StringValueClass]].schemaType shouldBe SString()
     implicitly[Schema[IntegerValueClass]].schemaType shouldBe SInteger()
@@ -32,7 +51,7 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     )(identity)
   }
 
-it should "find schema for recursive data structure" in {
+  it should "find schema for recursive data structure" in {
     val schema = removeValidators(implicitly[Schema[F]]).schemaType
 
     schema shouldBe SProduct[F](
@@ -41,7 +60,7 @@ it should "find schema for recursive data structure" in {
     )
   }
 
-it should "find schema for recursive data structure when invoked from many threads" in {
+  it should "find schema for recursive data structure when invoked from many threads" in {
     val expected =
       SProduct[F](
         SObjectInfo("sttp.tapir.generic.F"),
@@ -61,7 +80,7 @@ it should "find schema for recursive data structure when invoked from many threa
     }
   }
 
-    it should "find schema for recursive coproduct type" in {
+  it should "find schema for recursive coproduct type" in {
     val schemaType = removeValidators(implicitly[Schema[Node]]).schemaType
     schemaType shouldBe a[SCoproduct[Node]]
     schemaType.asInstanceOf[SCoproduct[Node]].subtypes shouldBe Map(
@@ -83,7 +102,7 @@ it should "find schema for recursive data structure when invoked from many threa
     )
   }
 
-    it should "support derivation of recursive schemas wrapped with an option" in {
+  it should "support derivation of recursive schemas wrapped with an option" in {
     // https://github.com/softwaremill/tapir/issues/192
     val expectedISchema: Schema[IOpt] =
       Schema(
@@ -102,7 +121,7 @@ it should "find schema for recursive data structure when invoked from many threa
     removeValidators(implicitly[Schema[JOpt]]) shouldBe expectedJSchema
   }
 
-    it should "support derivation of recursive schemas wrapped with a collection" in {
+  it should "support derivation of recursive schemas wrapped with a collection" in {
     val expectedISchema: Schema[IList] =
       Schema(
         SProduct(
@@ -119,4 +138,61 @@ it should "find schema for recursive data structure when invoked from many threa
     removeValidators(implicitly[Schema[IList]]) shouldBe expectedISchema
     removeValidators(implicitly[Schema[JList]]) shouldBe expectedJSchema
   }
+
+  it should "find schema for a simple case class and use snake case naming transformation" in {
+    val expectedSnakeCaseNaming =
+      expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some_field_name"), stringSchema)))
+    implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
+    implicitly[Schema[D]].schemaType shouldBe expectedSnakeCaseNaming
+  }
+
+  it should "find schema for a simple case class and use kebab case naming transformation" in {
+    val expectedKebabCaseNaming =
+      expectedDSchema.copy(fields = List(field[D, String](FieldName("someFieldName", "some-field-name"), stringSchema)))
+    implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
+    implicitly[Schema[D]].schemaType shouldBe expectedKebabCaseNaming
+  }
+
+  it should "not transform names which are annotated with a custom name" in {
+    implicit val customConf: Configuration = Configuration.default.withSnakeCaseMemberNames
+    val schema = implicitly[Schema[L]]
+    schema shouldBe Schema[L](
+      SProduct(
+        SObjectInfo("sttp.tapir.generic.L"),
+        List(
+          field(FieldName("firstField", "specialName"), intSchema),
+          field(FieldName("secondField", "second_field"), intSchema)
+        )
+      )
+    )
+  }
+
+  it should "generate one-of schema using the given discriminator" in {
+    implicit val customConf: Configuration = Configuration.default.withDiscriminator("who_am_i")
+
+    val schemaType = implicitly[Schema[Entity]].schemaType
+    schemaType shouldBe a[SCoproduct[Entity]]
+
+    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes shouldBe Map(
+      SObjectInfo("sttp.tapir.generic.Organization") -> Schema(
+        SProduct[Organization](
+          SObjectInfo("sttp.tapir.generic.Organization"),
+          List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
+        )
+      ),
+      SObjectInfo("sttp.tapir.generic.Person") -> Schema(
+        SProduct[Person](
+          SObjectInfo("sttp.tapir.generic.Person"),
+          List(
+            field(FieldName("first"), Schema(SString())),
+            field(FieldName("age"), Schema(SInteger())),
+            field(FieldName("who_am_i"), Schema(SString()))
+          )
+        )
+      )
+    )
+
+    schemaType.asInstanceOf[SCoproduct[Entity]].discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))
+  }
+
 }

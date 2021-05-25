@@ -7,7 +7,6 @@ import sttp.tapir.generic.auto._
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.TestUtil.field
 
-
 class SchemaMacroTest extends AnyFlatSpec with Matchers {
   import SchemaMacroTestData._
 
@@ -19,7 +18,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   }
 
   it should "modify product schema" in {
-    val info1 = SObjectInfo("sttp.tapir.Person")
+    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.Person")
     val baseSchema = Schema(
       SProduct[Person](
         info1,
@@ -27,8 +26,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
       )
     )
 
-    baseSchema.
-      modify(_.age)(_.description("test").default(10)) shouldBe Schema(
+    baseSchema.modify(_.age)(_.description("test").default(10)) shouldBe Schema(
       SProduct[Person](
         info1,
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(10)))
@@ -37,7 +35,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   }
 
   it should "modify product schema with derivation" in {
-    val info1 = SObjectInfo("sttp.tapir.Person")
+    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.Person")
     implicitly[Schema[Person]]
       .modify(_.age)(_.description("test").default(10)) shouldBe Schema(
       SProduct[Person](
@@ -48,8 +46,8 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   }
 
   it should "modify nested product schema" in {
-    val info1 = SObjectInfo("sttp.tapir.DevTeam")
-    val info2 = SObjectInfo("sttp.tapir.Person")
+    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.DevTeam")
+    val info2 = SObjectInfo("sttp.tapir.SchemaMacroTestData.Person")
 
     val expectedNestedProduct =
       Schema(
@@ -67,7 +65,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   }
 
   it should "modify array elements in products" in {
-    val info1 = SObjectInfo("sttp.tapir.ArrayWrapper")
+    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.ArrayWrapper")
     implicitly[Schema[ArrayWrapper]]
       .modify(_.f1.each)(_.format("xyz")) shouldBe Schema(
       SProduct[ArrayWrapper](
@@ -78,7 +76,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   }
 
   it should "modify array in products" in {
-    val info1 = SObjectInfo("sttp.tapir.ArrayWrapper")
+    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.ArrayWrapper")
     implicitly[Schema[ArrayWrapper]]
       .modify(_.f1)(_.format("xyz")) shouldBe Schema(
       SProduct[ArrayWrapper](
@@ -91,7 +89,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   }
 
   it should "support chained modifications" in {
-    val info1 = SObjectInfo("sttp.tapir.DevTeam")
+    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.DevTeam")
 
     implicitly[Schema[DevTeam]]
       .modify(_.p1)(_.format("xyz"))
@@ -111,7 +109,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     parentSchema
       .modify(_.child)(_.format("xyz")) shouldBe Schema(
       SProduct[Parent](
-        SObjectInfo("sttp.tapir.Parent"),
+        SObjectInfo("sttp.tapir.SchemaMacroTestData.Parent"),
         List(field(FieldName("child"), implicitly[Schema[Person]].asOption.format("xyz")))
       ),
       validator = parentSchema.validator
@@ -123,13 +121,13 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     parentSchema
       .modify(_.child.each.age)(_.format("xyz")) shouldBe Schema(
       SProduct[Parent](
-        SObjectInfo("sttp.tapir.Parent"),
+        SObjectInfo("sttp.tapir.SchemaMacroTestData.Parent"),
         List(
           field(
             FieldName("child"),
             Schema(
               SProduct[Person](
-                SObjectInfo("sttp.tapir.Person"),
+                SObjectInfo("sttp.tapir.SchemaMacroTestData.Person"),
                 List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).format("xyz")))
               )
             ).asOption
@@ -144,7 +142,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     implicitly[Schema[Team]]
       .modify(_.v.each)(_.description("test")) shouldBe Schema(
       SProduct[Team](
-        SObjectInfo("sttp.tapir.Team"),
+        SObjectInfo("sttp.tapir.SchemaMacroTestData.Team"),
         List(
           field(
             FieldName("v"),
@@ -169,7 +167,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   it should "add default to product" in {
     val expected = Schema(
       SProduct[Person](
-        SObjectInfo("sttp.tapir.Person"),
+        SObjectInfo("sttp.tapir.SchemaMacroTestData.Person"),
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).default(34)))
       )
     )
@@ -182,7 +180,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   it should "add example to product" in {
     val expected = Schema(
       SProduct[Person](
-        SObjectInfo("sttp.tapir.Person"),
+        SObjectInfo("sttp.tapir.SchemaMacroTestData.Person"),
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).encodedExample(18)))
       )
     )
@@ -195,7 +193,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   it should "add description to product" in {
     val expected = Schema(
       SProduct[Person](
-        SObjectInfo("sttp.tapir.Person"),
+        SObjectInfo("sttp.tapir.SchemaMacroTestData.Person"),
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test")))
       )
     )
@@ -203,12 +201,4 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     implicitly[Schema[Person]].modify(_.age)(_.description("test")) shouldBe expected
   }
 
-  // it should "work with custom naming configuration" in {
-  //   implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
-  //   val actual = implicitly[Schema[D]].modify(_.someFieldName)(_.description("something"))
-  //   actual.schemaType shouldBe SProduct[D](
-  //     SObjectInfo("sttp.tapir.generic.D"),
-  //     List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
-  //   )
-  // }
 }

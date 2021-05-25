@@ -62,6 +62,7 @@ class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestEx
     val codec = implicitly[Codec[String, Test6, CodecFormat.XWwwFormUrlencoded]]
 
     // when
+    println(s"DUPA [${codec.schema.schemaType}]")
     codec.schema.schemaType shouldBe
       SProduct[Test6](
         SObjectInfo("sttp.tapir.generic.FormCodecDerivationTest.<local FormCodecDerivationTest>.Test6"),
