@@ -2,6 +2,7 @@ package sttp.tapir.serverless.aws.terraform
 
 import sttp.model.Method
 import sttp.tapir.internal._
+import sttp.tapir.serverless.aws.terraform.PathComponent.DefaultParamName
 import sttp.tapir.{Endpoint, EndpointInput, _}
 
 import java.util.UUID
@@ -28,7 +29,7 @@ private[terraform] object EndpointsToTerraformConfig {
           input match {
             case (id, m, fp @ EndpointInput.FixedPath(p, _, _)) => (acc :+ PathComponent(id, m, Left(fp)) -> p, c)
             case (id, m, pc @ EndpointInput.PathCapture(name, _, _)) =>
-              (acc :+ PathComponent(id, m, Right(pc)) -> name.getOrElse(s"param$c"), if (name.isEmpty) c + 1 else c)
+              (acc :+ PathComponent(id, m, Right(pc)) -> name.getOrElse(s"$DefaultParamName$c"), if (name.isEmpty) c + 1 else c)
             case _ => (acc, c)
           }
         }
@@ -48,9 +49,7 @@ private[terraform] object EndpointsToTerraformConfig {
         case (_, _, EndpointIO.Header(name, codec, _))        => s"$headerPrefix$name" -> !codec.schema.isOptional
         case (_, _, EndpointIO.FixedHeader(header, codec, _)) => s"$headerPrefix${header.name}" -> !codec.schema.isOptional
         case (_, _, EndpointInput.Query(name, codec, _))      => s"$queryPrefix$name" -> !codec.schema.isOptional
-      } ++ pathComponents.collect { case (_ @PathComponent(_, _, Right(pc)), _) =>
-        s"$pathPrefix${pc.name.getOrElse("param")}" -> !pc.codec.schema.isOptional
-      }
+      } ++ pathComponents.collect { case (c @ PathComponent(_, _, Right(pc)), _) => s"$pathPrefix${c.name}" -> !pc.codec.schema.isOptional }
 
       AwsTerraformApiGatewayMethod(
         name,
@@ -68,6 +67,10 @@ private[terraform] object EndpointsToTerraformConfig {
 case class PathComponent(id: String, method: Method, component: Either[EndpointInput.FixedPath[_], EndpointInput.PathCapture[_]]) {
   def name: String = component match {
     case Left(fp)  => fp.s
-    case Right(pc) => pc.name.getOrElse("param")
+    case Right(pc) => pc.name.getOrElse(DefaultParamName)
   }
+}
+
+object PathComponent {
+  val DefaultParamName = "param"
 }

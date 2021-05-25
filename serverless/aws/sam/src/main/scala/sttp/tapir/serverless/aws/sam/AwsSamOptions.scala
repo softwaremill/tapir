@@ -9,6 +9,6 @@ case class AwsSamOptions(
     memorySize: Int = 256
 )
 
-trait FunctionSource
+sealed trait FunctionSource
 case class ImageSource(imageUri: String) extends FunctionSource
 case class CodeSource(runtime: String, codeUri: String, handler: String) extends FunctionSource

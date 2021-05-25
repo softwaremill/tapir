@@ -9,10 +9,10 @@ private[terraform] object ApiResourceTree {
     PathComponent("root", Method("ANY"), Left(EndpointInput.FixedPath("/", Codec.idPlain(), EndpointIO.Info.empty)))
 
   private val pathMatches: (PathComponent, PathComponent) => Boolean = (a, b) => {
-    (a.component, b.component) match {
-      case (Left(fp1), Left(fp2))   => fp1.s == fp2.s && a.method == b.method
-      case (Right(pc1), Right(pc2)) => pc1.name == pc2.name && a.method == b.method
-      case _                        => false
+    (a, b) match {
+      case (PathComponent(_, m1, Left(fp1)), PathComponent(_, m2, Left(fp2)))   => fp1.s == fp2.s && m1 == m2
+      case (PathComponent(_, m1, Right(pc1)), PathComponent(_, m2, Right(pc2))) => pc1.name == pc2.name && m1 == m2
+      case _                                                                    => false
     }
   }
 

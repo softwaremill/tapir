@@ -3,8 +3,6 @@ package sttp.tapir.serverless.aws.sam
 import io.circe.syntax._
 import sttp.tapir.serverless.aws.sam.AwsSamTemplateEncoders._
 
-import scala.collection.immutable.ListMap
-
 case class SamTemplate(
     AWSTemplateFormatVersion: String = "2010-09-09",
     Transform: String = "AWS::Serverless-2016-10-31",
@@ -17,15 +15,15 @@ case class SamTemplate(
   }
 }
 
-trait Resource {
+sealed trait Resource {
   def Properties: Properties
 }
 case class FunctionResource(Properties: Properties) extends Resource
 case class HttpResource(Properties: HttpProperties) extends Resource
 
-trait Properties
+sealed trait Properties
 
-trait FunctionProperties {
+sealed trait FunctionProperties {
   val Timeout: Long
   val MemorySize: Int
   val Events: Map[String, FunctionHttpApiEvent]
