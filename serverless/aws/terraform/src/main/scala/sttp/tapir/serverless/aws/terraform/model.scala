@@ -7,7 +7,7 @@ import sttp.tapir.serverless.aws.terraform.AwsTerraformEncoders._
 case class AwsTerraformApiGateway(resourceTree: ResourceTree, methods: Seq[AwsTerraformApiGatewayMethod]) {
   def toJson()(implicit options: AwsTerraformOptions): String = {
     val gateway = this
-    Printer.spaces2.print(gateway.asJson(AwsTerraformEncoders.encoderAwsTerraformApiGateway))
+    Printer.spaces2.print(gateway.asJson)
   }
 }
 

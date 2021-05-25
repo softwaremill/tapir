@@ -10,7 +10,7 @@ sealed trait TerraformResource {
 }
 
 private[terraform] object TerraformResource {
-  val TapirApiGateway = "TapirApiGateway"
+  val TapirApiGateway = "TapirApiGateway" // main resource name
 
   def terraformResource[R](`type`: String, name: String, encoded: Json): Json =
     Json.fromFields(Seq(`type` -> Json.fromFields(Seq(name -> encoded))))

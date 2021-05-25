@@ -4,8 +4,6 @@ import sttp.model.Method
 import sttp.tapir.serverless.aws.terraform.EndpointsToTerraformConfig.IdMethodEndpointInput
 import sttp.tapir.{Codec, EndpointIO, EndpointInput}
 
-import java.util.UUID
-
 private[terraform] object ApiResourceTree {
   val RootPathComponent: PathComponent =
     PathComponent("root", Method("ANY"), Left(EndpointInput.FixedPath("/", Codec.idPlain(), EndpointIO.Info.empty)))
@@ -40,41 +38,8 @@ private[terraform] object ApiResourceTree {
     ResourceTree(RootPathComponent, paths0.map(collectChildren(1, _)))
   }
 
-  private def distinctBy[D](value: PathComponent => D)(pcs: Seq[PathComponent]): Seq[PathComponent] =
+  private def distinctBy[V](value: PathComponent => V)(pcs: Seq[PathComponent]): Seq[PathComponent] =
     pcs.groupBy(value).flatMap { case (_, pcs) => pcs.headOption }.toSeq
 }
 
 case class ResourceTree(path: PathComponent, children: Seq[ResourceTree])
-
-object Dupa extends App {
-  def show(r: ResourceTree): Unit = {
-    def showResource(nest: Int = 1, r: ResourceTree): Unit = {
-      if (r.children.nonEmpty) {
-        r.children.foreach { c =>
-          println("  " * nest + c.path.name + " " + c.path.method.method)
-          showResource(nest + 1, c)
-        }
-      }
-    }
-    println(r.path.name + " " + r.path.method.method)
-    showResource(1, r)
-  }
-
-  import sttp.tapir._
-  import sttp.tapir.internal._
-
-  val eps = List(
-    endpoint.get.in("accounts" / path[String]("id")),
-    endpoint.post.in("accounts"),
-    endpoint.get.in("accounts" / path[String]("id") / "transactions"),
-    endpoint.post.in("accounts" / path[String]("id") / "transactions")
-  )
-
-  val epsBasicInputs: Seq[(Endpoint[_, _, _, _], Vector[IdMethodEndpointInput])] = eps.map { ep =>
-    ep -> ep.input.asVectorOfBasicInputs().map(input => (UUID.randomUUID().toString, ep.httpMethod.getOrElse(Method("ANY")), input))
-  }
-
-  val tree = ApiResourceTree(epsBasicInputs.map(_._2))
-
-  show(tree)
-}
