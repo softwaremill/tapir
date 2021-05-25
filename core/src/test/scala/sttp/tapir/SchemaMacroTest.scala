@@ -7,7 +7,10 @@ import sttp.tapir.generic.auto._
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.TestUtil.field
 
+
 class SchemaMacroTest extends AnyFlatSpec with Matchers {
+  import SchemaMacroTestData._
+
   behavior of "apply modification"
 
   it should "modify basic schema" in {
@@ -16,6 +19,24 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
   }
 
   it should "modify product schema" in {
+    val info1 = SObjectInfo("sttp.tapir.Person")
+    val baseSchema = Schema(
+      SProduct[Person](
+        info1,
+        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(10)))
+      )
+    )
+
+    baseSchema.
+      modify(_.age)(_.description("test").default(10)) shouldBe Schema(
+      SProduct[Person](
+        info1,
+        List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(10)))
+      )
+    )
+  }
+
+  it should "modify product schema with derivation" in {
     val info1 = SObjectInfo("sttp.tapir.Person")
     implicitly[Schema[Person]]
       .modify(_.age)(_.description("test").default(10)) shouldBe Schema(
@@ -191,9 +212,3 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     )
   }
 }
-
-case class ArrayWrapper(f1: List[String])
-case class Person(name: String, age: Int)
-case class DevTeam(p1: Person, p2: Person)
-case class Parent(child: Option[Person])
-case class Team(v: Map[String, Person])

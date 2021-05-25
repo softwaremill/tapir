@@ -6,7 +6,7 @@ import sbt.internal.ProjectMatrix
 
 val scala2_12 = "2.12.13"
 val scala2_13 = "2.13.5"
-val scala3 = "3.0.0-RC3"
+val scala3 = "3.0.0"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -210,7 +210,9 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((3, _)) => Nil
+        case Some((3, _)) => Seq(
+            "com.softwaremill.magnolia" %%% "magnolia-core" % "2.0.0-M4",
+          )
         case _ =>
           Seq(
             "com.propensive" %%% "magnolia" % "0.17.0",

@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
 class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
+  import SchemaApplyValidationTestData._
+  
   it should "validate openProduct" in {
     implicit val schemaForInt: Schema[Int] = Schema.schemaForInt.validate(Validator.min(10))
     val schema = implicitly[Schema[Map[String, Int]]]
@@ -167,12 +169,3 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
       case c: ValidationError.Custom[T]    => c.copy(path = Nil)
     }
 }
-
-final case class RecursiveName(name: String, subNames: Option[Vector[RecursiveName]])
-
-sealed trait Animal
-sealed trait Pet extends Animal {}
-case class Dog(name: String, friends: List[Pet]) extends Pet
-case class Cat(name: String, friends: List[Pet]) extends Pet
-
-case class SimpleDog(name: String)

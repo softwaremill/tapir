@@ -48,10 +48,8 @@ object ModifySchemaMacro {
           val newAcc = acc match {
             // replace the term controlled by quicklens
             case TermPathElement(term, xargs @ _*) :: rest => FunctorPathElement(f, term, xargs: _*) :: rest
-            case pathEl :: _ =>
-              c.abort(c.enclosingPosition, s"Invalid use of path element $pathEl. $ShapeInfo, got: ${path.tree}")
-            case Nil =>
-              c.abort(c.enclosingPosition, s"Invalid use of path element(Nil). $ShapeInfo, got: ${path.tree}")
+            case elements =>
+              c.abort(c.enclosingPosition, s"Invalid use of path elements [${elements.mkString(", ")}]. $ShapeInfo, got: ${path.tree}")
           }
           collectPathElements(t, newAcc)
         case _: Ident => acc
