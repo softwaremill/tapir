@@ -20,6 +20,16 @@ class VerifyTerraformTemplateTest extends AnyFunSuite with Matchers {
     AwsTerraformInterpreter.toTerraformConfig(List.empty).toJson()
   }
 
+  test("should match expected json root endpoint") {
+    val ep = endpoint
+
+    val expectedJson = load("root_endpoint.json")
+    val actualJson = AwsTerraformInterpreter.toTerraformConfig(List(ep)).toJson()
+    println(actualJson)
+
+    expectedJson shouldBe noIndentation(actualJson)
+  }
+
   test("should match expected json simple endpoint") {
     val ep = endpoint.get.in("hello" / "world")
 
@@ -50,9 +60,10 @@ class VerifyTerraformTemplateTest extends AnyFunSuite with Matchers {
       endpoint.post.in("accounts" / path[String]("id") / "transactions")
     )
 
+    val expectedJson = load("endpoints_common_paths.json")
     val actualJson = AwsTerraformInterpreter.toTerraformConfig(eps).toJson()
 
-    println(actualJson)
+    expectedJson shouldBe noIndentation(actualJson)
   }
 }
 

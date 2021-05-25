@@ -14,34 +14,34 @@ object AwsTerraformEncoders {
         Seq("required_providers" -> Json.fromFields(Seq("aws" -> Json.fromFields(Seq("source" -> Json.fromString("hashicorp/aws"))))))
       )
 
-      def toTerraformResources(parent: String, tree: ResourceTree, acc: Map[String, AwsApiGatewayResource]): Seq[TerraformResource] = {
-        println(acc.size)
-
+      def toTerraformResources(parent: String, tree: ResourceTree): Seq[(String, AwsApiGatewayResource)] = {
         val name = tree.path.name
         val resourceName = if (parent == TapirApiGateway) name else s"$parent-$name"
         val apiGatewayResource =
           AwsApiGatewayResource(resourceName, parentId = parent, tree.path.component.map(_ => s"{$name}").getOrElse(name))
 
-        val methodResources =
-          gateway.methods
-            .find(_.paths.lastOption.exists(_.id == tree.path.id))
-            .map { m =>
-              val resourceId = acc.getOrElse(m.paths.last.id, apiGatewayResource).name
-              Seq(
-                AwsApiGatewayMethod(m.name, resourceId, m.httpMethod.method, m.requestParameters),
-                AwsApiGatewayIntegration(m.name)
-              )
-            }
-            .getOrElse(Seq.empty)
-
         if (tree.children.isEmpty)
-          methodResources ++ (apiGatewayResource +: acc.values.groupBy(_.pathPart).flatMap(_._2.headOption).toSeq)
+          Seq(tree.path.id -> apiGatewayResource)
         else
-          methodResources ++ tree.children.flatMap(child => toTerraformResources(parent = resourceName, child, acc + (tree.path.id -> apiGatewayResource)))
+          (tree.path.id -> apiGatewayResource) +: tree.children.flatMap(child => toTerraformResources(parent = resourceName, child))
       }
 
-      val endpointResources: Seq[TerraformResource] =
-        gateway.resourceTree.children.flatMap(child => toTerraformResources(parent = TapirApiGateway, child, Map.empty))
+      val pathResources: Seq[(String, AwsApiGatewayResource)] =
+        gateway.resourceTree.children.flatMap(toTerraformResources(TapirApiGateway, _))
+
+      val methodResources: Seq[TerraformResource] =
+        gateway.methods
+          .flatMap { m =>
+            val resourceId =
+              pathResources
+                .find { case (id, _) => m.paths.lastOption.map(_.id).getOrElse(TapirApiGateway) == id }
+                .map { case (_, res) => res.name }
+                .getOrElse(TapirApiGateway)
+            Seq(
+              AwsApiGatewayMethod(m.name, resourceId, m.httpMethod.method, m.requestParameters),
+              AwsApiGatewayIntegration(m.name)
+            )
+          }
 
       val output = Json.fromFields(
         Seq(
@@ -61,8 +61,15 @@ object AwsTerraformEncoders {
               AwsIamRole(options.assumeRolePolicy.noSpaces).json(),
               AwsLambdaPermission.json(),
               AwsApiGatewayRestApi(options.apiGatewayName, options.apiGatewayDescription).json(),
-              AwsApiGatewayDeployment(endpointResources.collect { case i @ AwsApiGatewayIntegration(_) => i.name }).json()
-            ) ++ endpointResources.map(_.json())
+              AwsApiGatewayDeployment(methodResources.collect { case i @ AwsApiGatewayIntegration(_) => i.name }).json()
+            )
+              ++ pathResources
+                .groupBy { case (_, res) => res.name }
+                .flatMap { case (_, res) => res.headOption }
+                .toSeq
+                .sortBy { case (_, res) => res.name.length }
+                .map { case (_, res) => res.json() }
+              ++ methodResources.map(_.json())
           ),
           "output" -> output
         )

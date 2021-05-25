@@ -11,10 +11,7 @@ import java.nio.file.{Files, Paths}
 object TerraformExample extends App {
 
   val eps = List(
-    endpoint.in("accounts" / path[String]("id") / "transactions"),
-    endpoint.in("accounts" / path[String]("id") / "history"),
-    endpoint.in("accounts" / path[String]("id") / "credit"),
-    endpoint.in("accounts" / path[String]("id") / "info")
+    endpoint
   )
 
   implicit val options: AwsTerraformOptions = AwsTerraformOptions(

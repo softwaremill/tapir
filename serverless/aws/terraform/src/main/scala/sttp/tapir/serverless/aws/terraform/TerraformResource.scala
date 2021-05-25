@@ -123,7 +123,10 @@ case class AwsApiGatewayMethod(
     Json.fromFields(
       Seq(
         "rest_api_id" -> Json.fromString(s"$${aws_api_gateway_rest_api.$TapirApiGateway.id}"),
-        "resource_id" -> Json.fromString(s"$${aws_api_gateway_resource.$resourceId.id}"),
+        "resource_id" -> Json.fromString(
+          if (resourceId == TapirApiGateway) s"$${aws_api_gateway_rest_api.$TapirApiGateway.root_resource_id}"
+          else s"$${aws_api_gateway_resource.$resourceId.id}"
+        ),
         "http_method" -> Json.fromString(httpMethod),
         "authorization" -> Json.fromString("NONE")
       ) ++ (if (requestParameters.nonEmpty)
