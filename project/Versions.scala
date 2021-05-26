@@ -13,7 +13,7 @@ object Versions {
   val playJson = "2.9.2"
   val finatra = "21.2.0"
   val catbird = "21.2.0"
-  val json4s = "3.6.11"
+  val json4s = "4.0.0"
   val sprayJson = "1.3.6"
   val scalaCheck = "1.15.4"
   val scalaTest = "3.2.9"
