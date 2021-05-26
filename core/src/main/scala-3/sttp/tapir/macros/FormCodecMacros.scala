@@ -82,7 +82,7 @@ object FormCodecMacros {
     '{
       Codec.formSeqCodecUtf8
         .mapDecode($decodeExpr)($encodeExpr)
-        //TODO .schema(${Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${summon[Type[T]]}]."))})
+        .schema(${Expr.summon[Schema[T]].getOrElse(report.throwError(s"Cannot find a given Schema[${summon[Type[T]]}]."))})
     }
   }
 }
