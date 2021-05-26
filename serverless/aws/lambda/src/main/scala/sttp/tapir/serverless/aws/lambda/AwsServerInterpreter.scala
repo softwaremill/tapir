@@ -1,6 +1,5 @@
 package sttp.tapir.serverless.aws.lambda
 
-import cats.data.Kleisli
 import cats.effect.Sync
 import sttp.model.StatusCode
 import sttp.monad.syntax._
@@ -28,7 +27,7 @@ trait AwsServerInterpreter {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
     implicit val bodyListener: BodyListener[F, String] = new AwsBodyListener[F]
 
-    Kleisli { request: AwsRequest =>
+    { request: AwsRequest =>
       implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
       implicit val bodyListener: BodyListener[F, String] = new AwsBodyListener[F]
       val serverRequest = new AwsServerRequest(request)

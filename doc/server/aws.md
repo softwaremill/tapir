@@ -1,24 +1,66 @@
 # Running behind AWS API Gateway
 
-[AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) provides a proxy integration
-with [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html) which allows
-you to implement API routes using Lambda functions. [AWS SAM](https://aws.amazon.com/serverless/sam/) on the other hand provides a configuration mechanism
-for binding HTTP APIs to Lambda functions.
+[AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) provides a proxy
+integration
+with [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html)
+which allows you to implement API routes using Lambda functions. On the other hand tools
+like [AWS SAM](https://aws.amazon.com/serverless/sam/) and [Terraform](https://www.terraform.io/) provides a
+configuration mechanism for binding AWS Api Gateway routes to Lambda functions and automating cloud deployments.
 
-This concept of serverless API has been adapted to Tapir in form of two components.
+This concept of serverless API has been adapted to Tapir in form of three components.
 
-The first one is `AwsServerInterpreter` which routes AWS API Gateway requests to responses just as any other server interpreter does.
-It should be used in your lambda function code.
+The first one is `AwsServerInterpreter` which routes AWS API Gateway requests to responses just as any other server
+interpreter does. It should be used in your lambda function code.
+
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "@VERSION@"
 ```
 
-The second one is `AwsSamInterpreter` which interprets Tapir `Endpoints` into AWS SAM configuration file.
-It should be used to configure your API Gateway.
+The remaining two are `AwsSamInterpreter` which interprets Tapir `Endpoints` into AWS SAM template file
+and `AwsTerraformInterpreter` which interprets `Endpoints` into terraform configuration file. One of them should be used
+to configure your API Gateway.
+
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "@VERSION@"
 ```
 
-In our [GitHub repository](https://github.com/softwaremill/tapir/tree/master/serverless/aws/examples/src/main/scala/sttp/tapir/serverless/aws/examples/LambdaApiExample) 
-you'll find a runnable example which uses [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
-to run a "hello world" serverless application locally. 
+## Examples
+
+In
+our [GitHub repository](https://github.com/softwaremill/tapir/tree/master/serverless/aws/examples/src/main/scala/sttp/tapir/serverless/aws/examples)
+you'll find a `LambdaApiExample` handler which uses `AwsServerInterpreter` to route a hello endpoint along
+with `SamTemplateExample` and `TerraformConfigExample` which interpret endpoints to SAM/Terraform configuration. Go
+ahead and clone tapir project and select `project awsExamples` from sbt shell.
+
+Make sure you
+have [AWS command line tools installed](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
+
+### SAM
+
+To try it out using SAM template you don't need an AWS account.
+
+* install [AWS SAM command line tool](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-command-reference.html)
+* run `assembly` task and `runMain sttp.tapir.serverless.aws.examples.SamTemplateExample`
+* open a terminal and in tapir root directory run `sam local start-api --warm-containers EAGER`
+
+That will create `template.yaml` and start up AWS Api Gateway locally. Hello endpoint will be available
+under `curl http://127.0.0.1:3000/api/hello`. First invocation will take a while but subsequent ones will be faster
+since the created container will be reused.
+
+### Terraform
+
+To run the example using terraform you will need an AWS account, and an S3 bucket.
+
+* install [Terraform](https://learn.hashicorp.com/tutorials/terraform/install-cli)
+* run `assembly` task
+* open a terminal in `tapir/serverless/aws/examples/target/jvm-2.13` directory. That's where the fat jar is saved. You
+  need to upload it into your s3 bucket. Using command line
+  tools: `aws s3 cp tapir-aws-examples.jar s3://{your-bucket}/{your-key}`.
+* Run `runMain sttp.tapir.serverless.aws.examples.TerraformConfigExample {your-aws-region} {your-bucket} {your-key}`
+* open terminal in tapir root directory, run `terraform init` and `terraform apply`
+
+That will create `api_gateway.tf.json` configuration and deploy Api Gateway and lambda function to AWS. Terraform will
+output the url of the created API Gateway which you can call followed by `/api/hello` path.
+
+To destroy all the created resources run `terraform destroy`.

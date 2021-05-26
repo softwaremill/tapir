@@ -13,17 +13,18 @@ import scala.concurrent.duration.DurationInt
 /** Before running the actual example we need to interpret our api as Terraform resources */
 object TerraformConfigExample extends App {
 
+  if (args.length != 3) sys.error("Usage: [aws region] [s3 bucket] [s3 key]")
+
+  val region = args(0)
+  val bucket = args(1)
+  val key = args(2)
+
   implicit val terraformOptions: AwsTerraformOptions = AwsTerraformOptions(
-    "eu-central-1",
+    region,
     functionName = "PersonsFunction",
     apiGatewayName = "PersonsApiGateway",
     autoDeploy = true,
-    functionSource = S3Source(
-      "terraform-example-kubinio",
-      "v1.0.0/tapir-aws-examples.jar",
-      "java11",
-      "sttp.tapir.serverless.aws.examples.LambdaApiExample::handleRequest"
-    ),
+    functionSource = S3Source(bucket, key, "java11", "sttp.tapir.serverless.aws.examples.LambdaApiExample::handleRequest"),
     timeout = 30.seconds,
     memorySize = 1024
   )
@@ -32,5 +33,5 @@ object TerraformConfigExample extends App {
 
   val apiGatewayConfig = Printer.spaces2.print(apiGateway.asJson)
 
-  Files.write(Paths.get("serverless/aws/terraform/example/api_gateway.tf.json"), apiGatewayConfig.getBytes(UTF_8))
+  Files.write(Paths.get("api_gateway.tf.json"), apiGatewayConfig.getBytes(UTF_8))
 }

@@ -14,6 +14,5 @@ case class AwsTerraformApiGateway(routes: Seq[AwsApiGatewayRoute]) {
 case class AwsApiGatewayRoute(
     name: String,
     path: String,
-    httpMethod: Method,
-    requestParameters: Seq[(String, String)]
+    httpMethod: Method
 )

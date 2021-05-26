@@ -24,7 +24,7 @@ object LambdaHandler extends RequestStreamHandler {
 
     (decode[AwsRequest](json) match {
       case Right(awsRequest) => route(awsRequest)
-      case Left(_)           => IO.pure(AwsResponse(isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, Map.empty, ""))
+      case Left(_)           => IO.pure(AwsResponse(Nil, isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, ""))
     }).map { awsRes =>
       val writer = new BufferedWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8))
       writer.write(Printer.noSpaces.print(awsRes.asJson))

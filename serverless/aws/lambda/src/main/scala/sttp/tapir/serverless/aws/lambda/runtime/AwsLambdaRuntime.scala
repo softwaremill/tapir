@@ -20,8 +20,10 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 
 // loosely based on https://github.com/carpe/scalambda/blob/master/native/src/main/scala/io/carpe/scalambda/native/ScalambdaIO.scala
-abstract class AwsLambdaRuntime[F[_]: ConcurrentEffect: ContextShift] extends StrictLogging {
+abstract class AwsLambdaRuntime[F[_]] extends StrictLogging {
   implicit def executionContext: ExecutionContext
+  implicit def contextShift: ContextShift[F]
+  implicit def concurrentEffect: ConcurrentEffect[F]
 
   implicit def serverOptions: AwsServerOptions[F] = AwsServerOptions.customInterceptors()
   def endpoints: Iterable[ServerEndpoint[_, _, _, Any, F]]

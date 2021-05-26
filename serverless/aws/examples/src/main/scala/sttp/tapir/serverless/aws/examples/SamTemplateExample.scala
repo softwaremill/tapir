@@ -9,6 +9,10 @@ import java.nio.file.{Files, Paths}
 /** Before running the actual example we need to interpret our api as SAM template */
 object SamTemplateExample extends App {
 
+  val dir: String = sys.env("$PWD")
+
+  println(dir)
+
   val jarPath = Paths.get("serverless/aws/examples/target/jvm-2.13/tapir-aws-examples.jar").toAbsolutePath.toString
 
   implicit val samOptions: AwsSamOptions = AwsSamOptions(

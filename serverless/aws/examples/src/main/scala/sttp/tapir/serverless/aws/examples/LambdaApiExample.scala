@@ -15,12 +15,6 @@ import sttp.tapir.serverless.aws.lambda._
 import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
 import java.nio.charset.StandardCharsets.UTF_8
 
-/** Example assumes that you have `sam local` installed on your OS. Installation is described here:
-  * https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html
-  *
-  * Select `awsExamples` project from sbt shell and run `assembly` task to build a fat jar with lambda handler.
-  * Then `runSamExample` to generate `template.yaml` and start up `sam local`.
-  */
 object LambdaApiExample extends RequestStreamHandler {
 
   val helloEndpoint: ServerEndpoint[Unit, Unit, String, Any, IO] = endpoint.get

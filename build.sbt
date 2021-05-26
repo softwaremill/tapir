@@ -898,8 +898,6 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, cats, circeJson, awsSam, sttpStubServer % "test", tests % "test", serverTests)
 
-lazy val sam = Process("sam local start-api --warm-containers EAGER").run()
-
 // integration tests for lambda interpreter
 // it's a separate project since it needs a fat jar with lambda code which cannot be build from tests sources
 // runs sam local cmd line tool to start AWS Api Gateway with lambda proxy
@@ -915,25 +913,30 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
       case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
       case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
     },
-    Test / test := {
-      if (scalaVersion.value == scala2_13)
-        (Test / test)
-          .dependsOn((Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate"))
-          .dependsOn(assembly)
-          .value
-      else {} // skip tests (run them only once for scala 2.13)
-    },
-    Test / testOptions += Tests.Setup(() => {
+    Test / test := (Test / test)
+      .dependsOn((Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate"))
+      .dependsOn(assembly)
+      .value,
+    Test / testOptions ++= {
       val log = sLog.value
-      val samReady = PollingUtils.poll(30.seconds, 1.second) {
-        sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/health"))
-      }
-      if (!samReady) {
-        sam.destroy()
-        log.err("Failed to start sam local-api")
-      }
-    }),
-    Test / testOptions += Tests.Cleanup(() => sam.destroy()),
+      lazy val sam = Process("sam local start-api --warm-containers EAGER").run()
+      Seq(
+        Tests.Setup(() => {
+          val samReady = PollingUtils.poll(30.seconds, 1.second) {
+            sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/health"))
+          }
+          if (!samReady) {
+            sam.destroy()
+            sam.exitValue()
+            log.error("failed to start sam local within 30 seconds")
+          }
+        }),
+        Tests.Cleanup(() => {
+          sam.destroy()
+          sam.exitValue()
+        })
+      )
+    },
     Test / parallelExecution := false
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -965,8 +968,6 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
   .jvmPlatform(scalaVersions = allScalaVersions)
   .dependsOn(core, tests % Test)
 
-lazy val runSamExample = taskKey[Unit]("runs aws lambda example on sam local")
-
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
   .settings(commonJvmSettings)
   .settings(
@@ -979,22 +980,6 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
       case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
       case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
       case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
-    },
-    runSamExample := {
-      val log = sLog.value
-      (Compile / runMain).toTask(" sttp.tapir.serverless.aws.examples.SamTemplateExample$").value
-      val samReady = PollingUtils.poll(20.seconds, 1.second) {
-        sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/api/hello"))
-      }
-      if (!samReady) {
-        sam.destroy()
-        log.err("Failed to start sam local-api, have your run sbt assembly?")
-      } else {
-        log.info("Lambda function is available under http://127.0.0.1:3000/api/hello ...")
-        log.info("Press any key to exit ...")
-        scala.io.StdIn.readLine()
-        sam.destroy()
-      }
     }
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
