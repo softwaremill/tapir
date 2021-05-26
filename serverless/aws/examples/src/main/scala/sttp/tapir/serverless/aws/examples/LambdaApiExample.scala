@@ -10,7 +10,6 @@ import io.circe.syntax._
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.serverless.aws.examples.LambdaApiExample.route
 import sttp.tapir.serverless.aws.lambda._
 
 import java.io.{BufferedWriter, InputStream, OutputStream, OutputStreamWriter}
@@ -22,7 +21,16 @@ import java.nio.charset.StandardCharsets.UTF_8
   * Select `awsExamples` project from sbt shell and run `assembly` task to build a fat jar with lambda handler.
   * Then `runSamExample` to generate `template.yaml` and start up `sam local`.
   */
-class LambdaApiExample extends RequestStreamHandler {
+object LambdaApiExample extends RequestStreamHandler {
+
+  val helloEndpoint: ServerEndpoint[Unit, Unit, String, Any, IO] = endpoint.get
+    .in("api" / "hello")
+    .out(stringBody)
+    .serverLogic { _ => IO.pure(s"Hello!".asRight[Unit]) }
+
+  implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
+
+  val route: Route[IO] = AwsServerInterpreter.toRoute(helloEndpoint)
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 
@@ -33,7 +41,7 @@ class LambdaApiExample extends RequestStreamHandler {
     (decode[AwsRequest](json) match {
       /** Process request using interpreted route */
       case Right(awsRequest) => route(awsRequest)
-      case Left(_)           => IO.pure(AwsResponse(Nil, isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, ""))
+      case Left(ex)          => IO.pure(AwsResponse(Nil, isBase64Encoded = false, StatusCode.BadRequest.code, Map.empty, ex.getMessage))
     }).map { awsRes =>
       /** Write response to output */
       val writer = new BufferedWriter(new OutputStreamWriter(output, UTF_8))
@@ -41,16 +49,4 @@ class LambdaApiExample extends RequestStreamHandler {
       writer.flush()
     }.unsafeRunSync()
   }
-}
-
-object LambdaApiExample {
-
-  val helloEndpoint: ServerEndpoint[Unit, Unit, String, Any, IO] = endpoint.get
-    .in("api" / "hello")
-    .out(stringBody)
-    .serverLogic { _ => IO.pure("Hello!".asRight[Unit]) }
-
-  implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
-
-  val route: Route[IO] = AwsServerInterpreter.toRoute(helloEndpoint)
 }

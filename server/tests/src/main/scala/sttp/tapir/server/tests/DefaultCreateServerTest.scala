@@ -15,10 +15,10 @@ import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.tests._
 
-class CreateTestServer[F[_], +R, ROUTE, B](
+class DefaultCreateServerTest[F[_], +R, ROUTE, B](
     backend: SttpBackend[IO, R],
     interpreter: TestServerInterpreter[F, R, ROUTE, B]
-) extends TestServer[F, R, ROUTE, B]
+) extends CreateServerTest[F, R, ROUTE, B]
     with StrictLogging {
   override def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
@@ -63,11 +63,11 @@ class CreateTestServer[F[_], +R, ROUTE, B](
   }
 }
 
-object CreateTestServer {
+object DefaultCreateServerTest {
   type StreamsWithWebsockets = Fs2Streams[IO] with WebSockets
 }
 
-trait TestServer[F[_], +R, ROUTE, B] {
+trait CreateServerTest[F[_], +R, ROUTE, B] {
   def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",

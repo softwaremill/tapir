@@ -11,6 +11,8 @@ case class AwsTerraformOptions(
     functionName: String,
     apiGatewayName: String,
     apiGatewayDescription: String = "Serverless Application",
+    apiGatewayStage: String = "$default",
+    autoDeploy: Boolean = false,
     assumeRolePolicy: Json = lambdaDefaultAssumeRolePolicy,
     functionSource: FunctionSource,
     timeout: FiniteDuration = 10.seconds,

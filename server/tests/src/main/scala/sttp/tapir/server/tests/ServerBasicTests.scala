@@ -31,14 +31,14 @@ import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
 class ServerBasicTests[F[_], ROUTE, B](
-    createTestServer: TestServer[F, Any, ROUTE, B],
+    createServerTest: CreateServerTest[F, Any, ROUTE, B],
     serverInterpreter: TestServerInterpreter[F, Any, ROUTE, B],
     multipleValueHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true
 )(implicit
     m: MonadError[F]
 ) {
-  import createTestServer._
+  import createServerTest._
   import serverInterpreter._
 
   private val basicStringRequest = basicRequest.response(asStringAlways)

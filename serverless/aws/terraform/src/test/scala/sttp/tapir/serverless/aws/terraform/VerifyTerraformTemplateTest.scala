@@ -25,7 +25,6 @@ class VerifyTerraformTemplateTest extends AnyFunSuite with Matchers {
 
     val expectedJson = load("root_endpoint.json")
     val actualJson = AwsTerraformInterpreter.toTerraformConfig(List(ep)).toJson()
-    println(actualJson)
 
     expectedJson shouldBe noIndentation(actualJson)
   }

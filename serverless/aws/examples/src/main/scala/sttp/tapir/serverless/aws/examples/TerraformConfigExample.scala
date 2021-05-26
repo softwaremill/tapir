@@ -8,22 +8,24 @@ import sttp.tapir.serverless.aws.terraform.{AwsTerraformApiGateway, AwsTerraform
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.{Files, Paths}
+import scala.concurrent.duration.DurationInt
 
 /** Before running the actual example we need to interpret our api as Terraform resources */
 object TerraformConfigExample extends App {
-
-  val jarPath = Paths.get("serverless/aws/examples/target/jvm-2.13/tapir-aws-examples.jar").toAbsolutePath.toString
 
   implicit val terraformOptions: AwsTerraformOptions = AwsTerraformOptions(
     "eu-central-1",
     functionName = "PersonsFunction",
     apiGatewayName = "PersonsApiGateway",
+    autoDeploy = true,
     functionSource = S3Source(
       "terraform-example-kubinio",
       "v1.0.0/tapir-aws-examples.jar",
       "java11",
       "sttp.tapir.serverless.aws.examples.LambdaApiExample::handleRequest"
-    )
+    ),
+    timeout = 30.seconds,
+    memorySize = 1024
   )
 
   val apiGateway: AwsTerraformApiGateway = AwsTerraformInterpreter.toTerraformConfig(helloEndpoint)

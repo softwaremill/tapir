@@ -4,10 +4,10 @@ import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{
-  CreateTestServer,
+  DefaultCreateServerTest,
   ServerAuthenticationTests,
   ServerBasicTests,
-  ServerFileMutltipartTests,
+  ServerFileMultipartTests,
   ServerMetricsTest,
   backendResource
 }
@@ -24,15 +24,15 @@ class VertxServerTest extends TestSuite {
       implicit val m: FutureMonad = new FutureMonad()(ExecutionContext.global)
 
       val interpreter = new VertxTestServerInterpreter(vertx)
-      val createTestServer = new CreateTestServer(backend, interpreter)
+      val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new ServerBasicTests(createTestServer, interpreter).tests() ++
-        new ServerFileMutltipartTests(
-          createTestServer,
+      new ServerBasicTests(createServerTest, interpreter).tests() ++
+        new ServerFileMultipartTests(
+          createServerTest,
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
         ).tests() ++
-        new ServerAuthenticationTests(createTestServer).tests() ++
-        new ServerMetricsTest(createTestServer).tests()
+        new ServerAuthenticationTests(createServerTest).tests() ++
+        new ServerMetricsTest(createServerTest).tests()
     }
   }
 }

@@ -16,12 +16,12 @@ import sttp.tapir.tests.{Fruit, Test}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
 abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
-    createTestServer: TestServer[F, S with WebSockets, ROUTE, B],
+    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE, B],
     val streams: S
 )(implicit
     m: MonadError[F]
 ) {
-  import createTestServer._
+  import createServerTest._
 
   private def pureResult[T](t: T): F[T] = m.unit(t)
   def functionToPipe[A, B](f: A => B): streams.Pipe[A, B]

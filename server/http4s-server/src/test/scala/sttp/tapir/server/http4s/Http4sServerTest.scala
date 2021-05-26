@@ -14,7 +14,7 @@ import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.server.tests.{CreateTestServer, ServerAuthenticationTests, ServerBasicTests, ServerFileMutltipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
@@ -29,7 +29,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
 
     val interpreter = new Http4sTestServerInterpreter()
-    val createTestServer = new CreateTestServer(backend, interpreter)
+    val createServerTest = new DefaultCreateServerTest(backend, interpreter)
     def randomUUID = Some(UUID.randomUUID().toString)
     val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
@@ -51,7 +51,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
           }
           .unsafeRunSync()
       },
-      createTestServer.testServer(
+      createServerTest.testServer(
         endpoint.out(
           webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain]
             .apply(Fs2Streams[IO])
@@ -67,7 +67,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
           .send(backend)
           .map(_.body should matchPattern { case Right(List(WebSocketFrame.Ping(_), WebSocketFrame.Ping(_))) => })
       },
-      createTestServer.testServer(
+      createServerTest.testServer(
         endpoint.out(streamBinaryBody(Fs2Streams[IO])),
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
@@ -86,7 +86,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
             case wrongResponse           => fail(s"expected to get count of received data chunks, instead got $wrongResponse")
           })
       },
-      createTestServer.testServer(
+      createServerTest.testServer(
         endpoint.out(serverSentEventsBody[IO]),
         "Send and receive SSE"
       )((_: Unit) => IO(Right(fs2.Stream(sse1, sse2)))) { (backend, baseUri) =>
@@ -104,13 +104,13 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       }
     )
 
-    new ServerBasicTests(createTestServer, interpreter).tests() ++
-      new ServerFileMutltipartTests(createTestServer).tests() ++
-      new ServerStreamingTests(createTestServer, Fs2Streams[IO]).tests() ++
-      new ServerWebSocketTests(createTestServer, Fs2Streams[IO]) {
+    new ServerBasicTests(createServerTest, interpreter).tests() ++
+      new ServerFileMultipartTests(createServerTest).tests() ++
+      new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests() ++
+      new ServerWebSocketTests(createServerTest, Fs2Streams[IO]) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
-      new ServerAuthenticationTests(createTestServer).tests() ++
-      new ServerMetricsTest(createTestServer).tests() ++ additionalTests()
+      new ServerAuthenticationTests(createServerTest).tests() ++
+      new ServerMetricsTest(createServerTest).tests() ++ additionalTests()
   }
 }

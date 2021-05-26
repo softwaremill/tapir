@@ -15,8 +15,8 @@ import sttp.tapir.tests.{Test, _}
 import java.io.{ByteArrayInputStream, InputStream}
 import java.util.concurrent.atomic.AtomicInteger
 
-class ServerMetricsTest[F[_], ROUTE, B](createTestServer: TestServer[F, Any, ROUTE, B])(implicit m: MonadError[F]) {
-  import createTestServer._
+class ServerMetricsTest[F[_], ROUTE, B](createServerTest: CreateServerTest[F, Any, ROUTE, B])(implicit m: MonadError[F]) {
+  import createServerTest._
 
   def tests(): List[Test] = List(
     {

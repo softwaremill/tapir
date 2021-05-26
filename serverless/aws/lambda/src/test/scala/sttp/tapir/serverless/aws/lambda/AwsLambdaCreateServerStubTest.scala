@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda.tests
+package sttp.tapir.serverless.aws.lambda
 
 import cats.data.NonEmptyList
 import cats.effect.IO
@@ -12,12 +12,11 @@ import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.tests.TestServer
-import sttp.tapir.serverless.aws.lambda._
-import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaStubTestServer._
+import sttp.tapir.server.tests.CreateServerTest
+import sttp.tapir.serverless.aws.lambda.AwsLambdaCreateServerStubTest._
 import sttp.tapir.tests.Test
 
-class AwsLambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
+class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO], String] {
 
   override def testServer[I, E, O](
       e: Endpoint[I, E, O, Any],
@@ -62,7 +61,7 @@ class AwsLambdaStubTestServer extends TestServer[IO, Any, Route[IO], String] {
     }
 }
 
-object AwsLambdaStubTestServer {
+object AwsLambdaCreateServerStubTest {
   implicit val catsMonadIO: CatsMonadError[IO] = new CatsMonadError[IO]
 
   def sttpToAwsRequest(request: Request[_, _]): AwsRequest = {

@@ -11,9 +11,9 @@ import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.tests.Test
 
-class ServerAuthenticationTests[F[_], S, ROUTE, B](createTestServer: TestServer[F, S, ROUTE, B])(implicit m: MonadError[F])
+class ServerAuthenticationTests[F[_], S, ROUTE, B](createServerTest: CreateServerTest[F, S, ROUTE, B])(implicit m: MonadError[F])
     extends Matchers {
-  import createTestServer._
+  import createServerTest._
   private val Realm = "realm"
 
   private val base = endpoint.post.in("secret" / path[Long]("id")).in(query[String]("q"))

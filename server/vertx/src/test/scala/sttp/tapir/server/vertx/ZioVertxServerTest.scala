@@ -6,10 +6,10 @@ import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests.{
-  CreateTestServer,
+  DefaultCreateServerTest,
   ServerAuthenticationTests,
   ServerBasicTests,
-  ServerFileMutltipartTests,
+  ServerFileMultipartTests,
   ServerStreamingTests,
   backendResource
 }
@@ -28,16 +28,16 @@ class ZioVertxServerTest extends TestSuite {
     vertxResource.map { implicit vertx =>
       implicit val m: MonadError[Task] = VertxZioServerInterpreter.monadError
       val interpreter = new ZioVertxTestServerInterpreter(vertx)
-      val createTestServer =
-        new CreateTestServer(backend, interpreter).asInstanceOf[CreateTestServer[Task, ZioStreams, Router => Route, RoutingContext => Unit]]
+      val createServerTest =
+        new DefaultCreateServerTest(backend, interpreter).asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, Router => Route, RoutingContext => Unit]]
 
-      new ServerBasicTests(createTestServer, interpreter).tests() ++
-        new ServerFileMutltipartTests(
-          createTestServer,
+      new ServerBasicTests(createServerTest, interpreter).tests() ++
+        new ServerFileMultipartTests(
+          createServerTest,
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
         ).tests() ++
-        new ServerAuthenticationTests(createTestServer).tests() ++
-        new ServerStreamingTests(createTestServer, ZioStreams).tests()
+        new ServerAuthenticationTests(createServerTest).tests() ++
+        new ServerStreamingTests(createServerTest, ZioStreams).tests()
     }
   }
 }

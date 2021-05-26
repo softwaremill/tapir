@@ -20,11 +20,11 @@ import java.io.File
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class ServerFileMutltipartTests[F[_], ROUTE, B](
-    createTestServer: TestServer[F, Any, ROUTE, B],
+class ServerFileMultipartTests[F[_], ROUTE, B](
+    createServerTest: CreateServerTest[F, Any, ROUTE, B],
     multipartInlineHeaderSupport: Boolean = true
 )(implicit m: MonadError[F]) {
-  import createTestServer._
+  import createServerTest._
 
   private val basicStringRequest = basicRequest.response(asStringAlways)
   private def pureResult[T](t: T): F[T] = m.unit(t)

@@ -896,15 +896,18 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, cats, circeJson, awsSam)
+  .dependsOn(core, cats, circeJson, awsSam, sttpStubServer % "test", tests % "test", serverTests)
 
 lazy val sam = Process("sam local start-api --warm-containers EAGER").run()
 
+// integration tests for lambda interpreter
+// it's a separate project since it needs a fat jar with lambda code which cannot be build from tests sources
+// runs sam local cmd line tool to start AWS Api Gateway with lambda proxy
 lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/lambda-tests"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-aws-lambda-tests",
-    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.lambdaInterface,
+    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface,
     assembly / assemblyJarName := "tapir-aws-lambda-tests.jar",
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {
@@ -912,10 +915,14 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
       case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
       case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
     },
-    Test / test := (Test / test)
-      .dependsOn((Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate"))
-      .dependsOn(assembly)
-      .value,
+    Test / test := {
+      if (scalaVersion.value == scala2_13)
+        (Test / test)
+          .dependsOn((Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate"))
+          .dependsOn(assembly)
+          .value
+      else {} // skip tests (run them only once for scala 2.13)
+    },
     Test / testOptions += Tests.Setup(() => {
       val log = sLog.value
       val samReady = PollingUtils.poll(30.seconds, 1.second) {
@@ -930,7 +937,7 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     Test / parallelExecution := false
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
-  .dependsOn(core, cats, circeJson, awsLambda, awsSam, sttpStubServer, tests, serverTests)
+  .dependsOn(core, cats, circeJson, awsLambda, awsSam, tests)
 
 lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
   .settings(commonJvmSettings)
@@ -963,11 +970,16 @@ lazy val runSamExample = taskKey[Unit]("runs aws lambda example on sam local")
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
   .settings(commonJvmSettings)
   .settings(
-    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.lambdaInterface
+    libraryDependencies += "com.amazonaws" % "aws-lambda-java-runtime-interface-client" % Versions.awsLambdaInterface
   )
   .settings(
     name := "tapir-aws-examples",
     assembly / assemblyJarName := "tapir-aws-examples.jar",
+    assembly / assemblyMergeStrategy := {
+      case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
+      case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
+      case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
+    },
     runSamExample := {
       val log = sLog.value
       (Compile / runMain).toTask(" sttp.tapir.serverless.aws.examples.SamTemplateExample$").value

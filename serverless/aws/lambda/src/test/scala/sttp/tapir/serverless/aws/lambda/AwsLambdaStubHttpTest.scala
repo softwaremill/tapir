@@ -1,4 +1,4 @@
-package sttp.tapir.serverless.aws.lambda.tests
+package sttp.tapir.serverless.aws.lambda
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
@@ -7,8 +7,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.{ServerBasicTests, ServerMetricsTest, TestServerInterpreter}
-import sttp.tapir.serverless.aws.lambda.tests.AwsLambdaStubTestServer._
-import sttp.tapir.serverless.aws.lambda.{AwsServerInterpreter, AwsServerOptions, Route}
+import sttp.tapir.serverless.aws.lambda.AwsLambdaCreateServerStubTest.catsMonadIO
 import sttp.tapir.tests.{Port, Test, TestSuite}
 
 import scala.reflect.ClassTag
@@ -16,7 +15,7 @@ import scala.reflect.ClassTag
 class AwsLambdaStubHttpTest extends TestSuite {
   override def tests: Resource[IO, List[Test]] = Resource.eval(
     IO.pure {
-      val createTestServer = new AwsLambdaStubTestServer
+      val createTestServer = new AwsLambdaCreateServerStubTest
       new ServerBasicTests(createTestServer, AwsLambdaStubHttpTest.testServerInterpreter)(catsMonadIO).tests() ++
         new ServerMetricsTest(createTestServer).tests()
     }

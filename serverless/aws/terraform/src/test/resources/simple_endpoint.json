@@ -43,73 +43,63 @@
           "action" : "lambda:InvokeFunction",
           "function_name" : "${aws_lambda_function.lambda.function_name}",
           "principal" : "apigateway.amazonaws.com",
-          "source_arn" : "${aws_api_gateway_rest_api.TapirApiGateway.execution_arn}/*/*"
+          "source_arn" : "${aws_apigatewayv2_api.TapirApiGateway.execution_arn}/*/*"
         }
       }
     },
     {
-      "aws_api_gateway_rest_api" : {
+      "aws_apigatewayv2_api" : {
         "TapirApiGateway" : {
           "name" : "TapirApiGateway",
-          "description" : "Serverless Application"
+          "description" : "Serverless Application",
+          "protocol_type" : "HTTP"
         }
       }
     },
     {
-      "aws_api_gateway_deployment" : {
+      "aws_apigatewayv2_deployment" : {
         "TapirApiGateway" : {
           "depends_on" : [
-            "aws_api_gateway_integration.GetHelloWorld"
+            "aws_apigatewayv2_route.GetHelloWorld"
           ],
-          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
-          "stage_name" : "test"
+          "api_id" : "${aws_apigatewayv2_api.TapirApiGateway.id}"
         }
       }
     },
     {
-      "aws_api_gateway_resource" : {
-        "hello" : {
-          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
-          "parent_id" : "${aws_api_gateway_rest_api.TapirApiGateway.root_resource_id}",
-          "path_part" : "hello"
+      "aws_apigatewayv2_stage" : {
+        "TapirApiGateway" : {
+          "api_id" : "${aws_apigatewayv2_api.TapirApiGateway.id}",
+          "name" : "$default",
+          "auto_deploy" : false
         }
       }
     },
     {
-      "aws_api_gateway_resource" : {
-        "hello-world" : {
-          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
-          "parent_id" : "${aws_api_gateway_resource.hello.id}",
-          "path_part" : "world"
-        }
-      }
-    },
-    {
-      "aws_api_gateway_method" : {
+      "aws_apigatewayv2_integration" : {
         "GetHelloWorld" : {
-          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
-          "resource_id" : "${aws_api_gateway_resource.hello-world.id}",
-          "http_method" : "GET",
-          "authorization" : "NONE"
+          "api_id" : "${aws_apigatewayv2_api.TapirApiGateway.id}",
+          "integration_type" : "AWS_PROXY",
+          "integration_method" : "POST",
+          "integration_uri" : "${aws_lambda_function.lambda.invoke_arn}",
+          "payload_format_version" : "2.0"
         }
       }
     },
     {
-      "aws_api_gateway_integration" : {
+      "aws_apigatewayv2_route" : {
         "GetHelloWorld" : {
-          "rest_api_id" : "${aws_api_gateway_rest_api.TapirApiGateway.id}",
-          "resource_id" : "${aws_api_gateway_method.GetHelloWorld.resource_id}",
-          "http_method" : "${aws_api_gateway_method.GetHelloWorld.http_method}",
-          "integration_http_method" : "POST",
-          "type" : "AWS_PROXY",
-          "uri" : "${aws_lambda_function.lambda.invoke_arn}"
+          "api_id" : "${aws_apigatewayv2_api.TapirApiGateway.id}",
+          "route_key" : "GET /hello/world",
+          "authorization_type" : "NONE",
+          "target" : "integrations/${aws_apigatewayv2_integration.GetHelloWorld.id}"
         }
       }
     }
   ],
   "output" : {
     "base_url" : {
-      "value" : "${aws_api_gateway_deployment.TapirApiGateway.invoke_url}"
+      "value" : "${aws_apigatewayv2_api.TapirApiGateway.api_endpoint}"
     }
   }
 }
