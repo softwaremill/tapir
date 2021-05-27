@@ -30,7 +30,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     val se: ServerEndpoint[I, E, O, Any, IO] = e.serverLogic(fn)
-    val route: Route[IO] = AwsServerInterpreter.toRoute(se)
+    val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(se)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
   }
@@ -39,7 +39,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
       runTest: (SttpBackend[IO, Any], Uri) => IO[Assertion]
   ): Test = {
     implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
-    val route: Route[IO] = AwsServerInterpreter.toRoute(e)
+    val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
   }

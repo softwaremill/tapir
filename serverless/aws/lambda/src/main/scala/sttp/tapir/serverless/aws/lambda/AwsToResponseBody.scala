@@ -37,7 +37,11 @@ private[lambda] class AwsToResponseBody[F[_]](implicit options: AwsServerOptions
 
   private def safeRead(byteBuffer: ByteBuffer): Array[Byte] = {
     if (byteBuffer.hasArray) {
-      byteBuffer.array()
+      if (byteBuffer.array().length != byteBuffer.limit()) {
+        val array = new Array[Byte](byteBuffer.limit())
+        byteBuffer.get(array, 0, byteBuffer.limit())
+        array
+      } else byteBuffer.array()
     } else {
       val array = new Array[Byte](byteBuffer.remaining())
       byteBuffer.get(array)

@@ -10,7 +10,7 @@ import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.reflect.ClassTag
 
-trait AwsServerInterpreter {
+trait AwsCatsEffectServerInterpreter {
   def toRoute[I, E, O, F[_]](e: Endpoint[I, E, O, Any])(
       logic: I => F[Either[E, O]]
   )(implicit serverOptions: AwsServerOptions[F], sync: Sync[F]): Route[F] = toRoute(e.serverLogic(logic))
@@ -49,4 +49,4 @@ trait AwsServerInterpreter {
   }
 }
 
-object AwsServerInterpreter extends AwsServerInterpreter
+object AwsCatsEffectServerInterpreter extends AwsCatsEffectServerInterpreter

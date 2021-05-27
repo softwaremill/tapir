@@ -9,10 +9,7 @@ case class SamTemplate(
     Resources: Map[String, Resource],
     Outputs: Map[String, Output]
 ) {
-  def toYaml: String = {
-    val template: SamTemplate = this
-    Printer(dropNullKeys = true, preserveOrder = true, stringStyle = Printer.StringStyle.Plain).pretty(template.asJson)
-  }
+  def toYaml: String = Printer(dropNullKeys = true, preserveOrder = true, stringStyle = Printer.StringStyle.Plain).pretty(this.asJson)
 }
 
 sealed trait Resource {

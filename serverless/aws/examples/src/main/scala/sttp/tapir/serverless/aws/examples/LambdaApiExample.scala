@@ -24,7 +24,7 @@ object LambdaApiExample extends RequestStreamHandler {
 
   implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
 
-  val route: Route[IO] = AwsServerInterpreter.toRoute(helloEndpoint)
+  val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(helloEndpoint)
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 
