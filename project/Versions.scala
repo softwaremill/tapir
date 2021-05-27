@@ -21,7 +21,7 @@ object Versions {
   val refined = "0.9.25"
   val enumeratum = "1.6.1"
   val zio = "1.0.8"
-  val zioInteropCats = "3.1.1.0"
+  val zioInteropCats = "2.5.1.0"
   val zioJson = "0.1.5"
   val playClient = "2.1.3"
   val playServer = "2.8.7"
