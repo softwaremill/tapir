@@ -4,7 +4,7 @@ import com.softwaremill.UpdateVersionInDocs
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
-val scala2_12 = "2.12.13"
+val scala2_12 = "2.12.14"
 val scala2_13 = "2.13.6"
 
 val allScalaVersions = List(scala2_12, scala2_13)
