@@ -59,6 +59,8 @@ private[openapi] class EndpointToOperationResponse(
       Some(Response(description, headers.toListMap, content))
     } else if (outputs.nonEmpty) {
       Some(Response(description))
+    } else if (sc.nonEmpty) {
+      Some(Response.Empty)
     } else {
       None
     }
