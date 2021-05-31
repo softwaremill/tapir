@@ -7,22 +7,23 @@ import com.twitter.util.Future
 import org.apache.commons.fileupload.FileItemHeaders
 import sttp.capabilities.Streams
 import sttp.model.{Header, Part}
-import sttp.tapir.{RawBodyType, RawPart}
 import sttp.tapir.internal.NoStreams
-import sttp.tapir.server.interpreter.RequestBody
+import sttp.tapir.server.interpreter.{RawValue, RequestBody}
+import sttp.tapir.{RawBodyType, RawPart}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
-import scala.collection.immutable.Seq
 import scala.collection.JavaConverters._
+import scala.collection.immutable.Seq
 
 class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) extends RequestBody[Future, Nothing] {
   override val streams: Streams[Nothing] = NoStreams
 
-  override def toRaw[R](bodyType: RawBodyType[R]): Future[R] = toRaw(bodyType, request.content, request.charset.map(Charset.forName))
+  override def toRaw[R](bodyType: RawBodyType[R]): Future[RawValue[R]] =
+    toRaw(bodyType, request.content, request.charset.map(Charset.forName))
 
-  private def toRaw[R](bodyType: RawBodyType[R], body: Buf, charset: Option[Charset]): Future[R] = {
+  private def toRaw[R](bodyType: RawBodyType[R], body: Buf, charset: Option[Charset]): Future[RawValue[R]] = {
     def asByteArray: Array[Byte] = {
       val array = new Array[Byte](body.length)
       body.write(array, 0)
@@ -37,12 +38,13 @@ class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) 
     }
 
     bodyType match {
-      case RawBodyType.StringBody(defaultCharset) => Future.value[R](new String(asByteArray, charset.getOrElse(defaultCharset)))
-      case RawBodyType.ByteArrayBody              => Future.value[R](asByteArray)
-      case RawBodyType.ByteBufferBody             => Future.value[R](asByteBuffer)
-      case RawBodyType.InputStreamBody            => Future.value[R](new ByteArrayInputStream(asByteArray))
-      case RawBodyType.FileBody                   => serverOptions.createFile(asByteArray)
-      case m: RawBodyType.MultipartBody           => multiPartRequestToRawBody(request, m)
+      case RawBodyType.StringBody(defaultCharset) =>
+        Future.value[R](new String(asByteArray, charset.getOrElse(defaultCharset))).map(RawValue(_))
+      case RawBodyType.ByteArrayBody    => Future.value[R](asByteArray).map(RawValue(_))
+      case RawBodyType.ByteBufferBody   => Future.value[R](asByteBuffer).map(RawValue(_))
+      case RawBodyType.InputStreamBody  => Future.value[R](new ByteArrayInputStream(asByteArray)).map(RawValue(_))
+      case RawBodyType.FileBody         => serverOptions.createFile(asByteArray).map(file => RawValue(file, Seq(file)))
+      case m: RawBodyType.MultipartBody => multiPartRequestToRawBody(request, m).map(RawValue.fromParts)
     }
   }
 
@@ -94,8 +96,12 @@ class FinatraRequestBody(request: Request, serverOptions: FinatraServerOptions) 
               futureBody = toRaw(partType, Buf.ByteArray.Owned(multiPartItem.data), charset)
             } yield futureBody
               .map(body =>
-                Part(name, body, otherDispositionParams = dispositionParams - "name", headers = fileItemHeaders(multiPartItem.headers))
-                  .asInstanceOf[RawPart]
+                Part(
+                  name,
+                  body.value,
+                  otherDispositionParams = dispositionParams - "name",
+                  headers = fileItemHeaders(multiPartItem.headers)
+                )
               )
           }
           .toSeq

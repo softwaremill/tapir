@@ -230,7 +230,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `T` are covered).
     */
   def oneOf[T](firstCase: OneOfMapping[_ <: T], otherCases: OneOfMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
-    EndpointOutput.OneOf[T, T](firstCase +: otherCases, Mapping.id)
+    EndpointOutput.OneOf[T, T](firstCase +: otherCases.toList, Mapping.id)
 
   /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the runtime class of `T`.
@@ -346,7 +346,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
       emptyInput,
       EndpointOutput.Void(),
       emptyOutput,
-      EndpointInfo(None, None, None, Vector.empty, deprecated = false)
+      EndpointInfo(None, None, None, Vector.empty, deprecated = false, Vector.empty)
     )
 
   val endpoint: Endpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)

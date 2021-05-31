@@ -1,46 +1,62 @@
 package sttp.tapir.server.stub
 
+import sttp.capabilities.Streams
 import sttp.client3.testing._
 import sttp.client3.{Identity, Request, Response}
 import sttp.model._
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
-import sttp.tapir.model.{ConnectionInfo, ServerRequest}
-import sttp.tapir.server.interpreter._
+import sttp.tapir.model.{ServerRequest, ServerResponse}
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.Interceptor
+import sttp.tapir.server.interpreter.{RequestBody, _}
+import sttp.tapir.server.stub.SttpStubServer.{requestBody, toResponseBody}
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointOutput, RawBodyType, WebSocketBodyOutput}
 
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
+import scala.util.{Success, Try}
 
 trait SttpStubServer {
 
   implicit class RichSttpBackendStub[F[_], R](val stub: SttpBackendStub[F, R]) {
-    def whenRequestMatchesEndpoint[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[_, E, O] = {
-      new TypeAwareWhenRequest(
-        endpoint,
-        new stub.WhenRequest(req =>
-          DecodeBasicInputs(endpoint.input, new SttpRequest(req)) match {
-            case _: DecodeBasicInputsResult.Failure => false
-            case _: DecodeBasicInputsResult.Values  => true
-          }
-        )
+    def whenRequestMatchesEndpoint[E, O](endpoint: Endpoint[_, E, O, _]): TypeAwareWhenRequest[_, E, O] =
+      new TypeAwareWhenRequest(endpoint, _whenRequestMatches(endpoint))
+
+    def whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[I, E, O] =
+      new TypeAwareWhenRequest(endpoint, _whenInputMatches(endpoint)(inputMatcher))
+
+    def whenRequestMatchesEndpointThenLogic[I, E, O](
+        endpoint: ServerEndpoint[I, E, O, R, F],
+        interceptors: List[Interceptor[F, Any]] = Nil
+    ): SttpBackendStub[F, R] =
+      _whenRequestMatches(endpoint.endpoint).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
+
+    def whenInputMatchesThenLogic[I, E, O](endpoint: ServerEndpoint[I, E, O, R, F], interceptors: List[Interceptor[F, Any]] = Nil)(
+        inputMatcher: I => Boolean
+    ): SttpBackendStub[F, R] =
+      _whenInputMatches(endpoint.endpoint)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
+
+    private def _whenRequestMatches[E, O](endpoint: Endpoint[_, E, O, _]): stub.WhenRequest = {
+      new stub.WhenRequest(req =>
+        DecodeBasicInputs(endpoint.input, new SttpRequest(req)) match {
+          case _: DecodeBasicInputsResult.Failure => false
+          case _: DecodeBasicInputsResult.Values  => true
+        }
       )
     }
 
-    def whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): TypeAwareWhenRequest[I, E, O] = {
-      new TypeAwareWhenRequest(
-        endpoint,
-        new stub.WhenRequest(req =>
-          decodeBody(req, DecodeBasicInputs(endpoint.input, new SttpRequest(req))) match {
-            case _: DecodeBasicInputsResult.Failure => false
-            case values: DecodeBasicInputsResult.Values =>
-              InputValue(endpoint.input, values) match {
-                case InputValueResult.Value(params, _) => inputMatcher(params.asAny.asInstanceOf[I])
-                case _: InputValueResult.Failure       => false
-              }
-          }
-        )
+    private def _whenInputMatches[I, E, O](endpoint: Endpoint[I, E, O, _])(inputMatcher: I => Boolean): stub.WhenRequest = {
+      new stub.WhenRequest(req =>
+        decodeBody(req, DecodeBasicInputs(endpoint.input, new SttpRequest(req))) match {
+          case _: DecodeBasicInputsResult.Failure => false
+          case values: DecodeBasicInputsResult.Values =>
+            InputValue(endpoint.input, values) match {
+              case InputValueResult.Value(params, _) => inputMatcher(params.asAny.asInstanceOf[I])
+              case _: InputValueResult.Failure       => false
+            }
+        }
       )
     }
 
@@ -67,6 +83,36 @@ trait SttpStubServer {
         case RawBodyType.InputStreamBody     => new ByteArrayInputStream(asByteArray)
         case RawBodyType.FileBody            => throw new UnsupportedOperationException
         case _: RawBodyType.MultipartBody    => throw new UnsupportedOperationException
+      }
+    }
+
+    private def interpretRequest[I, E, O](
+        req: Request[_, _],
+        endpoint: ServerEndpoint[I, E, O, R, F],
+        interceptors: List[Interceptor[F, Any]]
+    ): F[Response[_]] = {
+      def toResponse(sRequest: ServerRequest, sResponse: ServerResponse[Any]): Response[Any] = {
+        sttp.client3.Response(
+          sResponse.body.getOrElse(()),
+          sResponse.code,
+          "",
+          sResponse.headers,
+          Nil,
+          RequestMetadata(sRequest.method, sRequest.uri, sRequest.headers)
+        )
+      }
+
+      val interpreter =
+        new ServerInterpreter[R, F, Any, Nothing](requestBody[F](), toResponseBody, interceptors, _ => stub.responseMonad.unit(()))(
+          stub.responseMonad,
+          new BodyListener[F, Any] {
+            override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = stub.responseMonad.map(cb(Success(())))(_ => body)
+          }
+        )
+      val sRequest = new SttpRequest(req)
+      stub.responseMonad.map(interpreter.apply(sRequest, endpoint)) {
+        case Some(sResponse) => toResponse(sRequest, sResponse)
+        case None            => toResponse(sRequest, ServerResponse(StatusCode.BadRequest, Nil, None))
       }
     }
 
@@ -102,16 +148,6 @@ trait SttpStubServer {
           responseValue: Any,
           statusCode: StatusCode
       ): SttpBackendStub[F, R] = {
-        val toResponseBody: ToResponseBody[Any, Nothing] = new ToResponseBody[Any, Nothing] {
-          override val streams: NoStreams = NoStreams
-          override def fromRawValue[RAW](v: RAW, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[RAW]): Any = v
-          override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
-          override def fromWebSocketPipe[REQ, RESP](
-              pipe: streams.Pipe[REQ, RESP],
-              o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
-          ): Any = pipe // impossible
-        }
-
         val outputValues: OutputValues[Any] =
           new EncodeOutputs[Any, Nothing](toResponseBody, Seq(ContentTypeRange.AnyRange))
             .apply(output, ParamsAsAny(responseValue), OutputValues.empty)
@@ -132,5 +168,23 @@ trait SttpStubServer {
         */
       def generic: stub.WhenRequest = whenRequest
     }
+  }
+}
+
+object SttpStubServer {
+  private val toResponseBody: ToResponseBody[Any, Nothing] = new ToResponseBody[Any, Nothing] {
+    override val streams: NoStreams = NoStreams
+    override def fromRawValue[RAW](v: RAW, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[RAW]): Any = v
+    override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
+    override def fromWebSocketPipe[REQ, RESP](
+        pipe: streams.Pipe[REQ, RESP],
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+    ): Any = pipe // impossible
+  }
+
+  private def requestBody[F[_]](): RequestBody[F, Nothing] = new RequestBody[F, Nothing] {
+    override val streams: Streams[Nothing] = NoStreams
+    override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = ???
+    override def toStream(): streams.BinaryStream = ???
   }
 }

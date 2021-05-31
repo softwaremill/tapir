@@ -21,7 +21,7 @@ object ZioPartialServerLogicHttp4s extends App {
       case (user, salutation) =>
         val greeting = s"$salutation, ${user.name}!"
 
-        putStrLn(greeting).as(greeting)
+        putStrLn(greeting).as(greeting).orDie
     }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in

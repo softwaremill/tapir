@@ -67,7 +67,7 @@ class FinatraToResponseBody extends ToResponseBody[FinatraContent, Nothing] {
           rawValueToContentBody(partType.asInstanceOf[RawBodyType[Any]], part.asInstanceOf[Part[Any]], part.body)
         )
 
-      part.headers.foreach { case Header(name, value) => builder.addField(name, value) }
+      part.headers.foreach(header => builder.addField(header.name, header.value))
 
       builder.build()
     }

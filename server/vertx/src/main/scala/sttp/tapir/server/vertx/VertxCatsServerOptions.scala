@@ -1,6 +1,7 @@
 package sttp.tapir.server.vertx
 
 import cats.Applicative
+import cats.effect.Sync
 import cats.implicits.catsSyntaxOptionId
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
@@ -9,11 +10,14 @@ import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.File
 
 final case class VertxCatsServerOptions[F[_]](
-    uploadDirectory: File,
+    uploadDirectory: TapirFile,
+    deleteFile: TapirFile => F[Unit],
     maxQueueSizeForReadStream: Int,
     interceptors: List[Interceptor[F, RoutingContext => Unit]]
 ) extends VertxServerOptions[F] {
@@ -44,7 +48,8 @@ object VertxCatsServerOptions {
     *                                        header.
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
-  def customInterceptors[F[_]: Applicative](
+  def customInterceptors[F[_]: Sync](
+      metricsInterceptor: Option[MetricsRequestInterceptor[F, RoutingContext => Unit]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[F, RoutingContext => Unit]] = Nil,
@@ -53,9 +58,11 @@ object VertxCatsServerOptions {
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): VertxCatsServerOptions[F] = {
     VertxCatsServerOptions(
-      File.createTempFile("tapir", null).getParentFile.getAbsoluteFile,
+      File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
+      file => Sync[F].delay(Defaults.deleteFile()(file)),
       maxQueueSizeForReadStream = 16,
-      exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, F, RoutingContext => Unit](_, (_, _) => Applicative[F].unit)).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++
@@ -63,5 +70,5 @@ object VertxCatsServerOptions {
     )
   }
 
-  implicit def default[F[_]: Applicative]: VertxCatsServerOptions[F] = customInterceptors()
+  implicit def default[F[_]: Sync]: VertxCatsServerOptions[F] = customInterceptors()
 }

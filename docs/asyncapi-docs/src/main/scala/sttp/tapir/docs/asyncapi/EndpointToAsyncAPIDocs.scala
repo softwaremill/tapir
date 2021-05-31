@@ -14,7 +14,8 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
       info: Info,
       servers: Iterable[(String, Server)],
       es: Iterable[Endpoint[_, _, _, _]],
-      options: AsyncAPIDocsOptions
+      options: AsyncAPIDocsOptions,
+      docsExtensions: List[DocsExtension[_]]
   ): AsyncAPI = {
     val wsEndpointsWithWrapper = es.map(e => (e, findWebSocket(e))).collect { case (e, Some(ws)) => (e, ws) }
     val wsEndpoints = wsEndpointsWithWrapper.map(_._1).map(nameAllPathCapturesInEndpoint)
@@ -35,7 +36,8 @@ private[asyncapi] object EndpointToAsyncAPIDocs {
       channels = channels.map { case (p, c) => (p, Right(c)) }.toListMap,
       components = componentsCreator.components,
       tags = List.empty,
-      externalDocs = None
+      externalDocs = None,
+      extensions = DocsExtensions.fromIterable(docsExtensions)
     )
   }
 

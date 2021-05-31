@@ -315,6 +315,16 @@ package object tests {
       .out(stringBody)
       .name("Query with default")
 
+  val out_json_or_default_json: Endpoint[String, Unit, Entity, Any] =
+    endpoint.get
+      .in("entity" / path[String]("type"))
+      .out(
+        oneOf[Entity](
+          oneOfMapping[Person](StatusCode.Created, jsonBody[Person]),
+          oneOfDefaultMapping[Organization](jsonBody[Organization])
+        )
+      )
+
   val out_no_content_or_ok_empty_output: Endpoint[Int, Unit, Unit, Any] = {
     val anyMatches: PartialFunction[Any, Boolean] = { case _ => true }
 

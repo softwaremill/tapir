@@ -20,3 +20,9 @@ paths:
               schema:
                 type: string
                 format: binary
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string

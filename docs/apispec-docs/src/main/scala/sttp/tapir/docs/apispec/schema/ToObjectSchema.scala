@@ -14,8 +14,10 @@ class ToObjectSchema(val referenceEnums: SObjectInfo => Boolean) {
     typeData match {
       case TSchema(TSchemaType.SArray(o), _, _, _, _, _, _, _) =>
         apply(o)
-      case TSchema(TSchemaType.SOption(o), _, _, _, _, _, _, _) =>
-        apply(o)
+      case t @ TSchema(o: TSchemaType.SOption[_, _], _, _, _, _, _, _, _) =>
+        // #1168: if there's an optional field which is an object, with metadata defined (such as description), this
+        // needs to be propagated to the target object, so that it isn't omitted.
+        apply(propagateMetadataForOption(t, o).element)
       case s @ TSchema(st: TSchemaType.SProduct[_], _, _, _, _, _, _, _) =>
         productSchemas(s, st)
       case s @ TSchema(st: TSchemaType.SCoproduct[_], _, _, _, _, _, _, _) =>
@@ -29,13 +31,9 @@ class ToObjectSchema(val referenceEnums: SObjectInfo => Boolean) {
   private def productSchemas[T](s: TSchema[T], st: TSchemaType.SProduct[T]): List[ObjectSchema] = {
     (st.info -> s: ObjectSchema) +: st.fields
       .flatMap(a =>
-        a.schema match {
-          case s @ TSchema(_, _, _, _, _, _, _, v) =>
-            v.traversePrimitives { case Validator.Enum(_, _, Some(info)) => Vector(info) } match {
-              case info +: _ if referenceEnums(info) => List(info -> s: ObjectSchema)
-              case _                                 => apply(a.schema)
-            }
-          case _ => apply(a.schema)
+        a.schema.validator.traversePrimitives { case Validator.Enum(_, _, Some(info)) => Vector(info) } match {
+          case info +: _ if referenceEnums(info) => List(info -> a.schema: ObjectSchema)
+          case _                                 => apply(a.schema)
         }
       )
   }

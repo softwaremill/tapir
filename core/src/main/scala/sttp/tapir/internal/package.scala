@@ -239,7 +239,7 @@ package object internal {
     if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
   }
 
-  def showOneOf(mappings: Seq[String]): String = s"status one of(${mappings.mkString("|")})"
+  def showOneOf(mappings: Seq[String]): String = s"one of(${mappings.mkString("|")})"
 
   def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {
@@ -308,6 +308,7 @@ package object internal {
       toPrimitives(v)
     }
 
-    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] = asPrimitiveValidators.collect(handle).flatten.toVector
+    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] =
+      asPrimitiveValidators.collect(handle).flatten.toVector
   }
 }

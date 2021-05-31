@@ -91,7 +91,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.18.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.18.0-M12"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
@@ -153,4 +153,4 @@ We offer commercial support for tapir and related technologies, as well as devel
 
 ## Copyright
 
-Copyright (C) 2018-2020 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2021 SoftwareMill [https://softwaremill.com](https://softwaremill.com).

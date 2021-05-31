@@ -6,12 +6,12 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.vertx.VertxZioServerOptions
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.zio._
+import sttp.tapir.server.vertx.{VertxBodyListener, VertxZioServerOptions}
 import zio._
 
 import scala.reflect.ClassTag
@@ -46,10 +46,12 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
       e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
   )(implicit runtime: Runtime[R], serverOptions: VertxZioServerOptions[RIO[R, *]]): Handler[RoutingContext] = { rc =>
     val fromVFuture = new RioFromVFuture[R]
+    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Unit] = new VertxBodyListener[RIO[R, *]]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Unit, ZioStreams](
       new VertxRequestBody[RIO[R, *], ZioStreams](rc, serverOptions, fromVFuture),
       new VertxToResponseBody(serverOptions),
-      serverOptions.interceptors
+      serverOptions.interceptors,
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 
