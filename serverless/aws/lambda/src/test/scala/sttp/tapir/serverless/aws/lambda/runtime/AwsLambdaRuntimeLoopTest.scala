@@ -14,6 +14,8 @@ import sttp.tapir.serverless.aws.lambda.{AwsCatsEffectServerInterpreter, AwsServ
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+import scala.collection.immutable.Seq
+
 class AwsLambdaRuntimeLoopTest extends AnyFunSuite with Matchers {
 
   test("should process event") {
