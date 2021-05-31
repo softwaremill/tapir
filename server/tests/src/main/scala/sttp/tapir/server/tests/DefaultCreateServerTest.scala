@@ -63,10 +63,6 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
   }
 }
 
-object DefaultCreateServerTest {
-  type StreamsWithWebsockets = Fs2Streams[IO] with WebSockets
-}
-
 trait CreateServerTest[F[_], +R, ROUTE, B] {
   def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
@@ -79,5 +75,7 @@ trait CreateServerTest[F[_], +R, ROUTE, B] {
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
 
-  def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
+  def testServer(name: String, rs: => NonEmptyList[ROUTE])(
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test
 }
