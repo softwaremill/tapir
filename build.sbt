@@ -923,7 +923,7 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
       lazy val sam = Process("sam local start-api --warm-containers EAGER").run()
       Seq(
         Tests.Setup(() => {
-          val samReady = PollingUtils.poll(30.seconds, 1.second) {
+          val samReady = PollingUtils.poll(60.seconds, 1.second) {
             sam.isAlive() && PollingUtils.urlConnectionAvailable(new URL(s"http://127.0.0.1:3000/health"))
           }
           if (!samReady) {

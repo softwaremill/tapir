@@ -3,6 +3,8 @@ package sttp.tapir.serverless.aws.lambda
 import cats.data.NonEmptyList
 import cats.effect.IO
 import org.scalatest.Assertion
+import sttp.capabilities.WebSockets
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3
 import sttp.client3.testing.SttpBackendStub
 import sttp.client3.{ByteArrayBody, ByteBufferBody, InputStreamBody, NoBody, Request, Response, StringBody, SttpBackend, _}
@@ -23,7 +25,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
       testNameSuffix: String,
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, String]]
-  )(fn: I => IO[Either[E, O]])(runTest: (SttpBackend[IO, Any], Uri) => IO[Assertion]): Test = {
+  )(fn: I => IO[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
     implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(
       encodeResponseBody = false,
       metricsInterceptor = metricsInterceptor,
@@ -36,7 +38,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
   }
 
   override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, Any, IO], testNameSuffix: String)(
-      runTest: (SttpBackend[IO, Any], Uri) => IO[Assertion]
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
     val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(e)
@@ -44,8 +46,10 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
   }
 
-  override def testServer(name: String, rs: => NonEmptyList[Route[IO]])(runTest: (SttpBackend[IO, Any], Uri) => IO[Assertion]): Test = {
-    val backend: SttpBackendStub[IO, Any] = SttpBackendStub(catsMonadIO).whenAnyRequest
+  override def testServer(name: String, rs: => NonEmptyList[Route[IO]])(
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test = {
+    val backend = SttpBackendStub[IO, Fs2Streams[IO] with WebSockets](catsMonadIO).whenAnyRequest
       .thenRespondF { request =>
         val responses: NonEmptyList[Response[String]] = rs.map { route =>
           route(sttpToAwsRequest(request)).map(awsToSttpResponse).unsafeRunSync()
@@ -55,8 +59,8 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
     Test(name)(runTest(backend, uri"http://localhost:3000").unsafeRunSync())
   }
 
-  private def stubBackend(route: Route[IO]): SttpBackend[IO, Any] =
-    SttpBackendStub(catsMonadIO).whenAnyRequest.thenRespondF { request =>
+  private def stubBackend(route: Route[IO]): SttpBackend[IO, Fs2Streams[IO] with WebSockets] =
+    SttpBackendStub[IO, Fs2Streams[IO] with WebSockets](catsMonadIO).whenAnyRequest.thenRespondF { request =>
       route(sttpToAwsRequest(request)).map(awsToSttpResponse)
     }
 }
