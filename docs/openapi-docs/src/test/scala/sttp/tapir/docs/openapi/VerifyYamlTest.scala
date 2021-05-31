@@ -519,6 +519,25 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe load("expected_extensions.yml")
   }
+
+  test("should include a response even if all outputs are empty") {
+    sealed trait Base
+    case object Success extends Base
+    case object AnotherSuccess extends Base
+
+    val ep = infallibleEndpoint.get.out(
+      sttp.tapir.oneOf[Base](
+        oneOfMapping(StatusCode.Ok, emptyOutputAs(Success)),
+        oneOfMapping(StatusCode.Accepted, emptyOutputAs(AnotherSuccess))
+      )
+    )
+
+    val expectedYaml = load("expected_multi_empty_outputs.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, Info("Entities", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlTest {
