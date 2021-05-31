@@ -17,7 +17,6 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import scala.collection.immutable.Seq
 import scala.util.{Success, Try}
-import sttp.monad.syntax._
 
 trait SttpStubServer {
 

@@ -3,7 +3,14 @@ package sttp.tapir.server.play
 import akka.actor.ActorSystem
 import cats.effect.{IO, Resource}
 import sttp.monad.FutureMonad
-import sttp.tapir.server.tests.{CreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerMetricsTest, backendResource}
+import sttp.tapir.server.tests.{
+  DefaultCreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMultipartTests,
+  ServerMetricsTest,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 
 class PlayServerTest extends TestSuite {
@@ -16,17 +23,17 @@ class PlayServerTest extends TestSuite {
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
 
       val interpreter = new PlayTestServerInterpreter()(actorSystem)
-      val createServerTest = new CreateServerTest(interpreter)
+      val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
       new ServerBasicTests(
-        backend,
         createServerTest,
         interpreter,
         multipleValueHeaderSupport = false,
-        multipartInlineHeaderSupport = false,
         inputStreamSupport = false
-      ).tests() ++ new ServerAuthenticationTests(backend, createServerTest).tests() ++
-        new ServerMetricsTest(backend, createServerTest).tests()
+      ).tests() ++
+        new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests()
+      new ServerAuthenticationTests(createServerTest).tests() ++
+        new ServerMetricsTest(createServerTest).tests()
     }
   }
 }
