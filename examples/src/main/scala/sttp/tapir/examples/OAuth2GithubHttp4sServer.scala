@@ -5,7 +5,7 @@ import cats.syntax.all._
 import io.circe.generic.auto._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import pdi.jwt.{JwtAlgorithm, JwtCirce, JwtClaim}
 import sttp.client3._

@@ -5,7 +5,7 @@ import io.circe.generic.auto._
 import fs2._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams

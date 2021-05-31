@@ -5,11 +5,12 @@ import cats.syntax.all._
 import fs2.io.file.Files
 import fs2.{Chunk, Stream}
 import org.http4s
-import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
+import org.http4s.Header.ToRaw.rawToRaw
 import org.http4s._
+import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.model.{HasHeaders, HeaderNames, Part, Header => SttpHeader}
+import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
@@ -59,11 +60,11 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
 
   private def rawPartToBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T]): Option[multipart.Part[F]] = {
     m.partType(part.name).map { partType =>
-      val headers = part.headers.map { header =>
-        Header.Raw(CaseInsensitiveString(header.name), header.value)
+      val headers: List[Header.ToRaw] = part.headers.map { header =>
+        rawToRaw(Header.Raw(CIString(header.name), header.value))
       }.toList
 
-      val partContentType: `Content-Type` =
+      val partContentType =
         part.contentType.map(parseContentType).getOrElse(`Content-Type`(http4s.MediaType.application.`octet-stream`))
       val entity = rawValueToEntity(partType.asInstanceOf[RawBodyType[Any]], part.body)
 
@@ -74,7 +75,7 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
 
       val shouldAddCtHeader = part.headers.exists(_.is(HeaderNames.ContentType))
       val allHeaders = if (shouldAddCtHeader) {
-        Headers((partContentType: Header.ToRaw) :: contentDispositionHeader :: headers)
+        Headers.apply((partContentType: Header.ToRaw) :: contentDispositionHeader :: headers)
       } else {
         Headers(contentDispositionHeader :: headers)
       }

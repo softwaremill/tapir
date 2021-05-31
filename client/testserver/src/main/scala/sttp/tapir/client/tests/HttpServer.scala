@@ -8,7 +8,7 @@ import fs2.{Pipe, Stream}
 import org.http4s.dsl.io._
 import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._

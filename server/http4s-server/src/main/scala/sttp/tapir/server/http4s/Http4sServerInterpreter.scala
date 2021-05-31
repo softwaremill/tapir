@@ -7,14 +7,13 @@ import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import cats.~>
 import fs2.{Pipe, Stream}
+import org.http4s._
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.websocket.WebSocketFrame
-import org.http4s._
 import org.log4s.{Logger, getLogger}
 import org.typelevel.ci.CIString
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.model.{Header => SttpHeader}
 import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
@@ -51,8 +50,8 @@ trait Http4sServerInterpreter {
 
   //
 
-  def toHttp[I, E, O, F[_]: Async, G[_]: Sync](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G])(fToG: F ~> G)(gToF: G ~> F)(implicit
-      serverOptions: Http4sServerOptions[F, G]
+  def toHttp[I, E, O, F[_]: Async, G[_]: Sync](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G])(fToG: F ~> G)(gToF: G ~> F)(
+      implicit serverOptions: Http4sServerOptions[F, G]
   ): Http[OptionT[G, *], F] = toHttp(List(se))(fToG)(gToF)
 
   def toRoutes[I, E, O, F[_]: Async](
@@ -100,7 +99,7 @@ trait Http4sServerInterpreter {
       response: ServerResponse[Http4sResponseBody[F]]
   ): F[Response[F]] = {
     val statusCode = statusCodeToHttp4sStatus(response.code)
-    val headers = Headers(response.headers.map(header => Header.Raw(CaseInsensitiveString(header.name), header.value)).toList)
+    val headers = Headers(response.headers.map(header => Header.Raw(CIString(header.name), header.value)).toList)
 
     response.body match {
       case Some(Left(pipeF)) =>
