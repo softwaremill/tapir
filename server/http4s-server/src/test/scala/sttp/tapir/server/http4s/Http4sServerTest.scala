@@ -2,6 +2,7 @@ package sttp.tapir.server.http4s
 
 import cats.effect._
 import cats.syntax.all._
+import org.http4s.HttpRoutes
 import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
@@ -12,15 +13,8 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
-import sttp.tapir.server.tests.{
-  CreateServerTest,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerMetricsTest,
-  ServerStreamingTests,
-  ServerWebSocketTests,
-  backendResource
-}
+import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
@@ -35,7 +29,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
 
     val interpreter = new Http4sTestServerInterpreter()
-    val createServerTest = new CreateServerTest(interpreter)
+    val createServerTest = new DefaultCreateServerTest(backend, interpreter)
     def randomUUID = Some(UUID.randomUUID().toString)
     val sse1 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
     val sse2 = ServerSentEvent(randomUUID, randomUUID, randomUUID, Some(Random.nextInt(200)))
@@ -64,7 +58,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
             .autoPing(Some((1.second, WebSocketFrame.ping)))
         ),
         "automatic pings"
-      )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { baseUri =>
+      )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { (backend, baseUri) =>
         basicRequest
           .response(asWebSocket { ws: WebSocket[IO] =>
             List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
@@ -78,7 +72,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         "streaming should send data according to producer stream rate"
       )((_: Unit) =>
         IO(Right(fs2.Stream.awakeEvery[IO](1.second).map(_.toString()).through(fs2.text.utf8Encode).interruptAfter(5.seconds)))
-      ) { baseUri =>
+      ) { (backend, baseUri) =>
         basicRequest
           .response(
             asStream(Fs2Streams[IO])(bs => {
@@ -95,7 +89,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       createServerTest.testServer(
         endpoint.out(serverSentEventsBody[IO]),
         "Send and receive SSE"
-      )((_: Unit) => IO(Right(fs2.Stream(sse1, sse2)))) { baseUri =>
+      )((_: Unit) => IO(Right(fs2.Stream(sse1, sse2)))) { (backend, baseUri) =>
         basicRequest
           .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
             Http4sServerSentEvents
@@ -110,12 +104,13 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       }
     )
 
-    new ServerBasicTests(backend, createServerTest, interpreter).tests() ++
-      new ServerStreamingTests(backend, createServerTest, Fs2Streams[IO]).tests() ++
-      new ServerWebSocketTests(backend, createServerTest, Fs2Streams[IO]) {
+    new ServerBasicTests(createServerTest, interpreter).tests() ++
+      new ServerFileMultipartTests(createServerTest).tests() ++
+      new ServerStreamingTests(createServerTest, Fs2Streams[IO]).tests() ++
+      new ServerWebSocketTests(createServerTest, Fs2Streams[IO]) {
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
-      new ServerAuthenticationTests(backend, createServerTest).tests() ++
-      new ServerMetricsTest(backend, createServerTest).tests() ++ additionalTests()
+      new ServerAuthenticationTests(createServerTest).tests() ++
+      new ServerMetricsTest(createServerTest).tests() ++ additionalTests()
   }
 }

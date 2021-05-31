@@ -1,9 +1,9 @@
-package sttp.tapir.server.http4s
+package sttp.tapir.integ.cats
 
 import cats.effect.Sync
 import sttp.monad.MonadError
 
-private[http4s] class CatsMonadError[F[_]](implicit F: Sync[F]) extends MonadError[F] {
+class CatsMonadError[F[_]](implicit F: Sync[F]) extends MonadError[F] {
   override def unit[T](t: T): F[T] = F.pure(t)
   override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
   override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)

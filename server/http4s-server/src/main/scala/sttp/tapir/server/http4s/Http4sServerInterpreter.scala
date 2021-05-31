@@ -16,6 +16,7 @@ import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header => SttpHeader}
 import sttp.tapir.Endpoint
+import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
