@@ -10,6 +10,7 @@ interpreted as:
   * [Http4s](server/http4s.md) `HttpRoutes[F]`
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
+  * [aws](server/aws.md) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
   * [sttp](client/sttp.md).
@@ -136,11 +137,11 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    :caption: Server interpreters
 
    server/akkahttp
-   server/aws
    server/http4s
    server/finatra
    server/play
    server/vertx
+   server/aws
    server/options
    server/logic
    server/observability

@@ -1,24 +1,27 @@
-# Running behind AWS API Gateway
+# Running using the AWS serverless stack
 
-[AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html) provides a proxy
-integration
-with [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html)
-which allows you to implement API routes using Lambda functions. On the other hand tools
-like [AWS SAM](https://aws.amazon.com/serverless/sam/) and [Terraform](https://www.terraform.io/) provides a
-configuration mechanism for binding AWS Api Gateway routes to Lambda functions and automating cloud deployments.
+Tapir server endpoints can be packaged and deployed as an [AWS Lambda](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html) function. To invoke the function, HTTP requests can be proxied through [AWS API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html).
 
-This concept of serverless API has been adapted to Tapir in form of three components.
+To configure API Gateway routes, and the Lambda function, tools like [AWS SAM](https://aws.amazon.com/serverless/sam/) and [Terraform](https://www.terraform.io/) can be used, to automate cloud deployments.
 
-The first one is `AwsServerInterpreter` which routes AWS API Gateway requests to responses just as any other server
-interpreter does. It should be used in your lambda function code.
+For an overview of how this works in more detail, see [this blog post](https://blog.softwaremill.com/tapir-serverless-a-proof-of-concept-6b8c9de4d396).
+
+## Serverless interpreters
+
+To implement the Lambda function, a server interpreter is available, which takes tapir endpoints with associated server logic, and returns an `AwsRequest => F[AwsResponse]` function. This is used in the `AwsLambdaRuntime` to implement the Lambda loop of reading the next request, computing and sending the response.
+
+Currently, only an interpreter integrating with cats-effect is available (`AwsCatsEffectServerInterpreter`). To use, add the following dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "@VERSION@"
 ```
 
-The remaining two are `AwsSamInterpreter` which interprets Tapir `Endpoints` into AWS SAM template file
-and `AwsTerraformInterpreter` which interprets `Endpoints` into terraform configuration file. One of them should be used
-to configure your API Gateway.
+To configure API Gateway and the Lambda function, you can use:
+
+* the `AwsSamInterpreter` which interprets tapir `Endpoints` into an AWS SAM template file
+* or the `AwsTerraformInterpreter` which interprets `Endpoints` into terraform configuration file.
+
+Add one of the following dependencies:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "@VERSION@"
@@ -27,14 +30,12 @@ to configure your API Gateway.
 
 ## Examples
 
-In
-our [GitHub repository](https://github.com/softwaremill/tapir/tree/master/serverless/aws/examples/src/main/scala/sttp/tapir/serverless/aws/examples)
+In our [GitHub repository](https://github.com/softwaremill/tapir/tree/master/serverless/aws/examples/src/main/scala/sttp/tapir/serverless/aws/examples)
 you'll find a `LambdaApiExample` handler which uses `AwsServerInterpreter` to route a hello endpoint along
 with `SamTemplateExample` and `TerraformConfigExample` which interpret endpoints to SAM/Terraform configuration. Go
 ahead and clone tapir project and select `project awsExamples` from sbt shell.
 
-Make sure you
-have [AWS command line tools installed](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
+Make sure you have [AWS command line tools installed](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html).
 
 ### SAM
 
