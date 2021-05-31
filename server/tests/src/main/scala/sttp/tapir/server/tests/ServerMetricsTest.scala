@@ -33,8 +33,10 @@ class ServerMetricsTest[F[_], ROUTE, B](createServerTest: CreateServerTest[F, An
           .send(backend)
           .map { r =>
             r.body shouldBe Right("""{"fruit":"apple","amount":1}""")
-            reqCounter.metric.value.get() shouldBe 1
-            resCounter.metric.value.get() shouldBe 1
+            eventually {
+              reqCounter.metric.value.get() shouldBe 1
+              resCounter.metric.value.get() shouldBe 1
+            }
           } >> basicRequest // onDecodeFailure path
           .post(uri"$baseUri/api/echo")
           .body("""{"invalid":"body",}""")
