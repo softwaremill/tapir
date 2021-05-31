@@ -18,6 +18,8 @@ import scala.collection.immutable.Seq
 
 class AwsLambdaRuntimeLogicTest extends AnyFunSuite with Matchers {
 
+  val nextInvocationUri = uri"http://aws/2018-06-01/runtime/invocation/next"
+
   test("should process event") {
     // given
     var hello = ""
@@ -28,8 +30,8 @@ class AwsLambdaRuntimeLogicTest extends AnyFunSuite with Matchers {
     })
 
     val backend = SttpBackendStub(monadError)
-      .whenRequestMatches(_.uri == uri"http://aws/2018-06-01/runtime/invocation/next")
-      .thenRespondF(IO.pure(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214")))))
+      .whenRequestMatches(_.uri == nextInvocationUri)
+      .thenRespond(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -46,10 +48,8 @@ class AwsLambdaRuntimeLogicTest extends AnyFunSuite with Matchers {
     val route = AwsCatsEffectServerInterpreter.toRoute(testEp)(_ => IO(().asRight[Unit]))
 
     val backend = SttpBackendStub(monadError)
-      .whenRequestMatches(_.uri == uri"http://aws/2018-06-01/runtime/invocation/next")
+      .whenRequestMatches(_.uri == nextInvocationUri)
       .thenRespondF(_ => throw new RuntimeException)
-
-    val loop = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend)))
 
     // when
     val result = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
@@ -63,8 +63,8 @@ class AwsLambdaRuntimeLogicTest extends AnyFunSuite with Matchers {
     val route = AwsCatsEffectServerInterpreter.toRoute(testEp)(_ => IO(().asRight[Unit]))
 
     val backend = SttpBackendStub(monadError)
-      .whenRequestMatches(_.uri == uri"http://aws/2018-06-01/runtime/invocation/next")
-      .thenRespondF(IO.pure(Response("???", StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214")))))
+      .whenRequestMatches(_.uri == nextInvocationUri)
+      .thenRespond(Response("???", StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -80,8 +80,8 @@ class AwsLambdaRuntimeLogicTest extends AnyFunSuite with Matchers {
     val route = AwsCatsEffectServerInterpreter.toRoute(testEp)(_ => IO(().asRight[Unit]))
 
     val backend = SttpBackendStub(monadError)
-      .whenRequestMatches(_.uri == uri"http://aws/2018-06-01/runtime/invocation/next")
-      .thenRespondF(IO.pure(Response(awsRequest, StatusCode.Ok)))
+      .whenRequestMatches(_.uri == nextInvocationUri)
+      .thenRespond(Response(awsRequest, StatusCode.Ok))
 
     // when
     val result = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
@@ -95,8 +95,8 @@ class AwsLambdaRuntimeLogicTest extends AnyFunSuite with Matchers {
     val route = AwsCatsEffectServerInterpreter.toRoute(testEp)(_ => throw new RuntimeException)
 
     val backend = SttpBackendStub(monadError)
-      .whenRequestMatches(_.uri == uri"http://aws/2018-06-01/runtime/invocation/next")
-      .thenRespondF(IO.pure(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214")))))
+      .whenRequestMatches(_.uri == nextInvocationUri)
+      .thenRespond(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondOk()
 
@@ -112,8 +112,8 @@ class AwsLambdaRuntimeLogicTest extends AnyFunSuite with Matchers {
     val route = AwsCatsEffectServerInterpreter.toRoute(testEp)(_ => IO(().asRight[Unit]))
 
     val backend = SttpBackendStub(monadError)
-      .whenRequestMatches(_.uri == uri"http://aws/2018-06-01/runtime/invocation/next")
-      .thenRespondF(IO.pure(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214")))))
+      .whenRequestMatches(_.uri == nextInvocationUri)
+      .thenRespond(Response(awsRequest, StatusCode.Ok, "Ok", Seq(Header("lambda-runtime-aws-request-id", "43214"))))
       .whenAnyRequest
       .thenRespondF(_ => throw new RuntimeException)
 

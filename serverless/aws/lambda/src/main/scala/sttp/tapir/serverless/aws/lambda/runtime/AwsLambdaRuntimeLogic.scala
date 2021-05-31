@@ -25,7 +25,7 @@ object AwsLambdaRuntimeLogic extends StrictLogging {
   ): F[Either[Throwable, Unit]] = {
     implicit val monad: MonadError[F] = new CatsMonadError[F]
 
-    val runtimeApiInvocationUri = uri"http://${awsRuntimeApi}/2018-06-01/runtime/invocation"
+    val runtimeApiInvocationUri = uri"http://$awsRuntimeApi/2018-06-01/runtime/invocation"
 
     /** Make request (without a timeout as prescribed by the AWS Custom Lambda Runtime documentation).
       * This is due to the possibility of the runtime being frozen between lambda function invocations.

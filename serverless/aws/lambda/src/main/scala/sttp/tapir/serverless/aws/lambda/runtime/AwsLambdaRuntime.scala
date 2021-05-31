@@ -13,7 +13,7 @@ import scala.concurrent.duration.DurationInt
 
 abstract class AwsLambdaRuntime[F[_]: ContextShift: ConcurrentEffect] extends StrictLogging {
   def endpoints: Iterable[ServerEndpoint[_, _, _, Any, F]]
-  implicit def executionContext: ExecutionContext
+  implicit def executionContext: ExecutionContext = ExecutionContext.global
   implicit def serverOptions: AwsServerOptions[F] = AwsServerOptions.customInterceptors()
 
   def main(args: Array[String]): Unit = {
