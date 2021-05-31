@@ -37,7 +37,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
       implicit val m: FutureMonad = new FutureMonad()(actorSystem.dispatcher)
 
       val interpreter = new AkkaHttpTestServerInterpreter()(actorSystem)
-      val createServerTest = new DefaultCreateServerTest(backend, interpreter).asInstanceOf[DefaultCreateServerTest[Future, AkkaStreams with WebSockets, Route, AkkaResponseBody]]
+      val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {

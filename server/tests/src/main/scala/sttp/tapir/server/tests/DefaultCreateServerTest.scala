@@ -16,7 +16,7 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.tests._
 
 class DefaultCreateServerTest[F[_], +R, ROUTE, B](
-    backend: SttpBackend[IO, R],
+    backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     interpreter: TestServerInterpreter[F, R, ROUTE, B]
 ) extends CreateServerTest[F, R, ROUTE, B]
     with StrictLogging {
@@ -27,7 +27,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
       metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
   )(
       fn: I => F[Either[E, O]]
-  )(runTest: (SttpBackend[IO, R], Uri) => IO[Assertion]): Test = {
+  )(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
       NonEmptyList.of(interpreter.route(e.serverLogic(fn), decodeFailureHandler, metricsInterceptor))
@@ -35,7 +35,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
   }
 
   override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
-      runTest: (SttpBackend[IO, R], Uri) => IO[Assertion]
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
@@ -44,7 +44,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
   }
 
   override def testServer(name: String, rs: => NonEmptyList[ROUTE])(
-      runTest: (SttpBackend[IO, R], Uri) => IO[Assertion]
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
     val resources = for {
       port <- interpreter.server(rs).onError { case e: Exception =>
@@ -73,11 +73,11 @@ trait CreateServerTest[F[_], +R, ROUTE, B] {
       testNameSuffix: String = "",
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
-  )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, R], Uri) => IO[Assertion]): Test
+  )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
 
   def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
-      runTest: (SttpBackend[IO, R], Uri) => IO[Assertion]
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test
 
-  def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: (SttpBackend[IO, R], Uri) => IO[Assertion]): Test
+  def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
 }
