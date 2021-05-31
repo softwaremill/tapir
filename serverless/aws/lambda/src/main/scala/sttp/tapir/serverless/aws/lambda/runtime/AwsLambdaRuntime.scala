@@ -22,6 +22,6 @@ abstract class AwsLambdaRuntime[F[_]: ContextShift: ConcurrentEffect] extends St
       Blocker.liftExecutionContext(implicitly)
     )
     val route: Route[F] = AwsCatsEffectServerInterpreter.toRoute(endpoints.toList)
-    ConcurrentEffect[F].toIO(AwsLambdaRuntimeLoop(route, sys.env("AWS_LAMBDA_RUNTIME_API"), backend)).foreverM.unsafeRunSync()
+    ConcurrentEffect[F].toIO(AwsLambdaRuntimeLogic(route, sys.env("AWS_LAMBDA_RUNTIME_API"), backend)).foreverM.unsafeRunSync()
   }
 }

@@ -16,7 +16,7 @@ import sttp.tapir.serverless.aws.lambda.{AwsRequest, AwsResponse, Route}
 import scala.concurrent.duration.DurationInt
 
 // loosely based on https://github.com/carpe/scalambda/blob/master/native/src/main/scala/io/carpe/scalambda/native/ScalambdaIO.scala
-object AwsLambdaRuntimeLoop extends StrictLogging {
+object AwsLambdaRuntimeLogic extends StrictLogging {
 
   def apply[F[_]: ContextShift: ConcurrentEffect](
       route: Route[F],

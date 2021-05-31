@@ -9,14 +9,14 @@ import sttp.client3.testing.SttpBackendStub
 import sttp.model.{Header, StatusCode}
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.serverless.aws.lambda.runtime.AwsLambdaRuntimeLoopTest._
+import sttp.tapir.serverless.aws.lambda.runtime.AwsLambdaRuntimeLogicTest._
 import sttp.tapir.serverless.aws.lambda.{AwsCatsEffectServerInterpreter, AwsServerOptions}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.collection.immutable.Seq
 
-class AwsLambdaRuntimeLoopTest extends AnyFunSuite with Matchers {
+class AwsLambdaRuntimeLogicTest extends AnyFunSuite with Matchers {
 
   test("should process event") {
     // given
@@ -34,7 +34,7 @@ class AwsLambdaRuntimeLoopTest extends AnyFunSuite with Matchers {
       .thenRespondOk()
 
     // when
-    val result = AwsLambdaRuntimeLoop(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
+    val result = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
 
     // then
     hello shouldBe "hello"
@@ -49,10 +49,10 @@ class AwsLambdaRuntimeLoopTest extends AnyFunSuite with Matchers {
       .whenRequestMatches(_.uri == uri"http://aws/2018-06-01/runtime/invocation/next")
       .thenRespondF(_ => throw new RuntimeException)
 
-    val loop = AwsLambdaRuntimeLoop(route, "aws", Resource.eval(IO.pure(backend)))
+    val loop = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend)))
 
     // when
-    val result = AwsLambdaRuntimeLoop(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
+    val result = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
 
     // then
     result.isLeft shouldBe true
@@ -69,7 +69,7 @@ class AwsLambdaRuntimeLoopTest extends AnyFunSuite with Matchers {
       .thenRespondOk()
 
     // when
-    val result = AwsLambdaRuntimeLoop(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
+    val result = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
 
     // then
     result.isLeft shouldBe true
@@ -84,7 +84,7 @@ class AwsLambdaRuntimeLoopTest extends AnyFunSuite with Matchers {
       .thenRespondF(IO.pure(Response(awsRequest, StatusCode.Ok)))
 
     // when
-    val result = AwsLambdaRuntimeLoop(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
+    val result = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
 
     // then
     result.isLeft shouldBe true
@@ -101,7 +101,7 @@ class AwsLambdaRuntimeLoopTest extends AnyFunSuite with Matchers {
       .thenRespondOk()
 
     // when
-    val result = AwsLambdaRuntimeLoop(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
+    val result = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
 
     // then
     result shouldBe Right(())
@@ -118,14 +118,14 @@ class AwsLambdaRuntimeLoopTest extends AnyFunSuite with Matchers {
       .thenRespondF(_ => throw new RuntimeException)
 
     // when
-    val result = AwsLambdaRuntimeLoop(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
+    val result = AwsLambdaRuntimeLogic(route, "aws", Resource.eval(IO.pure(backend))).unsafeRunSync()
 
     // then
     result.isLeft shouldBe true
   }
 }
 
-object AwsLambdaRuntimeLoopTest {
+object AwsLambdaRuntimeLogicTest {
   implicit val contextShift: ContextShift[IO] = IO.contextShift(global)
   implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors()
 

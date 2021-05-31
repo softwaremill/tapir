@@ -15,6 +15,23 @@ import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.tests._
 
+trait CreateServerTest[F[_], +R, ROUTE, B] {
+  def testServer[I, E, O](
+      e: Endpoint[I, E, O, R],
+      testNameSuffix: String = "",
+      decodeFailureHandler: Option[DecodeFailureHandler] = None,
+      metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
+  )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
+
+  def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test
+
+  def testServer(name: String, rs: => NonEmptyList[ROUTE])(
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test
+}
+
 class DefaultCreateServerTest[F[_], +R, ROUTE, B](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     interpreter: TestServerInterpreter[F, R, ROUTE, B]
@@ -61,21 +78,4 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
         .unsafeRunSync()
     )
   }
-}
-
-trait CreateServerTest[F[_], +R, ROUTE, B] {
-  def testServer[I, E, O](
-      e: Endpoint[I, E, O, R],
-      testNameSuffix: String = "",
-      decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
-  )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
-
-  def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
-  ): Test
-
-  def testServer(name: String, rs: => NonEmptyList[ROUTE])(
-      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
-  ): Test
 }
