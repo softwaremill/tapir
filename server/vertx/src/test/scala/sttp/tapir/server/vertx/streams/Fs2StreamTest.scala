@@ -59,13 +59,13 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
     def internal(attempts: Int): IO[A] =
       io.flatTap(a => IO.delay(cond(a)))
-        .handleErrorWith({ case NonFatal(e) =>
+        .handleErrorWith { case e =>
           if (attempts < maxAttempts) {
             Temporal[IO].sleep(frequency) *> internal(attempts + 1)
           } else {
             IO.raiseError(e)
           }
-        })
+        }
 
     internal(0)
   }

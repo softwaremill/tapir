@@ -13,7 +13,7 @@ import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes: SecuritySchemes, options: OpenAPIDocsOptions) {
   private val codecToMediaType = new CodecToMediaType(schemas)
-  private val endpointToOperationResponse = new EndpointToOperationResponse(schemas, codecToMediaType)
+  private val endpointToOperationResponse = new EndpointToOperationResponse(schemas, codecToMediaType, options)
 
   def pathItem(e: Endpoint[_, _, _, _]): (String, PathItem) = {
     import Method._
@@ -48,7 +48,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
       e.info.tags.toList,
       e.info.summary,
       e.info.description,
-      e.info.name.getOrElse(defaultId),
+      e.info.name.orElse(Some(defaultId)),
       parameters.toList.map(Right(_)),
       body.headOption,
       Responses(responses),

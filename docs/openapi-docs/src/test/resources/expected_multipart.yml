@@ -19,6 +19,12 @@ paths:
             multipart/form-data:
               schema:
                 $ref: '#/components/schemas/FruitData'
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   schemas:
     FruitData:

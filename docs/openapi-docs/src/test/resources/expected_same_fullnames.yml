@@ -19,6 +19,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Pet1'
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   schemas:
     Pet:

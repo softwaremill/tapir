@@ -5,7 +5,7 @@ import sbt.Reference.display
 import sbt.internal.ProjectMatrix
 
 val scala2_12 = "2.12.13"
-val scala2_13 = "2.13.5"
+val scala2_13 = "2.13.6"
 
 val allScalaVersions = List(scala2_12, scala2_13)
 val codegenScalaVersions = List(scala2_12)
@@ -23,7 +23,6 @@ excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
-  mimaPreviousArtifacts := Set.empty, //Set("com.softwaremill.sttp.tapir" %% name.value % "0.12.21")
   updateDocs := Def.taskDyn {
     val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
     Def.task {
@@ -31,12 +30,25 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       files1 ++ Seq(file("generated-doc/out"))
     }
   }.value,
+  mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using versioningSchemeSettings
   ideSkipProject := (scalaVersion.value == scala2_12) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
   // remove false alarms about unused implicit definitions in macros
   scalacOptions += "-Ywarn-macros:after",
   evictionErrorLevel := Level.Info
+)
+
+val versioningSchemeSettings = Seq(
+  mimaPreviousArtifacts := {
+    val minorUnchanged = previousStableVersion.value.flatMap(CrossVersion.partialVersion) == CrossVersion.partialVersion(version.value)
+    val isRcOrMilestone = version.value.contains("M") || version.value.contains("RC")
+    if (minorUnchanged && !isRcOrMilestone)
+      previousStableVersion.value.map(organization.value %% moduleName.value % _).toSet
+    else
+      Set.empty
+  },
+  versionScheme := Some("early-semver")
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
@@ -200,6 +212,7 @@ lazy val clientTestServer2_13 = clientTestServer.jvm(scala2_13)
 
 lazy val core: ProjectMatrix = (projectMatrix in file("core"))
   .settings(commonSettings)
+  .settings(versioningSchemeSettings)
   .settings(
     name := "tapir-core",
     libraryDependencies ++= Seq(
@@ -270,12 +283,12 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
   .settings(
     name := "tapir-cats",
     libraryDependencies ++= Seq(
-      "org.typelevel" %%% "cats-core" % "2.6.0",
+      "org.typelevel" %%% "cats-core" % "2.6.1",
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "org.typelevel" %%% "discipline-scalatest" % "2.1.4" % Test,
-      "org.typelevel" %%% "cats-laws" % "2.6.0" % Test
+      "org.typelevel" %%% "discipline-scalatest" % "2.1.5" % Test,
+      "org.typelevel" %%% "cats-laws" % "2.6.1" % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
@@ -480,8 +493,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.7.3",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.7.3" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.8.2",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.8.2" % Test,
       scalaTest.value % Test
     )
   )
@@ -515,7 +528,7 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
   .settings(
     name := "tapir-prometheus-metrics",
     libraryDependencies ++= Seq(
-      "io.prometheus" % "simpleclient_common" % "0.10.0",
+      "io.prometheus" % "simpleclient_common" % "0.11.0",
       scalaTest.value % Test
     )
   )
@@ -527,10 +540,10 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
   .settings(
     name := "tapir-opentelemetry-metrics",
     libraryDependencies ++= Seq(
-      "io.opentelemetry" % "opentelemetry-api" % "1.1.0",
-      "io.opentelemetry" % "opentelemetry-sdk" % "1.1.0",
+      "io.opentelemetry" % "opentelemetry-api" % "1.2.0",
+      "io.opentelemetry" % "opentelemetry-sdk" % "1.2.0",
       "io.opentelemetry" % "opentelemetry-sdk-metrics" % "1.1.0-alpha" % Test,
-      scalaTest.value % Test,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)

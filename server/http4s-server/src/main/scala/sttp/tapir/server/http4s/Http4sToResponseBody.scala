@@ -59,8 +59,8 @@ private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
 
   private def rawPartToBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T]): Option[multipart.Part[F]] = {
     m.partType(part.name).map { partType =>
-      val headers = part.headers.map { case SttpHeader(hk, hv) =>
-        Header.Raw(CIString(hk), hv): Header.ToRaw
+      val headers = part.headers.map { header =>
+        Header.Raw(CaseInsensitiveString(header.name), header.value)
       }.toList
 
       val partContentType: `Content-Type` =
