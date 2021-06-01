@@ -914,9 +914,14 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     },
     Test / test := {
       if (scalaVersion.value == scala2_13) { // only one test can run concurrently, as it starts a local sam instance
-        (Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate").value
-        assembly.value
-        (Test / test).value
+        (Test / test)
+          .dependsOn(
+            Def.sequential(
+              (Compile / runMain).toTask(" sttp.tapir.serverless.aws.lambda.tests.LambdaSamTemplate"),
+              assembly
+            )
+          )
+          .value
       }
     },
     Test / testOptions ++= {
