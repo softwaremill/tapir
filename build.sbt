@@ -971,7 +971,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-literal" % Versions.circe,
-      "org.typelevel" %% "jawn-parser" % "1.0.3"
+      "org.typelevel" %% "jawn-parser" % "1.1.2"
     )
   )
   .jvmPlatform(scalaVersions = allScalaVersions)
