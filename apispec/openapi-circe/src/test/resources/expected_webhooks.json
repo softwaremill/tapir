@@ -1,0 +1,31 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Fruits",
+    "version": "1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "getRoot",
+        "responses": {
+          "200": {
+            "description": "Default description"
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {
+    "newPet": {
+      "get": {
+        "operationId": "getRoot",
+        "responses": {
+          "200": {
+            "description": "Default description"
+          }
+        }
+      }
+    }
+  }
+}

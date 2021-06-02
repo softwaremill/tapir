@@ -2,7 +2,7 @@ package sttp.tapir.apispec
 
 import scala.collection.immutable.ListMap
 
-case class Reference($ref: String)
+case class Reference($ref: String, summary: Option[String] = None, description: Option[String] = None)
 
 object Reference {
   def to(prefix: String, $ref: String): Reference = new Reference(s"$prefix${$ref}")
