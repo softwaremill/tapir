@@ -11,7 +11,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 import java.io.StringWriter
-import java.time.{Duration, Instant}
+import java.time.{Clock, Duration, Instant}
 
 case class PrometheusMetrics[F[_]](
     namespace: String,
@@ -31,8 +31,8 @@ case class PrometheusMetrics[F[_]](
     copy(metrics = metrics :+ requestsActive(registry, namespace, labels))
   def withResponsesTotal(labels: MetricLabels = MetricLabels.Default): PrometheusMetrics[F] =
     copy(metrics = metrics :+ responsesTotal(registry, namespace, labels))
-  def withResponsesDuration(labels: MetricLabels = MetricLabels.Default): PrometheusMetrics[F] =
-    copy(metrics = metrics :+ responsesDuration(registry, namespace, labels))
+  def withResponsesDuration(labels: MetricLabels = MetricLabels.Default, clock: Clock = Clock.systemUTC()): PrometheusMetrics[F] =
+    copy(metrics = metrics :+ responsesDuration(registry, namespace, labels, clock))
   def withCustom(m: Metric[F, _]): PrometheusMetrics[F] = copy(metrics = metrics :+ m)
 
   def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F, B] =
@@ -118,7 +118,12 @@ object PrometheusMetrics {
       }
     )
 
-  def responsesDuration[F[_]](registry: CollectorRegistry, namespace: String, labels: MetricLabels): Metric[F, Histogram] =
+  def responsesDuration[F[_]](
+      registry: CollectorRegistry,
+      namespace: String,
+      labels: MetricLabels,
+      clock: Clock = Clock.systemUTC()
+  ): Metric[F, Histogram] =
     Metric[F, Histogram](
       Histogram
         .build()
@@ -129,20 +134,20 @@ object PrometheusMetrics {
         .register(registry),
       onRequest = { (req, histogram, m) =>
         m.unit {
-          val requestStart = Instant.now()
+          val requestStart = clock.instant()
           EndpointMetric()
             .onResponse { (ep, res) =>
               m.eval(
                 histogram
                   .labels(labels.forRequest(ep, req) ++ labels.forResponse(res): _*)
-                  .observe(Duration.between(requestStart, Instant.now()).toMillis.toDouble / 1000.0)
+                  .observe(Duration.between(requestStart, clock.instant()).toMillis.toDouble / 1000.0)
               )
             }
             .onException { (ep, ex) =>
               m.eval(
                 histogram
                   .labels(labels.forRequest(ep, req) ++ labels.forResponse(ex): _*)
-                  .observe(Duration.between(requestStart, Instant.now()).toMillis.toDouble / 1000.0)
+                  .observe(Duration.between(requestStart, clock.instant()).toMillis.toDouble / 1000.0)
               )
             }
         }

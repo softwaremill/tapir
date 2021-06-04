@@ -19,6 +19,7 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, De
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interpreter.ServerInterpreter
 
+import java.time.{Clock, Instant, ZoneId}
 import scala.collection.immutable
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -95,21 +96,22 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
 
   "default metrics" should "collect responses duration" in {
     // given
-    val waitServerEp: Int => ServerEndpoint[String, String, String, Any, Id] = millis => {
+    val clock = new TestClock()
+    val waitServerEp: Long => ServerEndpoint[String, String, String, Any, Id] = millis => {
       PersonsApi { name =>
-        Thread.sleep(millis)
+        clock.forward(millis)
         PersonsApi.defaultLogic(name)
       }.serverEp
     }
 
-    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesDuration()
+    val metrics = PrometheusMetrics[Id]("tapir", new CollectorRegistry()).withResponsesDuration(clock = clock)
     val interpreter =
       new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(100))
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(200))
-    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(300))
+    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(101))
+    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(201))
+    interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(301))
 
     // then
     val encoded = collectorRegistryCodec.encode(metrics.registry)
@@ -212,4 +214,16 @@ object PrometheusMetricsTest {
     override def uri: Uri = uri"http://example.com/metrics"
     override def headers: immutable.Seq[Header] = Nil
   }
+}
+
+class TestClock(start: Long = System.currentTimeMillis()) extends Clock {
+  private var _millis = start
+
+  def forward(m: Long): Unit = {
+    _millis += m
+  }
+
+  override def getZone: ZoneId = Clock.systemUTC().getZone
+  override def withZone(zone: ZoneId): Clock = this
+  override def instant(): Instant = Instant.ofEpochMilli(_millis)
 }
