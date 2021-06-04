@@ -936,7 +936,7 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
           if (!samReady) {
             sam.destroy()
             val exit = sam.exitValue()
-            log.error(s"failed to start sam local within 30 seconds (exit code: $exit")
+            log.error(s"failed to start sam local within 60 seconds (exit code: $exit")
           }
         }),
         Tests.Cleanup(() => {
