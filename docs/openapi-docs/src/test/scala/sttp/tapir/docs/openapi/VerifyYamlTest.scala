@@ -538,6 +538,15 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("explicit Content-Type header should have priority over the codec") {
+    val ep = endpoint.out(stringBody and header("Content-Type", "text/csv"))
+
+    val expectedYaml = load("expected_explicit_content_type_header.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, "title", "1.0").toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlTest {
