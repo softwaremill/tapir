@@ -82,7 +82,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
         Right(
           RequestBody(
             info.description,
-            codecToMediaType(codec, info.examples),
+            codecToMediaType(codec, info.examples, Option.empty),
             Some(!codec.schema.isOptional),
             DocsExtensions.fromIterable(info.docsExtensions)
           )
@@ -91,7 +91,7 @@ private[openapi] class EndpointToOpenAPIPaths(schemas: Schemas, securitySchemes:
         Right(
           RequestBody(
             info.description,
-            codecToMediaType(codec, info.examples),
+            codecToMediaType(codec, info.examples, Option.empty),
             Some(true),
             DocsExtensions.fromIterable(info.docsExtensions)
           )
