@@ -540,7 +540,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("explicit Content-Type header should have priority over the codec") {
-    val ep = out_overridden_content_type_header
+    val ep = out_fixed_content_type_header
 
     val expectedYaml = load("expected_explicit_content_type_header.yml")
 

@@ -63,8 +63,8 @@ class ServerBasicTests[F[_], ROUTE, B](
     testServer(endpoint, "POST empty endpoint")((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
       basicRequest.post(baseUri).send(backend).map(_.body shouldBe Right(""))
     },
-    testServer(out_overridden_content_type_header, "Overridden content-type header")((_: Unit) => pureResult("".asRight[Unit])) { (backend, baseUri) =>
-      basicRequest.get(baseUri).send(backend).map(_.headers.map(h => h.name -> h.value).toSet should contain ("Content-Type" -> "text/csv"))
+    testServer(out_fixed_content_type_header, "Fixed content-type header")((_: Unit) => pureResult("".asRight[Unit])) { (backend, baseUri) =>
+      basicRequest.get(baseUri).send(backend).map(_.headers should contain only Header("Content-Type", "text/csv"))
     },
     testServer(endpoint.get, "GET a GET endpoint")((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(baseUri).send(backend).map(_.body shouldBe Right(""))

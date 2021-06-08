@@ -315,7 +315,7 @@ package object tests {
       .out(stringBody)
       .name("Query with default")
 
-  val out_overridden_content_type_header: Endpoint[Unit, Unit, String, Any] =
+  val out_fixed_content_type_header: Endpoint[Unit, Unit, String, Any] =
     endpoint.out(stringBody and header("Content-Type", "text/csv"))
 
   val out_json_or_default_json: Endpoint[String, Unit, Entity, Any] =
