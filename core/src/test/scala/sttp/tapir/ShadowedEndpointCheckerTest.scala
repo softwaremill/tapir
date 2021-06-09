@@ -16,10 +16,7 @@ class ShadowedEndpointCheckerTest extends AnyFlatSpecLike with Matchers {
 
     val result = ShadowedEndpointChecker.findShadowedEndpoints(List(e1, e2, e3, e4, e5, e6))
 
-    val expectedResult = List(
-      ShadowedEndpoint(e3, e2),
-      ShadowedEndpoint(e4, e2),
-      ShadowedEndpoint(e5, e2))
+    val expectedResult = List(ShadowedEndpoint(e3, e2), ShadowedEndpoint(e4, e2), ShadowedEndpoint(e5, e2))
     result shouldBe expectedResult
   }
 
@@ -33,10 +30,7 @@ class ShadowedEndpointCheckerTest extends AnyFlatSpecLike with Matchers {
 
     val result = ShadowedEndpointChecker.findShadowedEndpoints(List(e1, e2, e3, e4, e5, e6))
 
-    val expectedResult = List(
-      ShadowedEndpoint(e3, e2),
-      ShadowedEndpoint(e4, e2),
-      ShadowedEndpoint(e5, e2))
+    val expectedResult = List(ShadowedEndpoint(e3, e2), ShadowedEndpoint(e4, e2), ShadowedEndpoint(e5, e2))
     result shouldBe expectedResult
   }
 
