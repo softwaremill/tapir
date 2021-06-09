@@ -6,12 +6,21 @@ import sttp.tapir.util.ShadowedEndpointChecker
 
 class ShadowedEndpointCheckerTest extends AnyFlatSpecLike with Matchers {
 
-  it should "should detect shadowed endpoints" in {
+  it should "detect shadowed endpoints" in {
     val e1 =   endpoint.get.in("x").out(stringBody)
     val e2 =   endpoint.get.in("x").out(stringBody)
 
     val result = ShadowedEndpointChecker.findShadowedEndpoints(List(e1,e2))
 
     result.get shouldBe ShadowedEndpoint(e1,e2)
+  }
+
+  it should "should return empty result when shadowed endpoints are not present" in {
+    val e1 =   endpoint.get.in("x").out(stringBody)
+    val e2 =   endpoint.get.in("y").out(stringBody)
+
+    val result = ShadowedEndpointChecker.findShadowedEndpoints(List(e1,e2))
+
+    result shouldBe empty
   }
 }
