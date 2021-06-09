@@ -5,7 +5,9 @@ import sttp.tapir.{Endpoint, ShadowedEndpoint}
 object ShadowedEndpointChecker {
 
   def findShadowedEndpoints(endpoints: List[Endpoint[_, _, _, _]]): List[ShadowedEndpoint] = {
-    val duplicates = endpoints.groupBy(x => normalizePath(x.input.show)).filter(c => c._2.size > 1)
+    val duplicates = endpoints.groupBy(endpoint => extractNormalizedPath(endpoint)).
+      filter(duplicate => duplicate match {
+        case (_,duplicatedEndpoints) => duplicatedEndpoints.size > 1})
     if (duplicates.isEmpty) List() else buildShadowedEndpoints(duplicates)
   }
 
@@ -17,8 +19,8 @@ object ShadowedEndpointChecker {
     }).toList
   }
 
-  def normalizePath(i: String): String = {
-    val withoutWildcard = i.replace("/*", "")
+  def extractNormalizedPath(i: Endpoint[_, _, _, _]): String = {
+    val withoutWildcard = i.input.show.replace("/*", "")
     if (withoutWildcard.endsWith("/")) withoutWildcard.dropRight(1) else withoutWildcard
   }
 }
