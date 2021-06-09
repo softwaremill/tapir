@@ -1,5 +1,3 @@
 package sttp.tapir
 
-case class ShadowedEndpoint[I, E, O, R](e: Endpoint[I, E, O, R], by: Endpoint[I, E, O, R]) {
-
-}
+case class ShadowedEndpoint(e: Endpoint[_, _, _, _], by: Endpoint[_, _, _, _])
