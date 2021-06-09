@@ -20,7 +20,7 @@ object ShadowedEndpointChecker {
   }
 
   def extractNormalizedPath(i: Endpoint[_, _, _, _]): String = {
-    val withoutWildcard = i.input.show.replace("/*", "")
-    if (withoutWildcard.endsWith("/")) withoutWildcard.dropRight(1) else withoutWildcard
+    val pathWithoutWildcard = i.input.show.replace("/*", "")
+    if (pathWithoutWildcard.endsWith("/")) pathWithoutWildcard.dropRight(1) else pathWithoutWildcard
   }
 }
