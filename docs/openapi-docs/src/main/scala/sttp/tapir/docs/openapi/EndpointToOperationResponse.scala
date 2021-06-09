@@ -110,7 +110,7 @@ private[openapi] class EndpointToOperationResponse(
   private def extractFixedContentType(outputs: List[EndpointOutput[_]]): Option[String] = {
     outputs.flatMap(_.traverseOutputs {
       case EndpointIO.FixedHeader(h, _, _) =>
-        if (h.name.equalsIgnoreCase("Content-Type")) Vector(h.value) else Vector.empty
+        if (h.is("Content-Type")) Vector(h.value) else Vector.empty
     }).headOption
   }
 }
