@@ -6,7 +6,7 @@ import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
-import sttp.model.{Method, StatusCode}
+import sttp.model.{Header, MediaType, Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.Book
@@ -18,7 +18,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.openapi._
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.{Person, _}
-import sttp.tapir.{Endpoint, endpoint, path, query, stringBody, _}
+import sttp.tapir.{Endpoint, endpoint, header, path, query, stringBody, _}
 
 import java.time.{Instant, LocalDateTime}
 
@@ -537,6 +537,15 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("explicit Content-Type header should have priority over the codec") {
+    val ep = out_fixed_content_type_header
+
+    val expectedYaml = load("expected_explicit_content_type_header.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(ep, "title", "1.0").toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
   }
 }
 
