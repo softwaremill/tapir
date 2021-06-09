@@ -8,7 +8,7 @@ import magnolia.*
 
 trait MatchTypeMacros {
   inline implicit def gen[T: ClassTag](using Mirror.Of[T]): MatchType[T] = {
-    val derivation = new MatchTypeDerivation {
+    val derivation = new Derivation[MatchType] {
       val ct: ClassTag[T] = classTag[T]
 
       override def join[A](ctx: CaseClass[Typeclass, A]): Typeclass[A] = (value: Any) =>
