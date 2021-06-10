@@ -162,6 +162,15 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
     schema.modify(x => x)(_.description("test")) shouldBe schema.description("test")
   }
 
+  it should "work with custom naming configuration" in {
+    implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
+    val actual = implicitly[Schema[D]].modify(_.someFieldName)(_.description("something"))
+    actual.schemaType shouldBe SProduct[D](
+      SObjectInfo("sttp.tapir.generic.D"),
+      List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
+    )
+  }  
+
   behavior of "apply default"
 
   it should "add default to product" in {

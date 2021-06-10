@@ -110,6 +110,32 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     s.applyValidation(SimpleDog("a")) should have length 1
   }
 
+  it should "validate recursive values" in {
+    import sttp.tapir.generic.auto._
+    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
+    lazy implicit val schema: Schema[RecursiveName] = Schema.derived[RecursiveName]
+
+    schema.applyValidation(RecursiveName("x", None)) shouldBe Nil
+    schema.applyValidation(RecursiveName("", None)) shouldBe List(
+      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("name")))
+    )
+    schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", None))))) shouldBe Nil
+    schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("", None))))) shouldBe List(
+      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("name")))
+    )
+    schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("x", None)))))))) shouldBe Nil
+    schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("", None)))))))) shouldBe List(
+      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("subNames"), FieldName("name")))
+    )
+  }
+
+  it should "show recursive validators" in {
+    import sttp.tapir.generic.auto._
+    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
+    lazy implicit val s: Schema[RecursiveName] = Schema.derived[RecursiveName]
+    s.showValidators shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
+  }
+
   private def noPath[T](v: ValidationError[T]): ValidationError[T] =
     v match {
       case p: ValidationError.Primitive[T] => p.copy(path = Nil)
