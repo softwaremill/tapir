@@ -81,8 +81,10 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
         val uri = pathFragments.foldLeft(req.uri)(_.addPath(_))
         req.withUri(uri)
       case EndpointInput.Query(name, codec, _) =>
-        val encodedParams = codec.encode(value)
-        req.withUri(req.uri.withQueryParam(name, encodedParams))
+        codec.encode(value) match {
+          case values if values.nonEmpty => req.withUri(req.uri.withQueryParam(name, values))
+          case _                         => req
+        }
       case EndpointInput.Cookie(name, codec, _) =>
         codec.encode(value).foldLeft(req)(_.addCookie(name, _))
       case EndpointInput.QueryParams(codec, _) =>
