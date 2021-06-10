@@ -6,6 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import sttp.tapir.generic.auto._
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.TestUtil.field
+import scala.collection.immutable.ListMap
 
 class SchemaMacroTest extends AnyFlatSpec with Matchers {
   import SchemaMacroTestData._
@@ -169,7 +170,42 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
       SObjectInfo("sttp.tapir.generic.D"),
       List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
     )
-  }  
+  }
+
+  it should "add descriminator based on a trait method" in {
+    val sUser = Schema.derived[User]
+    val sOrganization = Schema.derived[Organization]
+    val sEntity: Schema[Entity] =
+      Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("user" -> sUser, "org" -> sOrganization)
+
+    sEntity.schemaType shouldBe SCoproduct[Entity](
+      SObjectInfo("sttp.tapir.SchemaMacroTest.Entity"),
+      ListMap(
+        SObjectInfo("sttp.tapir.SchemaMacroTest.User", List()) -> Schema(
+          SProduct[User](
+            SObjectInfo("sttp.tapir.SchemaMacroTest.User"),
+            List(
+              field(FieldName("firstName"), Schema(SString())),
+              field(FieldName("lastName"), Schema(SString())),
+            )
+          )
+        ),
+        SObjectInfo("sttp.tapir.SchemaMacroTest.Organization") -> Schema(
+          SProduct[Organization](
+            SObjectInfo("sttp.tapir.SchemaMacroTest.Organization"),
+            List(field(FieldName("name"), Schema(SString())))
+          )
+        )
+      ),
+      Some(
+        SDiscriminator(
+          FieldName("kind"),
+          Map("user" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTest.User")), "org" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTest.Organization")))
+        )
+      )
+    )(_ => None)
+
+  }
 
   behavior of "apply default"
 
