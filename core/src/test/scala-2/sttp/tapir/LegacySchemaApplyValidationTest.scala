@@ -3,38 +3,10 @@ package sttp.tapir
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-import java.util.concurrent.TimeUnit
-import scala.concurrent.duration.Duration
-
 class LegacySchemaApplyValidationTest extends AnyFlatSpec with Matchers {
   import SchemaApplyValidationTestData._
 
-    it should "validate recursive values" in {
-    import sttp.tapir.generic.auto._
-    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
-    val schema: Schema[RecursiveName] = implicitly[Schema[RecursiveName]]
-
-    schema.applyValidation(RecursiveName("x", None)) shouldBe Nil
-    schema.applyValidation(RecursiveName("", None)) shouldBe List(
-      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("name")))
-    )
-    schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", None))))) shouldBe Nil
-    schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("", None))))) shouldBe List(
-      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("name")))
-    )
-    schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("x", None)))))))) shouldBe Nil
-    schema.applyValidation(RecursiveName("x", Some(Vector(RecursiveName("x", Some(Vector(RecursiveName("", None)))))))) shouldBe List(
-      ValidationError.Primitive(Validator.minLength(1), "", List(FieldName("subNames"), FieldName("subNames"), FieldName("name")))
-    )
-  }
-
-  it should "show recursive validators" in {
-    import sttp.tapir.generic.auto._
-    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
-    val s: Schema[RecursiveName] = implicitly[Schema[RecursiveName]]
-    s.showValidators shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
-  }
-
+  //currently in Scala 3, we use mirror based derivation, therefor we are not able to derived an instance for a two-level hierarchy - https://dotty.epfl.ch/docs/reference/contextual/derivation.html#types-supporting-derives-clauses
 //#946: derivation of validator twice in the same derivation
   it should "validate recursive values with two-level hierarchy" in {
     import sttp.tapir.generic.auto._

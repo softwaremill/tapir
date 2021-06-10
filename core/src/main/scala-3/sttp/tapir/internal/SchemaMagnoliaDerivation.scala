@@ -12,7 +12,7 @@ import scala.deriving.Mirror
 
 trait SchemaMagnoliaDerivation {
 
-  inline def derived[T](using genericDerivationConfig: Configuration, m: Mirror.Of[T]) = {
+  inline def derived[T](using genericDerivationConfig: Configuration, m: Mirror.Of[T]): Schema[T] = {
     val derivation = new Derivation[Schema] {
         type Typeclass[T] = Schema[T]
 
