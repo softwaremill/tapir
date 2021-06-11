@@ -30,7 +30,7 @@ case class Schema(
     exclusiveMaximum: Option[Boolean] = None,
     minItems: Option[Int] = None,
     maxItems: Option[Int] = None,
-    enum: Option[List[String]] = None,
+    enum: Option[List[ExampleSingleValue]] = None,
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 

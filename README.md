@@ -18,6 +18,7 @@ interpreted as:
   Currently supported:
   * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html).
   * [Play](https://tapir.softwaremill.com/en/latest/client/play.html).
+  * [http4s](https://tapir.softwaremill.com/en/latest/client/http4s.html)
 * documentation. Currently supported: 
   * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)

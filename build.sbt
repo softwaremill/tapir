@@ -120,7 +120,6 @@ lazy val allAggregates = core.projectRefs ++
   http4sClient.projectRefs ++
   sttpClient.projectRefs ++
   playClient.projectRefs ++
-  http4sClient.projectRefs ++
   tests.projectRefs ++
   examples.projectRefs ++
   playground.projectRefs ++

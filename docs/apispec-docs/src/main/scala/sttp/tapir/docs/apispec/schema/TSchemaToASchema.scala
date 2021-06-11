@@ -2,7 +2,7 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
-import sttp.tapir.docs.apispec.{exampleValue, rawToString}
+import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.internal.{IterableToListMap, _}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
@@ -112,7 +112,7 @@ private[schema] class TSchemaToASchema(
       case Validator.MaxSize(value)          => oschema.copy(maxItems = Some(value))
       case Validator.Enumeration(_, None, _) => oschema
       case Validator.Enumeration(v, Some(encode), _) =>
-        val values = v.flatMap(x => encode(x).map(rawToString))
+        val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
         oschema.copy(enum = if (values.nonEmpty) Some(values) else None)
     }
   }
