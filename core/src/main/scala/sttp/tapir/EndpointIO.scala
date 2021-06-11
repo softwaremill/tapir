@@ -7,11 +7,12 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
+import sttp.tapir.macros.EndpointTransputMacros
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.typelevel.{FnComponents, ParamConcat}
+import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
-import scala.collection.immutable.{Seq, ListMap}
+import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
 /** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
@@ -25,15 +26,12 @@ import scala.concurrent.duration.FiniteDuration
   * `EndpointTransput` >---                            ---> `EndpointIO`
   *                        \---> `EndpointOutput` >---/
   */
-sealed trait EndpointTransput[T] {
+sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   private[tapir] type ThisType[X]
 
   def map[U](mapping: Mapping[T, U]): ThisType[U]
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
-  }
 
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 

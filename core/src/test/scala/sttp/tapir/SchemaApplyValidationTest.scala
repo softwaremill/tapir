@@ -8,6 +8,8 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
 class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
+  import SchemaApplyValidationTestData._
+  
   it should "validate openProduct" in {
     implicit val schemaForInt: Schema[Int] = Schema.schemaForInt.validate(Validator.min(10))
     val schema = implicitly[Schema[Map[String, Int]]]
@@ -101,10 +103,17 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
     schema.applyValidation(Person("ImportantAndOld", 21)) shouldBe empty
   }
 
+  it should "use validators defined when modifying the schema" in {
+    import sttp.tapir.generic.auto._
+    val s: Schema[SimpleDog] = implicitly[Derived[Schema[SimpleDog]]].value.modify(_.name)(_.validate(Validator.minLength(3)))
+
+    s.applyValidation(SimpleDog("a")) should have length 1
+  }
+
   it should "validate recursive values" in {
     import sttp.tapir.generic.auto._
     implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
-    val schema: Schema[RecursiveName] = implicitly[Schema[RecursiveName]]
+    lazy implicit val schema: Schema[RecursiveName] = Schema.derived[RecursiveName]
 
     schema.applyValidation(RecursiveName("x", None)) shouldBe Nil
     schema.applyValidation(RecursiveName("", None)) shouldBe List(
@@ -123,42 +132,8 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
   it should "show recursive validators" in {
     import sttp.tapir.generic.auto._
     implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
-    val s: Schema[RecursiveName] = implicitly[Schema[RecursiveName]]
+    lazy implicit val s: Schema[RecursiveName] = Schema.derived[RecursiveName]
     s.showValidators shouldBe Some("name->(length>=1),subNames->(elements(elements(recursive)))")
-  }
-
-  // #946: derivation of validator twice in the same derivation
-  it should "validate recursive values with two-level hierarchy" in {
-    import sttp.tapir.generic.auto._
-    implicit val stringSchema: Schema[String] = Schema.schemaForString.validate(Validator.minLength(1))
-    val schema: Schema[Animal] = implicitly[Schema[Animal]]
-
-    schema.applyValidation(Dog("reksio1", Nil)) shouldBe Nil
-    schema.applyValidation(Dog("", Nil)) should have length 1
-    schema.applyValidation(Dog("reksio1", List(Dog("reksio2", Nil)))) shouldBe Nil
-    schema.applyValidation(Dog("reksio1", List(Dog("", Nil)))) should have length 1
-    schema.applyValidation(Dog("reksio1", List(Dog("reksio2", List(Dog("reksio3", Nil)))))) shouldBe Nil
-    schema.applyValidation(Dog("reksio1", List(Dog("reksio2", List(Dog("", Nil)))))) should have length 1
-
-    schema.applyValidation(Cat("tom1", Nil)) shouldBe Nil
-    schema.applyValidation(Cat("", Nil)) should have length 1
-    schema.applyValidation(Cat("tom1", List(Cat("tom2", Nil)))) shouldBe Nil
-    schema.applyValidation(Cat("tom1", List(Cat("", Nil)))) should have length 1
-    schema.applyValidation(Cat("tom1", List(Cat("tom2", List(Cat("tom3", Nil)))))) shouldBe Nil
-    schema.applyValidation(Cat("tom1", List(Cat("tom2", List(Cat("", Nil)))))) should have length 1
-
-    schema.applyValidation(Dog("reksio1", List(Dog("reksio2", List(Cat("tom3", Nil)))))) shouldBe Nil
-    schema.applyValidation(Dog("reksio1", List(Dog("reksio2", List(Cat("", Nil)))))) should have length 1
-
-    schema.applyValidation(Cat("tom1", List(Cat("tom2", List(Dog("reksio3", Nil)))))) shouldBe Nil
-    schema.applyValidation(Cat("tom1", List(Cat("tom2", List(Dog("", Nil)))))) should have length 1
-  }
-
-  it should "use validators defined when modifying the schema" in {
-    import sttp.tapir.generic.auto._
-    val s: Schema[SimpleDog] = implicitly[Derived[Schema[SimpleDog]]].value.modify(_.name)(_.validate(Validator.minLength(3)))
-
-    s.applyValidation(SimpleDog("a")) should have length 1
   }
 
   private def noPath[T](v: ValidationError[T]): ValidationError[T] =
@@ -167,12 +142,3 @@ class SchemaApplyValidationTest extends AnyFlatSpec with Matchers {
       case c: ValidationError.Custom[T]    => c.copy(path = Nil)
     }
 }
-
-final case class RecursiveName(name: String, subNames: Option[Vector[RecursiveName]])
-
-sealed trait Animal
-sealed trait Pet extends Animal {}
-case class Dog(name: String, friends: List[Pet]) extends Pet
-case class Cat(name: String, friends: List[Pet]) extends Pet
-
-case class SimpleDog(name: String)
