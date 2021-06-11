@@ -72,28 +72,60 @@ object SchemaMacros {
 trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
   implicit inline def schemaForMap[V: Schema]: Schema[Map[String, V]] = ${ SchemaCompanionMacros.generateSchemaForMap[V]('{ summon[Schema[V]] }) }
 
-  def oneOfUsingField[E, V](extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] = ??? //TODO
+  inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] = 
+  ${ SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)}
 }
 
 object SchemaCompanionMacros {
   import sttp.tapir.SchemaType.*
+  import sttp.tapir.internal.SObjectInfoMacros
 
   def generateSchemaForMap[V: Type](schemaForV: Expr[Schema[V]])(using q: Quotes): Expr[Schema[Map[String, V]]] = {
     import quotes.reflect.*
-    
-    def extractTypeArguments(tpe: TypeRepr): List[String] = {
-      def allTypeArguments(tr: TypeRepr): Seq[TypeRepr] = tr match {
-        case at: AppliedType => at.args.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
-        case _ => List.empty[TypeRepr]
-      }
-      
-      allTypeArguments(tpe).map(_.typeSymbol.name).toList
-    }
 
     val tpe = TypeRepr.of[V]
-    val genericTypeParametersM = List(tpe.typeSymbol.name) ++ extractTypeArguments(tpe)
+    val genericTypeParametersM = List(tpe.typeSymbol.name) ++ SObjectInfoMacros.extractTypeArguments(tpe)
 
     '{Schema(SOpenProduct[Map[String, V], V](SObjectInfo("Map", ${Expr(genericTypeParametersM)}), ${schemaForV})(identity))}
   }
+
+  def generateOneOfUsingField[E: Type, V: Type](extractor: Expr[E => V], asString: Expr[V => String])(
+      mapping: Expr[Seq[(V, Schema[_])]]
+  )(conf: Expr[Configuration])(using q: Quotes): Expr[Schema[E]] = {
+    import q.reflect.*
+   
+    def resolveFunctionName(f: Statement): String = f match {
+      case Inlined(_, _, block) => resolveFunctionName(block)
+      case Block(List(), block) => resolveFunctionName(block)
+      case Block(List(defdef), _) => resolveFunctionName(defdef)
+      case DefDef(_, _,_, Some(body)) => resolveFunctionName(body)
+      case Apply(fun, _) => resolveFunctionName(fun)
+      case Select(_ ,kind) => kind
+    }
+
+    val tpe = TypeRepr.of[E]
+
+    val functionName = resolveFunctionName(extractor.asTerm)
+    val typeParams = SObjectInfoMacros.extractTypeArguments(tpe)
+
+    '{
+      import _root_.sttp.tapir.internal._
+      import _root_.sttp.tapir.Schema
+      import _root_.sttp.tapir.Schema._
+      import _root_.sttp.tapir.SchemaType._
+      import _root_.scala.collection.immutable.{List, Map}
+
+      val mappingAsList = $mapping.toList
+      val mappingAsMap = mappingAsList.toMap
+      val discriminator = SDiscriminator(_root_.sttp.tapir.FieldName(${Expr(functionName)}, $conf.toEncodedName(${Expr(functionName)})), mappingAsMap.map { case (k, sf) => 
+        $asString.apply(k) -> SRef(sf.schemaType.asInstanceOf[SObject[_]].info)
+      })
+      val info = SObjectInfo(SObjectInfoMacros.typeFullName[E], ${Expr(typeParams)})
+      val subtypes = (mappingAsList.map(_._2).map(s => s.schemaType.asInstanceOf[SObject[_]].info -> s): List[(SObjectInfo, Schema[_])]).toListMap
+      Schema(SCoproduct[E](info, subtypes, _root_.scala.Some(discriminator))(
+        e => mappingAsMap.get($extractor(e)).map(_.schemaType.asInstanceOf[SObject[_]].info)
+      ))
+    }
+  }  
 
 }
