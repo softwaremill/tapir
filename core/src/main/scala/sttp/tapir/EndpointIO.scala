@@ -1,6 +1,5 @@
 package sttp.tapir
 
-import java.nio.charset.Charset
 import sttp.capabilities.Streams
 import sttp.model.{Header, Method}
 import sttp.tapir.Codec.JsonCodec
@@ -11,7 +10,9 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.{FnComponents, ParamConcat}
 import sttp.ws.WebSocketFrame
 
-import scala.collection.immutable.{Seq, ListMap}
+import java.net.URLEncoder
+import java.nio.charset.Charset
+import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
 /** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
@@ -21,7 +22,7 @@ import scala.concurrent.duration.FiniteDuration
   *
   * The hierarchy is as follows:
   *
-  *                        /---> `EndpointInput`  >---\
+  * /---> `EndpointInput`  >---\
   * `EndpointTransput` >---                            ---> `EndpointIO`
   *                        \---> `EndpointOutput` >---/
   */
@@ -114,8 +115,10 @@ object EndpointInput {
     override private[tapir] type ThisType[X] = FixedPath[X]
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
+
     override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedPath[U] = copy(codec = c, info = i)
-    override def show = s"/$s"
+
+    override def show: String = "/" + URLEncoder.encode(s, "UTF-8")
   }
 
   case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: Info[T]) extends Basic[T] {
