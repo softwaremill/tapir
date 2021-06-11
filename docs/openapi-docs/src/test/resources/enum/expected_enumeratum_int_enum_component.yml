@@ -35,8 +35,8 @@ components:
     ErrorCode:
       type: integer
       enum:
-        - '1'
-        - '2'
+        - 1
+        - 2
     Error2Response:
       required:
         - error

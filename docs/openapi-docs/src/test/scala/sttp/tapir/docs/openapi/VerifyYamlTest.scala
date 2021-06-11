@@ -6,7 +6,7 @@ import io.circe.yaml.Printer.StringStyle.{DoubleQuoted, Literal}
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
-import sttp.model.{Header, MediaType, Method, StatusCode}
+import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.openapi.VerifyYamlTest._
 import sttp.tapir.docs.openapi.dtos.Book
