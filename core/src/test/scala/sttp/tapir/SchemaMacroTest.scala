@@ -6,8 +6,10 @@ import org.scalatest.flatspec.AnyFlatSpec
 import sttp.tapir.generic.auto._
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.TestUtil.field
+import scala.collection.immutable.ListMap
+import org.scalatest.prop.TableDrivenPropertyChecks
 
-class SchemaMacroTest extends AnyFlatSpec with Matchers {
+class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks {
   import SchemaMacroTestData._
 
   behavior of "apply modification"
@@ -169,9 +171,55 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers {
       SObjectInfo("sttp.tapir.generic.D"),
       List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
     )
-  }  
+  }
 
-  behavior of "apply default"
+  it should "add discriminator based on a trait method" in {
+    val sUser = Schema.derived[User]
+    val sOrganization = Schema.derived[Organization]
+
+    forAll(
+      Table(
+        "schema",
+        Schema.oneOfUsingField[Wrapper, String]({ x => x.e.kind(x.s) }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[Wrapper, String](x => x.e.kind(x.s), _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[Wrapper, String](_.e.kind, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[Entity, String](_.kind, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[Entity, String]({ x => x.kind }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
+        Schema.oneOfUsingField[Entity, String]({ _.kind }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType
+      )
+    ) { _.asInstanceOf[SCoproduct[_]].discriminator shouldBe Some(
+        SDiscriminator(
+          FieldName("kind"),
+          Map(
+            "user" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTestData.User")),
+            "org" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTestData.Organization"))
+          )
+        )
+      )
+    }
+  }
+
+  it should "extract type params for discriminator based on a trait method" in {
+    val sUser = Schema.derived[User]
+    val sOrganization = Schema.derived[Organization]
+
+    val schema = Schema.oneOfUsingField[WrapperT[String, Int, String], String]({ x => x.e.kind(x.a) }, _.toString)("user" -> sUser, "org" -> sOrganization)
+    val schemaType = schema.schemaType.asInstanceOf[SCoproduct[_]]
+    
+    schemaType.discriminator shouldBe Some(
+        SDiscriminator(
+          FieldName("kind"),
+          Map(
+            "user" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTestData.User")),
+            "org" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTestData.Organization"))
+          )
+        )
+      )
+
+      schemaType.info shouldBe SObjectInfo("sttp.tapir.SchemaMacroTestData.WrapperT",  List("String", "Int", "String"))
+  }
+
+behavior of "apply default"
 
   it should "add default to product" in {
     val expected = Schema(
