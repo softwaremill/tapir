@@ -39,9 +39,21 @@ trait TapirAsyncAPICirceEncoders {
   implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveWithExtensions[OAuthFlow]
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveWithExtensions[OAuthFlows]
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveWithExtensions[SecurityScheme]
+  implicit val encoderExampleSingleValue: Encoder[ExampleSingleValue] = {
+    case ExampleSingleValue(value: String)     => parse(value).getOrElse(Json.fromString(value))
+    case ExampleSingleValue(value: Int)        => Json.fromInt(value)
+    case ExampleSingleValue(value: Long)       => Json.fromLong(value)
+    case ExampleSingleValue(value: Float)      => Json.fromFloatOrString(value)
+    case ExampleSingleValue(value: Double)     => Json.fromDoubleOrString(value)
+    case ExampleSingleValue(value: Boolean)    => Json.fromBoolean(value)
+    case ExampleSingleValue(value: BigDecimal) => Json.fromBigDecimal(value)
+    case ExampleSingleValue(value: BigInt)     => Json.fromBigInt(value)
+    case ExampleSingleValue(null)              => Json.Null
+    case ExampleSingleValue(value)             => Json.fromString(value.toString)
+  }
   implicit val encoderExampleValue: Encoder[ExampleValue] = {
-    case ExampleSingleValue(value)    => parse(value).getOrElse(Json.fromString(value))
-    case ExampleMultipleValue(values) => Json.arr(values.map(v => parse(v).getOrElse(Json.fromString(v))): _*)
+    case e: ExampleSingleValue        => encoderExampleSingleValue(e)
+    case ExampleMultipleValue(values) => Json.arr(values.map(v => encoderExampleSingleValue(ExampleSingleValue(v))): _*)
   }
   implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.encodeEnumeration(SchemaType)
   implicit val encoderSchema: Encoder[Schema] = deriveWithExtensions[Schema]

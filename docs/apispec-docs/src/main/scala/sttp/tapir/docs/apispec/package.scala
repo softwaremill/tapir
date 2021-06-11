@@ -23,8 +23,7 @@ package object apispec {
     result
   }
 
-  private[docs] def rawToString[T](v: Any): String = v.toString
-  private[docs] def encodeToString[T](codec: Codec[_, T, _]): T => Option[String] = e => Some(rawToString(codec.encode(e)))
+  private def rawToString[T](v: Any): String = v.toString
 
   private[docs] def exampleValue[T](v: String): ExampleValue = ExampleSingleValue(v)
   private[docs] def exampleValue[T](codec: Codec[_, T, _], e: T): Option[ExampleValue] = exampleValue(codec.schema, codec.encode(e))
