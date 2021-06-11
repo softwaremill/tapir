@@ -4,7 +4,7 @@ import scala.concurrent.duration.Duration
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
-class ValidatorTest2 extends AnyFlatSpec with Matchers {
+class ValidatorScala3EnumTest extends AnyFlatSpec with Matchers {
   it should "validate enum" in {
     Validator.derivedEnumeration[ColorEnum].possibleValues should contain theSameElementsAs ColorEnum.values
   }
