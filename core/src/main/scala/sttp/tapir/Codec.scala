@@ -291,6 +291,7 @@ object Codec extends CodecExtensions with FormCodecMacros {
           case Array(u)     => UsernamePassword(u, None)
           case Array(u, "") => UsernamePassword(u, None)
           case Array(u, p)  => UsernamePassword(u, Some(p))
+          case _            => sys.error("impossible")
         }
         DecodeResult.Value(up)
       } catch {

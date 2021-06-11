@@ -4,28 +4,34 @@ import akka.actor.ActorSystem
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import play.api.Mode
+import play.api.http.HttpEntity
 import play.api.mvc.{Handler, RequestHeader}
 import play.api.routing.Router
 import play.api.routing.Router.Routes
 import play.core.server.{DefaultAkkaHttpServerComponents, ServerConfig}
 import sttp.tapir.Endpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestServerInterpreter[Future, Any, Router.Routes] {
+class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestServerInterpreter[Future, Any, Router.Routes, HttpEntity] {
   import actorSystem.dispatcher
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
-      decodeFailureHandler: Option[DecodeFailureHandler]
+      decodeFailureHandler: Option[DecodeFailureHandler],
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, HttpEntity]] = None
   ): Routes = {
     implicit val serverOptions: PlayServerOptions =
-      PlayServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      PlayServerOptions.customInterceptors(
+        metricsInterceptor = metricsInterceptor,
+        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
+      )
     PlayServerInterpreter.toRoutes(e)
   }
 

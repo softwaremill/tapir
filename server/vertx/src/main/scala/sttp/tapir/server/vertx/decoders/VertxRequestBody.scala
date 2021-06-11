@@ -7,7 +7,6 @@ import io.vertx.ext.web.RoutingContext
 import sttp.capabilities.Streams
 import sttp.model.Part
 import sttp.tapir.RawBodyType
-import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
 import sttp.tapir.server.vertx.VertxServerOptions
 import sttp.tapir.server.vertx.interpreters.FromVFuture
@@ -43,10 +42,10 @@ class VertxRequestBody[F[_], S: ReadStreamCompatible](
         case Some(upload) =>
           Future.succeededFuture {
             val file = new File(upload.uploadedFileName())
-            RawValue(file, Seq(SttpFile.fromFile(file)))
+            RawValue(file, Seq(file))
           }
         case None if rc.getBody != null =>
-          val filePath = s"${serverOptions.uploadDirectory.toFile.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
+          val filePath = s"${serverOptions.uploadDirectory.getAbsolutePath}/tapir-${new Date().getTime}-${Random.nextLong()}"
           val fs = rc.vertx.fileSystem
           val result = fs
             .createFile(filePath)
@@ -54,7 +53,7 @@ class VertxRequestBody[F[_], S: ReadStreamCompatible](
             .flatMap(_ =>
               Future.succeededFuture {
                 val file = new File(filePath)
-                RawValue(file, Seq(SttpFile.fromFile(file)))
+                RawValue(file, Seq(file))
               }
             )
           result

@@ -1,6 +1,6 @@
 package sttp.tapir.server.akkahttp
 
-import akka.http.scaladsl.model.{HttpResponse, StatusCode => AkkaStatusCode}
+import akka.http.scaladsl.model.{HttpResponse, StatusCodes}
 import akka.http.scaladsl.server.Directives.{
   complete,
   extractExecutionContext,
@@ -19,7 +19,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
-import sttp.tapir.server.interpreter.ServerInterpreter
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -45,6 +45,7 @@ trait AkkaHttpServerInterpreter {
       extractExecutionContext { implicit ec =>
         extractMaterializer { implicit mat =>
           implicit val monad: FutureMonad = new FutureMonad()
+          implicit val bodyListener: BodyListener[Future, AkkaResponseBody] = new AkkaBodyListener
           val serverRequest = new AkkaServerRequest(ctx)
           val interpreter = new ServerInterpreter(
             new AkkaRequestBody(ctx, serverRequest, serverOptions),
@@ -63,7 +64,7 @@ trait AkkaHttpServerInterpreter {
   }
 
   private def serverResponseToAkka(response: ServerResponse[AkkaResponseBody]): Route = {
-    val statusCode = AkkaStatusCode.int2StatusCode(response.code.code)
+    val statusCode = StatusCodes.getForKey(response.code.code).getOrElse(StatusCodes.custom(response.code.code, ""))
     val akkaHeaders = parseHeadersOrThrowWithoutContentHeaders(response)
 
     response.body match {

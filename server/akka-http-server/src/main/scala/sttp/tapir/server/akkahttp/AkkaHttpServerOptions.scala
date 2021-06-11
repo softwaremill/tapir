@@ -2,19 +2,20 @@ package sttp.tapir.server.akkahttp
 
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
-import sttp.tapir.Defaults
-import sttp.tapir.model.{ServerRequest, SttpFile}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.Future
 
 case class AkkaHttpServerOptions(
-    createFile: ServerRequest => Future[SttpFile],
-    deleteFile: SttpFile => Future[Unit],
+    createFile: ServerRequest => Future[TapirFile],
+    deleteFile: TapirFile => Future[Unit],
     interceptors: List[Interceptor[Future, AkkaResponseBody]]
 ) {
   def prependInterceptor(i: Interceptor[Future, AkkaResponseBody]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
@@ -42,6 +43,7 @@ object AkkaHttpServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, AkkaResponseBody]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[LoggingAdapter => Future[Unit]]] = Some(Log.defaultServerLog),
       additionalInterceptors: List[Interceptor[Future, AkkaResponseBody]] = Nil,
@@ -53,19 +55,20 @@ object AkkaHttpServerOptions {
     AkkaHttpServerOptions(
       defaultCreateFile,
       defaultDeleteFile,
-      exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
         serverLog.map(Log.serverLogInterceptor).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++
         List(new DecodeFailureInterceptor[Future, AkkaResponseBody](decodeFailureHandler))
     )
 
-  val defaultCreateFile: ServerRequest => Future[SttpFile] = { _ =>
+  val defaultCreateFile: ServerRequest => Future[TapirFile] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
-    Future(SttpFile.fromFile(Defaults.createTempFile()))
+    Future(Defaults.createTempFile())
   }
 
-  val defaultDeleteFile: SttpFile => Future[Unit] = file => {
+  val defaultDeleteFile: TapirFile => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(Defaults.deleteFile()(file))
   }

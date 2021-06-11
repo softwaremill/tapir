@@ -8,11 +8,11 @@ import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.{Charset, EntityDecoder, Request, multipart}
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{Header, Part}
-import sttp.tapir.model.{ServerRequest, SttpFile}
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{RawBodyType, RawPart}
+import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 
-import java.io.{ByteArrayInputStream, File}
+import java.io.ByteArrayInputStream
 
 private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( // TODO: constraints?
     request: Request[F],
@@ -37,7 +37,7 @@ private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( /
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
           val fileSink = fs2.io.file.writeAll[F](file.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext))
-          t(body.through(fileSink).compile.drain.map(_ => RawValue(file.toFile, Seq(file))))
+          t(body.through(fileSink).compile.drain.map(_ => RawValue(file, Seq(file))))
         }
       case m: RawBodyType.MultipartBody =>
         // TODO: use MultipartDecoder.mixedMultipart once available?
@@ -49,7 +49,7 @@ private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( /
               .map { case (part, codecMeta) => toRawPart(part, codecMeta).asInstanceOf[F[RawPart]] }
 
             val rawParts: F[RawValue[Vector[RawPart]]] = rawPartsF.sequence.map { parts =>
-              RawValue(parts, parts collect { case _ @Part(_, f: File, _, _) => SttpFile.fromFile(f) })
+              RawValue(parts, parts collect { case _ @Part(_, f: TapirFile, _, _) => f })
             }
 
             rawParts.asInstanceOf[F[RawValue[R]]] // R is Vector[RawPart]

@@ -3,20 +3,20 @@ package sttp.tapir.server.vertx
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.core.{Context, Vertx}
 import io.vertx.ext.web.RoutingContext
-import sttp.tapir.Defaults
-import sttp.tapir.model.SttpFile
 import sttp.tapir.server.interceptor.Interceptor
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.File
 import scala.concurrent.{ExecutionContext, Future}
 
 final case class VertxFutureServerOptions(
-    uploadDirectory: SttpFile,
-    deleteFile: SttpFile => Future[Unit],
+    uploadDirectory: TapirFile,
+    deleteFile: TapirFile => Future[Unit],
     interceptors: List[Interceptor[Future, RoutingContext => Unit]],
     private val specificExecutionContext: Option[ExecutionContext]
 ) extends VertxServerOptions[Future] {
@@ -54,6 +54,7 @@ object VertxFutureServerOptions {
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
   def customInterceptors(
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, RoutingContext => Unit]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[Future, RoutingContext => Unit]] = Nil,
@@ -63,9 +64,10 @@ object VertxFutureServerOptions {
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): VertxFutureServerOptions = {
     VertxFutureServerOptions(
-      SttpFile.fromFile(File.createTempFile("tapir", null).getParentFile.getAbsoluteFile),
+      File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
       defaultDeleteFile,
-      exceptionHandler.map(new ExceptionInterceptor[Future, RoutingContext => Unit](_)).toList ++
+      metricsInterceptor.toList ++
+        exceptionHandler.map(new ExceptionInterceptor[Future, RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, Future, RoutingContext => Unit](_, (_, _) => Future.successful(()))).toList ++
         additionalInterceptors ++
         unsupportedMediaTypeInterceptor.toList ++
@@ -74,7 +76,7 @@ object VertxFutureServerOptions {
     )
   }
 
-  val defaultDeleteFile: SttpFile => Future[Unit] = file => {
+  val defaultDeleteFile: TapirFile => Future[Unit] = file => {
     import scala.concurrent.ExecutionContext.Implicits.global
     Future(Defaults.deleteFile()(file))
   }

@@ -1,7 +1,7 @@
 package sttp.tapir.ztapir
 
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema}
 import sttp.tapir.CodecFormat.TextPlain
+import sttp.tapir.{Codec, DecodeResult}
 
 sealed trait TestError
 

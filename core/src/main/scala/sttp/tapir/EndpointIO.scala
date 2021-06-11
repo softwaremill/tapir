@@ -182,7 +182,7 @@ object EndpointInput {
     def single(scheme: String, realm: String = DefaultRealm): WWWAuthenticate = WWWAuthenticate(List(s"""$scheme realm="$realm""""))
   }
 
-  trait Auth[T] extends EndpointInput.Single[T] {
+  sealed trait Auth[T] extends EndpointInput.Single[T] {
     def input: EndpointInput.Single[T]
     def challenge: WWWAuthenticate
     def securitySchemeName: Option[String]

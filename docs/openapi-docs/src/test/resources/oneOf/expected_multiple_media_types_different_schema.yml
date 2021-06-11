@@ -22,6 +22,12 @@ paths:
             application/xml:
               schema:
                 $ref: '#/components/schemas/Organization'
+        '400':
+          description: 'Invalid value for: header Accept'
+          content:
+            text/plain:
+              schema:
+                type: string
 components:
   schemas:
     Person:

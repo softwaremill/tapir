@@ -121,7 +121,7 @@ object Book {
 val bookInput: EndpointIO[Book] = jsonBody[Book]
 ```
 
-Like Circe, µPickle allows you to control the rendered json output. Please see the [Custom Configuration](http://www.lihaoyi.com/upickle/#CustomConfiguration) of the manual for details.
+Like Circe, µPickle allows you to control the rendered json output. Please see the [Custom Configuration](https://com-lihaoyi.github.io/upickle/#CustomConfiguration) of the manual for details.
 
 For more examples, including making a custom encoder/decoder, see [TapirJsonuPickleTests.scala](https://github.com/softwaremill/tapir/blob/master/json/upickle/src/test/scala/sttp/tapir/json/upickle/TapirJsonuPickleTests.scala)
 
@@ -220,6 +220,21 @@ import org.json4s._
 implicit val serialization: Serialization = org.json4s.jackson.Serialization
 implicit val formats: Formats = org.json4s.jackson.Serialization.formats(NoTypeHints)
 ```
+
+## Zio JSON
+
+To use Zio JSON, add the following dependency to your project:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "@VERSION@"
+```
+Next, import the package (or extend the `TapirJsonZio` trait, see [MyTapir](../mytapir.md) and add `TapirJsonZio` instead of `TapirCirceJson`):
+
+```scala mdoc:compile-only
+import sttp.tapir.json.zio._
+```
+
+Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for each type you want to serialize.
 
 
 ## Other JSON libraries
