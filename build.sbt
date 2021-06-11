@@ -527,9 +527,9 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .jsPlatform(
-    scalaVersions = allScalaVersions,
+    scalaVersions = scala2Versions,
     settings = commonJsSettings
   )
   .dependsOn(core)
@@ -561,7 +561,7 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core % "compile->compile;test->test")
 
 lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/opentelemetry-metrics"))
@@ -575,7 +575,7 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core % "compile->compile;test->test")
 
 // apispec
@@ -828,7 +828,7 @@ lazy val sttpMockServer: ProjectMatrix = (projectMatrix in file("server/sttp-moc
       "io.circe" %% "circe-literal" % Versions.circe % Test
     )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, serverTests % "test", sttpClient)
 
 lazy val finatraServer: ProjectMatrix = (projectMatrix in file("server/finatra-server"))
@@ -916,7 +916,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
       "org.http4s" %% "http4s-blaze-client" % Versions.http4s
     )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, cats, circeJson, awsSam, sttpStubServer % "test", tests % "test", serverTests)
 
 // integration tests for lambda interpreter
@@ -970,7 +970,7 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     },
     Test / parallelExecution := false
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, cats, circeJson, awsLambda, awsSam, tests)
 
 lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
@@ -982,7 +982,7 @@ lazy val awsSam: ProjectMatrix = (projectMatrix in file("serverless/aws/sam"))
       "io.circe" %% "circe-generic" % Versions.circe
     )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, tests % Test)
 
 lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/terraform"))
@@ -996,7 +996,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "org.typelevel" %% "jawn-parser" % "1.1.2"
     )
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(core, tests % Test)
 
 lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/examples"))
@@ -1013,7 +1013,7 @@ lazy val awsExamples: ProjectMatrix = (projectMatrix in file("serverless/aws/exa
       case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
     }
   )
-  .jvmPlatform(scalaVersions = allScalaVersions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(awsLambda, awsSam, awsTerraform)
 
 // client
