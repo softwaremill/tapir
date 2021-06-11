@@ -34,7 +34,7 @@ case class OpenapiCodegenTask(
   def makeFile(file: File): Task[File] = {
     task {
       val parsed = YamlParser.parseFile(IO.readLines(inputYaml).mkString("\n"))
-      val lines = BasicGenerator.generateObjects(parsed.toOption.get, packageName, objectName).linesIterator.toSeq
+      val lines = BasicGenerator.generateObjects(parsed.toTry.get, packageName, objectName).linesIterator.toSeq
       IO.writeLines(file, lines, IO.utf8)
       file
     }
