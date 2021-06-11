@@ -290,7 +290,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-generic" % Versions.circe,
       "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum,
-      "com.softwaremill.common" %%% "tagging" % "2.3.0",
+      "com.softwaremill.common" %%% "tagging" % "2.3.1",
       scalaTest.value,
       "com.softwaremill.macwire" %% "macros" % "2.3.7",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
