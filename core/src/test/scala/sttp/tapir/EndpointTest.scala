@@ -126,7 +126,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       )
   }
 
-  "oneOfMapping" should "not compile when the type erasure of `T` is different from `T`" in {    
+  "oneOfMapping" should "not compile when the type erasure of `T` is different from `T`" in {
     assertDoesNotCompile("""
       case class Wrapper[T](s: T)
 
@@ -371,6 +371,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     val mapped = query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
     val mapping: Mapping[(Int, String), Wrapper] = mapped match {
       case EndpointInput.MappedPair(_, m) => m.asInstanceOf[Mapping[(Int, String), Wrapper]]
+      case _                              => fail()
     }
 
     // when
@@ -391,7 +392,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       |query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
     """)
   }
-  
+
   "mapTo" should "fail on missing field" in {
     assertDoesNotCompile("""
       |case class Wrapper(i: Int)

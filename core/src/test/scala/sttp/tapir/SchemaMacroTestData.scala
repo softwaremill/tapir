@@ -18,12 +18,14 @@ object SchemaMacroTestData {
     def kind: String = "user"
     def kind(s: String): String = s match {
       case "user" => "user"
+      case _      => throw new MatchError(s)
     }
   }
   case class Organization(name: String) extends Entity {
     def kind: String = "org"
     def kind(s: String): String = s match {
       case "org" => "org"
+      case _     => throw new MatchError(s)
     }
   }
 }
