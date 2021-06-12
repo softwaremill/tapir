@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
@@ -527,13 +526,9 @@ package object tests {
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[List[IntWrapper]])
     }
-
-    val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
   }
 
   //
-
-  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]] ++ Validation.allEndpoints
 
   type Port = Int
 }

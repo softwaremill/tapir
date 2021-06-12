@@ -99,20 +99,6 @@ class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  test("use enumeratum validator for array elements") {
-    import sttp.tapir.codec.enumeratum._
-
-    val expectedYaml = load("validator/expected_valid_enumeratum.yml")
-
-    val actualYaml =
-      OpenAPIDocsInterpreter
-        .toOpenAPI(List(endpoint.in("enum-test").out(jsonBody[Enumeratum.FruitWithEnum])), Info("Fruits", "1.0"))
-        .toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
   test("use enum validator for a cats non-empty-list of enums") {
     import cats.data.NonEmptyList
     import sttp.tapir.integ.cats.codec._
