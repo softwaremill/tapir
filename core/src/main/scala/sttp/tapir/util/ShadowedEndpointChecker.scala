@@ -1,11 +1,11 @@
 package sttp.tapir.util
 
-import sttp.tapir.{Endpoint, ShadowedEndpoint}
+import sttp.tapir.EndpointTransput.Pair
+import sttp.tapir.{Endpoint, EndpointInput, EndpointTransput, ShadowedEndpoint}
+
+import java.net.URLEncoder
 
 object ShadowedEndpointChecker {
-  final val WILDCARD_SYMBOL = "/..."
-  final val PATH_VARIABLE_REPLACEMENT_SYMBOL = "_"
-  final val PATH_VARIABLE_SEGMENT = "\\[(.*?)]"
 
   def apply(endpoints: List[Endpoint[_, _, _, _]]): List[ShadowedEndpoint] = {
     findShadowedEndpoints(endpoints, List()).distinctBy(_.e)
@@ -24,26 +24,37 @@ object ShadowedEndpointChecker {
   private def checkIfShadows(e1: Endpoint[_, _, _, _], e2: Endpoint[_, _, _, _]): Boolean = {
     val e1Segments = extractSegments(e1)
     val e2Segments = extractSegments(e2)
-    val commonSegments = e1Segments.zip(e2Segments).filter(p => p._1.equals(p._2) || p._1.equals("/_") || p._2.equals("/_"))
+    val commonSegments = e1Segments
+      .zip(e2Segments)
+      .filter(p => p._1.equals(WildcardPathSegment) || p._1.equals(p._2) || p._1.equals(PathVariableSegment) || p._2.equals(PathVariableSegment))
 
     if (e1Segments.size == commonSegments.size && e1Segments.size == e2Segments.size) true
-    else if (e1Segments.size == commonSegments.size && endsWithWildcard(e1)) true
-    else if (e2Segments.size == commonSegments.size && endsWithWildcard(e2)) true
+    else if (e1Segments.size == commonSegments.size && e1Segments.last.equals(WildcardPathSegment)) true
     else false
   }
 
-  private def extractSegments(endpoint: Endpoint[_, _, _, _]): List[String] = {
-    normalizePath(endpoint).split(' ').toList
+  private def extractSegments(endpoint: Endpoint[_, _, _, _]): List[PathComponent] = {
+    extractPathSegments(endpoint.input)
   }
 
-  private def endsWithWildcard(e: Endpoint[_, _, _, _]): Boolean = {
-    e.input.show.endsWith(WILDCARD_SYMBOL)
-  }
+  private def extractPathSegments(e: EndpointTransput[_]): List[PathComponent] = {
+    def flattenedPairs(et: EndpointTransput[_]): Vector[EndpointTransput[_]] =
+      et match {
+        case p: Pair[_] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
+        case other => Vector(other)
+      }
 
-  private def normalizePath(e: Endpoint[_, _, _, _]): String = {
-    e.input.show
-      .replaceAll(PATH_VARIABLE_SEGMENT, PATH_VARIABLE_REPLACEMENT_SYMBOL)
-      .replace(WILDCARD_SYMBOL, "")
-      .split('?').head
+    def mapToPathSegments(et: Vector[EndpointTransput[_]]): List[PathComponent] = {
+      et.map({
+        case EndpointInput.FixedPath(x, _, _) => FixedPathSegment(URLEncoder.encode(x, "UTF-8"))
+        case EndpointInput.PathsCapture(_, _) => WildcardPathSegment
+        case EndpointInput.PathCapture(_, _, _) => PathVariableSegment
+        case EndpointInput.FixedMethod(m, _, _) => FixedMethod(m)
+        case _ => NotRelevantForShadowCheck
+      }).toList
+        .filter(!_.equals(NotRelevantForShadowCheck))
+    }
+
+    mapToPathSegments(flattenedPairs(e))
   }
 }

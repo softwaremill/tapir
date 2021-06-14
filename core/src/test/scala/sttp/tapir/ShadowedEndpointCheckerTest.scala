@@ -6,6 +6,16 @@ import sttp.tapir.util.ShadowedEndpointChecker
 
 class ShadowedEndpointCheckerTest extends AnyFlatSpecLike with Matchers {
 
+  it should "omit all segments which are not relevant for shadow check" in {
+    val e1 = endpoint.get.in(query[String]("key").and(header[String]("X-Account"))).in("x")
+    val e2 = endpoint.get.in("x")
+
+    val result = ShadowedEndpointChecker.apply(List(e1, e2))
+
+    val expectedResult = List(ShadowedEndpoint(e2, e1))
+    result shouldBe expectedResult
+  }
+
   it should "should detect shadowed endpoints with path variables that contain special characters" in {
     val e1 = endpoint.get.in("[x]")
     val e2 = endpoint.get.in("x")
@@ -26,8 +36,7 @@ class ShadowedEndpointCheckerTest extends AnyFlatSpecLike with Matchers {
 
     val result = ShadowedEndpointChecker.apply(List(e1, e2, e3))
 
-    val expectedResult = List(ShadowedEndpoint(e3, e2))
-    result shouldBe expectedResult
+    result shouldBe Nil
   }
 
   it should "detect endpoint with path variable shadowed by endpoint with wildcard" in {
@@ -49,7 +58,7 @@ class ShadowedEndpointCheckerTest extends AnyFlatSpecLike with Matchers {
 
     val result = ShadowedEndpointChecker.apply(List(e1, e2, e3, e4))
 
-    val expectedResult = List(ShadowedEndpoint(e2, e1), ShadowedEndpoint(e3, e2), ShadowedEndpoint(e4, e2))
+    val expectedResult = List(ShadowedEndpoint(e3, e2), ShadowedEndpoint(e4, e2))
     result shouldBe expectedResult
   }
 
