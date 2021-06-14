@@ -8,7 +8,7 @@ case object PathVariableSegment extends PathComponent
 
 case object WildcardPathSegment extends PathComponent
 
-case class FixedPathSegment(i: String) extends PathComponent
+case class FixedPathSegment(s: String) extends PathComponent
 
 case class FixedMethod(m: Method) extends PathComponent
 
