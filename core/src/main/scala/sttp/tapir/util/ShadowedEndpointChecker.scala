@@ -1,7 +1,7 @@
 package sttp.tapir.util
 
 import sttp.tapir.EndpointTransput.Pair
-import sttp.tapir.{Endpoint, EndpointInput, EndpointTransput, FixedMethodComponent, FixedPathSegment, NotRelevantForShadowCheck, PathComponent, PathVariableSegment, ShadowedEndpoint, WildcardPathSegment}
+import sttp.tapir.{Endpoint, EndpointInput, EndpointTransput, FixedMethodComponent, FixedPathSegment, PathComponent, PathVariableSegment, ShadowedEndpoint, WildcardPathSegment}
 
 import java.net.URLEncoder
 
@@ -33,26 +33,25 @@ object ShadowedEndpointChecker {
     else false
   }
 
-  private def extractSegments(endpoint: Endpoint[_, _, _, _]): List[PathComponent] = {
+  private def extractSegments(endpoint: Endpoint[_, _, _, _]): Vector[PathComponent] = {
     extractPathSegments(endpoint.input)
   }
 
-  private def extractPathSegments(e: EndpointTransput[_]): List[PathComponent] = {
+  private def extractPathSegments(e: EndpointTransput[_]): Vector[PathComponent] = {
     def flattenedPairs(et: EndpointTransput[_]): Vector[EndpointTransput[_]] =
       et match {
         case p: Pair[_] => flattenedPairs(p.left) ++ flattenedPairs(p.right)
         case other => Vector(other)
       }
 
-    def mapToPathSegments(et: Vector[EndpointTransput[_]]): List[PathComponent] = {
-      et.map({
-        case EndpointInput.FixedPath(x, _, _) => FixedPathSegment(URLEncoder.encode(x, "UTF-8"))
-        case EndpointInput.PathsCapture(_, _) => WildcardPathSegment
-        case EndpointInput.PathCapture(_, _, _) => PathVariableSegment
-        case EndpointInput.FixedMethod(m, _, _) => FixedMethodComponent(m)
-        case _ => NotRelevantForShadowCheck
-      }).toList
-        .filter(!_.equals(NotRelevantForShadowCheck))
+    def mapToPathSegments(et: Vector[EndpointTransput[_]]): Vector[PathComponent] = {
+      et.flatMap({
+        case EndpointInput.FixedPath(x, _, _) => Option(FixedPathSegment(URLEncoder.encode(x, "UTF-8")))
+        case EndpointInput.PathsCapture(_, _) => Option(WildcardPathSegment)
+        case EndpointInput.PathCapture(_, _, _) => Option(PathVariableSegment)
+        case EndpointInput.FixedMethod(m, _, _) => Option(FixedMethodComponent(m))
+        case _ => Option.empty
+      })
     }
 
     mapToPathSegments(flattenedPairs(e))
