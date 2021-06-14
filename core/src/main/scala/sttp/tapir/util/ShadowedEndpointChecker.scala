@@ -1,7 +1,7 @@
 package sttp.tapir.util
 
 import sttp.tapir.EndpointTransput.Pair
-import sttp.tapir.{Endpoint, EndpointInput, EndpointTransput, ShadowedEndpoint}
+import sttp.tapir.{Endpoint, EndpointInput, EndpointTransput, FixedMethod, FixedPathSegment, NotRelevantForShadowCheck, PathComponent, PathVariableSegment, ShadowedEndpoint, WildcardPathSegment}
 
 import java.net.URLEncoder
 

@@ -1,4 +1,4 @@
-package sttp.tapir.util
+package sttp.tapir
 
 import sttp.model.Method
 
