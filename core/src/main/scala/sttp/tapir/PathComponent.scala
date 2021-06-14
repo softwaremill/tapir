@@ -10,6 +10,6 @@ case object WildcardPathSegment extends PathComponent
 
 case class FixedPathSegment(s: String) extends PathComponent
 
-case class FixedMethod(m: Method) extends PathComponent
+case class FixedMethodComponent(m: Method) extends PathComponent
 
 case object NotRelevantForShadowCheck extends PathComponent

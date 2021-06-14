@@ -366,7 +366,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
         compareTransputs(left1, left2) && compareTransputs(right1, right2)
       case (EndpointInput.MappedPair(input1, _), EndpointInput.MappedPair(input2, _)) =>
         compareTransputs(input1, input2)
-      case (FixedMethod(m1, _, info1), FixedMethod(m2, _, info2)) =>
+      case (FixedMethodComponent(m1, _, info1), FixedMethodComponent(m2, _, info2)) =>
         m1 == m2 && info1 == info2
       case (FixedPath(s1, _, info1), FixedPath(s2, _, info2)) =>
         s1 == s2 && info1 == info2

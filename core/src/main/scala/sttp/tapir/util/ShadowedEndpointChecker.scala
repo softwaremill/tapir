@@ -1,7 +1,7 @@
 package sttp.tapir.util
 
 import sttp.tapir.EndpointTransput.Pair
-import sttp.tapir.{Endpoint, EndpointInput, EndpointTransput, FixedMethod, FixedPathSegment, NotRelevantForShadowCheck, PathComponent, PathVariableSegment, ShadowedEndpoint, WildcardPathSegment}
+import sttp.tapir.{Endpoint, EndpointInput, EndpointTransput, FixedMethodComponent, FixedPathSegment, NotRelevantForShadowCheck, PathComponent, PathVariableSegment, ShadowedEndpoint, WildcardPathSegment}
 
 import java.net.URLEncoder
 
@@ -49,7 +49,7 @@ object ShadowedEndpointChecker {
         case EndpointInput.FixedPath(x, _, _) => FixedPathSegment(URLEncoder.encode(x, "UTF-8"))
         case EndpointInput.PathsCapture(_, _) => WildcardPathSegment
         case EndpointInput.PathCapture(_, _, _) => PathVariableSegment
-        case EndpointInput.FixedMethod(m, _, _) => FixedMethod(m)
+        case EndpointInput.FixedMethod(m, _, _) => FixedMethodComponent(m)
         case _ => NotRelevantForShadowCheck
       }).toList
         .filter(!_.equals(NotRelevantForShadowCheck))
