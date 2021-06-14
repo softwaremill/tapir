@@ -9,7 +9,7 @@ import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.docs.openapi.VerifyYamlTest._
-import sttp.tapir.docs.openapi.dtos.Book
+import sttp.tapir.docs.openapi.dtos.{Book, Country, Items}
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
@@ -28,6 +28,21 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     .in(query[String]("color"))
     .out(jsonBody[FruitAmount])
     .out(header[Int]("X-Role"))
+
+  test("should result in not parameter-fixed spec") {
+    val expectedYaml = load("expected_derived_schema.yaml")
+
+    val itemsPet: Endpoint[Unit, Unit, Items[BPet], Any] = endpoint
+      .out(jsonBody[Items[BPet]])
+
+    val itemsCountry: Endpoint[Int, Unit, Items[Country], Any] = endpoint
+      .in("number" / path[Int])
+      .out(jsonBody[Items[Country]])
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(List(itemsPet, itemsCountry), Info("Items", "1.0")).toYaml
+
+    actualYaml shouldBe expectedYaml
+  }
 
   test("should match the expected yaml") {
     val expectedYaml = load("expected.yml")
