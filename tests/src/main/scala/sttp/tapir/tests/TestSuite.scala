@@ -1,6 +1,7 @@
 package sttp.tapir.tests
 
 import cats.effect.{ContextShift, IO, Resource}
+import org.scalactic.source.Position
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -15,7 +16,8 @@ trait TestSuite extends AnyFunSuite with BeforeAndAfterAll {
   val (allTests, doRelease) = tests.allocated.unsafeRunSync()
   allTests.foreach { t =>
     if (testNameFilter.forall(filter => t.name.contains(filter))) {
-      test(t.name)(t.f())(t.pos)
+      implicit val pos: Position = t.pos
+      test(t.name)(t.f())
     }
   }
   private val release = doRelease

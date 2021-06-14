@@ -17,14 +17,14 @@ abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends Cli
   val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
   def wsToPipe: WebSocketToPipe[R]
 
-  override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
+  override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     IO.fromFuture(
       IO(SttpClientInterpreter.toRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(args).send(backend).map(_.body))
     )
   }
 
-  override def safeSend[I, E, O, FN[_]](
+  override def safeSend[I, E, O](
       e: Endpoint[I, E, O, R],
       port: Port,
       args: I

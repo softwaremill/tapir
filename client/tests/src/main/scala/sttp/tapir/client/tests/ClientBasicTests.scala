@@ -143,12 +143,18 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       }
     }
 
-    testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
+    testClient[Unit, Unit, Unit](in_unit_out_json_unit, (), Right(()))
 
     test(in_fixed_header_out_string.showDetail) {
       send(in_fixed_header_out_string, port, ())
         .unsafeToFuture()
         .map(_ shouldBe Right("Location: secret"))
+    }
+
+    test("not existing endpoint, with error output not matching 404") {
+      safeSend(not_existing_endpoint, port, ()).unsafeRunSync() should matchPattern {
+        case DecodeResult.Error(_, _: IllegalArgumentException) =>
+      }
     }
   }
 }

@@ -33,6 +33,14 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
       case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
     }
   },
+  Test / unmanagedSourceDirectories ++= {
+    val sourceDir = (Test / sourceDirectory).value
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((3, _))            => List(sourceDir / "scala-3")
+      case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
+      case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
+    }
+  },
   updateDocs := Def.taskDyn {
     val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
     Def.task {
@@ -58,7 +66,22 @@ val versioningSchemeSettings = Seq(
   versionScheme := Some("early-semver")
 )
 
-val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
+val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
+  Compile / unmanagedSourceDirectories ++= {
+    val sourceDir = (Compile / sourceDirectory).value
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((3, _)) => List(sourceDir / "scalajvm-3")
+      case _            => List(sourceDir / "scalajvm-2")
+    }
+  },
+  Test / unmanagedSourceDirectories ++= {
+    val sourceDir = (Test / sourceDirectory).value
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((3, _)) => List(sourceDir / "scalajvm-3")
+      case _            => List(sourceDir / "scalajvm-2")
+    }
+  }
+)
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
 val commonJsSettings = commonSettings ++ browserGeckoTestSettings
@@ -1013,12 +1036,12 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(
     name := "tapir-client-tests",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
-      "org.http4s" %% "http4s-circe" % Versions.http4s
+      "org.http4s" %% "http4s-dsl" % Versions.http4sScala3,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4sScala3,
+      "org.http4s" %% "http4s-circe" % Versions.http4sScala3
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings
@@ -1048,15 +1071,23 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     )
   )
   .jvmPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJvmSettings ++ Seq(
-      libraryDependencies ++= loggerDependencies.map(_ % Test) ++ Seq(
-        "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test,
+      libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2-ce2" % Versions.sttp % Test,
-        "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional,
-        "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
-        "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
-      )
+        "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional
+      ),
+      libraryDependencies ++= {
+        CrossVersion.partialVersion(scalaVersion.value) match {
+          case Some((3, _)) => Nil
+          case _ =>
+            Seq(
+              "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+              "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test,
+              "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+            )
+        }
+      }
     )
   )
   .jsPlatform(
