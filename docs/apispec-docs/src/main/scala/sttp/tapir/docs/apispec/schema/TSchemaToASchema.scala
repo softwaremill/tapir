@@ -2,7 +2,7 @@ package sttp.tapir.docs.apispec.schema
 
 import sttp.tapir.SchemaType.SObjectInfo
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
-import sttp.tapir.docs.apispec.{exampleValue, rawToString}
+import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.internal.{IterableToListMap, _}
 import sttp.tapir.{Validator, Schema => TSchema, SchemaType => TSchemaType}
 
@@ -26,7 +26,7 @@ private[schema] class TSchemaToASchema(
                 case TSchema(s: TSchemaType.SObject[_], _, _, _, _, _, _, _) =>
                   f.name.encodedName -> Left(objectToSchemaReference.map(s.info))
                 case schema @ TSchema(_, _, _, _, _, _, _, v) =>
-                  v.traversePrimitives { case Validator.Enum(_, _, Some(info)) => Vector(info) } match {
+                  v.traversePrimitives { case Validator.Enumeration(_, _, Some(info)) => Vector(info) } match {
                     case info +: _ if referenceEnums(info) => f.name.encodedName -> Left(objectToSchemaReference.map(info))
                     case _                                 => f.name.encodedName -> apply(schema)
                   }
@@ -105,14 +105,14 @@ private[schema] class TSchemaToASchema(
           maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
           exclusiveMaximum = Option(exclusive).filter(identity)
         )
-      case Validator.Pattern(value)   => oschema.copy(pattern = Some(value))
-      case Validator.MinLength(value) => oschema.copy(minLength = Some(value))
-      case Validator.MaxLength(value) => oschema.copy(maxLength = Some(value))
-      case Validator.MinSize(value)   => oschema.copy(minItems = Some(value))
-      case Validator.MaxSize(value)   => oschema.copy(maxItems = Some(value))
-      case Validator.Enum(_, None, _) => oschema
-      case Validator.Enum(v, Some(encode), _) =>
-        val values = v.flatMap(x => encode(x).map(rawToString))
+      case Validator.Pattern(value)          => oschema.copy(pattern = Some(value))
+      case Validator.MinLength(value)        => oschema.copy(minLength = Some(value))
+      case Validator.MaxLength(value)        => oschema.copy(maxLength = Some(value))
+      case Validator.MinSize(value)          => oschema.copy(minItems = Some(value))
+      case Validator.MaxSize(value)          => oschema.copy(maxItems = Some(value))
+      case Validator.Enumeration(_, None, _) => oschema
+      case Validator.Enumeration(v, Some(encode), _) =>
+        val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
         oschema.copy(enum = if (values.nonEmpty) Some(values) else None)
     }
   }

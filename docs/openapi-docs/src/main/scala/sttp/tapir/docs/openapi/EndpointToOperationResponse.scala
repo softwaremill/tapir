@@ -66,12 +66,14 @@ private[openapi] class EndpointToOperationResponse(
     }
   }
 
-  private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] =
+  private def collectBodies(outputs: List[EndpointOutput[_]]): List[(Option[String], ListMap[String, MediaType])] = {
+    val forcedContentType = extractFixedContentType(outputs)
     outputs.flatMap(_.traverseOutputs {
-      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples)))
+      case EndpointIO.Body(_, codec, info) => Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType)))
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(_, codec, info, _)) =>
-        Vector((info.description, codecToMediaType(codec, info.examples)))
+        Vector((info.description, codecToMediaType(codec, info.examples, forcedContentType)))
     })
+  }
 
   private def collectHeaders(outputs: List[EndpointOutput[_]]): List[(String, Right[Nothing, Header])] = {
     outputs.flatMap(_.traverseOutputs {
@@ -104,4 +106,11 @@ private[openapi] class EndpointToOperationResponse(
       .defaultDecodeFailureOutput(input)
       .map(output => outputToResponses(output, ResponsesDefaultKey, None))
       .getOrElse(ListMap())
+
+  private def extractFixedContentType(outputs: List[EndpointOutput[_]]): Option[String] = {
+    outputs.flatMap(_.traverseOutputs {
+      case EndpointIO.FixedHeader(h, _, _) =>
+        if (h.is("Content-Type")) Vector(h.value) else Vector.empty
+    }).headOption
+  }
 }

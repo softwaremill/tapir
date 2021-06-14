@@ -18,6 +18,7 @@ interpreted as:
   Currently supported:
   * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html).
   * [Play](https://tapir.softwaremill.com/en/latest/client/play.html).
+  * [http4s](https://tapir.softwaremill.com/en/latest/client/http4s.html)
 * documentation. Currently supported: 
   * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
@@ -41,7 +42,7 @@ case class Book(title: String)
 val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
-    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
+    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)

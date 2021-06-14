@@ -45,13 +45,13 @@ package object tests {
     endpoint.in(query[String]("fruit").map(_.toList)(_.mkString(""))).out(stringBody).name("mapped query")
 
   val in_mapped_path_out_string: Endpoint[Fruit, Unit, String, Any] =
-    endpoint.in(("fruit" / path[String]).mapTo(Fruit)).out(stringBody).name("mapped path")
+    endpoint.in(("fruit" / path[String]).mapTo[Fruit]).out(stringBody).name("mapped path")
 
   val in_mapped_path_path_out_string: Endpoint[FruitAmount, Unit, String, Any] =
-    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount)).out(stringBody).name("mapped path path")
+    endpoint.in(("fruit" / path[String] / "amount" / path[Int]).mapTo[FruitAmount]).out(stringBody).name("mapped path path")
 
   val in_query_mapped_path_path_out_string: Endpoint[(FruitAmount, String), Unit, String, Any] = endpoint
-    .in(("fruit" / path[String] / "amount" / path[Int]).mapTo(FruitAmount))
+    .in(("fruit" / path[String] / "amount" / path[Int]).mapTo[FruitAmount])
     .in(query[String]("color"))
     .out(stringBody)
     .name("query and mapped path path")
@@ -61,7 +61,7 @@ package object tests {
 
   val in_query_out_mapped_string_header: Endpoint[String, Unit, FruitAmount, Any] = endpoint
     .in(query[String]("fruit"))
-    .out(stringBody.and(header[Int]("X-Role")).mapTo(FruitAmount))
+    .out(stringBody.and(header[Int]("X-Role")).mapTo[FruitAmount])
     .name("out mapped")
 
   val in_header_before_path: Endpoint[(String, Int), Unit, (Int, String), Any] = endpoint
@@ -315,6 +315,9 @@ package object tests {
       .out(stringBody)
       .name("Query with default")
 
+  val out_fixed_content_type_header: Endpoint[Unit, Unit, String, Any] =
+    endpoint.out(stringBody and header("Content-Type", "text/csv"))
+
   val out_json_or_default_json: Endpoint[String, Unit, Entity, Any] =
     endpoint.get
       .in("entity" / path[String]("type"))
@@ -475,7 +478,7 @@ package object tests {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
-          .validate(Validator.derivedEnum)
+          .validate(Validator.derivedEnumeration)
       }
       endpoint.in(query[Color]("color"))
     }
@@ -487,7 +490,7 @@ package object tests {
             case "red"  => Red
             case "blue" => Blue
           })(_.toString.toLowerCase)
-          .validate(Validator.derivedEnum)
+          .validate(Validator.derivedEnumeration)
       }
       endpoint.in(query[Option[Color]]("color"))
     }
@@ -495,7 +498,7 @@ package object tests {
     val out_enum_object: Endpoint[Unit, Unit, ColorValue, Any] = {
       implicit def schemaForColor: Schema[Color] =
         Schema.string.validate(
-          Validator.enum(
+          Validator.enumeration(
             List(Blue, Red),
             {
               case Red  => Some("red")
@@ -508,12 +511,12 @@ package object tests {
 
     val in_enum_values: Endpoint[IntWrapper, Unit, Unit, Any] = {
       implicit def plainCodecForWrapper: PlainCodec[IntWrapper] =
-        Codec.int.map(IntWrapper.apply(_))(_.v).validate(Validator.enum(List(IntWrapper(1), IntWrapper(2))))
+        Codec.int.map(IntWrapper.apply(_))(_.v).validate(Validator.enumeration(List(IntWrapper(1), IntWrapper(2))))
       endpoint.in(query[IntWrapper]("amount"))
     }
 
     val in_json_wrapper_enum: Endpoint[ColorWrapper, Unit, Unit, Any] = {
-      implicit def schemaForColor: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
+      implicit def schemaForColor: Schema[Color] = Schema.string.validate(Validator.derivedEnumeration.encode(_.toString.toLowerCase))
       endpoint.in(jsonBody[ColorWrapper])
     }
 

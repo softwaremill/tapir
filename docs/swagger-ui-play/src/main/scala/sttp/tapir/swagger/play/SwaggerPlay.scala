@@ -52,17 +52,22 @@ class SwaggerPlay(
   )
 
   def routes: Routes = {
-    case GET(p"/$path") if path == contextPath =>
-      actionBuilder {
-        MovedPermanently(redirectPath)
-      }
-    case GET(p"/$path/$file") if path == contextPath =>
-      actionBuilder {
-        file match {
-          case `yamlName` =>
-            Ok(yaml).as("text/yaml")
-          case _ =>
-            Ok.sendResource(s"$resourcePathPrefix/$file")
+    case GET(p"/$path*") if path.startsWith(contextPath) =>
+      val filePart = path.substring(contextPath.length)
+      // Remove the first '/' if present
+      val file = if (filePart.nonEmpty) filePart.substring(1) else filePart
+      if (file.isEmpty) {
+        actionBuilder {
+          MovedPermanently(redirectPath)
+        }
+      } else {
+        actionBuilder {
+          file match {
+            case `yamlName` =>
+              Ok(yaml).as("text/yaml")
+            case _ =>
+              Ok.sendResource(s"$resourcePathPrefix/$file")
+          }
         }
       }
   }

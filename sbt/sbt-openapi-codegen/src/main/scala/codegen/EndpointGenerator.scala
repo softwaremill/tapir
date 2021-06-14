@@ -42,7 +42,7 @@ class EndpointGenerator {
   }
 
   private def urlMapper(url: String, parameters: Seq[OpenapiParameter]): String = {
-    //.in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
+    //.in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     val inPath = url.split('/').filter(_.nonEmpty) map { segment =>
       if (segment.startsWith("{")) {
         val name = segment.drop(1).dropRight(1)

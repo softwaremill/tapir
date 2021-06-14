@@ -117,7 +117,7 @@ class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
     import cats.data.NonEmptyList
     import sttp.tapir.integ.cats.codec._
     implicit def schemaForColor: Schema[Color] =
-      Schema.string.validate(Validator.enum(List(Blue, Red), { c => Some(c.toString.toLowerCase()) }))
+      Schema.string.validate(Validator.enumeration(List(Blue, Red), { c => Some(c.toString.toLowerCase()) }))
 
     val expectedYaml = load("validator/expected_valid_enum_cats_nel.yml")
 

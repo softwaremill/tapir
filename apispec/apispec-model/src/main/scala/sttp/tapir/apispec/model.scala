@@ -9,9 +9,8 @@ object Reference {
 }
 
 sealed trait ExampleValue
-
-case class ExampleSingleValue(value: String) extends ExampleValue
-case class ExampleMultipleValue(values: List[String]) extends ExampleValue
+case class ExampleSingleValue(value: Any) extends ExampleValue
+case class ExampleMultipleValue(values: List[Any]) extends ExampleValue
 
 case class Tag(
     name: String,

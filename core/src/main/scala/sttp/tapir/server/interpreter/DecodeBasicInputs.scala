@@ -53,7 +53,7 @@ private case class DecodeInputsContext(request: ServerRequest, pathSegments: Lis
 }
 
 object DecodeBasicInputs {
-  private final case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
+  case class IndexedBasicInput(input: EndpointInput.Basic[_], index: Int)
 
   /** Decodes values of all basic inputs defined by the given `input`, and returns a map from the input to the
     * input's value.
@@ -72,7 +72,7 @@ object DecodeBasicInputs {
     // We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
     // An exact-path check is done after method & path matching
 
-    val basicInputs = input.asVectorOfBasicInputs().zipWithIndex.map(IndexedBasicInput.tupled)
+    val basicInputs = input.asVectorOfBasicInputs().zipWithIndex.map { case (el, i) => IndexedBasicInput(el, i) }
 
     val methodInputs = basicInputs.filter(t => isRequestMethod(t.input))
     val pathInputs = basicInputs.filter(t => isPath(t.input))

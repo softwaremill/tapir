@@ -74,16 +74,18 @@ import sttp.tapir._
 import sttp.tapir.Codec.PlainCodec
 
 sealed trait Color
+
 case object Blue extends Color
+
 case object Red extends Color
 
 implicit def plainCodecForColor: PlainCodec[Color] = {
   Codec.string
     .map[Color]((_: String) match {
-      case "red"  => Red
+      case "red" => Red
       case "blue" => Blue
     })(_.toString.toLowerCase)
-    .validate(Validator.derivedEnum)
+    .validate(Validator.derivedEnumeration)
 }
 ```
 
