@@ -31,7 +31,7 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
     }
   )
 
-  val amountRoute: Route = AkkaHttpServerInterpreter.toRoute(amountEndpoint)(_ => Future.successful(Right(())))
+  val amountRoute: Route = AkkaHttpServerInterpreter().toRoute(amountEndpoint)(_ => Future.successful(Right(())))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

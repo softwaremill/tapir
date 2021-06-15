@@ -91,9 +91,9 @@ object BooksExample extends App with StrictLogging {
 
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.
-    AkkaHttpServerInterpreter.toRoute(addBook)((bookAddLogic _).tupled) ~
-      AkkaHttpServerInterpreter.toRoute(booksListing)(bookListingLogic) ~
-      AkkaHttpServerInterpreter.toRoute(booksListingByGenre)(bookListingByGenreLogic)
+    AkkaHttpServerInterpreter().toRoute(addBook)((bookAddLogic _).tupled) ~
+      AkkaHttpServerInterpreter().toRoute(booksListing)(bookListingLogic) ~
+      AkkaHttpServerInterpreter().toRoute(booksListingByGenre)(bookListingByGenreLogic)
   }
 
   def startServer(route: Route, yaml: String): Unit = {

@@ -25,17 +25,17 @@ class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[Future, AkkaResponseBody]] = None
   ): Route = {
-    implicit val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
+    val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
       metricsInterceptor = metricsInterceptor,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
-    AkkaHttpServerInterpreter.toRoute(e)
+    AkkaHttpServerInterpreter(serverOptions).toRoute(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Route = {
-    AkkaHttpServerInterpreter.toRouteRecoverErrors(e)(fn)
+    AkkaHttpServerInterpreter().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Route]): Resource[IO, Port] = {
