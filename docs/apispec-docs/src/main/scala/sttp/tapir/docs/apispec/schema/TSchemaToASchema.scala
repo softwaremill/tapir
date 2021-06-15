@@ -113,7 +113,7 @@ private[schema] class TSchemaToASchema(
       case Validator.Enumeration(_, None, _) => oschema
       case Validator.Enumeration(v, Some(encode), _) =>
         val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
-        oschema.copy(enum = if (values.nonEmpty) Some(values) else None)
+        oschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
     }
   }
 

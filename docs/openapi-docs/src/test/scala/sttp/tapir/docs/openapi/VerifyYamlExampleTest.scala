@@ -5,6 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
+import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.Info
@@ -136,7 +137,10 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     val expectedBook = Book("title", Genre("name", "desc"), 2021, Author("name", Country("country")))
 
     implicit val testSchemaZonedDateTime: Schema[ZonedDateTime] = Schema.schemaForZonedDateTime.encodedExample(expectedDateTime)
-    implicit val testSchemaBook = implicitly[Schema[Book]].encodedExample(circeCodec[Book].encode(expectedBook))
+    implicit val testSchemaBook: Schema[Book] = {
+      val schema: Schema[Book] = implicitly[Derived[Schema[Book]]].value
+      schema.encodedExample(circeCodec[Book](implicitly, implicitly, schema).encode(expectedBook))
+    }
 
     val endpoint_with_dateTimes = endpoint.post.in(jsonBody[ZonedDateTime]).out(jsonBody[Book])
 

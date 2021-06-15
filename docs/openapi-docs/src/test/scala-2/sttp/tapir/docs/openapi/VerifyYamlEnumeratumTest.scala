@@ -1,10 +1,13 @@
 package sttp.tapir.docs.openapi
 
+import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir._
+import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
+import sttp.tapir.openapi.circe.yaml._
 import VerifyYamlEnumeratumTest._
 
 class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {

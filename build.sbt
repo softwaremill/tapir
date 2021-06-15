@@ -23,24 +23,23 @@ concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
+def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
+  CrossVersion.partialVersion(scalaVersion) match {
+    case Some((3, _))            => List(sourceDir / "scala-3")
+    case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
+    case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
+  }
+
+def versionedScalaJvmSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
+  CrossVersion.partialVersion(scalaVersion) match {
+    case Some((3, _)) => List(sourceDir / "scalajvm-3")
+    case _            => List(sourceDir / "scalajvm-2")
+  }
+
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
-  Compile / unmanagedSourceDirectories ++= {
-    val sourceDir = (Compile / sourceDirectory).value
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((3, _))            => List(sourceDir / "scala-3")
-      case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
-      case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
-    }
-  },
-  Test / unmanagedSourceDirectories ++= {
-    val sourceDir = (Test / sourceDirectory).value
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((3, _))            => List(sourceDir / "scala-3")
-      case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
-      case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
-    }
-  },
+  Compile / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
+  Test / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   updateDocs := Def.taskDyn {
     val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
     Def.task {
@@ -67,20 +66,8 @@ val versioningSchemeSettings = Seq(
 )
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
-  Compile / unmanagedSourceDirectories ++= {
-    val sourceDir = (Compile / sourceDirectory).value
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((3, _)) => List(sourceDir / "scalajvm-3")
-      case _            => List(sourceDir / "scalajvm-2")
-    }
-  },
-  Test / unmanagedSourceDirectories ++= {
-    val sourceDir = (Test / sourceDirectory).value
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((3, _)) => List(sourceDir / "scalajvm-3")
-      case _            => List(sourceDir / "scalajvm-2")
-    }
-  }
+  Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
+  Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value)
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -684,6 +671,9 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test)
+
+lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
+lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12))
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonJvmSettings)
