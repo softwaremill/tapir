@@ -72,7 +72,7 @@ def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-val booksListingRoute: Route = AkkaHttpServerInterpreter
+val booksListingRoute: Route = AkkaHttpServerInterpreter()
   .toRoute(booksListing)((bookListingLogic _).tupled)
 
 

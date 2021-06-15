@@ -9,14 +9,17 @@ Each interpreter accepts an implicit options value, which contains configuration
 * how to handle decode failures (see [error handling](errors.md))
 * additional user-provided interceptors
 
-To use custom server options, define an implicit value, which will be in scope when converting endpoints to the
-target route representation. For example, for `AkkaHttpServerOptions`:
+To use custom server options define a value and use it as an argument for creation of server.
+For example, for `AkkaHttpServerOptions` and `AkkaHttpServerInterpreter`:
 
 ```scala mdoc:compile-only
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
-implicit val customServerOptions: AkkaHttpServerOptions = 
+val customServerOptions: AkkaHttpServerOptions = 
   AkkaHttpServerOptions.customInterceptors(decodeFailureHandler = ???)
+  
+AkkaHttpServerInterpreter(customServerOptions)
 ```
 
 ## Request interceptors
