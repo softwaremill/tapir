@@ -42,7 +42,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
       def additionalTests(): List[Test] = List(
         Test("endpoint nested in a path directive") {
           val e = endpoint.get.in("test" and "directive").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter.toRoute(e))
+          val route = Directives.pathPrefix("api")(AkkaHttpServerInterpreter().toRoute(e))
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
@@ -58,7 +58,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             .serverLogic[Future](_ => {
               Source(List(sse1, sse2)).asRight[Unit].unit(new FutureMonad())
             })
-          val route = AkkaHttpServerInterpreter.toRoute(e)
+          val route = AkkaHttpServerInterpreter().toRoute(e)
           interpreter
             .server(NonEmptyList.of(route))
             .use { port =>
