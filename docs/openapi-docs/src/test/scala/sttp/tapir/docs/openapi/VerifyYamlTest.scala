@@ -29,7 +29,9 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     .out(jsonBody[FruitAmount])
     .out(header[Int]("X-Role"))
 
-  test("should result in not parameter-fixed spec") {
+  test("should use usage-site, not declaration-site type parameter names") {
+    implicit def schema[A: Schema]: Schema[Items[A]] = Schema.derived[Items[A]]
+
     val expectedYaml = load("expected_derived_schema.yaml")
 
     val itemsPet: Endpoint[Unit, Unit, Items[BPet], Any] = endpoint
@@ -41,7 +43,9 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(List(itemsPet, itemsCountry), Info("Items", "1.0")).toYaml
 
-    actualYaml shouldBe expectedYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
   }
 
   test("should match the expected yaml") {
