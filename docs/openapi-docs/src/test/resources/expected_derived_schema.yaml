@@ -1,0 +1,75 @@
+openapi: 3.0.3
+info:
+  title: Items
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Items_A_Pet'
+  /number/{p1}:
+    get:
+      operationId: getNumberP1
+      parameters:
+        - name: p1
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Items_A_Country'
+        '400':
+          description: 'Invalid value for: path parameter p1'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    Items_A_Pet:
+      required:
+        - total
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pet'
+        total:
+          type: integer
+    Items_A_Country:
+      required:
+        - total
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Country'
+        total:
+          type: integer
+    Pet:
+      required:
+        - legsCount
+      type: object
+      properties:
+        legsCount:
+          type: integer
+    Country:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
