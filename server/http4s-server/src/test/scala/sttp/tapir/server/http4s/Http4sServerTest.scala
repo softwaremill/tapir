@@ -60,7 +60,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         "automatic pings"
       )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { (backend, baseUri) =>
         basicRequest
-          .response(asWebSocket { ws: WebSocket[IO] =>
+          .response(asWebSocket { (ws: WebSocket[IO]) =>
             List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
           })
           .get(baseUri.scheme("ws"))

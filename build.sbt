@@ -492,7 +492,7 @@ lazy val uPickleJson: ProjectMatrix = (projectMatrix in file("json/upickle"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings ++ Seq(

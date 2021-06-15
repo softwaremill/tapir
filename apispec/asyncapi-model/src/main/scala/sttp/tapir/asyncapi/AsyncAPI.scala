@@ -63,7 +63,7 @@ case class Server(
     extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 case class ServerVariable(
-    enum: List[String],
+    `enum`: List[String],
     default: Option[String],
     description: Option[String],
     examples: List[String],

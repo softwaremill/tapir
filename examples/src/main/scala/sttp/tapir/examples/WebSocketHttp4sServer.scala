@@ -82,7 +82,7 @@ object WebSocketHttp4sServer extends App {
     .use { backend =>
       // Client which interacts with the web socket
       basicRequest
-        .response(asWebSocket { ws: WebSocket[IO] =>
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("7 bytes")
             _ <- ws.sendText("7 bytes")
