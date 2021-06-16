@@ -31,7 +31,7 @@ class FakeStream extends ReadStream[Buffer] { self =>
       if (demand < 0L) {
         demand = Long.MaxValue
       }
-      lock.notifyAll
+      lock.notifyAll()
       self
     }
 
@@ -60,7 +60,7 @@ class FakeStream extends ReadStream[Buffer] { self =>
 
   def handle(buff: Buffer): Unit =
     lock.synchronized {
-      if (demand == 0L) lock.wait
+      if (demand == 0L) lock.wait()
       if (demand != Long.MaxValue) demand -= 1
       eventHandler.handle(buff)
     }

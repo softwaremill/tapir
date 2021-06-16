@@ -59,9 +59,13 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
   }
 
-  private def endpointHandler[F[_], I, E, O, A, S: ReadStreamCompatible](
+  private def endpointHandler[F[_], I, E, O, A, S, BS](
       e: ServerEndpoint[I, E, O, _, F]
-  )(implicit serverOptions: VertxCatsServerOptions[F], effect: Effect[F]): Handler[RoutingContext] = { rc =>
+  )(implicit
+      serverOptions: VertxCatsServerOptions[F],
+      effect: Effect[F],
+      readStreamCompatible: ReadStreamCompatible[S, BS]
+  ): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]

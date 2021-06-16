@@ -88,8 +88,8 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     implicit val monad: FutureMonad = new FutureMonad()
     implicit val bodyListener: BodyListener[Future, RoutingContext => Unit] = new VertxBodyListener[Future]
     val interpreter = new ServerInterpreter[Any, Future, RoutingContext => Unit, Nothing](
-      new VertxRequestBody[Future, Nothing](rc, serverOptions, FutureFromVFuture),
-      new VertxToResponseBody[Future, Nothing](serverOptions),
+      new VertxRequestBody[Future, Nothing, Nothing](rc, serverOptions, FutureFromVFuture),
+      new VertxToResponseBody[Future, Nothing, Nothing](serverOptions),
       serverOptions.interceptors,
       serverOptions.deleteFile
     )

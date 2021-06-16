@@ -5,18 +5,18 @@ import io.vertx.core.streams.ReadStream
 import sttp.capabilities.Streams
 import sttp.tapir.internal.NoStreams
 
-trait ReadStreamCompatible[S] {
+trait ReadStreamCompatible[S, BS] {
   val streams: Streams[S]
-  def asReadStream(s: streams.BinaryStream): ReadStream[Buffer]
-  def fromReadStream(s: ReadStream[Buffer]): streams.BinaryStream
+  def asReadStream(s: BS): ReadStream[Buffer]
+  def fromReadStream(s: ReadStream[Buffer]): BS
 }
 
 object ReadStreamCompatible {
-  def apply[S](implicit ev: ReadStreamCompatible[S]): ReadStreamCompatible[S] = ev
+  def apply[S, BS](implicit ev: ReadStreamCompatible[S, BS]): ReadStreamCompatible[S, BS] = ev
 
-  implicit val incompatible: ReadStreamCompatible[Nothing] = new ReadStreamCompatible[Nothing] {
+  implicit val incompatible: ReadStreamCompatible[Nothing, Nothing] = new ReadStreamCompatible[Nothing, Nothing] {
     override val streams: NoStreams = NoStreams
-    override def asReadStream(s: streams.BinaryStream): ReadStream[Buffer] = ???
-    override def fromReadStream(s: ReadStream[Buffer]): streams.BinaryStream = ???
+    override def asReadStream(s: Nothing): ReadStream[Buffer] = ???
+    override def fromReadStream(s: ReadStream[Buffer]): Nothing = ???
   }
 }

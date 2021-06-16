@@ -15,9 +15,8 @@ import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxServerOptions[F])
+class VertxToResponseBody[F[_], S, BS](serverOptions: VertxServerOptions[F])(implicit readStreamCompatible: ReadStreamCompatible[S, BS])
     extends ToResponseBody[RoutingContext => Unit, S] {
-  private val readStreamCompatible = ReadStreamCompatible[S]
   override val streams: Streams[S] = readStreamCompatible.streams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContext => Unit = { rc =>
@@ -40,7 +39,7 @@ class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxSer
       format: CodecFormat,
       charset: Option[Charset]
   ): RoutingContext => Unit = { rc =>
-    Pipe(readStreamCompatible.asReadStream(v.asInstanceOf[readStreamCompatible.streams.BinaryStream]), rc.response)
+    Pipe(readStreamCompatible.asReadStream(v.asInstanceOf[BS]), rc.response)
   }
 
   override def fromWebSocketPipe[REQ, RESP](

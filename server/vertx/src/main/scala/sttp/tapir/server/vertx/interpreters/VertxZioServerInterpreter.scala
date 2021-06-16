@@ -13,6 +13,7 @@ import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.zio._
 import sttp.tapir.server.vertx.{VertxBodyListener, VertxZioServerOptions}
 import zio._
+import zio.stream.Stream
 
 import scala.reflect.ClassTag
 
@@ -48,7 +49,7 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
     val fromVFuture = new RioFromVFuture[R]
     implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Unit] = new VertxBodyListener[RIO[R, *]]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Unit, ZioStreams](
-      new VertxRequestBody[RIO[R, *], ZioStreams](rc, serverOptions, fromVFuture),
+      new VertxRequestBody[RIO[R, *], ZioStreams, Stream[Throwable, Byte]](rc, serverOptions, fromVFuture),
       new VertxToResponseBody(serverOptions),
       serverOptions.interceptors,
       serverOptions.deleteFile
