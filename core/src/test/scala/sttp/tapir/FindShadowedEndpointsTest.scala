@@ -12,7 +12,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2))
 
-    result shouldBe Nil
+    result shouldBe Set()
   }
 
   it should "not detect shadowed endpoint when second endpoint doesn't have specified method" in {
@@ -21,7 +21,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2))
 
-    result shouldBe Nil
+    result shouldBe Set()
   }
 
   it should "detect shadowed endpoint when first endpoint doesn't have specified method" in {
@@ -30,7 +30,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2))
 
-    val expectedResult = List(ShadowedEndpoint(e2, e1))
+    val expectedResult = Set(ShadowedEndpoint(e2, e1))
     result shouldBe expectedResult
   }
 
@@ -39,7 +39,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
     val e2 = endpoint.get
     val result = FindShadowedEndpoints(List(e1, e2))
 
-    val expectedResult = List(ShadowedEndpoint(e2, e1))
+    val expectedResult = Set(ShadowedEndpoint(e2, e1))
     result shouldBe expectedResult
   }
 
@@ -49,7 +49,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2))
 
-    val expectedResult = List(ShadowedEndpoint(e2, e1))
+    val expectedResult = Set(ShadowedEndpoint(e2, e1))
     result shouldBe expectedResult
   }
 
@@ -59,7 +59,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2))
 
-    result shouldBe Nil
+    result shouldBe Set()
   }
 
   it should "should detect shadowed endpoint when methods are not provided" in {
@@ -68,7 +68,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2))
 
-    val expectedResult = List(ShadowedEndpoint(e2, e1))
+    val expectedResult = Set(ShadowedEndpoint(e2, e1))
     result shouldBe expectedResult
   }
 
@@ -78,7 +78,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2))
 
-    val expectedResult = List(ShadowedEndpoint(e2, e1))
+    val expectedResult = Set(ShadowedEndpoint(e2, e1))
     result shouldBe expectedResult
   }
 
@@ -91,7 +91,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2, e3, e4, e5))
 
-    val expectedResult = List(ShadowedEndpoint(e5, e2))
+    val expectedResult = Set(ShadowedEndpoint(e5, e2))
     result shouldBe expectedResult
   }
 
@@ -102,7 +102,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2, e3))
 
-    result shouldBe Nil
+    result shouldBe Set()
   }
 
   it should "detect endpoint with path variable shadowed by endpoint with wildcard" in {
@@ -112,7 +112,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2, e3))
 
-    val expectedResult = List(ShadowedEndpoint(e2, e1), ShadowedEndpoint(e3, e1))
+    val expectedResult = Set(ShadowedEndpoint(e2, e1), ShadowedEndpoint(e3, e1))
     result shouldBe expectedResult
   }
 
@@ -125,7 +125,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2, e3, e4))
 
-    val expectedResult = List(ShadowedEndpoint(e4, e3))
+    val expectedResult = Set(ShadowedEndpoint(e4, e3))
     result shouldBe expectedResult
   }
 
@@ -137,7 +137,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2, e3, e4))
 
-    val expectedResult = List(ShadowedEndpoint(e2, e1), ShadowedEndpoint(e3, e1))
+    val expectedResult = Set(ShadowedEndpoint(e2, e1), ShadowedEndpoint(e3, e1))
     result shouldBe expectedResult
   }
 
@@ -148,7 +148,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2, e3))
 
-    val expectedResult = List(ShadowedEndpoint(e3, e2))
+    val expectedResult = Set(ShadowedEndpoint(e3, e2))
     result shouldBe expectedResult
   }
 
@@ -162,7 +162,7 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
     val result = FindShadowedEndpoints(List(e1, e2, e3, e4, e5, e6))
 
-    val expectedResult = List(ShadowedEndpoint(e3, e2), ShadowedEndpoint(e4, e2))
+    val expectedResult = Set(ShadowedEndpoint(e3, e2), ShadowedEndpoint(e4, e2))
     result shouldBe expectedResult
   }
 
@@ -173,11 +173,11 @@ class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
     val e4 = endpoint.get.in("a/b/c").out(stringBody)
 
     val result = FindShadowedEndpoints(List(e1, e2, e3, e4))
-    result shouldBe Nil
+    result shouldBe Set()
   }
 
   it should "return empty result for empty input" in {
     val result = FindShadowedEndpoints(Nil)
-    result shouldBe Nil
+    result shouldBe Set()
   }
 }

@@ -8,8 +8,8 @@ import java.net.URLEncoder
 
 object FindShadowedEndpoints {
 
-  def apply(endpoints: List[Endpoint[_, _, _, _]]): List[ShadowedEndpoint] = {
-    findShadowedEndpoints(endpoints, List()).distinctBy(_.e)
+  def apply(endpoints: List[Endpoint[_, _, _, _]]): Set[ShadowedEndpoint] = {
+    findShadowedEndpoints(endpoints, List()).groupBy(_.e).map(_._2.head).toSet
   }
 
   private def findShadowedEndpoints(endpoints: List[Endpoint[_, _, _, _]], acc: List[ShadowedEndpoint]): List[ShadowedEndpoint] =
