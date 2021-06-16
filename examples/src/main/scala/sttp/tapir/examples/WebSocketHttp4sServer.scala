@@ -1,6 +1,6 @@
 package sttp.tapir.examples
 
-import cats.effect.{Blocker, ContextShift, IO, Timer}
+import cats.effect.{Blocker, Concurrent, ContextShift, IO, Timer}
 import io.circe.generic.auto._
 import fs2._
 import org.http4s.HttpRoutes
@@ -17,7 +17,7 @@ import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerRoutesInterpreter}
 import sttp.ws.WebSocket
 
 import scala.concurrent.ExecutionContext
@@ -28,6 +28,7 @@ object WebSocketHttp4sServer extends App {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
+  implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
   val blocker: Blocker = Blocker.liftExecutionContext(ec)
 
   //
@@ -67,7 +68,7 @@ object WebSocketHttp4sServer extends App {
   }
 
   // Implementing the endpoint's logic, by providing the web socket pipe
-  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
+  val wsRoutes: HttpRoutes[IO] = Http4sServerRoutesInterpreter().toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
 
   // Documentation
   val apiDocs = AsyncAPIInterpreter.toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml

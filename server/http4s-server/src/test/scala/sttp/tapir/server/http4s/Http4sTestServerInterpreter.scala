@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s
 
 import cats.data.{Kleisli, NonEmptyList}
-import cats.effect.{ContextShift, IO, Resource, Timer}
+import cats.effect.{Concurrent, ContextShift, IO, Resource, Timer}
 import cats.syntax.all._
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
@@ -24,26 +24,27 @@ class Http4sTestServerInterpreter
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
+  implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, Http4sResponseBody[IO]]] = None
   ): HttpRoutes[IO] = {
-    implicit val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
+    val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
       .customInterceptors(
         metricsInterceptor = metricsInterceptor,
         exceptionHandler = Some(DefaultExceptionHandler),
         serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    Http4sServerInterpreter.toRoutes(e)
+    Http4sServerRoutesInterpreter(serverOptions).toRoutes(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO] with WebSockets], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): HttpRoutes[IO] = {
-    Http4sServerInterpreter.toRouteRecoverErrors(e)(fn)
+    Http4sServerRoutesInterpreter().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[HttpRoutes[IO]]): Resource[IO, Port] = {

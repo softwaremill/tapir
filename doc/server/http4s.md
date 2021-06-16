@@ -25,16 +25,18 @@ a subclass of `Throwable` (an exception); it expects a function of type `I => F[
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerRoutesInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import cats.effect.{ContextShift, Timer}
+import cats.effect.{Concurrent, ContextShift, Timer}
 
 // will probably come from somewhere else
 implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
 implicit val t: Timer[IO] =
-  IO.timer(scala.concurrent.ExecutionContext.global) 
+  IO.timer(scala.concurrent.ExecutionContext.global)
+  
+implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
   IO.pure(Right[Unit, Int](s.length))
@@ -42,7 +44,7 @@ def countCharacters(s: String): IO[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: HttpRoutes[IO] = 
-  Http4sServerInterpreter.toRoutes(countCharactersEndpoint)(countCharacters _)
+  Http4sServerRoutesInterpreter().toRoutes(countCharactersEndpoint)(countCharacters _)
 ```
 
 Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
@@ -50,8 +52,9 @@ functions which take multiple arguments need to be converted to a function using
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerRoutesInterpreter
 import cats.effect.IO
+import cats.effect.Concurrent
 import org.http4s.HttpRoutes
 import cats.effect.{ContextShift, Timer}
 
@@ -60,10 +63,11 @@ implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
 implicit val t: Timer[IO] =
   IO.timer(scala.concurrent.ExecutionContext.global)
+implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val routes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(anEndpoint)((logic _).tupled)
+val routes: HttpRoutes[IO] = Http4sServerRoutesInterpreter().toRoutes(anEndpoint)((logic _).tupled)
 ```
 
 The created `HttpRoutes` are the usual http4s `Kleisli`-based transformation of a `Request` to a `Response`, and can 
@@ -95,9 +99,10 @@ For example, to define an endpoint that returns event stream:
 
 ```scala mdoc:compile-only
 import cats.effect.IO
+import cats.effect.Concurrent
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
-import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
+import sttp.tapir.server.http4s.{Http4sServerRoutesInterpreter, serverSentEventsBody}
 
 import cats.effect.{ContextShift, Timer}
 
@@ -105,8 +110,9 @@ val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
 
 implicit val cs: ContextShift[IO] = ???
 implicit val t: Timer[IO] = ???
+implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
-val routes = Http4sServerInterpreter.toRoutes(sseEndpoint)(_ =>
+val routes = Http4sServerRoutesInterpreter().toRoutes(sseEndpoint)(_ =>
   IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
 )
 ```

@@ -14,7 +14,7 @@ import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerRoutesInterpreter}
 
 import java.time.Instant
 import scala.collection.immutable.ListMap
@@ -69,11 +69,11 @@ object OAuth2GithubHttp4sServer extends App {
   // converting endpoints to routes
 
   // simply redirect to github auth service
-  val loginRoute: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(login)(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit]))
+  val loginRoute: HttpRoutes[IO] = Http4sServerRoutesInterpreter().toRoutes(login)(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit]))
 
   // after successful authorization github redirects you here
   def loginGithubRoute(backend: SttpBackend[IO, Any]): HttpRoutes[IO] =
-    Http4sServerInterpreter.toRoutes(loginGithub)(code =>
+    Http4sServerRoutesInterpreter().toRoutes(loginGithub)(code =>
       basicRequest
         .response(asStringAlways)
         .post(uri"$accessTokenUrl?client_id=$clientId&client_secret=$clientSecret&code=$code")
@@ -98,7 +98,7 @@ object OAuth2GithubHttp4sServer extends App {
   }
 
   // get user details from decoded jwt
-  val secretPlaceRoute: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(secretPlace)(token =>
+  val secretPlaceRoute: HttpRoutes[IO] = Http4sServerRoutesInterpreter().toRoutes(secretPlace)(token =>
     IO(
       for {
         authDetails <- authenticate(token)
