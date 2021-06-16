@@ -27,9 +27,7 @@ object FindShadowedEndpoints {
   }
 
   private def checkMethods(e1: Endpoint[_, _, _, _], e2: Endpoint[_, _, _, _]): Boolean = {
-    if (e1.httpMethod.equals(e2.httpMethod)) true
-    else if (e1.httpMethod.isEmpty && e2.httpMethod.nonEmpty) true
-    else false
+    if (e1.httpMethod.equals(e2.httpMethod) || e1.httpMethod.isEmpty) true else false
   }
 
   private def checkPaths(e1: Endpoint[_, _, _, _], e2: Endpoint[_, _, _, _]): Boolean = {

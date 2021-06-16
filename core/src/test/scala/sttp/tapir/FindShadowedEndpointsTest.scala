@@ -6,6 +6,12 @@ import sttp.tapir.util.FindShadowedEndpoints
 
 class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
+  it should "bvshould not detect shadowed endpoint when first endpoint has empty path and second fixed path" in {
+    val e1 = endpoint.get.in(path[String].name("y_1") / path[String].name("y_2"))
+    val e2 = endpoint.get.in(path[String].name("y_3") / path[String].name("y_4"))
+    println(FindShadowedEndpoints(List(e1, e2)))
+  }
+
   it should "should not detect shadowed endpoint when first endpoint has empty path and second fixed path" in {
     val e1 = endpoint.get
     val e2 = endpoint.get.in("x")
