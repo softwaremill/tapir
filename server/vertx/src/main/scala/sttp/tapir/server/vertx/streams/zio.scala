@@ -25,7 +25,7 @@ object zio {
   implicit def zioReadStreamCompatible[F[_]](implicit
       opts: VertxZioServerOptions[F],
       runtime: Runtime[Any]
-  ): ReadStreamCompatible[ZioStreams, Stream[Throwable, Byte]] = new ReadStreamCompatible[ZioStreams, Stream[Throwable, Byte]] {
+  ): ReadStreamCompatible[ZioStreams] = new ReadStreamCompatible[ZioStreams] {
     override val streams: ZioStreams = ZioStreams
 
     override def asReadStream(stream: Stream[Throwable, Byte]): ReadStream[Buffer] =

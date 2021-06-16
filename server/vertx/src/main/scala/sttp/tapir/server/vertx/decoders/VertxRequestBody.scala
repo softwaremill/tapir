@@ -20,11 +20,11 @@ import java.util.Date
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class VertxRequestBody[F[_], S, BS](
+class VertxRequestBody[F[_], S <: Streams[S]](
     rc: RoutingContext,
     serverOptions: VertxServerOptions[F],
     fromVFuture: FromVFuture[F]
-)(implicit readStreamCompatible: ReadStreamCompatible[S, BS])
+)(implicit val readStreamCompatible: ReadStreamCompatible[S])
     extends RequestBody[F, S] {
   override val streams: Streams[S] = readStreamCompatible.streams
 

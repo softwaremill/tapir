@@ -34,8 +34,8 @@ object fs2 {
   implicit def fs2ReadStreamCompatible[F[_]](implicit
       opts: VertxCatsServerOptions[F],
       F: ConcurrentEffect[F]
-  ): ReadStreamCompatible[Fs2Streams[F], Stream[F, Byte]] =
-    new ReadStreamCompatible[Fs2Streams[F], Stream[F, Byte]] {
+  ): ReadStreamCompatible[Fs2Streams[F]] =
+    new ReadStreamCompatible[Fs2Streams[F]] {
       override val streams: Fs2Streams[F] = Fs2Streams[F]
 
       override def asReadStream(stream: Stream[F, Byte]): ReadStream[Buffer] =

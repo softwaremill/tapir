@@ -4,6 +4,7 @@ import cats.effect.{Async, ConcurrentEffect, Effect}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
+import sttp.capabilities.Streams
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
@@ -59,17 +60,17 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
   }
 
-  private def endpointHandler[F[_], I, E, O, A, S, BS](
-      e: ServerEndpoint[I, E, O, _, F]
+  private def endpointHandler[F[_], I, E, O, A, S <: Streams[S]](
+      e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
   )(implicit
       serverOptions: VertxCatsServerOptions[F],
       effect: Effect[F],
-      readStreamCompatible: ReadStreamCompatible[S, BS]
+      readStreamCompatible: ReadStreamCompatible[S]
   ): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
-    val interpreter: ServerInterpreter[Nothing, F, RoutingContext => Unit, S] = new ServerInterpreter(
+    val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Unit, S] = new ServerInterpreter(
       new VertxRequestBody(rc, serverOptions, fFromVFuture),
       new VertxToResponseBody(serverOptions),
       serverOptions.interceptors,
