@@ -19,8 +19,13 @@ private[tapir] object UrlencodedData {
 
   def encode(s: Seq[(String, String)], charset: Charset): String = {
     def encodeSpace(in: String): String = in.replace("%20", "+")
+
     s.map { case (k, v) =>
       s"${encodeSpace(URIUtils.encodeURIComponent(k))}=${encodeSpace(URIUtils.encodeURIComponent(v))}"
     }.mkString("&")
+  }
+
+  def encode(s: String): String = {
+    URIUtils.encodeURIComponent(s)
   }
 }
