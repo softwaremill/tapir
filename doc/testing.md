@@ -154,22 +154,18 @@ type `List[Endpoint[_, _, _, _]]` an outputs `Set[ShadowedEndpoint]`.
 
 Examples:
 
-```scala mdoc:compile-only
+```scala mdoc
 val e1 = endpoint.get.in("x" / paths)
 val e2 = endpoint.get.in("x" / "y" / "x")
 val e3 = endpoint.get.in("x")
 val e4 = endpoint.get.in("y" / "x")
 val res = FindShadowedEndpoints(List(e1, e2, e3, e4))
 println(res)
-    
-> Set(GET /x /y /x, is shadowed by: GET /x /..., GET /x, is shadowed by: GET /x /...)
 ```
 
-```scala mdoc:compile-only
+```scala mdoc
 val e1 = endpoint.get.in(path[String].name("y_1") / path[String].name("y_2"))
 val e2 = endpoint.get.in(path[String].name("y_3") / path[String].name("y_4"))
 val res = FindShadowedEndpoints(List(e1, e2))
-println(res)
-
-> Set(GET /[y_3] /[y_4], is shadowed by: GET /[y_1] /[y_2])
+res
 ```
