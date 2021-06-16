@@ -160,7 +160,7 @@ val e2 = endpoint.get.in("x" / "y" / "x")
 val e3 = endpoint.get.in("x")
 val e4 = endpoint.get.in("y" / "x")
 val res = FindShadowedEndpoints(List(e1, e2, e3, e4))
-println(res)
+res
 ```
 
 ```scala mdoc
