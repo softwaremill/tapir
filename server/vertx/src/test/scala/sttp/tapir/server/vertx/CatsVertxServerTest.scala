@@ -4,7 +4,14 @@ import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
-import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerStreamingTests, backendResource}
+import sttp.tapir.server.tests.{
+  DefaultCreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMultipartTests,
+  ServerStreamingTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 
 class CatsVertxServerTest extends TestSuite {
@@ -23,7 +30,7 @@ class CatsVertxServerTest extends TestSuite {
         new ServerFileMultipartTests(
           createServerTest,
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
-        ).tests()
+        ).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
         new ServerStreamingTests(createServerTest, Fs2Streams.apply[IO]).tests()
     }

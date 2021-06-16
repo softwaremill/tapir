@@ -1,6 +1,6 @@
 package sttp.tapir.server.vertx.interpreters
 
-import cats.effect.{Async, ConcurrentEffect, Effect}
+import cats.effect.{Async, CancelToken, ConcurrentEffect, Effect, IO}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -16,6 +16,7 @@ import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 import sttp.tapir.server.vertx.{VertxBodyListener, VertxCatsServerOptions}
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
 trait VertxCatsServerInterpreter extends CommonServerInterpreter {
@@ -85,10 +86,23 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
       }
       .handleError { e => rc.fail(e) }
 
+    // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
+    // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
+    // if so, we need to use this fact to cancel the operation nonetheless
+    val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken[IO]]]](None)
+
+    rc.response.exceptionHandler { t: Throwable =>
+      cancelRef.getAndSet(Some(Left(t))).collect { case Right(t) =>
+        t.unsafeRunSync()
+      }
+      ()
+    }
+
     val cancelToken = effect.toIO(result).unsafeRunCancelable { _ => () }
-    rc.response.exceptionHandler { _ =>
+    cancelRef.getAndSet(Some(Right(cancelToken))).collect { case Left(_) =>
       cancelToken.unsafeRunSync()
     }
+
     ()
   }
 

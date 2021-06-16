@@ -29,7 +29,8 @@ class ZioVertxServerTest extends TestSuite {
       implicit val m: MonadError[Task] = VertxZioServerInterpreter.monadError
       val interpreter = new ZioVertxTestServerInterpreter(vertx)
       val createServerTest =
-        new DefaultCreateServerTest(backend, interpreter).asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, Router => Route, RoutingContext => Unit]]
+        new DefaultCreateServerTest(backend, interpreter)
+          .asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, Router => Route, RoutingContext => Unit]]
 
       new ServerBasicTests(createServerTest, interpreter).tests() ++
         new ServerFileMultipartTests(
