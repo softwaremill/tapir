@@ -6,7 +6,7 @@ import sttp.tapir.{Endpoint, EndpointInput, ShadowedEndpoint}
 
 import java.net.URLEncoder
 
-object ShadowedEndpointChecker {
+object FindShadowedEndpoints {
 
   def apply(endpoints: List[Endpoint[_, _, _, _]]): List[ShadowedEndpoint] = {
     findShadowedEndpoints(endpoints, List()).distinctBy(_.e)
@@ -23,23 +23,37 @@ object ShadowedEndpointChecker {
   }
 
   private def checkIfShadows(e1: Endpoint[_, _, _, _], e2: Endpoint[_, _, _, _]): Boolean = {
-    val e1Segments = extractSegments(e1)
-    val e2Segments = extractSegments(e2)
+    checkMethods(e1, e2) && checkPaths(e1, e2)
+  }
+
+  private def checkMethods(e1: Endpoint[_, _, _, _], e2: Endpoint[_, _, _, _]): Boolean = {
+    if (e1.httpMethod.equals(e2.httpMethod)) true
+    else if (e1.httpMethod.isEmpty && e2.httpMethod.nonEmpty) true
+    else false
+  }
+
+  private def checkPaths(e1: Endpoint[_, _, _, _], e2: Endpoint[_, _, _, _]): Boolean = {
+    val e1Segments = extractPathSegments(e1)
+    val e2Segments = extractPathSegments(e2)
     val commonSegments = e1Segments
       .zip(e2Segments)
       .filter(p => p._1.equals(WildcardPathSegment) || p._1.equals(p._2) || p._1.equals(PathVariableSegment))
 
     if (e1Segments.size == commonSegments.size && e1Segments.size == e2Segments.size) true
-    else if (e1Segments.size == commonSegments.size && e1Segments.last.equals(WildcardPathSegment)) true
+    else if (e1Segments.size == commonSegments.size && endsWithWildcard(e1Segments)) true
+    else if (e1Segments.size - 1 == commonSegments.size && e2Segments.size == commonSegments.size && endsWithWildcard(e1Segments)) true
     else false
   }
 
-  private def extractSegments(endpoint: Endpoint[_, _, _, _]): Vector[PathComponent] = {
+  private def endsWithWildcard(paths: Vector[PathComponent]): Boolean = {
+    paths.nonEmpty && paths.indexOf(WildcardPathSegment) == paths.size - 1
+  }
+
+  private def extractPathSegments(endpoint: Endpoint[_, _, _, _]): Vector[PathComponent] = {
     endpoint.input.traverseInputs({
       case EndpointInput.FixedPath(x, _, _) => Vector(FixedPathSegment(URLEncoder.encode(x, "UTF-8")))
       case EndpointInput.PathsCapture(_, _) => Vector(WildcardPathSegment)
       case EndpointInput.PathCapture(_, _, _) => Vector(PathVariableSegment)
-      case EndpointInput.FixedMethod(m, _, _) => Vector(FixedMethodComponent(m))
     })
   }
 }
@@ -51,5 +65,3 @@ private case object PathVariableSegment extends PathComponent
 private case object WildcardPathSegment extends PathComponent
 
 private case class FixedPathSegment(s: String) extends PathComponent
-
-private case class FixedMethodComponent(m: Method) extends PathComponent
