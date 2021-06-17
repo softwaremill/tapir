@@ -320,7 +320,16 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       "org.typelevel" %%% "cats-laws" % "2.6.1" % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    // tests for cats3 are disable until https://github.com/lampepfl/dotty/issues/12849 is fixed
+    settings = Seq(
+      Test / skip := scalaVersion.value == scala3,
+      Test / test := {
+        if (scalaVersion.value == scala3) () else (Test / test).value
+      }
+    )
+  )
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings ++ Seq(
