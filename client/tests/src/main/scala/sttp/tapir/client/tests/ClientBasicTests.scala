@@ -151,9 +151,13 @@ trait ClientBasicTests { this: ClientTests[Any] =>
         .map(_ shouldBe Right("Location: secret"))
     }
 
-    test("not existing endpoint, with error output not matching 404") {
-      safeSend(not_existing_endpoint, port, ()).unsafeRunSync() should matchPattern {
-        case DecodeResult.Error(_, _: IllegalArgumentException) =>
+    // when there's a 404, fetch API seems to throw an exception, not giving us the opportunity to parse the result
+    if (!platformIsScalaJS) {
+      test("not existing endpoint, with error output not matching 404") {
+        safeSend(not_existing_endpoint, port, ())
+          .unsafeToFuture()
+          .map(_ should matchPattern { case DecodeResult.Error(_, _: IllegalArgumentException) =>
+          })
       }
     }
   }
