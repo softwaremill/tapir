@@ -370,7 +370,7 @@ lazy val refined: ProjectMatrix = (projectMatrix in file("integrations/refined")
       "io.circe" %%% "circe-refined" % Versions.circe % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .jvmPlatform(scalaVersions = scala2Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings ++ Seq(
