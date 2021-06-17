@@ -3,6 +3,7 @@ package sttp.tapir.server.tests
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
 import cats.implicits._
+import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.Assertion
 import org.slf4j.{Logger, LoggerFactory}
 import sttp.capabilities.WebSockets
@@ -35,9 +36,8 @@ trait CreateServerTest[F[_], +R, ROUTE, B] {
 class DefaultCreateServerTest[F[_], +R, ROUTE, B](
     backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
     interpreter: TestServerInterpreter[F, R, ROUTE, B]
-) extends CreateServerTest[F, R, ROUTE, B] {
-  // TODO: replace with StrictLogging once scala-logging is available for Scala3
-  protected val logger: Logger = LoggerFactory.getLogger(getClass.getName)
+) extends CreateServerTest[F, R, ROUTE, B]
+    with StrictLogging {
 
   override def testServer[I, E, O](
       e: Endpoint[I, E, O, R],

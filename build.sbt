@@ -83,7 +83,7 @@ val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 )
 
 lazy val allAggregates = core.projectRefs ++
@@ -295,7 +295,7 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
       "com.softwaremill.common" %%% "tagging" % "2.3.1",
       scalaTest.value,
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
-    )
+    ) ++ loggerDependencies
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
