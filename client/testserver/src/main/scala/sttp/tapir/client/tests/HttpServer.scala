@@ -5,13 +5,13 @@ import cats.implicits._
 import org.http4s.dsl.io._
 import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.middleware._
 import org.http4s.server.websocket.WebSocketBuilder
 import org.http4s.syntax.kleisli._
-import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
 import org.http4s.{multipart, _}
+import org.typelevel.ci.CIString
 import scodec.bits.ByteVector
 import sttp.tapir.client.tests.HttpServer._
 
@@ -50,23 +50,25 @@ class HttpServer(port: Port) {
       if (f == "papaya") {
         Accepted("29")
       } else {
-        Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header("X-Role", f.length.toString))
+        Ok(s"fruit: $f${amount.map(" " + _).getOrElse("")}", Header.Raw(CIString("X-Role"), f.length.toString))
       }
     case GET -> Root / "fruit" / f                                         => Ok(s"$f")
     case GET -> Root / "fruit" / f / "amount" / amount :? colorOptParam(c) => Ok(s"$f $amount $c")
     case _ @GET -> Root / "api" / "unit"                                   => Ok("{}")
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ GET -> Root / "api" / "echo" / "headers" =>
-      val headers = r.headers.toList.map(h => Header(h.name.value, h.value.reverse))
-      val filteredHeaders = r.headers.find(_.name.value.equalsIgnoreCase("Cookie")) match {
-        case Some(c) => headers.filter(_.name.value.equalsIgnoreCase("Cookie")) :+ Header("Set-Cookie", c.value.reverse)
+      val headers = r.headers.headers.map(h => h.copy(value = h.value.reverse))
+      val filteredHeaders: Header.ToRaw = r.headers.headers.find(_.name == CIString("Cookie")) match {
+        case Some(c) => headers.filter(_.name == CIString("Cookie")) :+ Header.Raw(CIString("Set-Cookie"), c.value.reverse)
         case None    => headers
       }
-      Ok(headers = filteredHeaders: _*)
+      okOnlyHeaders(List(filteredHeaders))
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
-      Ok(headers = r.uri.multiParams.getOrElse("qq", Nil).reverse.map(v => Header("hh", v)): _*)
+      okOnlyHeaders(r.uri.multiParams.getOrElse("qq", Nil).reverse.map("hh" -> _: Header.ToRaw))
     case r @ GET -> Root / "api" / "echo" / "param-to-upper-header" =>
-      Ok(headers = r.uri.multiParams.map { case (k, v) => Header(k.toUpperCase(), v.headOption.getOrElse("?")) }.toSeq: _*)
+      okOnlyHeaders(r.uri.multiParams.map { case (k, v) =>
+        k -> v.headOption.getOrElse("?"): Header.ToRaw
+      }.toSeq)
     case r @ POST -> Root / "api" / "echo" / "multipart" =>
       r.decode[multipart.Multipart[IO]] { mp =>
         val parts: Vector[multipart.Part[IO]] = mp.parts
@@ -78,22 +80,22 @@ class HttpServer(port: Port) {
       }
     case r @ POST -> Root / "api" / "echo" => r.as[String].flatMap(Ok(_))
     case r @ GET -> Root =>
-      r.headers.get(CaseInsensitiveString("X-Role")) match {
-        case None    => Ok()
-        case Some(h) => Ok("Role: " + h.value)
+      r.headers.get(CIString("X-Role")) match {
+        case None     => Ok()
+        case Some(hs) => Ok("Role: " + hs.head.value)
       }
 
     case r @ GET -> Root / "secret" =>
-      r.headers.get(CaseInsensitiveString("Location")) match {
-        case None    => BadRequest()
-        case Some(h) => Ok("Location: " + h.value)
+      r.headers.get(CIString("Location")) match {
+        case None     => BadRequest()
+        case Some(hs) => Ok("Location: " + hs.head.value)
       }
 
     case DELETE -> Root / "api" / "delete" => Ok()
 
     case r @ GET -> Root / "auth" :? apiKeyOptParam(ak) =>
-      val authHeader = r.headers.get(CaseInsensitiveString("Authorization")).map(_.value)
-      val xApiKey = r.headers.get(CaseInsensitiveString("X-Api-Key")).map(_.value)
+      val authHeader = r.headers.get(CIString("Authorization")).map(_.head.value)
+      val xApiKey = r.headers.get(CIString("X-Api-Key")).map(_.head.value)
       Ok(s"Authorization=$authHeader; X-Api-Key=$xApiKey; Query=$ak")
 
     case GET -> Root / "mapping" :? numParam(v) =>
@@ -102,7 +104,7 @@ class HttpServer(port: Port) {
     case _ @GET -> Root / "status" :? statusOutParam(status) =>
       status match {
         case 204 => NoContent()
-        case 200 => Ok(`Content-Type`(MediaType.text.plain))
+        case 200 => Ok.headers(`Content-Type`(MediaType.text.plain))
         case _   => BadRequest()
       }
 
@@ -161,8 +163,10 @@ class HttpServer(port: Port) {
       }
   }
 
+  private def okOnlyHeaders(headers: Seq[Header.ToRaw]): IO[Response[IO]] = IO.pure(Response(headers = Headers(headers)))
+
   private def fromAcceptHeader(r: Request[IO])(f: PartialFunction[String, IO[Response[IO]]]): IO[Response[IO]] =
-    r.headers.get(Accept).map(h => f(h.value)).getOrElse(NotAcceptable())
+    r.headers.get[Accept].map(h => f(h.values.head.toString())).getOrElse(NotAcceptable())
 
   private val organizationXml = Ok("<name>sml-xml</name>", `Content-Type`(MediaType.application.xml, Charset.`UTF-8`))
   private val organizationJson = Ok("{\"name\": \"sml\"}", `Content-Type`(MediaType.application.json, Charset.`UTF-8`))
