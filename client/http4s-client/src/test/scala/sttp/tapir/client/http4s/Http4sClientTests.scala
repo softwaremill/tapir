@@ -1,7 +1,7 @@
 package sttp.tapir.client.http4s
 
 import cats.effect.{Blocker, ContextShift, IO, Timer}
-import org.http4s.client.blaze.BlazeClientBuilder
+import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.{Request, Response}
 import sttp.tapir.client.tests.ClientTests
 import sttp.tapir.{DecodeResult, Endpoint}
