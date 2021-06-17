@@ -14,13 +14,13 @@ abstract class Http4sClientTests[R] extends ClientTests[R] {
   implicit val blocker: Blocker = Blocker.liftExecutionContext(global)
 
   override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
-    val (request, parseResponse) = Http4sClientInterpreter[IO].toRequestUnsafe(e, Some(s"http://localhost:$port")).apply(args)
+    val (request, parseResponse) = Http4sClientInterpreter[IO]().toRequestUnsafe(e, Some(s"http://localhost:$port")).apply(args)
 
     sendAndParseResponse(request, parseResponse)
   }
 
   override def safeSend[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I): IO[DecodeResult[Either[E, O]]] = {
-    val (request, parseResponse) = Http4sClientInterpreter[IO].toRequest(e, Some(s"http://localhost:$port")).apply(args)
+    val (request, parseResponse) = Http4sClientInterpreter[IO]().toRequest(e, Some(s"http://localhost:$port")).apply(args)
 
     sendAndParseResponse(request, parseResponse)
   }
