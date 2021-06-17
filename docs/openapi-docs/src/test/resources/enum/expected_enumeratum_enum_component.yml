@@ -33,6 +33,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Luxembourg'
+  /maybeCountry:
+    get:
+      operationId: getMaybecountry
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MaybeCountry'
 components:
   schemas:
     Belgium:
@@ -54,6 +64,15 @@ components:
       type: object
       properties:
         countryCode:
+          $ref: '#/components/schemas/CountryCode'
+    MaybeCountry:
+      required:
+          - countryCode
+      type: object
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'
+        countryCodeOpt:
           $ref: '#/components/schemas/CountryCode'
     Poland:
       required:

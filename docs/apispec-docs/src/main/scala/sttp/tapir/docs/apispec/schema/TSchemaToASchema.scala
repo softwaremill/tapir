@@ -25,6 +25,17 @@ private[schema] class TSchemaToASchema(
               f.schema match {
                 case TSchema(s: TSchemaType.SObject[_], _, _, _, _, _, _, _) =>
                   f.name.encodedName -> Left(objectToSchemaReference.map(s.info))
+                case TSchema(
+                      TSchemaType.SOption(TSchema(_: TSchemaType.SString[_], _, _, _, _, _, _, Validator.Enumeration(_, _, Some(info)))),
+                      _,
+                      _,
+                      _,
+                      _,
+                      _,
+                      _,
+                      _
+                    ) if referenceEnums(info) =>
+                  f.name.encodedName -> Left(objectToSchemaReference.map(info))
                 case schema @ TSchema(_, _, _, _, _, _, _, v) =>
                   v.traversePrimitives { case Validator.Enumeration(_, _, Some(info)) => Vector(info) } match {
                     case info +: _ if referenceEnums(info) => f.name.encodedName -> Left(objectToSchemaReference.map(info))

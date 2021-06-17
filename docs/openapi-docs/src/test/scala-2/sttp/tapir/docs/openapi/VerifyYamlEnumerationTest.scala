@@ -47,13 +47,14 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
         Seq(
           endpoint.in("poland").out(jsonBody[Poland]),
           endpoint.in("belgium").out(jsonBody[Belgium]),
-          endpoint.in("luxembourg").out(jsonBody[Luxembourg])
+          endpoint.in("luxembourg").out(jsonBody[Luxembourg]),
+          endpoint.in("maybeCountry").out(jsonBody[MaybeCountry])
         ),
         "Countries",
         "1.0"
       )
       .toYaml
-
+    println(actualYaml)
     val expectedYaml = load("enum/expected_enumeratum_enum_component.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml
@@ -103,6 +104,7 @@ object VerifyYamlEnumerationTest {
   case class Poland(countryCode: CountryCode)
   case class Belgium(countryCode: CountryCode)
   case class Luxembourg(countryCode: CountryCode)
+  case class MaybeCountry(countryCode: CountryCode, countryCodeOpt: Option[CountryCode])
 
   sealed abstract class ErrorCode(val value: Int) extends IntEnumEntry
 
