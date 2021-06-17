@@ -41,13 +41,6 @@ paths:
                 type: string
 components:
   schemas:
-    G_String:
-      required:
-        - data
-      type: object
-      properties:
-        data:
-          type: string
     G_Int:
       required:
         - data
@@ -55,3 +48,10 @@ components:
       properties:
         data:
           type: integer
+    G_String:
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: string

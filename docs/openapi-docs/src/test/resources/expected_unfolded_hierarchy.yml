@@ -27,6 +27,16 @@ paths:
                 type: string
 components:
   schemas:
+    Author:
+      required:
+        - name
+        - country
+      type: object
+      properties:
+        name:
+          type: string
+        country:
+          $ref: '#/components/schemas/Country'
     Book:
       required:
         - title
@@ -43,6 +53,13 @@ components:
           type: integer
         author:
           $ref: '#/components/schemas/Author'
+    Country:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
     Genre:
       required:
         - name
@@ -52,21 +69,4 @@ components:
         name:
           type: string
         description:
-          type: string
-    Author:
-      required:
-        - name
-        - country
-      type: object
-      properties:
-        name:
-          type: string
-        country:
-          $ref: '#/components/schemas/Country'
-    Country:
-      required:
-        - name
-      type: object
-      properties:
-        name:
           type: string

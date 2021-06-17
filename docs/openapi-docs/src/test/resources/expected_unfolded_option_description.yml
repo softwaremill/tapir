@@ -23,11 +23,6 @@ paths:
                 type: string
 components:
   schemas:
-    ObjectWithOption:
-      type: object
-      properties:
-        data:
-          $ref: '#/components/schemas/FruitAmount'
     FruitAmount:
       required:
         - fruit
@@ -39,3 +34,8 @@ components:
         amount:
           type: integer
       description: Amount of fruits
+    ObjectWithOption:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/FruitAmount'

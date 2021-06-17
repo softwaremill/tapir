@@ -11,8 +11,8 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.util.Base64
 
-private[lambda] class AwsToResponseBody[F[_]](implicit options: AwsServerOptions[F]) extends ToResponseBody[String, Nothing] {
-  override val streams: capabilities.Streams[Nothing] = NoStreams
+private[lambda] class AwsToResponseBody[F[_]](implicit options: AwsServerOptions[F]) extends ToResponseBody[String, NoStreams] {
+  override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): String = bodyType match {
     case RawBodyType.StringBody(charset) =>
@@ -54,6 +54,6 @@ private[lambda] class AwsToResponseBody[F[_]](implicit options: AwsServerOptions
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
   ): String = throw new UnsupportedOperationException
 }

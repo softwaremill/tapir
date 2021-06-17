@@ -7,6 +7,7 @@ import sttp.model._
 import sttp.monad.MonadError
 import sttp.tapir.TestUtil._
 import sttp.tapir._
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 
@@ -60,7 +61,7 @@ class ServerInterpreterTest extends AnyFlatSpec with Matchers {
     val interceptor3 = new AddToTrailInterceptor("3")
 
     val interpreter =
-      new ServerInterpreter[Any, Id, Unit, Nothing](
+      new ServerInterpreter[Any, Id, Unit, NoStreams](
         TestRequestBody,
         UnitToResponseBody,
         List(interceptor1, interceptor2, interceptor3),

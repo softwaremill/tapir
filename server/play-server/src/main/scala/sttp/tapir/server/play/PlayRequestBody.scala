@@ -4,7 +4,6 @@ import akka.stream.Materializer
 import akka.util.ByteString
 import play.api.mvc.{RawBuffer, Request}
 import play.core.parsers.Multipart
-import sttp.capabilities.Streams
 import sttp.model.Part
 import sttp.tapir.internal._
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
@@ -16,9 +15,9 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
 private[play] class PlayRequestBody(request: Request[RawBuffer], serverOptions: PlayServerOptions)(implicit mat: Materializer)
-    extends RequestBody[Future, Nothing] {
+    extends RequestBody[Future, NoStreams] {
 
-  override val streams: Streams[Nothing] = NoStreams
+  override val streams: NoStreams = NoStreams
 
   override def toRaw[R](bodyType: RawBodyType[R]): Future[RawValue[R]] = {
     val body = request.body.asBytes().getOrElse(ByteString.apply(java.nio.file.Files.readAllBytes(request.body.asFile.toPath)))

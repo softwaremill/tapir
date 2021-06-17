@@ -172,16 +172,16 @@ object SttpMockServerClient {
   )(expectedOutput: Either[E, O]): OutputValues[Any] = {
 
     val responseValue = expectedOutput.merge
-    val toResponseBody: ToResponseBody[Any, Nothing] = new ToResponseBody[Any, Nothing] {
+    val toResponseBody: ToResponseBody[Any, NoStreams] = new ToResponseBody[Any, NoStreams] {
       override val streams: NoStreams = NoStreams
       override def fromRawValue[RAW](v: RAW, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[RAW]): Any = v
       override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
       override def fromWebSocketPipe[REQ, RESP](
           pipe: streams.Pipe[REQ, RESP],
-          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+          o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
       ): Any = pipe // impossible
     }
-    new EncodeOutputs[Any, Nothing](toResponseBody, Seq(ContentTypeRange.AnyRange))
+    new EncodeOutputs[Any, NoStreams](toResponseBody, Seq(ContentTypeRange.AnyRange))
       .apply(
         expectedOutput.fold(
           _ => endpoint.errorOutput,

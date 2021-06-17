@@ -5,6 +5,7 @@ import cats.effect.{IO, Resource}
 import cats.implicits._
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.Assertion
+import org.slf4j.{Logger, LoggerFactory}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
@@ -37,6 +38,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
     interpreter: TestServerInterpreter[F, R, ROUTE, B]
 ) extends CreateServerTest[F, R, ROUTE, B]
     with StrictLogging {
+
   override def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",

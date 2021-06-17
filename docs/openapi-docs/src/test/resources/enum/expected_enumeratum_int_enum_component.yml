@@ -32,11 +32,6 @@ components:
       properties:
         error:
           $ref: '#/components/schemas/ErrorCode'
-    ErrorCode:
-      type: integer
-      enum:
-        - 1
-        - 2
     Error2Response:
       required:
         - error
@@ -44,3 +39,8 @@ components:
       properties:
         error:
           $ref: '#/components/schemas/ErrorCode'
+    ErrorCode:
+      type: integer
+      enum:
+        - 1
+        - 2

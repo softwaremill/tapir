@@ -5,7 +5,7 @@ import io.circe.generic.auto._
 import fs2._
 import org.http4s.HttpRoutes
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -82,7 +82,7 @@ object WebSocketHttp4sServer extends App {
     .use { backend =>
       // Client which interacts with the web socket
       basicRequest
-        .response(asWebSocket { ws: WebSocket[IO] =>
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("7 bytes")
             _ <- ws.sendText("7 bytes")

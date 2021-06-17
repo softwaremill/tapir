@@ -30,6 +30,13 @@ paths:
                 type: string
 components:
   schemas:
+    Organization:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
     Person:
       required:
         - name
@@ -40,10 +47,3 @@ components:
           type: string
         age:
           type: integer
-    Organization:
-      required:
-        - name
-      type: object
-      properties:
-        name:
-          type: string

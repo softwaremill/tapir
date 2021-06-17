@@ -11,8 +11,8 @@ import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 import java.util.Base64
 
-private[lambda] class AwsRequestBody[F[_]: MonadError](request: AwsRequest) extends RequestBody[F, Nothing] {
-  override val streams: capabilities.Streams[Nothing] = NoStreams
+private[lambda] class AwsRequestBody[F[_]: MonadError](request: AwsRequest) extends RequestBody[F, NoStreams] {
+  override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = {
     val decoded =
