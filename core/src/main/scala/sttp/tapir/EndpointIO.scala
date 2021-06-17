@@ -1,6 +1,5 @@
 package sttp.tapir
 
-import java.nio.charset.Charset
 import sttp.capabilities.Streams
 import sttp.model.{Header, Method}
 import sttp.tapir.Codec.JsonCodec
@@ -12,6 +11,7 @@ import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
+import java.nio.charset.Charset
 import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
@@ -113,8 +113,7 @@ object EndpointInput {
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedPath[U] = copy(codec = c, info = i)
-
-    override def show: String = UrlencodedData.encode(s)
+    override def show: String = s"/${UrlencodedData.encode(s)}"
   }
 
   case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: Info[T]) extends Basic[T] {
