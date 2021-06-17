@@ -59,10 +59,10 @@ paths:
         - apiKeyAuth: []
 components:
   securitySchemes:
-    httpAuth:
-      type: http
-      scheme: bearer
     apiKeyAuth:
       type: apiKey
       name: apikey
       in: header
+    httpAuth:
+      type: http
+      scheme: bearer

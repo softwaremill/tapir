@@ -3,7 +3,7 @@ package sttp.tapir.server.http4s
 import cats.data.{Kleisli, NonEmptyList}
 import cats.effect.{ContextShift, IO, Resource, Timer}
 import cats.syntax.all._
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{HttpRoutes, Request, Response}
 import sttp.capabilities.WebSockets

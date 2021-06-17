@@ -89,6 +89,17 @@ paths:
                 type: string
 components:
   schemas:
+    Entity:
+      oneOf:
+        - $ref: '#/components/schemas/Organization'
+        - $ref: '#/components/schemas/Person'
+    Organization:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
     Person:
       required:
         - name
@@ -99,14 +110,3 @@ components:
           type: string
         age:
           type: integer
-    Entity:
-      oneOf:
-          - $ref: '#/components/schemas/Organization'
-          - $ref: '#/components/schemas/Person'
-    Organization:
-      required:
-        - name
-      type: object
-      properties:
-        name:
-          type: string

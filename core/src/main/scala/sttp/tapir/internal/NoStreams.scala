@@ -2,7 +2,7 @@ package sttp.tapir.internal
 
 import sttp.capabilities.Streams
 
-trait NoStreams extends Streams[Nothing] {
+trait NoStreams extends Streams[NoStreams] {
   override type BinaryStream = Nothing
   override type Pipe[A, B] = Nothing
 }

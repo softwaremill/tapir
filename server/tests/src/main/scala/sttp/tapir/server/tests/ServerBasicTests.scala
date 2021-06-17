@@ -63,8 +63,9 @@ class ServerBasicTests[F[_], ROUTE, B](
     testServer(endpoint, "POST empty endpoint")((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
       basicRequest.post(baseUri).send(backend).map(_.body shouldBe Right(""))
     },
-    testServer(out_fixed_content_type_header, "Fixed content-type header")((_: Unit) => pureResult("".asRight[Unit])) { (backend, baseUri) =>
-      basicRequest.get(baseUri).send(backend).map(_.headers.toSet should contain (Header("Content-Type", "text/csv")))
+    testServer(out_fixed_content_type_header, "Fixed content-type header")((_: Unit) => pureResult("".asRight[Unit])) {
+      (backend, baseUri) =>
+        basicRequest.get(baseUri).send(backend).map(_.headers.toSet should contain(Header("Content-Type", "text/csv")))
     },
     testServer(endpoint.get, "GET a GET endpoint")((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(baseUri).send(backend).map(_.body shouldBe Right(""))
@@ -746,7 +747,7 @@ class ServerBasicTests[F[_], ROUTE, B](
         .in(query[String]("z"))
         .in(query[String]("u"))
         .out(plainBody[Int])
-        .serverLogicPart { t: (String, String) => pureResult((t._1.toInt + t._2.toInt).asRight[Unit]) }
+        .serverLogicPart { (t: (String, String)) => pureResult((t._1.toInt + t._2.toInt).asRight[Unit]) }
         .andThen { case (xy, (z, u)) => pureResult((xy * z.toInt * u.toInt).asRight[Unit]) },
       "partial server logic - parts, one part, multiple values"
     ) { (backend, baseUri) =>

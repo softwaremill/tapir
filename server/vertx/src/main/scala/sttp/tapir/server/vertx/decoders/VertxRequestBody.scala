@@ -20,12 +20,13 @@ import java.util.Date
 import scala.collection.JavaConverters._
 import scala.util.Random
 
-class VertxRequestBody[F[_], S: ReadStreamCompatible](
+class VertxRequestBody[F[_], S <: Streams[S]](
     rc: RoutingContext,
     serverOptions: VertxServerOptions[F],
     fromVFuture: FromVFuture[F]
-) extends RequestBody[F, S] {
-  override val streams: Streams[S] = ReadStreamCompatible[S].streams
+)(implicit val readStreamCompatible: ReadStreamCompatible[S])
+    extends RequestBody[F, S] {
+  override val streams: Streams[S] = readStreamCompatible.streams
 
   override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = fromVFuture(bodyType match {
     case RawBodyType.StringBody(defaultCharset) =>
@@ -79,7 +80,7 @@ class VertxRequestBody[F[_], S: ReadStreamCompatible](
   })
 
   override def toStream(): streams.BinaryStream =
-    ReadStreamCompatible[S].fromReadStream(rc.request.asInstanceOf[ReadStream[Buffer]]).asInstanceOf[streams.BinaryStream]
+    readStreamCompatible.fromReadStream(rc.request.asInstanceOf[ReadStream[Buffer]]).asInstanceOf[streams.BinaryStream]
 
   private def extractPart[B](name: String, bodyType: RawBodyType[B]): B = {
     bodyType match {

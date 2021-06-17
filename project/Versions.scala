@@ -1,5 +1,6 @@
 object Versions {
-  val http4s = "0.21.24"
+  val http4s = "0.22.0-RC1"
+  val http4sOld = "0.21.24"
   val catsEffect = "2.5.1"
   val circe = "0.14.1"
   val circeYaml = "0.14.0"
@@ -17,7 +18,7 @@ object Versions {
   val sprayJson = "1.3.6"
   val scalaCheck = "1.15.4"
   val scalaTest = "3.2.9"
-  val scalaTestPlusScalaCheck = "3.2.2.0"
+  val scalaTestPlusScalaCheck = "3.2.9.0"
   val refined = "0.9.26"
   val enumeratum = "1.6.1"
   val zio = "1.0.9"

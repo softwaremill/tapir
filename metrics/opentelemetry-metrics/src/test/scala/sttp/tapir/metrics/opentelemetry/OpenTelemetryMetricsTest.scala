@@ -9,6 +9,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.time.{Second, Span}
 import sttp.tapir.TestUtil._
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.metrics.MetricLabels
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
@@ -27,7 +28,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi().serverEp
     val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withRequestsTotal()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     interpreter.apply(PersonsApi.request("Jacob"), serverEp)
@@ -49,7 +50,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     }.serverEp
     val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withRequestsActive()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     val response = Future { interpreter.apply(PersonsApi.request("Jacob"), serverEp) }
@@ -73,7 +74,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val provider = SdkMeterProvider.builder().build()
     val serverEp = PersonsApi().serverEp
     val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withResponsesTotal()
-    val interpreter = new ServerInterpreter[Any, Id, Unit, Nothing](
+    val interpreter = new ServerInterpreter[Any, Id, Unit, NoStreams](
       TestRequestBody,
       UnitToResponseBody,
       List(metrics.metricsInterceptor(), new DecodeFailureInterceptor(DefaultDecodeFailureHandler.handler)),
@@ -107,7 +108,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
     val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withResponsesDuration()
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(100))
@@ -126,7 +127,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val provider = SdkMeterProvider.builder().build()
     val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withResponsesTotal(labels)
     val interpreter =
-      new ServerInterpreter[Any, Id, String, Nothing](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
+      new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
     interpreter.apply(PersonsApi.request("Jacob"), serverEp)
@@ -140,7 +141,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val serverEp = PersonsApi { _ => throw new RuntimeException("Ups") }.serverEp
     val provider = SdkMeterProvider.builder().build()
     val metrics = OpenTelemetryMetrics[Id](provider, "tapir", "1.0.0").withResponsesTotal()
-    val interpreter = new ServerInterpreter[Any, Id, String, Nothing](
+    val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
       TestRequestBody,
       StringToResponseBody,
       List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler)),

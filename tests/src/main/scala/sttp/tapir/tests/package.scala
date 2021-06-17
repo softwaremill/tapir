@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import io.circe.generic.auto._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
-import com.softwaremill.macwire._
 import com.softwaremill.tagging.{@@, Tagger}
 import io.circe.{Decoder, Encoder}
 import sttp.capabilities.Streams
@@ -384,12 +383,12 @@ package object tests {
           )
         )
 
-    val out_json_xml_different_schema: Endpoint[String, Unit, Entity with Product with Serializable, Any] =
+    val out_json_xml_different_schema: Endpoint[String, Unit, Entity, Any] =
       endpoint.get
         .in("content-negotiation" / "entity")
         .in(header[String]("Accept"))
         .out(
-          sttp.tapir.oneOf(
+          sttp.tapir.oneOf[Entity](
             oneOfMapping(StatusCode.Ok, jsonBody[Person]),
             oneOfMapping(StatusCode.Ok, xmlBody[Organization])
           )
@@ -460,14 +459,19 @@ package object tests {
       implicit def validatedListDecoder[T: Decoder]: Decoder[ValidatedList[T]] =
         implicitly[Decoder[List[T]]].map(_.taggedWith[BasketOfFruits])
       implicit def schemaForValidatedList[T: Schema]: Schema[ValidatedList[T]] =
-        implicitly[Schema[T]].asIterable.validate(Validator.minSize(1))
+        implicitly[Schema[T]].asIterable[List].validate(Validator.minSize(1)).map(l => Some(l.taggedWith[BasketOfFruits]))(l => l)
       endpoint.in(jsonBody[BasketOfFruits])
     }
 
     val in_valid_map: Endpoint[Map[String, ValidFruitAmount], Unit, Unit, Any] = {
+      // TODO: needed until Scala3 derivation supports
+      implicit val schemaForStringWrapper: Schema[StringWrapper] = Schema(SchemaType.SString())
+      implicit val encoderForStringWrapper: Encoder[StringWrapper] = Encoder.encodeString.contramap(_.v)
+      implicit val decoderForStringWrapper: Decoder[StringWrapper] = Decoder.decodeString.map(StringWrapper.apply)
+
       implicit val schemaForIntWrapper: Schema[IntWrapper] = Schema(SchemaType.SInteger()).validate(Validator.min(1).contramap(_.v))
-      implicit val encoder: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
-      implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
+      implicit val encoderForIntWrapper: Encoder[IntWrapper] = Encoder.encodeInt.contramap(_.v)
+      implicit val decoderForIntWrapper: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[Map[String, ValidFruitAmount]])
     }
 
@@ -527,13 +531,9 @@ package object tests {
       implicit val decode: Decoder[IntWrapper] = Decoder.decodeInt.map(IntWrapper.apply)
       endpoint.in(jsonBody[List[IntWrapper]])
     }
-
-    val allEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]]
   }
 
   //
-
-  val allTestEndpoints: Set[Endpoint[_, _, _, _]] = wireSet[Endpoint[_, _, _, _]] ++ Validation.allEndpoints
 
   type Port = Int
 }

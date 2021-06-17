@@ -22,7 +22,7 @@ package object handlers {
     rc.next()
   }
 
-  private[vertx] def attachDefaultHandlers[E, S: ReadStreamCompatible](e: Endpoint[_, E, _, _], route: Route): Route = {
+  private[vertx] def attachDefaultHandlers[E](e: Endpoint[_, E, _, _], route: Route): Route = {
     e.input.asVectorOfBasicInputs() foreach {
       case body: EndpointIO.Body[_, _] =>
         body.bodyType match {

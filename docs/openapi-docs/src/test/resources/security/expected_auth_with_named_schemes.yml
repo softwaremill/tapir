@@ -41,13 +41,13 @@ paths:
         - secApiKeyHeader: []
 components:
   securitySchemes:
-    secBearer:
-      type: http
-      scheme: bearer
-    secBasic:
-      type: http
-      scheme: basic
     secApiKeyHeader:
       type: apiKey
       name: apikey
       in: header
+    secBasic:
+      type: http
+      scheme: basic
+    secBearer:
+      type: http
+      scheme: bearer

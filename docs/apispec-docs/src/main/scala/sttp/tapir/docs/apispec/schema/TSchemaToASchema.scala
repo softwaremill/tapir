@@ -48,9 +48,13 @@ private[schema] class TSchemaToASchema(
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           ASchema.apply(
-            schemas.values.toList.collect { case TSchema(s: TSchemaType.SProduct[_], _, _, _, _, _, _, _) =>
-              Left(objectToSchemaReference.map(s.info))
-            },
+            schemas.values.toList
+              .collect { case TSchema(s: TSchemaType.SProduct[_], _, _, _, _, _, _, _) =>
+                Left(objectToSchemaReference.map(s.info))
+              }
+              .sortBy { case Left(Reference(ref)) =>
+                ref
+              },
             d.map(tDiscriminatorToADiscriminator)
           )
         )
@@ -113,7 +117,7 @@ private[schema] class TSchemaToASchema(
       case Validator.Enumeration(_, None, _) => oschema
       case Validator.Enumeration(v, Some(encode), _) =>
         val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
-        oschema.copy(enum = if (values.nonEmpty) Some(values) else None)
+        oschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
     }
   }
 

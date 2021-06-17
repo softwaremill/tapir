@@ -17,12 +17,12 @@ class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] with WebSockets]
   override type F[X] = _F[X]
 
   override def apply[REQ, RESP](s: Any)(ws: WebSocket[F], o: WebSocketBodyOutput[Any, REQ, RESP, _, Fs2Streams[F]]): Any = {
-    in: Stream[F, REQ] =>
+    (in: Stream[F, REQ]) =>
       val sends = in
         .map(o.requests.encode)
         .evalMap(ws.send(_, isContinuation = false)) // TODO support fragmented frames
 
-      def decode(frame: WebSocketFrame) =
+      def decode(frame: WebSocketFrame): F[Either[Unit, Option[RESP]]] =
         o.responses.decode(frame) match {
           case failure: DecodeResult.Failure =>
             MonadError[F, Throwable].raiseError(
@@ -31,7 +31,7 @@ class WebSocketToFs2Pipe[_F[_]: Concurrent, R <: Fs2Streams[_F] with WebSockets]
           case DecodeResult.Value(v) => (Right(Some(v)): Either[Unit, Option[RESP]]).pure[F]
         }
 
-      def raiseBadAccumulator(acc: WebSocketFrame, current: WebSocketFrame) =
+      def raiseBadAccumulator[T](acc: WebSocketFrame, current: WebSocketFrame): F[T] =
         MonadError[F, Throwable].raiseError(
           new WebSocketFrameDecodeFailure(
             current,
