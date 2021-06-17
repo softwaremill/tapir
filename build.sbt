@@ -816,7 +816,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
       "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, cats, serverTests % Test)
 
 lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stub-server"))
@@ -925,7 +925,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %% "http4s-ce2-backend" % Versions.sttp,
-      "org.http4s" %% "http4s-blaze-client" % Versions.http4s
+      "org.http4s" %% "http4s-blaze-client" % Versions.http4sOld
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1035,9 +1035,9 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
   .settings(
     name := "tapir-client-tests",
     libraryDependencies ++= Seq(
-      "org.http4s" %% "http4s-dsl" % Versions.http4sScala3,
-      "org.http4s" %% "http4s-blaze-server" % Versions.http4sScala3,
-      "org.http4s" %% "http4s-circe" % Versions.http4sScala3
+      "org.http4s" %% "http4s-dsl" % Versions.http4s,
+      "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
+      "org.http4s" %% "http4s-circe" % Versions.http4s
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
