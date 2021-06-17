@@ -15,7 +15,7 @@ abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
   override def send[I, E, O, FN[_]](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     val response: Future[Either[E, O]] =
-      SttpClientInterpreter.toRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(args).send(backend).map(_.body)
+      SttpClientInterpreter().toRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(args).send(backend).map(_.body)
     IO.fromFuture(IO(response))
   }
 
@@ -26,7 +26,7 @@ abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     def response: Future[DecodeResult[Either[E, O]]] =
-      SttpClientInterpreter.toRequest(e, Some(uri"http://localhost:$port")).apply(args).send(backend).map(_.body)
+      SttpClientInterpreter().toRequest(e, Some(uri"http://localhost:$port")).apply(args).send(backend).map(_.body)
     IO.fromFuture(IO(response))
   }
 

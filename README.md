@@ -78,7 +78,7 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
-  SttpClientInterpreter
+  SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```

@@ -114,7 +114,7 @@ object BooksExample extends App with StrictLogging {
     import sttp.client3._
     import sttp.tapir.client.sttp._
 
-    val client = SttpClientInterpreter.toQuickClient(booksListing, Some(uri"http://localhost:8080"))
+    val client = SttpClientInterpreter().toQuickClient(booksListing, Some(uri"http://localhost:8080"))
 
     val result: Either[String, Vector[Book]] = client(Some(3))
 
