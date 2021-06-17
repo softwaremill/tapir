@@ -52,7 +52,7 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: Routes = 
-  PlayServerInterpreter.toRoutes(countCharactersEndpoint)(countCharacters _)
+  PlayServerInterpreter().toRoutes(countCharactersEndpoint)(countCharacters _)
 ```
 
 Note that the second argument to `toRoutes` is a function with one argument, a tuple of type `I`. This means that 
@@ -70,7 +70,7 @@ implicit val materializer: Materializer = ???
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val aRoute: Routes = PlayServerInterpreter.toRoutes(anEndpoint)((logic _).tupled)
+val aRoute: Routes = PlayServerInterpreter().toRoutes(anEndpoint)((logic _).tupled)
 ```
 
 ## Bind the routes

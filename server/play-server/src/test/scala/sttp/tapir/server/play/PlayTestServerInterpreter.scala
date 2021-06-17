@@ -27,18 +27,18 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestS
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Future, HttpEntity]] = None
   ): Routes = {
-    implicit val serverOptions: PlayServerOptions =
+    val serverOptions: PlayServerOptions =
       PlayServerOptions.customInterceptors(
         metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    PlayServerInterpreter.toRoutes(e)
+    PlayServerInterpreter(serverOptions).toRoutes(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Routes = {
-    PlayServerInterpreter.toRoutesRecoverErrors(e)(fn)
+    PlayServerInterpreter().toRoutesRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Routes]): Resource[IO, Port] = {
