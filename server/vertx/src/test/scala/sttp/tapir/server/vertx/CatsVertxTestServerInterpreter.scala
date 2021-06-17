@@ -1,7 +1,7 @@
 package sttp.tapir.server.vertx
 
 import cats.data.NonEmptyList
-import cats.effect.{IO, Resource}
+import cats.effect.{IO, Resource, Sync}
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -26,18 +26,20 @@ class CatsVertxTestServerInterpreter(vertx: Vertx)
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, RoutingContext => Unit]] = None
   ): Router => Route = {
-    implicit val options: VertxCatsServerOptions[IO] =
+    val options: VertxCatsServerOptions[IO] =
       VertxCatsServerOptions.customInterceptors(
         metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    VertxCatsServerInterpreter.route(e)
+    VertxCatsServerInterpreter(options).route(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO]], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
-  ): Router => Route =
-    VertxCatsServerInterpreter.routeRecoverErrors(e)(fn)
+  ): Router => Route = {
+    val fs: Sync[IO] = Sync[IO]
+    VertxCatsServerInterpreter()(fs).routeRecoverErrors(e)(fn)
+  }
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

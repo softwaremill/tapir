@@ -29,18 +29,18 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Task, RoutingContext => Unit]] = None
   ): Router => Route = {
-    implicit val options: VertxZioServerOptions[Task] =
+    val options: VertxZioServerOptions[Task] =
       VertxZioServerOptions.customInterceptors(
         metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    VertxZioServerInterpreter.route(e)
+    VertxZioServerInterpreter(options).route(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Task[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route =
-    VertxZioServerInterpreter.routeRecoverErrors(e)(fn)
+    VertxZioServerInterpreter().routeRecoverErrors(e)(fn)
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)
