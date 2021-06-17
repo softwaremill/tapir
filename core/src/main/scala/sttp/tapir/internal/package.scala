@@ -293,6 +293,13 @@ package object internal {
     }
   }
 
+  implicit class SortListMap[K, V](m: immutable.ListMap[K, V]) {
+    def sortByKey(implicit ko: Ordering[K]): immutable.ListMap[K, V] = sortBy(_._1)
+    def sortBy[B: Ordering](f: ((K, V)) => B): immutable.ListMap[K, V] = {
+      m.toList.sortBy(f).toListMap
+    }
+  }
+
   implicit class ValidatorSyntax(v: Validator[_]) {
 
     def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {

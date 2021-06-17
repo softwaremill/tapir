@@ -48,9 +48,13 @@ private[schema] class TSchemaToASchema(
       case TSchemaType.SCoproduct(_, schemas, d) =>
         Right(
           ASchema.apply(
-            schemas.values.toList.collect { case TSchema(s: TSchemaType.SProduct[_], _, _, _, _, _, _, _) =>
-              Left(objectToSchemaReference.map(s.info))
-            },
+            schemas.values.toList
+              .collect { case TSchema(s: TSchemaType.SProduct[_], _, _, _, _, _, _, _) =>
+                Left(objectToSchemaReference.map(s.info))
+              }
+              .sortBy { case Left(Reference(ref)) =>
+                ref
+              },
             d.map(tDiscriminatorToADiscriminator)
           )
         )
