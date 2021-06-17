@@ -91,7 +91,7 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     // if so, we need to use this fact to cancel the operation nonetheless
     val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken[IO]]]](None)
 
-    rc.response.exceptionHandler { t: Throwable =>
+    rc.response.exceptionHandler { (t: Throwable) =>
       cancelRef.getAndSet(Some(Left(t))).collect { case Right(t) =>
         t.unsafeRunSync()
       }
