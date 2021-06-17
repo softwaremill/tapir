@@ -113,7 +113,8 @@ object EndpointInput {
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedPath[U] = copy(codec = c, info = i)
-    override def show = s"/$s"
+
+    override def show: String = UrlencodedData.encode(s)
   }
 
   case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: Info[T]) extends Basic[T] {
