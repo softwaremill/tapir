@@ -261,7 +261,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
         case _ =>
           Seq(
             "com.softwaremill.magnolia" %%% "magnolia-core" % "1.0.0-M3",
-            "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.5.0" % Test
+            "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
           )
       }
     },
@@ -1135,7 +1135,7 @@ lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.5.0" % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.6.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     )
   )
