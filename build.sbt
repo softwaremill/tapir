@@ -2,6 +2,7 @@ import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.UpdateVersionInDocs
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
+
 import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
@@ -725,7 +726,8 @@ lazy val swaggerUiHttp4s: ProjectMatrix = (projectMatrix in file("docs/swagger-u
     name := "tapir-swagger-ui-http4s",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.webjars" % "swagger-ui" % Versions.swaggerUi
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
