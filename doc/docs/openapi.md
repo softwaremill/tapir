@@ -21,7 +21,7 @@ import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 
 val booksListing = endpoint.in(path[String]("bookId"))
 
-val docs: OpenAPI = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "My Bookshop", "1.0")
+val docs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 ```
 
 Such a model can then be refined, by adding details which are not auto-generated. Working with a deeply nested case 
@@ -36,7 +36,7 @@ returned `OpenAPI` case class either directly or by using a helper method:
 ```scala mdoc:silent
 import sttp.tapir.openapi.Server
 
-val docsWithServers: OpenAPI = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "My Bookshop", "1.0")
+val docsWithServers: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
   .servers(List(Server("https://api.example.com/v1").description("Production server")))
 ```
 
@@ -48,7 +48,7 @@ val booksListingByGenre = endpoint.in(path[String]("genre"))
 ```
 
 ```scala mdoc:silent
-OpenAPIDocsInterpreter.toOpenAPI(List(addBook, booksListing, booksListingByGenre), "My Bookshop", "1.0")
+OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGenre), "My Bookshop", "1.0")
 ```
 
 The openapi case classes can then be serialised to YAML using [Circe](https://circe.github.io/circe/):
@@ -122,7 +122,7 @@ val rootExtensions = List(
   DocsExtension.of("x-root-list", List(1, 2, 4))
 )
 
-val openAPIYaml = OpenAPIDocsInterpreter.toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions).toYaml
+val openAPIYaml = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions).toYaml
 ```
 
 However, to add extensions to other unusual places (like, `License` or `Server`, etc.) you should modify the `OpenAPI`
@@ -170,7 +170,7 @@ import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.swagger.akkahttp.SwaggerAkka
 
 val myEndpoints: Seq[Endpoint[_, _, _, _]] = ???
-val docsAsYaml: String = OpenAPIDocsInterpreter.toOpenAPI(myEndpoints, "My App", "1.0").toYaml
+val docsAsYaml: String = OpenAPIDocsInterpreter().toOpenAPI(myEndpoints, "My App", "1.0").toYaml
 // add to your akka routes
 new SwaggerAkka(docsAsYaml).routes
 ```

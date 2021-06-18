@@ -47,7 +47,7 @@ object ZioExampleHttp4sServer extends App {
   val yaml: String = {
     import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
     import sttp.tapir.openapi.circe.yaml._
-    OpenAPIDocsInterpreter.toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
+    OpenAPIDocsInterpreter().toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
   }
 
   // Starting the server

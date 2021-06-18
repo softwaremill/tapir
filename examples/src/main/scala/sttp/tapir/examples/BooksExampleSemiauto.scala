@@ -98,7 +98,7 @@ object BooksExampleSemiauto extends App with StrictLogging {
     import sttp.tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = OpenAPIDocsInterpreter.toOpenAPI(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
+    val docs = OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
     docs.toYaml
   }
 
