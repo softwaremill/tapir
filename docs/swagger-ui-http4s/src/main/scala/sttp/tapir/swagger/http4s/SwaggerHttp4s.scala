@@ -40,7 +40,7 @@ class SwaggerHttp4s(
     val dsl = Http4sDsl[F]
     import dsl._
 
-    val rootPath = contextPath.foldLeft(Root: Path)(_ / _)
+    val rootPath = contextPath.foldLeft(Root: Path)(_ / Path.Segment(_))
 
     HttpRoutes.of[F] {
       case path @ GET -> `rootPath` =>

@@ -7,11 +7,11 @@ import cats.syntax.flatMap._
 import cats.syntax.traverse._
 import org.http4s._
 import org.http4s.dsl.io._
-import org.http4s.headers.Location
 import org.http4s.syntax.literals._
 import org.scalatest.OptionValues
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
+import org.typelevel.ci.CIString
 
 import scala.concurrent.ExecutionContext
 
@@ -32,7 +32,7 @@ class SwaggerHttp4sTest extends AnyFlatSpecLike with Matchers with OptionValues 
   it should "redirect to the correct path" in {
 
     val uri = uri"/i/love/chocolate"
-    val expectedLocationHeader = Location(uri.addPath("index.html").withQueryParam("url", s"$uri/$yamlName"))
+    val expectedLocationHeader = uri.addPath("index.html").withQueryParam("url", s"$uri/$yamlName")
 
     val response = swaggerDocs.routes
       .run(Request(GET, uri))
@@ -41,7 +41,7 @@ class SwaggerHttp4sTest extends AnyFlatSpecLike with Matchers with OptionValues 
       .value
 
     response.status shouldBe Status.PermanentRedirect
-    response.headers.toList should contain(expectedLocationHeader)
+    response.headers.headers.find(_.name == CIString("Location")).map(_.value) shouldBe Some(expectedLocationHeader.toString)
 
   }
 
