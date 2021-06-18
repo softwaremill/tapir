@@ -144,3 +144,44 @@ val result = SttpClientInterpreter
   
 result == out 
 ```
+
+## Shadowed endpoints
+
+It is possible to define a list of endpoints where some of the endpoints will be overlapping with each other. In such
+case when a request matches both endpoints it will be handled only by the first endpoint end second endpoint will be
+always omitted. To detect such cases one can use `FindShadowedEndpoints` util class which takes an input of
+type `List[Endpoint[_, _, _, _]]` an outputs `Set[ShadowedEndpoint]`.
+
+Example 1:
+
+```scala mdoc:silent
+import sttp.tapir.util.FindShadowedEndpoints
+
+val e1 = endpoint.get.in("x" / paths)
+val e2 = endpoint.get.in("x" / "y" / "x")
+val e3 = endpoint.get.in("x")
+val e4 = endpoint.get.in("y" / "x")
+val res = FindShadowedEndpoints(List(e1, e2, e3, e4)) 
+```
+
+Results in:
+
+```scala mdoc
+res.toString
+```
+
+Example 2:
+
+```scala mdoc:silent:nest
+import sttp.tapir.util.FindShadowedEndpoints
+
+val e1 = endpoint.get.in(path[String].name("y_1") / path[String].name("y_2"))
+val e2 = endpoint.get.in(path[String].name("y_3") / path[String].name("y_4"))
+val res = FindShadowedEndpoints(List(e1, e2))
+```
+
+Results in:
+
+```scala mdoc
+res.toString
+```

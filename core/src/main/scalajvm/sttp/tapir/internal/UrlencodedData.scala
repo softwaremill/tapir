@@ -21,4 +21,8 @@ private[tapir] object UrlencodedData {
       s"${URLEncoder.encode(k, charset.toString)}=${URLEncoder.encode(v, charset.toString)}"
     }.mkString("&")
   }
+
+  def encode(s: String): String = {
+    URLEncoder.encode(s, "UTF-8")
+  }
 }
