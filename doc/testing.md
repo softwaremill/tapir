@@ -147,9 +147,9 @@ result == out
 
 ## Shadowed endpoints
 
-It is possible to define a list of endpoints where some of the endpoints will be overlapping with each other. In such
-case when a request matches both endpoints it will be handled only by the first endpoint end second endpoint will be
-always omitted. To detect such cases one can use `FindShadowedEndpoints` util class which takes an input of
+It is possible to define a list of endpoints where some endpoints will be overlapping with each other. In such
+case when all matching requests will be handled by the first endpoint; the second endpoint will always be omitted. 
+To detect such cases one can use `FindShadowedEndpoints` util class which takes an input of
 type `List[Endpoint[_, _, _, _]]` an outputs `Set[ShadowedEndpoint]`.
 
 Example 1:
@@ -185,3 +185,7 @@ Results in:
 ```scala mdoc
 res.toString
 ```
+
+Note that the above takes into account only the method & the shape of the path. It does *not* take into account possible
+decoding failures: these might impact request-endpoint matching, and the exact behavior is determined by the
+[`DecodeFailureHandler`](server/errors.md#decode-failures) used.
