@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "0.18.0-M16"
-"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "0.18.0-M16"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-docs" % "0.18.0-M17"
+"com.softwaremill.sttp.tapir" %% "tapir-asyncapi-circe-yaml" % "0.18.0-M17"
 ```
 
 Tapir contains a case class-based model of the asyncapi data structures in the `asyncapi/asyncapi-model` subproject (the
