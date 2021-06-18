@@ -537,9 +537,3 @@ package object tests {
 
   type Port = Int
 }
-
-case class ColorValue(color: Color, value: Int)
-
-sealed trait Color
-case object Blue extends Color
-case object Red extends Color
