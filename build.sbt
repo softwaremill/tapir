@@ -174,7 +174,7 @@ lazy val macros = Seq(
   // remove false alarms about unused implicit definitions in macros
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, _)) => Seq("\"-Ywarn-macros:after\"")
+      case Some((2, _)) => Seq("-Ywarn-macros:after")
       case _            => Seq.empty[String]
     }
   }
