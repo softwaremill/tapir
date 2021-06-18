@@ -25,23 +25,11 @@ private[schema] class TSchemaToASchema(
               f.schema match {
                 case TSchema(s: TSchemaType.SObject[_], _, _, _, _, _, _, _) =>
                   f.name.encodedName -> Left(objectToSchemaReference.map(s.info))
-                case TSchema(
-                      TSchemaType.SOption(TSchema(_: TSchemaType.SString[_], _, _, _, _, _, _, Validator.Enumeration(_, _, Some(info)))),
-                      _,
-                      _,
-                      _,
-                      _,
-                      _,
-                      _,
-                      _
-                    ) if referenceEnums(info) =>
-                  f.name.encodedName -> Left(objectToSchemaReference.map(info))
-                case schema @ TSchema(_, _, _, _, _, _, _, v) =>
-                  v.traversePrimitives { case Validator.Enumeration(_, _, Some(info)) => Vector(info) } match {
-                    case info +: _ if referenceEnums(info) => f.name.encodedName -> Left(objectToSchemaReference.map(info))
-                    case _                                 => f.name.encodedName -> apply(schema)
+                case schema =>
+                  schemaIsReferencedEnum(schema) match {
+                    case Some(enumInfo) => f.name.encodedName -> Left(objectToSchemaReference.map(enumInfo))
+                    case None           => f.name.encodedName -> apply(schema)
                   }
-                case schema => f.name.encodedName -> apply(schema)
               }
             }.toListMap
           )
@@ -49,7 +37,11 @@ private[schema] class TSchemaToASchema(
       case TSchemaType.SArray(TSchema(el: TSchemaType.SObject[_], _, _, _, _, _, _, _)) =>
         Right(ASchema(SchemaType.Array).copy(items = Some(Left(objectToSchemaReference.map(el.info)))))
       case TSchemaType.SArray(el) =>
-        Right(ASchema(SchemaType.Array).copy(items = Some(apply(el))))
+        val items = schemaIsReferencedEnum(el) match {
+          case Some(enumInfo) => Some(Left(objectToSchemaReference.map(enumInfo)))
+          case None           => Some(apply(el))
+        }
+        Right(ASchema(SchemaType.Array).copy(items = items))
       case TSchemaType.SOption(TSchema(el: TSchemaType.SObject[_], _, _, _, _, _, _, _)) => Left(objectToSchemaReference.map(el.info))
       case TSchemaType.SOption(el)                                                       => apply(el)
       case TSchemaType.SBinary()                                                         => Right(ASchema(SchemaType.String).copy(format = SchemaFormat.Binary))
@@ -90,6 +82,18 @@ private[schema] class TSchemaToASchema(
     result
       .map(addMetadata(_, schema))
       .map(addConstraints(_, primitiveValidators, wholeNumbers))
+  }
+
+  private def schemaIsReferencedEnum(schema: TSchema[_]): Option[SObjectInfo] = {
+    val validatorToCheck = schema match {
+      case TSchema(TSchemaType.SOption(TSchema(_, _, _, _, _, _, _, v)), _, _, _, _, _, _, _) => v
+      case TSchema(_, _, _, _, _, _, _, v)                                                    => v
+    }
+
+    validatorToCheck.traversePrimitives { case Validator.Enumeration(_, _, Some(info)) => Vector(info) } match {
+      case info +: _ if referenceEnums(info) => Some(info)
+      case _                                 => None
+    }
   }
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
