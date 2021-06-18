@@ -192,6 +192,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
   }
 
   val showTestData = List(
+    (endpoint.in("p1/p2"), "/p1%2Fp2 -> -/-"),
     (endpoint.name("E1").in("p1"), "[E1] /p1 -> -/-"),
     (endpoint.get.in("p1" / "p2"), "GET /p1 /p2 -> -/-"),
     (endpoint.in("p1" / path[String]("p2") / paths), "/p1 /[p2] /... -> -/-"),
@@ -218,7 +219,8 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     (endpoint.in("p1" / query[String]("par1") / query[String]("par2")), "/p1?par1={par1}&par2={par2}"),
     (endpoint.in("p1" / path[String].name("par1") / query[String]("par2")), "/p1/{par1}?par2={par2}"),
     (endpoint.in("p1" / auth.apiKey(query[String]("par2"))), "/p1?par2={par2}"),
-    (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}")
+    (endpoint.in("p2" / path[String]).mapIn(identity(_))(identity(_)), "/p2/{param1}"),
+    (endpoint.in("p1/p2"), "/p1%2Fp2")
   )
 
   for ((testEndpoint, expectedRenderPath) <- renderTestData) {
