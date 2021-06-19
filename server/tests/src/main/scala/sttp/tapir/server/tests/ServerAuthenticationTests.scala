@@ -44,7 +44,7 @@ class ServerAuthenticationTests[F[_], S, ROUTE, B](createServerTest: CreateServe
     )
   }
 
-  def tests(): List[Test] = missingAuthTests ++ correctAuthTests ++ badRequestWithCorrectAuthTests
+  def tests(): List[Test] = missingAuthTests ++ correctAuthTests ++ badRequestWithCorrectAuthTests ++ badRequestWithMissingAuthTests
 
   private def missingAuthTests = endpoints.map { case (authType, endpoint, _) =>
     testServer(endpoint, s"missing $authType")(_ => result) { (backend, baseUri) =>
@@ -72,6 +72,15 @@ class ServerAuthenticationTests[F[_], S, ROUTE, B](createServerTest: CreateServe
   private def badRequestWithCorrectAuthTests = endpoints.map { case (authType, endpoint, auth) =>
     testServer(endpoint, s"invalid request $authType")(_ => result) { (backend, baseUri) =>
       auth(invalidRequest(baseUri)).send(backend).map(_.code shouldBe StatusCode.BadRequest)
+    }
+  }
+
+  private def badRequestWithMissingAuthTests = endpoints.map { case (authType, endpoint, _) =>
+    testServer(endpoint, s"invalid request with missing $authType")(_ => result) { (backend, baseUri) =>
+      invalidRequest(baseUri).send(backend).map { r =>
+        r.code shouldBe StatusCode.Unauthorized
+        r.header("WWW-Authenticate") shouldBe Some(expectedChallenge(authType))
+      }
     }
   }
 }
