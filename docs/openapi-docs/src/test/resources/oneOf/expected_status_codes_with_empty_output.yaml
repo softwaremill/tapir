@@ -10,4 +10,4 @@ paths:
         '200':
           description: ''
         '403':
-          description: 'forbidden'
+          description: forbidden
