@@ -6,9 +6,9 @@ import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
-import sttp.tapir.server.vertx.VertxFutureServerInterpreter.FutureFromVFuture
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
+import sttp.tapir.server.vertx.interpreters.VertxFutureServerInterpreter.FutureFromVFuture
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.{VertxBodyListener, VertxFutureServerOptions}
 
@@ -105,3 +105,28 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
   }
 }
 
+object VertxFutureServerInterpreter {
+  def apply(serverOptions: VertxFutureServerOptions = VertxFutureServerOptions.default): VertxFutureServerInterpreter = {
+    new VertxFutureServerInterpreter {
+      override def vertxFutureServerOptions: VertxFutureServerOptions = serverOptions
+    }
+  }
+
+  private[vertx] object FutureFromVFuture extends FromVFuture[Future] {
+    def apply[T](f: => VFuture[T]): Future[T] = f.asScala
+  }
+
+  implicit class VertxFutureToScalaFuture[A](future: => VFuture[A]) {
+    def asScala: Future[A] = {
+      val promise = Promise[A]()
+      future.onComplete { handler =>
+        if (handler.succeeded()) {
+          promise.success(handler.result())
+        } else {
+          promise.failure(handler.cause())
+        }
+      }
+      promise.future
+    }
+  }
+}

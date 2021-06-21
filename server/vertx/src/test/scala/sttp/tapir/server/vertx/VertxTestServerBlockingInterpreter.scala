@@ -6,6 +6,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.vertx.interpreters.VertxFutureServerInterpreter
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
