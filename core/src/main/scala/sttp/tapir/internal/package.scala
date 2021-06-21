@@ -171,7 +171,7 @@ package object internal {
         case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
           val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toList
           Right(entries)
-        case e: EndpointIO.Empty[_]     => if(e.info.description.nonEmpty)  Left(Vector(e)) else Left(Vector.empty)
+        case e: EndpointIO.Empty[_]     => if (e.info.description.nonEmpty) Left(Vector(e)) else Left(Vector.empty)
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
       }
     }

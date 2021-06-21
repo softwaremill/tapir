@@ -1,6 +1,5 @@
 package sttp.tapir.docs.openapi
 
-import sttp.tapir.EndpointIO.Empty
 import sttp.tapir._
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, SchemaType => ASchemaType}
 import sttp.tapir.docs.apispec.exampleValue
@@ -49,7 +48,7 @@ private[openapi] class EndpointToOperationResponse(
     val statusCodeDescriptions = outputs.flatMap {
       case EndpointOutput.StatusCode(possibleCodes, _, _)                             => possibleCodes.filter(c => sc.contains(c._1)).flatMap(_._2.description)
       case EndpointOutput.FixedStatusCode(_, _, EndpointIO.Info(Some(desc), _, _, _)) => Vector(desc)
-      case EndpointIO.Empty(_,i) => if(i.description.nonEmpty) Vector(i.description.get) else Vector()
+      case EndpointIO.Empty(_, i)                                                     => if (i.description.nonEmpty) Vector(i.description.get) else Vector()
       case _                                                                          => Vector()
     }
 
