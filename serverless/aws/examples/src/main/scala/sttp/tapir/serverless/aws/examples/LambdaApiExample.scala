@@ -22,9 +22,9 @@ object LambdaApiExample extends RequestStreamHandler {
     .out(stringBody)
     .serverLogic { _ => IO.pure(s"Hello!".asRight[Unit]) }
 
-  implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
+  val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
 
-  val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(helloEndpoint)
+  val route: Route[IO] = AwsCatsEffectServerInterpreter(options).toRoute(helloEndpoint)
 
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 

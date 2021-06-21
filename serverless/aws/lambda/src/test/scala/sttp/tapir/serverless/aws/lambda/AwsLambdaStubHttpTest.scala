@@ -29,18 +29,18 @@ object AwsLambdaStubHttpTest {
         decodeFailureHandler: Option[DecodeFailureHandler],
         metricsInterceptor: Option[MetricsRequestInterceptor[IO, String]]
     ): Route[IO] = {
-      implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(
+      val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(
         encodeResponseBody = false,
         metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-      AwsCatsEffectServerInterpreter.toRoute(e)
+      AwsCatsEffectServerInterpreter(options).toRoute(e)
     }
     override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => IO[O])(implicit
         eClassTag: ClassTag[E]
     ): Route[IO] = {
-      implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
-      AwsCatsEffectServerInterpreter.toRouteRecoverErrors(e)(fn)
+      val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
+      AwsCatsEffectServerInterpreter(options).toRouteRecoverErrors(e)(fn)
     }
     override def server(routes: NonEmptyList[Route[IO]]): Resource[IO, Port] = ???
   }

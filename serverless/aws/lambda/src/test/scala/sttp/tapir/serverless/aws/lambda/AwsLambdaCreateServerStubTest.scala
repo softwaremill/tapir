@@ -26,13 +26,13 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, String]]
   )(fn: I => IO[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
-    implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(
+    val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(
       encodeResponseBody = false,
       metricsInterceptor = metricsInterceptor,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     val se: ServerEndpoint[I, E, O, Any, IO] = e.serverLogic(fn)
-    val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(se)
+    val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(se)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
   }
@@ -40,8 +40,8 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
   override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, Any, IO], testNameSuffix: String)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
-    implicit val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
-    val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(e)
+    val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
+    val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
   }
