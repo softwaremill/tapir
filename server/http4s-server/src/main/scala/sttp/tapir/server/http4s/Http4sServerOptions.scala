@@ -100,6 +100,6 @@ object Http4sServerOptions {
       }
   }
 
-  implicit def default[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] =
+  def default[F[_], G[_]: Sync: ContextShift]: Http4sServerOptions[F, G] =
     customInterceptors(Some(DefaultExceptionHandler), Some(Log.defaultServerLog[G]))
 }

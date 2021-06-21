@@ -58,7 +58,7 @@ object FinatraServerOptions extends Logging {
         List(new DecodeFailureInterceptor[Future, FinatraContent](decodeFailureHandler))
     )
 
-  implicit val default: FinatraServerOptions = customInterceptors()
+  val default: FinatraServerOptions = customInterceptors()
 
   def defaultCreateFile(futurePool: FuturePool)(bytes: Array[Byte]): Future[TapirFile] = {
     // TODO: Make this streaming
