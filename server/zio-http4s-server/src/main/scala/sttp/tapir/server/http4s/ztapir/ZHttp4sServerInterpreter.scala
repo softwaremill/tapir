@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s.ztapir
 
 import org.http4s.HttpRoutes
-import sttp.tapir.server.http4s.{Http4sServerOptions, Http4sServerRoutesInterpreter}
+import sttp.tapir.server.http4s.{Http4sServerOptions, Http4sServerInterpreter}
 import sttp.tapir.ztapir._
 import zio.{RIO, ZIO}
 import zio.clock.Clock
@@ -28,7 +28,7 @@ trait ZHttp4sServerInterpreter[R] {
       serverEndpoints: List[ZServerEndpoint[R, _, _, _]]
   ) {
     def toRoutes: HttpRoutes[RIO[R with Clock, *]] = {
-      Http4sServerRoutesInterpreter(zHttp4sServerOptions).toRoutes(serverEndpoints.map(_.widen[R with Clock]))
+      Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(serverEndpoints.map(_.widen[R with Clock]))
     }
   }
 }

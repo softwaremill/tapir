@@ -7,7 +7,7 @@ import org.http4s.server.Router
 import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.tapir._
-import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerRoutesInterpreter}
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.syntax.all._
 
 import scala.concurrent.ExecutionContext
@@ -25,7 +25,7 @@ object HelloWorldHttp4sServer extends App {
   implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val helloWorldRoutes: HttpRoutes[IO] = Http4sServerRoutesInterpreter().toRoutes(helloWorld)(name => IO(s"Hello, $name!".asRight[Unit]))
+  val helloWorldRoutes: HttpRoutes[IO] = Http4sServerInterpreter().toRoutes(helloWorld)(name => IO(s"Hello, $name!".asRight[Unit]))
 
   // starting the server
 

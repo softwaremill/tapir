@@ -14,7 +14,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._
 import sttp.tapir.openapi.OpenAPI
 import sttp.tapir.openapi.circe.yaml._
-import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerRoutesInterpreter}
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.tapir.swagger.http4s.SwaggerHttp4s
 
 import scala.concurrent.ExecutionContext
@@ -55,9 +55,9 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
     )
   )
 
-  val booksListingRoutes: HttpRoutes[IO] = Http4sServerRoutesInterpreter().toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
+  val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter().toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
   val addBookRoutes: HttpRoutes[IO] =
-    Http4sServerRoutesInterpreter().toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
+    Http4sServerInterpreter().toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes
 
   // generating the documentation in yml; extension methods come from imported packages

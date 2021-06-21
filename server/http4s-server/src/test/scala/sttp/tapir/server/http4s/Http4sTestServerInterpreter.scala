@@ -38,13 +38,13 @@ class Http4sTestServerInterpreter
         serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    Http4sServerRoutesInterpreter(serverOptions).toRoutes(e)
+    Http4sServerInterpreter(serverOptions).toRoutes(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO] with WebSockets], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): HttpRoutes[IO] = {
-    Http4sServerRoutesInterpreter().toRouteRecoverErrors(e)(fn)
+    Http4sServerInterpreter().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[HttpRoutes[IO]]): Resource[IO, Port] = {

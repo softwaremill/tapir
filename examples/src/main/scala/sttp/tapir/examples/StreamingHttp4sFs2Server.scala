@@ -9,7 +9,7 @@ import org.http4s.server.blaze.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.client3._
 import sttp.tapir._
-import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerRoutesInterpreter}
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import fs2._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.HeaderNames
@@ -34,7 +34,7 @@ object StreamingHttp4sFs2Server extends App {
   implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val streamingRoutes: HttpRoutes[IO] = Http4sServerRoutesInterpreter().toRoutes(streamingEndpoint) { _ =>
+  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter().toRoutes(streamingEndpoint) { _ =>
     val size = 100L
     Stream
       .emit(List[Char]('a', 'b', 'c', 'd'))

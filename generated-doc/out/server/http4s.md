@@ -10,7 +10,8 @@ dependency:
 and import the object:
 
 ```scala
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerToHttpInterpreter
+
 ```
 
 This objects contains the `toRoutes` and `toRoutesRecoverErrors` methods. This first requires the 
@@ -25,7 +26,7 @@ a subclass of `Throwable` (an exception); it expects a function of type `I => F[
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerToHttpInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
 import cats.effect.{ContextShift, Timer}
@@ -34,15 +35,15 @@ import cats.effect.{ContextShift, Timer}
 implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
 implicit val t: Timer[IO] =
-  IO.timer(scala.concurrent.ExecutionContext.global)  
+  IO.timer(scala.concurrent.ExecutionContext.global)
 
-def countCharacters(s: String): IO[Either[Unit, Int]] = 
+def countCharacters(s: String): IO[Either[Unit, Int]] =
   IO.pure(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
-val countCharactersRoutes: HttpRoutes[IO] = 
-  Http4sServerInterpreter.toRoutes(countCharactersEndpoint)(countCharacters _)
+val countCharactersRoutes: HttpRoutes[IO] =
+  Http4sServerToHttpInterpreter.toRoutes(countCharactersEndpoint)(countCharacters _)
 ```
 
 Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
@@ -50,7 +51,7 @@ functions which take multiple arguments need to be converted to a function using
 
 ```scala
 import sttp.tapir._
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerToHttpInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
 import cats.effect.{ContextShift, Timer}
@@ -62,8 +63,8 @@ implicit val t: Timer[IO] =
   IO.timer(scala.concurrent.ExecutionContext.global)
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
-val routes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(anEndpoint)((logic _).tupled)
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
+val routes: HttpRoutes[IO] = Http4sServerToHttpInterpreter.toRoutes(anEndpoint)((logic _).tupled)
 ```
 
 The created `HttpRoutes` are the usual http4s `Kleisli`-based transformation of a `Request` to a `Response`, and can 
@@ -97,7 +98,7 @@ For example, to define an endpoint that returns event stream:
 import cats.effect.IO
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
-import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
+import sttp.tapir.server.http4s.{Http4sServerToHttpInterpreter, serverSentEventsBody}
 
 import cats.effect.{ContextShift, Timer}
 
@@ -106,9 +107,8 @@ val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
 implicit val cs: ContextShift[IO] = ???
 implicit val t: Timer[IO] = ???
 
-val routes = Http4sServerInterpreter.toRoutes(sseEndpoint)(_ =>
-  IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
-)
+val routes =
+  Http4sServerToHttpInterpreter.toRoutes(sseEndpoint)(_ => IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None)))))
 ```
 
 ## Configuration
@@ -125,7 +125,7 @@ configuration:
 
 ```scala
 import cats.effect._
-import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
+import sttp.tapir.server.http4s.{Http4sServerToHttpInterpreter, Http4sServerOptions}
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
 

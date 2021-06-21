@@ -17,7 +17,7 @@ import sttp.tapir.docs.asyncapi.AsyncAPIInterpreter
 import sttp.tapir.asyncapi.Server
 import sttp.tapir.asyncapi.circe.yaml._
 import sttp.tapir.json.circe._
-import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerRoutesInterpreter}
+import sttp.tapir.server.http4s.Http4sServerInterpreter
 import sttp.ws.WebSocket
 
 import scala.concurrent.ExecutionContext
@@ -68,7 +68,7 @@ object WebSocketHttp4sServer extends App {
   }
 
   // Implementing the endpoint's logic, by providing the web socket pipe
-  val wsRoutes: HttpRoutes[IO] = Http4sServerRoutesInterpreter().toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
+  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter().toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
 
   // Documentation
   val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
