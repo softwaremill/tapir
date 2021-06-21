@@ -4,15 +4,27 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.model.StatusCode
+import sttp.model.StatusCode.NoContent
 import sttp.tapir.docs.openapi.VerifyYamlOneOfTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.MultipleMediaTypes
-import sttp.tapir.{Codec, CodecFormat, Schema, SchemaType, endpoint, header, plainBody, statusCode, oneOfDefaultMapping, oneOfMapping}
+import sttp.tapir.{Codec, CodecFormat, EndpointIO, Schema, SchemaType, emptyOutput, endpoint, header, oneOfDefaultMapping, oneOfMapping, plainBody, statusCode, statusDefaultMapping, statusMapping}
 
 class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
+
+  test("should support description for status code mappings with empty output") {
+    val expectedYaml = load("oneOf/expected_status_codes_with_empty_output.yaml")
+
+    val e = endpoint.errorOut(sttp.tapir.oneOf(oneOfMapping(StatusCode.Forbidden, EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty).description("forbidden"))))
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("test", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 
   test("should support multiple status codes") {
     val expectedYaml = load("oneOf/expected_status_codes.yml")
