@@ -1,20 +1,20 @@
 package sttp.tapir
 
+import sttp.capabilities.Streams
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model._
+import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
+import sttp.tapir.EndpointIO.Empty
+import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.internal.{ModifyMacroSupport, _}
+import sttp.tapir.macros.TapirMacros
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.typelevel.MatchType
+import sttp.ws.WebSocketFrame
+
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-import sttp.capabilities.Streams
-import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
-import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
-import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.internal.ModifyMacroSupport
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.typelevel.MatchType
-import sttp.tapir.internal._
-import sttp.tapir.macros.TapirMacros
-import sttp.ws.WebSocketFrame
-
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
@@ -321,7 +321,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
 
   /** An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
     */
-  val emptyOutput: EndpointOutput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  val emptyOutput: Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
     */
