@@ -58,7 +58,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
       .map(intAsBuffer)
       .flattenChunks
       .provideLayer(clock.Clock.live)
-    val readStream = zio.zioReadStreamCompatible(options, runtime).asReadStream(stream)
+    val readStream = zio.zioReadStreamCompatible(options)(runtime).asReadStream(stream)
     runtime
       .unsafeRunSync(for {
         ref <- ZRef.make[List[Int]](Nil)
@@ -97,7 +97,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
       .map(intAsBuffer)
       .flattenChunks
       .provideLayer(clock.Clock.live) ++ ZStream.fail(new Exception("!"))
-    val readStream = zio.zioReadStreamCompatible(options, runtime).asReadStream(stream)
+    val readStream = zio.zioReadStreamCompatible(options)(runtime).asReadStream(stream)
     runtime
       .unsafeRunSync(for {
         ref <- ZRef.make[List[Int]](Nil)
@@ -135,7 +135,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
     val opts = options.copy(maxQueueSizeForReadStream = 128)
     val count = 100
     val readStream = new FakeStream()
-    val stream = zio.zioReadStreamCompatible(opts, runtime).fromReadStream(readStream)
+    val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunSync(for {
         resultFiber <- stream
@@ -166,7 +166,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
     val opts = options.copy(maxQueueSizeForReadStream = 4)
     val count = 100
     val readStream = new FakeStream()
-    val stream = zio.zioReadStreamCompatible(opts, runtime).fromReadStream(readStream)
+    val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunSync(for {
         resultFiber <- stream
@@ -201,7 +201,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
     val opts = options.copy(maxQueueSizeForReadStream = 4)
     val count = 50
     val readStream = new FakeStream()
-    val stream = zio.zioReadStreamCompatible(opts, runtime).fromReadStream(readStream)
+    val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
       .unsafeRunSync(for {
         resultFiber <- stream
