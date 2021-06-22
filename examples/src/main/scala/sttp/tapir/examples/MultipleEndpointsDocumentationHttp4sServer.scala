@@ -42,7 +42,6 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
-  implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
   val books = new AtomicReference(
     Vector(
@@ -55,9 +54,9 @@ object MultipleEndpointsDocumentationHttp4sServer extends App {
     )
   )
 
-  val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter().toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
+  val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
   val addBookRoutes: HttpRoutes[IO] =
-    Http4sServerInterpreter().toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
+    Http4sServerInterpreter[IO]().toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes
 
   // generating the documentation in yml; extension methods come from imported packages
