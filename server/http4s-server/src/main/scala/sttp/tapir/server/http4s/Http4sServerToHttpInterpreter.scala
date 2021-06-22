@@ -8,9 +8,9 @@ import fs2.Pipe
 import fs2.concurrent.Queue
 import org.http4s._
 import org.http4s.server.websocket.WebSocketBuilder
-import org.http4s.util.CaseInsensitiveString
 import org.http4s.websocket.WebSocketFrame
 import org.log4s.{Logger, getLogger}
+import org.typelevel.ci.CIString
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
@@ -78,14 +78,14 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
       response: ServerResponse[Http4sResponseBody[F]]
   ): F[Response[F]] = {
     val statusCode = statusCodeToHttp4sStatus(response.code)
-    val headers = Headers(response.headers.map(header => Header.Raw(CaseInsensitiveString(header.name), header.value)).toList)
+    val headers = Headers(response.headers.map(header => Header.Raw(CIString(header.name), header.value)).toList)
 
     response.body match {
       case Some(Left(pipeF)) =>
         Queue.bounded[F, WebSocketFrame](32).flatMap { queue =>
           pipeF.flatMap { pipe =>
             val receive: Pipe[F, WebSocketFrame, Unit] = pipe.andThen(s => s.evalMap(f => queue.enqueue1(f)))
-            WebSocketBuilder[F].build(queue.dequeue, receive, headers = headers, filterPingPongs = false)
+            WebSocketBuilder[F].copy(headers = headers, filterPingPongs = false).build(queue.dequeue, receive)
           }
         }
       case Some(Right(entity)) =>

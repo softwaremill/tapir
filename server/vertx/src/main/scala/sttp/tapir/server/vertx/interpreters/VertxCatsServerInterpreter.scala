@@ -1,10 +1,10 @@
 package sttp.tapir.server.vertx.interpreters
 
-import cats.effect.{Async, ConcurrentEffect, Effect, Sync}
-import cats.effect.{Async, CancelToken, ConcurrentEffect, Effect, IO}
+import cats.effect.{Sync, Async, CancelToken, ConcurrentEffect, Effect, IO}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
+import sttp.capabilities.Streams
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
