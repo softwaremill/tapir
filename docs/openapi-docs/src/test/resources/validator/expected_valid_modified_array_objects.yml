@@ -15,14 +15,6 @@ paths:
                 $ref: '#/components/schemas/ObjectWithList'
 components:
   schemas:
-    ObjectWithList:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/FruitAmount'
-          maxItems: 1
     FruitAmount:
       required:
         - fruit
@@ -33,3 +25,11 @@ components:
           type: string
         amount:
           type: integer
+    ObjectWithList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FruitAmount'
+          maxItems: 1

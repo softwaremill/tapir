@@ -5,6 +5,7 @@ import sttp.model.StatusCode
 import sttp.monad.syntax._
 import sttp.tapir.Endpoint
 import sttp.tapir.integ.cats.CatsMonadError
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
@@ -32,7 +33,7 @@ trait AwsCatsEffectServerInterpreter[F[_]] {
 
     { request: AwsRequest =>
       val serverRequest = new AwsServerRequest(request)
-      val interpreter = new ServerInterpreter[Any, F, String, Nothing](
+      val interpreter = new ServerInterpreter[Any, F, String, NoStreams](
         new AwsRequestBody[F](request),
         new AwsToResponseBody(awsServerOptions),
         awsServerOptions.interceptors,

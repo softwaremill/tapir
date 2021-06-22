@@ -30,7 +30,7 @@ trait FinatraServerInterpreter extends Logging {
   def toRoute[I, E, O](se: ServerEndpoint[I, E, O, Any, Future]): FinatraRoute = {
     val handler = { request: Request =>
       val serverRequest = new FinatraServerRequest(request)
-      val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, Nothing](
+      val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
         new FinatraRequestBody(request, finatraServerOptions),
         new FinatraToResponseBody,
         finatraServerOptions.interceptors,

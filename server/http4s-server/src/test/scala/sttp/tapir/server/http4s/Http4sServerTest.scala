@@ -2,19 +2,27 @@ package sttp.tapir.server.http4s
 
 import cats.effect._
 import cats.syntax.all._
-import org.http4s.HttpRoutes
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.scalatest.matchers.should.Matchers._
-import org.scalatest.{EitherValues, OptionValues}
+import org.scalatest.OptionValues
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.integ.cats.CatsMonadError
-import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.server.tests.{
+  DefaultCreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMultipartTests,
+  ServerMetricsTest,
+  ServerStreamingTests,
+  ServerWebSocketTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
@@ -23,7 +31,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Random
 
-class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with EitherValues with OptionValues {
+class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite with OptionValues {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
     implicit val m: CatsMonadError[IO] = new CatsMonadError[IO]
@@ -60,7 +68,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         "automatic pings"
       )((_: Unit) => IO(Right((in: fs2.Stream[IO, String]) => in))) { (backend, baseUri) =>
         basicRequest
-          .response(asWebSocket { ws: WebSocket[IO] =>
+          .response(asWebSocket { (ws: WebSocket[IO]) =>
             List(ws.receive().timeout(60.seconds), ws.receive().timeout(60.seconds)).sequence
           })
           .get(baseUri.scheme("ws"))
@@ -100,7 +108,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
           })
           .get(baseUri)
           .send(backend)
-          .map(_.body.value shouldBe List(sse1, sse2))
+          .map(_.body.right.toOption.value shouldBe List(sse1, sse2))
       }
     )
 

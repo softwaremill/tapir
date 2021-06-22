@@ -7,6 +7,7 @@ import play.api.routing.Router.Routes
 import sttp.model.StatusCode
 import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.DecodeFailureContext
 import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, ServerInterpreter}
@@ -60,7 +61,7 @@ trait PlayServerInterpreter {
         playServerOptions.defaultActionBuilder.async(playServerOptions.playBodyParsers.raw) { request =>
           implicit val bodyListener: BodyListener[Future, HttpEntity] = new PlayBodyListener
           val serverRequest = new PlayServerRequest(request)
-          val interpreter = new ServerInterpreter[Any, Future, HttpEntity, Nothing](
+          val interpreter = new ServerInterpreter[Any, Future, HttpEntity, NoStreams](
             new PlayRequestBody(request, playServerOptions),
             new PlayToResponseBody,
             playServerOptions.interceptors,

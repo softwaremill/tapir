@@ -7,7 +7,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.vertx.streams.ReadStreamState._
 import sttp.tapir.server.vertx.VertxZioServerOptions
 import _root_.zio._
-import _root_.zio.stream.ZStream
+import _root_.zio.stream.{Stream, ZStream}
 
 import scala.collection.immutable.{Queue => SQueue}
 import scala.language.postfixOps
@@ -25,10 +25,10 @@ object zio {
   implicit def zioReadStreamCompatible[F[_]](implicit
       opts: VertxZioServerOptions[F],
       runtime: Runtime[Any]
-  ) = new ReadStreamCompatible[ZioStreams] {
+  ): ReadStreamCompatible[ZioStreams] = new ReadStreamCompatible[ZioStreams] {
     override val streams: ZioStreams = ZioStreams
 
-    override def asReadStream(stream: streams.BinaryStream): ReadStream[Buffer] =
+    override def asReadStream(stream: Stream[Throwable, Byte]): ReadStream[Buffer] =
       runtime
         .unsafeRunSync(for {
           promise <- Promise.make[Nothing, Unit]
@@ -109,7 +109,7 @@ object zio {
         .toEither
         .fold(throw _, identity)
 
-    override def fromReadStream(readStream: ReadStream[Buffer]): streams.BinaryStream =
+    override def fromReadStream(readStream: ReadStream[Buffer]): Stream[Throwable, Byte] =
       runtime
         .unsafeRunSync(for {
           stateRef <- ZRef.make(ReadStreamState[UIO, Chunk[Byte]](Queued(SQueue.empty), Queued(SQueue.empty)))

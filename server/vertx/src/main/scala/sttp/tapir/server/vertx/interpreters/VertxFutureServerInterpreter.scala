@@ -4,6 +4,7 @@ import io.vertx.core.{Handler, Future => VFuture}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
+import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
@@ -85,9 +86,9 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
     implicit val bodyListener: BodyListener[Future, RoutingContext => Unit] = new VertxBodyListener[Future]
-    val interpreter = new ServerInterpreter[Any, Future, RoutingContext => Unit, Nothing](
-      new VertxRequestBody[Future, Nothing](rc, vertxFutureServerOptions, FutureFromVFuture),
-      new VertxToResponseBody[Future, Nothing](vertxFutureServerOptions),
+    val interpreter = new ServerInterpreter[Any, Future, RoutingContext => Unit, NoStreams](
+      new VertxRequestBody(rc, vertxFutureServerOptions, FutureFromVFuture),
+      new VertxToResponseBody(vertxFutureServerOptions),
       vertxFutureServerOptions.interceptors,
       vertxFutureServerOptions.deleteFile
     )

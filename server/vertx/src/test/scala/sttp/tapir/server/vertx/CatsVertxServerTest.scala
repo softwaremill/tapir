@@ -7,6 +7,14 @@ import sttp.monad.MonadError
 import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerStreamingTests, backendResource}
 import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter
 import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter.CatsFFromVFuture
+import sttp.tapir.server.tests.{
+  DefaultCreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMultipartTests,
+  ServerStreamingTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 
 class CatsVertxServerTest extends TestSuite {
@@ -24,7 +32,7 @@ class CatsVertxServerTest extends TestSuite {
         new ServerFileMultipartTests(
           createServerTest,
           multipartInlineHeaderSupport = false // README: doesn't seem supported but I may be wrong
-        ).tests()
+        ).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
         new ServerStreamingTests(createServerTest, Fs2Streams.apply[IO]).tests()
     }

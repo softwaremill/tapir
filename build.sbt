@@ -2,6 +2,7 @@ import com.softwaremill.SbtSoftwareMillBrowserTestJS._
 import com.softwaremill.UpdateVersionInDocs
 import sbt.Reference.display
 import sbt.internal.ProjectMatrix
+
 import java.net.URL
 import scala.concurrent.duration.DurationInt
 import scala.sys.process.Process
@@ -23,8 +24,23 @@ concurrentRestrictions in Global += Tags.limit(Tags.Test, 1)
 
 excludeLintKeys in Global ++= Set(ideSkipProject, reStartArgs)
 
+def versionedScalaSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
+  CrossVersion.partialVersion(scalaVersion) match {
+    case Some((3, _))            => List(sourceDir / "scala-3")
+    case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
+    case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
+  }
+
+def versionedScalaJvmSourceDirectories(sourceDir: File, scalaVersion: String): List[File] =
+  CrossVersion.partialVersion(scalaVersion) match {
+    case Some((3, _)) => List(sourceDir / "scalajvm-3")
+    case _            => List(sourceDir / "scalajvm-2")
+  }
+
 val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   organization := "com.softwaremill.sttp.tapir",
+  Compile / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
+  Test / unmanagedSourceDirectories ++= versionedScalaSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
   updateDocs := Def.taskDyn {
     val files1 = UpdateVersionInDocs(sLog.value, organization.value, version.value)
     Def.task {
@@ -33,7 +49,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
     }
   }.value,
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using versioningSchemeSettings
-  ideSkipProject := (scalaVersion.value == scala2_12) || thisProjectRef.value.project.contains("JS"),
+  ideSkipProject := (scalaVersion.value == scala2_12) || (scalaVersion.value == scala3) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false
 )
@@ -50,7 +66,10 @@ val versioningSchemeSettings = Seq(
   versionScheme := Some("early-semver")
 )
 
-val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings
+val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
+  Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
+  Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value)
+)
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
 val commonJsSettings = commonSettings ++ browserGeckoTestSettings
@@ -60,12 +79,12 @@ def dependenciesFor(version: String)(deps: (Option[(Long, Long)] => ModuleID)*):
 
 val scalaTest = Def.setting("org.scalatest" %%% "scalatest" % Versions.scalaTest)
 val scalaCheck = Def.setting("org.scalacheck" %%% "scalacheck" % Versions.scalaCheck)
-val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-14" % Versions.scalaTestPlusScalaCheck)
+val scalaTestPlusScalaCheck = Def.setting("org.scalatestplus" %%% "scalacheck-1-15" % Versions.scalaTestPlusScalaCheck)
 
 lazy val loggerDependencies = Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "ch.qos.logback" % "logback-core" % "1.2.3",
-  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.3"
+  "com.typesafe.scala-logging" %% "scala-logging" % "3.9.4"
 )
 
 lazy val allAggregates = core.projectRefs ++
@@ -155,7 +174,7 @@ lazy val macros = Seq(
   // remove false alarms about unused implicit definitions in macros
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, _)) => Seq("\"-Ywarn-macros:after\"")
+      case Some((2, _)) => Seq("-Ywarn-macros:after")
       case _            => Seq.empty[String]
     }
   }
@@ -230,7 +249,9 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       "com.softwaremill.sttp.model" %%% "core" % Versions.sttpModel,
       "com.softwaremill.sttp.shared" %%% "core" % Versions.sttpShared,
       "com.softwaremill.sttp.shared" %%% "ws" % Versions.sttpShared,
-      scalaTest.value % Test
+      scalaTest.value % Test,
+      scalaCheck.value % Test,
+      scalaTestPlusScalaCheck.value % Test
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -240,20 +261,9 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           )
         case _ =>
           Seq(
-            "com.propensive" %%% "magnolia" % "0.17.0",
-            "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-            scalaCheck.value % Test,
-            scalaTestPlusScalaCheck.value % Test,
-            "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.5.0" % Test
+            "com.softwaremill.magnolia" %%% "magnolia-core" % "1.0.0-M3",
+            "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
           )
-      }
-    },
-    Compile / unmanagedSourceDirectories ++= {
-      val sourceDir = (Compile / sourceDirectory).value
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((3, _))            => List(sourceDir / "scala-3")
-        case Some((2, n)) if n >= 13 => List(sourceDir / "scala-2", sourceDir / "scala-2.13+")
-        case _                       => List(sourceDir / "scala-2", sourceDir / "scala-2.13-")
       }
     },
     // Until https://youtrack.jetbrains.com/issue/SCL-18636 is fixed and IntelliJ properly imports projects with
@@ -263,13 +273,7 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
     }
   )
   .jvmPlatform(
-    scalaVersions = scala2And3Versions,
-    libraryDependencies ++= {
-      CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((3, _)) => Nil
-        case _            => Seq("org.scala-lang" % "scala-compiler" % scalaVersion.value % Test)
-      }
-    }
+    scalaVersions = scala2And3Versions
   )
   .jsPlatform(
     scalaVersions = scala2Versions,
@@ -289,20 +293,17 @@ lazy val tests: ProjectMatrix = (projectMatrix in file("tests"))
     name := "tapir-tests",
     libraryDependencies ++= Seq(
       "io.circe" %%% "circe-generic" % Versions.circe,
-      "com.beachape" %%% "enumeratum-circe" % Versions.enumeratum,
-      "com.softwaremill.common" %%% "tagging" % "2.3.0",
+      "com.softwaremill.common" %%% "tagging" % "2.3.1",
       scalaTest.value,
-      "com.softwaremill.macwire" %% "macros" % "2.3.7",
       "org.typelevel" %%% "cats-effect" % Versions.catsEffect
-    ),
-    libraryDependencies ++= loggerDependencies
+    ) ++ loggerDependencies
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings
   )
-  .dependsOn(core, circeJson, enumeratum, cats)
+  .dependsOn(core, circeJson, cats)
 
 // integrations
 
@@ -320,7 +321,16 @@ lazy val cats: ProjectMatrix = (projectMatrix in file("integrations/cats"))
       "org.typelevel" %%% "cats-laws" % "2.6.1" % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(
+    scalaVersions = scala2And3Versions,
+    // tests for cats3 are disable until https://github.com/lampepfl/dotty/issues/12849 is fixed
+    settings = Seq(
+      Test / skip := scalaVersion.value == scala3,
+      Test / test := {
+        if (scalaVersion.value == scala3) () else (Test / test).value
+      }
+    )
+  )
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings ++ Seq(
@@ -385,7 +395,7 @@ lazy val zio: ProjectMatrix = (projectMatrix in file("integrations/zio"))
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core)
 
 lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
@@ -431,7 +441,7 @@ lazy val circeJson: ProjectMatrix = (projectMatrix in file("json/circe"))
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings
@@ -561,7 +571,7 @@ lazy val prometheusMetrics: ProjectMatrix = (projectMatrix in file("metrics/prom
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core % "compile->compile;test->test")
 
 lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/opentelemetry-metrics"))
@@ -575,7 +585,7 @@ lazy val opentelemetryMetrics: ProjectMatrix = (projectMatrix in file("metrics/o
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core % "compile->compile;test->test")
 
 // apispec
@@ -586,7 +596,7 @@ lazy val apispecModel: ProjectMatrix = (projectMatrix in file("apispec/apispec-m
     name := "tapir-apispec-model"
   )
   .settings(libraryDependencies += scalaTest.value % Test)
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
 
 // openapi
 
@@ -596,7 +606,7 @@ lazy val openapiModel: ProjectMatrix = (projectMatrix in file("apispec/openapi-m
     name := "tapir-openapi-model"
   )
   .settings(libraryDependencies += scalaTest.value % Test)
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(apispecModel)
 
 lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe"))
@@ -609,7 +619,7 @@ lazy val openapiCirce: ProjectMatrix = (projectMatrix in file("apispec/openapi-c
     ),
     name := "tapir-openapi-circe"
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(openapiModel)
 
 lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/openapi-circe-yaml"))
@@ -618,7 +628,7 @@ lazy val openapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/opena
     libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
     name := "tapir-openapi-circe-yaml"
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(openapiCirce)
 
 // asyncapi
@@ -629,7 +639,7 @@ lazy val asyncapiModel: ProjectMatrix = (projectMatrix in file("apispec/asyncapi
     name := "tapir-asyncapi-model"
   )
   .settings(libraryDependencies += scalaTest.value % Test)
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(apispecModel)
 
 lazy val asyncapiCirce: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe"))
@@ -642,7 +652,7 @@ lazy val asyncapiCirce: ProjectMatrix = (projectMatrix in file("apispec/asyncapi
     ),
     name := "tapir-asyncapi-circe"
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(asyncapiModel)
 
 lazy val asyncapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/asyncapi-circe-yaml"))
@@ -651,7 +661,7 @@ lazy val asyncapiCirceYaml: ProjectMatrix = (projectMatrix in file("apispec/asyn
     libraryDependencies += "io.circe" %% "circe-yaml" % Versions.circeYaml,
     name := "tapir-asyncapi-circe-yaml"
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(asyncapiCirce)
 
 // docs
@@ -661,7 +671,7 @@ lazy val apispecDocs: ProjectMatrix = (projectMatrix in file("docs/apispec-docs"
   .settings(
     name := "tapir-apispec-docs"
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, tests % Test, apispecModel)
 
 lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"))
@@ -669,8 +679,11 @@ lazy val openapiDocs: ProjectMatrix = (projectMatrix in file("docs/openapi-docs"
   .settings(
     name := "tapir-openapi-docs"
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(openapiModel, core, apispecDocs, tests % Test, openapiCirceYaml % Test)
+
+lazy val openapiDocs2_13 = openapiDocs.jvm(scala2_13).dependsOn(enumeratum.jvm(scala2_13))
+lazy val openapiDocs2_12 = openapiDocs.jvm(scala2_12).dependsOn(enumeratum.jvm(scala2_12))
 
 lazy val asyncapiDocs: ProjectMatrix = (projectMatrix in file("docs/asyncapi-docs"))
   .settings(commonJvmSettings)
@@ -713,7 +726,8 @@ lazy val swaggerUiHttp4s: ProjectMatrix = (projectMatrix in file("docs/swagger-u
     name := "tapir-swagger-ui-http4s",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
-      "org.webjars" % "swagger-ui" % Versions.swaggerUi
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -766,7 +780,7 @@ lazy val swaggerUiVertx: ProjectMatrix = (projectMatrix in file("docs/swagger-ui
       "org.webjars" % "swagger-ui" % Versions.swaggerUi
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
 
 // server
 
@@ -779,7 +793,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
     )
   )
   .dependsOn(tests)
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
 
 lazy val akkaHttpServer: ProjectMatrix = (projectMatrix in file("server/akka-http-server"))
   .settings(commonJvmSettings)
@@ -804,7 +818,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
       "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, cats, serverTests % Test)
 
 lazy val sttpStubServer: ProjectMatrix = (projectMatrix in file("server/sttp-stub-server"))
@@ -892,7 +906,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % Test)
 
 lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
@@ -913,7 +927,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
       "com.softwaremill.sttp.client3" %% "http4s-ce2-backend" % Versions.sttp,
-      "org.http4s" %% "http4s-blaze-client" % Versions.http4s
+      "org.http4s" %% "http4s-blaze-client" % Versions.http4sOld
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1028,7 +1042,7 @@ lazy val clientTests: ProjectMatrix = (projectMatrix in file("client/tests"))
       "org.http4s" %% "http4s-circe" % Versions.http4s
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .jsPlatform(
     scalaVersions = scala2Versions,
     settings = commonJsSettings
@@ -1058,15 +1072,23 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     )
   )
   .jvmPlatform(
-    scalaVersions = scala2Versions,
+    scalaVersions = scala2And3Versions,
     settings = commonJvmSettings ++ Seq(
-      libraryDependencies ++= loggerDependencies.map(_ % Test) ++ Seq(
-        "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test,
+      libraryDependencies ++= Seq(
         "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2-ce2" % Versions.sttp % Test,
-        "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional,
-        "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
-        "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
-      )
+        "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional
+      ),
+      libraryDependencies ++= {
+        CrossVersion.partialVersion(scalaVersion.value) match {
+          case Some((3, _)) => Nil
+          case _ =>
+            Seq(
+              "com.softwaremill.sttp.shared" %% "akka" % Versions.sttpShared % Optional,
+              "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp % Test,
+              "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams % Optional
+            )
+        }
+      }
     )
   )
   .jsPlatform(
@@ -1115,7 +1137,7 @@ lazy val openapiCodegen = (projectMatrix in file("sbt/sbt-openapi-codegen"))
       scalaTest.value % Test,
       scalaCheck.value % Test,
       scalaTestPlusScalaCheck.value % Test,
-      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.5.0" % Test,
+      "com.47deg" %% "scalacheck-toolbox-datetime" % "0.6.0" % Test,
       "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
     )
   )

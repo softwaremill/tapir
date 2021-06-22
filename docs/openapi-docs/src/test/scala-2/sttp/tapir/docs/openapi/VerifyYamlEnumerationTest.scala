@@ -53,8 +53,26 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
         "1.0"
       )
       .toYaml
-
     val expectedYaml = load("enum/expected_enumeratum_enum_component.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should create component for optional and collections of enums") {
+    import sttp.tapir.codec.enumeratum._
+
+    implicit val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
+
+    val actualYaml = OpenAPIDocsInterpreter
+      .toOpenAPI(
+        Seq(
+          endpoint.in("countryCollection").out(jsonBody[CountryCollection])
+        ),
+        "Countries",
+        "1.0"
+      )
+      .toYaml
+    val expectedYaml = load("enum/expected_enumeratum_enum_collection_component.yml")
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
@@ -103,6 +121,7 @@ object VerifyYamlEnumerationTest {
   case class Poland(countryCode: CountryCode)
   case class Belgium(countryCode: CountryCode)
   case class Luxembourg(countryCode: CountryCode)
+  case class CountryCollection(countryCode: CountryCode, countryCodeOpt: Option[CountryCode], countryCodeMulti: List[CountryCode])
 
   sealed abstract class ErrorCode(val value: Int) extends IntEnumEntry
 

@@ -74,15 +74,13 @@ import sttp.tapir._
 import sttp.tapir.Codec.PlainCodec
 
 sealed trait Color
-
 case object Blue extends Color
-
 case object Red extends Color
 
 implicit def plainCodecForColor: PlainCodec[Color] = {
   Codec.string
     .map[Color]((_: String) match {
-      case "red" => Red
+      case "red"  => Red
       case "blue" => Blue
     })(_.toString.toLowerCase)
     .validate(Validator.derivedEnumeration)
@@ -93,7 +91,7 @@ If the enum is nested within an object, regardless of whether the codec for that
 we need to specify the encode function by hand:
 
 ```scala
-implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
+implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnumeration.encode(_.toString.toLowerCase))
 ```
 
 Like other validators/schemas, enum schemas need to be added to a codec manually, or through an implicit value if the 

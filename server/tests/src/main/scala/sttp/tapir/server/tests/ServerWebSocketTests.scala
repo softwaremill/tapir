@@ -35,7 +35,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
       "string client-terminated echo"
     )((_: Unit) => pureResult(stringEcho.asRight[Unit])) { (backend, baseUri) =>
       basicRequest
-        .response(asWebSocket { ws: WebSocket[IO] =>
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
             _ <- ws.sendText("test2")
@@ -56,7 +56,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
         pureResult(stringEcho.asRight[Unit])
       ) { (backend, baseUri) =>
         basicRequest
-          .response(asWebSocket { ws: WebSocket[IO] =>
+          .response(asWebSocket { (ws: WebSocket[IO]) =>
             for {
               _ <- ws.sendText("test1")
               m <- ws.receiveText()
@@ -75,7 +75,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
       (_: Unit) => pureResult(functionToPipe((f: Fruit) => Fruit(s"echo: ${f.f}")).asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
-        .response(asWebSocket { ws: WebSocket[IO] =>
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("""{"f":"apple"}""")
             _ <- ws.sendText("""{"f":"orange"}""")
@@ -97,7 +97,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
       }.asRight[Unit])
     ) { (backend, baseUri) =>
       basicRequest
-        .response(asWebSocket { ws: WebSocket[IO] =>
+        .response(asWebSocket { (ws: WebSocket[IO]) =>
           for {
             _ <- ws.sendText("test1")
             _ <- ws.sendText("test2")

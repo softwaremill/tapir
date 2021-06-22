@@ -15,6 +15,7 @@ import sttp.tapir.server.vertx.streams.zio._
 import sttp.tapir.server.vertx.{VertxBodyListener, VertxZioServerOptions}
 import zio._
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
 trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
@@ -64,11 +65,23 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
         RIO.effect(rc.fail(e))
       }
 
-    val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
-    rc.response.exceptionHandler { _ =>
-      canceler(Fiber.Id.None)
+    // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
+    // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
+    // if so, we need to use this fact to cancel the operation nonetheless
+    val cancelRef = new AtomicReference[Option[Either[Throwable, Fiber.Id => Exit[Throwable, Any]]]](None)
+
+    rc.response.exceptionHandler { (t: Throwable) =>
+      cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
+        c(Fiber.Id.None)
+      }
       ()
     }
+
+    val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
+    cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
+      canceler(Fiber.Id.None)
+    }
+
     ()
   }
 }

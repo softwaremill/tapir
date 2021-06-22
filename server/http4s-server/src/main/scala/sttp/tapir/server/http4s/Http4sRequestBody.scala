@@ -58,15 +58,15 @@ private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( /
   }
 
   private def toRawPart[R](part: multipart.Part[F], partType: RawBodyType[R]): G[Part[R]] = {
-    val dispositionParams = part.headers.get(`Content-Disposition`).map(_.parameters).getOrElse(Map.empty)
-    val charset = part.headers.get(`Content-Type`).flatMap(_.charset)
+    val dispositionParams = part.headers.get[`Content-Disposition`].map(_.parameters).getOrElse(Map.empty)
+    val charset = part.headers.get[`Content-Type`].flatMap(_.charset)
     toRawFromStream(part.body, partType, charset)
       .map(r =>
         Part(
           part.name.getOrElse(""),
           r.value,
-          otherDispositionParams = dispositionParams - Part.NameDispositionParam,
-          headers = part.headers.toList.map(h => Header(h.name.value, h.value))
+          otherDispositionParams = dispositionParams.map { case (k, v) => k.toString -> v } - Part.NameDispositionParam,
+          headers = part.headers.headers.map(h => Header(h.name.toString, h.value))
         )
       )
   }

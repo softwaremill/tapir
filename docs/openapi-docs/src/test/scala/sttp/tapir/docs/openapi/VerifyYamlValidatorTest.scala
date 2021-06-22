@@ -10,7 +10,7 @@ import sttp.tapir.json.circe._
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests._
-import VerifyYamlValidatorTest._
+import sttp.tapir.docs.openapi.dtos.VerifyYamlValidatorTestData._
 
 class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
 
@@ -202,10 +202,4 @@ class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-}
-
-object VerifyYamlValidatorTest {
-  case class ObjectWithList(data: List[FruitAmount])
-  case class ObjectWithStrings(data: List[String])
-  case class MyClass(myAttribute: Int)
 }

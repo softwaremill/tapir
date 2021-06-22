@@ -4,7 +4,7 @@ import cats.syntax.all._
 import io.circe.generic.auto._
 import org.http4s._
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.tapir.json.circe._
 import sttp.tapir.generic.auto._

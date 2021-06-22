@@ -25,7 +25,11 @@ Tapir is licensed under Apache2, the source code is [available on GitHub](https:
 Depending on how you prefer to explore the library, take a look at one of the [examples](examples.md) or read on
 for a more detailed description of how tapir works!
 
-Tapir is available for Scala 2.12 and 2.13 on the JVM. The client interpreter is also available for Scala.JS.
+Tapir is available:
+
+* all modules - Scala 2.12 and 2.13 on the JVM
+* selected modules (core, http4s server, sttp client, openapi, some js and datatype integrations) - Scala 3 on the JVM  
+* selected modules (sttp client, some js and datatype integrations) - Scala 2.12 and 2.13 using Scala.JS.
 
 ## Code teaser
 
@@ -46,7 +50,7 @@ case class Book(title: String)
 val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
-    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
+    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)

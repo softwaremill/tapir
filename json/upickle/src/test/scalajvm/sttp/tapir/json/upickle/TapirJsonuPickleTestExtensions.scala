@@ -14,7 +14,7 @@ trait TapirJsonuPickleTestExtensions { self: TapirJsonuPickleTests =>
   object DateConversionUtil {
     val dateFormatString = "yyyy-MM-dd HH:mm:ss.SSS"
 
-    implicit val rw1 = upickle.default
+    implicit val rw1: ReadWriter[Date] = upickle.default
       .readwriter[String]
       .bimap[Date](
         date => {

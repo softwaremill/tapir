@@ -8,7 +8,8 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.docs.openapi.VerifyYamlTest._
+import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
+import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData2._
 import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
@@ -39,8 +40,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
-  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1, Any] = endpoint
-    .out(jsonBody[F1])
+  val endpoint_wit_recursive_structure: Endpoint[Unit, Unit, F1, Any] = endpoint.out(jsonBody[F1])
 
   test("should match the expected yaml when schema is recursive") {
     val expectedYaml = load("expected_recursive.yml")
@@ -547,12 +547,4 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(ep, "title", "1.0").toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
   }
-}
-
-object VerifyYamlTest {
-  case class F1(data: List[F1])
-  case class G[T](data: T)
-  case class ObjectWrapper(value: FruitAmount)
-  case class ObjectWithList(data: List[FruitAmount])
-  case class ObjectWithOption(data: Option[FruitAmount])
 }

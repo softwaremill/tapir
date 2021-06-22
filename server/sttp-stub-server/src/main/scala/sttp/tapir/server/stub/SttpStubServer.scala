@@ -103,7 +103,7 @@ trait SttpStubServer {
       }
 
       val interpreter =
-        new ServerInterpreter[R, F, Any, Nothing](requestBody[F](), toResponseBody, interceptors, _ => stub.responseMonad.unit(()))(
+        new ServerInterpreter[R, F, Any, NoStreams](requestBody[F](), toResponseBody, interceptors, _ => stub.responseMonad.unit(()))(
           stub.responseMonad,
           new BodyListener[F, Any] {
             override def onComplete(body: Any)(cb: Try[Unit] => F[Unit]): F[Any] = stub.responseMonad.map(cb(Success(())))(_ => body)
@@ -149,7 +149,7 @@ trait SttpStubServer {
           statusCode: StatusCode
       ): SttpBackendStub[F, R] = {
         val outputValues: OutputValues[Any] =
-          new EncodeOutputs[Any, Nothing](toResponseBody, Seq(ContentTypeRange.AnyRange))
+          new EncodeOutputs[Any, NoStreams](toResponseBody, Seq(ContentTypeRange.AnyRange))
             .apply(output, ParamsAsAny(responseValue), OutputValues.empty)
 
         whenRequest.thenRespond(
@@ -172,18 +172,18 @@ trait SttpStubServer {
 }
 
 object SttpStubServer {
-  private val toResponseBody: ToResponseBody[Any, Nothing] = new ToResponseBody[Any, Nothing] {
+  private val toResponseBody: ToResponseBody[Any, NoStreams] = new ToResponseBody[Any, NoStreams] {
     override val streams: NoStreams = NoStreams
     override def fromRawValue[RAW](v: RAW, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[RAW]): Any = v
     override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): Any = v
     override def fromWebSocketPipe[REQ, RESP](
         pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
     ): Any = pipe // impossible
   }
 
-  private def requestBody[F[_]](): RequestBody[F, Nothing] = new RequestBody[F, Nothing] {
-    override val streams: Streams[Nothing] = NoStreams
+  private def requestBody[F[_]](): RequestBody[F, NoStreams] = new RequestBody[F, NoStreams] {
+    override val streams: NoStreams = NoStreams
     override def toRaw[R](bodyType: RawBodyType[R]): F[RawValue[R]] = ???
     override def toStream(): streams.BinaryStream = ???
   }
