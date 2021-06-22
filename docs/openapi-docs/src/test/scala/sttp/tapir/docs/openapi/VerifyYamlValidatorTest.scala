@@ -3,6 +3,7 @@ package sttp.tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum
 import sttp.tapir.{endpoint, _}
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.generic.auto._

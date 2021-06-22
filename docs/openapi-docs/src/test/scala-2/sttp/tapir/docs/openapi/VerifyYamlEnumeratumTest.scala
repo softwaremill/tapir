@@ -17,7 +17,7 @@ class VerifyYamlEnumeratumTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("validator/expected_valid_enumeratum.yml")
 
     val actualYaml =
-      OpenAPIDocsInterpreter
+      OpenAPIDocsInterpreter()
         .toOpenAPI(List(endpoint.in("enum-test").out(jsonBody[Enumeratum.FruitWithEnum])), Info("Fruits", "1.0"))
         .toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)

@@ -61,9 +61,9 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
   test("should create component for optional and collections of enums") {
     import sttp.tapir.codec.enumeratum._
 
-    implicit val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
+    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
 
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter(options)
       .toOpenAPI(
         Seq(
           endpoint.in("countryCollection").out(jsonBody[CountryCollection])
