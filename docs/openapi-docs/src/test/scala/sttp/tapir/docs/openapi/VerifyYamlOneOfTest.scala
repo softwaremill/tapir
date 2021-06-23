@@ -10,9 +10,20 @@ import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.MultipleMediaTypes
-import sttp.tapir.{Codec, CodecFormat, Schema, SchemaType, endpoint, header, plainBody, statusCode, oneOfDefaultMapping, oneOfMapping}
+import sttp.tapir.{Codec, CodecFormat, Schema, SchemaType, emptyOutput, endpoint, header, oneOfDefaultMapping, oneOfMapping, plainBody, statusCode}
 
 class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
+
+  test("should support description for status code mappings with empty output") {
+    val expectedYaml = load("oneOf/expected_status_codes_with_empty_output.yaml")
+
+    val e = endpoint.errorOut(sttp.tapir.oneOf(oneOfMapping(StatusCode.Forbidden, emptyOutput.description("forbidden"))))
+
+    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("test", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 
   test("should support multiple status codes") {
     val expectedYaml = load("oneOf/expected_status_codes.yml")
