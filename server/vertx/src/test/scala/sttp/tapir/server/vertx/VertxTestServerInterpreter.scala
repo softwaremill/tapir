@@ -2,28 +2,30 @@ package sttp.tapir.server.vertx
 
 import cats.data.NonEmptyList
 import cats.effect.{IO, Resource}
-import io.vertx.core.{Future => VFuture}
-import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
-import io.vertx.ext.web.{Route, Router}
+import io.vertx.core.{Vertx, Future => VFuture}
+import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.tapir.Endpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
-import scala.reflect.ClassTag
 import scala.concurrent.Future
+import scala.reflect.ClassTag
 
-class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route] {
+class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route, RoutingContext => Unit] {
   import VertxTestServerInterpreter._
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
-      decodeFailureHandler: Option[DecodeFailureHandler]
+      decodeFailureHandler: Option[DecodeFailureHandler],
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, RoutingContext => Unit]] = None
   ): Router => Route = {
-    implicit val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(decodeFailureHandler =
-      decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
+    implicit val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(
+      metricsInterceptor = metricsInterceptor,
+      decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     VertxFutureServerInterpreter.route(e)
   }

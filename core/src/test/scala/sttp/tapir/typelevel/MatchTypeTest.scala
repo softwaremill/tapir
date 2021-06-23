@@ -33,10 +33,12 @@ class MatchTypeTest extends AnyFlatSpec with MatchTypeTestExtensions with Matche
   }
 
   it should "provide implicit for all primitive class returning false for any other primitive type" in {
-    matcherAndTypes.permutations.foreach({ case (matcher, _) :: tl =>
-      tl.map(_._2).foreach { badValue =>
-        (matcher(badValue) shouldBe false) withClue (s"Matcher $matcher did not reject $badValue")
-      }
+    matcherAndTypes.permutations.foreach({
+      case (matcher, _) :: tl =>
+        tl.map(_._2).foreach { badValue =>
+          (matcher(badValue) shouldBe false) withClue (s"Matcher $matcher did not reject $badValue")
+        }
+      case _ => fail("impossible")
     })
   }
 
@@ -79,8 +81,21 @@ class MatchTypeTest extends AnyFlatSpec with MatchTypeTestExtensions with Matche
     matchType(a) shouldBe false
   }
 
+  it should "provide implicit for recursive structure" in {
+    case class A(s: Option[A]) 
+
+    lazy implicit val matchType: MatchType[A] = MatchType.gen
+    var a: Any = null
+
+    a = A(Some(A(None)))
+    matchType(a) shouldBe true
+    
+    a = Left(Left("plop"))
+    matchType(a) shouldBe false
+  }
+
   it should "work for list" in {
-    val matchType: MatchType[List[Int]] = implicitly
+    lazy implicit  val matchType: MatchType[List[Int]] = MatchType.gen
 
     var a: Any = List(1)
     matchType(a) shouldBe true

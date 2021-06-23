@@ -31,6 +31,12 @@ jobs:
           ~/.ivy2/cache
           ~/.coursier
         key: sbt-cache-${{ runner.os }}-${{ matrix.target-platform }}-${{ hashFiles('project/build.properties') }}
+    - name: Install sam cli
+      run: |
+        wget -q https://github.com/aws/aws-sam-cli/releases/latest/download/aws-sam-cli-linux-x86_64.zip
+        unzip -q aws-sam-cli-linux-x86_64.zip -d sam-installation
+        sudo ./sam-installation/install --update
+        sam --version
     - name: Compile
       run: sbt -v compile compileDocumentation
     - name: Test
@@ -54,6 +60,8 @@ jobs:
     needs: [ci]
     if: github.event_name != 'pull_request' && (startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-20.04
+    env:
+      JAVA_OPTS: -Xmx5G
     steps:
       - name: Checkout
         uses: actions/checkout@v2

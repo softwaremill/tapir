@@ -17,13 +17,6 @@ paths:
                   $ref: '#/components/schemas/ObjectWrapper'
 components:
   schemas:
-    ObjectWrapper:
-      required:
-        - value
-      type: object
-      properties:
-        value:
-          $ref: '#/components/schemas/FruitAmount'
     FruitAmount:
       required:
         - fruit
@@ -36,3 +29,10 @@ components:
           type: integer
           format: int32
       description: Amount of fruits
+    ObjectWrapper:
+      required:
+        - value
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/FruitAmount'

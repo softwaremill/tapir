@@ -19,4 +19,14 @@ package object schema {
       }
       .tToKey
   }
+
+  private[docs] def propagateMetadataForOption[T, E](schema: TSchema[T], opt: TSchemaType.SOption[T, E]): TSchemaType.SOption[T, E] = {
+    opt.copy(
+      element = opt.element.copy(
+        description = schema.description.orElse(opt.element.description),
+        format = schema.format.orElse(opt.element.format),
+        deprecated = schema.deprecated || opt.element.deprecated
+      )
+    )(opt.toOption)
+  }
 }

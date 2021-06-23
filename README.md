@@ -18,6 +18,7 @@ interpreted as:
   Currently supported:
   * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html).
   * [Play](https://tapir.softwaremill.com/en/latest/client/play.html).
+  * [http4s](https://tapir.softwaremill.com/en/latest/client/http4s.html)
 * documentation. Currently supported: 
   * [OpenAPI](https://tapir.softwaremill.com/en/latest/docs/openapi.html)
   * [AsyncAPI](https://tapir.softwaremill.com/en/latest/docs/asyncapi.html)
@@ -41,7 +42,7 @@ case class Book(title: String)
 val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] = 
   endpoint
     .get
-    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
+    .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
     .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
     .in(header[AuthToken]("X-Auth-Token"))
     .errorOut(stringBody)
@@ -91,7 +92,7 @@ tapir documentation is available at [tapir.softwaremill.com](http://tapir.softwa
 Add the following dependency:
 
 ```sbt
-"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.18.0-M4"
+"com.softwaremill.sttp.tapir" %% "tapir-core" % "0.18.0-M17"
 ```
 
 You'll need partial unification enabled in the compiler (alternatively, you'll need to manually provide type arguments in some cases):
@@ -153,4 +154,4 @@ We offer commercial support for tapir and related technologies, as well as devel
 
 ## Copyright
 
-Copyright (C) 2018-2020 SoftwareMill [https://softwaremill.com](https://softwaremill.com).
+Copyright (C) 2018-2021 SoftwareMill [https://softwaremill.com](https://softwaremill.com).

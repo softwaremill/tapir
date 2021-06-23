@@ -5,7 +5,8 @@ import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir._
-import sttp.tapir.docs.openapi.VerifyYamlCoproductTest._
+import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData._
+import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData2._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
@@ -119,29 +120,4 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
-}
-
-object VerifyYamlCoproductTest {
-  sealed trait GenericEntity[T]
-  case class GenericPerson[T](data: T) extends GenericEntity[T]
-
-  sealed trait Clause
-  case class Expression(v: String) extends Clause
-  case class Not(not: Clause) extends Clause
-  case class NestedEntity(entity: Entity)
-
-  object Color extends Enumeration {
-    type Color = Value
-
-    val Blue = Value("blue")
-    val Red = Value("red")
-
-    implicit def schemaForEnum: Schema[Value] = Schema.string.validate(Validator.enum(values.toList, v => Option(v)))
-  }
-
-  sealed trait Shape {
-    def shapeType: String
-  }
-
-  case class Square(color: Color.Value, shapeType: String = "square") extends Shape
 }

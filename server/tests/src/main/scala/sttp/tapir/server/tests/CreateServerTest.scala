@@ -5,35 +5,66 @@ import cats.effect.{IO, Resource}
 import cats.implicits._
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.Assertion
+import org.slf4j.{Logger, LoggerFactory}
+import sttp.capabilities.WebSockets
+import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
 import sttp.model._
 import sttp.tapir._
-import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.tests._
 
-class CreateServerTest[F[_], +R, ROUTE](interpreter: TestServerInterpreter[F, R, ROUTE]) extends StrictLogging {
+trait CreateServerTest[F[_], +R, ROUTE, B] {
   def testServer[I, E, O](
       e: Endpoint[I, E, O, R],
       testNameSuffix: String = "",
-      decodeFailureHandler: Option[DecodeFailureHandler] = None
+      decodeFailureHandler: Option[DecodeFailureHandler] = None,
+      metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
+  )(fn: I => F[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test
+
+  def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test
+
+  def testServer(name: String, rs: => NonEmptyList[ROUTE])(
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test
+}
+
+class DefaultCreateServerTest[F[_], +R, ROUTE, B](
+    backend: SttpBackend[IO, Fs2Streams[IO] with WebSockets],
+    interpreter: TestServerInterpreter[F, R, ROUTE, B]
+) extends CreateServerTest[F, R, ROUTE, B]
+    with StrictLogging {
+
+  override def testServer[I, E, O](
+      e: Endpoint[I, E, O, R],
+      testNameSuffix: String = "",
+      decodeFailureHandler: Option[DecodeFailureHandler] = None,
+      metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
   )(
       fn: I => F[Either[E, O]]
-  )(runTest: Uri => IO[Assertion]): Test = {
+  )(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
-      NonEmptyList.of(interpreter.route(e.serverLogic(fn), decodeFailureHandler))
+      NonEmptyList.of(interpreter.route(e.serverLogic(fn), decodeFailureHandler, metricsInterceptor))
     )(runTest)
   }
 
-  def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(runTest: Uri => IO[Assertion]): Test = {
+  override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, R, F], testNameSuffix: String = "")(
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test = {
     testServer(
       e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix),
       NonEmptyList.of(interpreter.route(e))
     )(runTest)
   }
 
-  def testServer(name: String, rs: => NonEmptyList[ROUTE])(runTest: Uri => IO[Assertion]): Test = {
+  override def testServer(name: String, rs: => NonEmptyList[ROUTE])(
+      runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
+  ): Test = {
     val resources = for {
       port <- interpreter.server(rs).onError { case e: Exception =>
         Resource.eval(IO(logger.error(s"Starting server failed because of ${e.getMessage}")))
@@ -44,7 +75,7 @@ class CreateServerTest[F[_], +R, ROUTE](interpreter: TestServerInterpreter[F, R,
     Test(name)(
       resources
         .use { port =>
-          runTest(uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
+          runTest(backend, uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
         }
         .unsafeRunSync()
     )

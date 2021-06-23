@@ -7,7 +7,7 @@ case class Schema(
     allOf: List[ReferenceOr[Schema]] = List.empty,
     title: Option[String] = None,
     required: List[String] = List.empty,
-    `type`: Option[SchemaType.SchemaType] = None,
+    `type`: Option[SchemaType] = None,
     items: Option[ReferenceOr[Schema]] = None,
     properties: ListMap[String, ReferenceOr[Schema]] = ListMap.empty,
     description: Option[String] = None,
@@ -30,27 +30,27 @@ case class Schema(
     exclusiveMaximum: Option[Boolean] = None,
     minItems: Option[Int] = None,
     maxItems: Option[Int] = None,
-    enum: Option[List[String]] = None
+    `enum`: Option[List[ExampleSingleValue]] = None,
+    extensions: ListMap[String, ExtensionValue] = ListMap.empty
 )
 
 case class Discriminator(propertyName: String, mapping: Option[ListMap[String, String]])
 
 object Schema {
-  def apply(`type`: SchemaType.SchemaType): Schema = new Schema(`type` = Some(`type`))
+  def apply(`type`: SchemaType): Schema = new Schema(`type` = Some(`type`))
 
   def apply(references: List[ReferenceOr[Schema]], discriminator: Option[Discriminator]): Schema =
     new Schema(oneOf = references, discriminator = discriminator)
 }
 
-object SchemaType extends Enumeration {
-  type SchemaType = Value
-
-  val Boolean: Value = Value("boolean")
-  val Object: Value = Value("object")
-  val Array: Value = Value("array")
-  val Number: Value = Value("number")
-  val String: Value = Value("string")
-  val Integer: Value = Value("integer")
+sealed abstract class SchemaType(val value: String)
+object SchemaType {
+  case object Boolean extends SchemaType("boolean")
+  case object Object extends SchemaType("object")
+  case object Array extends SchemaType("array")
+  case object Number extends SchemaType("number")
+  case object String extends SchemaType("string")
+  case object Integer extends SchemaType("integer")
 }
 
 object SchemaFormat {

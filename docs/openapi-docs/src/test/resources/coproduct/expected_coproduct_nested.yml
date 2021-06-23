@@ -15,6 +15,10 @@ paths:
                 $ref: '#/components/schemas/NestedEntity'
 components:
   schemas:
+    Entity:
+      oneOf:
+        - $ref: '#/components/schemas/Organization'
+        - $ref: '#/components/schemas/Person'
     NestedEntity:
       required:
         - entity
@@ -22,10 +26,6 @@ components:
       properties:
         entity:
           $ref: '#/components/schemas/Entity'
-    Entity:
-      oneOf:
-        - $ref: '#/components/schemas/Organization'
-        - $ref: '#/components/schemas/Person'
     Organization:
       required:
         - name

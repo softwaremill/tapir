@@ -13,6 +13,10 @@ trait DecodeFailureHandler {
   /** Given the context in which a decode failure occurred (the request, the input and the failure), returns an optional
     * response to the request. `None` indicates that no action should be taken, and the request might be passed
     * for decoding to other endpoints.
+    *
+    * Inputs are decoded in the following order: method, path, query, headers, body. Hence, if there's a decode failure
+    * on a query parameter, any method & path inputs of the input must have matched and must have been decoded
+    * successfully.
     */
   def apply(ctx: DecodeFailureContext): Option[ValuedEndpointOutput[_]]
 }
@@ -177,16 +181,18 @@ object DefaultDecodeFailureHandler {
               s"expected $valueName to be greater than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
             case Validator.Max(value, exclusive) =>
               s"expected $valueName to be less than ${if (exclusive) "" else "or equal to "}$value, but was ${ve.invalidValue}"
-            case Validator.Pattern(value) => s"expected $valueName to match '$value', but was '${ve.invalidValue}'"
-            case Validator.MinLength(value) =>
-              s"expected $valueName to have length greater than or equal to $value, but was ${ve.invalidValue}"
-            case Validator.MaxLength(value) =>
-              s"expected $valueName to have length less than or equal to $value, but was ${ve.invalidValue} "
-            case Validator.MinSize(value) =>
-              s"expected size of $valueName to be greater than or equal to $value, but was ${ve.invalidValue.size}"
-            case Validator.MaxSize(value) =>
-              s"expected size of $valueName to be less than or equal to $value, but was ${ve.invalidValue.size}"
-            case Validator.Enum(possibleValues, _, _) => s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
+            // TODO: convert to patterns when https://github.com/lampepfl/dotty/issues/12226 is fixed
+            case p: Validator.Pattern[T] => s"expected $valueName to match '${p.value}', but was '${ve.invalidValue}'"
+            case m: Validator.MinLength[T] =>
+              s"expected $valueName to have length greater than or equal to ${m.value}, but was ${ve.invalidValue}"
+            case m: Validator.MaxLength[T] =>
+              s"expected $valueName to have length less than or equal to ${m.value}, but was ${ve.invalidValue} "
+            case m: Validator.MinSize[T, Iterable] =>
+              s"expected size of $valueName to be greater than or equal to ${m.value}, but was ${ve.invalidValue.size}"
+            case m: Validator.MaxSize[T, Iterable] =>
+              s"expected size of $valueName to be less than or equal to ${m.value}, but was ${ve.invalidValue.size}"
+            case Validator.Enumeration(possibleValues, _, _) =>
+              s"expected $valueName to be within $possibleValues, but was '${ve.invalidValue}'"
           }
         case c: ValidationError.Custom[T] =>
           s"expected $valueName to pass custom validation: ${c.message}, but was '${ve.invalidValue}'"

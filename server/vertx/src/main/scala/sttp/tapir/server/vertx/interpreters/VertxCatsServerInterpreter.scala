@@ -1,20 +1,22 @@
 package sttp.tapir.server.vertx.interpreters
 
-import cats.effect.{Async, ConcurrentEffect, Effect}
+import cats.effect.{Async, CancelToken, ConcurrentEffect, Effect, IO}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
+import sttp.capabilities.Streams
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
-import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
-import sttp.tapir.server.vertx.streams.ReadStreamCompatible
-import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.Endpoint
-import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.vertx.VertxCatsServerOptions
+import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
+import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
+import sttp.tapir.server.vertx.streams.ReadStreamCompatible
+import sttp.tapir.server.vertx.{VertxBodyListener, VertxCatsServerOptions}
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
 trait VertxCatsServerInterpreter extends CommonServerInterpreter {
@@ -59,15 +61,21 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
   }
 
-  private def endpointHandler[F[_], I, E, O, A, S: ReadStreamCompatible](
-      e: ServerEndpoint[I, E, O, _, F]
-  )(implicit serverOptions: VertxCatsServerOptions[F], effect: Effect[F]): Handler[RoutingContext] = { rc =>
+  private def endpointHandler[F[_], I, E, O, A, S <: Streams[S]](
+      e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
+  )(implicit
+      serverOptions: VertxCatsServerOptions[F],
+      effect: Effect[F],
+      readStreamCompatible: ReadStreamCompatible[S]
+  ): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
+    implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
-    val interpreter = new ServerInterpreter(
+    val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Unit, S] = new ServerInterpreter(
       new VertxRequestBody(rc, serverOptions, fFromVFuture),
       new VertxToResponseBody(serverOptions),
-      serverOptions.interceptors
+      serverOptions.interceptors,
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 
@@ -78,10 +86,23 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
       }
       .handleError { e => rc.fail(e) }
 
+    // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
+    // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
+    // if so, we need to use this fact to cancel the operation nonetheless
+    val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken[IO]]]](None)
+
+    rc.response.exceptionHandler { (t: Throwable) =>
+      cancelRef.getAndSet(Some(Left(t))).collect { case Right(t) =>
+        t.unsafeRunSync()
+      }
+      ()
+    }
+
     val cancelToken = effect.toIO(result).unsafeRunCancelable { _ => () }
-    rc.response.exceptionHandler { _ =>
+    cancelRef.getAndSet(Some(Right(cancelToken))).collect { case Left(_) =>
       cancelToken.unsafeRunSync()
     }
+
     ()
   }
 

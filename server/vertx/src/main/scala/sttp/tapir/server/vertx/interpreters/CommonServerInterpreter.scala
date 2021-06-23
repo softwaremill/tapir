@@ -4,10 +4,9 @@ import io.vertx.ext.web.{Route, Router}
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.vertx.handlers.attachDefaultHandlers
 import sttp.tapir.server.vertx.routing.PathMapping.{RouteDefinition, createRoute}
-import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 
 trait CommonServerInterpreter {
-  protected def mountWithDefaultHandlers[F[_], I, E, O, C, S: ReadStreamCompatible](e: ServerEndpoint[I, E, O, C, F])(
+  protected def mountWithDefaultHandlers[F[_], I, E, O, C](e: ServerEndpoint[I, E, O, C, F])(
       router: Router,
       routeDef: RouteDefinition
   ): Route =

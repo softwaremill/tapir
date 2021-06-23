@@ -94,6 +94,9 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       Right((("1", "2"), "3", "4"))
     )
 
+    testClient(out_json_or_default_json.name("person"), "person", Right(Person("mary", 20)))
+    testClient(out_json_or_default_json.name("org"), "org", Right(Organization("work")))
+
     testClient(out_no_content_or_ok_empty_output.name("204"), 204, Right(()))
     testClient(out_no_content_or_ok_empty_output.name("200"), 200, Right(()))
 
@@ -140,12 +143,22 @@ trait ClientBasicTests { this: ClientTests[Any] =>
       }
     }
 
-    testClient[Unit, Unit, Unit, Nothing](in_unit_out_json_unit, (), Right(()))
+    testClient[Unit, Unit, Unit](in_unit_out_json_unit, (), Right(()))
 
     test(in_fixed_header_out_string.showDetail) {
       send(in_fixed_header_out_string, port, ())
         .unsafeToFuture()
         .map(_ shouldBe Right("Location: secret"))
+    }
+
+    // when there's a 404, fetch API seems to throw an exception, not giving us the opportunity to parse the result
+    if (!platformIsScalaJS) {
+      test("not existing endpoint, with error output not matching 404") {
+        safeSend(not_existing_endpoint, port, ())
+          .unsafeToFuture()
+          .map(_ should matchPattern { case DecodeResult.Error(_, _: IllegalArgumentException) =>
+          })
+      }
     }
   }
 }

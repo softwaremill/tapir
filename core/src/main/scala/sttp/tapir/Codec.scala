@@ -12,8 +12,8 @@ import sttp.model.headers.{Cookie, CookieWithMeta}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
-import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import sttp.tapir.internal._
+import sttp.tapir.macros.{FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 
@@ -109,7 +109,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
-object Codec extends CodecExtensions with FormCodecDerivation {
+object Codec extends CodecExtensions with FormCodecMacros {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
@@ -291,6 +291,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
           case Array(u)     => UsernamePassword(u, None)
           case Array(u, "") => UsernamePassword(u, None)
           case Array(u, p)  => UsernamePassword(u, Some(p))
+          case _            => sys.error("impossible")
         }
         DecodeResult.Value(up)
       } catch {
@@ -502,7 +503,7 @@ case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Code
   def validate(v: Validator[T]): MultipartCodec[T] = copy(codec = codec.validate(v))
 }
 
-object MultipartCodec extends MultipartCodecDerivation {
+object MultipartCodec extends MultipartCodecMacros {
   val Default: MultipartCodec[Seq[Part[Array[Byte]]]] = {
     Codec
       .multipartCodec(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, Codec.listHead(Codec.byteArray))))

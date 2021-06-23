@@ -1,22 +1,19 @@
 package sttp.tapir.server.tests
 
-import cats.effect.IO
+import cats.implicits._
 import org.scalatest.matchers.should.Matchers
 import sttp.client3._
-import sttp.model._
-import sttp.model.StatusCode
-import sttp.monad.MonadError
-import sttp.tapir._
-import sttp.tapir.tests.Test
-import cats.implicits._
 import sttp.model.Uri.QuerySegment
+import sttp.model.{StatusCode, _}
+import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.WWWAuthenticate
+import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
+import sttp.tapir.tests.Test
 
-class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], serverTests: CreateServerTest[F, S, ROUTE])(implicit
-    m: MonadError[F]
-) extends Matchers {
-  import serverTests._
+class ServerAuthenticationTests[F[_], S, ROUTE, B](createServerTest: CreateServerTest[F, S, ROUTE, B])(implicit m: MonadError[F])
+    extends Matchers {
+  import createServerTest._
   private val Realm = "realm"
 
   private val base = endpoint.post.in("secret" / path[Long]("id")).in(query[String]("q"))
@@ -50,7 +47,7 @@ class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], s
   def tests(): List[Test] = missingAuthTests ++ correctAuthTests ++ badRequestWithCorrectAuthTests
 
   private def missingAuthTests = endpoints.map { case (authType, endpoint, _) =>
-    testServer(endpoint, s"missing $authType")(_ => result) { baseUri =>
+    testServer(endpoint, s"missing $authType")(_ => result) { (backend, baseUri) =>
       validRequest(baseUri).send(backend).map { r =>
         r.code shouldBe StatusCode.Unauthorized
         r.header("WWW-Authenticate") shouldBe Some(expectedChallenge(authType))
@@ -65,7 +62,7 @@ class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], s
   }
 
   private def correctAuthTests = endpoints.map { case (authType, endpoint, auth) =>
-    testServer(endpoint, s"correct $authType")(_ => result) { baseUri =>
+    testServer(endpoint, s"correct $authType")(_ => result) { (backend, baseUri) =>
       auth(validRequest(baseUri))
         .send(backend)
         .map(_.code shouldBe StatusCode.Ok)
@@ -73,7 +70,7 @@ class ServerAuthenticationTests[F[_], S, ROUTE](backend: SttpBackend[IO, Any], s
   }
 
   private def badRequestWithCorrectAuthTests = endpoints.map { case (authType, endpoint, auth) =>
-    testServer(endpoint, s"invalid request $authType")(_ => result) { baseUri =>
+    testServer(endpoint, s"invalid request $authType")(_ => result) { (backend, baseUri) =>
       auth(invalidRequest(baseUri)).send(backend).map(_.code shouldBe StatusCode.BadRequest)
     }
   }

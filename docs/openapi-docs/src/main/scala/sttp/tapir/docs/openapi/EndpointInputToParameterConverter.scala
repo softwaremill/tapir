@@ -4,8 +4,6 @@ import sttp.tapir.apispec.{ReferenceOr, Schema}
 import sttp.tapir.openapi.{Parameter, ParameterIn}
 import sttp.tapir.{Codec, EndpointIO, EndpointInput}
 
-import scala.collection.immutable.ListMap
-
 private[openapi] object EndpointInputToParameterConverter {
   def from[T](query: EndpointInput.Query[T], schema: ReferenceOr[Schema]): Parameter = {
     val examples = ExampleConverter.convertExamples(query.codec, query.info.examples)
@@ -16,9 +14,10 @@ private[openapi] object EndpointInputToParameterConverter {
       description = query.info.description,
       required = Some(!query.codec.schema.isOptional),
       deprecated = if (query.info.deprecated) Some(true) else None,
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(query.info.docsExtensions)
     )
   }
 
@@ -29,9 +28,10 @@ private[openapi] object EndpointInputToParameterConverter {
       in = ParameterIn.Path,
       description = pathCapture.info.description,
       required = Some(true),
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(pathCapture.info.docsExtensions)
     )
   }
 
@@ -43,9 +43,10 @@ private[openapi] object EndpointInputToParameterConverter {
       description = header.info.description,
       required = Some(!header.codec.schema.isOptional),
       deprecated = if (header.info.deprecated) Some(true) else None,
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(header.info.docsExtensions)
     )
   }
 
@@ -61,9 +62,10 @@ private[openapi] object EndpointInputToParameterConverter {
       description = header.info.description,
       required = Some(true),
       deprecated = if (header.info.deprecated) Some(true) else None,
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(header.info.docsExtensions)
     )
   }
 
@@ -75,9 +77,10 @@ private[openapi] object EndpointInputToParameterConverter {
       description = cookie.info.description,
       required = Some(!cookie.codec.schema.isOptional),
       deprecated = if (cookie.info.deprecated) Some(true) else None,
-      schema = schema,
+      schema = Some(schema),
       example = examples.singleExample,
-      examples = examples.multipleExamples
+      examples = examples.multipleExamples,
+      extensions = DocsExtensions.fromIterable(cookie.info.docsExtensions)
     )
   }
 }

@@ -15,9 +15,8 @@ import java.io.{File, InputStream}
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 
-class VertxToResponseBody[F[_], S: ReadStreamCompatible](serverOptions: VertxServerOptions[F])
+class VertxToResponseBody[F[_], S <: Streams[S]](serverOptions: VertxServerOptions[F])(implicit val readStreamCompatible: ReadStreamCompatible[S])
     extends ToResponseBody[RoutingContext => Unit, S] {
-  private val readStreamCompatible = ReadStreamCompatible[S]
   override val streams: Streams[S] = readStreamCompatible.streams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): RoutingContext => Unit = { rc =>

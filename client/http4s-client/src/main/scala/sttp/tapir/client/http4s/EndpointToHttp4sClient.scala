@@ -6,6 +6,7 @@ import cats.implicits._
 import fs2.Chunk
 import org.http4s._
 import org.http4s.headers.`Content-Type`
+import org.typelevel.ci.CIString
 import sttp.capabilities.Streams
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.ResponseMetadata
@@ -81,8 +82,10 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
         val uri = pathFragments.foldLeft(req.uri)(_.addPath(_))
         req.withUri(uri)
       case EndpointInput.Query(name, codec, _) =>
-        val encodedParams = codec.encode(value)
-        req.withUri(req.uri.withQueryParam(name, encodedParams))
+        codec.encode(value) match {
+          case values if values.nonEmpty => req.withUri(req.uri.withQueryParam(name, values))
+          case _                         => req
+        }
       case EndpointInput.Cookie(name, codec, _) =>
         codec.encode(value).foldLeft(req)(_.addCookie(name, _))
       case EndpointInput.QueryParams(codec, _) =>
@@ -95,12 +98,12 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
       case EndpointIO.StreamBodyWrapper(StreamBodyIO(streams, _, _, _)) =>
         setStreamingBody(streams)(value.asInstanceOf[streams.BinaryStream], req)
       case EndpointIO.Header(name, codec, _) =>
-        val headers = codec.encode(value).map(value => Header(name, value))
+        val headers = codec.encode(value).map(value => Header.Raw(CIString(name), value): Header.ToRaw)
         req.putHeaders(headers: _*)
       case EndpointIO.Headers(codec, _) =>
-        val headers = codec.encode(value).map(h => Header(h.name, h.value))
+        val headers = codec.encode(value).map(h => Header.Raw(CIString(h.name), h.value): Header.ToRaw)
         req.putHeaders(headers: _*)
-      case EndpointIO.FixedHeader(h, _, _)           => req.putHeaders(Header(h.name, h.value))
+      case EndpointIO.FixedHeader(h, _, _)           => req.putHeaders(Header.Raw(CIString(h.name), h.value))
       case EndpointInput.ExtractFromRequest(_, _)    => req // ignoring
       case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
@@ -181,7 +184,7 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
     val output = if (code.isSuccess) e.output else e.errorOutput
 
     // headers with cookies
-    val headers = response.headers.toList.map(h => sttp.model.Header(h.name.toString(), h.value)).toVector
+    val headers = response.headers.headers.map(h => sttp.model.Header(h.name.toString, h.value)).toVector
 
     parser(response).map { responseBody =>
       val params = clientOutputParams(output, responseBody, ResponseMetadata(code, response.status.reason, headers))

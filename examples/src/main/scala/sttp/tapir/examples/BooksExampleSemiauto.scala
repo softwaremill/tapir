@@ -49,7 +49,7 @@ object BooksExampleSemiauto extends App with StrictLogging {
       .out(jsonBody[Vector[Book]])
 
     val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
-      .in(("list" / path[String]("genre").map(Some(_))(_.get)).and(limitParameter).mapTo(BooksQuery))
+      .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter).mapTo[BooksQuery])
       .out(jsonBody[Vector[Book]])
   }
 

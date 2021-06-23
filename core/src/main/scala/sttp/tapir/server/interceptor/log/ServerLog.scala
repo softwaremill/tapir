@@ -12,12 +12,12 @@ trait ServerLog[T] {
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors,
     * haven't provided a response.
     */
-  def decodeFailureNotHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext): T
+  def decodeFailureNotHandled(ctx: DecodeFailureContext): T
 
   /** Invoked when there's a decode failure for an input of the endpoint and the interpreter, or other interceptors,
     * provided a response.
     */
-  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_]): T
+  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): T
 
   /** Invoked when all inputs of the request have been decoded successfully and the endpoint handles the request by
     * providing a response, with the given status code.
@@ -38,18 +38,18 @@ case class DefaultServerLog[T](
     logLogicExceptions: Boolean = true
 ) extends ServerLog[T] {
 
-  def decodeFailureNotHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext): T =
+  def decodeFailureNotHandled(ctx: DecodeFailureContext): T =
     if (logAllDecodeFailures)
       doLogAllDecodeFailures(
-        s"Request not handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
+        s"Request not handled by: ${ctx.endpoint.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}",
         exception(ctx)
       )
     else noLog
 
-  def decodeFailureHandled(e: Endpoint[_, _, _, _], ctx: DecodeFailureContext, response: ServerResponse[_]): T =
+  def decodeFailureHandled(ctx: DecodeFailureContext, response: ServerResponse[_]): T =
     if (logWhenHandled)
       doLogWhenHandled(
-        s"Request handled by: ${e.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; responding with: $response",
+        s"Request handled by: ${ctx.endpoint.show}; decode failure: ${ctx.failure}, on input: ${ctx.failingInput.show}; responding with: $response",
         exception(ctx)
       )
     else noLog

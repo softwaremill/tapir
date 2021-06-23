@@ -7,7 +7,7 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.{auth, endpoint, header, path, stringBody, _}
 
-import scala.collection.immutable.ListMap
+import scala.collection.immutable.{Seq, ListMap}
 
 class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
 

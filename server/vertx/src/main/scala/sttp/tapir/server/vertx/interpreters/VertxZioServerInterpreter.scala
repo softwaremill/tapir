@@ -6,14 +6,15 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.vertx.VertxZioServerOptions
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.zio._
+import sttp.tapir.server.vertx.{VertxBodyListener, VertxZioServerOptions}
 import zio._
 
+import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
 trait VertxZioServerInterpreter extends CommonServerInterpreter {
@@ -46,10 +47,12 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
       e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
   )(implicit runtime: Runtime[R], serverOptions: VertxZioServerOptions[RIO[R, *]]): Handler[RoutingContext] = { rc =>
     val fromVFuture = new RioFromVFuture[R]
+    implicit val bodyListener: BodyListener[RIO[R, *], RoutingContext => Unit] = new VertxBodyListener[RIO[R, *]]
     val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], RoutingContext => Unit, ZioStreams](
       new VertxRequestBody[RIO[R, *], ZioStreams](rc, serverOptions, fromVFuture),
       new VertxToResponseBody(serverOptions),
-      serverOptions.interceptors
+      serverOptions.interceptors,
+      serverOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 
@@ -62,11 +65,23 @@ trait VertxZioServerInterpreter extends CommonServerInterpreter {
         RIO.effect(rc.fail(e))
       }
 
-    val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
-    rc.response.exceptionHandler { _ =>
-      canceler(Fiber.Id.None)
+    // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
+    // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
+    // if so, we need to use this fact to cancel the operation nonetheless
+    val cancelRef = new AtomicReference[Option[Either[Throwable, Fiber.Id => Exit[Throwable, Any]]]](None)
+
+    rc.response.exceptionHandler { (t: Throwable) =>
+      cancelRef.getAndSet(Some(Left(t))).collect { case Right(c) =>
+        c(Fiber.Id.None)
+      }
       ()
     }
+
+    val canceler = runtime.unsafeRunAsyncCancelable(result) { _ => () }
+    cancelRef.getAndSet(Some(Right(canceler))).collect { case Left(_) =>
+      canceler(Fiber.Id.None)
+    }
+
     ()
   }
 

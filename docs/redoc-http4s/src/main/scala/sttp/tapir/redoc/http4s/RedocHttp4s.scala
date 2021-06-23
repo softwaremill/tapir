@@ -37,13 +37,13 @@ class RedocHttp4s(
     val dsl = Http4sDsl[F]
     import dsl._
 
-    val rootPath = contextPath.foldLeft(Root: Path)(_ / _)
+    val rootPath = contextPath.foldLeft(Root: Path)(_ / Path.Segment(_))
 
     HttpRoutes.of[F] {
       case GET -> `rootPath` / "" =>
         Ok(html, `Content-Type`(MediaType.text.html, Charset.`UTF-8`))
       case req @ GET -> `rootPath` =>
-        PermanentRedirect(Location(req.uri.withPath(req.uri.path.concat("/"))))
+        PermanentRedirect(Location(req.uri.withPath(req.uri.path / Path.Segment(""))))
       case GET -> `rootPath` / `yamlName` =>
         Ok(yaml, `Content-Type`(MediaType.text.yaml, Charset.`UTF-8`))
     }

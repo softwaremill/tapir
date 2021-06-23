@@ -131,7 +131,7 @@ package object internal {
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
     // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code
     // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
-    // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs are skipped.
+    // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs without metadata are skipped.
     type BasicOutputs = Vector[EndpointOutput.Basic[_]]
     def asBasicOutputsList: List[(Option[StatusCode], BasicOutputs)] =
       asBasicOutputsOrList match {
@@ -171,9 +171,13 @@ package object internal {
         case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
           val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toList
           Right(entries)
-        case _: EndpointIO.Empty[_]     => Left(Vector.empty)
+        case e: EndpointIO.Empty[_]     => if (hasMetaData(e)) Left(Vector(e)) else Left(Vector.empty)
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
       }
+    }
+
+    private def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
+      e.info.deprecated || e.info.description.nonEmpty || e.info.docsExtensions.nonEmpty || e.info.examples.nonEmpty
     }
 
     def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
@@ -239,7 +243,7 @@ package object internal {
     if (et2.isEmpty) "-" else et2.map(_.show).mkString(" ")
   }
 
-  def showOneOf(mappings: Seq[String]): String = s"status one of(${mappings.mkString("|")})"
+  def showOneOf(mappings: Seq[String]): String = s"one of(${mappings.mkString("|")})"
 
   def charset(bodyType: RawBodyType[_]): Option[Charset] = {
     bodyType match {
@@ -293,6 +297,13 @@ package object internal {
     }
   }
 
+  implicit class SortListMap[K, V](m: immutable.ListMap[K, V]) {
+    def sortByKey(implicit ko: Ordering[K]): immutable.ListMap[K, V] = sortBy(_._1)
+    def sortBy[B: Ordering](f: ((K, V)) => B): immutable.ListMap[K, V] = {
+      m.toList.sortBy(f).toListMap
+    }
+  }
+
   implicit class ValidatorSyntax(v: Validator[_]) {
 
     def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {
@@ -308,6 +319,7 @@ package object internal {
       toPrimitives(v)
     }
 
-    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] = asPrimitiveValidators.collect(handle).flatten.toVector
+    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] =
+      asPrimitiveValidators.collect(handle).flatten.toVector
   }
 }

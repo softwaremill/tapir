@@ -13,8 +13,14 @@ paths:
           schema:
             type: integer
             enum:
-              - '1'
-              - '2'
+              - 1
+              - 2
       responses:
         '200':
           description: ''
+        '400':
+          description: 'Invalid value for: query parameter amount'
+          content:
+            text/plain:
+              schema:
+                type: string

@@ -28,11 +28,12 @@ trait FinatraServerInterpreter extends Logging {
   def toRoute[I, E, O](se: ServerEndpoint[I, E, O, Any, Future])(implicit serverOptions: FinatraServerOptions): FinatraRoute = {
     val handler = { request: Request =>
       val serverRequest = new FinatraServerRequest(request)
-      val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, Nothing](
+      val serverInterpreter = new ServerInterpreter[Any, Future, FinatraContent, NoStreams](
         new FinatraRequestBody(request, serverOptions),
         new FinatraToResponseBody,
-        serverOptions.interceptors
-      )(FutureMonadError)
+        serverOptions.interceptors,
+        serverOptions.deleteFile
+      )(FutureMonadError, new FinatraBodyListener[Future]())
 
       serverInterpreter(serverRequest, se).map {
         case None => Response(Status.NotFound)
@@ -52,7 +53,7 @@ trait FinatraServerInterpreter extends Logging {
               Response(Version.Http11, status)
           }
 
-          response.headers.foreach { case Header(name, value) => responseWithContent.headerMap.add(name, value) }
+          response.headers.foreach(header => responseWithContent.headerMap.add(header.name, header.value))
 
           // If there's a content-type header in headers, override the content-type.
           response.contentType.foreach(ct => responseWithContent.contentType = ct)

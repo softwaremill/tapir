@@ -24,6 +24,13 @@ paths:
             text/plain:
               schema:
                 type: string
+        '400':
+          description: 'Invalid value for: query parameter fruit, Invalid value for:
+                        query parameter amount'
+          content:
+            text/plain:
+              schema:
+                type: string
   /fruit/{p1}/amount/{p2}:
     get:
       operationId: getFruitP1AmountP2
@@ -55,6 +62,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FruitAmount'
+        '400':
+          description: 'Invalid value for: path parameter p2, Invalid value for: query
+                        parameter color'
+          content:
+            text/plain:
+              schema:
+                type: string
   /api/delete:
     delete:
       operationId: deleteApiDelete

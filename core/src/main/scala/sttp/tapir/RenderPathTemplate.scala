@@ -1,6 +1,7 @@
 package sttp.tapir
 
 import sttp.tapir.EndpointInput.{PathCapture, Query}
+import sttp.tapir.internal.UrlencodedData
 
 object RenderPathTemplate {
   type RenderPathParam = (Int, PathCapture[_]) => String
@@ -33,7 +34,7 @@ object RenderPathTemplate {
     inputs.foldLeft((Vector.empty[String], 1)) { case ((acc, index), component) =>
       component match {
         case p: EndpointInput.PathCapture[_]  => (acc :+ pathParamRendering(index, p), index + 1)
-        case EndpointInput.FixedPath(s, _, _) => (acc :+ s, index)
+        case EndpointInput.FixedPath(s, _, _) => (acc :+ UrlencodedData.encode(s), index)
         case _                                => (acc, index)
       }
     }

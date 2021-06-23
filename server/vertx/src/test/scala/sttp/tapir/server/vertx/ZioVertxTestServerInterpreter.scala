@@ -5,19 +5,20 @@ import cats.data.NonEmptyList
 import cats.effect.{ConcurrentEffect, IO, Resource}
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
-import io.vertx.ext.web.{Route, Router}
+import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.Endpoint
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
+import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
-import zio.{Runtime, Task}
 import zio.interop.catz._
+import zio.{Runtime, Task}
 
 import scala.reflect.ClassTag
 
-class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Task, ZioStreams, Router => Route] {
+class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Task, ZioStreams, Router => Route, RoutingContext => Unit] {
   import VertxZioServerInterpreter._
   import ZioVertxTestServerInterpreter._
 
@@ -25,10 +26,14 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, ZioStreams, Task],
-      decodeFailureHandler: Option[DecodeFailureHandler]
+      decodeFailureHandler: Option[DecodeFailureHandler],
+      metricsInterceptor: Option[MetricsRequestInterceptor[Task, RoutingContext => Unit]] = None
   ): Router => Route = {
     implicit val options: VertxZioServerOptions[Task] =
-      VertxZioServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      VertxZioServerOptions.customInterceptors(
+        metricsInterceptor = metricsInterceptor,
+        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
+      )
     VertxZioServerInterpreter.route(e)
   }
 

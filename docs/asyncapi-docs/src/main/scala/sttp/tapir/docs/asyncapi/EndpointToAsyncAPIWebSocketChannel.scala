@@ -29,10 +29,11 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 
     val channelItem = ChannelItem(
       e.info.summary.orElse(e.info.description).orElse(ws.info.description),
-      Some(endpointToOperation(options.subscribeOperationId(pathComponents, e), e, ws.wrapped.responses)),
-      Some(endpointToOperation(options.publishOperationId(pathComponents, e), e, ws.wrapped.requests)),
+      Some(endpointToOperation(options.subscribeOperationId(pathComponents, e), e, ws.wrapped.responses, ws.wrapped.responsesInfo)),
+      Some(endpointToOperation(options.publishOperationId(pathComponents, e), e, ws.wrapped.requests, ws.wrapped.requestsInfo)),
       parameters(inputs),
-      List(WebSocketChannelBinding(method.method, objectSchemaFromFields(queryInputs), objectSchemaFromFields(headerInputs), None))
+      List(WebSocketChannelBinding(method.method, objectSchemaFromFields(queryInputs), objectSchemaFromFields(headerInputs), None)),
+      DocsExtensions.fromIterable(e.info.docsExtensions)
     )
 
     (e.renderPathTemplate(renderQueryParam = None, includeAuth = false), channelItem)
@@ -40,14 +41,15 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
 
   private def parameters(inputs: Vector[EndpointInput.Basic[_]]): ListMap[String, ReferenceOr[Parameter]] = {
     inputs.collect { case EndpointInput.PathCapture(Some(name), codec, info) =>
-      name -> Right(Parameter(info.description, schemas(codec).toOption, None))
+      name -> Right(Parameter(info.description, schemas(codec).toOption, None, DocsExtensions.fromIterable(info.docsExtensions)))
     }.toListMap
   }
 
   private def endpointToOperation(
       id: String,
       e: Endpoint[_, _, _, _],
-      codec: Codec[_, _, _ <: CodecFormat]
+      codec: Codec[_, _, _ <: CodecFormat],
+      operationInfo: EndpointIO.Info[_]
   ): Operation = {
     Operation(
       Some(id),
@@ -57,7 +59,8 @@ private[asyncapi] class EndpointToAsyncAPIWebSocketChannel(
       None,
       Nil,
       Nil,
-      codecToMessageKey.get(codec).map(mk => Left(Reference.to("#/components/messages/", mk)))
+      codecToMessageKey.get(codec).map(mk => Left(Reference.to("#/components/messages/", mk))),
+      DocsExtensions.fromIterable(operationInfo.docsExtensions)
     )
   }
 

@@ -4,13 +4,14 @@ import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
 import cats.syntax.all._
 import fs2.{Chunk, Stream}
 import org.http4s
+import org.http4s._
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
-import org.http4s.{EntityBody, EntityEncoder, Header, Headers, multipart}
-import org.http4s.util.CaseInsensitiveString
+import org.http4s.Header.ToRaw.rawToRaw
+import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
-import sttp.model.{HasHeaders, Part, Header => SttpHeader}
-import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
+import sttp.model.{HasHeaders, HeaderNames, Part}
 import sttp.tapir.server.interpreter.ToResponseBody
+import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 
@@ -59,19 +60,22 @@ private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift
 
   private def rawPartToBodyPart[T](m: RawBodyType.MultipartBody, part: Part[T]): Option[multipart.Part[F]] = {
     m.partType(part.name).map { partType =>
-      val headers = part.headers.map { case SttpHeader(hk, hv) =>
-        Header.Raw(CaseInsensitiveString(hk), hv)
+      val headers: List[Header.ToRaw] = part.headers.map { header =>
+        rawToRaw(Header.Raw(CIString(header.name), header.value))
       }.toList
 
-      val partContentType = part.contentType.map(parseContentType).getOrElse(`Content-Type`(http4s.MediaType.application.`octet-stream`))
+      val partContentType =
+        part.contentType.map(parseContentType).getOrElse(`Content-Type`(http4s.MediaType.application.`octet-stream`))
       val entity = rawValueToEntity(partType.asInstanceOf[RawBodyType[Any]], part.body)
 
-      val dispositionParams = part.otherDispositionParams + (Part.NameDispositionParam -> part.name)
-      val contentDispositionHeader = `Content-Disposition`("form-data", dispositionParams)
+      val dispositionParams = (part.otherDispositionParams + (Part.NameDispositionParam -> part.name)).map { case (k, v) =>
+        CIString(k) -> v
+      }
+      val contentDispositionHeader: Header.ToRaw = `Content-Disposition`("form-data", dispositionParams)
 
-      val shouldAddCtHeader = headers.exists(_.name == `Content-Type`.name)
+      val shouldAddCtHeader = part.headers.exists(_.is(HeaderNames.ContentType))
       val allHeaders = if (shouldAddCtHeader) {
-        Headers(partContentType :: contentDispositionHeader :: headers)
+        Headers.apply((partContentType: Header.ToRaw) :: contentDispositionHeader :: headers)
       } else {
         Headers(contentDispositionHeader :: headers)
       }

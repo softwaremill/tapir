@@ -1,23 +1,23 @@
 package sttp.tapir
 
+import sttp.capabilities.Streams
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model._
+import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
+import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.internal.{ModifyMacroSupport, _}
+import sttp.tapir.macros.TapirMacros
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.typelevel.MatchType
+import sttp.ws.WebSocketFrame
+
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-import sttp.capabilities.Streams
-import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
-import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
-import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.internal.{ModifyMacroSupport, OneOfMappingMacro}
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.typelevel.MatchType
-import sttp.tapir.internal._
-import sttp.ws.WebSocketFrame
-
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport {
+trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport with TapirMacros {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -63,12 +63,15 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
 
+  @scala.deprecated(message = "Use customJsonBody", since = "0.18.0")
+  def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = customJsonBody[T]
+
   /** Json codecs are usually derived from json-library-specific implicits. That's why integrations with
     * various json libraries define `jsonBody` methods, which directly require the library-specific implicits.
     *
     * If you have a custom json codec, you should use this method instead.
     */
-  def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
+  def customJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
 
   /** Implement your own xml codec using `Codec.xml()` before using this method.
     */
@@ -230,23 +233,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     * Note that exhaustiveness of the mappings is not checked (that all subtypes of `T` are covered).
     */
   def oneOf[T](firstCase: OneOfMapping[_ <: T], otherCases: OneOfMapping[_ <: T]*): EndpointOutput.OneOf[T, T] =
-    EndpointOutput.OneOf[T, T](firstCase +: otherCases, Mapping.id)
-
-  /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
-    * as a server) matches the runtime class of `T`.
-    *
-    * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this
-    * situation would give invalid results. In such cases, use [[oneOfMappingClassMatcher]],
-    * [[oneOfMappingValueMatcher]] or [[oneOfMappingFromMatchType]] instead.
-    *
-    * Should be used in [[oneOf]] output descriptions.
-    */
-  def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
-
-  @scala.deprecated("Use oneOfMapping", since = "0.18")
-  def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
+    EndpointOutput.OneOf[T, T](firstCase +: otherCases.toList, Mapping.id)
 
   /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
@@ -258,7 +245,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
       output: EndpointOutput[T],
       runtimeClass: Class[_]
   ): OneOfMapping[T] = {
-    OneOfMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
+    OneOfMapping(Some(statusCode), output, { (a: Any) => runtimeClass.isInstance(a) })
   }
 
   @scala.deprecated("Use oneOfMappingClassMatcher", since = "0.18")
@@ -333,7 +320,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
 
   /** An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
     */
-  val emptyOutput: EndpointOutput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
     */
@@ -346,7 +333,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
       emptyInput,
       EndpointOutput.Void(),
       emptyOutput,
-      EndpointInfo(None, None, None, Vector.empty, deprecated = false)
+      EndpointInfo(None, None, None, Vector.empty, deprecated = false, Vector.empty)
     )
 
   val endpoint: Endpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)

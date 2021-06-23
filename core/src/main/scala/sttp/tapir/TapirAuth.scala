@@ -22,7 +22,7 @@ object TapirAuth {
     */
   def basic[T: Codec[List[String], *, CodecFormat.TextPlain]](
       challenge: WWWAuthenticate = WWWAuthenticate.basic()
-  ): EndpointInput.Auth.Http[UsernamePassword] = httpAuth(BasicAuthType, challenge)
+  ): EndpointInput.Auth.Http[T] = httpAuth(BasicAuthType, challenge)
 
   /** Reads authorization data from the `Authorization` header, removing the `Bearer ` prefix.
     */

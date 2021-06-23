@@ -17,7 +17,7 @@ class ModifyFunctorInstancesTest extends AnyFlatSpec with Matchers with ModifyFu
   }
 
   it should "modify elements in NonEmptySet" in {
-    implicitly[Typeclass[NonEmptySetWrapper]]
+    implicitly[Schema[NonEmptySetWrapper]]
       .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
   }
 

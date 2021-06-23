@@ -1,0 +1,24 @@
+openapi: 3.0.3
+info:
+  title: Entities
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      parameters:
+        - name: amount
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: query parameter amount'
+          content:
+            text/plain:
+              schema:
+                type: string

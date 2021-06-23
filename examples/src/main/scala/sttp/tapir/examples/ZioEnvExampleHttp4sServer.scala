@@ -4,7 +4,7 @@ import cats.syntax.all._
 import io.circe.generic.auto._
 import org.http4s._
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -29,7 +29,7 @@ object ZioEnvExampleHttp4sServer extends App {
       }
 
       val live: ZLayer[Console, String, PetService] = ZLayer.fromFunction { console: Console => petId: Int =>
-        console.get.putStrLn(s"Got request for pet: $petId") *> {
+        console.get.putStrLn(s"Got request for pet: $petId").mapError(_.getMessage) *> {
           if (petId == 35) {
             UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
           } else {

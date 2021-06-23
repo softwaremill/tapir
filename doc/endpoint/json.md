@@ -1,9 +1,11 @@
 # Working with JSON
 
-Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a 
-third-party library to perform the actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe), 
-[µPickle](http://www.lihaoyi.com/upickle/), [Spray JSON](https://github.com/spray/spray-json) and 
-[Play JSON](https://github.com/playframework/play-json) are supported.
+Json values are supported through codecs, which encode/decode values to json strings. Most often, you'll be using a
+third-party library to perform the actual json parsing/printing. Currently, [Circe](https://github.com/circe/circe),
+[µPickle](http://www.lihaoyi.com/upickle/), [Spray JSON](https://github.com/spray/spray-json),
+[Play JSON](https://github.com/playframework/play-json), [Tethys JSON](https://github.com/tethys-json/tethys),
+[Jsoniter-scala](https://github.com/plokhotnyuk/jsoniter-scala), and [Json4s](https://github.com/json4s/json4s) are
+supported.
 
 All of the integrations, when imported into scope, define a `jsonBody[T]` method. This method depends on 
 library-specific implicits being in scope, and derives from them a json codec. The derivation also requires implicit
@@ -119,7 +121,7 @@ object Book {
 val bookInput: EndpointIO[Book] = jsonBody[Book]
 ```
 
-Like Circe, µPickle allows you to control the rendered json output. Please see the [Custom Configuration](http://www.lihaoyi.com/upickle/#CustomConfiguration) of the manual for details.
+Like Circe, µPickle allows you to control the rendered json output. Please see the [Custom Configuration](https://com-lihaoyi.github.io/upickle/#CustomConfiguration) of the manual for details.
 
 For more examples, including making a custom encoder/decoder, see [TapirJsonuPickleTests.scala](https://github.com/softwaremill/tapir/blob/master/json/upickle/src/test/scala/sttp/tapir/json/upickle/TapirJsonuPickleTests.scala)
 
@@ -193,7 +195,7 @@ Jsoniter Scala requires `JsonValueCodec` implicit value in scope for each type y
 To use [json4s](https://github.com/json4s/json4s) add the following dependencies to your project:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-json4s" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-json-json4s" % "@VERSION@"
 ```
 
 And one of the implementations:
@@ -218,6 +220,21 @@ import org.json4s._
 implicit val serialization: Serialization = org.json4s.jackson.Serialization
 implicit val formats: Formats = org.json4s.jackson.Serialization.formats(NoTypeHints)
 ```
+
+## Zio JSON
+
+To use Zio JSON, add the following dependency to your project:
+
+```scala
+"com.softwaremill.sttp.tapir" %% "tapir-json-zio" % "@VERSION@"
+```
+Next, import the package (or extend the `TapirJsonZio` trait, see [MyTapir](../mytapir.md) and add `TapirJsonZio` instead of `TapirCirceJson`):
+
+```scala mdoc:compile-only
+import sttp.tapir.json.zio._
+```
+
+Zio JSON requires `JsonEncoder` and `JsonDecoder` implicit values in scope for each type you want to serialize.
 
 
 ## Other JSON libraries

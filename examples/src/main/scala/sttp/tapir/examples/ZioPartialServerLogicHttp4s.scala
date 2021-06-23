@@ -2,7 +2,7 @@ package sttp.tapir.examples
 
 import org.http4s._
 import org.http4s.server.Router
-import org.http4s.server.blaze.BlazeServerBuilder
+import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import sttp.client3._
 import sttp.client3.asynchttpclient.zio.AsyncHttpClientZioBackend
@@ -21,7 +21,7 @@ object ZioPartialServerLogicHttp4s extends App {
       case (user, salutation) =>
         val greeting = s"$salutation, ${user.name}!"
 
-        putStrLn(greeting).as(greeting)
+        putStrLn(greeting).as(greeting).orDie
     }
 
   // 1st approach: define a base endpoint, which has the authentication logic built-in
