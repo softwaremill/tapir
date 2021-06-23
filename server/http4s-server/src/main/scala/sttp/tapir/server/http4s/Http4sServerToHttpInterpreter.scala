@@ -24,17 +24,12 @@ import scala.reflect.ClassTag
 trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
   implicit def gs: Sync[G]
-
   implicit def gcs: ContextShift[G]
-
   implicit def fs: Concurrent[F]
-
   implicit def fcs: ContextShift[F]
-
   implicit def timer: Timer[F]
 
   def fToG: F ~> G
-
   def gToF: G ~> F
 
   def http4sServerOptions: Http4sServerOptions[F, G] = Http4sServerOptions.default[F, G]
@@ -54,7 +49,9 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
 
   def toHttp[I, E, O](se: ServerEndpoint[I, E, O, Fs2Streams[F] with WebSockets, G]): Http[OptionT[G, *], F] = toHttp(List(se))(fToG)(gToF)
 
-  def toHttp(serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]])(fToG: F ~> G)(gToF: G ~> F): Http[OptionT[G, *], F] = {
+  def toHttp(
+      serverEndpoints: List[ServerEndpoint[_, _, _, Fs2Streams[F] with WebSockets, G]]
+  )(fToG: F ~> G)(gToF: G ~> F): Http[OptionT[G, *], F] = {
     implicit val monad: CatsMonadError[G] = new CatsMonadError[G]
     implicit val bodyListener: BodyListener[G, Http4sResponseBody[F]] = new Http4sBodyListener[F, G](gToF)
 
@@ -103,40 +100,39 @@ object Http4sServerToHttpInterpreter {
 
   private[http4s] val log: Logger = getLogger
 
-  def apply[F[_], G[_]]()(_fToG: F ~> G)(_gToF: G ~> F)(implicit _gs: Sync[G], _gcs: ContextShift[G], _fs: Concurrent[F], _fcs: ContextShift[F], _timer: Timer[F]): Http4sServerToHttpInterpreter[F, G] = {
+  def apply[F[_], G[_]]()(_fToG: F ~> G)(_gToF: G ~> F)(implicit
+      _gs: Sync[G],
+      _gcs: ContextShift[G],
+      _fs: Concurrent[F],
+      _fcs: ContextShift[F],
+      _timer: Timer[F]
+  ): Http4sServerToHttpInterpreter[F, G] = {
     new Http4sServerToHttpInterpreter[F, G] {
       override implicit def gs: Sync[G] = _gs
-
       override implicit def gcs: ContextShift[G] = _gcs
-
       override implicit def fs: Concurrent[F] = _fs
-
       override implicit def fcs: ContextShift[F] = _fcs
-
       override def fToG: F ~> G = _fToG
-
       override def gToF: G ~> F = _gToF
-
       override implicit def timer: Timer[F] = _timer
     }
   }
 
-  def apply[F[_], G[_]](serverOptions: Http4sServerOptions[F, G])(_fToG: F ~> G)(_gToF: G ~> F)(implicit _gs: Sync[G], _gcs: ContextShift[G], _fs: Concurrent[F], _fcs: ContextShift[F], _timer: Timer[F]): Http4sServerToHttpInterpreter[F, G] = {
+  def apply[F[_], G[_]](serverOptions: Http4sServerOptions[F, G])(_fToG: F ~> G)(_gToF: G ~> F)(implicit
+      _gs: Sync[G],
+      _gcs: ContextShift[G],
+      _fs: Concurrent[F],
+      _fcs: ContextShift[F],
+      _timer: Timer[F]
+  ): Http4sServerToHttpInterpreter[F, G] = {
     new Http4sServerToHttpInterpreter[F, G] {
       override implicit def gs: Sync[G] = _gs
-
       override implicit def gcs: ContextShift[G] = _gcs
-
       override implicit def fs: Concurrent[F] = _fs
-
       override implicit def fcs: ContextShift[F] = _fcs
-
       override implicit def timer: Timer[F] = _timer
-
       override def fToG: F ~> G = _fToG
-
       override def gToF: G ~> F = _gToF
-
       override def http4sServerOptions: Http4sServerOptions[F, G] = serverOptions
     }
   }
