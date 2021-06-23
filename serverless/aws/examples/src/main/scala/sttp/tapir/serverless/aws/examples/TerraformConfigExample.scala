@@ -1,9 +1,6 @@
 package sttp.tapir.serverless.aws.examples
 
-import io.circe.{Encoder, Printer}
-import io.circe.syntax._
-import sttp.tapir.serverless.aws.examples.LambdaApiExample.{helloEndpoint, options}
-import sttp.tapir.serverless.aws.terraform.AwsTerraformEncoders._
+import sttp.tapir.serverless.aws.examples.LambdaApiExample.helloEndpoint
 import sttp.tapir.serverless.aws.terraform.{AwsTerraformApiGateway, AwsTerraformInterpreter, AwsTerraformOptions, S3Source}
 
 import java.nio.charset.StandardCharsets.UTF_8
@@ -30,10 +27,7 @@ object TerraformConfigExample extends App {
   )
 
   val apiGateway: AwsTerraformApiGateway = AwsTerraformInterpreter(terraformOptions).toTerraformConfig(helloEndpoint)
-
-  implicit val encoder: Encoder[AwsTerraformApiGateway] = encoderAwsTerraformApiGateway(terraformOptions)
-
-  val apiGatewayConfig = Printer.spaces2.print(apiGateway.asJson)
+  val apiGatewayConfig = apiGateway.toJson(terraformOptions)
 
   Files.write(Paths.get("api_gateway.tf.json"), apiGatewayConfig.getBytes(UTF_8))
 }
