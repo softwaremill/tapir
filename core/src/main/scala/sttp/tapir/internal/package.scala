@@ -176,6 +176,10 @@ package object internal {
       }
     }
 
+    private def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
+      e.info.deprecated || e.info.description.nonEmpty || e.info.docsExtensions.nonEmpty || e.info.examples.nonEmpty
+    }
+
     def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
       output match {
         case o: EndpointOutput[_] if handle.isDefinedAt(o) => handle(o)
@@ -224,10 +228,6 @@ package object internal {
         case _: EndpointIO.StreamBodyWrapper[_, _]        => 2
         case _: EndpointOutput.WebSocketBodyWrapper[_, _] => 2
       }
-  }
-
-  def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
-    e.info.deprecated || e.info.description.nonEmpty || e.info.docsExtensions.nonEmpty || e.info.examples.nonEmpty
   }
 
   def addValidatorShow(s: String, schema: Schema[_]): String = schema.showValidators match {

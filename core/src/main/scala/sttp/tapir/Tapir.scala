@@ -4,7 +4,6 @@ import sttp.capabilities.Streams
 import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model._
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
-import sttp.tapir.EndpointIO.Empty
 import sttp.tapir.EndpointOutput.OneOfMapping
 import sttp.tapir.internal.{ModifyMacroSupport, _}
 import sttp.tapir.macros.TapirMacros
@@ -321,7 +320,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
 
   /** An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
     */
-  val emptyOutput: Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
     */

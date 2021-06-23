@@ -1,8 +1,5 @@
 package sttp.tapir
 
-import java.util.concurrent.TimeUnit
-
-import scala.concurrent.duration.Duration
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
@@ -126,11 +123,11 @@ class ValidatorTest extends AnyFlatSpec with Matchers {
 }
 
 sealed trait Color
-case object Blue  extends Color
-case object Red   extends Color
+case object Blue extends Color
+case object Red extends Color
 
 sealed trait InvalidColorEnum
 object InvalidColorEnum {
-  case object Blue          extends InvalidColorEnum
+  case object Blue extends InvalidColorEnum
   case class Red(s: String) extends InvalidColorEnum
 }
