@@ -30,20 +30,20 @@ class Http4sTestServerInterpreter
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, Http4sResponseBody[IO]]] = None
   ): HttpRoutes[IO] = {
-    implicit val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
+    val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
       .customInterceptors(
         metricsInterceptor = metricsInterceptor,
         exceptionHandler = Some(DefaultExceptionHandler),
         serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    Http4sServerInterpreter.toRoutes(e)
+    Http4sServerInterpreter(serverOptions).toRoutes(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO] with WebSockets], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): HttpRoutes[IO] = {
-    Http4sServerInterpreter.toRouteRecoverErrors(e)(fn)
+    Http4sServerInterpreter[IO]().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[HttpRoutes[IO]]): Resource[IO, Port] = {

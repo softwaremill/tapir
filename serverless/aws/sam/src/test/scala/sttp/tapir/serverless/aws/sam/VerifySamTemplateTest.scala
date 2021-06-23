@@ -15,13 +15,13 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml with image source") {
     val expectedYaml = load("image_source_template.yaml")
 
-    implicit val samOptions: AwsSamOptions = AwsSamOptions(
+    val samOptions: AwsSamOptions = AwsSamOptions(
       "PetApi",
       source = ImageSource("image.repository:pet-api"),
       memorySize = 1024
     )
 
-    val actualYaml = AwsSamInterpreter.toSamTemplate(List(getPetEndpoint, addPetEndpoint)).toYaml
+    val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint)).toYaml
 
     expectedYaml shouldBe noIndentation(actualYaml)
   }
@@ -29,13 +29,13 @@ class VerifySamTemplateTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml with code source") {
     val expectedYaml = load("code_source_template.yaml")
 
-    implicit val samOptions: AwsSamOptions = AwsSamOptions(
+    val samOptions: AwsSamOptions = AwsSamOptions(
       "PetApi",
       source = CodeSource(runtime = "java11", codeUri = "/somewhere/pet-api.jar", "pet.api.Handler::handleRequest"),
       memorySize = 1024
     )
 
-    val actualYaml = AwsSamInterpreter.toSamTemplate(List(getPetEndpoint, addPetEndpoint)).toYaml
+    val actualYaml = AwsSamInterpreter(samOptions).toSamTemplate(List(getPetEndpoint, addPetEndpoint)).toYaml
 
     expectedYaml shouldBe noIndentation(actualYaml)
   }

@@ -30,5 +30,5 @@ object OpenAPIDocsOptions {
       statusCode(StatusCode.BadRequest).and(stringBody.description(description))
     }
 
-  implicit val default: OpenAPIDocsOptions = OpenAPIDocsOptions(defaultOperationIdGenerator)
+  val default: OpenAPIDocsOptions = OpenAPIDocsOptions(defaultOperationIdGenerator)
 }

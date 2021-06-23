@@ -32,4 +32,6 @@ object AwsServerOptions {
       unsupportedMediaTypeInterceptor.toList ++
       List(new DecodeFailureInterceptor[F, String](decodeFailureHandler))
   )
+
+  def default[F[_]]: AwsServerOptions[F] = customInterceptors()
 }

@@ -48,17 +48,17 @@ object ZioEnvExampleHttp4sServer extends App {
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
   val petRoutes: HttpRoutes[RIO[PetService with Clock, *]] =
-    ZHttp4sServerInterpreter.from(petEndpoint)(petId => PetService.find(petId)).toRoutes
+    ZHttp4sServerInterpreter().from(petEndpoint)(petId => PetService.find(petId)).toRoutes
 
   // Same as above, but combining endpoint description with server logic:
   val petServerEndpoint: ZServerEndpoint[PetService, Int, String, Pet] = petEndpoint.zServerLogic(petId => PetService.find(petId))
-  val petServerRoutes: HttpRoutes[RIO[PetService with Clock, *]] = ZHttp4sServerInterpreter.from(List(petServerEndpoint)).toRoutes
+  val petServerRoutes: HttpRoutes[RIO[PetService with Clock, *]] = ZHttp4sServerInterpreter().from(List(petServerEndpoint)).toRoutes
 
   // Documentation
   val yaml: String = {
     import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
     import sttp.tapir.openapi.circe.yaml._
-    OpenAPIDocsInterpreter.toOpenAPI(List(petEndpoint), "Our pets", "1.0").toYaml
+    OpenAPIDocsInterpreter().toOpenAPI(List(petEndpoint), "Our pets", "1.0").toYaml
   }
 
   // Starting the server

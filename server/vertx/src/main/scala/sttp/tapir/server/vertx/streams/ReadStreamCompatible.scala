@@ -14,7 +14,7 @@ trait ReadStreamCompatible[S <: Streams[S]] {
 object ReadStreamCompatible {
   def apply[S <: Streams[S]](implicit ev: ReadStreamCompatible[S]): ReadStreamCompatible[S] = ev
 
-  implicit val incompatible: ReadStreamCompatible[NoStreams] = new ReadStreamCompatible[NoStreams] {
+  val incompatible: ReadStreamCompatible[NoStreams] = new ReadStreamCompatible[NoStreams] {
     override val streams: NoStreams = NoStreams
     override def asReadStream(s: Nothing): ReadStream[Buffer] = ???
     override def fromReadStream(s: ReadStream[Buffer]): Nothing = ???

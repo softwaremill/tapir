@@ -43,9 +43,9 @@ object PrometheusMetricsExample extends App with StrictLogging {
     )
 
   val routes: Route = concat(
-    AkkaHttpServerInterpreter.toRoute(personEndpoint),
+    AkkaHttpServerInterpreter().toRoute(personEndpoint),
     // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `CollectorRegistry` to plain text response
-    AkkaHttpServerInterpreter.toRoute(prometheusMetrics.metricsEndpoint)
+    AkkaHttpServerInterpreter().toRoute(prometheusMetrics.metricsEndpoint)
   )
 
   implicit val actorSystem: ActorSystem = ActorSystem()

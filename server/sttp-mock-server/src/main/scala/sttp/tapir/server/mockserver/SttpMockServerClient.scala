@@ -121,7 +121,7 @@ object SttpMockServerClient {
   }
 
   private def toExpectationRequest[E, I, O](endpoint: Endpoint[I, E, O, Any], input: I): ExpectationRequestDefinition = {
-    val request = SttpClientInterpreter.toRequest(endpoint, None).apply(input)
+    val request = SttpClientInterpreter().toRequest(endpoint, None).apply(input)
     ExpectationRequestDefinition(
       method = request.method,
       path = request.uri,

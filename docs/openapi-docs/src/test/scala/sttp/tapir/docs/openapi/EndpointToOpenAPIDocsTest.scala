@@ -103,7 +103,7 @@ class EndpointToOpenAPIDocsTest extends AnyFunSuite with Matchers {
 
   for (e <- allTestEndpoints) {
     test(s"${e.showDetail} should convert to open api") {
-      OpenAPIDocsInterpreter.toOpenAPI(e, Info("title", "19.2-beta-RC1"))
+      OpenAPIDocsInterpreter().toOpenAPI(e, Info("title", "19.2-beta-RC1"))
     }
   }
 }

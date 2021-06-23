@@ -17,29 +17,32 @@ import scala.reflect.ClassTag
 
 trait PlayServerInterpreter {
 
+  implicit def mat: Materializer
+
+  implicit def executionContext: ExecutionContextExecutor = mat.executionContext
+
+  def playServerOptions: PlayServerOptions = PlayServerOptions.default
+
   def toRoutes[I, E, O](e: Endpoint[I, E, O, Any])(
       logic: I => Future[Either[E, O]]
-  )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+  ): Routes = {
     toRoutes(e.serverLogic(logic))
   }
 
   def toRoutesRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(logic: I => Future[O])(implicit
       eIsThrowable: E <:< Throwable,
-      eClassTag: ClassTag[E],
-      mat: Materializer,
-      serverOptions: PlayServerOptions
+      eClassTag: ClassTag[E]
   ): Routes = {
     toRoutes(e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoutes[I, E, O](e: ServerEndpoint[I, E, O, Any, Future])(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
+  def toRoutes[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]): Routes = {
     toRoutes(List(e))
   }
 
   def toRoutes[I, E, O](
       serverEndpoints: List[ServerEndpoint[_, _, _, Any, Future]]
-  )(implicit mat: Materializer, serverOptions: PlayServerOptions): Routes = {
-    implicit val ec: ExecutionContextExecutor = mat.executionContext
+  ): Routes = {
     implicit val monad: FutureMonad = new FutureMonad()
 
     new PartialFunction[RequestHeader, Handler] {
@@ -49,20 +52,20 @@ trait PlayServerInterpreter {
           DecodeBasicInputs(se.input, serverRequest) match {
             case DecodeBasicInputsResult.Values(_, _) => true
             case DecodeBasicInputsResult.Failure(input, failure) =>
-              serverOptions.decodeFailureHandler(DecodeFailureContext(input, failure, se.endpoint, serverRequest)).isDefined
+              playServerOptions.decodeFailureHandler(DecodeFailureContext(input, failure, se.endpoint, serverRequest)).isDefined
           }
         }
       }
 
       override def apply(v1: RequestHeader): Handler = {
-        serverOptions.defaultActionBuilder.async(serverOptions.playBodyParsers.raw) { request =>
+        playServerOptions.defaultActionBuilder.async(playServerOptions.playBodyParsers.raw) { request =>
           implicit val bodyListener: BodyListener[Future, HttpEntity] = new PlayBodyListener
           val serverRequest = new PlayServerRequest(request)
           val interpreter = new ServerInterpreter[Any, Future, HttpEntity, NoStreams](
-            new PlayRequestBody(request, serverOptions),
+            new PlayRequestBody(request, playServerOptions),
             new PlayToResponseBody,
-            serverOptions.interceptors,
-            serverOptions.deleteFile
+            playServerOptions.interceptors,
+            playServerOptions.deleteFile
           )
 
           interpreter(serverRequest, serverEndpoints).map {
@@ -92,4 +95,18 @@ trait PlayServerInterpreter {
   }
 }
 
-object PlayServerInterpreter extends PlayServerInterpreter
+object PlayServerInterpreter {
+  def apply()(implicit _mat: Materializer): PlayServerInterpreter = {
+    new PlayServerInterpreter {
+      override implicit def mat: Materializer = _mat
+    }
+  }
+
+  def apply(serverOptions: PlayServerOptions)(implicit _mat: Materializer): PlayServerInterpreter = {
+    new PlayServerInterpreter {
+      override implicit def mat: Materializer = _mat
+
+      override def playServerOptions: PlayServerOptions = serverOptions
+    }
+  }
+}

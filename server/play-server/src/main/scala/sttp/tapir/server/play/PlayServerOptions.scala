@@ -89,7 +89,7 @@ object PlayServerOptions {
       case Some(ex) => logger.debug(s"$msg; exception: {}", ex)
     }
 
-  implicit def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customInterceptors()
+  def default(implicit mat: Materializer, ec: ExecutionContext): PlayServerOptions = customInterceptors()
 
   lazy val logger: Logger = Logger(this.getClass.getPackage.getName)
 }

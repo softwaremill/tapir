@@ -22,9 +22,8 @@ object zio {
       dfd.await
   }
 
-  implicit def zioReadStreamCompatible[F[_]](implicit
-      opts: VertxZioServerOptions[F],
-      runtime: Runtime[Any]
+  def zioReadStreamCompatible[F[_]](opts: VertxZioServerOptions[F])(implicit
+    runtime: Runtime[Any]
   ): ReadStreamCompatible[ZioStreams] = new ReadStreamCompatible[ZioStreams] {
     override val streams: ZioStreams = ZioStreams
 

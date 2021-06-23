@@ -19,7 +19,7 @@ abstract class PlayClientTests[R] extends ClientTests[R] {
 
   override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
     def response: Future[Either[E, O]] = {
-      val (req, responseParser) = PlayClientInterpreter.toRequestUnsafe(e, s"http://localhost:$port").apply(args)
+      val (req, responseParser) = PlayClientInterpreter().toRequestUnsafe(e, s"http://localhost:$port").apply(args)
       req.execute().map(responseParser)
     }
     IO.fromFuture(IO(response))
@@ -31,7 +31,7 @@ abstract class PlayClientTests[R] extends ClientTests[R] {
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     def response: Future[DecodeResult[Either[E, O]]] = {
-      val (req, responseParser) = PlayClientInterpreter.toRequest(e, s"http://localhost:$port").apply(args)
+      val (req, responseParser) = PlayClientInterpreter().toRequest(e, s"http://localhost:$port").apply(args)
       req.execute().map(responseParser)
     }
     IO.fromFuture(IO(response))

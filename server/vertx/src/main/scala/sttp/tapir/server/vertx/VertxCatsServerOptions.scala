@@ -70,5 +70,5 @@ object VertxCatsServerOptions {
     )
   }
 
-  implicit def default[F[_]: Sync]: VertxCatsServerOptions[F] = customInterceptors()
+  def default[F[_]: Sync]: VertxCatsServerOptions[F] = customInterceptors()
 }

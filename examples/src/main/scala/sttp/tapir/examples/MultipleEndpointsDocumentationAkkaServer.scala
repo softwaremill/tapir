@@ -48,12 +48,12 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
     )
   )
 
-  val booksListingRoute = AkkaHttpServerInterpreter.toRoute(booksListing)(_ => Future.successful(Right(books.get())))
+  val booksListingRoute = AkkaHttpServerInterpreter().toRoute(booksListing)(_ => Future.successful(Right(books.get())))
   val addBookRoute =
-    AkkaHttpServerInterpreter.toRoute(addBook)(book => Future.successful(Right(books.getAndUpdate(books => books :+ book))))
+    AkkaHttpServerInterpreter().toRoute(addBook)(book => Future.successful(Right(books.getAndUpdate(books => books :+ book))))
 
   // generating the documentation in yml; extension methods come from imported packages
-  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter.toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
+  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
   val openApiYml: String = openApiDocs.toYaml
 
   // starting the server

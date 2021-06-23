@@ -31,8 +31,7 @@ object fs2 {
       dfd.get
   }
 
-  implicit def fs2ReadStreamCompatible[F[_]](implicit
-      opts: VertxCatsServerOptions[F],
+  def fs2ReadStreamCompatible[F[_]](opts: VertxCatsServerOptions[F])(implicit
       F: ConcurrentEffect[F]
   ): ReadStreamCompatible[Fs2Streams[F]] =
     new ReadStreamCompatible[Fs2Streams[F]] {
