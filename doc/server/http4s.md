@@ -28,7 +28,7 @@ import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import cats.effect.{Concurrent, ContextShift, Timer}
+import cats.effect.{ContextShift, Timer}
 
 // will probably come from somewhere else
 implicit val cs: ContextShift[IO] =
@@ -52,7 +52,6 @@ functions which take multiple arguments need to be converted to a function using
 import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
-import cats.effect.Concurrent
 import org.http4s.HttpRoutes
 import cats.effect.{ContextShift, Timer}
 
@@ -96,7 +95,6 @@ For example, to define an endpoint that returns event stream:
 
 ```scala mdoc:compile-only
 import cats.effect.IO
-import cats.effect.Concurrent
 import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}

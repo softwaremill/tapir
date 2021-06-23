@@ -1,6 +1,6 @@
 package sttp.tapir.examples
 
-import cats.effect.{Blocker, Concurrent, ContextShift, IO, Timer}
+import cats.effect.{Blocker, ContextShift, IO, Timer}
 import io.circe.generic.auto._
 import fs2._
 import org.http4s.HttpRoutes

@@ -3,7 +3,6 @@ package sttp.tapir.docs.openapi
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.docs.openapi.VerifyYamlEnumeratumTest.Enumeratum
 import sttp.tapir.{endpoint, _}
 import sttp.tapir.generic.{Configuration, Derived}
 import sttp.tapir.generic.auto._
@@ -97,20 +96,6 @@ class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(Validation.in_enum_values, Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
-    actualYamlNoIndent shouldBe expectedYaml
-  }
-
-  test("use enumeratum validator for array elements") {
-    import sttp.tapir.codec.enumeratum._
-
-    val expectedYaml = load("validator/expected_valid_enumeratum.yml")
-
-    val actualYaml =
-      OpenAPIDocsInterpreter()
-        .toOpenAPI(List(endpoint.in("enum-test").out(jsonBody[Enumeratum.FruitWithEnum])), Info("Fruits", "1.0"))
-        .toYaml
-    val actualYamlNoIndent = noIndentation(actualYaml)
-
     actualYamlNoIndent shouldBe expectedYaml
   }
 

@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s
 
 import cats.data.{Kleisli, NonEmptyList}
-import cats.effect.{Concurrent, ContextShift, IO, Resource, Timer}
+import cats.effect.{ContextShift, IO, Resource, Timer}
 import cats.syntax.all._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
