@@ -12,6 +12,7 @@ import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
+import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 
 import scala.concurrent.{ExecutionContext, Future, Promise}
 import scala.reflect.ClassTag
@@ -87,8 +88,8 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     implicit val monad: FutureMonad = new FutureMonad()
     implicit val bodyListener: BodyListener[Future, RoutingContext => Unit] = new VertxBodyListener[Future]
     val interpreter = new ServerInterpreter[Any, Future, RoutingContext => Unit, NoStreams](
-      new VertxRequestBody(rc, vertxFutureServerOptions, FutureFromVFuture),
-      new VertxToResponseBody(vertxFutureServerOptions),
+      new VertxRequestBody(rc, vertxFutureServerOptions, FutureFromVFuture)(ReadStreamCompatible.incompatible),
+      new VertxToResponseBody(vertxFutureServerOptions)(ReadStreamCompatible.incompatible),
       vertxFutureServerOptions.interceptors,
       vertxFutureServerOptions.deleteFile
     )

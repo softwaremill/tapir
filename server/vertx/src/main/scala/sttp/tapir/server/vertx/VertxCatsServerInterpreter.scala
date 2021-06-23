@@ -16,6 +16,7 @@ import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBod
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
+import sttp.tapir.server.vertx.streams.fs2.fs2ReadStreamCompatible
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
@@ -56,18 +57,19 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
   )(implicit
       effect: ConcurrentEffect[F]
   ): Router => Route = { router =>
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
+    val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)
+    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e, readStreamCompatible))
   }
 
   private def endpointHandler[I, E, O, A, S <: Streams[S]](
-      e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
-  )(implicit effect: Effect[F], readStreamCompatible: ReadStreamCompatible[S]): Handler[RoutingContext] = { rc =>
+      e: ServerEndpoint[I, E, O, Fs2Streams[F], F], readStreamCompatible: ReadStreamCompatible[S]
+  )(implicit effect: Effect[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
     val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Unit, S] = new ServerInterpreter(
-      new VertxRequestBody(rc, vertxCatsServerOptions, fFromVFuture),
-      new VertxToResponseBody(vertxCatsServerOptions),
+      new VertxRequestBody(rc, vertxCatsServerOptions, fFromVFuture)(readStreamCompatible),
+      new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),
       vertxCatsServerOptions.interceptors,
       vertxCatsServerOptions.deleteFile
     )
