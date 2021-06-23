@@ -1,4 +1,3 @@
-
 # Generating OpenAPI documentation
 
 To use, add the following dependencies:
@@ -71,7 +70,7 @@ println(Printer.spaces2.print(docs.asJson))
 
 ## Options
 
-Options can be customised by providing an implicit instance of `OpenAPIDocsOptions`, when calling `.toOpenAPI`.
+Options can be customised by providing an instance of `OpenAPIDocsOptions` to the interpreter:
 
 * `operationIdGenerator`: each endpoint corresponds to an operation in the OpenAPI format and should have a unique 
   operation id. By default, the `name` of endpoint is used as the operation id, and if this is not available, the 

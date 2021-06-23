@@ -69,7 +69,7 @@ object Main {
 
 ## Configuration
 
-Every endpoint can be configured by providing an implicit `VertxFutureEndpointOptions`, see [server options](options.md) for details.
+Every endpoint can be configured by providing an instance of `VertxFutureEndpointOptions`, see [server options](options.md) for details.
 You can also provide your own `ExecutionContext` to execute the logic.
 
 ## Defining an endpoint together with the server logic

@@ -63,7 +63,7 @@ println(docs.toYaml)
 
 ## Options
 
-Options can be customised by providing an implicit instance of `AsyncAPIDocsOptions`, when calling `.toAsyncAPI`.
+Options can be customised by providing an instance of `AsyncAPIDocsOptions` to the interpreter:
 
 * `subscribeOperationId`: basing on the endpoint's path and the entire endpoint, determines the id of the subscribe 
   operation. This can be later used by code generators as the name of the method to receive messages from the socket.

@@ -113,7 +113,7 @@ val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint)(_ =>
 
 ## Configuration
 
-The interpreter can be configured by providing an implicit `Http4sServerOptions` value, see
+The interpreter can be configured by providing an `Http4sServerOptions` value, see
 [server options](options.md) for details.
 
 The http4s options also includes configuration for the blocking execution context to use, and the io chunk size.

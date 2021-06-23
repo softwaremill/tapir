@@ -136,7 +136,7 @@ val routes = AkkaHttpServerInterpreter().toRoute(sseEndpoint)(_ =>
 
 ## Configuration
 
-The interpreter can be configured by providing an implicit `AkkaHttpServerOptions` value, see
+The interpreter can be configured by providing an `AkkaHttpServerOptions` value, see
 [server options](options.md) for details.
 
 ## Defining an endpoint together with the server logic
