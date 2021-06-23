@@ -117,8 +117,7 @@ object App extends IOApp {
   def handler(req: String): IO[Either[Unit, String]] =
     IO.pure(Right(req))
 
-  val fs: Sync[IO] = Sync[IO]
-  val attach = VertxCatsServerInterpreter()(fs).route(responseEndpoint)(handler)
+  val attach = VertxCatsServerInterpreter[IO]().route(responseEndpoint)(handler)
 
   override def run(args: List[String]): IO[ExitCode] =
     Resource.make(IO.delay{
