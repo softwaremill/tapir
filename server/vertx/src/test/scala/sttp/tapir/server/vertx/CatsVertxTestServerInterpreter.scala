@@ -11,8 +11,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter.CatsFFromVFuture
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter.CatsFFromVFuture
 import sttp.tapir.tests.Port
 
 import scala.reflect.ClassTag
@@ -38,8 +37,7 @@ class CatsVertxTestServerInterpreter(vertx: Vertx)
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO]], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route = {
-    val fs: Sync[IO] = Sync[IO]
-    VertxCatsServerInterpreter()(fs).routeRecoverErrors(e)(fn)
+    VertxCatsServerInterpreter[IO]().routeRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {

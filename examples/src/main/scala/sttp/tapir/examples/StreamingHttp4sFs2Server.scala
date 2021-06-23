@@ -31,10 +31,9 @@ object StreamingHttp4sFs2Server extends App {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
-  implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter().toRoutes(streamingEndpoint) { _ =>
+  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(streamingEndpoint) { _ =>
     val size = 100L
     Stream
       .emit(List[Char]('a', 'b', 'c', 'd'))

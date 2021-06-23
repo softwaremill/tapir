@@ -24,7 +24,6 @@ class Http4sTestServerInterpreter
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
-  implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
@@ -44,7 +43,7 @@ class Http4sTestServerInterpreter
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO] with WebSockets], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): HttpRoutes[IO] = {
-    Http4sServerInterpreter().toRouteRecoverErrors(e)(fn)
+    Http4sServerInterpreter[IO]().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[HttpRoutes[IO]]): Resource[IO, Port] = {

@@ -14,7 +14,7 @@ to use this interpreter with `Future`.
 
 Then import the object:
 ```scala mdoc:compile-only
-import sttp.tapir.server.vertx.interpreters.VertxFutureServerInterpreter._
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter._
 ```
 
 This object contains the following methods:
@@ -31,7 +31,7 @@ functions which take multiple arguments need to be converted to a function using
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.vertx.interpreters.VertxFutureServerInterpreter
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter
 import io.vertx.ext.web._
 import scala.concurrent.Future
 
@@ -45,8 +45,8 @@ An HTTP server can then be started as in the following example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.vertx.interpreters.VertxFutureServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxFutureServerInterpreter._
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter
+import sttp.tapir.server.vertx.VertxFutureServerInterpreter._
 import io.vertx.core.Vertx
 import io.vertx.ext.web._
 import scala.concurrent.{Await, Future}
@@ -88,7 +88,7 @@ to use this interpreter with Cats Effect typeclasses.
 
 Then import the object:
 ```scala mdoc:compile-only
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter._
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
 ```
 
 This object contains the following methods:
@@ -103,8 +103,8 @@ import cats.syntax.flatMap._
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import sttp.tapir._
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter._
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter._
 
 object App extends IOApp {
 
@@ -139,7 +139,7 @@ import cats.effect._
 import fs2._
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir._
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter
 
 implicit val effect: ConcurrentEffect[IO] = ???
 
@@ -165,7 +165,7 @@ to use this interpreter with ZIO.
 
 Then import the object:
 ```scala mdoc:compile-only
-import sttp.tapir.server.vertx.interpreters.VertxZioServerInterpreter._
+import sttp.tapir.server.vertx.VertxZioServerInterpreter._
 ```
 
 This object contains method `route[R, I, E, O](e: Endpoint[I, E, O, ZioStreams])(logic: I => ZIO[R, E, O])` which returns a function `Router => Route` that will create a route maching the endpoint definition, and attach your logic as an handler.
@@ -175,8 +175,8 @@ Here is simple example which starts HTTP server with one route:
 import io.vertx.core.Vertx
 import io.vertx.ext.web.Router
 import sttp.tapir._
-import sttp.tapir.server.vertx.interpreters.VertxZioServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxZioServerInterpreter._
+import sttp.tapir.server.vertx.VertxZioServerInterpreter
+import sttp.tapir.server.vertx.VertxZioServerInterpreter._
 
 import zio._
 

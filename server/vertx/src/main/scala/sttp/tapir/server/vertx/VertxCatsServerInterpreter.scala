@@ -1,6 +1,6 @@
-package sttp.tapir.server.vertx.interpreters
+package sttp.tapir.server.vertx
 
-import cats.effect.{Sync, Async, CancelToken, ConcurrentEffect, Effect, IO}
+import cats.effect.{Async, CancelToken, ConcurrentEffect, Effect, IO, Sync}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -10,12 +10,12 @@ import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter.{CatsFFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter.{CatsFFromVFuture, monadError}
+import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
-import sttp.tapir.server.vertx.{VertxBodyListener, VertxCatsServerOptions}
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
@@ -56,7 +56,6 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
   )(implicit
       effect: ConcurrentEffect[F]
   ): Router => Route = { router =>
-    import sttp.tapir.server.vertx.streams.fs2._
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
   }
 

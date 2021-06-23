@@ -35,8 +35,6 @@ implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
 implicit val t: Timer[IO] =
   IO.timer(scala.concurrent.ExecutionContext.global)
-  
-implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
   IO.pure(Right[Unit, Int](s.length))
@@ -44,7 +42,7 @@ def countCharacters(s: String): IO[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
   endpoint.in(stringBody).out(plainBody[Int])
 val countCharactersRoutes: HttpRoutes[IO] = 
-  Http4sServerInterpreter().toRoutes(countCharactersEndpoint)(countCharacters _)
+  Http4sServerInterpreter[IO]().toRoutes(countCharactersEndpoint)(countCharacters _)
 ```
 
 Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
@@ -63,11 +61,10 @@ implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
 implicit val t: Timer[IO] =
   IO.timer(scala.concurrent.ExecutionContext.global)
-implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val routes: HttpRoutes[IO] = Http4sServerInterpreter().toRoutes(anEndpoint)((logic _).tupled)
+val routes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(anEndpoint)((logic _).tupled)
 ```
 
 The created `HttpRoutes` are the usual http4s `Kleisli`-based transformation of a `Request` to a `Response`, and can 
@@ -110,9 +107,8 @@ val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
 
 implicit val cs: ContextShift[IO] = ???
 implicit val t: Timer[IO] = ???
-implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
 
-val routes = Http4sServerInterpreter().toRoutes(sseEndpoint)(_ =>
+val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint)(_ =>
   IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
 )
 ```

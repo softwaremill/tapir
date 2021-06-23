@@ -5,16 +5,7 @@ import io.vertx.core.Vertx
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerStreamingTests, backendResource}
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxCatsServerInterpreter.CatsFFromVFuture
-import sttp.tapir.server.tests.{
-  DefaultCreateServerTest,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerFileMultipartTests,
-  ServerStreamingTests,
-  backendResource
-}
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter.CatsFFromVFuture
 import sttp.tapir.tests.{Test, TestSuite}
 
 class CatsVertxServerTest extends TestSuite {

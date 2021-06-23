@@ -1,4 +1,4 @@
-package sttp.tapir.server.vertx.interpreters
+package sttp.tapir.server.vertx
 
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -7,12 +7,12 @@ import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.vertx.VertxZioServerInterpreter.{RioFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
-import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
-import sttp.tapir.server.vertx.interpreters.VertxZioServerInterpreter.{RioFromVFuture, monadError}
+import sttp.tapir.server.vertx.encoders.{VertxToResponseBody, VertxOutputEncoders}
+import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.zio._
-import sttp.tapir.server.vertx.{VertxBodyListener, VertxZioServerOptions}
 import zio._
 
 import java.util.concurrent.atomic.AtomicReference

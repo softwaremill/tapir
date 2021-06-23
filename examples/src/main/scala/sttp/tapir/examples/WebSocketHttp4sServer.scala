@@ -28,7 +28,6 @@ object WebSocketHttp4sServer extends App {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
   implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
   implicit val timer: Timer[IO] = IO.timer(ec)
-  implicit val concurrent: Concurrent[IO] = IO.ioConcurrentEffect
   val blocker: Blocker = Blocker.liftExecutionContext(ec)
 
   //
@@ -68,7 +67,7 @@ object WebSocketHttp4sServer extends App {
   }
 
   // Implementing the endpoint's logic, by providing the web socket pipe
-  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter().toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
+  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
 
   // Documentation
   val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml

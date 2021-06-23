@@ -12,8 +12,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxZioServerInterpreter
-import sttp.tapir.server.vertx.interpreters.VertxZioServerInterpreter.RioFromVFuture
+import sttp.tapir.server.vertx.VertxZioServerInterpreter.RioFromVFuture
 import sttp.tapir.tests.Port
 import zio.interop.catz._
 import zio.{Runtime, Task}
