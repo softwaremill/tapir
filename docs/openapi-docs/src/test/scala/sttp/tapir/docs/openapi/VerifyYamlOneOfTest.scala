@@ -10,7 +10,19 @@ import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.MultipleMediaTypes
-import sttp.tapir.{Codec, CodecFormat, Schema, SchemaType, emptyOutput, endpoint, header, oneOfDefaultMapping, oneOfMapping, plainBody, statusCode}
+import sttp.tapir.{
+  Codec,
+  CodecFormat,
+  Schema,
+  SchemaType,
+  emptyOutput,
+  endpoint,
+  header,
+  oneOfDefaultMapping,
+  oneOfMapping,
+  plainBody,
+  statusCode
+}
 
 class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
@@ -19,7 +31,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
     val e = endpoint.errorOut(sttp.tapir.oneOf(oneOfMapping(StatusCode.Forbidden, emptyOutput.description("forbidden"))))
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("test", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("test", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
