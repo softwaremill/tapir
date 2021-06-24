@@ -20,14 +20,14 @@ object ZHttpInterpreter extends ZIOMonadError {
       route: Endpoint[I, Throwable, O, ZioStreams]
   )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
     Http.fromEffectFunction[Request] { req =>
-      val inteprete = new ZHttpBodyListener[R]
+      implicit val interpret: ZHttpBodyListener[R] = new ZHttpBodyListener[R]
       val router = route.serverLogic[RIO[R, *]](input => logic(input).either)
       val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](
         new ZHttpRequestBody(req),
         new ZHttpToResponseBody,
         Nil,
         (t) => RIO.apply(print("t"))
-      )(zioMonadError, inteprete)
+      )
 
       interpreter.apply(new ZHttpServerRequest(req), router).flatMap {
         case Some(resp) =>
@@ -38,7 +38,7 @@ object ZHttpInterpreter extends ZIOMonadError {
               content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
             )
           )
-        case None => ???
+        case None => ZIO.fail(HttpError.NotFound(req.url.path))
       }
     }
   }

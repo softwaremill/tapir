@@ -2,7 +2,7 @@ package sttp.tapir.examples
 
 import sttp.tapir._
 import sttp.tapir.server.zhttp.ZHttpInterpreter
-import zhttp.http.{Http, HttpApp, Request, Response}
+import zhttp.http.HttpApp
 import zhttp.service.Server
 import zio._
 import zio.blocking.Blocking
@@ -27,12 +27,8 @@ object HelloWorldZHttpServer extends App {
       .errorOut(plainBody[String].map(err => new Throwable(err))(_.getMessage))
       .out(stringBody)
 
-  private val value: Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = ZHttpInterpreter.toHttp(helloWorld)(name => ZIO.succeed(s"Hello $name"))
-  private val value1: Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = ZHttpInterpreter.toHttp(add) { case (x, y) => ZIO.succeed(s"Adding up ${x + y}") }
-  val app: HttpApp[Blocking, Throwable] =
-    value <> value1
-
-
+  val app: HttpApp[Blocking, Throwable] = ZHttpInterpreter.toHttp(helloWorld)(name => ZIO.succeed(s"Hello $name")) <>
+    ZHttpInterpreter.toHttp(add) { case (x, y) => ZIO.succeed(s"Adding up ${x + y}") }
 
   // starting the server
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =

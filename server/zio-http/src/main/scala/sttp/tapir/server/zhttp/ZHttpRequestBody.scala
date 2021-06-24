@@ -15,29 +15,22 @@ class ZHttpRequestBody[F](request: Request) extends RequestBody[RIO[F, *], ZioSt
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
   def asByteArray: Task[Array[Byte]] = request.content match {
-    case HttpData.Empty => Task.succeed(Array.emptyByteArray)
+    case HttpData.Empty              => Task.succeed(Array.emptyByteArray)
     case HttpData.CompleteData(data) => Task(data.toArray)
-    case HttpData.StreamData(data) => data.runCollect.map(_.toArray)
+    case HttpData.StreamData(data)   => data.runCollect.map(_.toArray)
   }
 
   def toRaw[R](bodyType: RawBodyType[R]): Task[RawValue[R]] = bodyType match {
-    case RawBodyType.StringBody(defaultCharset) =>
-      asByteArray.map(new String(_, defaultCharset)).map(t => RawValue(t))
-    case RawBodyType.ByteArrayBody =>
-      asByteArray.map(t => RawValue(t))
-    case RawBodyType.ByteBufferBody =>
-      asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(t => RawValue(t))
-    case RawBodyType.InputStreamBody =>
-      asByteArray.map(new ByteArrayInputStream(_)).map(t => RawValue(t))
-    case RawBodyType.FileBody =>
-      Task.effect(RawValue(Defaults.createTempFile()))
-    case RawBodyType.MultipartBody(_, _) =>
-      Task.never
+    case RawBodyType.StringBody(defaultCharset) => asByteArray.map(new String(_, defaultCharset)).map(RawValue(_))
+    case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
+    case RawBodyType.ByteBufferBody             => asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
+    case RawBodyType.InputStreamBody            => asByteArray.map(new ByteArrayInputStream(_)).map(RawValue(_))
+    case RawBodyType.FileBody                   => Task.effect(RawValue(Defaults.createTempFile()))
+    case RawBodyType.MultipartBody(_, _)        => Task.never
   }
 
-
   val stream: Stream[Throwable, Byte] = request.content match {
-    case HttpData.Empty => ZStream.empty
+    case HttpData.Empty              => ZStream.empty
     case HttpData.CompleteData(data) => ZStream.fromChunk(data)
     case HttpData.StreamData(stream) => stream
   }
