@@ -11,7 +11,9 @@ import zio._
 import zio.blocking.Blocking
 import zio.stream._
 
-object ZHttpInterpreter extends ZIOMonadError {
+trait ZHttpInterpreter extends ZIOMonadError {
+
+  def zHttpServerOptions[R]: ZHttpServerOptions[R] = ZHttpServerOptions.default
 
   private def sttpToZHttpHeader(header: SttpHeader): ZHttpHeader =
     ZHttpHeader(header.name, header.value)
@@ -25,8 +27,8 @@ object ZHttpInterpreter extends ZIOMonadError {
       val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](
         new ZHttpRequestBody(req),
         new ZHttpToResponseBody,
-        Nil,
-        (t) => RIO.apply(print("t"))
+        zHttpServerOptions[R].interceptors,
+        zHttpServerOptions[R].deleteFile
       )
 
       interpreter.apply(new ZHttpServerRequest(req), router).flatMap {

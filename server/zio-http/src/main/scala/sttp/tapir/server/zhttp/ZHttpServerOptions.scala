@@ -51,5 +51,5 @@ object ZHttpServerOptions {
     RIO(Defaults.deleteFile()(file))
   }
 
-  def default[R](): ZHttpServerOptions[R] = customInterceptors()
+  def default[R]: ZHttpServerOptions[R] = customInterceptors()
 }
