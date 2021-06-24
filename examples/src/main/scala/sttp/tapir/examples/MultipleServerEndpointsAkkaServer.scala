@@ -17,7 +17,7 @@ object MultipleServerEndpointsAkkaServer extends App {
     endpoint.get.in("endpoint2").in(path[String]).out(stringBody).serverLogic[Future] { path => Future.successful(Right(s"ok2: $path")) }
 
   // converting the endpoints to a (single) route
-  val route: Route = AkkaHttpServerInterpreter.toRoute(List(endpoint1, endpoint2))
+  val route: Route = AkkaHttpServerInterpreter().toRoute(List(endpoint1, endpoint2))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

@@ -67,10 +67,10 @@ object WebSocketHttp4sServer extends App {
   }
 
   // Implementing the endpoint's logic, by providing the web socket pipe
-  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
+  val wsRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(wsEndpoint)(_ => IO.pure(Right(countBytes)))
 
   // Documentation
-  val apiDocs = AsyncAPIInterpreter.toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
+  val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "Byte counter", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
   println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
   // Starting the server

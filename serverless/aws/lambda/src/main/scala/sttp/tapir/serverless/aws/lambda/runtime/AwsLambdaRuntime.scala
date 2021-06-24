@@ -14,14 +14,14 @@ import scala.concurrent.duration.DurationInt
 abstract class AwsLambdaRuntime[F[_]: ContextShift: ConcurrentEffect] extends StrictLogging {
   def endpoints: Iterable[ServerEndpoint[_, _, _, Any, F]]
   implicit def executionContext: ExecutionContext = ExecutionContext.global
-  implicit def serverOptions: AwsServerOptions[F] = AwsServerOptions.customInterceptors()
+  def serverOptions: AwsServerOptions[F] = AwsServerOptions.customInterceptors()
 
   def main(args: Array[String]): Unit = {
     val backend = Http4sBackend.usingBlazeClientBuilder(
       BlazeClientBuilder[F](executionContext).withConnectTimeout(0.seconds),
       Blocker.liftExecutionContext(implicitly)
     )
-    val route: Route[F] = AwsCatsEffectServerInterpreter.toRoute(endpoints.toList)
+    val route: Route[F] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(endpoints.toList)
     ConcurrentEffect[F].toIO(AwsLambdaRuntimeLogic(route, sys.env("AWS_LAMBDA_RUNTIME_API"), backend)).foreverM.unsafeRunSync()
   }
 }

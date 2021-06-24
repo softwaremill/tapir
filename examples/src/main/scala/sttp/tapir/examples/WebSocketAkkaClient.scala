@@ -25,7 +25,7 @@ object WebSocketAkkaClient extends App {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
   val backend = AkkaHttpBackend.usingActorSystem(actorSystem)
-  val result = SttpClientInterpreter
+  val result = SttpClientInterpreter()
     .toClientThrowDecodeFailures(jsonEchoWsEndpoint, Some(uri"wss://echo.websocket.org"), backend)
     .apply(())
     .flatMap {

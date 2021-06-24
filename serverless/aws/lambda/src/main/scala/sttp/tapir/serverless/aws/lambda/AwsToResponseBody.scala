@@ -11,7 +11,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.util.Base64
 
-private[lambda] class AwsToResponseBody[F[_]](implicit options: AwsServerOptions[F]) extends ToResponseBody[String, NoStreams] {
+private[lambda] class AwsToResponseBody[F[_]](options: AwsServerOptions[F]) extends ToResponseBody[String, NoStreams] {
   override val streams: capabilities.Streams[NoStreams] = NoStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): String = bodyType match {

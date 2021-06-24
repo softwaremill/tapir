@@ -1,6 +1,6 @@
-package sttp.tapir.server.vertx.interpreters
+package sttp.tapir.server.vertx
 
-import cats.effect.{Async, CancelToken, ConcurrentEffect, Effect, IO}
+import cats.effect.{Async, CancelToken, ConcurrentEffect, Effect, IO, Sync}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -10,37 +10,39 @@ import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter.{CatsFFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
+import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
 import sttp.tapir.server.vertx.streams.ReadStreamCompatible
-import sttp.tapir.server.vertx.{VertxBodyListener, VertxCatsServerOptions}
+import sttp.tapir.server.vertx.streams.fs2.fs2ReadStreamCompatible
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
 
-trait VertxCatsServerInterpreter extends CommonServerInterpreter {
+trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
+
+  implicit def fs: Sync[F]
+
+  def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F]
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
     * @param logic the logic to associate with the endpoint
-    * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]])(implicit
-      endpointOptions: VertxCatsServerOptions[F],
+  def route[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]])(implicit
       effect: ConcurrentEffect[F]
   ): Router => Route =
     route(e.serverLogic(logic))
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
     * @param logic the logic to associate with the endpoint
-    * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def routeRecoverErrors[F[_], I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(
+  def routeRecoverErrors[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(
       logic: I => F[O]
   )(implicit
-      endpointOptions: VertxCatsServerOptions[F],
       effect: ConcurrentEffect[F],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
@@ -48,34 +50,28 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     route(e.serverLogicRecoverErrors(logic))
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
-    * @param endpointOptions options associated to the endpoint, like its logging capabilities, or execution context
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[F[_], I, E, O](
+  def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
   )(implicit
-      endpointOptions: VertxCatsServerOptions[F],
       effect: ConcurrentEffect[F]
   ): Router => Route = { router =>
-    import sttp.tapir.server.vertx.streams.fs2._
-    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e))
+    val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)
+    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e, readStreamCompatible))
   }
 
-  private def endpointHandler[F[_], I, E, O, A, S <: Streams[S]](
-      e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
-  )(implicit
-      serverOptions: VertxCatsServerOptions[F],
-      effect: Effect[F],
-      readStreamCompatible: ReadStreamCompatible[S]
-  ): Handler[RoutingContext] = { rc =>
+  private def endpointHandler[I, E, O, A, S <: Streams[S]](
+      e: ServerEndpoint[I, E, O, Fs2Streams[F], F], readStreamCompatible: ReadStreamCompatible[S]
+  )(implicit effect: Effect[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
     val interpreter: ServerInterpreter[Fs2Streams[F], F, RoutingContext => Unit, S] = new ServerInterpreter(
-      new VertxRequestBody(rc, serverOptions, fFromVFuture),
-      new VertxToResponseBody(serverOptions),
-      serverOptions.interceptors,
-      serverOptions.deleteFile
+      new VertxRequestBody(rc, vertxCatsServerOptions, fFromVFuture)(readStreamCompatible),
+      new VertxToResponseBody(vertxCatsServerOptions)(readStreamCompatible),
+      vertxCatsServerOptions.interceptors,
+      vertxCatsServerOptions.deleteFile
     )
     val serverRequest = new VertxServerRequest(rc)
 
@@ -104,6 +100,22 @@ trait VertxCatsServerInterpreter extends CommonServerInterpreter {
     }
 
     ()
+  }
+}
+
+object VertxCatsServerInterpreter {
+  def apply[F[_]]()(implicit _fs: Sync[F]): VertxCatsServerInterpreter[F] = {
+    new VertxCatsServerInterpreter[F] {
+      override implicit def fs: Sync[F] = _fs
+    }
+  }
+
+  def apply[F[_]](serverOptions: VertxCatsServerOptions[F])(implicit _fs: Sync[F]): VertxCatsServerInterpreter[F] = {
+    new VertxCatsServerInterpreter[F] {
+      override implicit def fs: Sync[F] = _fs
+
+      override def vertxCatsServerOptions: VertxCatsServerOptions[F] = serverOptions
+    }
   }
 
   private[vertx] def monadError[F[_]](implicit F: Effect[F]): MonadError[F] = new MonadError[F] {

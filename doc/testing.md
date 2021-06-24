@@ -136,7 +136,7 @@ val testingBackend = TryHttpURLConnectionBackend()
 val in = "request-id-123" -> SampleIn("John", 23)
 val out = SampleOut("Hello, John!")
 
-val result = SttpClientInterpreter
+val result = SttpClientInterpreter()
   .toRequest(sampleJsonEndpoint, baseUri = Some(uri"http://localhost:1080"))
   .apply(in)
   .send(testingBackend)

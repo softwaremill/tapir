@@ -23,17 +23,17 @@ class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Fut
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Future, RoutingContext => Unit]] = None
   ): Router => Route = {
-    implicit val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(
+    val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(
       metricsInterceptor = metricsInterceptor,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
-    VertxFutureServerInterpreter.route(e)
+    VertxFutureServerInterpreter(options).route(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route =
-    VertxFutureServerInterpreter.routeRecoverErrors(e)(fn)
+    VertxFutureServerInterpreter().routeRecoverErrors(e)(fn)
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

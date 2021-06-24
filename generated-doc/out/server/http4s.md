@@ -10,7 +10,8 @@ dependency:
 and import the object:
 
 ```scala
-import sttp.tapir.server.http4s.Http4sServerInterpreter
+import sttp.tapir.server.http4s.Http4sServerToHttpInterpreter
+
 ```
 
 This objects contains the `toRoutes` and `toRoutesRecoverErrors` methods. This first requires the 
@@ -34,14 +35,14 @@ import cats.effect.{ContextShift, Timer}
 implicit val cs: ContextShift[IO] =
   IO.contextShift(scala.concurrent.ExecutionContext.global)
 implicit val t: Timer[IO] =
-  IO.timer(scala.concurrent.ExecutionContext.global)  
+  IO.timer(scala.concurrent.ExecutionContext.global)
 
-def countCharacters(s: String): IO[Either[Unit, Int]] = 
+def countCharacters(s: String): IO[Either[Unit, Int]] =
   IO.pure(Right[Unit, Int](s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
-val countCharactersRoutes: HttpRoutes[IO] = 
+val countCharactersRoutes: HttpRoutes[IO] =
   Http4sServerInterpreter.toRoutes(countCharactersEndpoint)(countCharacters _)
 ```
 
@@ -62,7 +63,7 @@ implicit val t: Timer[IO] =
   IO.timer(scala.concurrent.ExecutionContext.global)
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
 val routes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(anEndpoint)((logic _).tupled)
 ```
 
@@ -106,9 +107,8 @@ val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
 implicit val cs: ContextShift[IO] = ???
 implicit val t: Timer[IO] = ???
 
-val routes = Http4sServerInterpreter.toRoutes(sseEndpoint)(_ =>
-  IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
-)
+val routes =
+  Http4sServerInterpreter.toRoutes(sseEndpoint)(_ => IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None)))))
 ```
 
 ## Configuration
@@ -125,7 +125,7 @@ configuration:
 
 ```scala
 import cats.effect._
-import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
+import sttp.tapir.server.http4s.{Http4sServerToHttpInterpreter, Http4sServerOptions}
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
 

@@ -27,7 +27,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val endpoint = sttp.tapir.endpoint.get.out(jsonBody[Shape])
 
     val expectedYaml = load("coproduct/expected_coproduct_discriminator_with_enum_circe.yml")
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint, "My Bookshop", "1.0").toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint, "My Bookshop", "1.0").toYaml
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
@@ -38,7 +38,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
       .out(jsonBody[Entity])
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -53,7 +53,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("coproduct/expected_coproduct_discriminator.yml")
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, Entity, Any] = endpoint
       .out(jsonBody[Entity])
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -65,7 +65,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
       .out(jsonBody[NestedEntity])
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -80,7 +80,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("coproduct/expected_coproduct_discriminator_nested.yml")
     val endpoint_wit_sealed_trait: Endpoint[Unit, Unit, NestedEntity, Any] = endpoint
       .out(jsonBody[NestedEntity])
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_wit_sealed_trait, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -89,7 +89,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   test("should unfold coproducts from unfolded arrays") {
     val expectedYaml = load("coproduct/expected_unfolded_coproduct_unfolded_array.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint.out(jsonBody[List[Entity]]), Info("Entities", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.out(jsonBody[List[Entity]]), Info("Entities", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
   }
@@ -97,7 +97,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   test("should differentiate when a generic coproduct type is used multiple times") {
     val expectedYaml = load("coproduct/expected_generic_coproduct.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         List(endpoint.in("p1" and jsonBody[GenericEntity[String]]), endpoint.in("p2" and jsonBody[GenericEntity[Int]])),
         Info("Fruits", "1.0")
@@ -110,7 +110,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
 
   test("support recursive coproducts") {
     val expectedYaml = load("coproduct/expected_recursive_coproducts.yml")
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint.post.in(jsonBody[Clause]),
         Info("Entities", "1.0")

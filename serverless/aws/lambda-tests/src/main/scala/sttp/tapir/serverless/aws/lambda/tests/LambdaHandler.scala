@@ -15,9 +15,9 @@ import java.nio.charset.StandardCharsets
 object LambdaHandler extends RequestStreamHandler {
   override def handleRequest(input: InputStream, output: OutputStream, context: Context): Unit = {
 
-    implicit val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
+    val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
 
-    val route: Route[IO] = AwsCatsEffectServerInterpreter.toRoute(allEndpoints.toList)
+    val route: Route[IO] = AwsCatsEffectServerInterpreter(options).toRoute(allEndpoints.toList)
     val json = new String(input.readAllBytes(), StandardCharsets.UTF_8)
 
     (decode[AwsRequest](json) match {

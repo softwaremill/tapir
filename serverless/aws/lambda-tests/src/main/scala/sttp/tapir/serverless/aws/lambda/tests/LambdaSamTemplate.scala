@@ -9,7 +9,7 @@ object LambdaSamTemplate extends App {
 
   val jarPath = Paths.get("serverless/aws/lambda-tests/target/jvm-2.13/tapir-aws-lambda-tests.jar").toAbsolutePath.toString
 
-  implicit val samOptions: AwsSamOptions = AwsSamOptions(
+  val samOptions: AwsSamOptions = AwsSamOptions(
     "Tests",
     source = CodeSource(
       "java11",
@@ -18,6 +18,6 @@ object LambdaSamTemplate extends App {
     ),
     memorySize = 1024
   )
-  val yaml = AwsSamInterpreter.toSamTemplate(allEndpoints.map(_.endpoint).toList).toYaml
+  val yaml = AwsSamInterpreter(samOptions).toSamTemplate(allEndpoints.map(_.endpoint).toList).toYaml
   Files.write(Paths.get("template.yaml"), yaml.getBytes(UTF_8))
 }

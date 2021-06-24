@@ -32,10 +32,10 @@ object WebSocketAkkaServer extends App {
 
   // Implementation of the web socket: a flow which echoes incoming messages
   val wsRoute: Route =
-    AkkaHttpServerInterpreter.toRoute(wsEndpoint)(_ => Future.successful(Right(Flow.fromFunction((in: String) => Response(in)))))
+    AkkaHttpServerInterpreter().toRoute(wsEndpoint)(_ => Future.successful(Right(Flow.fromFunction((in: String) => Response(in)))))
 
   // Documentation
-  val apiDocs = AsyncAPIInterpreter.toAsyncAPI(wsEndpoint, "JSON echo", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
+  val apiDocs = AsyncAPIInterpreter().toAsyncAPI(wsEndpoint, "JSON echo", "1.0", List("dev" -> Server("localhost:8080", "ws"))).toYaml
   println(s"Paste into https://playground.asyncapi.io/ to see the docs for this endpoint:\n$apiDocs")
 
   // Starting the server

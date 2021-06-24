@@ -16,7 +16,7 @@ class Http4sClientRequestTests extends AnyFunSuite with Matchers {
     val testEndpoint = endpoint.get.in(query[Option[String]]("param"))
 
     // when
-    val (http4sRequest, _) = Http4sClientInterpreter[IO]
+    val (http4sRequest, _) = Http4sClientInterpreter[IO]()
       .toRequest(testEndpoint, baseUri = None)
       .apply(None)
 

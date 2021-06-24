@@ -25,22 +25,20 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 trait AkkaHttpServerInterpreter {
-  def toRoute[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(logic: I => Future[Either[E, O]])(implicit
-      serverOptions: AkkaHttpServerOptions
-  ): Route = toRoute(e.serverLogic(logic))
+
+  def akkaHttpServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default
+
+  def toRoute[I, E, O](e: Endpoint[I, E, O, AkkaStreams with WebSockets])(logic: I => Future[Either[E, O]]): Route =
+    toRoute(e.serverLogic(logic))
 
   def toRouteRecoverErrors[I, E, O](
-      e: Endpoint[I, E, O, AkkaStreams with WebSockets]
-  )(logic: I => Future[O])(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], serverOptions: AkkaHttpServerOptions): Route =
+    e: Endpoint[I, E, O, AkkaStreams with WebSockets]
+  )(logic: I => Future[O])(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route =
     toRoute(e.serverLogicRecoverErrors(logic))
 
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future])(implicit
-      serverOptions: AkkaHttpServerOptions
-  ): Route = toRoute(List(se))
+  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future]): Route = toRoute(List(se))
 
-  def toRoute(ses: List[ServerEndpoint[_, _, _, AkkaStreams with WebSockets, Future]])(implicit
-      serverOptions: AkkaHttpServerOptions
-  ): Route = {
+  def toRoute(ses: List[ServerEndpoint[_, _, _, AkkaStreams with WebSockets, Future]]): Route = {
     extractRequestContext { ctx =>
       extractExecutionContext { implicit ec =>
         extractMaterializer { implicit mat =>
@@ -48,14 +46,14 @@ trait AkkaHttpServerInterpreter {
           implicit val bodyListener: BodyListener[Future, AkkaResponseBody] = new AkkaBodyListener
           val serverRequest = new AkkaServerRequest(ctx)
           val interpreter = new ServerInterpreter(
-            new AkkaRequestBody(ctx, serverRequest, serverOptions),
+            new AkkaRequestBody(ctx, serverRequest, akkaHttpServerOptions),
             new AkkaToResponseBody,
-            serverOptions.interceptors,
-            serverOptions.deleteFile
+            akkaHttpServerOptions.interceptors,
+            akkaHttpServerOptions.deleteFile
           )
 
           onSuccess(interpreter(serverRequest, ses)) {
-            case None           => reject
+            case None => reject
             case Some(response) => serverResponseToAkka(response)
           }
         }
@@ -79,4 +77,11 @@ trait AkkaHttpServerInterpreter {
   }
 }
 
-object AkkaHttpServerInterpreter extends AkkaHttpServerInterpreter
+object AkkaHttpServerInterpreter {
+
+  def apply(serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.default): AkkaHttpServerInterpreter = {
+    new AkkaHttpServerInterpreter {
+      override def akkaHttpServerOptions: AkkaHttpServerOptions = serverOptions
+    }
+  }
+}

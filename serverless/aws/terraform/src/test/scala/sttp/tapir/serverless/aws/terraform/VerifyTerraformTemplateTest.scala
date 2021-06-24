@@ -9,7 +9,7 @@ import scala.io.Source
 
 class VerifyTerraformTemplateTest extends AnyFunSuite with Matchers {
 
-  private implicit val options: AwsTerraformOptions = AwsTerraformOptions(
+  private val options: AwsTerraformOptions = AwsTerraformOptions(
     awsRegion = "eu-central-1",
     functionName = "Tapir",
     apiGatewayName = "TapirApiGateway",
@@ -17,14 +17,14 @@ class VerifyTerraformTemplateTest extends AnyFunSuite with Matchers {
   )
 
   test("should handle empty endpoint list") {
-    AwsTerraformInterpreter.toTerraformConfig(List.empty).toJson()
+    AwsTerraformInterpreter(options).toTerraformConfig(List.empty).toJson(options)
   }
 
   test("should match expected json root endpoint") {
     val ep = endpoint
 
     val expectedJson = load("root_endpoint.json")
-    val actualJson = AwsTerraformInterpreter.toTerraformConfig(List(ep)).toJson()
+    val actualJson = AwsTerraformInterpreter(options).toTerraformConfig(List(ep)).toJson(options)
 
     expectedJson shouldBe noIndentation(actualJson)
   }
@@ -33,7 +33,7 @@ class VerifyTerraformTemplateTest extends AnyFunSuite with Matchers {
     val ep = endpoint.get.in("hello" / "world")
 
     val expectedJson = load("simple_endpoint.json")
-    val actualJson = AwsTerraformInterpreter.toTerraformConfig(List(ep)).toJson()
+    val actualJson = AwsTerraformInterpreter(options).toTerraformConfig(List(ep)).toJson(options)
 
     expectedJson shouldBe noIndentation(actualJson)
   }
@@ -46,7 +46,7 @@ class VerifyTerraformTemplateTest extends AnyFunSuite with Matchers {
       .in(header[String]("X-Secret"))
 
     val expectedJson = load("endpoint_with_params.json")
-    val actualJson = AwsTerraformInterpreter.toTerraformConfig(List(ep)).toJson()
+    val actualJson = AwsTerraformInterpreter(options).toTerraformConfig(List(ep)).toJson(options)
 
     expectedJson shouldBe noIndentation(actualJson)
   }
@@ -60,7 +60,7 @@ class VerifyTerraformTemplateTest extends AnyFunSuite with Matchers {
     )
 
     val expectedJson = load("endpoints_common_paths.json")
-    val actualJson = AwsTerraformInterpreter.toTerraformConfig(eps).toJson()
+    val actualJson = AwsTerraformInterpreter(options).toTerraformConfig(eps).toJson(options)
 
     expectedJson shouldBe noIndentation(actualJson)
   }

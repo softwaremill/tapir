@@ -30,7 +30,7 @@ object OpenapiExtensions extends App {
     DocsExtension.of("x-root-obj", MyExt("string", 33))
   )
 
-  val openapi = OpenAPIDocsInterpreter.toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions)
+  val openapi = OpenAPIDocsInterpreter().toOpenAPI(sampleEndpoint, Info("title", "1.0"), rootExtensions)
 
   println(openapi.toYaml)
 }

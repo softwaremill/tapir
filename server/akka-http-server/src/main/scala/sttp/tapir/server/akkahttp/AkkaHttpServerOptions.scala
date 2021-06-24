@@ -98,5 +98,5 @@ object AkkaHttpServerOptions {
       }
   }
 
-  implicit val default: AkkaHttpServerOptions = customInterceptors()
+  val default: AkkaHttpServerOptions = customInterceptors()
 }

@@ -5,6 +5,8 @@ import sttp.tapir.{DecodeResult, Endpoint}
 
 trait PlayClientInterpreter {
 
+  def playClientOptions: PlayClientOptions = PlayClientOptions.default
+
   /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
     * uri.
     *
@@ -15,10 +17,9 @@ trait PlayClientInterpreter {
     * - a response parser to use on the `StandaloneWSResponse` obtained after executing the request.
     */
   def toRequest[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: String)(implicit
-      clientOptions: PlayClientOptions,
       ws: StandaloneWSClient
   ): I => (StandaloneWSRequest, StandaloneWSResponse => DecodeResult[Either[E, O]]) =
-    new EndpointToPlayClient(clientOptions, ws).toPlayRequest(e, baseUri)
+    new EndpointToPlayClient(playClientOptions, ws).toPlayRequest(e, baseUri)
 
   /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
     * uri.
@@ -32,11 +33,16 @@ trait PlayClientInterpreter {
     * @throws IllegalArgumentException when response parsing fails
     */
   def toRequestUnsafe[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: String)(implicit
-      clientOptions: PlayClientOptions,
       ws: StandaloneWSClient
   ): I => (StandaloneWSRequest, StandaloneWSResponse => Either[E, O]) =
-    new EndpointToPlayClient(clientOptions, ws).toPlayRequestUnsafe(e, baseUri)
+    new EndpointToPlayClient(playClientOptions, ws).toPlayRequestUnsafe(e, baseUri)
 
 }
 
-object PlayClientInterpreter extends PlayClientInterpreter
+object PlayClientInterpreter {
+  def apply(clientOptions: PlayClientOptions = PlayClientOptions.default): PlayClientInterpreter = {
+    new PlayClientInterpreter {
+      override def playClientOptions: PlayClientOptions = clientOptions
+    }
+  }
+}

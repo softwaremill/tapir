@@ -20,7 +20,7 @@ abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends Cli
   override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
     IO.fromFuture(
-      IO(SttpClientInterpreter.toRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(args).send(backend).map(_.body))
+      IO(SttpClientInterpreter().toRequestThrowDecodeFailures(e, Some(uri"$scheme://localhost:$port")).apply(args).send(backend).map(_.body))
     )
   }
 
@@ -30,6 +30,6 @@ abstract class SttpAkkaClientTests[R >: WebSockets with AkkaStreams] extends Cli
       args: I
   ): IO[DecodeResult[Either[E, O]]] = {
     implicit val wst: WebSocketToPipe[R] = wsToPipe
-    IO.fromFuture(IO(SttpClientInterpreter.toRequest(e, Some(uri"http://localhost:$port")).apply(args).send(backend).map(_.body)))
+    IO.fromFuture(IO(SttpClientInterpreter().toRequest(e, Some(uri"http://localhost:$port")).apply(args).send(backend).map(_.body)))
   }
 }

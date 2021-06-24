@@ -10,7 +10,19 @@ import sttp.tapir.json.circe.jsonBody
 import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.MultipleMediaTypes
-import sttp.tapir.{Codec, CodecFormat, Schema, SchemaType, emptyOutput, endpoint, header, oneOfDefaultMapping, oneOfMapping, plainBody, statusCode}
+import sttp.tapir.{
+  Codec,
+  CodecFormat,
+  Schema,
+  SchemaType,
+  emptyOutput,
+  endpoint,
+  header,
+  oneOfDefaultMapping,
+  oneOfMapping,
+  plainBody,
+  statusCode
+}
 
 class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
@@ -19,7 +31,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
 
     val e = endpoint.errorOut(sttp.tapir.oneOf(oneOfMapping(StatusCode.Forbidden, emptyOutput.description("forbidden"))))
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("test", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("test", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -39,7 +51,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
       )
     )
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -59,7 +71,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
       )
     )
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Fruits", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Fruits", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -68,7 +80,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
   test("use status codes declared with description") {
     val expectedYaml = load("oneOf/expected_one_of_status_codes.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint
           .out(header[String]("Location"))
@@ -84,7 +96,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml with multiple media types for common schema") {
     val expectedYaml = load("oneOf/expected_multiple_media_types_common_schema.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_xml_text_common_schema, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(MultipleMediaTypes.out_json_xml_text_common_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
@@ -93,7 +105,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
   test("should match the expected yaml with multiple media types for different schema") {
     val expectedYaml = load("oneOf/expected_multiple_media_types_different_schema.yml")
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(MultipleMediaTypes.out_json_xml_different_schema, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(MultipleMediaTypes.out_json_xml_different_schema, Info("Examples", "1.0")).toYaml
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml

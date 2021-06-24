@@ -24,7 +24,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_json_json.yml")
 
-    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -37,7 +37,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val options = AsyncAPIDocsOptions.default.copy(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"), customSchemaName)
     val expectedYaml = loadYaml("expected_json_custom_schema_name.yml")
 
-    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1")(options).toYaml
+    val actualYaml = AsyncAPIInterpreter(options).toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -48,7 +48,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_string_json.yml")
 
-    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -60,7 +60,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_two_endpoints.yml")
 
-    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(List(e1, e2), "The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(List(e1, e2), "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -75,7 +75,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_binding.yml")
 
-    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -90,7 +90,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_security.yml")
 
     val actualYaml =
-      AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1", List("production" -> Server("example.org", "ws"))).toYaml
+      AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1", List("production" -> Server("example.org", "ws"))).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -107,7 +107,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = loadYaml("expected_json_examples.yml")
 
-    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -133,7 +133,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
       DocsExtension.of("x-root-list", List(1, 2, 4))
     )
 
-    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(sampleEndpoint, Info("title", "1.0"), Seq.empty, rootExtensions).toYaml
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(sampleEndpoint, Info("title", "1.0"), Seq.empty, rootExtensions).toYaml
 
     noIndentation(actualYaml) shouldBe loadYaml("expected_extensions.yml")
   }

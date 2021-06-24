@@ -23,5 +23,5 @@ object AsyncAPIDocsOptions {
     (prefix +: components.map(_.toLowerCase.capitalize)).mkString
   }
 
-  implicit val default: AsyncAPIDocsOptions = AsyncAPIDocsOptions(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"))
+  val default: AsyncAPIDocsOptions = AsyncAPIDocsOptions(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"))
 }

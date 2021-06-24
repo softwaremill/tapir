@@ -5,20 +5,13 @@ import io.vertx.core.Vertx
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
-import sttp.tapir.server.tests.{
-  DefaultCreateServerTest,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerFileMultipartTests,
-  ServerStreamingTests,
-  backendResource
-}
+import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerStreamingTests, backendResource}
+import sttp.tapir.server.vertx.VertxZioServerInterpreter.RioFromVFuture
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.Task
 import zio.interop.catz._
 
 class ZioVertxServerTest extends TestSuite {
-  import VertxZioServerInterpreter._
   import ZioVertxTestServerInterpreter._
 
   def vertxResource: Resource[IO, Vertx] =
