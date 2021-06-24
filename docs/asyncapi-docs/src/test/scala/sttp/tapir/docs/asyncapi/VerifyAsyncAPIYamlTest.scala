@@ -19,6 +19,18 @@ import scala.io.Source
 
 class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
 
+  test("should support basic websocket") {
+    val e = endpoint.in("fruit").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](AkkaStreams))
+
+    val expectedYaml = loadYaml("expected_json_json.yml")
+
+    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+    println(s"ACTUAL [$actualYaml]")
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
+
   test("should support basic json websockets") {
     val e = endpoint.in("fruit").out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](AkkaStreams))
 
