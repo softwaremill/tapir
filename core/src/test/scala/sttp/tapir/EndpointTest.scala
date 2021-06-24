@@ -4,7 +4,7 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.internal._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
 
@@ -297,7 +297,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       .in(query[Int]("y"))
       .serverLogicForCurrent { case (x, y) => Future.successful(Right(User1(x, y)): Either[String, User1]) }
 
-    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, List.empty))
+    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(List.empty), Some(SName.Unit))
     implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, ""))
 
     base
@@ -318,7 +318,7 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
     def parse1(t: String): Future[Either[String, User1]] = Future.successful(Right(User1(t)))
     def parse2(t: Int): Future[Either[String, User2]] = Future.successful(Right(User2(t)))
 
-    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(SObjectInfo.Unit, List.empty))
+    implicit val schemaForResult: Schema[Result] = Schema[Result](SchemaType.SProduct(List.empty), Some(SName.Unit))
     implicit val codec: Codec[String, Result, CodecFormat.TextPlain] = Codec.stringCodec(_ => Result(null, null, 0d))
 
     val _: ServerEndpoint[(String, Int, Double), String, Result, Any, Future] = endpoint

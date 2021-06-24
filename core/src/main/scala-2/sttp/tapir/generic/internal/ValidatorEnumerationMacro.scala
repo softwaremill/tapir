@@ -20,7 +20,7 @@ object ValidatorEnumerationMacro {
       } else {
         val instances = subclasses.map(x => Ident(x.asInstanceOf[scala.reflect.internal.Symbols#Symbol].sourceModule.asInstanceOf[Symbol]))
         val validatorEnum =
-          q"_root_.sttp.tapir.Validator.Enumeration($instances, None, Some(_root_.sttp.tapir.SchemaType.SObjectInfo(${symbol.fullName})))"
+          q"_root_.sttp.tapir.Validator.Enumeration($instances, None, Some(_root_.sttp.tapir.Schema.SName(${symbol.fullName})))"
         Debug.logGeneratedCode(c)(t.typeSymbol.fullName, validatorEnum)
         c.Expr[Validator.Enumeration[E]](validatorEnum)
       }

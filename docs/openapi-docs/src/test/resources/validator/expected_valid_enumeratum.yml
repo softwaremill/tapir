@@ -15,6 +15,11 @@ paths:
                 $ref: '#/components/schemas/FruitWithEnum'
 components:
   schemas:
+    FruitType:
+      type: string
+      enum:
+        - APPLE
+        - PEAR
     FruitWithEnum:
       required:
         - fruit
@@ -28,7 +33,4 @@ components:
         fruitType:
           type: array
           items:
-            type: string
-            enum:
-              - APPLE
-              - PEAR
+            $ref: '#/components/schemas/FruitType'

@@ -4,7 +4,8 @@ import org.json4s._
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
-import sttp.tapir.SchemaType.{SCoproduct, SObjectInfo}
+import sttp.tapir.Schema.SName
+import sttp.tapir.SchemaType.SCoproduct
 import sttp.tapir.{Codec, EndpointIO, Schema, anyFromUtf8StringBody}
 
 import scala.collection.immutable.ListMap
@@ -28,9 +29,9 @@ trait TapirJson4s {
   implicit val schemaForJson4s: Schema[JValue] =
     Schema(
       SCoproduct(
-        SObjectInfo("org.json4s.JValue"),
         ListMap.empty,
         None
-      )(_ => None)
+      )(_ => None),
+      Some(SName("org.json4s.JValue"))
     )
 }

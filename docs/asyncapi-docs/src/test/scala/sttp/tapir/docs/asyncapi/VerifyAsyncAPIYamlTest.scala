@@ -6,7 +6,7 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.generic.auto._
 import sttp.capabilities.akka.AkkaStreams
 import sttp.model.HeaderNames
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.asyncapi.{Info, Server}
 import sttp.tapir.asyncapi.circe.yaml.RichAsyncAPI
 import sttp.tapir.docs.asyncapi.AsyncAPIDocsOptions.defaultOperationIdGenerator
@@ -33,7 +33,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
   test("should support providing custom schema name") {
     val e = endpoint.in("fruit").out(webSocketBody[Fruit, CodecFormat.Json, Fruit, CodecFormat.Json](AkkaStreams))
 
-    def customSchemaName(info: SObjectInfo) = (info.fullName +: info.typeParameterShortNames).mkString("_")
+    def customSchemaName(name: SName) = (name.fullName +: name.typeParameterShortNames).mkString("_")
     val options = AsyncAPIDocsOptions.default.copy(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"), customSchemaName)
     val expectedYaml = loadYaml("expected_json_custom_schema_name.yml")
 

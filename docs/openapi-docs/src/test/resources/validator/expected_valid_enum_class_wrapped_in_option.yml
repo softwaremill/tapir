@@ -11,10 +11,7 @@ paths:
           in: query
           required: false
           schema:
-            type: string
-            enum:
-              - blue
-              - red
+            $ref: '#/components/schemas/Color'
       responses:
         '200':
           description: ''
@@ -24,3 +21,10 @@ paths:
             text/plain:
               schema:
                 type: string
+components:
+  schemas:
+    Color:
+      type: string
+      enum:
+        - blue
+        - red

@@ -1,6 +1,6 @@
 package sttp.tapir.docs
 
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.apispec.{ExampleMultipleValue, ExampleSingleValue, ExampleValue, SecurityScheme}
 import sttp.tapir.{Codec, Endpoint, EndpointInput, Schema, SchemaType}
 
@@ -8,7 +8,7 @@ package object apispec {
   private[docs] type SchemeName = String
   private[docs] type SecuritySchemes = Map[EndpointInput.Auth[_], (SchemeName, SecurityScheme)]
 
-  private[docs] val defaultSchemaName: SObjectInfo => String = info => {
+  private[docs] val defaultSchemaName: SName => String = info => {
     val shortName = info.fullName.split('.').last
     (shortName +: info.typeParameterShortNames).mkString("_")
   }
