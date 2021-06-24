@@ -6,25 +6,28 @@ import sttp.model.{Header => SttpHeader}
 import sttp.tapir.Endpoint
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.ztapir.ZIOMonadError
-import zhttp.http.{CanSupportPartial, Http, HttpChannel, HttpData, Request, Response, Status, Header => ZHttpHeader}
+import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZHttpHeader}
 import zio._
 import zio.blocking.Blocking
 import zio.stream._
-
 
 object ZHttpInterpreter extends ZIOMonadError {
 
   private def sttpToZHttpHeader(header: SttpHeader): ZHttpHeader =
     ZHttpHeader(header.name, header.value)
 
-  def toHttp[I, O, R <: Blocking](route: Endpoint[I, Throwable, O, ZioStreams])(logic: I => RIO[R, O]): Http[R, Throwable] = {
-    HttpChannel.fromEffectFunction[Request] { req =>
+  def toHttp[I, O, R <: Blocking](
+      route: Endpoint[I, Throwable, O, ZioStreams]
+  )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+    Http.fromEffectFunction[Request] { req =>
+      val inteprete = new ZHttpBodyListener[R]
       val router = route.serverLogic[RIO[R, *]](input => logic(input).either)
       val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](
         new ZHttpRequestBody(req),
         new ZHttpToResponseBody,
-        Nil
-      )
+        Nil,
+        (t) => RIO.apply(print("t"))
+      )(zioMonadError, inteprete)
 
       interpreter.apply(new ZHttpServerRequest(req), router).flatMap {
         case Some(resp) =>
@@ -35,10 +38,8 @@ object ZHttpInterpreter extends ZIOMonadError {
               content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
             )
           )
-        case None =>
-          ZIO.fail(CanSupportPartial.HttpPartial.get(req))
+        case None => ???
       }
-
     }
   }
 }
