@@ -29,7 +29,7 @@ object ZHttpServerOptions {
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       additionalInterceptors: List[Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]] = Nil,
       unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]] = Some(
-        new UnsupportedMediaTypeInterceptor()
+        new UnsupportedMediaTypeInterceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]()
       ),
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): ZHttpServerOptions[R] =
