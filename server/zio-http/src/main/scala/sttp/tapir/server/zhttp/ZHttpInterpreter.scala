@@ -49,7 +49,7 @@ trait ZHttpInterpreter[R <: Blocking] {
 }
 
 object ZHttpInterpreter {
-  def apply[R <: Blocking](serverOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default): ZHttpInterpreter[R] = {
+  def apply[R <: Blocking](serverOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default[R]): ZHttpInterpreter[R] = {
     new ZHttpInterpreter[R] {
       override def zHttpServerOptions: ZHttpServerOptions[R] = serverOptions
     }

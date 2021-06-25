@@ -27,8 +27,8 @@ object HelloWorldZHttpServer extends App {
       .errorOut(plainBody[String].map(err => new Throwable(err))(_.getMessage))
       .out(stringBody)
 
-  val app: HttpApp[Blocking, Throwable] = ZHttpInterpreter.toHttp(helloWorld)(name => ZIO.succeed(s"Hello $name")) <>
-    ZHttpInterpreter.toHttp(add) { case (x, y) => ZIO.succeed(s"Adding up ${x + y}") }
+  val app: HttpApp[Blocking, Throwable] = ZHttpInterpreter().toHttp(helloWorld)(name => ZIO.succeed(s"Hello $name")) <>
+    ZHttpInterpreter().toHttp(add) { case (x, y) => ZIO.succeed(s"Adding up ${x + y}") }
 
   // starting the server
   override def run(args: List[String]): URIO[zio.ZEnv, ExitCode] =
