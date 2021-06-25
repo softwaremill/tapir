@@ -21,7 +21,6 @@ import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
 import sttp.tapir.TestUtil.field
-import sttp.tapir.internal.IterableToListMap
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   import SchemaGenericAutoTest._
@@ -238,14 +237,14 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schemaType = implicitly[Schema[Entity]].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 
-    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs Map(
-      SName("sttp.tapir.generic.Organization") -> Schema(
+    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
+      Schema(
         SProduct[Organization](
           List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
         ),
         Some(SName("sttp.tapir.generic.Organization"))
       ),
-      SName("sttp.tapir.generic.Person") -> Schema(
+      Schema(
         SProduct[Person](
           List(
             field(FieldName("first"), Schema(SString())),
@@ -281,9 +280,9 @@ object SchemaGenericAutoTest {
     case st @ SCoproduct(subtypes, discriminator) =>
       s.copy(schemaType =
         SCoproduct(
-          subtypes.mapValues(subtypeSchema => removeValidators(subtypeSchema)).toListMap,
+          subtypes.map(subtypeSchema => removeValidators(subtypeSchema)),
           discriminator
-        )(st.subtypeInfo)
+        )(st.subtypeSchema)
       )
     case st @ SOpenProduct(valueSchema) => s.copy(schemaType = SOpenProduct(removeValidators(valueSchema))(st.fieldValues))
     case st @ SArray(element)           => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))

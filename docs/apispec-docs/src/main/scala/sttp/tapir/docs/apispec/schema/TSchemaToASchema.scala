@@ -37,12 +37,14 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       case TSchemaType.SCoproduct(schemas, d) =>
         Right(
           ASchema.apply(
-            schemas.values.toList
-              .collect { case TSchema(_, Some(name), _, _, _, _, _, _, _) =>
-                Left(nameToSchemaReference.map(name))
+            schemas
+              .map {
+                case TSchema(_, Some(name), _, _, _, _, _, _, _) => Left(nameToSchemaReference.map(name))
+                case t                                           => apply(t)
               }
-              .sortBy { case Left(Reference(ref)) =>
-                ref
+              .sortBy {
+                case Left(Reference(ref)) => ref
+                case Right(schema)        => schema.`type`.map(_.value).getOrElse("") + schema.toString
               },
             d.map(tDiscriminatorToADiscriminator)
           )

@@ -66,8 +66,8 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   it should "find schema for recursive coproduct type" in {
     val schemaType = removeValidators(implicitly[Schema[Node]]).schemaType
     schemaType shouldBe a[SCoproduct[Node]]
-    schemaType.asInstanceOf[SCoproduct[Node]].subtypes shouldBe Map(
-      SName("sttp.tapir.generic.Edge") -> Schema(
+    schemaType.asInstanceOf[SCoproduct[Node]].subtypes shouldBe List(
+      Schema(
         SProduct[Edge](
           List(
             field(FieldName("id"), longSchema),
@@ -76,7 +76,7 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
         ),
         Some(SName("sttp.tapir.generic.Edge"))
       ),
-      SName("sttp.tapir.generic.SimpleNode") -> Schema(
+      Schema(
         SProduct[SimpleNode](
           List(field(FieldName("id"), longSchema))
         ),

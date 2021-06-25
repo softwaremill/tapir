@@ -4,7 +4,7 @@ import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Derived
-import sttp.tapir.internal.{IterableToListMap, ValidatorSyntax}
+import sttp.tapir.internal.ValidatorSyntax
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 
 import java.io.InputStream
@@ -102,7 +102,7 @@ case class Schema[T](
           }
         case SOpenProduct(valueSchema) => valueSchema.showValidators.map(esv => s"elements($esv)")
         case SCoproduct(subtypes, _) =>
-          subtypes.map { case (n, v) => v.showValidators.map(svs => s"$n->($svs)") }.toList match {
+          subtypes.map(s => s.showValidators.map(svs => s.name.fold(svs)(n => s"${n.show}->($svs)"))) match {
             case Nil => None
             case l   => Some(l.mkString(","))
           }
@@ -134,7 +134,7 @@ case class Schema[T](
           case s @ SOpenProduct(valueSchema) if f == Schema.ModifyCollectionElements =>
             s.copy(valueSchema = valueSchema.modifyAtPath(fs, modify))(s.fieldValues)
           case s @ SCoproduct(subtypes, _) =>
-            s.copy(subtypes = subtypes.mapValues(_.modifyAtPath(fieldPath, modify)).toListMap)(s.subtypeInfo)
+            s.copy(subtypes = subtypes.map(_.modifyAtPath(fieldPath, modify)))(s.subtypeSchema)
           case _ => schemaType
         }
         copy(schemaType = schemaType2)
@@ -167,7 +167,7 @@ case class Schema[T](
         case s @ SOpenProduct(valueSchema) =>
           s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
         case s @ SCoproduct(subtypes, _) =>
-          s.subtypeInfo(t).flatMap(subtypes.get).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
+          s.subtypeSchema(t).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
         case SRef(name) => objects.get(name).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
         case _          => Nil
       })
@@ -180,7 +180,7 @@ case class Schema[T](
       case SArray(element)           => element.hasValidation
       case s: SProduct[T]            => s.fieldsWithValidation.nonEmpty
       case SOpenProduct(valueSchema) => valueSchema.hasValidation
-      case SCoproduct(subtypes, _)   => subtypes.values.exists(_.hasValidation)
+      case SCoproduct(subtypes, _)   => subtypes.exists(_.hasValidation)
       case SRef(_)                   => true
       case _                         => false
     })
@@ -229,7 +229,9 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = implicitly[Schema[T]].map(_ => None)(_.body)
 
-  case class SName(fullName: String, typeParameterShortNames: List[String] = Nil)
+  case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
+    def show: String = fullName + typeParameterShortNames.mkString("[", ",", "]")
+  }
   object SName {
     val Unit: SName = SName(fullName = "Unit")
   }

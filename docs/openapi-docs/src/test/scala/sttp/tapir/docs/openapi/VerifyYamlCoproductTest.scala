@@ -1,6 +1,5 @@
 package sttp.tapir.docs.openapi
 
-import io.circe.Codec
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -13,9 +12,11 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.{Entity, Organization, Person}
 
+import scala.util.{Failure, Success, Try}
+
 class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   test("should match expected yaml for coproduct with enum field") {
-    implicit val shapeCodec: Codec[Shape] = null
+    implicit val shapeCodec: io.circe.Codec[Shape] = null
     implicit val schema: Schema[Shape] = Schema
       .oneOfUsingField[Shape, String](
         _.shapeType,
@@ -119,5 +120,23 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
 
     val actualYamlNoIndent = noIndentation(actualYaml)
     actualYamlNoIndent shouldBe expectedYaml
+  }
+
+  test("flat either schema") {
+    implicit val eitherCodec: Codec[String, Either[Int, String], CodecFormat.TextPlain] =
+      Codec.string
+        .map(s =>
+          Try(s.toInt) match {
+            case Failure(_)     => Right(s)
+            case Success(value) => Left(value)
+          }
+        )(_.fold(_.toString, identity))
+        .schema(Schema(SchemaType.SCoproduct[Either[Int, String]](List(Schema.schemaForString, Schema.schemaForInt), None)(_ => None)))
+    val ep = endpoint.in(query[Either[Int, String]]("q"))
+
+    val expectedYaml = load("coproduct/expected_flat_either.yml")
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(ep, "title", "1.0").toYaml
+    noIndentation(actualYaml) shouldBe expectedYaml
   }
 }

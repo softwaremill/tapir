@@ -13,17 +13,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Entity'
-          examples:
-            Michal:
-              summary: Some summary
-              value:
-                Person:
-                  name: michal
-                  age: 40
-            Acme:
-                value:
-                  Organization:
-                    name: acme
+              examples:
+                Michal:
+                  summary: Some summary
+                  value:
+                    Person:
+                      name: michal
+                      age: 40
+                Acme:
+                  value:
+                    Organization:
+                      name: acme
 components:
   schemas:
     Entity:

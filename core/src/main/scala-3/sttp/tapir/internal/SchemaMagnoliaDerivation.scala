@@ -66,16 +66,17 @@ trait SchemaMagnoliaDerivation {
 
         override def split[T](ctx: SealedTrait[Schema, T]): Schema[T] = {
           withCache(ctx.typeInfo, ctx.annotations) {
-            val baseCoproduct = SCoproduct(
-              ctx.subtypes.toList.map(s => typeNameToSchemaName(s.typeInfo, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap,
-              None
-            )((t: T) => ctx.choose(t) { v => Some(typeNameToSchemaName(v.typeInfo, v.annotations)) })
+            val subtypesByName =
+              ctx.subtypes.toList.map(s => typeNameToSchemaName(s.typeInfo, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap
+            val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
+              ctx.choose(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeInfo, v.annotations)) }
+            )
             val coproduct = genericDerivationConfig.discriminator match {
               case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
               case None    => baseCoproduct
             }
 
-            Schema(schemaType = coproduct)
+            Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeInfo, ctx.annotations)))
           }
         }
 

@@ -32,10 +32,7 @@ trait TapirJsonCirce {
   // Json is a coproduct with unknown implementations
   implicit val schemaForCirceJson: Schema[Json] =
     Schema(
-      SCoproduct(
-        ListMap.empty,
-        None
-      )(_ => None),
+      SCoproduct(Nil, None)(_ => None),
       Some(SName("io.circe.Json"))
     )
 

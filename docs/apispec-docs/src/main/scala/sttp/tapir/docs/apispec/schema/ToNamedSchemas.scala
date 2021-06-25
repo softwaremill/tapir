@@ -18,23 +18,18 @@ class ToNamedSchemas {
         // #1168: if there's an optional field which is an object, with metadata defined (such as description), this
         // needs to be propagated to the target object, so that it isn't omitted.
         apply(propagateMetadataForOption(t, o).element)
-      case s @ TSchema(st: TSchemaType.SProduct[_], _, _, _, _, _, _, _, _)        => productSchemas(s, st)
-      case s @ TSchema(st: TSchemaType.SCoproduct[_], _, _, _, _, _, _, _, _)      => coproductSchemas(s, st)
-      case s @ TSchema(st: TSchemaType.SOpenProduct[_, _], _, _, _, _, _, _, _, _) => apply(st.valueSchema)
-      case _                                                                       => List.empty
+      case TSchema(st: TSchemaType.SProduct[_], _, _, _, _, _, _, _, _)        => productSchemas(st)
+      case TSchema(st: TSchemaType.SCoproduct[_], _, _, _, _, _, _, _, _)      => coproductSchemas(st)
+      case TSchema(st: TSchemaType.SOpenProduct[_, _], _, _, _, _, _, _, _, _) => apply(st.valueSchema)
+      case _                                                                   => List.empty
     }
 
     thisSchema ++ nestedSchemas
   }
 
-  private def productSchemas[T](s: TSchema[T], st: TSchemaType.SProduct[T]): List[NamedSchema] = st.fields.flatMap(a => apply(a.schema))
+  private def productSchemas[T](st: TSchemaType.SProduct[T]): List[NamedSchema] = st.fields.flatMap(a => apply(a.schema))
 
-  private def coproductSchemas[T](s: TSchema[T], st: TSchemaType.SCoproduct[T]): List[NamedSchema] =
-    subtypesSchema(st)
-      .flatMap(apply)
-      .toList
-
-  private def subtypesSchema(st: TSchemaType.SCoproduct[_]): Seq[TSchema[_]] = st.subtypes.values.toSeq
+  private def coproductSchemas[T](st: TSchemaType.SCoproduct[T]): List[NamedSchema] = st.subtypes.flatMap(apply)
 }
 
 object ToNamedSchemas {

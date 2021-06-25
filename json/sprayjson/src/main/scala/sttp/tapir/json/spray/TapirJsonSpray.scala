@@ -29,10 +29,7 @@ trait TapirJsonSpray {
   // JsValue is a coproduct with unknown implementations
   implicit val schemaForSprayJsValue: Schema[JsValue] =
     Schema(
-      SCoproduct(
-        ListMap.empty,
-        None
-      )(_ => None),
+      SCoproduct(Nil, None)(_ => None),
       Some(SName("spray.json.JsValue"))
     )
 

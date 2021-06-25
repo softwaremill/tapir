@@ -124,11 +124,9 @@ object SchemaCompanionMacros {
         }
       )
       val sname = SName(SNameMacros.typeFullName[E], ${Expr(typeParams)})
-      val subtypes = (mappingAsList.map(_._2).collect { case s@Schema(_, Some(subname), _, _, _, _, _, _, _) =>
-        subname -> s
-      }).toListMap
+      val subtypes = mappingAsList.map(_._2)
       Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator))(
-        e => mappingAsMap.get($extractor(e)).flatMap(_.name)
+        e => mappingAsMap.get($extractor(e))
       ), Some(sname))
     }
   }  

@@ -65,11 +65,9 @@ object OneOfMacro {
             )
             val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)})
             // cast needed because of Scala 2.12
-            val subtypes = (mappingAsList.map(_._2).collect { case s@Schema(_, Some(subname), _, _, _, _, _, _, _) => 
-              subname -> s
-            }: List[(SName, Schema[_])]).toListMap
+            val subtypes = mappingAsList.map(_._2)
             Schema(SCoproduct(subtypes, _root_.scala.Some(discriminator))(
-              e => mappingAsMap.get($extractor(e)).flatMap(_.name)
+              e => mappingAsMap.get($extractor(e))
             ), Some(sname))
           }"""
 

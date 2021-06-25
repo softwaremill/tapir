@@ -1,9 +1,6 @@
 package sttp.tapir
 
 import sttp.tapir.Schema.SName
-import sttp.tapir.internal.IterableToListMap
-
-import scala.collection.immutable.ListMap
 
 /** The type of the low-level representation of a `T` values. Part of [[Schema]]s. */
 sealed trait SchemaType[T] {
@@ -91,10 +88,10 @@ object SchemaType {
     override def contramap[TT](g: TT => T): SchemaType[TT] = SOpenProduct[TT, V](valueSchema)(g.andThen(fieldValues))
   }
 
-  case class SCoproduct[T](subtypes: ListMap[SName, Schema[_]], discriminator: Option[SDiscriminator])(
-      val subtypeInfo: T => Option[SName]
+  case class SCoproduct[T](subtypes: List[Schema[_]], discriminator: Option[SDiscriminator])(
+      val subtypeSchema: T => Option[Schema[_]]
   ) extends SchemaType[T] {
-    override def show: String = "oneOf:" + subtypes.values.mkString(",")
+    override def show: String = "oneOf:" + subtypes.map(_.show).mkString(",")
 
     def addDiscriminatorField[D](
         discriminatorName: FieldName,
@@ -102,19 +99,19 @@ object SchemaType {
         discriminatorMapping: Map[String, SRef[_]] = Map.empty
     ): SCoproduct[T] = {
       SCoproduct(
-        subtypes.mapValues {
+        subtypes.map {
           case s @ Schema(st: SchemaType.SProduct[T], _, _, _, _, _, _, _, _) =>
             s.copy(schemaType = st.copy(fields = st.fields :+ SProductField[T, D](discriminatorName, discriminatorSchema, _ => None)))
           case s => s
-        }.toListMap,
+        },
         Some(SDiscriminator(discriminatorName, discriminatorMapping))
-      )(subtypeInfo)
+      )(subtypeSchema)
     }
 
     override def contramap[TT](g: TT => T): SchemaType[TT] = SCoproduct(
       subtypes,
       discriminator
-    )(g.andThen(subtypeInfo))
+    )(g.andThen(subtypeSchema))
   }
 
   case class SRef[T](name: SName) extends SchemaType[T] {

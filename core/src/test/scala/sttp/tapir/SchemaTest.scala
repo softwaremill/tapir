@@ -137,25 +137,25 @@ class SchemaTest extends AnyFlatSpec with Matchers {
 
   it should "generate one-of schema using the given discriminator" in {
     val coproduct = SCoproduct[Unit](
-      ListMap(
-        SName("H") -> Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())))), Some(SName("H"))),
-        SName("G") -> Schema(
+      List(
+        Schema(SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())))), Some(SName("H"))),
+        Schema(
           SProduct[Unit](List(field(FieldName("f1"), Schema(SString())), field(FieldName("f2"), Schema(SString())))),
           Some(SName("G"))
         ),
-        SName("U") -> Schema(SString[Unit]())
+        Schema(SString[Unit]())
       ),
       None
     )(_ => None)
 
     val coproduct2 = coproduct.addDiscriminatorField(FieldName("who_am_i"))
 
-    coproduct2.subtypes shouldBe Map(
-      SName("H") -> Schema(
+    coproduct2.subtypes shouldBe List(
+      Schema(
         SProduct[Unit](List(field(FieldName("f1"), Schema(SInteger())), field(FieldName("who_am_i"), Schema(SString())))),
         Some(SName("H"))
       ),
-      SName("G") -> Schema(
+      Schema(
         SProduct[Unit](
           List(
             field(FieldName("f1"), Schema(SString())),
@@ -165,7 +165,7 @@ class SchemaTest extends AnyFlatSpec with Matchers {
         ),
         Some(SName("G"))
       ),
-      SName("U") -> Schema(SString[Unit]())
+      Schema(SString[Unit]())
     )
 
     coproduct2.discriminator shouldBe Some(SDiscriminator(FieldName("who_am_i"), Map.empty))

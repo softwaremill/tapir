@@ -28,10 +28,7 @@ trait TapirJson4s {
 
   implicit val schemaForJson4s: Schema[JValue] =
     Schema(
-      SCoproduct(
-        ListMap.empty,
-        None
-      )(_ => None),
+      SCoproduct(Nil, None)(_ => None),
       Some(SName("org.json4s.JValue"))
     )
 }
