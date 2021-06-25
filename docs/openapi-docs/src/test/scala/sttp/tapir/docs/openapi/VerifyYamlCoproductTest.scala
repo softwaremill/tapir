@@ -12,8 +12,6 @@ import sttp.tapir.openapi.Info
 import sttp.tapir.openapi.circe.yaml._
 import sttp.tapir.tests.{Entity, Organization, Person}
 
-import scala.util.{Failure, Success, Try}
-
 class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   test("should match expected yaml for coproduct with enum field") {
     implicit val shapeCodec: io.circe.Codec[Shape] = null
@@ -123,15 +121,9 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
   }
 
   test("flat either schema") {
-    implicit val eitherCodec: Codec[String, Either[Int, String], CodecFormat.TextPlain] =
-      Codec.string
-        .map(s =>
-          Try(s.toInt) match {
-            case Failure(_)     => Right(s)
-            case Success(value) => Left(value)
-          }
-        )(_.fold(_.toString, identity))
-        .schema(Schema(SchemaType.SCoproduct[Either[Int, String]](List(Schema.schemaForString, Schema.schemaForInt), None)(_ => None)))
+    // using the left-biased codec, instead of the default right-biased one.
+    implicit def eitherCodec[L, A, B, CF <: CodecFormat](implicit c1: Codec[L, A, CF], c2: Codec[L, B, CF]): Codec[L, Either[A, B], CF] =
+      Codec.eitherLeft(c1, c2)
     val ep = endpoint.in(query[Either[Int, String]]("q"))
 
     val expectedYaml = load("coproduct/expected_flat_either.yml")

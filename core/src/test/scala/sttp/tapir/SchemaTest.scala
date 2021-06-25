@@ -6,8 +6,6 @@ import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
 import sttp.tapir.TestUtil.field
 
-import scala.collection.immutable.ListMap
-
 class SchemaTest extends AnyFlatSpec with Matchers {
   it should "modify basic schema" in {
     implicitly[Schema[String]].modifyUnsafe[String]()(_.description("test")) shouldBe implicitly[Schema[String]]

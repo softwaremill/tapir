@@ -229,6 +229,18 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit def schemaForIterable[T: Schema, C[X] <: Iterable[X]]: Schema[C[T]] = implicitly[Schema[T]].asIterable[C]
   implicit def schemaForPart[T: Schema]: Schema[Part[T]] = implicitly[Schema[T]].map(_ => None)(_.body)
 
+  implicit def schemaForEither[A, B](implicit sa: Schema[A], sb: Schema[B]): Schema[Either[A, B]] =
+    Schema[Either[A, B]](
+      SchemaType.SCoproduct(List(sa, sb), None) {
+        case Left(_)  => Some(sa)
+        case Right(_) => Some(sb)
+      },
+      for {
+        na <- sa.name
+        nb <- sb.name
+      } yield Schema.SName("Either", List(na.show, nb.show))
+    )
+
   case class SName(fullName: String, typeParameterShortNames: List[String] = Nil) {
     def show: String = fullName + typeParameterShortNames.mkString("[", ",", "]")
   }

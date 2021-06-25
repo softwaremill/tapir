@@ -109,7 +109,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
-object Codec extends CodecExtensions with FormCodecMacros {
+object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
@@ -374,7 +374,7 @@ object Codec extends CodecExtensions with FormCodecMacros {
 
   //
 
-  private def listBinarySchema[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
+  private[tapir] def listBinarySchema[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
     id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
@@ -407,6 +407,85 @@ object Codec extends CodecExtensions with FormCodecMacros {
       .id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toVector))(us => us.map(c.encode).toList)
       .schema(c.schema.asIterable[Vector])
+
+  /** Create a codec which during decoding, first tries to decode values on the right using `c2`. If this fails for any
+    * reason, decoding is done using `c1`. Both codecs must have the low-level values and formats.
+    *
+    * For a left-biased variant see [[Codec.eitherLeft]]. This right-biased version is the default when using implicit
+    * codec resolution.
+    *
+    * The schema is defined to be an either schema as created by [[Schema.schemaForEither]].
+    */
+  implicit def eitherRight[L, A, B, CF <: CodecFormat](implicit c1: Codec[L, A, CF], c2: Codec[L, B, CF]): Codec[L, Either[A, B], CF] = {
+    Codec
+      .id[L, CF](c1.format, Schema.binary)
+      .mapDecode[Either[A, B]] { (l: L) =>
+        c2.decode(l) match {
+          case _: DecodeResult.Failure => c1.decode(l).map(Left(_))
+          case DecodeResult.Value(v)   => DecodeResult.Value(Right(v))
+        }
+      } {
+        case Left(a)  => c1.encode(a)
+        case Right(b) => c2.encode(b)
+      }
+      .schema(Schema.schemaForEither(c1.schema, c2.schema))
+  }
+
+  /** Create a codec which during decoding, first tries to decode values on the left using `c1`. If this fails for any
+    * reason, decoding is done using `c2`. Both codecs must have the low-level values and formats.
+    *
+    * For a right-biased variant see [[Codec.eitherRight]].
+    *
+    * The schema is defined to be an either schema as created by [[Schema.schemaForEither]].
+    */
+  def eitherLeft[L, A, B, CF <: CodecFormat](c1: Codec[L, A, CF], c2: Codec[L, B, CF]): Codec[L, Either[A, B], CF] = {
+    Codec
+      .id[L, CF](c1.format, Schema.binary)
+      .mapDecode[Either[A, B]] { (l: L) =>
+        c1.decode(l) match {
+          case _: DecodeResult.Failure => c2.decode(l).map(Right(_))
+          case DecodeResult.Value(v)   => DecodeResult.Value(Left(v))
+        }
+      } {
+        case Left(a)  => c1.encode(a)
+        case Right(b) => c2.encode(b)
+      }
+      .schema(Schema.schemaForEither(c1.schema, c2.schema))
+  }
+
+  //
+
+  def fromDecodeAndMeta[L, H: Schema, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
+    new Codec[L, H, CF] {
+      override def rawDecode(l: L): DecodeResult[H] = f(l)
+      override def encode(h: H): L = g(h)
+      override def schema: Schema[H] = implicitly[Schema[H]]
+      override def format: CF = cf
+    }
+
+  def json[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
+    anyStringCodec(CodecFormat.Json())(_rawDecode)(_encode)
+  }
+
+  def xml[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): XmlCodec[T] = {
+    anyStringCodec(CodecFormat.Xml())(_rawDecode)(_encode)
+  }
+
+  def anyStringCodec[T: Schema, CF <: CodecFormat](
+      cf: CF
+  )(_rawDecode: String => DecodeResult[T])(_encode: T => String): Codec[String, T, CF] = {
+    val isOptional = implicitly[Schema[T]].isOptional
+    fromDecodeAndMeta(cf)({ (s: String) =>
+      val toDecode = if (isOptional && s == "") "null" else s
+      _rawDecode(toDecode)
+    })(t => if (isOptional && t == None) "" else _encode(t))
+  }
+}
+
+/** Lower-priority codec implicits, which transform other codecs. For example, the [[Codec.eitherRight]] also transforms
+  * other codecs, but has priority so that there are no conflicting paths when deriving codecs.
+  */
+trait LowPriorityCodec { this: Codec.type =>
 
   /** Create a codec which requires that a list of low-level values contains a single element. Otherwise a decode
     * failure is returned. The given base codec `c` is used for decoding/encoding.
@@ -461,32 +540,6 @@ object Codec extends CodecExtensions with FormCodecMacros {
         case Some(v) => c.decode(v).map(Some(_))
       }(us => us.map(c.encode))
       .schema(c.schema.asOption)
-
-  def fromDecodeAndMeta[L, H: Schema, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
-    new Codec[L, H, CF] {
-      override def rawDecode(l: L): DecodeResult[H] = f(l)
-      override def encode(h: H): L = g(h)
-      override def schema: Schema[H] = implicitly[Schema[H]]
-      override def format: CF = cf
-    }
-
-  def json[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): JsonCodec[T] = {
-    anyStringCodec(CodecFormat.Json())(_rawDecode)(_encode)
-  }
-
-  def xml[T: Schema](_rawDecode: String => DecodeResult[T])(_encode: T => String): XmlCodec[T] = {
-    anyStringCodec(CodecFormat.Xml())(_rawDecode)(_encode)
-  }
-
-  def anyStringCodec[T: Schema, CF <: CodecFormat](
-      cf: CF
-  )(_rawDecode: String => DecodeResult[T])(_encode: T => String): Codec[String, T, CF] = {
-    val isOptional = implicitly[Schema[T]].isOptional
-    fromDecodeAndMeta(cf)({ (s: String) =>
-      val toDecode = if (isOptional && s == "") "null" else s
-      _rawDecode(toDecode)
-    })(t => if (isOptional && t == None) "" else _encode(t))
-  }
 }
 
 /** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec

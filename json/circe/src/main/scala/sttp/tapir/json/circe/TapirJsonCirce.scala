@@ -9,8 +9,6 @@ import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir._
 
-import scala.collection.immutable.ListMap
-
 trait TapirJsonCirce {
   def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(circeCodec[T])
 
