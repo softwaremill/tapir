@@ -1,6 +1,6 @@
 package sttp.tapir.docs.apispec.schema
 
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.SchemaType.{SObjectInfo, SOption}
 import sttp.tapir.internal._
 import sttp.tapir.{Codec, Validator, Schema => TSchema, SchemaType => TSchemaType}
 
@@ -24,6 +24,8 @@ class ToObjectSchema(val referenceEnums: SObjectInfo => Boolean) {
         coproductSchemas(s, st)
       case s @ TSchema(st: TSchemaType.SOpenProduct[_, _], _, _, _, _, _, _, _) =>
         (st.info -> s: ObjectSchema) +: apply(st.valueSchema)
+      case x @ TSchema(_, _, _, _, _, _, _, Validator.Enumeration(_, _, Some(info))) if referenceEnums(info) =>
+        List(info -> x: ObjectSchema)
       case _ => List.empty
     }
   }
