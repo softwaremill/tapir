@@ -58,10 +58,13 @@ object OneOfMacro {
             val mappingAsList = List(..$mapping)
             val mappingAsMap = mappingAsList.toMap
             val discriminator = SDiscriminator(
-              _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)), 
-              mappingAsMap.collect { case (k, sf@Schema(_, Some(fname), _, _, _, _, _, _, _)) => 
-                $asString.apply(k) -> SRef(fname)
+              _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)),
+              // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)
+              mappingAsMap.toList.flatMap { 
+                case (k, sf@Schema(_, Some(fname), _, _, _, _, _, _, _)) => List($asString.apply(k) -> SRef(fname))
+                case _ => Nil
               }
+              .toMap
             )
             val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)})
             // cast needed because of Scala 2.12
