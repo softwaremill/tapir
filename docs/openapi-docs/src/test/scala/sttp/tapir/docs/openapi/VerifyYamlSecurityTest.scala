@@ -57,7 +57,7 @@ class VerifyYamlSecurityTest extends AnyFunSuite with Matchers {
     val oauth2 =
       auth.oauth2
         .authorizationCode(
-          "https://example.com/auth",
+          Some("https://example.com/auth"),
           ListMap("client" -> "scope for clients", "admin" -> "administration scope")
         )
 
