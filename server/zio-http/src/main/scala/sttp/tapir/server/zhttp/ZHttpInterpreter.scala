@@ -23,7 +23,7 @@ trait ZHttpInterpreter[R <: Blocking] {
       route: Endpoint[I, Throwable, O, ZioStreams]
   )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
     Http.fromEffectFunction[Request] { req =>
-      implicit val interpret: ZHttpBodyListener[R] = new ZHttpBodyListener[R]
+      implicit val bodyListener: ZHttpBodyListener[R] = new ZHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
       val router = route.serverLogic[RIO[R, *]](input => logic(input).either)
       val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](

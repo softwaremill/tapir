@@ -130,7 +130,7 @@ lazy val allAggregates = core.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
-  zioServer.projectRefs ++
+  zioHttp4sServer.projectRefs ++
   zioHttp.projectRefs ++
   awsLambda.projectRefs ++
   awsLambdaTests.projectRefs ++
@@ -910,7 +910,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % Test)
 
-lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
+lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http4s-server",
@@ -923,12 +923,12 @@ lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-se
 lazy val zioHttp: ProjectMatrix = (projectMatrix in file("server/zio-http"))
   .settings(commonJvmSettings)
   .settings(
-    name := "tapir-zio-http4",
+    name := "tapir-zio-http",
     libraryDependencies ++= Seq(
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
       "io.d11" %% "zhttp" % "1.0.0.0-RC17")
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, serverTests % Test)
 
 // serverless
@@ -1189,7 +1189,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     circeJson,
     swaggerUiAkka,
     swaggerUiHttp4s,
-    zioServer,
+    zioHttp4sServer,
     zioHttp,
     sttpStubServer,
     playJson,
@@ -1226,7 +1226,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     swaggerUiHttp4s,
     refined,
     cats,
-    zioServer,
+    zioHttp4sServer,
     zioHttp
   )
 
@@ -1281,7 +1281,7 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     uPickleJson,
     vertxServer,
     zio,
-    zioServer,
+    zioHttp4sServer,
     zioHttp,
     derevo,
     zioJson,

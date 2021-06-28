@@ -16,7 +16,7 @@ class ZHttpRequestBody[F](request: Request) extends RequestBody[RIO[F, *], ZioSt
 
   def asByteArray: Task[Array[Byte]] = request.content match {
     case HttpData.Empty              => Task.succeed(Array.emptyByteArray)
-    case HttpData.CompleteData(data) => Task(data.toArray)
+    case HttpData.CompleteData(data) => Task.succeed(data.toArray)
     case HttpData.StreamData(data)   => data.runCollect.map(_.toArray)
   }
 
