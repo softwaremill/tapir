@@ -10,35 +10,37 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.server.zhttp.{ZHttpInterpreter, ZHttpServerOptions}
 import sttp.tapir.tests.Port
-import zhttp.http.{Http, HttpApp, Request, Response}
+import zhttp.http._
 import zhttp.service.Server
 import zio.blocking.Blocking
-import zio.{RIO, ZIO}
+import zio._
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class ZHttpTestServerInterpreter[R] extends TestServerInterpreter[RIO[R, *], ZioStreams, Http[R, Throwable, Request, Response[R, Throwable]], ZioStreams] {
+class ZHttpTestServerInterpreter[R <: Blocking]
+    extends TestServerInterpreter[RIO[R, *], ZioStreams, Http[R, Throwable, Request, Response[R, Throwable]], ZioStreams] {
 
   override def route[I, E, O](
-                               e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]],
-                               decodeFailureHandler: Option[DecodeFailureHandler] = None,
-                               metricsInterceptor: Option[MetricsRequestInterceptor[Future, ZioStreams]] = None
-                             ): Http[R, Throwable, Request, Response[R, Throwable]] = {
+      e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]],
+      decodeFailureHandler: Option[DecodeFailureHandler] = None,
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future, ZioStreams]] = None
+  ): Http[R, Throwable, Request, Response[R, Throwable]] = {
     val serverOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default
-    ZHttpInterpreter(serverOptions).toHttp(e.endpoint)()
+    ZHttpInterpreter(serverOptions).toRoutes(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Future[O])(implicit
-                                                                                                              eClassTag: ClassTag[E]
+      eClassTag: ClassTag[E]
   ): Http[R, Throwable, Request, Response[R, Throwable]] = {
     ZHttpInterpreter().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Http[R, Throwable, Request, Response[R, Throwable]]]): Resource[IO, Port] = {
-    val app: HttpApp[Blocking, Throwable] =
-      ZHttpInterpreter().toHttp(routes)(name => ZIO.succeed(s"Hello $name"))
+    val app: HttpApp[Blocking, Throwable] = ZHttpInterpreter().toRoutes(routes)
 
-    Resource.make(IO.(Server.start(8090, app))(_ => IO(8090))
+    val zioHttpServerPort = 8090
+    Server.start(zioHttpServerPort, app)
+    Resource.pure[IO, Port](zioHttpServerPort)
   }
 }

@@ -5,29 +5,45 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.zhttp.ZHttpInterpreter.zioMonadError
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZHttpHeader}
-import zio._
+import zio.{RIO, _}
 import zio.blocking.Blocking
 import zio.stream._
 
 trait ZHttpInterpreter[R <: Blocking] {
-  def toRouteRecoverErrors[I, O](e: Endpoint[I, Throwable, O, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] = ???
 
+  def toRouteRecoverErrors[I, O](
+      e: Endpoint[I, Throwable, O, ZioStreams]
+  )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+    toRoutes(e.serverLogicRecoverErrors(logic))
+  }
+
+  def toRoutes[I, O](
+      se: ServerEndpoint[I, Throwable, O, ZioStreams, RIO[R, *]]
+  ): Http[R, Throwable, Request, Response[R, Throwable]] = {
+    toHttp(se)
+  }
 
   def zHttpServerOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default
 
   private def sttpToZHttpHeader(header: SttpHeader): ZHttpHeader =
     ZHttpHeader(header.name, header.value)
 
-  def toHttp[I, O](
-                    route: Endpoint[I, Throwable, O, ZioStreams]
-                  )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+  def toRoutes[I, O](
+      e: Endpoint[I, Throwable, O, ZioStreams]
+  )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+    toHttp(e.serverLogic[RIO[R, *]](input => logic(input).either))
+  }
+
+  private def toHttp[O, I](
+      se: ServerEndpoint[I, Throwable, O, ZioStreams, RIO[R, *]]
+  ): Http[R, Throwable, Request, Response[R, Throwable]] =
     Http.fromEffectFunction[Request] { req =>
       implicit val interpret: ZHttpBodyListener[R] = new ZHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
-      val router = route.serverLogic[RIO[R, *]](input => logic(input).either)
       val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](
         new ZHttpRequestBody(req),
         new ZHttpToResponseBody,
@@ -35,7 +51,7 @@ trait ZHttpInterpreter[R <: Blocking] {
         zHttpServerOptions.deleteFile
       )
 
-      interpreter.apply(new ZHttpServerRequest(req), router).flatMap {
+      interpreter.apply(new ZHttpServerRequest(req), se).flatMap {
         case Some(resp) =>
           ZIO.succeed(
             Response.HttpResponse(
@@ -47,7 +63,7 @@ trait ZHttpInterpreter[R <: Blocking] {
         case None => ZIO.fail(HttpError.NotFound(req.url.path))
       }
     }
-  }
+
 }
 
 object ZHttpInterpreter {
