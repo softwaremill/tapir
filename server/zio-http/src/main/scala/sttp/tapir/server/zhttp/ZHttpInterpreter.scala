@@ -9,20 +9,24 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.zhttp.ZHttpInterpreter.zioMonadError
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZHttpHeader}
-import zio.{RIO, _}
+import zio._
 import zio.blocking.Blocking
-import zio.stream._
+import zio.stream.ZStream
+
+import scala.reflect.ClassTag
 
 trait ZHttpInterpreter[R <: Blocking] {
 
-  def toRouteRecoverErrors[I, O](
-      e: Endpoint[I, Throwable, O, ZioStreams]
-  )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+  def toRouteRecoverErrors[I, E, O](
+      e: Endpoint[I, E, O, ZioStreams]
+  )(
+      logic: I => RIO[R, O]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Http[R, Throwable, Request, Response[R, Throwable]] = {
     toRoutes(e.serverLogicRecoverErrors(logic))
   }
 
-  def toRoutes[I, O](
-      se: ServerEndpoint[I, Throwable, O, ZioStreams, RIO[R, *]]
+  def toRoutes[I, E, O](
+      se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
   ): Http[R, Throwable, Request, Response[R, Throwable]] = {
     toHttp(se)
   }
@@ -38,8 +42,8 @@ trait ZHttpInterpreter[R <: Blocking] {
     toHttp(e.serverLogic[RIO[R, *]](input => logic(input).either))
   }
 
-  private def toHttp[O, I](
-      se: ServerEndpoint[I, Throwable, O, ZioStreams, RIO[R, *]]
+  private def toHttp[O, E, I](
+      se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
   ): Http[R, Throwable, Request, Response[R, Throwable]] =
     Http.fromEffectFunction[Request] { req =>
       implicit val interpret: ZHttpBodyListener[R] = new ZHttpBodyListener[R]

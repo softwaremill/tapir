@@ -30,7 +30,7 @@ class ZHttpTestServerInterpreter[R <: Blocking]
     ZHttpInterpreter(serverOptions).toRoutes(e)
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Future[O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => RIO[R, O])(implicit
       eClassTag: ClassTag[E]
   ): Http[R, Throwable, Request, Response[R, Throwable]] = {
     ZHttpInterpreter().toRouteRecoverErrors(e)(fn)
