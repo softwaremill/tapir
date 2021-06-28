@@ -12,8 +12,8 @@ import sttp.tapir.server.zhttp.{ZHttpInterpreter, ZHttpServerOptions}
 import sttp.tapir.tests.Port
 import zhttp.http._
 import zhttp.service.Server
-import zio.blocking.Blocking
 import zio._
+import zio.blocking.Blocking
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -37,10 +37,16 @@ class ZHttpTestServerInterpreter[R <: Blocking]
   }
 
   override def server(routes: NonEmptyList[Http[R, Throwable, Request, Response[R, Throwable]]]): Resource[IO, Port] = {
-    val app: HttpApp[Blocking, Throwable] = ZHttpInterpreter().toRoutes(routes)
-
     val zioHttpServerPort = 8090
-    Server.start(zioHttpServerPort, app)
+
+    //    val bind = Server.start(zioHttpServerPort, concatRoutes(routes))
+    //    ZManaged.fromEffect(bind)  // and convert Zmanaged to Cats.Resource https://github.com/zio/zio/issues/826
+
+    Server.start(zioHttpServerPort, concatRoutes(routes))
     Resource.pure[IO, Port](zioHttpServerPort)
+  }
+
+  private def concatRoutes(routes: NonEmptyList[Http[R, Throwable, Request, Response[R, Throwable]]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+    routes.foldLeft[Http[R, Throwable, Request, Response[R, Throwable]]](Http.empty)((routes, route) => routes <> route)
   }
 }
