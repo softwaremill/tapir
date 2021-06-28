@@ -13,6 +13,8 @@ import zio.blocking.Blocking
 import zio.stream._
 
 trait ZHttpInterpreter[R <: Blocking] {
+  def toRouteRecoverErrors[I, O](e: Endpoint[I, Throwable, O, ZioStreams]): Http[R, Throwable, Request, Response[R, Throwable]] = ???
+
 
   def zHttpServerOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default
 
@@ -20,8 +22,8 @@ trait ZHttpInterpreter[R <: Blocking] {
     ZHttpHeader(header.name, header.value)
 
   def toHttp[I, O](
-      route: Endpoint[I, Throwable, O, ZioStreams]
-  )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+                    route: Endpoint[I, Throwable, O, ZioStreams]
+                  )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
     Http.fromEffectFunction[Request] { req =>
       implicit val interpret: ZHttpBodyListener[R] = new ZHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
