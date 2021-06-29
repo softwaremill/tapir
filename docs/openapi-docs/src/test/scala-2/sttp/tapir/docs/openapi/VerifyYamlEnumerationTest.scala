@@ -6,6 +6,7 @@ import enumeratum.{EnumEntry, _}
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Schema.SName
 import sttp.tapir.docs.openapi.VerifyYamlEnumerationTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -82,6 +83,16 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
+
+  test("should support optional enums and sequences of enums") {
+    implicit val shapeCodec: io.circe.Codec[Square] = null
+    val e = endpoint.get.out(jsonBody[Square])
+
+    val expectedYaml = load("enum/expected_enum_collections.yml")
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, "Enums", "1.0").toYaml
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
 }
 
 object VerifyYamlEnumerationTest {
@@ -122,4 +133,26 @@ object VerifyYamlEnumerationTest {
 
   case class Error1Response(error: ErrorCode)
   case class Error2Response(error: ErrorCode)
+
+  object CornerStyle extends Enumeration {
+    type CornerStyle = Value
+
+    val Rounded = Value("rounded")
+    val Straight = Value("straight")
+
+    implicit def schemaForEnum: Schema[Value] =
+      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SName("CornerStyle"))))
+  }
+
+  object Tag extends Enumeration {
+    type Tag = Value
+
+    val Tag1 = Value("tag1")
+    val Tag2 = Value("tag2")
+
+    implicit def schemaForEnum: Schema[Value] =
+      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SName("Tag"))))
+  }
+
+  case class Square(cornerStyle: Option[CornerStyle.Value], tags: Seq[Tag.Value])
 }
