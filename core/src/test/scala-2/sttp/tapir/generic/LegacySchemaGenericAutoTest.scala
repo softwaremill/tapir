@@ -1,30 +1,16 @@
 package sttp.tapir.generic
 
-import java.math.{BigDecimal => JBigDecimal}
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.auto._
-import sttp.tapir.{
-  FieldName,
-  Schema,
-  SchemaType,
-  Validator,
-  default,
-  deprecated,
-  description,
-  encodedExample,
-  encodedName,
-  format,
-  validate
-}
+import sttp.tapir.{FieldName, Schema, SchemaType}
 
 import scala.concurrent.Future
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Schema.SName
 import sttp.tapir.TestUtil.field
-import sttp.tapir.internal.IterableToListMap
 
 class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
-  import sttp.tapir.generic._
   import sttp.tapir.generic.SchemaGenericAutoTest._
 
   it should "find schema for value classes" in {
@@ -44,27 +30,24 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "find schema for map of value classes" in {
-    val schema = implicitly[Schema[Map[String, IntegerValueClass]]].schemaType
-    schema shouldBe SOpenProduct[Map[String, IntegerValueClass], IntegerValueClass](
-      SObjectInfo("Map", List("IntegerValueClass")),
-      Schema(SInteger())
-    )(identity)
+    val schema = implicitly[Schema[Map[String, IntegerValueClass]]]
+    schema.name shouldBe Some(SName("Map", List("IntegerValueClass")))
+    schema.schemaType shouldBe SOpenProduct[Map[String, IntegerValueClass], IntegerValueClass](Schema(SInteger()))(identity)
   }
 
   it should "find schema for recursive data structure" in {
-    val schema = removeValidators(implicitly[Schema[F]]).schemaType
+    val schema = removeValidators(implicitly[Schema[F]])
 
-    schema shouldBe SProduct[F](
-      SObjectInfo("sttp.tapir.generic.F"),
-      List(field(FieldName("f1"), Schema(SRef(SObjectInfo("sttp.tapir.generic.F"))).asArray), field(FieldName("f2"), intSchema))
+    schema.name shouldBe Some(SName("sttp.tapir.generic.F"))
+    schema.schemaType shouldBe SProduct[F](
+      List(field(FieldName("f1"), Schema(SRef(SName("sttp.tapir.generic.F"))).asArray), field(FieldName("f2"), intSchema))
     )
   }
 
   it should "find schema for recursive data structure when invoked from many threads" in {
     val expected =
       SProduct[F](
-        SObjectInfo("sttp.tapir.generic.F"),
-        List(field(FieldName("f1"), Schema(SRef(SObjectInfo("sttp.tapir.generic.F"))).asArray), field(FieldName("f2"), intSchema))
+        List(field(FieldName("f1"), Schema(SRef(SName("sttp.tapir.generic.F"))).asArray), field(FieldName("f2"), intSchema))
       )
 
     val count = 100
@@ -83,21 +66,21 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   it should "find schema for recursive coproduct type" in {
     val schemaType = removeValidators(implicitly[Schema[Node]]).schemaType
     schemaType shouldBe a[SCoproduct[Node]]
-    schemaType.asInstanceOf[SCoproduct[Node]].subtypes shouldBe Map(
-      SObjectInfo("sttp.tapir.generic.Edge") -> Schema(
+    schemaType.asInstanceOf[SCoproduct[Node]].subtypes shouldBe List(
+      Schema(
         SProduct[Edge](
-          SObjectInfo("sttp.tapir.generic.Edge"),
           List(
             field(FieldName("id"), longSchema),
-            field(FieldName("source"), Schema(SRef(SObjectInfo("sttp.tapir.generic.Node", List.empty))))
+            field(FieldName("source"), Schema(SRef(SName("sttp.tapir.generic.Node", List.empty))))
           )
-        )
+        ),
+        Some(SName("sttp.tapir.generic.Edge"))
       ),
-      SObjectInfo("sttp.tapir.generic.SimpleNode") -> Schema(
+      Schema(
         SProduct[SimpleNode](
-          SObjectInfo("sttp.tapir.generic.SimpleNode"),
           List(field(FieldName("id"), longSchema))
-        )
+        ),
+        Some(SName("sttp.tapir.generic.SimpleNode"))
       )
     )
   }
@@ -107,15 +90,15 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedISchema: Schema[IOpt] =
       Schema(
         SProduct(
-          SObjectInfo("sttp.tapir.generic.IOpt", List()),
           List(
-            field(FieldName("i1"), Schema(SRef(SObjectInfo("sttp.tapir.generic.IOpt"))).asOption),
+            field(FieldName("i1"), Schema(SRef(SName("sttp.tapir.generic.IOpt"))).asOption),
             field(FieldName("i2"), intSchema)
           )
-        )
+        ),
+        Some(SName("sttp.tapir.generic.IOpt", List()))
       )
     val expectedJSchema: Schema[JOpt] =
-      Schema(SProduct(SObjectInfo("sttp.tapir.generic.JOpt"), List(field(FieldName("data"), expectedISchema.asOption))))
+      Schema(SProduct(List(field(FieldName("data"), expectedISchema.asOption))), Some(SName("sttp.tapir.generic.JOpt")))
 
     removeValidators(implicitly[Schema[IOpt]]) shouldBe expectedISchema
     removeValidators(implicitly[Schema[JOpt]]) shouldBe expectedJSchema
@@ -125,15 +108,15 @@ class LegacySchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val expectedISchema: Schema[IList] =
       Schema(
         SProduct(
-          SObjectInfo("sttp.tapir.generic.IList", List()),
           List(
-            field(FieldName("i1"), Schema(SRef(SObjectInfo("sttp.tapir.generic.IList"))).asArray),
+            field(FieldName("i1"), Schema(SRef(SName("sttp.tapir.generic.IList"))).asArray),
             field(FieldName("i2"), intSchema)
           )
-        )
+        ),
+        Some(SName("sttp.tapir.generic.IList", List()))
       )
     val expectedJSchema =
-      Schema(SProduct[JList](SObjectInfo("sttp.tapir.generic.JList"), List(field(FieldName("data"), expectedISchema.asArray))))
+      Schema(SProduct[JList](List(field(FieldName("data"), expectedISchema.asArray))), Some(SName("sttp.tapir.generic.JList")))
 
     removeValidators(implicitly[Schema[IList]]) shouldBe expectedISchema
     removeValidators(implicitly[Schema[JList]]) shouldBe expectedJSchema

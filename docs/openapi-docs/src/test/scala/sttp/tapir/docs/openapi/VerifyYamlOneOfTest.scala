@@ -41,7 +41,7 @@ class VerifyYamlOneOfTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("oneOf/expected_status_codes.yml")
 
     // work-around for #10: unsupported sealed trait families
-    implicit val schemaForErrorInfo: Schema[ErrorInfo] = Schema[ErrorInfo](SchemaType.SProduct(SchemaType.SObjectInfo("ErrorInfo"), Nil))
+    implicit val schemaForErrorInfo: Schema[ErrorInfo] = Schema[ErrorInfo](SchemaType.SProduct(Nil), Some(Schema.SName("ErrorInfo")))
 
     val e = endpoint.errorOut(
       sttp.tapir.oneOf(

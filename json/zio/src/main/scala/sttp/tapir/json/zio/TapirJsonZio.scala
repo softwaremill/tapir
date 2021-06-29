@@ -3,7 +3,8 @@ package sttp.tapir.json.zio
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
-import sttp.tapir.SchemaType.{SCoproduct, SObjectInfo, SProduct}
+import sttp.tapir.Schema.SName
+import sttp.tapir.SchemaType.{SCoproduct, SProduct}
 import sttp.tapir.{EndpointIO, FieldName, Schema, anyFromUtf8StringBody}
 import zio.json.ast.Json
 import zio.json.ast.Json.Obj
@@ -30,28 +31,20 @@ trait TapirJsonZio {
     if (leftParenIndex >= 0) {
       val path = errorMessage.substring(0, leftParenIndex)
       val message = errorMessage.substring(leftParenIndex + 1, errorMessage.length - 1)
-      return message -> path.split("\\.").toList.filter(_.nonEmpty).map(FieldName.apply)
+      message -> path.split("\\.").toList.filter(_.nonEmpty).map(FieldName.apply)
     } else {
-      return errorMessage -> List.empty
+      errorMessage -> List.empty
     }
   }
 
   // JsValue is a coproduct with unknown implementations
   implicit val schemaForZioJsonValue: Schema[Json] =
     Schema(
-      SCoproduct(
-        SObjectInfo("zio.json.ast.Json"),
-        ListMap.empty,
-        None
-      )(_ => None)
+      SCoproduct(Nil, None)(_ => None),
+      Some(SName("zio.json.ast.Json"))
     )
 
   implicit val schemaForZioJsonObject: Schema[Obj] =
-    Schema(
-      SProduct(
-        SObjectInfo("zio.json.ast.Json.Obj"),
-        Nil
-      )
-    )
+    Schema(SProduct(Nil), Some(SName("zio.json.ast.Json.Obj")))
 
 }
