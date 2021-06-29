@@ -25,7 +25,7 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
     val expectedYaml = loadYaml("expected_string.yml")
     val expectedYamlNoIndent = noIndentation(expectedYaml)
 
-    val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
+    val actualYaml = AsyncAPIInterpreter().toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYamlNoIndent
