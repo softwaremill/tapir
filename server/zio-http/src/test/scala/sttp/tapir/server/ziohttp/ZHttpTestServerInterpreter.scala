@@ -1,7 +1,7 @@
 package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
-import cats.effect.{IO, Resource}
+import cats.effect.{Async, IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
@@ -14,39 +14,43 @@ import zhttp.http._
 import zhttp.service.Server
 import zio._
 import zio.blocking.Blocking
+import zio.interop.ZManagedSyntax
+import zio.interop.catz.taskEffectInstance
 
-import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class ZHttpTestServerInterpreter[R <: Blocking]
-    extends TestServerInterpreter[RIO[R, *], ZioStreams, Http[R, Throwable, Request, Response[R, Throwable]], ZioStreams] {
+class ZHttpTestServerInterpreter
+  extends TestServerInterpreter[RIO[Blocking, *], ZioStreams, Http[Blocking, Throwable, Request, Response[Blocking, Throwable]], ZioStreams] {
 
   override def route[I, E, O](
-      e: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]],
-      decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future, ZioStreams]] = None
-  ): Http[R, Throwable, Request, Response[R, Throwable]] = {
-    val serverOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default
+      e: ServerEndpoint[I, E, O, ZioStreams, RIO[Blocking, *]],
+      decodeFailureHandler: Option[DecodeFailureHandler],
+      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Blocking, *], ZioStreams]]
+  ): Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = {
+    val serverOptions: ZHttpServerOptions[Blocking] = ZHttpServerOptions.default
     ZHttpInterpreter(serverOptions).toRoutes(e)
   }
 
-  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => RIO[R, O])(implicit
+  override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => RIO[Blocking, O])(implicit
       eClassTag: ClassTag[E]
-  ): Http[R, Throwable, Request, Response[R, Throwable]] = {
+  ): Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = {
     ZHttpInterpreter().toRouteRecoverErrors(e)(fn)
   }
 
-  override def server(routes: NonEmptyList[Http[R, Throwable, Request, Response[R, Throwable]]]): Resource[IO, Port] = {
+  override def server(routes: NonEmptyList[Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]]): Resource[IO, Port] = {
+    val as: Async[IO] = Async[IO]
+    implicit val r: Runtime[Blocking] = Runtime.default
     val zioHttpServerPort = 8090
+    val managed: ZManaged[Blocking, Throwable, Int] =
+      Server.start(zioHttpServerPort, concatRoutes(routes)).toManaged(_ => URIO(zioHttpServerPort))
 
-    //    val bind = Server.start(zioHttpServerPort, concatRoutes(routes))
-    //    ZManaged.fromEffect(bind)  // and convert Zmanaged to Cats.Resource https://github.com/zio/zio/issues/826
-
-    Server.start(zioHttpServerPort, concatRoutes(routes))
-    Resource.pure[IO, Port](zioHttpServerPort)
+    new ZManagedSyntax(managed)
+      .toResource(as, taskEffectInstance)
   }
 
-  private def concatRoutes(routes: NonEmptyList[Http[R, Throwable, Request, Response[R, Throwable]]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
-    routes.foldLeft[Http[R, Throwable, Request, Response[R, Throwable]]](Http.empty)((routes, route) => routes <> route)
+  private def concatRoutes(
+      routes: NonEmptyList[Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]]
+  ): Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = {
+    routes.foldLeft[Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]](Http.empty)((routes, route) => routes <> route)
   }
 }
