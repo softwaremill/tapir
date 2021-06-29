@@ -499,7 +499,7 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
 trait LowPriorityCodec { this: Codec.type =>
 
   /** Create a codec which during decoding, first tries to decode values on the right using `c2`. If this fails for any
-    * reason, decoding is done using `c1`. Both codecs must have the low-level values and formats.
+    * reason, decoding is done using `c1`. Both codecs must have the same low-level values and formats.
     *
     * For a left-biased variant see [[Codec.eitherLeft]]. This right-biased version is the default when using implicit
     * codec resolution.
@@ -522,7 +522,7 @@ trait LowPriorityCodec { this: Codec.type =>
   }
 
   /** Create a codec which during decoding, first tries to decode values on the left using `c1`. If this fails for any
-    * reason, decoding is done using `c2`. Both codecs must have the low-level values and formats.
+    * reason, decoding is done using `c2`. Both codecs must have the same low-level values and formats.
     *
     * For a right-biased variant see [[Codec.eitherRight]].
     *
