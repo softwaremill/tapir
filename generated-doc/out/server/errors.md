@@ -38,7 +38,7 @@ def handleErrors[T](f: Future[T]): Future[Either[ErrorInfo, T]] =
       Success(Left(e.getMessage))
   }
 
-AkkaHttpServerInterpreter.toRoute(
+AkkaHttpServerInterpreter().toRoute(
   endpoint
     .errorOut(plainBody[ErrorInfo])
     .out(plainBody[Int])
