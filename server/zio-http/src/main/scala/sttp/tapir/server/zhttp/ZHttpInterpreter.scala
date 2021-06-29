@@ -77,7 +77,7 @@ object ZHttpInterpreter {
     }
   }
 
-  private[zhttp] def zioMonadError[R]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
+   def zioMonadError[R <: Blocking]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
     override def unit[T](t: T): RIO[R, T] = URIO.succeed(t)
     override def map[T, T2](fa: RIO[R, T])(f: T => T2): RIO[R, T2] = fa.map(f)
     override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
