@@ -27,7 +27,7 @@ class VerifyYamlCoproductTest extends AnyFunSuite with Matchers {
 
     val expectedYaml = load("coproduct/expected_coproduct_discriminator_with_enum_circe.yml")
     val actualYaml =
-      OpenAPIDocsInterpreter(docsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true))
+      OpenAPIDocsInterpreter()
         .toOpenAPI(endpoint, "My Bookshop", "1.0")
         .toYaml
     noIndentation(actualYaml) shouldBe expectedYaml

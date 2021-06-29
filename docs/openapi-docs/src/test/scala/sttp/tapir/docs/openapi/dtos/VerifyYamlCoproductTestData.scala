@@ -1,7 +1,6 @@
 package sttp.tapir.docs.openapi.dtos
 
-import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.docs.openapi.dtos.VerifyYamlCoproductTestData.CornerStyle.values
+import sttp.tapir.Schema.SName
 import sttp.tapir.{Schema, Validator}
 import sttp.tapir.tests.Entity
 
@@ -28,7 +27,7 @@ object VerifyYamlCoproductTestData {
     val Straight = Value("straight")
 
     implicit def schemaForEnum: Schema[Value] =
-      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SObjectInfo("CornerStyle"))))
+      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SName("CornerStyle"))))
   }
 
   object Tag extends Enumeration {
@@ -38,7 +37,7 @@ object VerifyYamlCoproductTestData {
     val Tag2 = Value("tag2")
 
     implicit def schemaForEnum: Schema[Value] =
-      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SObjectInfo("Tag"))))
+      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SName("Tag"))))
   }
 
   sealed trait Shape {
