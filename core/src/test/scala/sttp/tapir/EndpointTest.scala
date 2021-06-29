@@ -401,4 +401,15 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
       |query[Int]("q1").and(query[String]("q2")).mapTo[Wrapper]
     """)
   }
+
+  "mapTo" should "compile for case class with defined companion object" in {
+    assertCompiles("""
+      import sttp.tapir.generic.auto._
+
+      case class Wrapper(i: Int, s: String)
+      object Wrapper
+
+      formBody[Wrapper]
+    """)
+  }
 }
