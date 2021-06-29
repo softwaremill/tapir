@@ -78,15 +78,15 @@ trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
 
 object SchemaCompanionMacros {
   import sttp.tapir.SchemaType.*
-  import sttp.tapir.internal.SObjectInfoMacros
+  import sttp.tapir.internal.SNameMacros
 
   def generateSchemaForMap[V: Type](schemaForV: Expr[Schema[V]])(using q: Quotes): Expr[Schema[Map[String, V]]] = {
     import quotes.reflect.*
 
     val tpe = TypeRepr.of[V]
-    val genericTypeParametersM = List(tpe.typeSymbol.name) ++ SObjectInfoMacros.extractTypeArguments(tpe)
+    val genericTypeParametersM = List(tpe.typeSymbol.name) ++ SNameMacros.extractTypeArguments(tpe)
 
-    '{Schema(SOpenProduct[Map[String, V], V](SObjectInfo("Map", ${Expr(genericTypeParametersM)}), ${schemaForV})(identity))}
+    '{Schema(SOpenProduct[Map[String, V], V](${schemaForV})(identity), Some(Schema.SName("Map", ${Expr(genericTypeParametersM)})))}
   }
 
   def generateOneOfUsingField[E: Type, V: Type](extractor: Expr[E => V], asString: Expr[V => String])(
@@ -106,7 +106,7 @@ object SchemaCompanionMacros {
     val tpe = TypeRepr.of[E]
 
     val functionName = resolveFunctionName(extractor.asTerm)
-    val typeParams = SObjectInfoMacros.extractTypeArguments(tpe)
+    val typeParams = SNameMacros.extractTypeArguments(tpe)
 
     '{
       import _root_.sttp.tapir.internal._
@@ -117,14 +117,17 @@ object SchemaCompanionMacros {
 
       val mappingAsList = $mapping.toList
       val mappingAsMap = mappingAsList.toMap
-      val discriminator = SDiscriminator(_root_.sttp.tapir.FieldName(${Expr(functionName)}, $conf.toEncodedName(${Expr(functionName)})), mappingAsMap.map { case (k, sf) => 
-        $asString.apply(k) -> SRef(sf.schemaType.asInstanceOf[SObject[_]].info)
-      })
-      val info = SObjectInfo(SObjectInfoMacros.typeFullName[E], ${Expr(typeParams)})
-      val subtypes = (mappingAsList.map(_._2).map(s => s.schemaType.asInstanceOf[SObject[_]].info -> s): List[(SObjectInfo, Schema[_])]).toListMap
-      Schema(SCoproduct[E](info, subtypes, _root_.scala.Some(discriminator))(
-        e => mappingAsMap.get($extractor(e)).map(_.schemaType.asInstanceOf[SObject[_]].info)
-      ))
+      val discriminator = SDiscriminator(
+        _root_.sttp.tapir.FieldName(${Expr(functionName)}, $conf.toEncodedName(${Expr(functionName)})),
+        mappingAsMap.collect { case (k, sf@Schema(_, Some(fname), _, _, _, _, _, _, _)) =>
+          $asString.apply(k) -> SRef(fname)
+        }
+      )
+      val sname = SName(SNameMacros.typeFullName[E], ${Expr(typeParams)})
+      val subtypes = mappingAsList.map(_._2)
+      Schema(SCoproduct[E](subtypes, _root_.scala.Some(discriminator))(
+        e => mappingAsMap.get($extractor(e))
+      ), Some(sname))
     }
   }  
 

@@ -32,8 +32,8 @@ object TapirAuth {
 
   object oauth2 {
     def authorizationCode(
-        authorizationUrl: String,
-        scopes: ListMap[String, String],
+        authorizationUrl: Option[String] = None,
+        scopes: ListMap[String, String] = ListMap(),
         tokenUrl: Option[String] = None,
         refreshUrl: Option[String] = None,
         challenge: WWWAuthenticate = WWWAuthenticate.bearer()

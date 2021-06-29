@@ -19,7 +19,7 @@ trait SchemaMagnoliaDerivation {
         if (ctx.isValueClass) {
           Schema[T](schemaType = ctx.parameters.head.typeclass.schemaType.asInstanceOf[SchemaType[T]])
         } else {
-          Schema[T](schemaType = productSchemaType(ctx))
+          Schema[T](schemaType = productSchemaType(ctx), name = Some(typeNameToSchemaName(ctx.typeName, ctx.annotations)))
         }
       enrichSchema(result, ctx.annotations)
     }
@@ -27,7 +27,6 @@ trait SchemaMagnoliaDerivation {
 
   private def productSchemaType[T](ctx: ReadOnlyCaseClass[Schema, T])(implicit genericDerivationConfig: Configuration): SProduct[T] =
     SProduct(
-      typeNameToObjectInfo(ctx.typeName, ctx.annotations),
       ctx.parameters.map { p =>
         val pSchema = enrichSchema(p.typeclass, p.annotations)
         val encodedName = getEncodedName(p.annotations).getOrElse(genericDerivationConfig.toEncodedName(p.label))
@@ -36,14 +35,14 @@ trait SchemaMagnoliaDerivation {
       }.toList
     )
 
-  private def typeNameToObjectInfo(typeName: TypeName, annotations: Seq[Any]): SchemaType.SObjectInfo = {
+  private def typeNameToSchemaName(typeName: TypeName, annotations: Seq[Any]): Schema.SName = {
     def allTypeArguments(tn: TypeName): Seq[TypeName] = tn.typeArguments.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
 
     annotations.collectFirst { case ann: encodedName => ann.name } match {
       case Some(altName) =>
-        SObjectInfo(altName, Nil)
+        Schema.SName(altName, Nil)
       case None =>
-        SObjectInfo(typeName.full, allTypeArguments(typeName).map(_.short).toList)
+        Schema.SName(typeName.full, allTypeArguments(typeName).map(_.short).toList)
     }
   }
 
@@ -64,16 +63,16 @@ trait SchemaMagnoliaDerivation {
 
   def dispatch[T](ctx: SealedTrait[Schema, T])(implicit genericDerivationConfig: Configuration): Schema[T] = {
     withCache(ctx.typeName, ctx.annotations) {
-      val baseCoproduct = SCoproduct(
-        typeNameToObjectInfo(ctx.typeName, ctx.annotations),
-        ctx.subtypes.map(s => typeNameToObjectInfo(s.typeName, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap,
-        None
-      )((t: T) => ctx.dispatch(t) { v => Some(typeNameToObjectInfo(v.typeName, v.annotations)) })
+      val subtypesByName =
+        ctx.subtypes.map(s => typeNameToSchemaName(s.typeName, s.annotations) -> s.typeclass.asInstanceOf[Typeclass[T]]).toListMap
+      val baseCoproduct = SCoproduct(subtypesByName.values.toList, None)((t: T) =>
+        ctx.dispatch(t) { v => subtypesByName.get(typeNameToSchemaName(v.typeName, v.annotations)) }
+      )
       val coproduct = genericDerivationConfig.discriminator match {
         case Some(d) => baseCoproduct.addDiscriminatorField(FieldName(d))
         case None    => baseCoproduct
       }
-      Schema(schemaType = coproduct)
+      Schema(schemaType = coproduct, name = Some(typeNameToSchemaName(ctx.typeName, ctx.annotations)))
     }
   }
 
@@ -90,7 +89,7 @@ trait SchemaMagnoliaDerivation {
     }
 
     if (inProgress.contains(cacheKey)) {
-      Schema[T](SRef(typeNameToObjectInfo(typeName, annotations)))
+      Schema[T](SRef(typeNameToSchemaName(typeName, annotations)))
     } else {
       try {
         inProgress.add(cacheKey)

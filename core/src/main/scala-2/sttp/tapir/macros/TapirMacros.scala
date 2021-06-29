@@ -1,9 +1,9 @@
 package sttp.tapir.macros
 
 import sttp.model.StatusCode
+import sttp.tapir.EndpointOutput
 import sttp.tapir.EndpointOutput.OneOfMapping
 import sttp.tapir.internal.OneOfMappingMacro
-import sttp.tapir.{EndpointOutput, oneOf, oneOfMappingClassMatcher, oneOfMappingFromMatchType, oneOfMappingValueMatcher}
 
 import scala.reflect.ClassTag
 

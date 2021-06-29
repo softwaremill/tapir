@@ -206,7 +206,7 @@ object EndpointInput {
       override def securitySchemeName(name: String): Http[T] = copy(securitySchemeName = Some(name))
     }
     case class Oauth2[T](
-        authorizationUrl: String,
+        authorizationUrl: Option[String],
         tokenUrl: Option[String],
         scopes: ListMap[String, String],
         refreshUrl: Option[String],

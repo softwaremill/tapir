@@ -1,6 +1,6 @@
 package sttp.tapir
 
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.macros.ValidatorMacros
 
 import scala.collection.immutable
@@ -48,8 +48,8 @@ object Validator extends ValidatorMacros {
   /** @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
     *               This will be automatically inferred if the validator is directly added to a codec.
     */
-  def enumeration[T](possibleValues: List[T], encode: EncodeToRaw[T], info: Option[SObjectInfo] = None): Validator.Enumeration[T] =
-    Enumeration(possibleValues, Some(encode), info)
+  def enumeration[T](possibleValues: List[T], encode: EncodeToRaw[T], name: Option[SName] = None): Validator.Enumeration[T] =
+    Enumeration(possibleValues, Some(encode), name)
 
   //
 
@@ -124,7 +124,7 @@ object Validator extends ValidatorMacros {
     }
   }
 
-  case class Enumeration[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], info: Option[SObjectInfo]) extends Primitive[T] {
+  case class Enumeration[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], name: Option[SName]) extends Primitive[T] {
     override def apply(t: T): List[ValidationError[_]] = {
       if (possibleValues.contains(t)) {
         List.empty

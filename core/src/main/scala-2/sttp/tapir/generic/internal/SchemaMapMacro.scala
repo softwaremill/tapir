@@ -24,7 +24,9 @@ object SchemaMapMacro {
       q"""{
           val s = $schemaForV
           _root_.sttp.tapir.Schema(
-            _root_.sttp.tapir.SchemaType.SOpenProduct(_root_.sttp.tapir.SchemaType.SObjectInfo("Map", $genericTypeParametersM), s)(identity))
+            _root_.sttp.tapir.SchemaType.SOpenProduct(s)(identity),
+            Some(_root_.sttp.tapir.Schema.SName("Map", $genericTypeParametersM))
+          )
          }"""
     Debug.logGeneratedCode(c)(weakTypeV.typeSymbol.fullName, schemaForMap)
     c.Expr[Schema[Map[String, V]]](schemaForMap)

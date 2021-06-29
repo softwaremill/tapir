@@ -57,15 +57,21 @@ object OneOfMacro {
             import _root_.scala.collection.immutable.{List, Map}
             val mappingAsList = List(..$mapping)
             val mappingAsMap = mappingAsList.toMap
-            val discriminator = SDiscriminator(_root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)), mappingAsMap.map { case (k, sf) => 
-              $asString.apply(k) -> SRef(sf.schemaType.asInstanceOf[SObject[_]].info)
-            })
-            val info = SObjectInfo(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)})
+            val discriminator = SDiscriminator(
+              _root_.sttp.tapir.FieldName($name, $conf.toEncodedName($name)),
+              // cannot use .collect because of a bug in ScalaJS (Trying to access the this of another class ... during phase: jscode)
+              mappingAsMap.toList.flatMap { 
+                case (k, sf@Schema(_, Some(fname), _, _, _, _, _, _, _)) => List($asString.apply(k) -> SRef(fname))
+                case _ => Nil
+              }
+              .toMap
+            )
+            val sname = SName(${weakTypeE.typeSymbol.fullName},${extractTypeArguments(weakTypeE)})
             // cast needed because of Scala 2.12
-            val subtypes = (mappingAsList.map(_._2).map(s => s.schemaType.asInstanceOf[SObject[_]].info -> s): List[(SObjectInfo, Schema[_])]).toListMap
-            Schema(SCoproduct(info, subtypes, _root_.scala.Some(discriminator))(
-              e => mappingAsMap.get($extractor(e)).map(_.schemaType.asInstanceOf[SObject[_]].info)
-            ))
+            val subtypes = mappingAsList.map(_._2)
+            Schema(SCoproduct(subtypes, _root_.scala.Some(discriminator))(
+              e => mappingAsMap.get($extractor(e))
+            ), Some(sname))
           }"""
 
     Debug.logGeneratedCode(c)(weakTypeE.typeSymbol.fullName, schemaForE)

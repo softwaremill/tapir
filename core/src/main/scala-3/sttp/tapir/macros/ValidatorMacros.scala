@@ -1,7 +1,7 @@
 package sttp.tapir.macros
 
 import sttp.tapir.Validator
-import sttp.tapir.SchemaType
+import sttp.tapir.{Schema, SchemaType}
 
 import scala.compiletime
 
@@ -34,13 +34,13 @@ object ValidatorMacros {
         val instances = children.map(x => tpe.memberType(x).asType match { 
           case '[f] => Ref(x).asExprOf[f]
         })
-        val info = '{Option(SchemaType.SObjectInfo(${Expr(symbol.fullName)}))}
+        val name = '{Option(Schema.SName(${Expr(symbol.fullName)}))}
 
         '{
           Validator.Enumeration[T](
             List(${Varargs(instances)}: _*).asInstanceOf[List[T]],
             None,
-            ${info}
+            ${name}
           )
         }
       }

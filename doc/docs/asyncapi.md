@@ -68,10 +68,12 @@ Options can be customised by providing an instance of `AsyncAPIDocsOptions` to t
 * `subscribeOperationId`: basing on the endpoint's path and the entire endpoint, determines the id of the subscribe 
   operation. This can be later used by code generators as the name of the method to receive messages from the socket.
 * `publishOperationId`: as above, but for publishing (sending messages to the web socket).
-* `referenceEnums`: defines if enums should be converted to async api components and referenced later.
-  This option can be applied to all enums in the schema, or only specific ones.
-  `SObjectInfo` input parameter is a unique identifier of object in the schema.
-  By default, it is fully qualified name of the class (when using `Validator.derivedEnum` or implicits from `sttp.tapir.codec.enumeratum._`).
+
+## Inlined and referenced schemas
+
+All named schemas (that is, schemas which have the `Schema.name` property defined) will be referenced at point of
+use, and their definitions will be part of the `components` section. If you'd like a schema to be inlined, instead
+of referenced, [modify the schema](../endpoint/schemas.md) removing the name.
 
 ## AsyncAPI Specification Extensions
 

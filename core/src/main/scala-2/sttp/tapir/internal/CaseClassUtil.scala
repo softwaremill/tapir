@@ -23,7 +23,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
   lazy val instanceFromValues: Tree = if (fields.size == 1) {
     q"$companion.apply(values.head.asInstanceOf[${fields.head.typeSignature}])"
   } else {
-    q"$companion.tupled.asInstanceOf[Any => $t].apply(sttp.tapir.internal.SeqToParams(values))"
+    q"($companion.apply _).tupled.asInstanceOf[Any => $t].apply(sttp.tapir.internal.SeqToParams(values))"
   }
 
   lazy val schema: Tree = c.typecheck(q"_root_.scala.Predef.implicitly[_root_.sttp.tapir.Schema[$t]]")

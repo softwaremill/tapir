@@ -17,18 +17,12 @@ import scala.collection.immutable
 class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
 
   test("should create component for enum using trait") {
-
-    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = {
-      case soi if soi.fullName.contains("Game") => true
-      case _                                    => false
-    })
-
     implicit val schemaForGame: Schema[Game] =
       Schema.string[Game].validate(Validator.derivedEnumeration[Game].encode(_.toString.toLowerCase))
     implicit val schemaForEpisode: Schema[Episode] =
-      Schema.string[Episode].validate(Validator.derivedEnumeration[Episode].encode(_.toString.toLowerCase))
+      Schema.string[Episode].validate(Validator.derivedEnumeration[Episode].encode(_.toString.toLowerCase)).copy(name = None)
 
-    val actualYaml = OpenAPIDocsInterpreter(options)
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(Seq(endpoint.in("totalWar").out(jsonBody[TotalWar]), endpoint.in("callOfDuty").out(jsonBody[CallOfDuty])), "Games", "1.0")
       .toYaml
 
@@ -40,9 +34,7 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
   test("should create component for enum using enumeratum Enum") {
     import sttp.tapir.codec.enumeratum._
 
-    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
-
-    val actualYaml = OpenAPIDocsInterpreter(options)
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         Seq(
           endpoint.in("poland").out(jsonBody[Poland]),
@@ -61,9 +53,7 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
   test("should create component for optional and collections of enums") {
     import sttp.tapir.codec.enumeratum._
 
-    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
-
-    val actualYaml = OpenAPIDocsInterpreter(options)
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         Seq(
           endpoint.in("countryCollection").out(jsonBody[CountryCollection])
@@ -80,9 +70,7 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
   test("should create component for enum using enumeratum IntEnum") {
     import sttp.tapir.codec.enumeratum._
 
-    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
-
-    val actualYaml = OpenAPIDocsInterpreter(options)
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         Seq(endpoint.in("error1").out(jsonBody[Error1Response]), endpoint.in("error2").out(jsonBody[Error2Response])),
         "Errors",

@@ -7,7 +7,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData2._
 import sttp.tapir.docs.openapi.dtos.Book
@@ -52,7 +52,7 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
   }
 
   test("should support providing custom schema name") {
-    def customSchemaName(info: SObjectInfo) = (info.fullName +: info.typeParameterShortNames).mkString("_")
+    def customSchemaName(name: SName) = (name.fullName +: name.typeParameterShortNames).mkString("_")
     val options = OpenAPIDocsOptions.default.copy(OpenAPIDocsOptions.defaultOperationIdGenerator, customSchemaName)
     val expectedYaml = load("expected_custom_schema_name.yml")
 
@@ -244,12 +244,12 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     import SchemaType._
     implicit val customFruitAmountSchema: Schema[FruitAmount] = Schema(
       SProduct(
-        SObjectInfo("tapir.tests.FruitAmount", Nil),
         List(
           SProductField(FieldName("fruit"), Schema(SString()), (_: FruitAmount) => None),
           SProductField(FieldName("amount"), Schema(SInteger()).format("int32"), (_: FruitAmount) => None)
         )
-      )
+      ),
+      Some(SName("tapir.tests.FruitAmount", Nil))
     ).description("Amount of fruits")
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint.post.out(jsonBody[List[ObjectWrapper]]), Info("Fruits", "1.0")).toYaml

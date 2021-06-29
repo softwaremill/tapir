@@ -17,11 +17,10 @@ import sttp.tapir.{
   validate
 }
 
-import scala.concurrent.Future
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Schema.SName
 import sttp.tapir.TestUtil.field
-import sttp.tapir.internal.IterableToListMap
 
 class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   import SchemaGenericAutoTest._
@@ -59,9 +58,9 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   val expectedASchema: Schema[A] =
     Schema[A](
       SProduct(
-        SObjectInfo("sttp.tapir.generic.A"),
         List(field(FieldName("f1"), stringSchema), field(FieldName("f2"), intSchema), field(FieldName("f3"), stringSchema.asOption))
-      )
+      ),
+      Some(SName("sttp.tapir.generic.A"))
     )
 
   it should "find schema for collections of case classes" in {
@@ -78,15 +77,15 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
   }
 
   it should "find schema for a nested case class" in {
+    implicitly[Schema[B]].name shouldBe Some(SName("sttp.tapir.generic.B"))
     implicitly[Schema[B]].schemaType shouldBe SProduct[B](
-      SObjectInfo("sttp.tapir.generic.B"),
       List(field(FieldName("g1"), stringSchema), field(FieldName("g2"), expectedASchema))
     )
   }
 
   it should "find schema for case classes with collections" in {
+    implicitly[Schema[C]].name shouldBe Some(SName("sttp.tapir.generic.C"))
     implicitly[Schema[C]].schemaType shouldBe SProduct[C](
-      SObjectInfo("sttp.tapir.generic.C"),
       List(field(FieldName("h1"), stringSchema.asArray), field(FieldName("h2"), intSchema.asOption))
     )
     implicitly[Schema[C]].schemaType.asInstanceOf[SProduct[C]].required shouldBe Nil
@@ -94,45 +93,47 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
 
   it should "use custom schema for custom types" in {
     implicit val scustom: Schema[Custom] = Schema[Custom](SchemaType.SString())
-    val schema = implicitly[Schema[G]].schemaType
-    schema shouldBe SProduct[G](
-      SObjectInfo("sttp.tapir.generic.G"),
+    val schema = implicitly[Schema[G]]
+    schema.name shouldBe Some(SName("sttp.tapir.generic.G"))
+    schema.schemaType shouldBe SProduct[G](
       List(field(FieldName("f1"), intSchema), field(FieldName("f2"), stringSchema))
     )
   }
 
   it should "derive schema for parametrised type classes" in {
-    val schema = implicitly[Schema[H[A]]].schemaType
-    schema shouldBe SProduct[H[A]](SObjectInfo("sttp.tapir.generic.H", List("A")), List(field(FieldName("data"), expectedASchema)))
+    val schema = implicitly[Schema[H[A]]]
+    schema.name shouldBe Some(SName("sttp.tapir.generic.H", List("A")))
+    schema.schemaType shouldBe SProduct[H[A]](List(field(FieldName("data"), expectedASchema)))
   }
 
   it should "find schema for map" in {
-    val schema = implicitly[Schema[Map[String, Int]]].schemaType
-    schema shouldBe SOpenProduct[Map[String, Int], Int](SObjectInfo("Map", List("Int")), intSchema)(identity)
+    val schema = implicitly[Schema[Map[String, Int]]]
+    schema.name shouldBe Some(SName("Map", List("Int")))
+    schema.schemaType shouldBe SOpenProduct[Map[String, Int], Int](intSchema)(identity)
   }
 
   it should "find schema for map of products" in {
-    val schema = implicitly[Schema[Map[String, D]]].schemaType
-    schema shouldBe SOpenProduct[Map[String, D], D](
-      SObjectInfo("Map", List("D")),
-      Schema(SProduct(SObjectInfo("sttp.tapir.generic.D"), List(field(FieldName("someFieldName"), stringSchema))))
+    val schema = implicitly[Schema[Map[String, D]]]
+    schema.name shouldBe Some(SName("Map", List("D")))
+    schema.schemaType shouldBe SOpenProduct[Map[String, D], D](
+      Schema(SProduct(List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.generic.D")))
     )(identity)
   }
 
   it should "find schema for map of generic products" in {
-    val schema = implicitly[Schema[Map[String, H[D]]]].schemaType
-    schema shouldBe SOpenProduct[Map[String, H[D]], H[D]](
-      SObjectInfo("Map", List("H", "D")),
+    val schema = implicitly[Schema[Map[String, H[D]]]]
+    schema.name shouldBe Some(SName("Map", List("H", "D")))
+    schema.schemaType shouldBe SOpenProduct[Map[String, H[D]], H[D]](
       Schema(
         SProduct[H[D]](
-          SObjectInfo("sttp.tapir.generic.H", List("D")),
           List(
             field(
               FieldName("data"),
-              Schema(SProduct[D](SObjectInfo("sttp.tapir.generic.D"), List(field(FieldName("someFieldName"), stringSchema))))
+              Schema(SProduct[D](List(field(FieldName("someFieldName"), stringSchema))), Some(SName("sttp.tapir.generic.D")))
             )
           )
-        )
+        ),
+        Some(SName("sttp.tapir.generic.H", List("D")))
       )
     )(identity)
   }
@@ -141,7 +142,6 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schema = implicitly[Schema[I]]
     schema shouldBe Schema[I](
       SProduct(
-        SObjectInfo("sttp.tapir.generic.I"),
         List(
           field(
             FieldName("int"),
@@ -156,16 +156,17 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
             FieldName("child", "child-k-name"),
             Schema[K](
               SProduct(
-                SObjectInfo("sttp.tapir.generic.K"),
                 List(
                   field(FieldName("double"), implicitly[Schema[Double]].format("double64")),
                   field(FieldName("str"), stringSchema.format("special-string"))
                 )
-              )
+              ),
+              Some(SName("sttp.tapir.generic.K"))
             ).deprecated(true).description("child-k-desc")
           )
         )
-      )
+      ),
+      Some(SName("sttp.tapir.generic.I"))
     ).description("class I")
   }
 
@@ -186,8 +187,8 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schema = implicitly[Schema[Test1]]
 
     // when
+    schema.name shouldBe Some(SName("sttp.tapir.generic.SchemaGenericAutoTest.<local SchemaGenericAutoTest>.Test1"))
     schema.schemaType shouldBe SProduct[Test1](
-      SObjectInfo("sttp.tapir.generic.SchemaGenericAutoTest.<local SchemaGenericAutoTest>.Test1"),
       List(
         field(FieldName("f1"), implicitly[Schema[String]]),
         field(FieldName("f2"), implicitly[Schema[Byte]]),
@@ -222,12 +223,12 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schema = implicitly[Schema[L]]
     schema shouldBe Schema[L](
       SProduct(
-        SObjectInfo("sttp.tapir.generic.L"),
         List(
           field(FieldName("firstField", "specialName"), intSchema),
           field(FieldName("secondField", "second_field"), intSchema)
         )
-      )
+      ),
+      Some(SName("sttp.tapir.generic.L"))
     )
   }
 
@@ -236,22 +237,22 @@ class SchemaGenericAutoTest extends AsyncFlatSpec with Matchers {
     val schemaType = implicitly[Schema[Entity]].schemaType
     schemaType shouldBe a[SCoproduct[Entity]]
 
-    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs Map(
-      SObjectInfo("sttp.tapir.generic.Organization") -> Schema(
+    schemaType.asInstanceOf[SCoproduct[Entity]].subtypes should contain theSameElementsAs List(
+      Schema(
         SProduct[Organization](
-          SObjectInfo("sttp.tapir.generic.Organization"),
           List(field(FieldName("name"), Schema(SString())), field(FieldName("who_am_i"), Schema(SString())))
-        )
+        ),
+        Some(SName("sttp.tapir.generic.Organization"))
       ),
-      SObjectInfo("sttp.tapir.generic.Person") -> Schema(
+      Schema(
         SProduct[Person](
-          SObjectInfo("sttp.tapir.generic.Person"),
           List(
             field(FieldName("first"), Schema(SString())),
             field(FieldName("age"), Schema(SInteger())),
             field(FieldName("who_am_i"), Schema(SString()))
           )
-        )
+        ),
+        Some(SName("sttp.tapir.generic.Person"))
       )
     )
 
@@ -266,29 +267,27 @@ object SchemaGenericAutoTest {
   private[generic] val longSchema = implicitly[Schema[Long]]
 
   val expectedDSchema: SProduct[D] =
-    SProduct[D](SObjectInfo("sttp.tapir.generic.D"), List(field(FieldName("someFieldName"), stringSchema)))
+    SProduct[D](List(field(FieldName("someFieldName"), stringSchema)))
 
   // comparing recursive schemas without validators
   private[generic] def removeValidators[T](s: Schema[T]): Schema[T] = (s.schemaType match {
-    case SProduct(info, fields) =>
+    case SProduct(fields) =>
       s.copy(schemaType =
         SProduct(
-          info,
           fields.map(f => SProductField[T, f.FieldType](f.name, removeValidators(f.schema), f.get))
         )
       )
-    case st @ SCoproduct(info, subtypes, discriminator) =>
+    case st @ SCoproduct(subtypes, discriminator) =>
       s.copy(schemaType =
         SCoproduct(
-          info,
-          subtypes.mapValues(subtypeSchema => removeValidators(subtypeSchema)).toListMap,
+          subtypes.map(subtypeSchema => removeValidators(subtypeSchema)),
           discriminator
-        )(st.subtypeInfo)
+        )(st.subtypeSchema)
       )
-    case st @ SOpenProduct(info, valueSchema) => s.copy(schemaType = SOpenProduct(info, removeValidators(valueSchema))(st.fieldValues))
-    case st @ SArray(element)                 => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))
-    case st @ SOption(element)                => s.copy(schemaType = SOption(removeValidators(element))(st.toOption))
-    case _                                    => s
+    case st @ SOpenProduct(valueSchema) => s.copy(schemaType = SOpenProduct(removeValidators(valueSchema))(st.fieldValues))
+    case st @ SArray(element)           => s.copy(schemaType = SArray(removeValidators(element))(st.toIterable))
+    case st @ SOption(element)          => s.copy(schemaType = SOption(removeValidators(element))(st.toOption))
+    case _                              => s
   }).copy(validator = Validator.pass)
 }
 

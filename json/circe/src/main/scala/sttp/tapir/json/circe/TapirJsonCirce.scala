@@ -5,10 +5,9 @@ import io.circe.syntax._
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.DecodeResult.{Error, Value}
+import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir._
-
-import scala.collection.immutable.ListMap
 
 trait TapirJsonCirce {
   def jsonBody[T: Encoder: Decoder: Schema]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(circeCodec[T])
@@ -31,18 +30,9 @@ trait TapirJsonCirce {
   // Json is a coproduct with unknown implementations
   implicit val schemaForCirceJson: Schema[Json] =
     Schema(
-      SCoproduct(
-        SObjectInfo("io.circe.Json"),
-        ListMap.empty,
-        None
-      )(_ => None)
+      SCoproduct(Nil, None)(_ => None),
+      Some(SName("io.circe.Json"))
     )
 
-  implicit val schemaForCirceJsonObject: Schema[JsonObject] =
-    Schema(
-      SProduct(
-        SObjectInfo("io.circe.JsonObject"),
-        Nil
-      )
-    )
+  implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema(SProduct(Nil), Some(SName("io.circe.JsonObject")))
 }

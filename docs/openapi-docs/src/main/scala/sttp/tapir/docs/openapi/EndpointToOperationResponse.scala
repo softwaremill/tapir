@@ -10,7 +10,7 @@ import sttp.tapir.openapi._
 import scala.collection.immutable.ListMap
 
 private[openapi] class EndpointToOperationResponse(
-    objectSchemas: Schemas,
+    schemas: Schemas,
     codecToMediaType: CodecToMediaType,
     options: OpenAPIDocsOptions
 ) {
@@ -84,7 +84,7 @@ private[openapi] class EndpointToOperationResponse(
             Header(
               description = info.description,
               required = Some(!codec.schema.isOptional),
-              schema = Some(objectSchemas(codec)),
+              schema = Some(schemas(codec)),
               example = info.example.flatMap(exampleValue(codec, _))
             )
           )
@@ -109,9 +109,10 @@ private[openapi] class EndpointToOperationResponse(
       .getOrElse(ListMap())
 
   private def extractFixedContentType(outputs: List[EndpointOutput[_]]): Option[String] = {
-    outputs.flatMap(_.traverseOutputs {
-      case EndpointIO.FixedHeader(h, _, _) =>
+    outputs
+      .flatMap(_.traverseOutputs { case EndpointIO.FixedHeader(h, _, _) =>
         if (h.is("Content-Type")) Vector(h.value) else Vector.empty
-    }).headOption
+      })
+      .headOption
   }
 }
