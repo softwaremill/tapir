@@ -22,12 +22,13 @@ class VerifyAsyncAPIYamlTest extends AnyFunSuite with Matchers {
   test("should support basic websocket") {
     val e = endpoint.in("fruit").out(webSocketBody[String, CodecFormat.TextPlain, String, CodecFormat.TextPlain](AkkaStreams))
 
-    val expectedYaml = loadYaml("expected_json_json.yml")
+    val expectedYaml = loadYaml("expected_string.yml")
+    val expectedYamlNoIndent = noIndentation(expectedYaml)
 
     val actualYaml = AsyncAPIInterpreter.toAsyncAPI(e, "The fruit basket", "0.1").toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
-    actualYamlNoIndent shouldBe expectedYaml
+    actualYamlNoIndent shouldBe expectedYamlNoIndent
   }
 
   test("should support basic json websockets") {
