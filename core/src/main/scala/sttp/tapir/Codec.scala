@@ -508,7 +508,7 @@ trait LowPriorityCodec { this: Codec.type =>
     */
   implicit def eitherRight[L, A, B, CF <: CodecFormat](implicit c1: Codec[L, A, CF], c2: Codec[L, B, CF]): Codec[L, Either[A, B], CF] = {
     Codec
-      .id[L, CF](c1.format, Schema.binary)
+      .id[L, CF](c1.format, Schema.binary) // any schema will do, as we're overriding it later with schemaForEither
       .mapDecode[Either[A, B]] { (l: L) =>
         c2.decode(l) match {
           case _: DecodeResult.Failure => c1.decode(l).map(Left(_))
@@ -530,7 +530,7 @@ trait LowPriorityCodec { this: Codec.type =>
     */
   def eitherLeft[L, A, B, CF <: CodecFormat](c1: Codec[L, A, CF], c2: Codec[L, B, CF]): Codec[L, Either[A, B], CF] = {
     Codec
-      .id[L, CF](c1.format, Schema.binary)
+      .id[L, CF](c1.format, Schema.binary) // any schema will do, as we're overriding it later with schemaForEither
       .mapDecode[Either[A, B]] { (l: L) =>
         c1.decode(l) match {
           case _: DecodeResult.Failure => c2.decode(l).map(Right(_))
