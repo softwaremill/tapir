@@ -30,7 +30,7 @@ object Versions {
   val vertx = "4.1.0"
   val jsScalaJavaTime = "2.3.0"
   val jwtScala = "5.0.0"
-  val derevo = "0.12.5"
+  val derevo = "0.12.6"
   val newtype = "0.4.4"
   val awsLambdaInterface = "1.1.0"
 }
