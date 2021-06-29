@@ -1,6 +1,5 @@
 package sttp.tapir.docs.openapi.dtos
 
-import sttp.tapir.Schema.SName
 import sttp.tapir.{Schema, Validator}
 import sttp.tapir.tests.Entity
 
@@ -20,30 +19,9 @@ object VerifyYamlCoproductTestData {
     implicit def schemaForEnum: Schema[Value] = Schema.string.validate(Validator.enumeration(values.toList, v => Option(v)))
   }
 
-  object CornerStyle extends Enumeration {
-    type CornerStyle = Value
-
-    val Rounded = Value("rounded")
-    val Straight = Value("straight")
-
-    implicit def schemaForEnum: Schema[Value] =
-      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SName("CornerStyle"))))
-  }
-
-  object Tag extends Enumeration {
-    type Tag = Value
-
-    val Tag1 = Value("tag1")
-    val Tag2 = Value("tag2")
-
-    implicit def schemaForEnum: Schema[Value] =
-      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SName("Tag"))))
-  }
-
   sealed trait Shape {
     def shapeType: String
   }
 
-  case class Square(color: Color.Value, shapeType: String = "square", cornerStyle: Option[CornerStyle.Value], tags: Seq[Tag.Value])
-      extends Shape
+  case class Square(color: Color.Value, shapeType: String = "square") extends Shape
 }

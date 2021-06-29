@@ -15,11 +15,6 @@ paths:
                 $ref: '#/components/schemas/Shape'
 components:
   schemas:
-    CornerStyle:
-      type: string
-      enum:
-        - rounded
-        - straight
     Shape:
       oneOf:
         - $ref: '#/components/schemas/Square'
@@ -40,14 +35,3 @@ components:
             - red
         shapeType:
           type: string
-        cornerStyle:
-          $ref: '#/components/schemas/CornerStyle'
-        tags:
-          type: array
-          items:
-            $ref: '#/components/schemas/Tag'
-      Tag:
-        type: string
-        enum:
-          - tag1
-          - tag2
