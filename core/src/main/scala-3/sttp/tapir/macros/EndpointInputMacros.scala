@@ -7,6 +7,11 @@ import scala.quoted.*
 import scala.deriving.Mirror
 
 trait EndpointInputMacros {
+  /**
+    * Derives an input description using metadata specified with annotations on the given case class. Each field
+    * of the case class must be annotated with one of the annotations from [[sttp.tapir.EndpointIO.annotations]].
+    * The result is mapped to an instance of the [[T]] type.
+    */
   inline def derived[T <: Product]: EndpointInput[T] = ${EndpointInputMacros.derivedImpl[T]}
 }
 

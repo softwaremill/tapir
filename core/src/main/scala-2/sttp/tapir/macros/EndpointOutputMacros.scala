@@ -4,5 +4,10 @@ import sttp.tapir.EndpointOutput
 import sttp.tapir.generic.internal.EndpointOutputAnnotationsMacro
 
 trait EndpointOutputMacros {
-  def derived[A]: EndpointOutput[A] = macro EndpointOutputAnnotationsMacro.generateEndpointOutput[A]
+
+  /** Derives an output description using metadata specified with annotations on the given case class. Each field
+    * of the case class must be annotated with one of the annotations from [[sttp.tapir.EndpointIO.annotations]].
+    * The result is mapped to an instance of the [[T]] type.
+    */
+  def derived[T]: EndpointOutput[T] = macro EndpointOutputAnnotationsMacro.generateEndpointOutput[T]
 }
