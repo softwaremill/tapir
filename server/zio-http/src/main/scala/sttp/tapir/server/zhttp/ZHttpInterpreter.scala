@@ -33,8 +33,8 @@ trait ZHttpInterpreter[R <: Blocking] {
 
   def zHttpServerOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default
 
-  private def sttpToZHttpHeader(header: SttpHeader): ZHttpHeader =
-    ZHttpHeader(header.name, header.value)
+  private def sttpToZHttpHeader(hl: (String, Seq[SttpHeader])): ZHttpHeader =
+    ZHttpHeader(hl._1, hl._2.map(f => f.value).mkString(", "))
 
   def toRoutes[I, O](
       e: Endpoint[I, Throwable, O, ZioStreams]
@@ -57,10 +57,12 @@ trait ZHttpInterpreter[R <: Blocking] {
 
       interpreter.apply(new ZHttpServerRequest(req), se).flatMap {
         case Some(resp) =>
+          val list: List[ZHttpHeader] = resp.headers.groupBy(_.name)
+            .map(sttpToZHttpHeader).toList
           ZIO.succeed(
             Response.HttpResponse(
               status = Status.fromJHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
-              headers = resp.headers.map(sttpToZHttpHeader).toList,
+              headers = list,
               content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
             )
           )
