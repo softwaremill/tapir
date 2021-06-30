@@ -247,18 +247,18 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   object SName {
     val Unit: SName = SName(fullName = "Unit")
   }
+
+  object annotations {
+    class description(val text: String) extends StaticAnnotation
+    class encodedExample(val example: Any) extends StaticAnnotation
+    class default[T](val default: T) extends StaticAnnotation
+    class format(val format: String) extends StaticAnnotation
+    class deprecated extends StaticAnnotation
+    class encodedName(val name: String) extends StaticAnnotation
+    class validate[T](val v: Validator[T]) extends StaticAnnotation
+  }
 }
 
 trait LowPrioritySchema {
   implicit def derivedSchema[T](implicit derived: Derived[Schema[T]]): Schema[T] = derived.value
 }
-
-// annotations
-
-class description(val text: String) extends StaticAnnotation
-class encodedExample(val example: Any) extends StaticAnnotation
-class default[T](val default: T) extends StaticAnnotation
-class format(val format: String) extends StaticAnnotation
-class deprecated extends StaticAnnotation
-class encodedName(val name: String) extends StaticAnnotation
-class validate[T](val v: Validator[T]) extends StaticAnnotation

@@ -2,7 +2,7 @@ package sttp.tapir.generic.internal
 
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.CaseClassUtil
-import sttp.tapir.{Codec, CodecFormat, encodedName}
+import sttp.tapir.{Codec, CodecFormat, Schema}
 
 import scala.reflect.macros.blackbox
 
@@ -26,7 +26,7 @@ object FormCodecMacro {
       )
     }
 
-    val encodedNameType = c.weakTypeOf[encodedName]
+    val encodedNameType = c.weakTypeOf[Schema.annotations.encodedName]
     val encodeParams: Iterable[Tree] = fieldsWithCodecs.map { case (field, codec) =>
       val fieldName = field.name.asInstanceOf[TermName]
       val fieldNameAsString = fieldName.decodedName.toString

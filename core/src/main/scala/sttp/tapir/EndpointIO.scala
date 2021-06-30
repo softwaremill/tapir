@@ -5,13 +5,16 @@ import sttp.model.{Header, Method}
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
+import sttp.tapir.EndpointInput.WWWAuthenticate
+import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
 import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
+import scala.annotation.StaticAnnotation
 import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
@@ -498,6 +501,34 @@ object EndpointIO {
   }
   object Info {
     def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
+  }
+
+  object annotations {
+    sealed trait EndpointInputAnnotation extends StaticAnnotation
+    sealed trait EndpointOutputAnnotation extends StaticAnnotation
+
+    class path extends EndpointInputAnnotation
+    class query(val name: String = "") extends EndpointInputAnnotation
+    class params extends EndpointInputAnnotation
+    class header(val name: String = "") extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class headers extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class cookie(val name: String = "") extends EndpointInputAnnotation
+    class cookies extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class setCookie(val name: String = "") extends EndpointOutputAnnotation
+    class setCookies extends EndpointOutputAnnotation
+    class statusCode extends EndpointOutputAnnotation
+    class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
+    class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
+    class apikey(val challenge: WWWAuthenticate = WWWAuthenticate.apiKey()) extends StaticAnnotation
+    class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends StaticAnnotation
+    class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
+    class securitySchemeName(val name: String) extends StaticAnnotation
+
+    /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the
+      * segment's name with `{...}` (curly braces), and reference the name using [[annotations.path]].
+      */
+    class endpointInput(val path: String = "") extends EndpointInputAnnotation
   }
 }
 

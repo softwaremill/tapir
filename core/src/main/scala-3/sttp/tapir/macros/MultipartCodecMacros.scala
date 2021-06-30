@@ -3,7 +3,7 @@ package sttp.tapir.macros
 import sttp.tapir.MultipartCodec
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.{CaseClass, CaseClassField}
-import sttp.tapir.{AnyPart, Codec, CodecFormat, DecodeResult, PartCodec, RawBodyType, Schema, TapirFile, encodedName}
+import sttp.tapir.{AnyPart, Codec, CodecFormat, DecodeResult, PartCodec, RawBodyType, Schema, TapirFile}
 import sttp.model.Part
 
 import scala.annotation.tailrec
@@ -20,7 +20,7 @@ object MultipartCodecMacros {
   def multipartCaseClassCodecImpl[T: Type](conf: Expr[Configuration])(using q: Quotes): Expr[MultipartCodec[T]] = {
     import quotes.reflect.*
     val caseClass = new CaseClass[q.type, T](using summon[Type[T]], q)
-    val encodedNameAnnotationSymbol = TypeTree.of[encodedName].tpe.typeSymbol
+    val encodedNameAnnotationSymbol = TypeTree.of[Schema.annotations.encodedName].tpe.typeSymbol
 
     def summonPartCodec[f: Type](field: CaseClassField[q.type, T]) = {
       val candidates = List(

@@ -2,7 +2,7 @@ package sttp.tapir.macros
 
 import sttp.tapir.generic.Configuration
 import sttp.tapir.internal.{CaseClass, CaseClassField}
-import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema, encodedName}
+import sttp.tapir.{Codec, CodecFormat, DecodeResult, Schema}
 
 import scala.quoted.*
 
@@ -15,7 +15,7 @@ object FormCodecMacros {
   def formCaseClassCodecImpl[T: Type](conf: Expr[Configuration])(using q: Quotes): Expr[Codec[String, T, CodecFormat.XWwwFormUrlencoded]] = {
     import quotes.reflect.*
     val caseClass = new CaseClass[q.type, T](using summon[Type[T]], q)
-    val encodedNameAnnotationSymbol = TypeTree.of[encodedName].tpe.typeSymbol
+    val encodedNameAnnotationSymbol = TypeTree.of[Schema.annotations.encodedName].tpe.typeSymbol
 
     def summonCodec[f: Type](field: CaseClassField[q.type, T]) = Expr.summon[Codec[List[String], f, CodecFormat.TextPlain]].getOrElse {
       report.throwError(s"Cannot find Codec[List[String], T, CodecFormat.TextPlain]] for field: ${field}, of type: ${field.tpe}")

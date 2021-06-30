@@ -2,7 +2,6 @@ package sttp.tapir.internal
 
 import sttp.tapir._
 import sttp.tapir.CodecFormat.TextPlain
-import sttp.tapir.annotations
 import sttp.tapir.internal.{CaseClass, CaseClassField}
 import sttp.tapir.typelevel.ParamConcat
 import sttp.model.{QueryParams, Header, StatusCode}
@@ -127,26 +126,26 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   }
 
   // annotation symbols
-  private val endpointInputAnnotationSymbol = TypeTree.of[annotations.endpointInput].tpe.typeSymbol
-  private val pathAnnotationSymbol = TypeTree.of[annotations.path].tpe.typeSymbol
-  private val queryAnnotationSymbol = TypeTree.of[annotations.query].tpe.typeSymbol
-  private val headerAnnotationSymbol = TypeTree.of[annotations.header].tpe.typeSymbol
-  private val headersAnnotationSymbol = TypeTree.of[annotations.headers].tpe.typeSymbol
-  private val cookieAnnotationSymbol = TypeTree.of[annotations.cookie].tpe.typeSymbol
-  private val cookiesAnnotationSymbol = TypeTree.of[annotations.cookies].tpe.typeSymbol
-  private val setCookieAnnotationSymbol = TypeTree.of[annotations.setCookie].tpe.typeSymbol
-  private val setCookiesAnnotationSymbol = TypeTree.of[annotations.setCookies].tpe.typeSymbol
-  private val paramsAnnotationSymbol = TypeTree.of[annotations.params].tpe.typeSymbol
-  private val bearerAnnotationSymbol = TypeTree.of[annotations.bearer].tpe.typeSymbol
-  private val basicAnnotationSymbol = TypeTree.of[annotations.basic].tpe.typeSymbol
-  private val apikeyAnnotationSymbol = TypeTree.of[annotations.apikey].tpe.typeSymbol
-  private val securitySchemeNameAnnotationSymbol = TypeTree.of[annotations.securitySchemeName].tpe.typeSymbol
-  private val bodyAnnotationSymbol = TypeTree.of[annotations.body].tpe.typeSymbol
-  private val statusCodeAnnotationSymbol = TypeTree.of[annotations.statusCode].tpe.typeSymbol
+  private val endpointInputAnnotationSymbol = TypeTree.of[EndpointIO.annotations.endpointInput].tpe.typeSymbol
+  private val pathAnnotationSymbol = TypeTree.of[EndpointIO.annotations.path].tpe.typeSymbol
+  private val queryAnnotationSymbol = TypeTree.of[EndpointIO.annotations.query].tpe.typeSymbol
+  private val headerAnnotationSymbol = TypeTree.of[EndpointIO.annotations.header].tpe.typeSymbol
+  private val headersAnnotationSymbol = TypeTree.of[EndpointIO.annotations.headers].tpe.typeSymbol
+  private val cookieAnnotationSymbol = TypeTree.of[EndpointIO.annotations.cookie].tpe.typeSymbol
+  private val cookiesAnnotationSymbol = TypeTree.of[EndpointIO.annotations.cookies].tpe.typeSymbol
+  private val setCookieAnnotationSymbol = TypeTree.of[EndpointIO.annotations.setCookie].tpe.typeSymbol
+  private val setCookiesAnnotationSymbol = TypeTree.of[EndpointIO.annotations.setCookies].tpe.typeSymbol
+  private val paramsAnnotationSymbol = TypeTree.of[EndpointIO.annotations.params].tpe.typeSymbol
+  private val bearerAnnotationSymbol = TypeTree.of[EndpointIO.annotations.bearer].tpe.typeSymbol
+  private val basicAnnotationSymbol = TypeTree.of[EndpointIO.annotations.basic].tpe.typeSymbol
+  private val apikeyAnnotationSymbol = TypeTree.of[EndpointIO.annotations.apikey].tpe.typeSymbol
+  private val securitySchemeNameAnnotationSymbol = TypeTree.of[EndpointIO.annotations.securitySchemeName].tpe.typeSymbol
+  private val bodyAnnotationSymbol = TypeTree.of[EndpointIO.annotations.body].tpe.typeSymbol
+  private val statusCodeAnnotationSymbol = TypeTree.of[EndpointIO.annotations.statusCode].tpe.typeSymbol
 
   // schema symbols
-  private val descriptionAnnotationSymbol = TypeTree.of[description].tpe.typeSymbol
-  private val deprecatedAnnotationSymbol = TypeTree.of[deprecated].tpe.typeSymbol
+  private val descriptionAnnotationSymbol = TypeTree.of[Schema.annotations.description].tpe.typeSymbol
+  private val deprecatedAnnotationSymbol = TypeTree.of[Schema.annotations.deprecated].tpe.typeSymbol
 
   // util
   private def summonCodec[L: Type, H: Type, CF <: CodecFormat: Type](field: CaseClassField[q.type, T]): Expr[Codec[L, H, CF]] = Expr.summon[Codec[L, H, CF]].getOrElse {

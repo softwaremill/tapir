@@ -3,9 +3,7 @@ package sttp.tapir.generic.internal
 import sttp.model.StatusCode
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.EndpointOutput
-import sttp.tapir.annotations.setCookie
-import sttp.tapir.annotations.setCookies
-import sttp.tapir.annotations.statusCode
+import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable

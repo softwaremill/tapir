@@ -2,15 +2,8 @@ package sttp.tapir.generic.internal
 
 import sttp.model.Header
 import sttp.model.headers.Cookie
-import sttp.tapir.annotations.apikey
-import sttp.tapir.annotations.body
-import sttp.tapir.annotations.cookies
-import sttp.tapir.annotations.header
-import sttp.tapir.annotations.headers
-import sttp.tapir.annotations.securitySchemeName
-import sttp.tapir.deprecated
-import sttp.tapir.description
-import sttp.tapir.Codec
+import sttp.tapir.EndpointIO.annotations._
+import sttp.tapir.{Codec, Schema}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.internal.CaseClassUtil
 
@@ -24,8 +17,8 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
   protected val headersType = c.weakTypeOf[headers]
   protected val cookiesType = c.weakTypeOf[cookies]
 
-  private val descriptionType = c.weakTypeOf[description]
-  private val deprecatedType = c.weakTypeOf[deprecated]
+  private val descriptionType = c.weakTypeOf[Schema.annotations.description]
+  private val deprecatedType = c.weakTypeOf[Schema.annotations.deprecated]
   private val apikeyType = c.weakTypeOf[apikey]
   protected val securitySchemeNameType = c.weakTypeOf[securitySchemeName]
 

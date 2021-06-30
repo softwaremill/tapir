@@ -3,10 +3,11 @@ package sttp.tapir.generic
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.generic.auto._
 import sttp.tapir.SchemaType._
-import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, TapirFile, Validator, encodedName}
+import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, TapirFile, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.annotations.encodedName
 import sttp.tapir.TestUtil.field
 
 import java.nio.charset.StandardCharsets

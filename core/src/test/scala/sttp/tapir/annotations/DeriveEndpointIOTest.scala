@@ -1,18 +1,19 @@
 package sttp.tapir.annotations
 
 import java.nio.charset.StandardCharsets
-
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Header => ModelHeader, QueryParams => ModelQueryParams}
-import sttp.model.headers.{Cookie => ModelCookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta, Cookie => ModelCookie}
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.EndpointIO._
+import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.EndpointInput._
 import sttp.tapir.EndpointInput.Auth._
 import sttp.tapir.RawBodyType.StringBody
+import sttp.tapir.Schema.annotations.{deprecated, description}
 
 object JsonCodecs {
   implicit val stringJsonCodec: JsonCodecMock[String] = new JsonCodecMock[String]

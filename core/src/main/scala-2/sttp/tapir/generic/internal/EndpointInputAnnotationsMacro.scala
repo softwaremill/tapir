@@ -2,7 +2,7 @@ package sttp.tapir.generic.internal
 
 import sttp.model._
 import sttp.tapir.EndpointInput
-import sttp.tapir.annotations._
+import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable

@@ -3,7 +3,7 @@ package sttp.tapir.generic.internal
 import magnolia._
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Configuration
-import sttp.tapir.{FieldName, Schema, SchemaType, default, deprecated, description, encodedExample, encodedName, format, validate}
+import sttp.tapir.{FieldName, Schema, SchemaType}
 import SchemaMagnoliaDerivation.deriveCache
 import sttp.tapir.internal.IterableToListMap
 
@@ -38,7 +38,7 @@ trait SchemaMagnoliaDerivation {
   private def typeNameToSchemaName(typeName: TypeName, annotations: Seq[Any]): Schema.SName = {
     def allTypeArguments(tn: TypeName): Seq[TypeName] = tn.typeArguments.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
 
-    annotations.collectFirst { case ann: encodedName => ann.name } match {
+    annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name } match {
       case Some(altName) =>
         Schema.SName(altName, Nil)
       case None =>
@@ -47,17 +47,17 @@ trait SchemaMagnoliaDerivation {
   }
 
   private def getEncodedName(annotations: Seq[Any]): Option[String] =
-    annotations.collectFirst { case ann: encodedName => ann.name }
+    annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name }
 
   private def enrichSchema[X](schema: Schema[X], annotations: Seq[Any]): Schema[X] = {
     annotations.foldLeft(schema) {
-      case (schema, ann: description)    => schema.description(ann.text)
-      case (schema, ann: encodedExample) => schema.encodedExample(ann.example)
-      case (schema, ann: default[X])     => schema.default(ann.default)
-      case (schema, ann: validate[X])    => schema.validate(ann.v)
-      case (schema, ann: format)         => schema.format(ann.format)
-      case (schema, _: deprecated)       => schema.deprecated(true)
-      case (schema, _)                   => schema
+      case (schema, ann: Schema.annotations.description)    => schema.description(ann.text)
+      case (schema, ann: Schema.annotations.encodedExample) => schema.encodedExample(ann.example)
+      case (schema, ann: Schema.annotations.default[X])     => schema.default(ann.default)
+      case (schema, ann: Schema.annotations.validate[X])    => schema.validate(ann.v)
+      case (schema, ann: Schema.annotations.format)         => schema.format(ann.format)
+      case (schema, _: Schema.annotations.deprecated)       => schema.deprecated(true)
+      case (schema, _)                                      => schema
     }
   }
 
