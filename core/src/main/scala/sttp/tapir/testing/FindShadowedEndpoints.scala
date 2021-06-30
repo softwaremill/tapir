@@ -1,7 +1,7 @@
-package sttp.tapir.util
+package sttp.tapir.testing
 
 import sttp.tapir.internal.{RichEndpointInput, UrlencodedData}
-import sttp.tapir.{Endpoint, EndpointInput, ShadowedEndpoint}
+import sttp.tapir.{Endpoint, EndpointInput, testing}
 
 import scala.annotation.tailrec
 
@@ -18,7 +18,7 @@ object FindShadowedEndpoints {
     }
 
   private def findAllShadowedByEndpoint(endpoint: Endpoint[_, _, _, _], in: List[Endpoint[_, _, _, _]]): List[ShadowedEndpoint] = {
-    in.filter(e => checkIfShadows(endpoint, e)).map(e => ShadowedEndpoint(e, endpoint))
+    in.filter(e => checkIfShadows(endpoint, e)).map(e => testing.ShadowedEndpoint(e, endpoint))
   }
 
   private def checkIfShadows(e1: Endpoint[_, _, _, _], e2: Endpoint[_, _, _, _]): Boolean =

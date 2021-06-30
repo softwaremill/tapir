@@ -1,4 +1,6 @@
-package sttp.tapir
+package sttp.tapir.testing
+
+import sttp.tapir.Endpoint
 
 /** Endpoint `e1` is shadowed by endpoint `e2` when all requests that match `e2` also match `e1`. Here, "request matches
   * endpoint" takes into account only the method & shape of the path. It does *not* take into account possible

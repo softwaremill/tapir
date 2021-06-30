@@ -1,8 +1,8 @@
-package sttp.tapir
+package sttp.tapir.testing
 
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
-import sttp.tapir.util.FindShadowedEndpoints
+import sttp.tapir._
 
 class FindShadowedEndpointsTest extends AnyFlatSpecLike with Matchers {
 
