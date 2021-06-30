@@ -45,23 +45,14 @@ class ZHttpTestServerInterpreter
     val as: Async[IO] = Async[IO]
     implicit val r: Runtime[Blocking] = Runtime.default
     val zioHttpServerPort = 8091
-    println(routes.toList.size)
-    val value: Server[Blocking, Throwable] = Server.port(zioHttpServerPort) ++ Server.app(concatRoutes(routes))
-    val run: ZManaged[Blocking, Nothing, Exit[Throwable, Unit]] = Server
-      .make(value)
+    val server: Server[Blocking, Throwable] = Server.port(zioHttpServerPort) ++ Server.app(routes.reduce(_ <> _))
+    val managedServer: ZManaged[Blocking, Nothing, Exit[Throwable, Unit]] = Server
+      .make(server)
       .run
       .provideSomeLayer[Blocking](EventLoopGroup.auto(0) ++ ServerChannelFactory.auto)
 
-    new ZManagedSyntax(run)
+    new ZManagedSyntax(managedServer)
       .toResource(as, taskEffectInstance(r))
       .map(_ => zioHttpServerPort)
-  }
-
-  private def concatRoutes(
-      routes: NonEmptyList[Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]]
-  ): Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = {
-    routes.toList.foldLeft[Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]](Http.empty)((routes, route) =>
-      routes +++ route
-    )
   }
 }
