@@ -520,15 +520,15 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
     noIndentation(actualYaml) shouldBe load("expected_extensions.yml")
   }
 
-  test("should include a response even if all outputs are empty") {
+  test("should include a response even if all outputs are empty, with descriptions") {
     sealed trait Base
     case object Success extends Base
     case object AnotherSuccess extends Base
 
     val ep = infallibleEndpoint.get.out(
       sttp.tapir.oneOf[Base](
-        oneOfMapping(StatusCode.Ok, emptyOutputAs(Success)),
-        oneOfMapping(StatusCode.Accepted, emptyOutputAs(AnotherSuccess))
+        oneOfMapping(StatusCode.Ok, emptyOutputAs(Success).description("success")),
+        oneOfMapping(StatusCode.Accepted, emptyOutputAs(AnotherSuccess).description("maybe success"))
       )
     )
 

@@ -8,6 +8,6 @@ paths:
       operationId: getRoot
       responses:
         '200':
-          description: ''
+          description: success
         '202':
-          description: ''
+          description: maybe success
