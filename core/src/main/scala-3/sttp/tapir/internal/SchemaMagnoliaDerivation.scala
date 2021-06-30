@@ -41,7 +41,7 @@ trait SchemaMagnoliaDerivation {
         private def typeNameToSchemaName(typeName: TypeInfo, annotations: Seq[Any]): Schema.SName = {
           def allTypeArguments(tn: TypeInfo): Seq[TypeInfo] = tn.typeParams.toList.flatMap(tn2 => tn2 +: allTypeArguments(tn2))
 
-          annotations.collectFirst { case ann: encodedName => ann.name } match {
+          annotations.collectFirst { case ann: Schema.annotations.encodedName => ann.name } match {
             case Some(altName) =>
               Schema.SName(altName, Nil)
             case None =>

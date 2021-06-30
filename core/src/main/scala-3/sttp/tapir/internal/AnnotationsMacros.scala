@@ -169,10 +169,10 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   }
 
   private def makeBodyIO[f: Type](field: CaseClassField[q.type, T])(ann: Term): Expr[EndpointIO.Basic[f]] = {
-    val annExp = ann.asExprOf[annotations.body[_, _]]
+    val annExp = ann.asExprOf[EndpointIO.annotations.body[_, _]]
 
     ann.tpe.asType match {
-      case '[annotations.body[bt, cf]] =>
+      case '[EndpointIO.annotations.body[bt, cf]] =>
         '{EndpointIO.Body[bt, f](
           $annExp.bodyType.asInstanceOf[RawBodyType[bt]],
           ${summonCodec[bt, f, cf](field)}.asInstanceOf[Codec[bt, f, CodecFormat]],
@@ -234,12 +234,12 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   // auth inputs
   private def makeBearerAuthInput[f: Type](field: CaseClassField[q.type, T], schemeName: Option[Term], auth: Term): Expr[EndpointInput.Single[f]] =
     setSecuritySchemeName(
-      '{TapirAuth.bearer(${auth.asExprOf[annotations.bearer]}.challenge)(${summonCodec[List[String], f, CodecFormat.TextPlain](field)})},
+      '{TapirAuth.bearer(${auth.asExprOf[EndpointIO.annotations.bearer]}.challenge)(${summonCodec[List[String], f, CodecFormat.TextPlain](field)})},
       schemeName)
 
   private def makeBasicAuthInput[f: Type](field: CaseClassField[q.type, T], schemeName: Option[Term], auth: Term): Expr[EndpointInput.Single[f]] =
     setSecuritySchemeName(
-      '{TapirAuth.basic(${auth.asExprOf[annotations.basic]}.challenge)(${summonCodec[List[String], f, CodecFormat.TextPlain](field)})},
+      '{TapirAuth.basic(${auth.asExprOf[EndpointIO.annotations.basic]}.challenge)(${summonCodec[List[String], f, CodecFormat.TextPlain](field)})},
       schemeName)
 
   // schema & auth wrappers
@@ -250,12 +250,12 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
 
   private def wrapWithApiKey[f: Type](input: Expr[EndpointInput.Single[f]], apikey: Option[Term], schemeName: Option[Term]): Expr[EndpointInput.Single[f]] =
     apikey
-      .map(ak => setSecuritySchemeName('{EndpointInput.Auth.ApiKey($input, ${ak.asExprOf[annotations.apikey]}.challenge, None)}, schemeName))
+      .map(ak => setSecuritySchemeName('{EndpointInput.Auth.ApiKey($input, ${ak.asExprOf[EndpointIO.annotations.apikey]}.challenge, None)}, schemeName))
       .getOrElse(input)
 
   private def setSecuritySchemeName[f: Type](auth: Expr[EndpointInput.Auth[f]], schemeName: Option[Term]): Expr[EndpointInput.Single[f]] =
     schemeName
-      .map(s => '{$auth.securitySchemeName(${s.asExprOf[annotations.securitySchemeName]}.name)})
+      .map(s => '{$auth.securitySchemeName(${s.asExprOf[EndpointIO.annotations.securitySchemeName]}.name)})
       .getOrElse(auth)
 
   private def addSchemaMetadata[f: Type](field: CaseClassField[q.type, T], transput: Expr[EndpointTransput[f]]): Expr[EndpointTransput[f]] = {
