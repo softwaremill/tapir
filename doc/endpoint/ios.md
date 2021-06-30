@@ -144,7 +144,9 @@ case class User(
   sessionId: Long
 )
 ```
-endpoint input can be generated using macro `sttp.tapir.annotations.deriveEndpointInput[User]` which is equivalent to
+
+endpoint input can be generated using macro `EndpointInput.derived[User]` which is equivalent to
+
 ```scala mdoc:silent:nest
 import sttp.tapir._
 
@@ -152,7 +154,10 @@ val userInput: EndpointInput[User] =
   query[String]("user").and(cookie[Long]("sessionId")).mapTo[User]
 ```
 
+Similarly, endpoint outputs can be derived using `EndpointOutput.derived[...]`.
+
 Following annotations are available in package `sttp.tapir.annotations` for describing both input and output values:
+
 * `@header` captures a header with the same name as name of annotated field in a case class. This annotation
 can also be used with optional parameter `@header("headerName")` in order to capture a header with name `"headerName"`
 if a name of header is different from name of annotated field in a case class
@@ -164,6 +169,7 @@ instance from `String` to target type
 target type
 
 Following annotations are only available for describing input values:
+
 * `@query` captures a query parameter with the same name as name of annotated field in a case class. The same as
 annotation `@header` it has optional parameter to specify alternative name for query parameter
 * `@params` captures all query parameters. Can only be applied to fields represented as `QueryParams`
@@ -171,6 +177,7 @@ annotation `@header` it has optional parameter to specify alternative name for q
 `@header` it has optional parameter to specify alternative name for cookie
 * `@path` captures a path segment. Can only be applied to field of a case class if this case class is annotated
 by annotation `@endpointInput`. For example,
+  
 ```scala mdoc:silent:reset
 import sttp.tapir.annotations._
 
@@ -184,6 +191,7 @@ case class Book(
   name: String
 )
 ```
+
 Annotation `@endpointInput` specifies endpoint path. In order to capture one segment of this path it must be surrounded
 in curly braces
 * `@apikey` wraps any other input and designates it as an API key. Can only be used with another annotations
@@ -191,6 +199,7 @@ in curly braces
 * `@bearer` extracts data from the `Authorization` header removing the `Bearer` prefix.
 
 Following annotations are only available for describing output values:
+
 * `@setCookie` sends value in header `Set-Cookie`. The same as annotation `@header` it has optional parameter to specify
 alternative name for cookie. Can only be applied for field represented as `CookieValueWithMeta`
 * `@setCookies` sends several `Set-Cookie` headers. Can only be applied for field represented as `List[Cookie]`

@@ -6,7 +6,7 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
 import sttp.tapir.internal._
-import sttp.tapir.macros.EndpointTransputMacros
+import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
@@ -93,7 +93,7 @@ sealed trait EndpointInput[T] extends EndpointTransput[T] {
   def /[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] = and(other)
 }
 
-object EndpointInput {
+object EndpointInput extends EndpointInputMacros {
   sealed trait Single[T] extends EndpointInput[T] {
     private[tapir] type ThisType[X] <: EndpointInput.Single[X]
   }
@@ -266,7 +266,7 @@ sealed trait EndpointOutput[T] extends EndpointTransput[T] {
     EndpointOutput.Pair(this, other, mkCombine(concat), mkSplit(concat))
 }
 
-object EndpointOutput {
+object EndpointOutput extends EndpointOutputMacros {
   sealed trait Single[T] extends EndpointOutput[T]
   sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
 
