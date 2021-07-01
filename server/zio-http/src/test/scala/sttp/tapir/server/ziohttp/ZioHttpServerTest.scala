@@ -24,7 +24,7 @@ class ZioHttpServerTest extends TestSuite {
 
     implicit val m: MonadError[RIO[Blocking, *]] = zioMonadError
 
-    new ServerBasicTests(createServerTest, interpreter, false).tests() ++
+    new ServerBasicTests(createServerTest, interpreter, false, true, false, false).tests() ++
       new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
       new ServerAuthenticationTests(createServerTest).tests() ++
       new ServerMetricsTest(createServerTest).tests()
