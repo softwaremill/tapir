@@ -20,7 +20,7 @@ class ZioHttpRequestBody[F](request: Request) extends RequestBody[RIO[F, *], Zio
     case HttpData.StreamData(data)   => data.runCollect.map(_.toArray)
   }
 
-  def toRaw[R](bodyType: RawBodyType[R]): Task[RawValue[R]] = bodyType match {
+  override def toRaw[R](bodyType: RawBodyType[R]): Task[RawValue[R]] = bodyType match {
     case RawBodyType.StringBody(defaultCharset) => asByteArray.map(new String(_, defaultCharset)).map(RawValue(_))
     case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
     case RawBodyType.ByteBufferBody             => asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
@@ -35,5 +35,5 @@ class ZioHttpRequestBody[F](request: Request) extends RequestBody[RIO[F, *], Zio
     case HttpData.StreamData(stream) => stream
   }
 
-  def toStream(): streams.BinaryStream = stream.asInstanceOf[streams.BinaryStream]
+  override def toStream(): streams.BinaryStream = stream.asInstanceOf[streams.BinaryStream]
 }

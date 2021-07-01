@@ -8,7 +8,7 @@ import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
 
 class ZioHttpServerRequest(req: Request) extends ServerRequest {
-  def protocol: String = "HTTP/1.1" //TODO: missing field in request
+  override def protocol: String = "HTTP/1.1" //TODO: missing field in request
 
   def remote: Option[InetSocketAddress] =
     for {
@@ -16,24 +16,18 @@ class ZioHttpServerRequest(req: Request) extends ServerRequest {
       port <- req.url.port
     } yield new InetSocketAddress(host, port)
 
-  lazy val connectionInfo: ConnectionInfo =
+  override lazy val connectionInfo: ConnectionInfo =
     ConnectionInfo(None, remote, None)
 
-  def underlying: Any = req
+  override def underlying: Any = req
 
-  lazy val pathSegments: List[String] = req.url.path.toList
+  override lazy val pathSegments: List[String] = req.url.path.toList
 
-  lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams)
+  override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams)
 
-  def method: SttpMethod = SttpMethod(req.method.asJHttpMethod.name().toUpperCase)
+  override def method: SttpMethod = SttpMethod(req.method.asJHttpMethod.name().toUpperCase)
 
-  def uri: Uri = Uri.unsafeParse(req.url.toString)
+  override def uri: Uri = Uri.unsafeParse(req.url.toString)
 
-  lazy val headers: Seq[SttpHeader] = req.headers.map(h => SttpHeader(h.name.toString, h.value.toString))
+  override lazy val headers: Seq[SttpHeader] = req.headers.map(h => SttpHeader(h.name.toString, h.value.toString))
 }
-
-
-
-
-
-
