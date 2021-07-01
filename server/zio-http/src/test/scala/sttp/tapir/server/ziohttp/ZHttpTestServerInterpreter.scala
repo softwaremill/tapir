@@ -44,8 +44,9 @@ class ZHttpTestServerInterpreter
   override def server(routes: NonEmptyList[Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]]): Resource[IO, Port] = {
     val as: Async[IO] = Async[IO]
     implicit val r: Runtime[Blocking] = Runtime.default
-    val zioHttpServerPort = 8091
-    val server: Server[Blocking, Throwable] = Server.port(zioHttpServerPort) ++ Server.app(routes.toList.reduce(_ <> _))
+    val zioHttpServerPort = 8090
+    val server: Server[Blocking, Throwable] =
+      Server.port(zioHttpServerPort) ++ Server.app(routes.toList.reduce(_ <> _)) ++ Server.maxRequestSize(1000000)
     val managedServer: ZManaged[Blocking, Nothing, Exit[Throwable, Unit]] = Server
       .make(server)
       .run

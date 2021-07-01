@@ -1,9 +1,8 @@
 package sttp.tapir.server.ziohttp
 
 import cats.effect.{IO, Resource}
-import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
-import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerMetricsTest, ServerStreamingTests, backendResource}
+import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerBasicTests, backendResource}
 import sttp.tapir.server.zhttp.ZHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.RIO
