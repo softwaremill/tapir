@@ -135,7 +135,7 @@ The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the o
 
 Inputs and outputs can also be built for case classes using annotations. For example, for the case class `User`
 ```scala mdoc:silent:reset
-import sttp.tapir.annotations._
+import sttp.tapir.EndpointIO.annotations._
 
 case class User(
   @query
@@ -182,7 +182,7 @@ annotation `@header` it has optional parameter to specify alternative name for q
 by annotation `@endpointInput`. For example,
   
 ```scala mdoc:silent:reset
-import sttp.tapir.annotations._
+import sttp.tapir.EndpointIO.annotations._
 
 @endpointInput("books/{year}/{genre}")
 case class Book(
