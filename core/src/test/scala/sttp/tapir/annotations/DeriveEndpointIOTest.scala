@@ -1,15 +1,15 @@
 package sttp.tapir.annotations
 
 import java.nio.charset.StandardCharsets
-
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Header => ModelHeader, QueryParams => ModelQueryParams}
-import sttp.model.headers.{Cookie => ModelCookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta, Cookie => ModelCookie}
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.EndpointIO._
+import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.EndpointInput._
 import sttp.tapir.EndpointInput.Auth._
 import sttp.tapir.RawBodyType.StringBody
@@ -64,7 +64,7 @@ final case class TapirRequestTest5(
     @description("field-description")
     field1: Int,
     @cookie
-    @deprecated
+    @Schema.annotations.deprecated
     cookie: Boolean
 )
 
@@ -94,6 +94,19 @@ final case class TapirRequestTest7(
     @securitySchemeName(name = "secbearer")
     @bearer
     token: String
+)
+
+final case class TapirRequestTest8(
+    @query
+    @description("field-8-1")
+    @example(9)
+    @Schema.annotations.description("field-8-2")
+    @Schema.annotations.encodedExample(10)
+    @Schema.annotations.default(11)
+    @Schema.annotations.format("tel")
+    @Schema.annotations.validate(Validator.min(0))
+    @Schema.annotations.deprecated
+    field: Int
 )
 
 final case class TapirResponseTest1(
@@ -194,6 +207,28 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       }((t: TapirRequestTest6) => (t.field5, t.field2, t.field1, t.field3, t.field4))
 
     compareTransputs(derivedInput, expectedInput) shouldBe true
+  }
+
+  it should "derive correct input with schema annotations" in {
+    val expectedInput = query[Int]("field")
+      .description("field-8-1")
+      .example(9)
+      .default(11)
+      .schema(_.format("tel").encodedExample(10).description("field-8-2"))
+      .validate(Validator.min(0))
+      .deprecated()
+      .mapTo[TapirRequestTest8]
+
+    val derived = EndpointInput.derived[TapirRequestTest8].asInstanceOf[EndpointInput.Query[TapirRequestTest8]]
+
+    compareTransputs(EndpointInput.derived[TapirRequestTest8], expectedInput) shouldBe true
+    derived.codec.schema.description shouldBe expectedInput.codec.schema.description
+    derived.codec.schema.encodedExample shouldBe expectedInput.codec.schema.encodedExample
+    derived.codec.schema.format shouldBe expectedInput.codec.schema.format
+    derived.codec.schema.default shouldBe expectedInput.codec.schema.default
+
+    derived.codec.schema.applyValidation(TapirRequestTest8(-1)) should not be empty
+    derived.codec.schema.applyValidation(TapirRequestTest8(1)) shouldBe empty
   }
 
   it should "not compile if there is field without annotation" in {

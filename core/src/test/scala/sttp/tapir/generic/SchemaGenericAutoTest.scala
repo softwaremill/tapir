@@ -3,20 +3,8 @@ package sttp.tapir.generic
 import java.math.{BigDecimal => JBigDecimal}
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.auto._
-import sttp.tapir.{
-  FieldName,
-  Schema,
-  SchemaType,
-  Validator,
-  default,
-  deprecated,
-  description,
-  encodedExample,
-  encodedName,
-  format,
-  validate
-}
-
+import sttp.tapir.{FieldName, Schema, SchemaType, Validator}
+import sttp.tapir.Schema.annotations._
 import org.scalatest.flatspec.AsyncFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Schema.SName

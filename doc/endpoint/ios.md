@@ -135,7 +135,7 @@ The `Endpoint.mapIn`, `Endpoint.mapInTo` etc. have the same signatures are the o
 
 Inputs and outputs can also be built for case classes using annotations. For example, for the case class `User`
 ```scala mdoc:silent:reset
-import sttp.tapir.annotations._
+import sttp.tapir.EndpointIO.annotations._
 
 case class User(
   @query
@@ -175,11 +175,14 @@ annotation `@header` it has optional parameter to specify alternative name for q
 * `@params` captures all query parameters. Can only be applied to fields represented as `QueryParams`
 * `@cookie` captures a cookie with the same name as name of annotated field in a case class. The same as annotation
 `@header` it has optional parameter to specify alternative name for cookie
+* `@apikey` wraps any other input and designates it as an API key. Can only be used with another annotations
+* `@basic` extracts data from the `Authorization` header. Can only be applied for field represented as `UsernamePassword`
+* `@bearer` extracts data from the `Authorization` header removing the `Bearer` prefix.  
 * `@path` captures a path segment. Can only be applied to field of a case class if this case class is annotated
 by annotation `@endpointInput`. For example,
   
 ```scala mdoc:silent:reset
-import sttp.tapir.annotations._
+import sttp.tapir.EndpointIO.annotations._
 
 @endpointInput("books/{year}/{genre}")
 case class Book(
@@ -192,11 +195,8 @@ case class Book(
 )
 ```
 
-Annotation `@endpointInput` specifies endpoint path. In order to capture one segment of this path it must be surrounded
-in curly braces
-* `@apikey` wraps any other input and designates it as an API key. Can only be used with another annotations
-* `@basic` extracts data from the `Authorization` header. Can only be applied for field represented as `UsernamePassword`
-* `@bearer` extracts data from the `Authorization` header removing the `Bearer` prefix.
+Annotation `@endpointInput` specifies endpoint path. In order to capture a segment of the path, it must be surrounded
+in curly braces.
 
 Following annotations are only available for describing output values:
 

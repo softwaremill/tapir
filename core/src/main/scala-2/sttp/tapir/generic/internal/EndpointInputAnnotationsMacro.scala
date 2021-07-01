@@ -2,7 +2,7 @@ package sttp.tapir.generic.internal
 
 import sttp.model._
 import sttp.tapir.EndpointInput
-import sttp.tapir.annotations._
+import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable
@@ -45,7 +45,7 @@ class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends En
           case Some((symbol, idx)) =>
             inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> idx)
             val input = makePathInput(symbol)
-            assignSchemaAnnotations(input, symbol, util)
+            addMetadataFromAnnotations(input, symbol, util)
           case None =>
             c.abort(c.enclosingPosition, s"Target case class must have field with name $fieldName and annotation @path")
         }
@@ -64,11 +64,11 @@ class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends En
 
     val nonPathInputs = nonPathFields map { case (field, fieldIdx) =>
       val input = util
-        .extractOptArgFromAnnotation(field, queryType)
+        .extractOptStringArgFromAnnotation(field, queryType)
         .map(makeQueryInput(field))
-        .orElse(util.extractOptArgFromAnnotation(field, headerType).map(makeHeaderIO(field)))
-        .orElse(util.extractOptArgFromAnnotation(field, cookieType).map(makeCookieInput(field)))
-        .orElse(hasBodyAnnotation(field).map(makeBodyIO(field)))
+        .orElse(util.extractOptStringArgFromAnnotation(field, headerType).map(makeHeaderIO(field)))
+        .orElse(util.extractOptStringArgFromAnnotation(field, cookieType).map(makeCookieInput(field)))
+        .orElse(bodyAnnotation(field).map(makeBodyIO(field)))
         .orElse(if (util.annotated(field, paramsType)) Some(makeQueryParamsInput(field)) else None)
         .orElse(if (util.annotated(field, headersType)) Some(makeHeadersIO(field)) else None)
         .orElse(if (util.annotated(field, cookiesType)) Some(makeCookiesIO(field)) else None)
@@ -83,7 +83,7 @@ class EndpointInputAnnotationsMacro(override val c: blackbox.Context) extends En
           )
         }
       inputIdxToFieldIdx += (inputIdxToFieldIdx.size -> fieldIdx)
-      assignSchemaAnnotations(input, field, util)
+      addMetadataFromAnnotations(input, field, util)
     }
 
     val result = (pathInputs ::: nonPathInputs).reduceLeft { (left, right) => q"$left.and($right)" }
