@@ -4,7 +4,7 @@ import sttp.model.{QueryParams, Uri, Header => SttpHeader, Method => SttpMethod}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import zhttp.http.Request
 
-import java.net.InetSocketAddress
+import java.net.{InetSocketAddress, URLDecoder, URLEncoder}
 import scala.collection.immutable.Seq
 
 class ZHttpServerRequest(req: Request) extends ServerRequest {
@@ -22,6 +22,7 @@ class ZHttpServerRequest(req: Request) extends ServerRequest {
   def underlying: Any = req
 
   lazy val pathSegments: List[String] = req.url.path.toList
+
   lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(req.url.queryParams)
 
   def method: SttpMethod = SttpMethod(req.method.asJHttpMethod.name().toUpperCase)

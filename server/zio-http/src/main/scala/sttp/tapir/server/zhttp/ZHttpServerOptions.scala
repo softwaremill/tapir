@@ -24,7 +24,7 @@ case class ZHttpServerOptions[R](
 
 object ZHttpServerOptions {
 
-  def customInterceptors[R](
+  def customInterceptors[R <: Blocking](
       metricsInterceptor: Option[MetricsRequestInterceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]] = None,
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       additionalInterceptors: List[Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]] = Nil,
@@ -51,5 +51,5 @@ object ZHttpServerOptions {
     RIO(Defaults.deleteFile()(file))
   }
 
-  def default[R]: ZHttpServerOptions[R] = customInterceptors()
+  def default[R <: Blocking]: ZHttpServerOptions[R] = customInterceptors()
 }
