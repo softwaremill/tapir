@@ -12,24 +12,25 @@ import sttp.tapir.server.zhttp.{ZHttpInterpreter, ZHttpServerOptions}
 import sttp.tapir.tests.Port
 import zhttp.http._
 import zhttp.service.server.ServerChannelFactory
-import zhttp.service.{EventLoopGroup, Server, ServerChannelFactory}
+import zhttp.service.{EventLoopGroup, Server}
 import zio._
 import zio.blocking.Blocking
-import zio.console.Console
 import zio.interop.ZManagedSyntax
 import zio.interop.catz.taskEffectInstance
+import zio.stream.ZStream
 
 import scala.reflect.ClassTag
 
 class ZHttpTestServerInterpreter
-  extends TestServerInterpreter[RIO[Blocking, *], ZioStreams, Http[Blocking, Throwable, Request, Response[Blocking, Throwable]], ZioStreams] {
+  extends TestServerInterpreter[RIO[Blocking, *], ZioStreams, Http[Blocking, Throwable, Request, Response[Blocking, Throwable]], ZStream[Blocking, Throwable, Byte]] {
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, ZioStreams, RIO[Blocking, *]],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Blocking, *], ZioStreams]]
+      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Blocking, *], ZStream[Blocking, Throwable, Byte]]]
   ): Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = {
     val serverOptions: ZHttpServerOptions[Blocking] = ZHttpServerOptions.customInterceptors(
+      metricsInterceptor = metricsInterceptor,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
     ZHttpInterpreter(serverOptions).toRoutes(e)
