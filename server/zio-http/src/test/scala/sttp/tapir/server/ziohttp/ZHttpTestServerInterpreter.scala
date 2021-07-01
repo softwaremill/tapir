@@ -45,7 +45,7 @@ class ZHttpTestServerInterpreter
     val as: Async[IO] = Async[IO]
     implicit val r: Runtime[Blocking] = Runtime.default
     val zioHttpServerPort = 8091
-    val server: Server[Blocking, Throwable] = Server.port(zioHttpServerPort) ++ Server.app(routes.reduce(_ <> _))
+    val server: Server[Blocking, Throwable] = Server.port(zioHttpServerPort) ++ Server.app(routes.toList.reduce(_ <> _))
     val managedServer: ZManaged[Blocking, Nothing, Exit[Throwable, Unit]] = Server
       .make(server)
       .run
