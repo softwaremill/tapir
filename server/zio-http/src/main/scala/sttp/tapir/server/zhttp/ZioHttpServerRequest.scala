@@ -7,7 +7,7 @@ import zhttp.http.Request
 import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
 
-class ZHttpServerRequest(req: Request) extends ServerRequest {
+class ZioHttpServerRequest(req: Request) extends ServerRequest {
   def protocol: String = "HTTP/1.1" //TODO: missing field in request
 
   def remote: Option[InetSocketAddress] =

@@ -11,18 +11,18 @@ import zio.RIO
 import zio.blocking.Blocking
 import zio.stream.ZStream
 
-case class ZHttpServerOptions[R](
+case class ZioHttpServerOptions[R](
     createFile: ServerRequest => RIO[R, TapirFile],
     deleteFile: TapirFile => RIO[R, Unit],
     interceptors: List[Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]]
 ) {
-  def prependInterceptor(i: Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]): ZHttpServerOptions[R] =
+  def prependInterceptor(i: Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]): ZioHttpServerOptions[R] =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]): ZHttpServerOptions[R] =
+  def appendInterceptor(i: Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]): ZioHttpServerOptions[R] =
     copy(interceptors = interceptors :+ i)
 }
 
-object ZHttpServerOptions {
+object ZioHttpServerOptions {
 
   def customInterceptors[R <: Blocking](
       metricsInterceptor: Option[MetricsRequestInterceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]] = None,
@@ -32,8 +32,8 @@ object ZHttpServerOptions {
         new UnsupportedMediaTypeInterceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]()
       ),
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
-  ): ZHttpServerOptions[R] =
-    ZHttpServerOptions(
+  ): ZioHttpServerOptions[R] =
+    ZioHttpServerOptions(
       defaultCreateFile,
       defaultDeleteFile,
       metricsInterceptor.toList ++
@@ -51,5 +51,5 @@ object ZHttpServerOptions {
     RIO(Defaults.deleteFile()(file))
   }
 
-  def default[R <: Blocking]: ZHttpServerOptions[R] = customInterceptors()
+  def default[R <: Blocking]: ZioHttpServerOptions[R] = customInterceptors()
 }

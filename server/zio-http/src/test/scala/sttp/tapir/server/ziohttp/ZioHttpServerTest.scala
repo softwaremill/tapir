@@ -11,15 +11,15 @@ import sttp.tapir.server.tests.{
   ServerStreamingTests,
   backendResource
 }
-import sttp.tapir.server.zhttp.ZHttpInterpreter.zioMonadError
+import sttp.tapir.server.zhttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.RIO
 import zio.blocking.Blocking
 
-class ZHttpServerTest extends TestSuite {
+class ZioHttpServerTest extends TestSuite {
 
   override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
-    val interpreter = new ZHttpTestServerInterpreter()
+    val interpreter = new ZioHttpTestServerInterpreter()
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
     implicit val m: MonadError[RIO[Blocking, *]] = zioMonadError

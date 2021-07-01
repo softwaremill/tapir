@@ -8,7 +8,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.zhttp.{ZHttpInterpreter, ZHttpServerOptions}
+import sttp.tapir.server.zhttp.{ZioHttpInterpreter, ZioHttpServerOptions}
 import sttp.tapir.tests.Port
 import zhttp.http._
 import zhttp.service.server.ServerChannelFactory
@@ -21,7 +21,7 @@ import zio.stream.ZStream
 
 import scala.reflect.ClassTag
 
-class ZHttpTestServerInterpreter
+class ZioHttpTestServerInterpreter
   extends TestServerInterpreter[RIO[Blocking, *], ZioStreams, Http[Blocking, Throwable, Request, Response[Blocking, Throwable]], ZStream[Blocking, Throwable, Byte]] {
 
   override def route[I, E, O](
@@ -29,17 +29,17 @@ class ZHttpTestServerInterpreter
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Blocking, *], ZStream[Blocking, Throwable, Byte]]]
   ): Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = {
-    val serverOptions: ZHttpServerOptions[Blocking] = ZHttpServerOptions.customInterceptors(
+    val serverOptions: ZioHttpServerOptions[Blocking] = ZioHttpServerOptions.customInterceptors(
       metricsInterceptor = metricsInterceptor,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
-    ZHttpInterpreter(serverOptions).toRoutes(e)
+    ZioHttpInterpreter(serverOptions).toRoutes(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => RIO[Blocking, O])(implicit
       eClassTag: ClassTag[E]
   ): Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = {
-    ZHttpInterpreter().toRouteRecoverErrors(e)(fn)
+    ZioHttpInterpreter().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]]): Resource[IO, Port] = {

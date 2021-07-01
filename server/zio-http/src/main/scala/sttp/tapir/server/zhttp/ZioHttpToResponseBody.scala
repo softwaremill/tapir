@@ -10,7 +10,7 @@ import zio.stream.{Stream, ZStream}
 
 import java.nio.charset.Charset
 
-class ZHttpToResponseBody extends ToResponseBody[ZStream[Blocking, Throwable, Byte], ZioStreams] {
+class ZioHttpToResponseBody extends ToResponseBody[ZStream[Blocking, Throwable, Byte], ZioStreams] {
   val streams: ZioStreams = ZioStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): ZStream[Blocking, Throwable, Byte] =

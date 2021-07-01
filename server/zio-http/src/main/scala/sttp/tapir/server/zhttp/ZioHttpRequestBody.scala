@@ -11,7 +11,7 @@ import zio.{RIO, Task}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
-class ZHttpRequestBody[F](request: Request) extends RequestBody[RIO[F, *], ZioStreams] {
+class ZioHttpRequestBody[F](request: Request) extends RequestBody[RIO[F, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
   def asByteArray: Task[Array[Byte]] = request.content match {

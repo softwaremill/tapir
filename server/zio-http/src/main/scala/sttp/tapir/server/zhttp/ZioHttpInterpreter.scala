@@ -7,15 +7,15 @@ import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.zhttp.ZHttpInterpreter.zioMonadError
-import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZHttpHeader}
+import sttp.tapir.server.zhttp.ZioHttpInterpreter.zioMonadError
+import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZioHttpHeader}
 import zio._
 import zio.blocking.Blocking
 import zio.stream.ZStream
 
 import scala.reflect.ClassTag
 
-trait ZHttpInterpreter[R <: Blocking] {
+trait ZioHttpInterpreter[R <: Blocking] {
 
   def toRouteRecoverErrors[I, E, O](
       e: Endpoint[I, E, O, ZioStreams]
@@ -31,10 +31,10 @@ trait ZHttpInterpreter[R <: Blocking] {
     toHttp(se)
   }
 
-  def zHttpServerOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default
+  def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  private def sttpToZHttpHeader(hl: (String, Seq[SttpHeader])): ZHttpHeader =
-    ZHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
+  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
+    ZioHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
 
   def toRoutes[I, O](
       e: Endpoint[I, Throwable, O, ZioStreams]
@@ -46,21 +46,21 @@ trait ZHttpInterpreter[R <: Blocking] {
       se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
   ): Http[R, Throwable, Request, Response[R, Throwable]] =
     Http.fromEffectFunction[Request] { req =>
-      implicit val bodyListener: ZHttpBodyListener[R] = new ZHttpBodyListener[R]
+      implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
       val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](
-        new ZHttpRequestBody(req),
-        new ZHttpToResponseBody,
-        zHttpServerOptions.interceptors,
-        zHttpServerOptions.deleteFile
+        new ZioHttpRequestBody(req),
+        new ZioHttpToResponseBody,
+        zioHttpServerOptions.interceptors,
+        zioHttpServerOptions.deleteFile
       )
 
-      interpreter.apply(new ZHttpServerRequest(req), se).flatMap {
+      interpreter.apply(new ZioHttpServerRequest(req), se).flatMap {
         case Some(resp) =>
           ZIO.succeed(
             Response.HttpResponse(
               status = Status.fromJHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
-              headers = resp.headers.groupBy(_.name).map(sttpToZHttpHeader).toList,
+              headers = resp.headers.groupBy(_.name).map(sttpToZioHttpHeader).toList,
               content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
             )
           )
@@ -70,14 +70,14 @@ trait ZHttpInterpreter[R <: Blocking] {
 
 }
 
-object ZHttpInterpreter {
-  def apply[R <: Blocking](serverOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default[R]): ZHttpInterpreter[R] = {
-    new ZHttpInterpreter[R] {
-      override def zHttpServerOptions: ZHttpServerOptions[R] = serverOptions
+object ZioHttpInterpreter {
+  def apply[R <: Blocking](serverOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default[R]): ZioHttpInterpreter[R] = {
+    new ZioHttpInterpreter[R] {
+      override def zioHttpServerOptions: ZioHttpServerOptions[R] = serverOptions
     }
   }
 
-   def zioMonadError[R <: Blocking]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
+  def zioMonadError[R <: Blocking]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
     override def unit[T](t: T): RIO[R, T] = URIO.succeed(t)
     override def map[T, T2](fa: RIO[R, T])(f: T => T2): RIO[R, T2] = fa.map(f)
     override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
