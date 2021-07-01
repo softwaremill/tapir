@@ -34,7 +34,7 @@ trait ZHttpInterpreter[R <: Blocking] {
   def zHttpServerOptions: ZHttpServerOptions[R] = ZHttpServerOptions.default
 
   private def sttpToZHttpHeader(hl: (String, Seq[SttpHeader])): ZHttpHeader =
-    ZHttpHeader(hl._1, hl._2.map(f => f.value).mkString(", "))
+    ZHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
 
   def toRoutes[I, O](
       e: Endpoint[I, Throwable, O, ZioStreams]

@@ -4,7 +4,7 @@ import sttp.model.{QueryParams, Uri, Header => SttpHeader, Method => SttpMethod}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import zhttp.http.Request
 
-import java.net.{InetSocketAddress, URLDecoder, URLEncoder}
+import java.net.InetSocketAddress
 import scala.collection.immutable.Seq
 
 class ZHttpServerRequest(req: Request) extends ServerRequest {
