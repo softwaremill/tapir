@@ -18,7 +18,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
 
   def deriveEndpointInputImpl: Expr[EndpointInput[T]] = {
     // the path inputs must be defined in the order as they appear in the argument to @endpointInput
-    val pathSegments = caseClass.extractOptArgFromAnnotation(endpointInputAnnotationSymbol).flatten
+    val pathSegments = caseClass.extractOptStringArgFromAnnotation(endpointInputAnnotationSymbol).flatten
       .map { case path =>
         val pathWithoutLeadingSlash = if (path.startsWith("/")) path.drop(1) else path
         val result = if (pathWithoutLeadingSlash.endsWith("/")) pathWithoutLeadingSlash.dropRight(1) else pathWithoutLeadingSlash
@@ -55,9 +55,9 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     val nonPathInputs = nonPathFields.map { case (field, fieldIdx) =>
       field.tpe.asType match
         case '[f] =>
-          val input: Expr[EndpointInput.Single[f]] = field.extractOptArgFromAnnotation(queryAnnotationSymbol).map(makeQueryInput[f](field))
-            .orElse(field.extractOptArgFromAnnotation(headerAnnotationSymbol).map(makeHeaderIO[f](field)))
-            .orElse(field.extractOptArgFromAnnotation(cookieAnnotationSymbol).map(makeCookieInput[f](field)))
+          val input: Expr[EndpointInput.Single[f]] = field.extractOptStringArgFromAnnotation(queryAnnotationSymbol).map(makeQueryInput[f](field))
+            .orElse(field.extractOptStringArgFromAnnotation(headerAnnotationSymbol).map(makeHeaderIO[f](field)))
+            .orElse(field.extractOptStringArgFromAnnotation(cookieAnnotationSymbol).map(makeCookieInput[f](field)))
             .orElse(field.annotation(bodyAnnotationSymbol).map(makeBodyIO[f](field)))
             .orElse(if (field.annotated(paramsAnnotationSymbol)) Some(makeQueryParamsInput[f](field)) else None)
             .orElse(if (field.annotated(headersAnnotationSymbol)) Some(makeHeadersIO[f](field)) else None)
@@ -94,8 +94,8 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
     val outputs = fieldsWithIndex.map { case (field, fieldIdx) =>
       field.tpe.asType match
         case '[f] =>
-          val output: Expr[EndpointOutput.Single[f]] = field.extractOptArgFromAnnotation(headerAnnotationSymbol).map(makeHeaderIO[f](field))
-            .orElse(field.extractOptArgFromAnnotation(setCookieAnnotationSymbol).map(makeSetCookieOutput[f](field)))
+          val output: Expr[EndpointOutput.Single[f]] = field.extractOptStringArgFromAnnotation(headerAnnotationSymbol).map(makeHeaderIO[f](field))
+            .orElse(field.extractOptStringArgFromAnnotation(setCookieAnnotationSymbol).map(makeSetCookieOutput[f](field)))
             .orElse(field.annotation(bodyAnnotationSymbol).map(makeBodyIO[f](field)))
             .orElse(if (field.annotated(statusCodeAnnotationSymbol)) Some(makeStatusCodeOutput[f](field)) else None)
             .orElse(if (field.annotated(headersAnnotationSymbol)) Some(makeHeadersIO[f](field)) else None)
@@ -104,7 +104,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
             .getOrElse {
               report.throwError(s"All fields of ${caseClass.name} must be annotated with one of the annotations from sttp.tapir.annotations. No annotations for field: ${field.name}.")
             }
-          '{${addSchemaMetadata[f](field, output)}.asInstanceOf[EndpointOutput.Single[f]]}
+          '{${addMetadataFromAnnotations[f](field, output)}.asInstanceOf[EndpointOutput.Single[f]]}
     }
 
     val result = outputs.map(_.asTerm).reduceLeft { (left, right) =>
@@ -143,9 +143,16 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
   private val bodyAnnotationSymbol = TypeTree.of[EndpointIO.annotations.body].tpe.typeSymbol
   private val statusCodeAnnotationSymbol = TypeTree.of[EndpointIO.annotations.statusCode].tpe.typeSymbol
 
+  private val descriptionAnnotationSymbol = TypeTree.of[EndpointIO.annotations.description].tpe.typeSymbol
+  private val exampleAnnotationSymbol = TypeTree.of[EndpointIO.annotations.example].tpe.typeSymbol
+
   // schema symbols
-  private val descriptionAnnotationSymbol = TypeTree.of[Schema.annotations.description].tpe.typeSymbol
-  private val deprecatedAnnotationSymbol = TypeTree.of[Schema.annotations.deprecated].tpe.typeSymbol
+  private val schemaDescriptionAnnotationSymbol = TypeTree.of[Schema.annotations.description].tpe.typeSymbol
+  private val schemaEncodedExampleAnnotationSymbol = TypeTree.of[Schema.annotations.encodedExample].tpe.typeSymbol
+  private val schemaDefaultAnnotationSymbol = TypeTree.of[Schema.annotations.default].tpe.typeSymbol
+  private val schemaFormatAnnotationSymbol = TypeTree.of[Schema.annotations.format].tpe.typeSymbol
+  private val schemaDeprecatedAnnotationSymbol = TypeTree.of[Schema.annotations.deprecated].tpe.typeSymbol
+  private val schemaValidateAnnotationSymbol = TypeTree.of[Schema.annotations.validate].tpe.typeSymbol
 
   // util
   private def summonCodec[L: Type, H: Type, CF <: CodecFormat: Type](field: CaseClassField[q.type, T]): Expr[Codec[L, H, CF]] = Expr.summon[Codec[L, H, CF]].getOrElse {
@@ -244,7 +251,7 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
 
   // schema & auth wrappers
   private def wrapInput[f: Type](field: CaseClassField[q.type, T], input: Expr[EndpointInput.Single[f]]): Expr[EndpointInput.Single[f]] = {
-    val input2 = '{${addSchemaMetadata[f](field, input)}.asInstanceOf[EndpointInput.Single[f]]}
+    val input2 = '{${addMetadataFromAnnotations[f](field, input)}.asInstanceOf[EndpointInput.Single[f]]}
     wrapWithApiKey(input2, field.annotation(apikeyAnnotationSymbol), field.annotation(securitySchemeNameAnnotationSymbol))
   }
 
@@ -258,14 +265,34 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       .map(s => '{$auth.securitySchemeName(${s.asExprOf[EndpointIO.annotations.securitySchemeName]}.name)})
       .getOrElse(auth)
 
-  private def addSchemaMetadata[f: Type](field: CaseClassField[q.type, T], transput: Expr[EndpointTransput[f]]): Expr[EndpointTransput[f]] = {
-    // TODO: add other metadata (also in Scala2)
-    val transput2 = field.extractArgFromAnnotation(descriptionAnnotationSymbol)
-      .map(d => addMetadataToBasic(field, transput, '{ i => i.description(${Expr(d)})}))
-      .getOrElse(transput)
+  private def addMetadataFromAnnotations[f: Type](field: CaseClassField[q.type, T], transput: Expr[EndpointTransput[f]]): Expr[EndpointTransput[f]] = {
+    val transformations: List[Expr[EndpointTransput[f]] => Expr[EndpointTransput[f]]] = List(
+      t => field.extractStringArgFromAnnotation(descriptionAnnotationSymbol)
+        .map(d => addMetadataToBasic(field, t, '{ i => i.description(${Expr(d)})}))
+        .getOrElse(t),
+      t => field.extractTreeFromAnnotation(exampleAnnotationSymbol)
+        .map(e => addMetadataToBasic(field, t, '{ i => i.example(${e.asExprOf[f]})}))
+        .getOrElse(t),
+      t => field.extractStringArgFromAnnotation(schemaDescriptionAnnotationSymbol)
+        .map(d => addMetadataToBasic(field, t, '{ i => i.schema(_.description(${Expr(d)}))}))
+        .getOrElse(t),
+      t => field.extractTreeFromAnnotation(schemaEncodedExampleAnnotationSymbol)
+        .map(e => addMetadataToBasic(field, t, '{ i => i.schema(_.encodedExample(${e.asExprOf[Any]}))}))
+        .getOrElse(t),
+      t => field.extractTreeFromAnnotation(schemaDefaultAnnotationSymbol)
+        .map(d => addMetadataToBasic(field, t, '{ i => i.default(${d.asExprOf[f]})}))
+        .getOrElse(t),
+      t => field.extractStringArgFromAnnotation(schemaFormatAnnotationSymbol)
+        .map(format => addMetadataToBasic(field, t, '{ i => i.schema(_.format(${Expr(format)}))}))
+        .getOrElse(t),
+      t => if (field.annotated(schemaDeprecatedAnnotationSymbol)) then addMetadataToBasic(field, t, '{ i => i.deprecated()})
+        else t,
+      t => field.extractTreeFromAnnotation(schemaValidateAnnotationSymbol)
+        .map(v => addMetadataToBasic(field, t, '{ i => i.validate(${v.asExprOf[Validator[f]]})}))
+        .getOrElse(t)
+    )
 
-    if (field.annotated(deprecatedAnnotationSymbol)) then addMetadataToBasic(field, transput2, '{ i => i.deprecated()})
-    else transput2
+    transformations.foldLeft(transput)((t, f) => f(t))
   }
 
   private def addMetadataToBasic[f: Type](field: CaseClassField[q.type, T],
@@ -299,7 +326,11 @@ class AnnotationsMacros[T <: Product: Type](using q: Quotes) {
       Select.unique(tExpr.asTerm, field.name).asExprOf[Any]
     }
 
-    '{(t: T) => ${Expr.ofTupleFromSeq(tupleArgs('t))}.asInstanceOf[A]}
+    if (inputIdxToFieldIdx.size > 1) {
+      '{(t: T) => ${Expr.ofTupleFromSeq(tupleArgs('t))}.asInstanceOf[A]}
+    } else {
+      '{(t: T) => ${tupleArgs('t).head}.asInstanceOf[A]}
+    }
   }
 }
 

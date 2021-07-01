@@ -28,8 +28,8 @@ case class Schema[T](
     name: Option[SName] = None,
     isOptional: Boolean = false,
     description: Option[String] = None,
-    // The default value together with the value encoded to a raw format, which will then be directly rendered as a
-    // string in documentation. This is needed as codecs for nested types aren't available. Similar to Validator.EncodeToRaw
+    // The default value together with the value encoded to a raw format, which will then be directly rendered in the
+    // documentation. This is needed as codecs for nested types aren't available. Similar to Validator.EncodeToRaw
     default: Option[(T, Option[Any])] = None,
     format: Option[String] = None,
     encodedExample: Option[Any] = None,
@@ -248,6 +248,9 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
     val Unit: SName = SName(fullName = "Unit")
   }
 
+  /** Annotations which are used during automatic schema derivation, or semi-automatic schema derivation using
+    * [[Schema.derived]].
+    */
   object annotations {
     class description(val text: String) extends StaticAnnotation
     class encodedExample(val example: Any) extends StaticAnnotation

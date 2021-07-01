@@ -30,14 +30,14 @@ object FormCodecMacro {
     val encodeParams: Iterable[Tree] = fieldsWithCodecs.map { case (field, codec) =>
       val fieldName = field.name.asInstanceOf[TermName]
       val fieldNameAsString = fieldName.decodedName.toString
-      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
+      val encodedName = util.extractStringArgFromAnnotation(field, encodedNameType)
       q"""val transformedName = $encodedName.getOrElse($conf.toEncodedName($fieldNameAsString))
           $codec.encode(o.$fieldName).map(v => (transformedName, v))"""
     }
 
     val decodeParams = fieldsWithCodecs.map { case (field, codec) =>
       val fieldName = field.name.decodedName.toString
-      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
+      val encodedName = util.extractStringArgFromAnnotation(field, encodedNameType)
       q"""val transformedName = $encodedName.getOrElse($conf.toEncodedName($fieldName))
           $codec.decode(paramsMap.get(transformedName).toList.flatten)"""
     }

@@ -47,7 +47,7 @@ object MultipartCodecMacros {
     }
 
     def fieldTransformedName(field: CaseClassField[q.type, T]): Expr[String] = {
-      val encodedName = field.extractArgFromAnnotation(encodedNameAnnotationSymbol)
+      val encodedName = field.extractStringArgFromAnnotation(encodedNameAnnotationSymbol)
       '{${Expr(encodedName)}.getOrElse($conf.toEncodedName(${Expr(field.name)}))}
     }
 

@@ -503,6 +503,9 @@ object EndpointIO {
     def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
   }
 
+  /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class
+    * maps to an endpoint input/output.
+    */
   object annotations {
     sealed trait EndpointInputAnnotation extends StaticAnnotation
     sealed trait EndpointOutputAnnotation extends StaticAnnotation
@@ -529,6 +532,16 @@ object EndpointIO {
       * segment's name with `{...}` (curly braces), and reference the name using [[annotations.path]].
       */
     class endpointInput(val path: String = "") extends EndpointInputAnnotation
+
+    /** Specifies the example value of the endpoint input/output. Note that this is distinct from
+      * [[Schema.annotations.encodedExample]], which sets the example on the schema associated with the input/output.
+      */
+    class example(val example: Any) extends EndpointInputAnnotation with EndpointOutputAnnotation
+
+    /** Specifies the description of the endpoint input/output. Note that this is distinct from
+      * [[Schema.annotations.description]], which sets the description on the schema associated with the input/output.
+      */
+    class description(val text: String) extends EndpointInputAnnotation with EndpointOutputAnnotation
   }
 }
 

@@ -82,7 +82,7 @@ object MultipartCodecMacro {
     val encodedNameType = c.weakTypeOf[Schema.annotations.encodedName]
     val partCodecPairs = fieldsWithCodecs.map { case (field, (bodyType, codec)) =>
       val fieldName = field.name.decodedName.toString
-      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
+      val encodedName = util.extractStringArgFromAnnotation(field, encodedNameType)
       q"""($encodedName.getOrElse($conf.toEncodedName($fieldName)), _root_.sttp.tapir.PartCodec($bodyType, $codec))"""
     }
 
@@ -91,7 +91,7 @@ object MultipartCodecMacro {
     val encodeParams: Iterable[Tree] = fields.map { field =>
       val fieldName = field.name.asInstanceOf[TermName]
       val fieldNameAsString = fieldName.decodedName.toString
-      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
+      val encodedName = util.extractStringArgFromAnnotation(field, encodedNameType)
       val transformedName = q"val transformedName = $encodedName.getOrElse($conf.toEncodedName($fieldNameAsString))"
 
       if (fieldIsPart(field)) {
@@ -117,7 +117,7 @@ object MultipartCodecMacro {
 
     val decodeParams = fields.map { field =>
       val fieldName = field.name.decodedName.toString
-      val encodedName = util.extractArgFromAnnotation(field, encodedNameType)
+      val encodedName = util.extractStringArgFromAnnotation(field, encodedNameType)
       if (fieldIsPart(field)) {
         q"""val transformedName = $encodedName.getOrElse($conf.toEncodedName($fieldName))
             partsByName(transformedName)"""

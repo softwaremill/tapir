@@ -23,7 +23,7 @@ object FormCodecMacros {
 
     def encodeDefBody(tTerm: Term): Term = {
       val fieldsEncode = caseClass.fields.map { field =>
-        val encodedName = field.extractArgFromAnnotation(encodedNameAnnotationSymbol)
+        val encodedName = field.extractStringArgFromAnnotation(encodedNameAnnotationSymbol)
         val fieldEncode: Expr[List[(String, String)]] = field.tpe.asType match
           case '[f] =>
             val codec = summonCodec[f](field)
@@ -51,7 +51,7 @@ object FormCodecMacros {
 
     def decodeDefBody(paramsTerm: Term): Term = {
       def fieldsDecode(paramsMap: Expr[Map[String, Seq[String]]]) = caseClass.fields.map { field =>
-        val encodedName = field.extractArgFromAnnotation(encodedNameAnnotationSymbol)
+        val encodedName = field.extractStringArgFromAnnotation(encodedNameAnnotationSymbol)
         val fieldDecode = field.tpe.asType match
           case '[f] =>
             val codec = summonCodec[f](field)

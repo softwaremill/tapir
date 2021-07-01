@@ -37,7 +37,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
   def findAnnotation(field: Symbol, annotationType: c.Type): Option[Annotation] =
     field.annotations.find(_.tree.tpe <:< annotationType)
 
-  def extractArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[String] = {
+  def extractStringArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[String] = {
     // https://stackoverflow.com/questions/20908671/scala-macros-how-to-read-an-annotation-object
     field.annotations.collectFirst {
       case a if a.tree.tpe <:< annotationType =>
@@ -48,7 +48,7 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
     }
   }
 
-  def extractOptArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[Option[String]] =
+  def extractOptStringArgFromAnnotation(field: Symbol, annotationType: c.Type): Option[Option[String]] =
     field.annotations.collectFirst {
       case a if a.tree.tpe <:< annotationType =>
         a.tree.children.tail match {
@@ -59,4 +59,15 @@ private[tapir] class CaseClassUtil[C <: blackbox.Context, T: C#WeakTypeTag](val 
           case _ => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
         }
     }
+
+  def extractTreeFromAnnotation(field: Symbol, annotationType: c.Type): Option[Tree] = {
+    // https://stackoverflow.com/questions/20908671/scala-macros-how-to-read-an-annotation-object
+    field.annotations.collectFirst {
+      case a if a.tree.tpe <:< annotationType =>
+        a.tree.children.tail match {
+          case List(t) => t
+          case _       => throw new IllegalStateException(s"Cannot extract annotation argument from: ${c.universe.showRaw(a.tree)}")
+        }
+    }
+  }
 }
