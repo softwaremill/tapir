@@ -80,6 +80,16 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             }
             .unsafeRunSync()
         },
+        Test("endpoint that doesn't match request path or method") {
+          val e = endpoint.get.in("test").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
+          val route = AkkaHttpServerInterpreter().toRoute(e)
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.post(uri"http://localhost:$port/tests").send(backend).map(_.code shouldBe StatusCode.NotFound)
+            }
+            .unsafeRunSync()
+        },
         Test("Send and receive SSE") {
           implicit val ec = actorSystem.dispatcher
           val e = endpoint.get
