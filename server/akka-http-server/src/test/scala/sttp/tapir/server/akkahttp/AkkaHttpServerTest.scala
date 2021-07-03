@@ -14,6 +14,7 @@ import sttp.capabilities.{WebSockets, akka}
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.model.sse.ServerSentEvent
+import sttp.model.StatusCode
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
@@ -32,7 +33,6 @@ import sttp.tapir.tests.{Test, TestSuite}
 import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Random
-import sttp.model.StatusCode
 
 class AkkaHttpServerTest extends TestSuite with EitherValues {
   def randomUUID = Some(UUID.randomUUID().toString)
