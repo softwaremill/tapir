@@ -17,12 +17,22 @@ import sttp.model.sse.ServerSentEvent
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
-import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.server.tests.{
+  DefaultCreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMultipartTests,
+  ServerMetricsTest,
+  ServerStreamingTests,
+  ServerWebSocketTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 
 import java.util.UUID
 import scala.concurrent.Future
 import scala.util.Random
+import sttp.model.StatusCode
 
 class AkkaHttpServerTest extends TestSuite with EitherValues {
   def randomUUID = Some(UUID.randomUUID().toString)
@@ -47,6 +57,26 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             .server(NonEmptyList.of(route))
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
+            }
+            .unsafeRunSync()
+        },
+        Test("endpoint that doesn't match request path") {
+          val e = endpoint.get.in("test").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
+          val route = AkkaHttpServerInterpreter().toRoute(e)
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.get(uri"http://localhost:$port/tests").send(backend).map(_.code shouldBe StatusCode.NotFound)
+            }
+            .unsafeRunSync()
+        },
+        Test("endpoint that doesn't match request method") {
+          val e = endpoint.get.in("test").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
+          val route = AkkaHttpServerInterpreter().toRoute(e)
+          interpreter
+            .server(NonEmptyList.of(route))
+            .use { port =>
+              basicRequest.post(uri"http://localhost:$port/test").send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed)
             }
             .unsafeRunSync()
         },
