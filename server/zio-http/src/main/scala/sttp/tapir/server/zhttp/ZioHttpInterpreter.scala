@@ -49,7 +49,7 @@ trait ZioHttpInterpreter[R <: Blocking] {
       implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
       val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](
-        new ZioHttpRequestBody(req),
+        new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), ZioHttpServerOptions.default),
         new ZioHttpToResponseBody,
         zioHttpServerOptions.interceptors,
         zioHttpServerOptions.deleteFile
