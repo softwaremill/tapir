@@ -61,9 +61,9 @@ To customise error messages that are returned upon validation/decode failures by
 
 Validators for enumerations can be created using:
 
-* `Validator.derivedEnum`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
+* `Validator.derivedEnumeration`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
   macro determines the possible values
-* `Validator.enum`, which takes the list of possible values
+* `Validator.enumeration`, which takes the list of possible values
 
 To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
 converts the enum value to a raw type (typically a string). This method is inferred *only* if the validator is directly 
