@@ -155,7 +155,7 @@ type `List[Endpoint[_, _, _, _]]` an outputs `Set[ShadowedEndpoint]`.
 Example 1:
 
 ```scala mdoc:silent
-import sttp.tapir.util.FindShadowedEndpoints
+import sttp.tapir.testing.FindShadowedEndpoints
 
 val e1 = endpoint.get.in("x" / paths)
 val e2 = endpoint.get.in("x" / "y" / "x")
@@ -173,7 +173,7 @@ res.toString
 Example 2:
 
 ```scala mdoc:silent:nest
-import sttp.tapir.util.FindShadowedEndpoints
+import sttp.tapir.testing.FindShadowedEndpoints
 
 val e1 = endpoint.get.in(path[String].name("y_1") / path[String].name("y_2"))
 val e2 = endpoint.get.in(path[String].name("y_3") / path[String].name("y_4"))

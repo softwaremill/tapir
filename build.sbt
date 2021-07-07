@@ -258,11 +258,11 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
           Seq(
-            "com.softwaremill.magnolia" %%% "magnolia-core" % "2.0.0-M8"
+            "com.softwaremill.magnolia" %%% "magnolia-core" % "2.0.0-M9"
           )
         case _ =>
           Seq(
-            "com.softwaremill.magnolia" %%% "magnolia-core" % "1.0.0-M3",
+            "com.softwaremill.magnolia" %%% "magnolia-core" % "1.0.0-M4",
             "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
           )
       }
@@ -533,8 +533,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.8.2",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.8.2" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.9.0",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.9.0" % Test,
       scalaTest.value % Test
     )
   )

@@ -62,7 +62,7 @@ val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book]
 import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
 import sttp.tapir.openapi.circe.yaml._
 
-val docs = OpenAPIDocsInterpreter.toOpenAPI(booksListing, "My Bookshop", "1.0")
+val docs = OpenAPIDocsInterpreter().toOpenAPI(booksListing, "My Bookshop", "1.0")
 println(docs.toYaml)
 
 
@@ -76,7 +76,7 @@ def bookListingLogic(bfy: BooksFromYear,
                      limit: Limit,
                      at: AuthToken): Future[Either[String, List[Book]]] =
   Future.successful(Right(List(Book("The Sorrows of Young Werther"))))
-val booksListingRoute: Route = AkkaHttpServerInterpreter
+val booksListingRoute: Route = AkkaHttpServerInterpreter()
   .toRoute(booksListing)((bookListingLogic _).tupled)
 
 
@@ -86,7 +86,7 @@ import sttp.tapir.client.sttp.SttpClientInterpreter
 import sttp.client3._
 
 val booksListingRequest: Request[DecodeResult[Either[String, List[Book]]], Any] = 
-  SttpClientInterpreter
+  SttpClientInterpreter()
     .toRequest(booksListing, Some(uri"http://localhost:8080"))
     .apply((BooksFromYear("SF", 2016), 20, "xyz-abc-123"))
 ```

@@ -1,6 +1,6 @@
 # Server options
 
-Each interpreter accepts an implicit options value, which contains configuration including:
+Each interpreter can be configured using an options object, which includes:
 
 * how to create a file (when receiving a response that is mapped to a file, or when reading a file-mapped multipart 
   part)
@@ -9,14 +9,17 @@ Each interpreter accepts an implicit options value, which contains configuration
 * how to handle decode failures (see [error handling](errors.md))
 * additional user-provided interceptors
 
-To use custom server options, define an implicit value, which will be in scope when converting endpoints to the
-target route representation. For example, for `AkkaHttpServerOptions`:
+To use custom server options pass them as an argument to the interpreter's `apply` method.
+For example, for `AkkaHttpServerOptions` and `AkkaHttpServerInterpreter`:
 
 ```scala
 import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
 
-implicit val customServerOptions: AkkaHttpServerOptions = 
+val customServerOptions: AkkaHttpServerOptions = 
   AkkaHttpServerOptions.customInterceptors(decodeFailureHandler = ???)
+  
+AkkaHttpServerInterpreter(customServerOptions)
 ```
 
 ## Request interceptors

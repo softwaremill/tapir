@@ -12,7 +12,7 @@ details on how the stub works).
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.18.0-M17"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-stub-server" % "0.18.0-M18"
 ```
 
 And the following imports:
@@ -79,7 +79,7 @@ with [mock-server](https://www.mock-server.com/)
 Add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.18.0-M17"
+"com.softwaremill.sttp.tapir" %% "tapir-sttp-mock-server" % "0.18.0-M18"
 ```
 
 Imports:
@@ -136,7 +136,7 @@ val testingBackend = TryHttpURLConnectionBackend()
 val in = "request-id-123" -> SampleIn("John", 23)
 val out = SampleOut("Hello, John!")
 
-val result = SttpClientInterpreter
+val result = SttpClientInterpreter()
   .toRequest(sampleJsonEndpoint, baseUri = Some(uri"http://localhost:1080"))
   .apply(in)
   .send(testingBackend)
@@ -155,7 +155,7 @@ type `List[Endpoint[_, _, _, _]]` an outputs `Set[ShadowedEndpoint]`.
 Example 1:
 
 ```scala
-import sttp.tapir.util.FindShadowedEndpoints
+import sttp.tapir.testing.FindShadowedEndpoints
 
 val e1 = endpoint.get.in("x" / paths)
 val e2 = endpoint.get.in("x" / "y" / "x")
@@ -168,13 +168,13 @@ Results in:
 
 ```scala
 res.toString
-// res2: String = "Set(GET /x, is shadowed by: GET /x /..., GET /x /y /x, is shadowed by: GET /x /...)"
+// res2: String = "Set(GET /x /y /x, is shadowed by: GET /x /..., GET /x, is shadowed by: GET /x /...)"
 ```
 
 Example 2:
 
 ```scala
-import sttp.tapir.util.FindShadowedEndpoints
+import sttp.tapir.testing.FindShadowedEndpoints
 
 val e1 = endpoint.get.in(path[String].name("y_1") / path[String].name("y_2"))
 val e2 = endpoint.get.in(path[String].name("y_3") / path[String].name("y_4"))

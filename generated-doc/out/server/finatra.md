@@ -4,7 +4,7 @@ To expose an endpoint as an [finatra](https://twitter.github.io/finatra/) server
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "0.18.0-M17"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server" % "0.18.0-M18"
 ```
 
 and import the object:
@@ -16,7 +16,7 @@ import sttp.tapir.server.finatra.FinatraServerInterpreter
 or if you would like to use cats-effect project, you can add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "0.18.0-M17"
+"com.softwaremill.sttp.tapir" %% "tapir-finatra-server-cats" % "0.18.0-M18"
 ```
 
 and import the object:
@@ -55,7 +55,7 @@ def countCharacters(s: String): Future[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: FinatraRoute = FinatraServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
+val countCharactersRoute: FinatraRoute = FinatraServerInterpreter().toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
 or a cats-effect's example:
@@ -72,7 +72,7 @@ def countCharacters(s: String): IO[Either[Unit, Int]] =
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: FinatraRoute = FinatraCatsServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
+val countCharactersRoute: FinatraRoute = FinatraCatsServerInterpreter().toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
 Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`.  This means that 
@@ -85,7 +85,7 @@ import com.twitter.util.Future
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
-val aRoute: FinatraRoute = FinatraServerInterpreter.toRoute(anEndpoint)((logic _).tupled)
+val aRoute: FinatraRoute = FinatraServerInterpreter().toRoute(anEndpoint)((logic _).tupled)
 ```
 
 Now that you've created the `FinatraRoute`, add `TapirController` as a trait to your `Controller`. You can then

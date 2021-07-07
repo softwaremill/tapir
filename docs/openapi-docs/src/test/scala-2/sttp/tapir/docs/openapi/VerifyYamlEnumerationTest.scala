@@ -6,6 +6,7 @@ import enumeratum.{EnumEntry, _}
 import io.circe.generic.auto._
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Schema.SName
 import sttp.tapir.docs.openapi.VerifyYamlEnumerationTest._
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
@@ -17,18 +18,12 @@ import scala.collection.immutable
 class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
 
   test("should create component for enum using trait") {
-
-    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = {
-      case soi if soi.fullName.contains("Game") => true
-      case _                                    => false
-    })
-
     implicit val schemaForGame: Schema[Game] =
       Schema.string[Game].validate(Validator.derivedEnumeration[Game].encode(_.toString.toLowerCase))
     implicit val schemaForEpisode: Schema[Episode] =
-      Schema.string[Episode].validate(Validator.derivedEnumeration[Episode].encode(_.toString.toLowerCase))
+      Schema.string[Episode].validate(Validator.derivedEnumeration[Episode].encode(_.toString.toLowerCase)).copy(name = None)
 
-    val actualYaml = OpenAPIDocsInterpreter(options)
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(Seq(endpoint.in("totalWar").out(jsonBody[TotalWar]), endpoint.in("callOfDuty").out(jsonBody[CallOfDuty])), "Games", "1.0")
       .toYaml
 
@@ -40,9 +35,7 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
   test("should create component for enum using enumeratum Enum") {
     import sttp.tapir.codec.enumeratum._
 
-    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
-
-    val actualYaml = OpenAPIDocsInterpreter(options)
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         Seq(
           endpoint.in("poland").out(jsonBody[Poland]),
@@ -61,9 +54,7 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
   test("should create component for optional and collections of enums") {
     import sttp.tapir.codec.enumeratum._
 
-    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
-
-    val actualYaml = OpenAPIDocsInterpreter(options)
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         Seq(
           endpoint.in("countryCollection").out(jsonBody[CountryCollection])
@@ -80,9 +71,7 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
   test("should create component for enum using enumeratum IntEnum") {
     import sttp.tapir.codec.enumeratum._
 
-    val options: OpenAPIDocsOptions = OpenAPIDocsOptions.default.copy(referenceEnums = _ => true)
-
-    val actualYaml = OpenAPIDocsInterpreter(options)
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         Seq(endpoint.in("error1").out(jsonBody[Error1Response]), endpoint.in("error2").out(jsonBody[Error2Response])),
         "Errors",
@@ -91,6 +80,16 @@ class VerifyYamlEnumerationTest extends AnyFunSuite with Matchers {
       .toYaml
 
     val expectedYaml = load("enum/expected_enumeratum_int_enum_component.yml")
+
+    noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should support optional enums and sequences of enums") {
+    implicit val shapeCodec: io.circe.Codec[Square] = null
+    val e = endpoint.get.out(jsonBody[Square])
+
+    val expectedYaml = load("enum/expected_enum_collections.yml")
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, "Enums", "1.0").toYaml
 
     noIndentation(actualYaml) shouldBe expectedYaml
   }
@@ -134,4 +133,26 @@ object VerifyYamlEnumerationTest {
 
   case class Error1Response(error: ErrorCode)
   case class Error2Response(error: ErrorCode)
+
+  object CornerStyle extends Enumeration {
+    type CornerStyle = Value
+
+    val Rounded = Value("rounded")
+    val Straight = Value("straight")
+
+    implicit def schemaForEnum: Schema[Value] =
+      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SName("CornerStyle"))))
+  }
+
+  object Tag extends Enumeration {
+    type Tag = Value
+
+    val Tag1 = Value("tag1")
+    val Tag2 = Value("tag2")
+
+    implicit def schemaForEnum: Schema[Value] =
+      Schema.string.validate(Validator.enumeration(values.toList, v => Option(v), Some(SName("Tag"))))
+  }
+
+  case class Square(cornerStyle: Option[CornerStyle.Value], tags: Seq[Tag.Value])
 }

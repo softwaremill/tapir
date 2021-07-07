@@ -3,9 +3,7 @@ package sttp.tapir.generic.internal
 import sttp.model.StatusCode
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta}
 import sttp.tapir.EndpointOutput
-import sttp.tapir.annotations.setCookie
-import sttp.tapir.annotations.setCookies
-import sttp.tapir.annotations.statusCode
+import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.internal.CaseClassUtil
 
 import scala.collection.mutable
@@ -24,10 +22,10 @@ class EndpointOutputAnnotationsMacro(override val c: blackbox.Context) extends E
 
     val outputs = util.fields map { field =>
       val output = util
-        .extractOptArgFromAnnotation(field, headerType)
+        .extractOptStringArgFromAnnotation(field, headerType)
         .map(makeHeaderIO(field))
-        .orElse(util.extractOptArgFromAnnotation(field, setCookieType).map(makeSetCookieOutput(field)))
-        .orElse(hasBodyAnnotation(field).map(makeBodyIO(field)))
+        .orElse(util.extractOptStringArgFromAnnotation(field, setCookieType).map(makeSetCookieOutput(field)))
+        .orElse(bodyAnnotation(field).map(makeBodyIO(field)))
         .orElse(if (util.annotated(field, statusCodeType)) Some(makeStatusCodeOutput(field)) else None)
         .orElse(if (util.annotated(field, headersType)) Some(makeHeadersIO(field)) else None)
         .orElse(if (util.annotated(field, cookiesType)) Some(makeCookiesIO(field)) else None)
@@ -39,7 +37,7 @@ class EndpointOutputAnnotationsMacro(override val c: blackbox.Context) extends E
           )
         }
 
-      assignSchemaAnnotations(output, field, util)
+      addMetadataFromAnnotations(output, field, util)
     }
 
     val result = outputs.reduceLeft { (left, right) => q"$left.and($right)" }

@@ -1,15 +1,15 @@
 package sttp.tapir.annotations
 
 import java.nio.charset.StandardCharsets
-
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import sttp.model.{Header => ModelHeader, QueryParams => ModelQueryParams}
-import sttp.model.headers.{Cookie => ModelCookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta, Cookie => ModelCookie}
 import sttp.model.StatusCode
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
 import sttp.tapir.EndpointIO._
+import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.EndpointInput._
 import sttp.tapir.EndpointInput.Auth._
 import sttp.tapir.RawBodyType.StringBody
@@ -64,7 +64,7 @@ final case class TapirRequestTest5(
     @description("field-description")
     field1: Int,
     @cookie
-    @deprecated
+    @Schema.annotations.deprecated
     cookie: Boolean
 )
 
@@ -94,6 +94,19 @@ final case class TapirRequestTest7(
     @securitySchemeName(name = "secbearer")
     @bearer
     token: String
+)
+
+final case class TapirRequestTest8(
+    @query
+    @description("field-8-1")
+    @example(9)
+    @Schema.annotations.description("field-8-2")
+    @Schema.annotations.encodedExample(10)
+    @Schema.annotations.default(11)
+    @Schema.annotations.format("tel")
+    @Schema.annotations.validate(Validator.min(0))
+    @Schema.annotations.deprecated
+    field: Int
 )
 
 final case class TapirResponseTest1(
@@ -132,7 +145,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       .and(anyJsonBody[String])
       .mapTo[TapirRequestTest1]
 
-    compareTransputs(deriveEndpointInput[TapirRequestTest1], expectedInput) shouldBe true
+    compareTransputs(EndpointInput.derived[TapirRequestTest1], expectedInput) shouldBe true
   }
 
   it should "derive correct input for dealised bodies" in {
@@ -140,13 +153,13 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
 
     val expectedInput = anyJsonBody[Boolean].mapTo[TapirRequestTest2]
 
-    compareTransputs(deriveEndpointInput[TapirRequestTest2], expectedInput) shouldBe true
+    compareTransputs(EndpointInput.derived[TapirRequestTest2], expectedInput) shouldBe true
   }
 
   it should "derive correct input for @queries, @headers, @cookies" in {
     val expectedInput = queryParams.and(headers).and(cookies).mapTo[TapirRequestTest3]
 
-    compareTransputs(deriveEndpointInput[TapirRequestTest3], expectedInput) shouldBe true
+    compareTransputs(EndpointInput.derived[TapirRequestTest3], expectedInput) shouldBe true
   }
 
   it should "derive correct input for auth annotations" in {
@@ -156,7 +169,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       .and(TapirAuth.bearer[String](challenge = WWWAuthenticate.bearer("bearer realm")))
       .mapTo[TapirRequestTest4]
 
-    compareTransputs(deriveEndpointInput[TapirRequestTest4], expectedInput) shouldBe true
+    compareTransputs(EndpointInput.derived[TapirRequestTest4], expectedInput) shouldBe true
   }
 
   it should "derive correct input for auth annotations with named security schemes" in {
@@ -167,7 +180,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       .and(TapirAuth.bearer[String]().securitySchemeName("secbearer"))
       .mapTo[TapirRequestTest7]
 
-    compareTransputs(deriveEndpointInput[TapirRequestTest7], expectedInput) shouldBe true
+    compareTransputs(EndpointInput.derived[TapirRequestTest7], expectedInput) shouldBe true
   }
 
   it should "derive input with descriptions" in {
@@ -176,11 +189,11 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       .and(cookie[Boolean]("cookie").deprecated())
       .mapTo[TapirRequestTest5]
 
-    compareTransputs(deriveEndpointInput[TapirRequestTest5], expectedInput) shouldBe true
+    compareTransputs(EndpointInput.derived[TapirRequestTest5], expectedInput) shouldBe true
   }
 
   it should "derive input with paths" in {
-    val derivedInput = deriveEndpointInput[TapirRequestTest6]
+    val derivedInput = EndpointInput.derived[TapirRequestTest6]
 
     val expectedInput = "some"
       .and(TapirAuth.apiKey(path[Int]("field5")))
@@ -196,6 +209,28 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
     compareTransputs(derivedInput, expectedInput) shouldBe true
   }
 
+  it should "derive correct input with schema annotations" in {
+    val expectedInput = query[Int]("field")
+      .description("field-8-1")
+      .example(9)
+      .default(11)
+      .schema(_.format("tel").encodedExample(10).description("field-8-2"))
+      .validate(Validator.min(0))
+      .deprecated()
+      .mapTo[TapirRequestTest8]
+
+    val derived = EndpointInput.derived[TapirRequestTest8].asInstanceOf[EndpointInput.Query[TapirRequestTest8]]
+
+    compareTransputs(EndpointInput.derived[TapirRequestTest8], expectedInput) shouldBe true
+    derived.codec.schema.description shouldBe expectedInput.codec.schema.description
+    derived.codec.schema.encodedExample shouldBe expectedInput.codec.schema.encodedExample
+    derived.codec.schema.format shouldBe expectedInput.codec.schema.format
+    derived.codec.schema.default shouldBe expectedInput.codec.schema.default
+
+    derived.codec.schema.applyValidation(TapirRequestTest8(-1)) should not be empty
+    derived.codec.schema.applyValidation(TapirRequestTest8(1)) shouldBe empty
+  }
+
   it should "not compile if there is field without annotation" in {
     assertDoesNotCompile("""
       final case class Test(
@@ -207,7 +242,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       )
 
       object Test {
-        deriveEndpointInput[Test]
+        EndpointInput.derived[Test]
       }
     """)
   }
@@ -222,7 +257,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       )
 
       object Test {
-        deriveEndpointInput[Test]
+        EndpointInput.derived[Test]
       }
     """)
   }
@@ -235,7 +270,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       )
 
       object Test {
-        deriveEndpointInput[Test]
+        EndpointInput.derived[Test]
       }
     """)
   }
@@ -248,7 +283,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       )
 
       object Test {
-        deriveEndpointInput[Test]
+        EndpointInput.derived[Test]
       }
     """)
   }
@@ -262,7 +297,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
         field2: String
       )
       object Test {
-        val input = deriveEndpointInput[Test]("/asdf/{field2}/{field3}")
+        val input = EndpointInput.derived[Test]("/asdf/{field2}/{field3}")
       }
     """)
   }
@@ -278,7 +313,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
         field3: Long
       )
       object Test {
-        val input = deriveEndpointInput[Test]("/asdf/{field2}")
+        val input = EndpointInput.derived[Test]("/asdf/{field2}")
       }
     """)
   }
@@ -292,7 +327,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
         field2: String
       )
       object Test {
-        val input = deriveEndpointInput[Test]("/asdf/{field2}/{field2}")
+        val input = EndpointInput.derived[Test]("/asdf/{field2}/{field2}")
       }
     """)
   }
@@ -307,13 +342,13 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       .and(statusCode)
       .mapTo[TapirResponseTest1]
 
-    compareTransputs(deriveEndpointOutput[TapirResponseTest1], expectedOutput) shouldBe true
+    compareTransputs(EndpointOutput.derived[TapirResponseTest1], expectedOutput) shouldBe true
   }
 
   it should "derive correct output for @headers, @cookies, @setCookies" in {
     val expectedOutput = headers.and(cookies).and(setCookies).mapTo[TapirResponseTest2]
 
-    compareTransputs(deriveEndpointOutput[TapirResponseTest2], expectedOutput) shouldBe true
+    compareTransputs(EndpointOutput.derived[TapirResponseTest2], expectedOutput) shouldBe true
   }
 
   it should "not compile if there is field without annotation" in {
@@ -327,7 +362,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       )
 
       object Test {
-        deriveEndpointOutput[Test]
+        EndpointOutput.derived[Test]
       }
     """)
   }
@@ -342,7 +377,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       )
 
       object Test {
-        deriveEndpointOutput[Test]
+        EndpointOutput.derived[Test]
       }
     """)
   }
@@ -355,7 +390,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       )
 
       object Test {
-        deriveEndpointOutput[Test]
+        EndpointOutput.derived[Test]
       }
     """)
   }

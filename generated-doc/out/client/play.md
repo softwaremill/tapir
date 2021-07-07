@@ -3,7 +3,7 @@
 Add the dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "0.18.0-M17"
+"com.softwaremill.sttp.tapir" %% "tapir-play-client" % "0.18.0-M18"
 ```
 
 To make requests using an endpoint definition using the [play client](https://github.com/playframework/play-ws), import:
@@ -53,7 +53,7 @@ def example[I, E, O, R >: AkkaStreams](implicit wsClient: StandaloneWSClient) {
   val e: Endpoint[I, E, O, R] = ???
   val inputArgs: I = ???
   
-  val (req, responseParser) = PlayClientInterpreter
+  val (req, responseParser) = PlayClientInterpreter()
       .toRequestUnsafe(e, s"http://localhost:9000")
       .apply(inputArgs)
   

@@ -6,8 +6,9 @@ import org.scalatest.flatspec.AnyFlatSpec
 import sttp.tapir.generic.auto._
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.TestUtil.field
-import scala.collection.immutable.ListMap
+
 import org.scalatest.prop.TableDrivenPropertyChecks
+import sttp.tapir.Schema.SName
 
 class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenPropertyChecks {
   import SchemaMacroTestData._
@@ -20,89 +21,90 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
   }
 
   it should "modify product schema" in {
-    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.Person")
+    val name1 = SName("sttp.tapir.SchemaMacroTestData.Person")
     val baseSchema = Schema(
       SProduct[Person](
-        info1,
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(10)))
-      )
+      ),
+      Some(name1)
     )
 
     baseSchema.modify(_.age)(_.description("test").default(10)) shouldBe Schema(
       SProduct[Person](
-        info1,
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(10)))
-      )
+      ),
+      Some(name1)
     )
   }
 
   it should "modify product schema with derivation" in {
-    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.Person")
+    val name1 = SName("sttp.tapir.SchemaMacroTestData.Person")
     implicitly[Schema[Person]]
       .modify(_.age)(_.description("test").default(10)) shouldBe Schema(
       SProduct[Person](
-        info1,
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(10)))
-      )
+      ),
+      Some(name1)
     )
   }
 
   it should "modify nested product schema" in {
-    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.DevTeam")
-    val info2 = SObjectInfo("sttp.tapir.SchemaMacroTestData.Person")
+    val name1 = SName("sttp.tapir.SchemaMacroTestData.DevTeam")
+    val name2 = SName("sttp.tapir.SchemaMacroTestData.Person")
 
     val expectedNestedProduct =
       Schema(
         SProduct[Person](
-          info2,
           List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test").default(11)))
-        )
+        ),
+        Some(name2)
       )
 
     implicitly[Schema[DevTeam]]
       .modify(_.p1.age)(_.description("test").default(11)) shouldBe
       Schema(
-        SProduct[DevTeam](info1, List(field(FieldName("p1"), expectedNestedProduct), field(FieldName("p2"), implicitly[Schema[Person]])))
+        SProduct[DevTeam](List(field(FieldName("p1"), expectedNestedProduct), field(FieldName("p2"), implicitly[Schema[Person]]))),
+        Some(name1)
       )
   }
 
   it should "modify array elements in products" in {
-    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.ArrayWrapper")
+    val name1 = SName("sttp.tapir.SchemaMacroTestData.ArrayWrapper")
     implicitly[Schema[ArrayWrapper]]
       .modify(_.f1.each)(_.format("xyz")) shouldBe Schema(
       SProduct[ArrayWrapper](
-        info1,
         List(field(FieldName("f1"), Schema(SArray[List[String], String](Schema(SString()).format("xyz"))(identity), isOptional = true)))
-      )
+      ),
+      Some(name1)
     )
   }
 
   it should "modify array in products" in {
-    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.ArrayWrapper")
+    val name1 = SName("sttp.tapir.SchemaMacroTestData.ArrayWrapper")
     implicitly[Schema[ArrayWrapper]]
       .modify(_.f1)(_.format("xyz")) shouldBe Schema(
       SProduct[ArrayWrapper](
-        info1,
         List(
           field(FieldName("f1"), Schema(SArray[List[String], String](Schema(SString()))(identity), isOptional = true).format("xyz"))
         )
-      )
+      ),
+      Some(name1)
     )
   }
 
   it should "support chained modifications" in {
-    val info1 = SObjectInfo("sttp.tapir.SchemaMacroTestData.DevTeam")
+    val name1 = SName("sttp.tapir.SchemaMacroTestData.DevTeam")
 
     implicitly[Schema[DevTeam]]
       .modify(_.p1)(_.format("xyz"))
       .modify(_.p2)(_.format("qwe")) shouldBe Schema(
       SProduct[DevTeam](
-        info1,
         List(
           field(FieldName("p1"), implicitly[Schema[Person]].format("xyz")),
           field(FieldName("p2"), implicitly[Schema[Person]].format("qwe"))
         )
-      )
+      ),
+      Some(name1)
     )
   }
 
@@ -111,9 +113,9 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     parentSchema
       .modify(_.child)(_.format("xyz")) shouldBe Schema(
       SProduct[Parent](
-        SObjectInfo("sttp.tapir.SchemaMacroTestData.Parent"),
         List(field(FieldName("child"), implicitly[Schema[Person]].asOption.format("xyz")))
       ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Parent")),
       validator = parentSchema.validator
     )
   }
@@ -123,19 +125,19 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     parentSchema
       .modify(_.child.each.age)(_.format("xyz")) shouldBe Schema(
       SProduct[Parent](
-        SObjectInfo("sttp.tapir.SchemaMacroTestData.Parent"),
         List(
           field(
             FieldName("child"),
             Schema(
               SProduct[Person](
-                SObjectInfo("sttp.tapir.SchemaMacroTestData.Person"),
                 List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).format("xyz")))
-              )
+              ),
+              Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
             ).asOption
           )
         )
       ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Parent")),
       validator = parentSchema.validator
     )
   }
@@ -144,18 +146,17 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     implicitly[Schema[Team]]
       .modify(_.v.each)(_.description("test")) shouldBe Schema(
       SProduct[Team](
-        SObjectInfo("sttp.tapir.SchemaMacroTestData.Team"),
         List(
           field(
             FieldName("v"),
             Schema(
-              SOpenProduct[Map[String, Person], Person](SObjectInfo("Map", List("Person")), implicitly[Schema[Person]].description("test"))(
-                identity
-              )
+              SOpenProduct[Map[String, Person], Person](implicitly[Schema[Person]].description("test"))(identity),
+              Some(SName("Map", List("Person")))
             )
           )
         )
-      )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Team"))
     )
   }
 
@@ -167,8 +168,8 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
   it should "work with custom naming configuration" in {
     implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
     val actual = implicitly[Schema[D]].modify(_.someFieldName)(_.description("something"))
+    actual.name shouldBe Some(SName("sttp.tapir.generic.D"))
     actual.schemaType shouldBe SProduct[D](
-      SObjectInfo("sttp.tapir.generic.D"),
       List(field(FieldName("someFieldName", "some-field-name"), Schema(SString()).description("something")))
     )
   }
@@ -187,12 +188,13 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
         Schema.oneOfUsingField[Entity, String]({ x => x.kind }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType,
         Schema.oneOfUsingField[Entity, String]({ _.kind }, _.toString)("user" -> sUser, "org" -> sOrganization).schemaType
       )
-    ) { _.asInstanceOf[SCoproduct[_]].discriminator shouldBe Some(
+    ) {
+      _.asInstanceOf[SCoproduct[_]].discriminator shouldBe Some(
         SDiscriminator(
           FieldName("kind"),
           Map(
-            "user" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTestData.User")),
-            "org" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTestData.Organization"))
+            "user" -> SRef(SName("sttp.tapir.SchemaMacroTestData.User")),
+            "org" -> SRef(SName("sttp.tapir.SchemaMacroTestData.Organization"))
           )
         )
       )
@@ -203,30 +205,31 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     val sUser = Schema.derived[User]
     val sOrganization = Schema.derived[Organization]
 
-    val schema = Schema.oneOfUsingField[WrapperT[String, Int, String], String]({ x => x.e.kind(x.a) }, _.toString)("user" -> sUser, "org" -> sOrganization)
+    val schema = Schema
+      .oneOfUsingField[WrapperT[String, Int, String], String]({ x => x.e.kind(x.a) }, _.toString)("user" -> sUser, "org" -> sOrganization)
     val schemaType = schema.schemaType.asInstanceOf[SCoproduct[_]]
-    
+
     schemaType.discriminator shouldBe Some(
-        SDiscriminator(
-          FieldName("kind"),
-          Map(
-            "user" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTestData.User")),
-            "org" -> SRef(SObjectInfo("sttp.tapir.SchemaMacroTestData.Organization"))
-          )
+      SDiscriminator(
+        FieldName("kind"),
+        Map(
+          "user" -> SRef(SName("sttp.tapir.SchemaMacroTestData.User")),
+          "org" -> SRef(SName("sttp.tapir.SchemaMacroTestData.Organization"))
         )
       )
+    )
 
-      schemaType.info shouldBe SObjectInfo("sttp.tapir.SchemaMacroTestData.WrapperT",  List("String", "Int", "String"))
+    schema.name shouldBe Some(SName("sttp.tapir.SchemaMacroTestData.WrapperT", List("String", "Int", "String")))
   }
 
-behavior of "apply default"
+  behavior of "apply default"
 
   it should "add default to product" in {
     val expected = Schema(
       SProduct[Person](
-        SObjectInfo("sttp.tapir.SchemaMacroTestData.Person"),
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).default(34)))
-      )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
     )
 
     implicitly[Schema[Person]].modify(_.age)(_.default(34)) shouldBe expected
@@ -237,9 +240,9 @@ behavior of "apply default"
   it should "add example to product" in {
     val expected = Schema(
       SProduct[Person](
-        SObjectInfo("sttp.tapir.SchemaMacroTestData.Person"),
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).encodedExample(18)))
-      )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
     )
 
     implicitly[Schema[Person]].modify(_.age)(_.encodedExample(18)) shouldBe expected
@@ -250,9 +253,9 @@ behavior of "apply default"
   it should "add description to product" in {
     val expected = Schema(
       SProduct[Person](
-        SObjectInfo("sttp.tapir.SchemaMacroTestData.Person"),
         List(field(FieldName("name"), Schema(SString())), field(FieldName("age"), Schema(SInteger()).description("test")))
-      )
+      ),
+      Some(SName("sttp.tapir.SchemaMacroTestData.Person"))
     )
 
     implicitly[Schema[Person]].modify(_.age)(_.description("test")) shouldBe expected

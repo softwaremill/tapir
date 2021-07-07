@@ -2,15 +2,8 @@ package sttp.tapir.generic.internal
 
 import sttp.model.Header
 import sttp.model.headers.Cookie
-import sttp.tapir.annotations.apikey
-import sttp.tapir.annotations.body
-import sttp.tapir.annotations.cookies
-import sttp.tapir.annotations.header
-import sttp.tapir.annotations.headers
-import sttp.tapir.annotations.securitySchemeName
-import sttp.tapir.deprecated
-import sttp.tapir.description
-import sttp.tapir.Codec
+import sttp.tapir.EndpointIO.annotations._
+import sttp.tapir.{Codec, Schema}
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.internal.CaseClassUtil
 
@@ -24,8 +17,16 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
   protected val headersType = c.weakTypeOf[headers]
   protected val cookiesType = c.weakTypeOf[cookies]
 
+  private val schemaDescriptionType = c.weakTypeOf[Schema.annotations.description]
+  private val schemaEncodedExampleType = c.weakTypeOf[Schema.annotations.encodedExample]
+  private val schemaDefaultType = c.weakTypeOf[Schema.annotations.default[_]]
+  private val schemaFormatType = c.weakTypeOf[Schema.annotations.format]
+  private val schemaDeprecatedType = c.weakTypeOf[Schema.annotations.deprecated]
+  private val schemaValidateType = c.weakTypeOf[Schema.annotations.validate[_]]
+
   private val descriptionType = c.weakTypeOf[description]
-  private val deprecatedType = c.weakTypeOf[deprecated]
+  private val exampleType = c.weakTypeOf[example]
+
   private val apikeyType = c.weakTypeOf[apikey]
   protected val securitySchemeNameType = c.weakTypeOf[securitySchemeName]
 
@@ -33,7 +34,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
     if (util.fields.isEmpty) {
       c.abort(c.enclosingPosition, "Case class must have at least one field")
     }
-    if (1 < util.fields.flatMap(hasBodyAnnotation).size) {
+    if (1 < util.fields.flatMap(bodyAnnotation).size) {
       c.abort(c.enclosingPosition, "No more than one body annotation is allowed")
     }
   }
@@ -69,7 +70,7 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
     codec
   }
 
-  protected def hasBodyAnnotation(field: c.Symbol): Option[c.universe.Annotation] =
+  protected def bodyAnnotation(field: c.Symbol): Option[c.universe.Annotation] =
     field.annotations.find(_.tree.tpe <:< typeOf[body[_, _]])
 
   protected def makeBodyIO(field: c.Symbol)(ann: c.universe.Annotation): Tree = {
@@ -118,23 +119,42 @@ abstract class EndpointAnnotationsMacro(val c: blackbox.Context) {
     q"(t: $classType) => (..$tupleArgs)"
   }
 
-  protected def assignSchemaAnnotations[A](input: Tree, field: Symbol, util: CaseClassUtil[c.type, A]): Tree = {
-    val inputWithDescription = util
-      .extractArgFromAnnotation(field, descriptionType)
-      .fold(input)(desc => q"$input.description($desc)")
-    val inputWithDeprecation = if (util.annotated(field, deprecatedType)) {
-      q"$inputWithDescription.deprecated()"
-    } else {
-      inputWithDescription
-    }
+  protected def addMetadataFromAnnotations[A](input: Tree, field: Symbol, util: CaseClassUtil[c.type, A]): Tree = {
+    val transformations: List[Tree => Tree] = List(
+      i => util.extractStringArgFromAnnotation(field, descriptionType).fold(i)(desc => q"$i.description($desc)"),
+      i => util.extractStringArgFromAnnotation(field, schemaDescriptionType).fold(i)(desc => q"$i.schema(_.description($desc))"),
+      i =>
+        util
+          .extractTreeFromAnnotation(field, exampleType)
+          .fold(i)(example => q"$i.example($example)"),
+      i =>
+        util
+          .extractTreeFromAnnotation(field, schemaEncodedExampleType)
+          .fold(i)(encodedExample => q"$i.schema(_.encodedExample($encodedExample))"),
+      i =>
+        util
+          .extractTreeFromAnnotation(field, schemaDefaultType)
+          .fold(i)(default => q"$i.default($default)"),
+      i =>
+        util
+          .extractStringArgFromAnnotation(field, schemaFormatType)
+          .fold(i)(format => q"$i.schema(_.format($format))"),
+      i => if (util.annotated(field, schemaDeprecatedType)) q"$i.deprecated()" else i,
+      i =>
+        util
+          .extractTreeFromAnnotation(field, schemaValidateType)
+          .fold(i)(validator => q"$i.validate($validator)"),
+      i =>
+        util.findAnnotation(field, apikeyType).fold(i) { a =>
+          val challenge = authChallenge(a)
+          setSecuritySchemeName(
+            q"_root_.sttp.tapir.EndpointInput.Auth.ApiKey($i, $challenge, None)",
+            util.findAnnotation(field, securitySchemeNameType)
+          )
+        }
+    )
 
-    util.findAnnotation(field, apikeyType).fold(inputWithDeprecation) { a =>
-      val challenge = authChallenge(a)
-      setSecuritySchemeName(
-        q"_root_.sttp.tapir.EndpointInput.Auth.ApiKey($inputWithDeprecation, $challenge, None)",
-        util.findAnnotation(field, securitySchemeNameType)
-      )
-    }
+    transformations.foldLeft(input)((i, f) => f(i))
   }
 
   protected def info(any: Any): Unit =

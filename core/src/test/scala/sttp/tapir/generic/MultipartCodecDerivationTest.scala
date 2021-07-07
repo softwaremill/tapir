@@ -3,9 +3,11 @@ package sttp.tapir.generic
 import sttp.model.{Header, MediaType, Part}
 import sttp.tapir.generic.auto._
 import sttp.tapir.SchemaType._
-import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, TapirFile, Validator, encodedName}
+import sttp.tapir.{DecodeResult, FieldName, MultipartCodec, RawPart, Schema, TapirFile, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.annotations.encodedName
 import sttp.tapir.TestUtil.field
 
 import java.nio.charset.StandardCharsets
@@ -53,9 +55,9 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
     val codec = implicitly[MultipartCodec[Test6]].codec
 
     // when
+    codec.schema.name shouldBe Some(SName("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"))
     codec.schema.schemaType shouldBe
       SProduct[Test6](
-        SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test6"),
         List(field(FieldName("f1"), implicitly[Schema[String]]), field(FieldName("f2"), implicitly[Schema[Int]]))
       )
   }
@@ -66,9 +68,9 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
     val codec = implicitly[MultipartCodec[Test1]].codec
 
     // when
+    codec.schema.name shouldBe Some(SName("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"))
     codec.schema.schemaType shouldBe
       SProduct[Test1](
-        SObjectInfo("sttp.tapir.generic.MultipartCodecDerivationTest.<local MultipartCodecDerivationTest>.Test1"),
         List(field(FieldName("f1"), implicitly[Schema[TapirFile]]), field(FieldName("f2"), implicitly[Schema[Int]]))
       )
   }

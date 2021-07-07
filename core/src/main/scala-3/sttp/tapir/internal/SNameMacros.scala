@@ -3,7 +3,7 @@ package sttp.tapir.internal
 import scala.quoted.*
 import sttp.tapir.SchemaType.*
 
-object SObjectInfoMacros {
+object SNameMacros {
 
   inline def typeFullName[T] = ${ typeFullNameImpl[T] }
   private def typeFullNameImpl[T: Type](using q: Quotes) = {
