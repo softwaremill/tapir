@@ -19,7 +19,7 @@ The `ZioHttpInterpreter` objects contains methods: `toRoutes` and `toRouteRecove
 The `toRoutes` method requires the logic of the endpoint to be given as a function of type:
 
 ```scala
-I =>
+I => Future[Either[E, O]]
 ```
 
 The `toRouteRecoverErrors` method recovers errors from failed futures, and hence requires that `E` is a subclass of
@@ -63,7 +63,7 @@ The zio-http interpreter accepts streaming bodies of type `Stream[Throwable, Byt
 capability. Both response bodies and request bodies can be streamed. Usage: `streamBody(ZioStreams)(schema, format)`.
 
 The capability can be added to the classpath independently of the interpreter through the
-`"com.softwaremill.sttp.shared" %% "akka"` dependency.
+`"com.softwaremill.sttp.shared" %% "zio"` dependency.
 
 ## Configuration
 

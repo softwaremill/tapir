@@ -1,4 +1,4 @@
-package sttp.tapir.server.zhttp
+package sttp.tapir.server.ziohttp
 
 import sttp.capabilities.zio.ZioStreams
 import sttp.model.HasHeaders

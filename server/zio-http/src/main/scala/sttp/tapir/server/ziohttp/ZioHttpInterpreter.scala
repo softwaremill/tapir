@@ -1,4 +1,4 @@
-package sttp.tapir.server.zhttp
+package sttp.tapir.server.ziohttp
 
 import io.netty.handler.codec.http.HttpResponseStatus
 import sttp.capabilities.zio.ZioStreams
@@ -7,7 +7,7 @@ import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.zhttp.ZioHttpInterpreter.zioMonadError
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZioHttpHeader}
 import zio._
 import zio.blocking.Blocking
@@ -49,7 +49,7 @@ trait ZioHttpInterpreter[R <: Blocking] {
       implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
       val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](
-        new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), ZioHttpServerOptions.default),
+        new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions),
         new ZioHttpToResponseBody,
         zioHttpServerOptions.interceptors,
         zioHttpServerOptions.deleteFile

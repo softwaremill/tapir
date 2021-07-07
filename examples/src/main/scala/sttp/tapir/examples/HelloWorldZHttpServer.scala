@@ -1,7 +1,7 @@
 package sttp.tapir.examples
 
 import sttp.tapir._
-import sttp.tapir.server.zhttp.ZioHttpInterpreter
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zhttp.http.HttpApp
 import zhttp.service.Server
 import zio._

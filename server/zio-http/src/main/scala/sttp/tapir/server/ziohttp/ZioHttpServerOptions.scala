@@ -1,4 +1,4 @@
-package sttp.tapir.server.zhttp
+package sttp.tapir.server.ziohttp
 
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.Interceptor
@@ -43,8 +43,8 @@ object ZioHttpServerOptions {
         List(new DecodeFailureInterceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]](decodeFailureHandler))
     )
 
-  def defaultCreateFile[R]: ServerRequest => RIO[R, TapirFile] = { _ =>
-    RIO(Defaults.createTempFile())
+  def defaultCreateFile: ServerRequest => Task[TapirFile] = { _ =>
+    Task(Defaults.createTempFile())
   }
 
   def defaultDeleteFile[R]: TapirFile => RIO[R, Unit] = file => {

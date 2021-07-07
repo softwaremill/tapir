@@ -1,4 +1,4 @@
-package sttp.tapir.server.zhttp
+package sttp.tapir.server.ziohttp
 
 import sttp.capabilities
 import sttp.capabilities.zio.ZioStreams
@@ -12,7 +12,7 @@ import zio.{RIO, Task}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
-class ZioHttpRequestBody[F, R](request: Request, serverRequest: ServerRequest, serverOptions: ZioHttpServerOptions[R]) extends RequestBody[RIO[F, *], ZioStreams] {
+class ZioHttpRequestBody[F](request: Request, serverRequest: ServerRequest, serverOptions: ZioHttpServerOptions[F]) extends RequestBody[RIO[F, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
   def asByteArray: Task[Array[Byte]] = request.content match {

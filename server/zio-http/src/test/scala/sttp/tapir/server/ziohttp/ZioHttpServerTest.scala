@@ -3,15 +3,8 @@ package sttp.tapir.server.ziohttp
 import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
-import sttp.tapir.server.tests.{
-  DefaultCreateServerTest,
-  ServerAuthenticationTests,
-  ServerBasicTests,
-  ServerMetricsTest,
-  ServerStreamingTests,
-  backendResource
-}
-import sttp.tapir.server.zhttp.ZioHttpInterpreter.zioMonadError
+import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerMetricsTest, ServerStreamingTests, backendResource}
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.RIO
 import zio.blocking.Blocking
