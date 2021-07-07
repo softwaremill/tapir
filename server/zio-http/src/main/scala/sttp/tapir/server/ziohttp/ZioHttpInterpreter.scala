@@ -36,10 +36,10 @@ trait ZioHttpInterpreter[R <: Blocking] {
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
     ZioHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
 
-  def toRoutes[I, O](
-      e: Endpoint[I, Throwable, O, ZioStreams]
-  )(logic: I => RIO[R, O]): Http[R, Throwable, Request, Response[R, Throwable]] = {
-    toHttp(e.serverLogic[RIO[R, *]](input => logic(input).either))
+  def toRoutes[I, E, O](
+      e: Endpoint[I, E, O, ZioStreams]
+  )(logic: I => RIO[R, Either[E, O]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+    toHttp(e.serverLogic[RIO[R, *]](input => logic(input)))
   }
 
   private def toHttp[O, E, I](

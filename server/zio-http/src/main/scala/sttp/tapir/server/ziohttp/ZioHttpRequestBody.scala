@@ -12,22 +12,23 @@ import zio.{RIO, Task}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
-class ZioHttpRequestBody[F](request: Request, serverRequest: ServerRequest, serverOptions: ZioHttpServerOptions[F]) extends RequestBody[RIO[F, *], ZioStreams] {
+class ZioHttpRequestBody[F](request: Request, serverRequest: ServerRequest, serverOptions: ZioHttpServerOptions[F])
+    extends RequestBody[RIO[F, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
   def asByteArray: Task[Array[Byte]] = request.content match {
-    case HttpData.Empty => Task.succeed(Array.emptyByteArray)
+    case HttpData.Empty              => Task.succeed(Array.emptyByteArray)
     case HttpData.CompleteData(data) => Task.succeed(data.toArray)
-    case HttpData.StreamData(data) => data.runCollect.map(_.toArray)
+    case HttpData.StreamData(data)   => data.runCollect.map(_.toArray)
   }
 
   override def toRaw[R](bodyType: RawBodyType[R]): Task[RawValue[R]] = bodyType match {
     case RawBodyType.StringBody(defaultCharset) => asByteArray.map(new String(_, defaultCharset)).map(RawValue(_))
     case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
     case RawBodyType.ByteBufferBody             => asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
-    case RawBodyType.InputStreamBody => asByteArray.map(new ByteArrayInputStream(_)).map(RawValue(_))
-    case RawBodyType.FileBody => serverOptions.createFile(serverRequest).flatMap(file => Task(RawValue(file, Seq(file))))
-    case RawBodyType.MultipartBody(_, _) => Task.never
+    case RawBodyType.InputStreamBody            => asByteArray.map(new ByteArrayInputStream(_)).map(RawValue(_))
+    case RawBodyType.FileBody                   => serverOptions.createFile(serverRequest).flatMap(file => Task.succeed(RawValue(file, Seq(file))))
+    case RawBodyType.MultipartBody(_, _)        => Task.never
   }
 
   val stream: Stream[Throwable, Byte] = request.content match {

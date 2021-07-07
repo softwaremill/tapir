@@ -12,10 +12,10 @@ import zio.stream.ZStream
 import zio.{RIO, Task}
 
 case class ZioHttpServerOptions[R](
-                                    createFile: ServerRequest => Task[TapirFile],
-                                    deleteFile: TapirFile => RIO[R, Unit],
-                                    interceptors: List[Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]]
-                                  ) {
+    createFile: ServerRequest => Task[TapirFile],
+    deleteFile: TapirFile => RIO[R, Unit],
+    interceptors: List[Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]]
+) {
   def prependInterceptor(i: Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]): ZioHttpServerOptions[R] =
     copy(interceptors = i :: interceptors)
   def appendInterceptor(i: Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]): ZioHttpServerOptions[R] =
