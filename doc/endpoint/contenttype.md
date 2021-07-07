@@ -24,7 +24,7 @@ On the client side, the appropriate mapping will be chosen basing on the `Conten
 
 For example:
 
-```scala mdoc:compile-only
+```scala
 import sttp.tapir._
 import sttp.tapir.Codec.{JsonCodec, XmlCodec}
 import sttp.model.StatusCode
