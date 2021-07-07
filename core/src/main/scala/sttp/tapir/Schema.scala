@@ -45,6 +45,18 @@ case class Schema[T](
     validator = validator.contramap(g)
   )
 
+  /** Adapt this schema to type `TT`. Only the meta-data is retained, except for default values and the validator
+    * (however, product field/subtypes validators are retained). Run-time functionality:
+    * - traversing collection elements, product fields, or coproduct subtypes
+    * - validating an instance of type `TT` the top-level type
+    * is lost.
+    */
+  def as[TT]: Schema[TT] = copy(
+    schemaType = schemaType.as[TT],
+    default = None,
+    validator = Validator.pass
+  )
+
   /** Returns an optional version of this schema, with `isOptional` set to true. */
   def asOption: Schema[Option[T]] =
     Schema(
@@ -166,7 +178,7 @@ case class Schema[T](
           s.fieldsWithValidation.flatMap(f => f.get(t).map(f.schema.applyValidation(_, objects2)).getOrElse(Nil).map(_.prependPath(f.name)))
         case s @ SOpenProduct(valueSchema) =>
           s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
-        case s @ SCoproduct(subtypes, _) =>
+        case s @ SCoproduct(_, _) =>
           s.subtypeSchema(t).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
         case SRef(name) => objects.get(name).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
         case _          => Nil

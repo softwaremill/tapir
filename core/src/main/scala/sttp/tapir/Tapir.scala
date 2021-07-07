@@ -117,40 +117,17 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   )(format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, Schema.string), EndpointIO.Info.empty, charset)
 
-  /** Creates a stream body, with a schema corresponding to a list of `T` values. The schema will only be used for
-    * documentation, it will *not* be used to validate incoming data.
-    *
+  /** Creates a stream body with a text schema.
     * @param s A supported streams implementation.
     * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
     * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
     *               header.
     * @param charset An optional charset of the resulting stream's data, to be used in the content type.
     */
-  def streamListBody[S, T](
+  def streamBody[S, T](
       s: Streams[S]
-  )(schema: Schema[List[T]], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, schema.map[s.BinaryStream](_ => None)(_ => Nil)), EndpointIO.Info.empty, charset)
-
-  /** Creates a stream body, with a schema corresponding to iterable `C[T]` values. The schema will only be used for
-    * documentation, it will *not* be used to validate incoming data.
-    *
-    * @param s A supported streams implementation.
-    * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
-    * @param emptyIterable A value corresponding to an empty iterable, used to map over the schema so that it skips
-    *                      validation.
-    * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
-    *               header.
-    * @param charset An optional charset of the resulting stream's data, to be used in the content type.
-    */
-  def streamIterableBody[S, C[X] <: Iterable[X], T](
-      s: Streams[S]
-  )(
-      schema: Schema[C[T]],
-      emptyIterable: C[T],
-      format: CodecFormat,
-      charset: Option[Charset] = None
-  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, schema.map[s.BinaryStream](_ => None)(_ => emptyIterable)), EndpointIO.Info.empty, charset)
+  )(schema: Schema[T], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, schema.as[s.BinaryStream]), EndpointIO.Info.empty, charset)
 
   // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
   // while the third one (S) can be inferred.
