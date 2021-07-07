@@ -1,4 +1,4 @@
-package sttp.tapir.server.zhttp
+package sttp.tapir.server.ziohttp
 
 import sttp.model.{QueryParams, Uri, Header => SttpHeader, Method => SttpMethod}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}

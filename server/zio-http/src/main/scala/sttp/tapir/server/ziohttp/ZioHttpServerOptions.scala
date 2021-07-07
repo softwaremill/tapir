@@ -1,4 +1,4 @@
-package sttp.tapir.server.zhttp
+package sttp.tapir.server.ziohttp
 
 import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interceptor.Interceptor

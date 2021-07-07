@@ -1,4 +1,4 @@
-package sttp.tapir.server.zhttp
+package sttp.tapir.server.ziohttp
 
 import io.netty.handler.codec.http.HttpResponseStatus
 import sttp.capabilities.zio.ZioStreams
@@ -7,7 +7,7 @@ import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interpreter.ServerInterpreter
-import sttp.tapir.server.zhttp.ZioHttpInterpreter.zioMonadError
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZioHttpHeader}
 import zio._
 import zio.blocking.Blocking

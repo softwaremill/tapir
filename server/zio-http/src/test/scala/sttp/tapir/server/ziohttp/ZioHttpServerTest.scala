@@ -11,7 +11,7 @@ import sttp.tapir.server.tests.{
   ServerStreamingTests,
   backendResource
 }
-import sttp.tapir.server.zhttp.ZioHttpInterpreter.zioMonadError
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.RIO
 import zio.blocking.Blocking
