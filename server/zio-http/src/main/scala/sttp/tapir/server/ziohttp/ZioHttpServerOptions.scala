@@ -7,12 +7,12 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, Decode
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.{Defaults, TapirFile}
-import zio.RIO
 import zio.blocking.Blocking
 import zio.stream.ZStream
+import zio.{RIO, Task}
 
 case class ZioHttpServerOptions[R](
-    createFile: ServerRequest => RIO[R, TapirFile],
+    createFile: ServerRequest => Task[TapirFile],
     deleteFile: TapirFile => RIO[R, Unit],
     interceptors: List[Interceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]]]
 ) {
@@ -43,8 +43,8 @@ object ZioHttpServerOptions {
         List(new DecodeFailureInterceptor[RIO[R, *], ZStream[Blocking, Throwable, Byte]](decodeFailureHandler))
     )
 
-  def defaultCreateFile[R]: ServerRequest => RIO[R, TapirFile] = { _ =>
-    RIO(Defaults.createTempFile())
+  def defaultCreateFile: ServerRequest => Task[TapirFile] = { _ =>
+    Task(Defaults.createTempFile())
   }
 
   def defaultDeleteFile[R]: TapirFile => RIO[R, Unit] = file => {

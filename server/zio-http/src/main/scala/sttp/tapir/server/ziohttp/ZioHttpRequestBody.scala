@@ -2,8 +2,9 @@ package sttp.tapir.server.ziohttp
 
 import sttp.capabilities
 import sttp.capabilities.zio.ZioStreams
+import sttp.tapir.RawBodyType
+import sttp.tapir.model.ServerRequest
 import sttp.tapir.server.interpreter.{RawValue, RequestBody}
-import sttp.tapir.{Defaults, RawBodyType}
 import zhttp.http.{HttpData, Request}
 import zio.stream.{Stream, ZStream}
 import zio.{RIO, Task}
@@ -11,7 +12,8 @@ import zio.{RIO, Task}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
-class ZioHttpRequestBody[F](request: Request) extends RequestBody[RIO[F, *], ZioStreams] {
+class ZioHttpRequestBody[F](request: Request, serverRequest: ServerRequest, serverOptions: ZioHttpServerOptions[F])
+    extends RequestBody[RIO[F, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
   def asByteArray: Task[Array[Byte]] = request.content match {
@@ -25,7 +27,7 @@ class ZioHttpRequestBody[F](request: Request) extends RequestBody[RIO[F, *], Zio
     case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
     case RawBodyType.ByteBufferBody             => asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))
     case RawBodyType.InputStreamBody            => asByteArray.map(new ByteArrayInputStream(_)).map(RawValue(_))
-    case RawBodyType.FileBody                   => Task.effect(RawValue(Defaults.createTempFile()))
+    case RawBodyType.FileBody                   => serverOptions.createFile(serverRequest).flatMap(file => Task.succeed(RawValue(file, Seq(file))))
     case RawBodyType.MultipartBody(_, _)        => Task.never
   }
 
