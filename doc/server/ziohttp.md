@@ -29,18 +29,19 @@ For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp.AkkaHttpServerInterpreter
-import scala.concurrent.Future
-import akka.http.scaladsl.server.Route
+import sttp.tapir.server.akkahttp.ZioHttpInterpreter
+import zhttp.http.{Http, Request, Response}
+import zio._
+import zio.blocking.Blocking
 
-def countCharacters(s: String): Future[Either[Unit, Int]] = 
-  Future.successful(Right[Unit, Int](s.length))
+def countCharacters(s: String): RIO[Blocking,Either[Unit,Int]] =
+  ZIO.succeed(Right(s.length))
 
-val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] = 
+val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: Route = 
-  AkkaHttpServerInterpreter().toRoute(countCharactersEndpoint)(countCharacters)
+val countCharactersRoute: Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]  =
+  ZioHttpInterpreter().toRoutes(countCharactersEndpoint)(countCharacters)
 ```
 
 Note that the second argument to `toRoutes` is a function with one argument, a tuple of type `I`. This means that
@@ -48,13 +49,14 @@ functions which take multiple arguments need to be converted to a function using
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp._
-import scala.concurrent.Future
-import akka.http.scaladsl.server.Route
+import sttp.tapir.server.akkahttp.ZioHttpInterpreter
+import zhttp.http.{Http, Request, Response}
+import zio._
+import zio.blocking.Blocking
 
-def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
-val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ??? 
-val aRoute: Route = AkkaHttpServerInterpreter().toRoute(anEndpoint)((logic _).tupled)
+def logic(s: String, i: Int): RIO[Blocking,Either[Unit,String]] = ???
+val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
+val aRoute: Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = ZioHttpInterpreter().toRoutes(anEndpoint)((logic _).tupled)
 ```
 
 ## Streaming
