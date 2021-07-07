@@ -66,15 +66,16 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   @scala.deprecated(message = "Use customJsonBody", since = "0.18.0")
   def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = customJsonBody[T]
 
-  /** Json codecs are usually derived from json-library-specific implicits. That's why integrations with
+  /** Requires an implicit [[Codec.JsonCodec]] in scope. Such a codec can be created using [[Codec.json]].
+    *
+    * However, json codecs are usually derived from json-library-specific implicits. That's why integrations with
     * various json libraries define `jsonBody` methods, which directly require the library-specific implicits.
     *
-    * If you have a custom json codec, you should use this method instead.
+    * Unless you have defined a custom json codec, the `jsonBody` methods should be used.
     */
   def customJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
 
-  /** Implement your own xml codec using `Codec.xml()` before using this method.
-    */
+  /** Requires an implicit [[Codec.XmlCodec]] in scope. Such a codec can be created using [[Codec.xml]]. */
   def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Xml]])
 
   def rawBinaryBody[R: RawBodyType.Binary](implicit codec: Codec[R, R, OctetStream]): EndpointIO.Body[R, R] =
