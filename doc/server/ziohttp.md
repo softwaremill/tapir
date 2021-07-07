@@ -29,7 +29,7 @@ For example:
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp.ZioHttpInterpreter
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zhttp.http.{Http, Request, Response}
 import zio._
 import zio.blocking.Blocking
@@ -49,7 +49,7 @@ functions which take multiple arguments need to be converted to a function using
 
 ```scala mdoc:compile-only
 import sttp.tapir._
-import sttp.tapir.server.akkahttp.ZioHttpInterpreter
+import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zhttp.http.{Http, Request, Response}
 import zio._
 import zio.blocking.Blocking
