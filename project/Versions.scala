@@ -1,6 +1,5 @@
 object Versions {
   val http4s = "0.22.0-RC1"
-  val http4sOld = "0.21.24"
   val catsEffect = "2.5.1"
   val circe = "0.14.1"
   val circeYaml = "0.14.0"
