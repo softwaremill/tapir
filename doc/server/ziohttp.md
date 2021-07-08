@@ -1,6 +1,6 @@
 # Running as an zio-http server
 
-To expose an endpoint as an [zio-htpp](https://github.com/dream11/zio-http) server, first add the following dependency:
+To expose an endpoint as a [zio-http](https://github.com/dream11/zio-http) server, first add the following dependency:
 
 ```scala
 "com.softwaremill.sttp.tapir" %% "tapir-zio-http" % "@VERSION@"
@@ -12,18 +12,16 @@ Now import the object:
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 ```
 
-The `ZioHttpInterpreter` objects contains methods: `toRoutes` and `toRouteRecoverErrors`.
+The `ZioHttpInterpreter` objects contains methods: `toHttp` and `toHttpRecoverErrors`.
 
-## Using `toRoutes` and `toRouteRecoverErrors`
-
-The `toRoutes` method requires the logic of the endpoint to be given as a function of type:
+The `toHttp` method requires the logic of the endpoint to be given as a function of type:
 
 ```scala
-I => RIO[Either[E, O]]
+I => RIO[R, Either[E, O]]
 ```
 
-The `toRouteRecoverErrors` method recovers errors from failed effects, and hence requires that `E` is a subclass of
-`Throwable` (an exception); it expects a function of type `I => RIO[O]`.
+The `toHttpRecoverErrors` method recovers errors from failed effects, and hence requires that `E` is a subclass of
+`Throwable` (an exception); it expects a function of type `I => RIO[R, O]`.
 
 For example:
 
@@ -32,19 +30,18 @@ import sttp.tapir._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zhttp.http.{Http, Request, Response}
 import zio._
-import zio.blocking.Blocking
 
-def countCharacters(s: String): RIO[Blocking,Either[Unit,Int]] =
+def countCharacters(s: String): RIO[Any, Either[Unit, Int]] =
   ZIO.succeed(Right(s.length))
 
 val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
-val countCharactersRoute: Http[Blocking, Throwable, Request, Response[Blocking, Throwable]]  =
-  ZioHttpInterpreter().toRoutes(countCharactersEndpoint)(countCharacters)
+val countCharactersHttp: Http[Any, Throwable, Request, Response[Any, Throwable]]  =
+  ZioHttpInterpreter().toHttp(countCharactersEndpoint)(countCharacters)
 ```
 
-Note that the second argument to `toRoutes` is a function with one argument, a tuple of type `I`. This means that
+Note that the second argument to `toHttp` is a function with one argument, a tuple of type `I`. This means that
 functions which take multiple arguments need to be converted to a function using a single argument using `.tupled`:
 
 ```scala mdoc:compile-only
@@ -52,11 +49,11 @@ import sttp.tapir._
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import zhttp.http.{Http, Request, Response}
 import zio._
-import zio.blocking.Blocking
 
-def logic(s: String, i: Int): RIO[Blocking,Either[Unit,String]] = ???
+def logic(s: String, i: Int): RIO[Any, Either[Unit,String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
-val aRoute: Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = ZioHttpInterpreter().toRoutes(anEndpoint)((logic _).tupled)
+val anHttp: Http[Any, Throwable, Request, Response[Blocking, Throwable]] = 
+    ZioHttpInterpreter().toHttp(anEndpoint)((logic _).tupled)
 ```
 
 ## Streaming

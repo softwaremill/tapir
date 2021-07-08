@@ -919,14 +919,11 @@ lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-htt
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
 
-
 lazy val zioHttp: ProjectMatrix = (projectMatrix in file("server/zio-http"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http",
-    libraryDependencies ++= Seq(
-      "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats,
-      "io.d11" %% "zhttp" % "1.0.0.0-RC17")
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, serverTests % Test)
@@ -1194,7 +1191,8 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     sttpStubServer,
     playJson,
     prometheusMetrics,
-    sttpMockServer
+    sttpMockServer,
+    zioJson
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))

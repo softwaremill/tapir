@@ -16,28 +16,23 @@ import scala.reflect.ClassTag
 
 trait ZioHttpInterpreter[R] {
 
-  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, ZioStreams])(
-      logic: I => RIO[R, O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Http[R, Throwable, Request, Response[R, Throwable]] =
-    toRoutes(e.serverLogicRecoverErrors(logic))
-
-  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]): Http[R, Throwable, Request, Response[R, Throwable]] =
-    toHttp(se)
-
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
-  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
-    ZioHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
-
-  def toRoutes[I, E, O](
+  def toHttp[I, E, O](
       e: Endpoint[I, E, O, ZioStreams]
   )(logic: I => RIO[R, Either[E, O]]): Http[R, Throwable, Request, Response[R, Throwable]] = {
     toHttp(e.serverLogic[RIO[R, *]](input => logic(input)))
   }
 
-  private def toHttp[O, E, I](
-      se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
-  ): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttpRecoverErrors[I, E, O](e: Endpoint[I, E, O, ZioStreams])(
+      logic: I => RIO[R, O]
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Http[R, Throwable, Request, Response[R, Throwable]] =
+    toHttp(e.serverLogicRecoverErrors(logic))
+
+  def toHttp(ses: List[ServerEndpoint[_, _, _, ZioStreams, RIO[R, *]]]): Http[R, Throwable, Request, Response[R, Throwable]] =
+    ses.map(toHttp(_)).foldLeft(Http.empty: Http[R, Throwable, Request, Response[R, Throwable]])(_ <> _)
+
+  def toHttp[O, E, I](se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]): Http[R, Throwable, Request, Response[R, Throwable]] =
     Http.fromEffectFunction[Request] { req =>
       implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
@@ -61,6 +56,8 @@ trait ZioHttpInterpreter[R] {
       }
     }
 
+  private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
+    ZioHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
 }
 
 object ZioHttpInterpreter {

@@ -31,13 +31,13 @@ class ZioHttpTestServerInterpreter
       metricsInterceptor = metricsInterceptor,
       decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
     )
-    ZioHttpInterpreter(serverOptions).toRoutes(e)
+    ZioHttpInterpreter(serverOptions).toHttp(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Task[O])(implicit
       eClassTag: ClassTag[E]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] =
-    ZioHttpInterpreter().toRouteRecoverErrors(e)(fn)
+    ZioHttpInterpreter().toHttpRecoverErrors(e)(fn)
 
   override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response[Any, Throwable]]]): Resource[IO, Port] = {
     val as: Async[IO] = Async[IO]
