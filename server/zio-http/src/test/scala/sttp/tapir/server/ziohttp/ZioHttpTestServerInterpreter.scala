@@ -43,7 +43,7 @@ class ZioHttpTestServerInterpreter
 
   override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response[Any, Throwable]]]): Resource[IO, Port] = {
     implicit val r: Runtime[Any] = Runtime.default
-    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ <> _))
+    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ <> _)) ++ Server.maxRequestSize(10000000)
     val port = ZManaged.fromEffect(UIO.effectTotal(8090 + portCounter.getAndIncrement()))
     port
       .flatMap(p =>
