@@ -926,7 +926,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     name := "tapir-aws-lambda",
     libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "httpclient-backend" % "3.3.9"
+      "com.softwaremill.sttp.client3" %% "httpclient-backend" % Versions.sttp
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
