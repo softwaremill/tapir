@@ -10,6 +10,7 @@ interpreted as:
   * [Http4s](server/http4s.md) `HttpRoutes[F]`
   * [Finatra](server/finatra.md) `http.Controller`
   * [Play](server/play.md) `Route`
+  * [ZIO Http](server/ziohttp.md) `Http`
   * [aws](server/aws.md) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
@@ -145,6 +146,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    server/finatra
    server/play
    server/vertx
+   server/ziohttp
    server/aws
    server/options
    server/logic

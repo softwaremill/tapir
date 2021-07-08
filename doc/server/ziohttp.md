@@ -19,11 +19,11 @@ The `ZioHttpInterpreter` objects contains methods: `toRoutes` and `toRouteRecove
 The `toRoutes` method requires the logic of the endpoint to be given as a function of type:
 
 ```scala
-I => Future[Either[E, O]]
+I => RIO[Either[E, O]]
 ```
 
-The `toRouteRecoverErrors` method recovers errors from failed futures, and hence requires that `E` is a subclass of
-`Throwable` (an exception); it expects a function of type `I => Future[O]`.
+The `toRouteRecoverErrors` method recovers errors from failed effects, and hence requires that `E` is a subclass of
+`Throwable` (an exception); it expects a function of type `I => RIO[O]`.
 
 For example:
 
