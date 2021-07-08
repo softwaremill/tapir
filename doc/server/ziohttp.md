@@ -52,7 +52,7 @@ import zio._
 
 def logic(s: String, i: Int): RIO[Any, Either[Unit,String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???
-val anHttp: Http[Any, Throwable, Request, Response[Blocking, Throwable]] = 
+val anHttp: Http[Any, Throwable, Request, Response[Any, Throwable]] = 
     ZioHttpInterpreter().toHttp(anEndpoint)((logic _).tupled)
 ```
 
