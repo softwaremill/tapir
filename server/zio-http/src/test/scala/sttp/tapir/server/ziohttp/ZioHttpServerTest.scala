@@ -13,8 +13,7 @@ import sttp.tapir.server.tests.{
 }
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
-import zio.RIO
-import zio.blocking.Blocking
+import zio.Task
 
 class ZioHttpServerTest extends TestSuite {
 
@@ -22,7 +21,7 @@ class ZioHttpServerTest extends TestSuite {
     val interpreter = new ZioHttpTestServerInterpreter()
     val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-    implicit val m: MonadError[RIO[Blocking, *]] = zioMonadError
+    implicit val m: MonadError[Task] = zioMonadError
 
     new ServerBasicTests(
       createServerTest,

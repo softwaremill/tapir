@@ -12,8 +12,8 @@ import zio.{RIO, Task}
 import java.io.ByteArrayInputStream
 import java.nio.ByteBuffer
 
-class ZioHttpRequestBody[F](request: Request, serverRequest: ServerRequest, serverOptions: ZioHttpServerOptions[F])
-    extends RequestBody[RIO[F, *], ZioStreams] {
+class ZioHttpRequestBody[R](request: Request, serverRequest: ServerRequest, serverOptions: ZioHttpServerOptions[R])
+    extends RequestBody[RIO[R, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
   def asByteArray: Task[Array[Byte]] = request.content match {
@@ -22,7 +22,7 @@ class ZioHttpRequestBody[F](request: Request, serverRequest: ServerRequest, serv
     case HttpData.StreamData(data)   => data.runCollect.map(_.toArray)
   }
 
-  override def toRaw[R](bodyType: RawBodyType[R]): Task[RawValue[R]] = bodyType match {
+  override def toRaw[RAW](bodyType: RawBodyType[RAW]): Task[RawValue[RAW]] = bodyType match {
     case RawBodyType.StringBody(defaultCharset) => asByteArray.map(new String(_, defaultCharset)).map(RawValue(_))
     case RawBodyType.ByteArrayBody              => asByteArray.map(RawValue(_))
     case RawBodyType.ByteBufferBody             => asByteArray.map(bytes => ByteBuffer.wrap(bytes)).map(RawValue(_))

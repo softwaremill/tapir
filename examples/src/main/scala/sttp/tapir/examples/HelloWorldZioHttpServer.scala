@@ -21,7 +21,7 @@ object HelloWorldZioHttpServer extends App {
       .in(path[Int]("y"))
       .out(stringBody)
 
-  val app: HttpApp[Blocking, Throwable] =
+  val app: HttpApp[Any, Throwable] =
     ZioHttpInterpreter().toRoutes(helloWorld)(name => ZIO.succeed(Right(s"Hello, $name!"))) <>
       ZioHttpInterpreter().toRoutes(add) { case (x, y) => ZIO.succeed(Right(s"$x + $y equals: ${x + y}")) }
 

@@ -10,26 +10,19 @@ import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZioHttpHeader}
 import zio._
-import zio.blocking.Blocking
-import zio.stream.ZStream
+import zio.stream.Stream
 
 import scala.reflect.ClassTag
 
-trait ZioHttpInterpreter[R <: Blocking] {
+trait ZioHttpInterpreter[R] {
 
-  def toRouteRecoverErrors[I, E, O](
-      e: Endpoint[I, E, O, ZioStreams]
-  )(
+  def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, ZioStreams])(
       logic: I => RIO[R, O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Http[R, Throwable, Request, Response[R, Throwable]] = {
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toRoutes(e.serverLogicRecoverErrors(logic))
-  }
 
-  def toRoutes[I, E, O](
-      se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]
-  ): Http[R, Throwable, Request, Response[R, Throwable]] = {
+  def toRoutes[I, E, O](se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(se)
-  }
 
   def zioHttpServerOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default
 
@@ -48,7 +41,7 @@ trait ZioHttpInterpreter[R <: Blocking] {
     Http.fromEffectFunction[Request] { req =>
       implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
-      val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], ZStream[Blocking, Throwable, Byte], ZioStreams](
+      val interpreter = new ServerInterpreter[ZioStreams, RIO[R, *], Stream[Throwable, Byte], ZioStreams](
         new ZioHttpRequestBody(req, new ZioHttpServerRequest(req), zioHttpServerOptions),
         new ZioHttpToResponseBody,
         zioHttpServerOptions.interceptors,
@@ -71,13 +64,13 @@ trait ZioHttpInterpreter[R <: Blocking] {
 }
 
 object ZioHttpInterpreter {
-  def apply[R <: Blocking](serverOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default[R]): ZioHttpInterpreter[R] = {
+  def apply[R](serverOptions: ZioHttpServerOptions[R] = ZioHttpServerOptions.default[R]): ZioHttpInterpreter[R] = {
     new ZioHttpInterpreter[R] {
       override def zioHttpServerOptions: ZioHttpServerOptions[R] = serverOptions
     }
   }
 
-  def zioMonadError[R <: Blocking]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
+  def zioMonadError[R]: MonadError[RIO[R, *]] = new MonadError[RIO[R, *]] {
     override def unit[T](t: T): RIO[R, T] = URIO.succeed(t)
     override def map[T, T2](fa: RIO[R, T])(f: T => T2): RIO[R, T2] = fa.map(f)
     override def flatMap[T, T2](fa: RIO[R, T])(f: T => RIO[R, T2]): RIO[R, T2] = fa.flatMap(f)
