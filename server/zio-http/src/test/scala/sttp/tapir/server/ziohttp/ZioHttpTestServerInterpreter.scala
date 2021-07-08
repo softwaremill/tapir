@@ -1,7 +1,7 @@
 package sttp.tapir.server.ziohttp
 
 import cats.data.NonEmptyList
-import cats.effect.{Async, IO, Resource}
+import cats.effect.{IO, Resource}
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
@@ -13,10 +13,10 @@ import zhttp.http._
 import zhttp.service.server.ServerChannelFactory
 import zhttp.service.{EventLoopGroup, Server}
 import zio._
-import zio.interop.ZManagedSyntax
-import zio.interop.catz.taskEffectInstance
+import zio.interop.catz._
 import zio.stream.Stream
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.reflect.ClassTag
 
 class ZioHttpTestServerInterpreter
@@ -39,19 +39,19 @@ class ZioHttpTestServerInterpreter
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] =
     ZioHttpInterpreter().toHttpRecoverErrors(e)(fn)
 
-  override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response[Any, Throwable]]]): Resource[IO, Port] = {
-    val as: Async[IO] = Async[IO]
-    implicit val r: Runtime[Any] = Runtime.default
-    val zioHttpServerPort = 8090
-    val server: Server[Any, Throwable] =
-      Server.port(zioHttpServerPort) ++ Server.app(routes.toList.reduce(_ <> _)) ++ Server.maxRequestSize(1000000)
-    val managedServer: ZManaged[Any, Nothing, Exit[Throwable, Unit]] = Server
-      .make(server)
-      .run
-      .provideLayer(EventLoopGroup.auto(0) ++ ServerChannelFactory.auto)
+  private val portCounter = new AtomicInteger(0) // no way to dynamically allocate ports
 
-    new ZManagedSyntax(managedServer)
-      .toResource(as, taskEffectInstance(r))
-      .map(_ => zioHttpServerPort)
+  override def server(routes: NonEmptyList[Http[Any, Throwable, Request, Response[Any, Throwable]]]): Resource[IO, Port] = {
+    implicit val r: Runtime[Any] = Runtime.default
+    val server: Server[Any, Throwable] = Server.app(routes.toList.reduce(_ <> _))
+    val port = ZManaged.fromEffect(UIO.effectTotal(8090 + portCounter.getAndIncrement()))
+    port
+      .flatMap(p =>
+        Server
+          .make(server ++ Server.port(p))
+          .provideLayer(EventLoopGroup.auto(0) ++ ServerChannelFactory.auto)
+          .map(_ => p)
+      )
+      .toResource[IO]
   }
 }
