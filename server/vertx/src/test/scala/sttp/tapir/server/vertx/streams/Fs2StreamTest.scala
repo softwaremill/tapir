@@ -8,14 +8,15 @@ import cats.syntax.option._
 import _root_.fs2.Stream
 import _root_.fs2.Chunk
 import io.vertx.core.buffer.Buffer
+import org.scalatest.Retries
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.tagobjects.Retryable
 import sttp.tapir.server.vertx.VertxCatsServerOptions
 
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 
-class Fs2StreamTest extends AnyFlatSpec with Matchers {
+class Fs2StreamTest extends AnyFlatSpec with Matchers with Retries {
   implicit val cs: ContextShift[IO] = IO.contextShift(scala.concurrent.ExecutionContext.global)
   implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
   val options: VertxCatsServerOptions[IO] = VertxCatsServerOptions.default[IO].copy(maxQueueSizeForReadStream = 4)
@@ -63,7 +64,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers {
     internal(0)
   }
 
-  "Fs2ReadStreamCompatible" should "convert fs2 stream to read stream" in {
+  "Fs2ReadStreamCompatible" should "convert fs2 stream to read stream" taggedAs (Retryable) in {
     val stream = Stream
       .unfoldChunkEval(0)({ num =>
         IO.delay(100.millis).as(((intAsBuffer(num), num + 1)).some)
