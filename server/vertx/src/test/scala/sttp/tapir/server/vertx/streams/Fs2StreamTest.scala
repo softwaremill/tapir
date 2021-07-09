@@ -64,6 +64,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with Retries {
     internal(0)
   }
 
+  // retriable due to https://github.com/softwaremill/tapir/issues/1169
   "Fs2ReadStreamCompatible" should "convert fs2 stream to read stream" taggedAs (Retryable) in {
     val stream = Stream
       .unfoldChunkEval(0)({ num =>
