@@ -262,7 +262,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           )
         case _ =>
           Seq(
-            "com.softwaremill.magnolia" %%% "magnolia-core" % "1.0.0-M4",
+            "com.propensive" %% "magnolia" % "0.17.0",
+            "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
             "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
           )
       }
