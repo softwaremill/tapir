@@ -130,7 +130,8 @@ lazy val allAggregates = core.projectRefs ++
   finatraServerCats.projectRefs ++
   playServer.projectRefs ++
   vertxServer.projectRefs ++
-  zioServer.projectRefs ++
+  zioHttp4sServer.projectRefs ++
+  zioHttp.projectRefs ++
   awsLambda.projectRefs ++
   awsLambdaTests.projectRefs ++
   awsSam.projectRefs ++
@@ -909,7 +910,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
   .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, serverTests % Test)
 
-lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
+lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-server"))
   .settings(commonJvmSettings)
   .settings(
     name := "tapir-zio-http4s-server",
@@ -917,6 +918,15 @@ lazy val zioServer: ProjectMatrix = (projectMatrix in file("server/zio-http4s-se
   )
   .jvmPlatform(scalaVersions = scala2Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
+
+lazy val zioHttp: ProjectMatrix = (projectMatrix in file("server/zio-http"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-zio-http",
+    libraryDependencies ++= Seq("dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats, "io.d11" %% "zhttp" % "1.0.0.0-RC17")
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+  .dependsOn(zio, serverTests % Test)
 
 // serverless
 
@@ -1006,7 +1016,7 @@ lazy val awsTerraform: ProjectMatrix = (projectMatrix in file("serverless/aws/te
       "io.circe" %% "circe-yaml" % Versions.circeYaml,
       "io.circe" %% "circe-generic" % Versions.circe,
       "io.circe" %% "circe-literal" % Versions.circe,
-      "org.typelevel" %% "jawn-parser" % "1.1.2"
+      "org.typelevel" %% "jawn-parser" % "1.2.0"
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1175,11 +1185,13 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     circeJson,
     swaggerUiAkka,
     swaggerUiHttp4s,
-    zioServer,
+    zioHttp4sServer,
+    zioHttp,
     sttpStubServer,
     playJson,
     prometheusMetrics,
-    sttpMockServer
+    sttpMockServer,
+    zioJson
   )
 
 lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
@@ -1211,7 +1223,8 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     swaggerUiHttp4s,
     refined,
     cats,
-    zioServer
+    zioHttp4sServer,
+    zioHttp
   )
 
 //TODO this should be invoked by compilation process, see #https://github.com/scalameta/mdoc/issues/355
@@ -1265,7 +1278,8 @@ lazy val documentation: ProjectMatrix = (projectMatrix in file("generated-doc"))
     uPickleJson,
     vertxServer,
     zio,
-    zioServer,
+    zioHttp4sServer,
+    zioHttp,
     derevo,
     zioJson,
     prometheusMetrics,

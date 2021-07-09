@@ -142,7 +142,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
       .and(cookie[Boolean]("another-cookie-name"))
       .and(header[Long]("header"))
       .and(header[Int]("another-header-name"))
-      .and(anyJsonBody[String])
+      .and(customJsonBody[String])
       .mapTo[TapirRequestTest1]
 
     compareTransputs(EndpointInput.derived[TapirRequestTest1], expectedInput) shouldBe true
@@ -151,7 +151,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
   it should "derive correct input for dealised bodies" in {
     import JsonCodecs._
 
-    val expectedInput = anyJsonBody[Boolean].mapTo[TapirRequestTest2]
+    val expectedInput = customJsonBody[Boolean].mapTo[TapirRequestTest2]
 
     compareTransputs(EndpointInput.derived[TapirRequestTest2], expectedInput) shouldBe true
   }
@@ -338,7 +338,7 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
     val expectedOutput = header[Int]("header1")
       .and(header[Boolean]("another-header-name"))
       .and(setCookie("cookie-name"))
-      .and(anyJsonBody[String])
+      .and(customJsonBody[String])
       .and(statusCode)
       .mapTo[TapirResponseTest1]
 
