@@ -40,7 +40,6 @@ trait FinatraServerInterpreter extends Logging {
       serverInterpreter(serverRequest, se).map {
         case ServerInterpreterResult.Failure(decodeFailureContexts) =>
           val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-
           Response(Status.fromCode(statusCode.code))
         case ServerInterpreterResult.Success(response) =>
           val status = Status(response.code.code)
