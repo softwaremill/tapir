@@ -23,7 +23,7 @@ import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
 import sttp.tapir.server.interceptor.ServerInterpreterResult
-import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputsResult, ServerInterpreter}
+import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.concurrent.Future
 import scala.reflect.ClassTag
@@ -58,9 +58,8 @@ trait AkkaHttpServerInterpreter {
 
           onSuccess(interpreter(serverRequest, ses)) {
             case ServerInterpreterResult.Failure(decodeFailureContexts) =>
-              val rejections = decodeFailureContexts.map { case (_, failure) => failure }.collect {
-                case DecodeBasicInputsResult.Failure(EndpointInput.FixedMethod(m, _, _), _) =>
-                  MethodRejection(methodToAkkaHttp(m))
+              val rejections = decodeFailureContexts.map(_.failingInput).collect { case EndpointInput.FixedMethod(m, _, _) =>
+                MethodRejection(methodToAkkaHttp(m))
               }
               reject(rejections.toSeq: _*)
             case ServerInterpreterResult.Success(response) =>
