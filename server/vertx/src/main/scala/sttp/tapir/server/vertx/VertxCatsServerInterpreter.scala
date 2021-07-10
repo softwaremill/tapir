@@ -9,6 +9,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.{DecodeFailureContext, ServerInterpreterResult}
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter.{CatsFFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
@@ -62,7 +63,8 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
   }
 
   private def endpointHandler[I, E, O, A, S <: Streams[S]](
-      e: ServerEndpoint[I, E, O, Fs2Streams[F], F], readStreamCompatible: ReadStreamCompatible[S]
+      e: ServerEndpoint[I, E, O, Fs2Streams[F], F],
+      readStreamCompatible: ReadStreamCompatible[S]
   )(implicit effect: Effect[F]): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
@@ -77,8 +79,10 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 
     val result = interpreter(serverRequest, e)
       .flatMap {
-        case None           => fFromVFuture(rc.response.setStatusCode(404).end()).void
-        case Some(response) => VertxOutputEncoders(response).apply(rc).pure
+        case ServerInterpreterResult.Failure(decodeFailureContexts) =>
+          val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
+          fFromVFuture(rc.response.setStatusCode(statusCode.code).end()).void
+        case ServerInterpreterResult.Success(response) => VertxOutputEncoders(response).apply(rc).pure
       }
       .handleError { e => rc.fail(e) }
 
