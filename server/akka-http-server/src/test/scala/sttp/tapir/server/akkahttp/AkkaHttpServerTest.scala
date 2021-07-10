@@ -9,12 +9,9 @@ import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
-import akka.http.scaladsl.server.Route
-import sttp.capabilities.{WebSockets, akka}
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.model.sse.ServerSentEvent
-import sttp.model.StatusCode
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
@@ -57,36 +54,6 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             .server(NonEmptyList.of(route))
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
-            }
-            .unsafeRunSync()
-        },
-        Test("endpoint that doesn't match request path") {
-          val e = endpoint.get.in("test").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val route = AkkaHttpServerInterpreter().toRoute(e)
-          interpreter
-            .server(NonEmptyList.of(route))
-            .use { port =>
-              basicRequest.get(uri"http://localhost:$port/tests").send(backend).map(_.code shouldBe StatusCode.NotFound)
-            }
-            .unsafeRunSync()
-        },
-        Test("endpoint that doesn't match request method") {
-          val e = endpoint.get.in("test").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val route = AkkaHttpServerInterpreter().toRoute(e)
-          interpreter
-            .server(NonEmptyList.of(route))
-            .use { port =>
-              basicRequest.post(uri"http://localhost:$port/test").send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed)
-            }
-            .unsafeRunSync()
-        },
-        Test("endpoint that doesn't match request path or method") {
-          val e = endpoint.get.in("test").out(stringBody).serverLogic(_ => ("ok".asRight[Unit]).unit)
-          val route = AkkaHttpServerInterpreter().toRoute(e)
-          interpreter
-            .server(NonEmptyList.of(route))
-            .use { port =>
-              basicRequest.post(uri"http://localhost:$port/tests").send(backend).map(_.code shouldBe StatusCode.NotFound)
             }
             .unsafeRunSync()
         },

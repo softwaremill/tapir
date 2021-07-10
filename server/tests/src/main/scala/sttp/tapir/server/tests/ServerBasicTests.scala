@@ -76,6 +76,17 @@ class ServerBasicTests[F[_], ROUTE, B](
       basicRequest.post(baseUri).send(backend).map(_.body shouldBe Symbol("left"))
     },
     //
+    testServer(endpoint.in("path"), "request an unknown endpoint")((_: Unit) => pureResult(().asRight[Unit])) { (backend, baseUri) =>
+      basicRequest.get(baseUri).send(backend).map(_.code shouldBe StatusCode.NotFound)
+    },
+    testServer(endpoint.get, "request a known endpoint with incorrect method")((_: Unit) => pureResult(().asRight[Unit])) {
+      (backend, baseUri) =>
+        basicRequest.post(baseUri).send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed)
+    },
+    testServer(endpoint.get.in("path"), "request an unknown endpoint with incorrect method")((_: Unit) => pureResult(().asRight[Unit])) {
+      (backend, baseUri) =>
+        basicRequest.post(baseUri).send(backend).map(_.code shouldBe StatusCode.NotFound)
+    },
     testServer(in_query_out_string)((fruit: String) => pureResult(s"fruit: $fruit".asRight[Unit])) { (backend, baseUri) =>
       basicRequest.get(uri"$baseUri?fruit=orange").send(backend).map(_.body shouldBe Right("fruit: orange"))
     },
