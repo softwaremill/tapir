@@ -54,7 +54,7 @@ class SwaggerHttp4s(
         Ok(yaml)
       case GET -> `rootPath` / swaggerResource =>
         StaticFile
-          .fromResource(
+          .fromResource[F](
             s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$swaggerResource",
             Blocker.liftExecutionContext(ExecutionContext.global)
           )
