@@ -48,11 +48,11 @@ import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 
 This adds the following method on `ZEndpoint`:
 
-* `def toRoutes[R](logic: I => ZIO[R, E, O]): HttpRoutes[ZIO[R with Clock, Throwable, *]]`
+* `def toRoutes[R](logic: I => ZIO[R, E, O]): HttpRoutes[ZIO[R with Clock with Blocking, Throwable, *]]`
 
 And the following methods on `ZServerEndpoint` or `List[ZServerEndpoint]`: 
 
-* `def toRoutes[R]: HttpRoutes[ZIO[R with Clock, Throwable, *]]`
+* `def toRoutes[R]: HttpRoutes[ZIO[R with Clock with Blocking, Throwable, *]]`
 
 Note that the resulting `HttpRoutes` always require a clock in their environment.
 
@@ -76,7 +76,7 @@ val serverEndpoint1: ZServerEndpoint[Service1, Unit, Unit, Unit] = ???
 val serverEndpoint2: ZServerEndpoint[Service2, Unit, Unit, Unit] = ???
 
 type Env = Service1 with Service2
-val routes: HttpRoutes[RIO[Env with Clock, *]] = 
+val routes: HttpRoutes[RIO[Env with Clock with Blocking, *]] = 
   ZHttp4sServerInterpreter().from(List(
     serverEndpoint1.widen[Env], 
     serverEndpoint2.widen[Env]

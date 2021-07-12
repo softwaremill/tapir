@@ -1,16 +1,17 @@
 package sttp.tapir.server.http4s.ztapir
 
 import org.http4s.HttpRoutes
-import sttp.tapir.server.http4s.{Http4sServerOptions, Http4sServerInterpreter}
+import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.ztapir._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.interop.catz._
-import zio.{&, RIO, ZIO}
+import zio.{RIO, ZIO}
 
 trait ZHttp4sServerInterpreter[R] {
 
-  def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]] = Http4sServerOptions.default
+  def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]] =
+    Http4sServerOptions.default
 
   def from[I, E, O](e: ZEndpoint[I, E, O])(logic: I => ZIO[R, E, O]): ServerEndpointsToRoutes =
     from[I, E, O](e.zServerLogic(logic))
@@ -28,8 +29,8 @@ trait ZHttp4sServerInterpreter[R] {
   class ServerEndpointsToRoutes(
       serverEndpoints: List[ZServerEndpoint[R, _, _, _]]
   ) {
-    def toRoutes: HttpRoutes[RIO[R with Clock, *]] = {
-      Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(serverEndpoints.map(_.widen[R with Clock]))
+    def toRoutes: HttpRoutes[RIO[R with Clock with Blocking, *]] = {
+      Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(serverEndpoints.map(_.widen[R with Clock with Blocking]))
     }
   }
 }
@@ -39,9 +40,12 @@ object ZHttp4sServerInterpreter {
     new ZHttp4sServerInterpreter[R] {}
   }
 
-  def apply[R](serverOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]]): ZHttp4sServerInterpreter[R] = {
+  def apply[R](
+      serverOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]]
+  ): ZHttp4sServerInterpreter[R] = {
     new ZHttp4sServerInterpreter[R] {
-      override def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock, *], RIO[R with Clock, *]] = serverOptions
+      override def zHttp4sServerOptions: Http4sServerOptions[RIO[R with Clock with Blocking, *], RIO[R with Clock with Blocking, *]] =
+        serverOptions
     }
   }
 }
