@@ -24,7 +24,7 @@ object fs2 {
       dfd.get
   }
 
-  implicit def fs2ReadStreamCompatible[F[_]](implicit opts: VertxCatsServerOptions[F], F: Async[F]): ReadStreamCompatible[Fs2Streams[F]] = {
+  implicit def fs2ReadStreamCompatible[F[_]](opts: VertxCatsServerOptions[F])(implicit F: Async[F]): ReadStreamCompatible[Fs2Streams[F]] = {
     new ReadStreamCompatible[Fs2Streams[F]] {
       override val streams: Fs2Streams[F] = Fs2Streams[F]
 

@@ -75,5 +75,5 @@ object VertxCatsServerOptions {
     )
   }
 
-  def default[F[_]: Async]: VertxCatsServerOptions[F] = customInterceptors()
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): VertxCatsServerOptions[F] = customInterceptors(dispatcher)
 }

@@ -1,5 +1,6 @@
 package sttp.tapir.server.vertx
 
+import cats.effect.std.Dispatcher
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
@@ -15,8 +16,8 @@ import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
 import sttp.tapir.server.vertx.encoders.{VertxOutputEncoders, VertxToResponseBody}
 import sttp.tapir.server.vertx.interpreters.{CommonServerInterpreter, FromVFuture}
 import sttp.tapir.server.vertx.routing.PathMapping.extractRouteDefinition
+import sttp.tapir.server.vertx.streams.ReadStreamCompatible
 import sttp.tapir.server.vertx.streams.fs2.fs2ReadStreamCompatible
-import sttp.tapir.server.vertx.{VertxBodyListener, VertxCatsServerOptions}
 
 import java.util.concurrent.atomic.AtomicReference
 import scala.reflect.ClassTag
@@ -25,7 +26,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 
   implicit def fa: Async[F]
 
-  def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F]
+  def vertxCatsServerOptions: VertxCatsServerOptions[F]
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
     * @param logic the logic to associate with the endpoint
@@ -81,18 +82,19 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
     // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
     // if so, we need to use this fact to cancel the operation nonetheless
-    val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken[IO]]]](None)
+    type CancelToken = () => scala.concurrent.Future[Unit]
+    val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken]]](None)
 
     rc.response.exceptionHandler { (t: Throwable) =>
       cancelRef.getAndSet(Some(Left(t))).collect { case Right(t) =>
-        t.unsafeRunSync()
+        t()
       }
       ()
     }
 
-    val cancelToken = serverOptions.dispatcher.unsafeRunCancelable(result)
+    val cancelToken = vertxCatsServerOptions.dispatcher.unsafeRunCancelable(result)
     cancelRef.getAndSet(Some(Right(cancelToken))).collect { case Left(_) =>
-      cancelToken.unsafeRunSync()
+      cancelToken()
     }
 
     ()
@@ -100,16 +102,16 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 }
 
 object VertxCatsServerInterpreter {
-  def apply[F[_]]()(implicit _fs: Sync[F]): VertxCatsServerInterpreter[F] = {
+  def apply[F[_]](dispatcher: Dispatcher[F])(implicit _fa: Async[F]): VertxCatsServerInterpreter[F] = {
     new VertxCatsServerInterpreter[F] {
-      override implicit def fs: Sync[F] = _fs
+      override implicit def fa: Async[F] = _fa
+      override def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F](dispatcher)(fa)
     }
   }
 
-  def apply[F[_]](serverOptions: VertxCatsServerOptions[F])(implicit _fs: Sync[F]): VertxCatsServerInterpreter[F] = {
+  def apply[F[_]](serverOptions: VertxCatsServerOptions[F])(implicit _fa: Async[F]): VertxCatsServerInterpreter[F] = {
     new VertxCatsServerInterpreter[F] {
-      override implicit def fs: Sync[F] = _fs
-
+      override implicit def fa: Async[F] = _fa
       override def vertxCatsServerOptions: VertxCatsServerOptions[F] = serverOptions
     }
   }
@@ -119,8 +121,7 @@ object VertxCatsServerInterpreter {
     override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
     override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
     override def error[T](t: Throwable): F[T] = F.raiseError(t)
-    override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] =
-      F.recoverWith(rt)(h)
+    override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
     override def eval[T](t: => T): F[T] = F.delay(t)
     override def suspend[T](t: => F[T]): F[T] = F.defer(t)
     override def flatten[T](ffa: F[F[T]]): F[T] = F.flatten(ffa)
