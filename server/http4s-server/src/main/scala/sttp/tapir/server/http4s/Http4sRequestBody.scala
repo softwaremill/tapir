@@ -1,6 +1,5 @@
 package sttp.tapir.server.http4s
 
-import java.io.ByteArrayInputStream
 import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import cats.{Monad, ~>}

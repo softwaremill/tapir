@@ -3,6 +3,7 @@ package sttp.tapir.tests
 import cats.effect.std.Dispatcher
 import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
+import org.scalactic.source.Position
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 

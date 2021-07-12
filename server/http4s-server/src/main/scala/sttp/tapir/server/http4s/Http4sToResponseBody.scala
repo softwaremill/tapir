@@ -5,7 +5,6 @@ import cats.syntax.all._
 import fs2.io.file.Files
 import fs2.{Chunk, Stream}
 import org.http4s
-import org.http4s.Header.ToRaw.rawToRaw
 import org.http4s._
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.Header.ToRaw.rawToRaw

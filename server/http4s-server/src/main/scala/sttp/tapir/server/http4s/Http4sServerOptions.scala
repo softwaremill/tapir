@@ -13,7 +13,6 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.File
-import scala.concurrent.ExecutionContext
 
 /** @tparam F The effect type used for response body streams. Usually the same as `G`.
   * @tparam G The effect type used for representing arbitrary side-effects, such as creating files or logging.
