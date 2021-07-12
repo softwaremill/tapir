@@ -16,16 +16,17 @@ import sttp.tapir.serverless.aws.lambda.{AwsRequest, AwsResponse, Route}
 import scala.concurrent.duration.DurationInt
 
 // loosely based on https://github.com/carpe/scalambda/blob/master/native/src/main/scala/io/carpe/scalambda/native/ScalambdaIO.scala
-object AwsLambdaRuntimeLogic extends StrictLogging {
+object AwsLambdaRuntimeInvocation extends StrictLogging {
 
-  def apply[F[_]: Sync](
+  /** Handles the next, single lambda invocation, read from api at `awsRuntimeApiHost` using `backend`, with the given `route`. */
+  def handleNext[F[_]: Sync](
       route: Route[F],
-      awsRuntimeApi: String,
+      awsRuntimeApiHost: String,
       backend: Resource[F, SttpBackend[F, Any]]
   ): F[Either[Throwable, Unit]] = {
     implicit val monad: MonadError[F] = new CatsMonadError[F]
 
-    val runtimeApiInvocationUri = uri"http://$awsRuntimeApi/2018-06-01/runtime/invocation"
+    val runtimeApiInvocationUri = uri"http://$awsRuntimeApiHost/2018-06-01/runtime/invocation"
 
     /** Make request (without a timeout as prescribed by the AWS Custom Lambda Runtime documentation).
       * This is due to the possibility of the runtime being frozen between lambda function invocations.
