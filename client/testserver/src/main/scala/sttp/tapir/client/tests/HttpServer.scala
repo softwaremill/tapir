@@ -57,7 +57,7 @@ class HttpServer(port: Port) {
     case r @ GET -> Root / "api" / "echo" / "params"                       => Ok(r.uri.query.params.toSeq.sortBy(_._1).map(p => s"${p._1}=${p._2}").mkString("&"))
     case r @ GET -> Root / "api" / "echo" / "headers" =>
       val headers = r.headers.headers.map(h => h.copy(value = h.value.reverse))
-      val filteredHeaders1: Header.ToRaw = r.headers.headers.find(_.name == CIString("Cookie")) match {
+      val filteredHeaders1 = r.headers.headers.find(_.name == CIString("Cookie")) match {
         case Some(c) => headers.filter(_.name == CIString("Cookie")) :+ Header.Raw(CIString("Set-Cookie"), c.value.reverse)
         case None    => headers
       }
