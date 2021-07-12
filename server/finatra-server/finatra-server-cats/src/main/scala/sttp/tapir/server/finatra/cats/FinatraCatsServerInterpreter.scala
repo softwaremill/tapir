@@ -12,9 +12,12 @@ import sttp.tapir.server.finatra.{FinatraRoute, FinatraServerInterpreter, Finatr
 import scala.reflect.ClassTag
 
 trait FinatraCatsServerInterpreter extends Logging {
+
+  def finatraServerOptions: FinatraServerOptions = FinatraServerOptions.default
+
   def toRoute[I, E, O, F[_]](
       e: Endpoint[I, E, O, Any]
-  )(logic: I => F[Either[E, O]])(implicit serverOptions: FinatraServerOptions, eff: Effect[F]): FinatraRoute = {
+  )(logic: I => F[Either[E, O]])(implicit eff: Effect[F]): FinatraRoute = {
     toRoute(e.serverLogic(logic))
   }
 
@@ -28,8 +31,8 @@ trait FinatraCatsServerInterpreter extends Logging {
 
   def toRoute[I, E, O, F[_]](
       e: ServerEndpoint[I, E, O, Any, F]
-  )(implicit serverOptions: FinatraServerOptions, eff: Effect[F]): FinatraRoute = {
-    FinatraServerInterpreter.toRoute(e.endpoint.serverLogic(i => eff.toIO(e.logic(new CatsMonadError)(i)).to[Rerunnable].run))
+  )(implicit eff: Effect[F]): FinatraRoute = {
+    FinatraServerInterpreter(finatraServerOptions).toRoute(e.endpoint.serverLogic(i => eff.toIO(e.logic(new CatsMonadError)(i)).to[Rerunnable].run))
   }
 
   private class CatsMonadError[F[_]](implicit F: Effect[F]) extends MonadError[F] {
@@ -45,4 +48,10 @@ trait FinatraCatsServerInterpreter extends Logging {
   }
 }
 
-object FinatraCatsServerInterpreter extends FinatraCatsServerInterpreter
+object FinatraCatsServerInterpreter {
+  def apply(serverOptions: FinatraServerOptions = FinatraServerOptions.default): FinatraCatsServerInterpreter = {
+    new FinatraCatsServerInterpreter {
+      override def finatraServerOptions: FinatraServerOptions = serverOptions
+    }
+  }
+}

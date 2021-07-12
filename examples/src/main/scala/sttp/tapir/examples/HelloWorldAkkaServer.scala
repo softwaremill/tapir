@@ -17,7 +17,7 @@ object HelloWorldAkkaServer extends App {
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val helloWorldRoute: Route = AkkaHttpServerInterpreter.toRoute(helloWorld)(name => Future.successful(Right(s"Hello, $name!")))
+  val helloWorldRoute: Route = AkkaHttpServerInterpreter().toRoute(helloWorld)(name => Future.successful(Right(s"Hello, $name!")))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()

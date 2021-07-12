@@ -24,11 +24,11 @@ object fs2 {
       dfd.get
   }
 
-  implicit def fs2ReadStreamCompatible[F[_]](implicit opts: VertxCatsServerOptions[F], F: Async[F]) = {
+  implicit def fs2ReadStreamCompatible[F[_]](implicit opts: VertxCatsServerOptions[F], F: Async[F]): ReadStreamCompatible[Fs2Streams[F]] = {
     new ReadStreamCompatible[Fs2Streams[F]] {
       override val streams: Fs2Streams[F] = Fs2Streams[F]
 
-      override def asReadStream(stream: streams.BinaryStream): ReadStream[Buffer] = {
+      override def asReadStream(stream: Stream[F, Byte]): ReadStream[Buffer] = {
         opts.dispatcher.unsafeRunSync {
           for {
             promise <- Deferred[F, Unit]
@@ -100,7 +100,7 @@ object fs2 {
         }
       }
 
-      override def fromReadStream(readStream: ReadStream[Buffer]): streams.BinaryStream =
+      override def fromReadStream(readStream: ReadStream[Buffer]): Stream[F, Byte] =
         opts.dispatcher.unsafeRunSync {
           for {
             stateRef <- Ref.of(ReadStreamState[F, Chunk[Byte]](Queued(SQueue.empty), Queued(SQueue.empty)))

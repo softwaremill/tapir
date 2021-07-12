@@ -17,7 +17,7 @@ class ModifyFunctorInstancesTest extends AnyFlatSpec with Matchers with ModifyFu
   }
 
   it should "modify elements in NonEmptySet" in {
-    implicitly[Typeclass[NonEmptySetWrapper]]
+    implicitly[Schema[NonEmptySetWrapper]]
       .modify(_.f1.each)(_.format("xyz")) shouldContainACollectionElementWithSchema ("f1", Schema(SString()).format("xyz"))
   }
 
@@ -34,7 +34,7 @@ class ModifyFunctorInstancesTest extends AnyFlatSpec with Matchers with ModifyFu
   implicit class CollectionSchemaMatcher[A](schema: Schema[A]) {
     def shouldContainACollectionElementWithSchema[B](fieldName: String, elemSchema: Schema[B]): Assertion =
       inside(schema.schemaType) {
-        case SProduct(_, List(f)) if f.name.name == fieldName =>
+        case SProduct(List(f)) if f.name.name == fieldName =>
           f.schema.schemaType shouldBe a[SArray[_, _]]
           f.schema.schemaType.asInstanceOf[SArray[_, _]].element shouldBe elemSchema
       }

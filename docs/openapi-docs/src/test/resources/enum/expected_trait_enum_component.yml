@@ -25,7 +25,7 @@ paths:
                 $ref: '#/components/schemas/CallOfDuty'
 components:
   schemas:
-    TotalWar:
+    CallOfDuty:
       required:
         - game
         - episode
@@ -43,7 +43,7 @@ components:
       enum:
         - action
         - strategy
-    CallOfDuty:
+    TotalWar:
       required:
         - game
         - episode

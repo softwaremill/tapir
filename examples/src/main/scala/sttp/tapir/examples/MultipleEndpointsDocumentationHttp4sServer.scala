@@ -1,5 +1,6 @@
 package sttp.tapir.examples
 
+import java.util.concurrent.atomic.AtomicReference
 import cats.effect._
 import cats.syntax.all._
 import io.circe.generic.auto._
@@ -52,13 +53,13 @@ object MultipleEndpointsDocumentationHttp4sServer extends IOApp {
     )
   )
 
-  val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
+  val booksListingRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(booksListing)(_ => IO(books.get().asRight[Unit]))
   val addBookRoutes: HttpRoutes[IO] =
-    Http4sServerInterpreter.toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
+    Http4sServerInterpreter[IO]().toRoutes(addBook)(book => IO((books.getAndUpdate(books => books :+ book): Unit).asRight[Unit]))
   val routes: HttpRoutes[IO] = booksListingRoutes <+> addBookRoutes
 
   // generating the documentation in yml; extension methods come from imported packages
-  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter.toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
+  val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
   val openApiYml: String = openApiDocs.toYaml
 
   override def run(args: List[String]): IO[ExitCode] = {

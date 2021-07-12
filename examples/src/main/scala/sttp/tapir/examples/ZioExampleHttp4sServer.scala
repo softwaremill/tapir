@@ -23,7 +23,7 @@ object ZioExampleHttp4sServer extends App {
   val petEndpoint: ZEndpoint[Int, String, Pet] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
-  val petRoutes: HttpRoutes[RIO[Clock & Blocking, *]] = ZHttp4sServerInterpreter
+  val petRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter()
     .from(petEndpoint) { petId =>
       if (petId == 35) {
         UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
@@ -41,14 +41,14 @@ object ZioExampleHttp4sServer extends App {
       IO.fail("Unknown pet id")
     }
   }
-  val petServerRoutes: HttpRoutes[RIO[Clock & Blocking, *]] = ZHttp4sServerInterpreter.from(petServerEndpoint).toRoutes
+  val petServerRoutes: HttpRoutes[RIO[Clock, *]] = ZHttp4sServerInterpreter().from(petServerEndpoint).toRoutes
 
   //
 
   val yaml: String = {
     import sttp.tapir.docs.openapi.OpenAPIDocsInterpreter
     import sttp.tapir.openapi.circe.yaml._
-    OpenAPIDocsInterpreter.toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
+    OpenAPIDocsInterpreter().toOpenAPI(petEndpoint, "Our pets", "1.0").toYaml
   }
 
   // Starting the server

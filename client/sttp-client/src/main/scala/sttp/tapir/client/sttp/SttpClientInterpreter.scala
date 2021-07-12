@@ -6,6 +6,8 @@ import sttp.tapir.{DecodeResult, Endpoint}
 
 trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
 
+  def sttpClientOptions: SttpClientOptions = SttpClientOptions.default
+
   /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
     * uri. If `baseUri` is not provided, the request will be a relative one.
     *
@@ -14,7 +16,6 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     * and the result of decoding the response (error or success value) is returned.
     */
   def toClient[F[_], I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[Uri], backend: SttpBackend[F, R])(implicit
-      clientOptions: SttpClientOptions,
       wsToPipe: WebSocketToPipe[R]
   ): I => F[DecodeResult[Either[E, O]]] = {
     val req = toRequest(e, baseUri)
@@ -30,7 +31,6 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     * instead.
     */
   def toClientThrowDecodeFailures[F[_], I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[Uri], backend: SttpBackend[F, R])(implicit
-      clientOptions: SttpClientOptions,
       wsToPipe: WebSocketToPipe[R]
   ): I => F[Either[E, O]] = {
     val req = toRequestThrowDecodeFailures(e, baseUri)
@@ -46,7 +46,6 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     * error value, a failed effect is returned instead.
     */
   def toClientThrowErrors[F[_], I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[Uri], backend: SttpBackend[F, R])(implicit
-      clientOptions: SttpClientOptions,
       wsToPipe: WebSocketToPipe[R]
   ): I => F[O] = {
     val req = toRequestThrowErrors(e, baseUri)
@@ -62,10 +61,9 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     * success values (note that this can be the body enriched with data from headers/status code).
     */
   def toRequest[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[Uri])(implicit
-      clientOptions: SttpClientOptions,
       wsToPipe: WebSocketToPipe[R]
   ): I => Request[DecodeResult[Either[E, O]], R] =
-    new EndpointToSttpClient(clientOptions, wsToPipe).toSttpRequest(e, baseUri)
+    new EndpointToSttpClient(sttpClientOptions, wsToPipe).toSttpRequest(e, baseUri)
 
   /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
     * uri. If `baseUri` is not provided, the request will be a relative one.
@@ -77,10 +75,9 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     * effect, when response parsing fails.
     */
   def toRequestThrowDecodeFailures[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[Uri])(implicit
-      clientOptions: SttpClientOptions,
       wsToPipe: WebSocketToPipe[R]
   ): I => Request[Either[E, O], R] =
-    i => new EndpointToSttpClient(clientOptions, wsToPipe).toSttpRequest(e, baseUri).apply(i).mapResponse(throwDecodeFailures)
+    i => new EndpointToSttpClient(sttpClientOptions, wsToPipe).toSttpRequest(e, baseUri).apply(i).mapResponse(throwDecodeFailures)
 
   /** Interprets the endpoint as a client call, using the given `baseUri` as the starting point to create the target
     * uri. If `baseUri` is not provided, the request will be a relative one.
@@ -94,11 +91,10 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     * @throws IllegalArgumentException when response parsing fails
     */
   def toRequestThrowErrors[I, E, O, R](e: Endpoint[I, E, O, R], baseUri: Option[Uri])(implicit
-      clientOptions: SttpClientOptions,
       wsToPipe: WebSocketToPipe[R]
   ): I => Request[O, R] =
     i =>
-      new EndpointToSttpClient(clientOptions, wsToPipe)
+      new EndpointToSttpClient(sttpClientOptions, wsToPipe)
         .toSttpRequest(e, baseUri)
         .apply(i)
         .mapResponse(throwDecodeFailures)
@@ -119,4 +115,10 @@ trait SttpClientInterpreter extends SttpClientInterpreterExtensions {
     s"Endpoint ${endpoint.show} returned error: $e, for inputs: $i."
 }
 
-object SttpClientInterpreter extends SttpClientInterpreter
+object SttpClientInterpreter {
+  def apply(clientOptions: SttpClientOptions = SttpClientOptions.default): SttpClientInterpreter = {
+    new SttpClientInterpreter {
+      override def sttpClientOptions: SttpClientOptions = clientOptions
+    }
+  }
+}

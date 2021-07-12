@@ -1,7 +1,7 @@
 package sttp.tapir
 
-import sttp.tapir.SchemaType.SObjectInfo
-import sttp.tapir.generic.internal.ValidatorEnumMacro
+import sttp.tapir.Schema.SName
+import sttp.tapir.macros.ValidatorMacros
 
 import scala.collection.immutable
 
@@ -16,7 +16,7 @@ sealed trait Validator[T] {
   def show: Option[String] = Validator.show(this)
 }
 
-object Validator extends ValidatorEnumMacro {
+object Validator extends ValidatorMacros {
   // Used to capture encoding of a value to a raw format, which will then be directly rendered as a string in
   // documentation. This is needed as codecs for nested types aren't available.
   type EncodeToRaw[T] = T => Option[scala.Any]
@@ -43,18 +43,13 @@ object Validator extends ValidatorEnumMacro {
   def custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String] = None): Validator[T] =
     Custom(doValidate, showMessage)
 
-  /** Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s.
-    * This enumeration will only be used for documentation, as a value outside of the allowed values will not be
-    * decoded in the first place (the decoder has no other option than to fail).
-    */
-  def derivedEnum[T]: Validator.Enum[T] = macro validatorForEnum[T]
-  def enum[T](possibleValues: List[T]): Validator.Enum[T] = Enum(possibleValues, None, None)
+  def enumeration[T](possibleValues: List[T]): Validator.Enumeration[T] = Enumeration(possibleValues, None, None)
 
   /** @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
     *               This will be automatically inferred if the validator is directly added to a codec.
     */
-  def enum[T](possibleValues: List[T], encode: EncodeToRaw[T], info: Option[SObjectInfo] = None): Validator.Enum[T] =
-    Enum(possibleValues, Some(encode), info)
+  def enumeration[T](possibleValues: List[T], encode: EncodeToRaw[T], name: Option[SName] = None): Validator.Enumeration[T] =
+    Enumeration(possibleValues, Some(encode), name)
 
   //
 
@@ -129,7 +124,7 @@ object Validator extends ValidatorEnumMacro {
     }
   }
 
-  case class Enum[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], info: Option[SObjectInfo]) extends Primitive[T] {
+  case class Enumeration[T](possibleValues: List[T], encode: Option[EncodeToRaw[T]], name: Option[SName]) extends Primitive[T] {
     override def apply(t: T): List[ValidationError[_]] = {
       if (possibleValues.contains(t)) {
         List.empty
@@ -141,7 +136,7 @@ object Validator extends ValidatorEnumMacro {
     /** Specify how values of this type can be encoded to a raw value (typically a [[String]]). This encoding
       * will be used when generating documentation.
       */
-    def encode(e: T => scala.Any): Enum[T] = copy(encode = Some(v => Some(e(v))))
+    def encode(e: T => scala.Any): Enumeration[T] = copy(encode = Some(v => Some(e(v))))
   }
 
   //
@@ -174,16 +169,17 @@ object Validator extends ValidatorEnumMacro {
 
   def show[T](v: Validator[T]): Option[String] = {
     v match {
-      case Min(value, exclusive)      => Some(s"${if (exclusive) ">" else ">="}$value")
-      case Max(value, exclusive)      => Some(s"${if (exclusive) "<" else "<="}$value")
-      case Pattern(value)             => Some(s"~$value")
-      case MinLength(value)           => Some(s"length>=$value")
-      case MaxLength(value)           => Some(s"length<=$value")
-      case MinSize(value)             => Some(s"size>=$value")
-      case MaxSize(value)             => Some(s"size<=$value")
-      case Custom(_, showMessage)     => showMessage.orElse(Some("custom"))
-      case Enum(possibleValues, _, _) => Some(s"in(${possibleValues.mkString(",")}")
-      case Mapped(wrapped, _)         => show(wrapped)
+      case Min(value, exclusive) => Some(s"${if (exclusive) ">" else ">="}$value")
+      case Max(value, exclusive) => Some(s"${if (exclusive) "<" else "<="}$value")
+      // TODO: convert to patterns when https://github.com/lampepfl/dotty/issues/12226 is fixed
+      case p: Pattern[T]                     => Some(s"~${p.value}")
+      case m: MinLength[T]                   => Some(s"length>=${m.value}")
+      case m: MaxLength[T]                   => Some(s"length<=${m.value}")
+      case m: MinSize[T, _]                  => Some(s"size>=${m.value}")
+      case m: MaxSize[T, _]                  => Some(s"size<=${m.value}")
+      case Custom(_, showMessage)            => showMessage.orElse(Some("custom"))
+      case Enumeration(possibleValues, _, _) => Some(s"in(${possibleValues.mkString(",")}")
+      case Mapped(wrapped, _)                => show(wrapped)
       case All(validators) =>
         validators.flatMap(show(_)) match {
           case immutable.Seq()  => None

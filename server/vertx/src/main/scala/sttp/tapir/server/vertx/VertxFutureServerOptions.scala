@@ -81,7 +81,7 @@ object VertxFutureServerOptions {
     Future(Defaults.deleteFile()(file))
   }
 
-  implicit val default: VertxFutureServerOptions = customInterceptors()
+  val default: VertxFutureServerOptions = customInterceptors()
 }
 
 class VertxExecutionContext(val vertx: Vertx, val ctx: Context) extends ExecutionContext {

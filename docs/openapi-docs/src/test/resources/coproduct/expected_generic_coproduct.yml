@@ -41,19 +41,12 @@ paths:
                 type: string
 components:
   schemas:
-    GenericEntity_String:
-      oneOf:
-        - $ref: '#/components/schemas/GenericPerson_String'
-    GenericPerson_String:
-      required:
-        - data
-      type: object
-      properties:
-        data:
-          type: string
     GenericEntity_Int:
       oneOf:
         - $ref: '#/components/schemas/GenericPerson_Int'
+    GenericEntity_String:
+      oneOf:
+        - $ref: '#/components/schemas/GenericPerson_String'
     GenericPerson_Int:
       required:
         - data
@@ -61,3 +54,10 @@ components:
       properties:
         data:
           type: integer
+    GenericPerson_String:
+      required:
+        - data
+      type: object
+      properties:
+        data:
+          type: string

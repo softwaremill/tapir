@@ -1,15 +1,14 @@
 package sttp.tapir.docs.openapi
 
 import sttp.model.{Method, StatusCode}
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.docs.apispec.defaultSchemaName
 import sttp.tapir.docs.openapi.EndpointInputToDecodeFailureOutput.defaultBadRequestDescription
 import sttp.tapir.{EndpointInput, EndpointOutput, statusCode, stringBody}
 
 case class OpenAPIDocsOptions(
     operationIdGenerator: (Vector[String], Method) => String,
-    schemaName: SObjectInfo => String = defaultSchemaName,
-    referenceEnums: SObjectInfo => Boolean = _ => false,
+    schemaName: SName => String = defaultSchemaName,
     defaultDecodeFailureOutput: EndpointInput[_] => Option[EndpointOutput[_]] = OpenAPIDocsOptions.defaultDecodeFailureOutput
 )
 
@@ -30,5 +29,5 @@ object OpenAPIDocsOptions {
       statusCode(StatusCode.BadRequest).and(stringBody.description(description))
     }
 
-  implicit val default: OpenAPIDocsOptions = OpenAPIDocsOptions(defaultOperationIdGenerator)
+  val default: OpenAPIDocsOptions = OpenAPIDocsOptions(defaultOperationIdGenerator)
 }

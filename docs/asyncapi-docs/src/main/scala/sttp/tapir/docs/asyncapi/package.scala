@@ -1,5 +1,5 @@
 package sttp.tapir.docs
 
-package object asyncapi extends TapirAsyncAPIDocs {
+package object asyncapi {
   private[docs] type MessageKey = String
 }

@@ -131,7 +131,7 @@ package object internal {
   implicit class RichEndpointOutput[I](output: EndpointOutput[I]) {
     // Outputs may differ basing on status code because of `oneOf`. This method extracts the status code
     // mapping to the top-level. In the map, the `None` key stands for the default status code, and a `Some` value
-    // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs are skipped.
+    // to the status code specified using `statusMapping` or `statusCode(_)`. Any empty outputs without metadata are skipped.
     type BasicOutputs = Vector[EndpointOutput.Basic[_]]
     def asBasicOutputsList: List[(Option[StatusCode], BasicOutputs)] =
       asBasicOutputsOrList match {
@@ -171,9 +171,13 @@ package object internal {
         case f: EndpointOutput.StatusCode[_] if f.documentedCodes.nonEmpty =>
           val entries = f.documentedCodes.keys.map(code => Some(code) -> Vector(f)).toList
           Right(entries)
-        case _: EndpointIO.Empty[_]     => Left(Vector.empty)
+        case e: EndpointIO.Empty[_]     => if (hasMetaData(e)) Left(Vector(e)) else Left(Vector.empty)
         case b: EndpointOutput.Basic[_] => Left(Vector(b))
       }
+    }
+
+    private def hasMetaData(e: EndpointIO.Empty[_]): Boolean = {
+      e.info.deprecated || e.info.description.nonEmpty || e.info.docsExtensions.nonEmpty || e.info.examples.nonEmpty
     }
 
     def traverseOutputs[T](handle: PartialFunction[EndpointOutput[_], Vector[T]]): Vector[T] =
@@ -290,6 +294,13 @@ package object internal {
         b += x
 
       b.result()
+    }
+  }
+
+  implicit class SortListMap[K, V](m: immutable.ListMap[K, V]) {
+    def sortByKey(implicit ko: Ordering[K]): immutable.ListMap[K, V] = sortBy(_._1)
+    def sortBy[B: Ordering](f: ((K, V)) => B): immutable.ListMap[K, V] = {
+      m.toList.sortBy(f).toListMap
     }
   }
 

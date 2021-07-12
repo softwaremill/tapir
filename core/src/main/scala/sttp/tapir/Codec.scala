@@ -12,8 +12,8 @@ import sttp.model.headers.{Cookie, CookieWithMeta}
 import sttp.tapir.CodecFormat.{MultipartFormData, OctetStream, TextPlain, XWwwFormUrlencoded}
 import sttp.tapir.DecodeResult._
 import sttp.tapir.RawBodyType.StringBody
-import sttp.tapir.generic.internal.{FormCodecDerivation, MultipartCodecDerivation}
 import sttp.tapir.internal._
+import sttp.tapir.macros.{FormCodecMacros, MultipartCodecMacros}
 import sttp.tapir.model.UsernamePassword
 import sttp.ws.WebSocketFrame
 
@@ -109,7 +109,7 @@ trait Codec[L, H, +CF <: CodecFormat] { outer =>
     schema(_.modifyUnsafe[U](Schema.ModifyCollectionElements)(_.validate(v)))
 }
 
-object Codec extends CodecExtensions with FormCodecDerivation {
+object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec {
   type PlainCodec[T] = Codec[String, T, CodecFormat.TextPlain]
   type JsonCodec[T] = Codec[String, T, CodecFormat.Json]
   type XmlCodec[T] = Codec[String, T, CodecFormat.Xml]
@@ -374,7 +374,7 @@ object Codec extends CodecExtensions with FormCodecDerivation {
 
   //
 
-  private def listBinarySchema[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
+  private[tapir] def listBinarySchema[T, U, CF <: CodecFormat](c: Codec[T, U, CF]): Codec[List[T], List[U], CF] =
     id[List[T], CF](c.format, Schema.binary)
       .mapDecode(ts => DecodeResult.sequence(ts.map(c.decode)).map(_.toList))(us => us.map(c.encode))
 
@@ -462,6 +462,8 @@ object Codec extends CodecExtensions with FormCodecDerivation {
       }(us => us.map(c.encode))
       .schema(c.schema.asOption)
 
+  //
+
   def fromDecodeAndMeta[L, H: Schema, CF <: CodecFormat](cf: CF)(f: L => DecodeResult[H])(g: H => L): Codec[L, H, CF] =
     new Codec[L, H, CF] {
       override def rawDecode(l: L): DecodeResult[H] = f(l)
@@ -489,6 +491,59 @@ object Codec extends CodecExtensions with FormCodecDerivation {
   }
 }
 
+/** Lower-priority codec implicits, which transform other codecs. For example, when deriving a codec
+  * `List[T] <-> Either[A, B]`, given codecs `ca: T <-> A` and `cb: T <-> B`, we want to get
+  * `listHead(eitherRight(ca, cb))`, not `eitherRight(listHead(ca), listHead(cb))` (although they would
+  * function the same).
+  */
+trait LowPriorityCodec { this: Codec.type =>
+
+  /** Create a codec which during decoding, first tries to decode values on the right using `c2`. If this fails for any
+    * reason, decoding is done using `c1`. Both codecs must have the same low-level values and formats.
+    *
+    * For a left-biased variant see [[Codec.eitherLeft]]. This right-biased version is the default when using implicit
+    * codec resolution.
+    *
+    * The schema is defined to be an either schema as created by [[Schema.schemaForEither]].
+    */
+  implicit def eitherRight[L, A, B, CF <: CodecFormat](implicit c1: Codec[L, A, CF], c2: Codec[L, B, CF]): Codec[L, Either[A, B], CF] = {
+    Codec
+      .id[L, CF](c1.format, Schema.binary) // any schema will do, as we're overriding it later with schemaForEither
+      .mapDecode[Either[A, B]] { (l: L) =>
+        c2.decode(l) match {
+          case _: DecodeResult.Failure => c1.decode(l).map(Left(_))
+          case DecodeResult.Value(v)   => DecodeResult.Value(Right(v))
+        }
+      } {
+        case Left(a)  => c1.encode(a)
+        case Right(b) => c2.encode(b)
+      }
+      .schema(Schema.schemaForEither(c1.schema, c2.schema))
+  }
+
+  /** Create a codec which during decoding, first tries to decode values on the left using `c1`. If this fails for any
+    * reason, decoding is done using `c2`. Both codecs must have the same low-level values and formats.
+    *
+    * For a right-biased variant see [[Codec.eitherRight]].
+    *
+    * The schema is defined to be an either schema as created by [[Schema.schemaForEither]].
+    */
+  def eitherLeft[L, A, B, CF <: CodecFormat](c1: Codec[L, A, CF], c2: Codec[L, B, CF]): Codec[L, Either[A, B], CF] = {
+    Codec
+      .id[L, CF](c1.format, Schema.binary) // any schema will do, as we're overriding it later with schemaForEither
+      .mapDecode[Either[A, B]] { (l: L) =>
+        c1.decode(l) match {
+          case _: DecodeResult.Failure => c2.decode(l).map(Right(_))
+          case DecodeResult.Value(v)   => DecodeResult.Value(Left(v))
+        }
+      } {
+        case Left(a)  => c1.encode(a)
+        case Right(b) => c2.encode(b)
+      }
+      .schema(Schema.schemaForEither(c1.schema, c2.schema))
+  }
+}
+
 /** Information needed to read a single part of a multipart body: the raw type (`rawBodyType`), and the codec
   * which further decodes it.
   */
@@ -503,7 +558,7 @@ case class MultipartCodec[T](rawBodyType: RawBodyType.MultipartBody, codec: Code
   def validate(v: Validator[T]): MultipartCodec[T] = copy(codec = codec.validate(v))
 }
 
-object MultipartCodec extends MultipartCodecDerivation {
+object MultipartCodec extends MultipartCodecMacros {
   val Default: MultipartCodec[Seq[Part[Array[Byte]]]] = {
     Codec
       .multipartCodec(Map.empty, Some(PartCodec(RawBodyType.ByteArrayBody, Codec.listHead(Codec.byteArray))))

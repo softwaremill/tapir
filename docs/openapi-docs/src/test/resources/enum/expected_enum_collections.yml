@@ -1,0 +1,36 @@
+openapi: 3.0.3
+info:
+  title: Enums
+  version: '1.0'
+paths:
+  /:
+    get:
+      operationId: getRoot
+      responses:
+        '200':
+          description: ''
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Square'
+components:
+  schemas:
+    CornerStyle:
+      type: string
+      enum:
+        - rounded
+        - straight
+    Square:
+      type: object
+      properties:
+        cornerStyle:
+          $ref: '#/components/schemas/CornerStyle'
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+    Tag:
+      type: string
+      enum:
+        - tag1
+        - tag2

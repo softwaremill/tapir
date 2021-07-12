@@ -5,6 +5,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.EndpointIO.Example
 import sttp.tapir.docs.openapi.dtos.{Author, Book, Country, Genre}
+import sttp.tapir.generic.Derived
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.openapi.Info
@@ -19,7 +20,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
 
   test("support example of list and not-list types") {
     val expectedYaml = load("example/expected_examples_of_list_and_not_list_types.yml")
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint.post
           .in(query[List[String]]("friends").example(List("bob", "alice")))
@@ -35,7 +36,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
 
   test("support multiple examples with explicit names") {
     val expectedYaml = load("example/expected_multiple_examples_with_names.yml")
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint.post
           .out(
@@ -56,7 +57,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
 
   test("support multiple examples with default names") {
     val expectedYaml = load("example/expected_multiple_examples_with_default_names.yml")
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint.post
           .in(jsonBody[Person].example(Person("bob", 23)).example(Person("matt", 30))),
@@ -70,7 +71,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
 
   test("support example name even if there is a single example") {
     val expectedYaml = load("example/expected_single_example_with_name.yml")
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint.post
           .out(
@@ -88,7 +89,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
 
   test("support multiple examples with both explicit and default names ") {
     val expectedYaml = load("example/expected_multiple_examples_with_explicit_and_default_names.yml")
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint.post
           .in(jsonBody[Person].examples(List(Example.of(Person("bob", 23), name = Some("Bob")), Example.of(Person("matt", 30))))),
@@ -102,7 +103,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
 
   test("support examples in different IO params") {
     val expectedYaml = load("example/expected_multiple_examples.yml")
-    val actualYaml = OpenAPIDocsInterpreter
+    val actualYaml = OpenAPIDocsInterpreter()
       .toOpenAPI(
         endpoint.post
           .in(path[String]("country").example("Poland").example("UK"))
@@ -123,7 +124,7 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     val expectedYaml = load("example/expected_fixed_header_example.yml")
 
     val e = endpoint.in(header("Content-Type", "application/json"))
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(e, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(e, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml
@@ -136,11 +137,14 @@ class VerifyYamlExampleTest extends AnyFunSuite with Matchers {
     val expectedBook = Book("title", Genre("name", "desc"), 2021, Author("name", Country("country")))
 
     implicit val testSchemaZonedDateTime: Schema[ZonedDateTime] = Schema.schemaForZonedDateTime.encodedExample(expectedDateTime)
-    implicit val testSchemaBook = implicitly[Schema[Book]].encodedExample(circeCodec[Book].encode(expectedBook))
+    implicit val testSchemaBook: Schema[Book] = {
+      val schema: Schema[Book] = implicitly[Derived[Schema[Book]]].value
+      schema.encodedExample(circeCodec[Book](implicitly, implicitly, schema).encode(expectedBook))
+    }
 
     val endpoint_with_dateTimes = endpoint.post.in(jsonBody[ZonedDateTime]).out(jsonBody[Book])
 
-    val actualYaml = OpenAPIDocsInterpreter.toOpenAPI(endpoint_with_dateTimes, Info("Examples", "1.0")).toYaml
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(endpoint_with_dateTimes, Info("Examples", "1.0")).toYaml
     val actualYamlNoIndent = noIndentation(actualYaml)
 
     actualYamlNoIndent shouldBe expectedYaml

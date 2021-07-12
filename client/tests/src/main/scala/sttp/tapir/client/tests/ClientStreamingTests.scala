@@ -14,17 +14,12 @@ trait ClientStreamingTests[S] { this: ClientTests[S] =>
   def streamingTests(): Unit = {
     test(in_stream_out_stream(streams).showDetail) {
       rmStream(
-        send(in_stream_out_stream(streams), port, mkStream("mango cranberry"))
+        // TODO: remove explicit type parameters when https://github.com/lampepfl/dotty/issues/12803 fixed
+        send[streams.BinaryStream, Unit, streams.BinaryStream](in_stream_out_stream(streams), port, mkStream("mango cranberry"))
           .unsafeRunSync()
           .toOption
           .get
       ) shouldBe "mango cranberry"
-    }
-
-    test("not existing endpoint, with error output not matching 404") {
-      safeSend(not_existing_endpoint, port, ()).unsafeRunSync() should matchPattern {
-        case DecodeResult.Error(_, _: IllegalArgumentException) =>
-      }
     }
   }
 }

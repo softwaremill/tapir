@@ -12,13 +12,13 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
+import sttp.tapir.server.vertx.VertxCatsServerInterpreter.CatsFFromVFuture
 import sttp.tapir.tests.Port
 
 import scala.reflect.ClassTag
 
 class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
     extends TestServerInterpreter[IO, Fs2Streams[IO], Router => Route, RoutingContext => Unit] {
-  import VertxCatsServerInterpreter._
 
   private val ioFromVFuture = new CatsFFromVFuture[IO]
 
@@ -27,20 +27,20 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, RoutingContext => Unit]] = None
   ): Router => Route = {
-    implicit val options: VertxCatsServerOptions[IO] =
+    val options: VertxCatsServerOptions[IO] =
       VertxCatsServerOptions.customInterceptors(
         dispatcher,
         metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    VertxCatsServerInterpreter.route(e)
+    VertxCatsServerInterpreter(options).route(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO]], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route = {
-    implicit val options: VertxCatsServerOptions[IO] = VertxCatsServerOptions.default(dispatcher)
-    VertxCatsServerInterpreter.routeRecoverErrors(e)(fn)
+    val options: VertxCatsServerOptions[IO] = VertxCatsServerOptions.default(dispatcher)
+    VertxCatsServerInterpreter[IO](options).routeRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {

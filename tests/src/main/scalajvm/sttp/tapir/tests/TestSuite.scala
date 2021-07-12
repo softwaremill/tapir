@@ -17,7 +17,8 @@ trait TestSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   allTests.foreach { t =>
     if (testNameFilter.forall(filter => t.name.contains(filter))) {
-      test(t.name)(t.f())(t.pos)
+      implicit val pos: Position = t.pos
+      test(t.name)(t.f())
     }
   }
   private val release = doRelease

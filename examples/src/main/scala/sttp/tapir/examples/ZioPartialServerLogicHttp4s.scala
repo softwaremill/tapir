@@ -57,8 +57,8 @@ object ZioPartialServerLogicHttp4s extends App {
   // ---
 
   // interpreting as routes
-  val helloWorldRoutes: HttpRoutes[RIO[UserService & Console & Clock & Blocking, *]] =
-    ZHttp4sServerInterpreter.from(List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic)).toRoutes
+  val helloWorldRoutes: HttpRoutes[RIO[UserService with Console with Clock, *]] =
+    ZHttp4sServerInterpreter().from(List(secureHelloWorld1WithLogic, secureHelloWorld2WithLogic)).toRoutes
 
   // testing
   val test: Task[Unit] = AsyncHttpClientZioBackend.managed().use { backend =>

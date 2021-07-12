@@ -19,7 +19,7 @@ object HelloWorldHttp4sServer extends IOApp {
     endpoint.get.in("hello").in(query[String]("name")).out(stringBody)
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val helloWorldRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(helloWorld)(name => IO(s"Hello, $name!".asRight[Unit]))
+  val helloWorldRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(helloWorld)(name => IO(s"Hello, $name!".asRight[Unit]))
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 

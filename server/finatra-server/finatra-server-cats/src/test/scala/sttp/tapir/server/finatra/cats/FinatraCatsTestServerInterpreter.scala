@@ -23,14 +23,14 @@ class FinatraCatsTestServerInterpreter extends TestServerInterpreter[IO, Any, Fi
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, FinatraContent]] = None
   ): FinatraRoute = {
-    implicit val serverOptions: FinatraServerOptions =
+    val serverOptions: FinatraServerOptions =
       FinatraServerOptions.customInterceptors(decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
-    FinatraCatsServerInterpreter.toRoute(e)
+    FinatraCatsServerInterpreter(serverOptions).toRoute(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
-  ): FinatraRoute = FinatraCatsServerInterpreter.toRouteRecoverErrors(e)(fn)
+  ): FinatraRoute = FinatraCatsServerInterpreter().toRouteRecoverErrors(e)(fn)
 
   override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraTestServerInterpreter.server(routes)
 }

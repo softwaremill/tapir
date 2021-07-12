@@ -4,14 +4,14 @@ To expose an endpoint as an [akka-http](https://doc.akka.io/docs/akka-http/curre
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.18.0-M11"
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.18.0"
 ```
 
 This will transitively pull some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion. Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.18.0-M11" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-akka-http-server" % "0.18.0" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Now import the object:
@@ -48,7 +48,7 @@ val countCharactersEndpoint: Endpoint[String, Unit, Int, Any] =
   endpoint.in(stringBody).out(plainBody[Int])
   
 val countCharactersRoute: Route = 
-  AkkaHttpServerInterpreter.toRoute(countCharactersEndpoint)(countCharacters)
+  AkkaHttpServerInterpreter().toRoute(countCharactersEndpoint)(countCharacters)
 ```
 
 Note that the second argument to `toRoute` is a function with one argument, a tuple of type `I`. This means that 
@@ -62,7 +62,7 @@ import akka.http.scaladsl.server.Route
 
 def logic(s: String, i: Int): Future[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
-val aRoute: Route = AkkaHttpServerInterpreter.toRoute(anEndpoint)((logic _).tupled)
+val aRoute: Route = AkkaHttpServerInterpreter().toRoute(anEndpoint)((logic _).tupled)
 ```
 
 ## Combining directives
@@ -88,7 +88,7 @@ val tapirEndpoint: Endpoint[String, Unit, Unit, Any] = endpoint.in(path[String](
 
 val myRoute: Route = metricsDirective {
   securityDirective { user =>
-    AkkaHttpServerInterpreter.toRoute(tapirEndpoint) { input => 
+    AkkaHttpServerInterpreter().toRoute(tapirEndpoint) { input => 
       ??? 
       /* here we can use both `user` and `input` values */
     }
@@ -129,14 +129,14 @@ import scala.concurrent.Future
 
 val sseEndpoint = endpoint.get.out(serverSentEventsBody)
 
-val routes = AkkaHttpServerInterpreter.toRoute(sseEndpoint)(_ =>
+val routes = AkkaHttpServerInterpreter().toRoute(sseEndpoint)(_ =>
   Future.successful(Right(Source.single(ServerSentEvent(Some("data"), None, None, None))))
 )
 ```
 
 ## Configuration
 
-The interpreter can be configured by providing an implicit `AkkaHttpServerOptions` value, see
+The interpreter can be configured by providing an `AkkaHttpServerOptions` value, see
 [server options](options.md) for details.
 
 ## Defining an endpoint together with the server logic

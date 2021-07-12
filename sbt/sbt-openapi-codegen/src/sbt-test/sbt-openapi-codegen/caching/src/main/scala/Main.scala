@@ -13,7 +13,7 @@ object Main extends App {
   val booksListing: Endpoint[(BooksFromYear, Limit, AuthToken), String, List[Book], Any] =
     endpoint
       .get
-      .in(("books" / path[String]("genre") / path[Int]("year")).mapTo(BooksFromYear))
+      .in(("books" / path[String]("genre") / path[Int]("year")).mapTo[BooksFromYear])
       .in(query[Limit]("limit").description("Maximum number of books to retrieve"))
       .in(header[AuthToken]("X-Auth-Token"))
       .errorOut(stringBody)

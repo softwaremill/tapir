@@ -23,13 +23,15 @@ paths:
                 type: string
 components:
   schemas:
+    Color:
+      type: string
+      enum:
+        - blue
+        - red
     ColorWrapper:
       required:
         - color
       type: object
       properties:
         color:
-          type: string
-          enum:
-            - blue
-            - red
+          $ref: '#/components/schemas/Color'

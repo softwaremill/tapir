@@ -1,6 +1,5 @@
 package sttp.tapir
 
-import sttp.capabilities
 import sttp.capabilities.Streams
 import sttp.model.Uri._
 import sttp.model._
@@ -21,14 +20,14 @@ object TestUtil {
 
   type Id[X] = X
 
-  object TestRequestBody extends RequestBody[Id, Nothing] {
-    override val streams: Streams[Nothing] = NoStreams
+  object TestRequestBody extends RequestBody[Id, NoStreams] {
+    override val streams: Streams[NoStreams] = NoStreams
     override def toRaw[R](bodyType: RawBodyType[R]): Id[RawValue[R]] = ???
     override def toStream(): streams.BinaryStream = ???
   }
 
-  object UnitToResponseBody extends ToResponseBody[Unit, Nothing] {
-    override val streams: Streams[Nothing] = NoStreams
+  object UnitToResponseBody extends ToResponseBody[Unit, NoStreams] {
+    override val streams: Streams[NoStreams] = NoStreams
     override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): Unit = ()
     override def fromStreamValue(
         v: streams.BinaryStream,
@@ -38,18 +37,18 @@ object TestUtil {
     ): Unit = ???
     override def fromWebSocketPipe[REQ, RESP](
         pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
     ): Unit = ???
   }
 
-  object StringToResponseBody extends ToResponseBody[String, Nothing] {
-    override val streams: capabilities.Streams[Nothing] = NoStreams
+  object StringToResponseBody extends ToResponseBody[String, NoStreams] {
+    override val streams: Streams[NoStreams] = NoStreams
     override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): String =
       v.asInstanceOf[String]
     override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): String = ""
     override def fromWebSocketPipe[REQ, RESP](
         pipe: streams.Pipe[REQ, RESP],
-        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+        o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
     ): String = ""
   }
 

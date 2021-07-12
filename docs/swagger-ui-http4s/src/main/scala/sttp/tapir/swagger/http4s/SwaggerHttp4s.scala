@@ -22,11 +22,11 @@ import org.http4s.headers.Location
   */
 class SwaggerHttp4s(
     yaml: String,
-    contextPath: String = "docs",
+    contextPath: List[String] = List("docs"),
     yamlName: String = "docs.yaml",
     redirectQuery: Map[String, Seq[String]] = Map.empty
 ) {
-  private val swaggerVersion = {
+  private val swaggerVersion: String = {
     val p = new Properties()
     val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
     try p.load(pomProperties)
@@ -38,17 +38,19 @@ class SwaggerHttp4s(
     val dsl = Http4sDsl[F]
     import dsl._
 
+    val rootPath = contextPath.foldLeft(Root: Path)(_ / Path.Segment(_))
+
     HttpRoutes.of[F] {
-      case path @ GET -> Root / `contextPath` =>
+      case path @ GET -> `rootPath` =>
         val queryParameters = Map("url" -> Seq(s"${path.uri}/$yamlName")) ++ redirectQuery
         Uri
           .fromString(s"${path.uri}/index.html")
           .map(uri => uri.setQueryParams(queryParameters))
           .map(uri => PermanentRedirect(Location(uri)))
           .getOrElse(NotFound())
-      case GET -> Root / `contextPath` / `yamlName` =>
+      case GET -> `rootPath` / `yamlName` =>
         Ok(yaml)
-      case GET -> Root / `contextPath` / swaggerResource =>
+      case GET -> `rootPath` / swaggerResource =>
         StaticFile
           .fromResource(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$swaggerResource")
           .getOrElseF(NotFound())

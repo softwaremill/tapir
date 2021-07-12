@@ -28,13 +28,13 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
         metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    FinatraServerInterpreter.toRoute(e)
+    FinatraServerInterpreter(serverOptions).toRoute(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): FinatraRoute = {
-    FinatraServerInterpreter.toRouteRecoverErrors(e)(fn)
+    FinatraServerInterpreter().toRouteRecoverErrors(e)(fn)
   }
 
   override def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = FinatraTestServerInterpreter.server(routes)

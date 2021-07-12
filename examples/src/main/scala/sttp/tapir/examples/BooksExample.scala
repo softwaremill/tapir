@@ -43,7 +43,7 @@ object BooksExample extends App with StrictLogging {
       .out(jsonBody[Vector[Book]])
 
     val booksListingByGenre: Endpoint[BooksQuery, String, Vector[Book], Any] = baseEndpoint.get
-      .in(("list" / path[String]("genre").map(Some(_))(_.get)).and(limitParameter).mapTo(BooksQuery))
+      .in(("list" / path[String]("genre").map(Option(_))(_.get)).and(limitParameter).mapTo[BooksQuery])
       .out(jsonBody[Vector[Book]])
   }
 
@@ -92,7 +92,7 @@ object BooksExample extends App with StrictLogging {
     import sttp.tapir.openapi.circe.yaml._
 
     // interpreting the endpoint description to generate yaml openapi documentation
-    val docs = OpenAPIDocsInterpreter.toOpenAPI(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
+    val docs = OpenAPIDocsInterpreter().toOpenAPI(List(addBook, booksListing, booksListingByGenre), "The Tapir Library", "1.0")
     docs.toYaml
   }
 
@@ -128,9 +128,9 @@ object BooksExample extends App with StrictLogging {
     // interpreting the endpoint description and converting it to an akka-http route, providing the logic which
     // should be run when the endpoint is invoked.
     concat(
-      AkkaHttpServerInterpreter.toRoute(addBook)((bookAddLogic _).tupled),
-      AkkaHttpServerInterpreter.toRoute(booksListing)(bookListingLogic),
-      AkkaHttpServerInterpreter.toRoute(booksListingByGenre)(bookListingByGenreLogic)
+      AkkaHttpServerInterpreter().toRoute(addBook)((bookAddLogic _).tupled),
+      AkkaHttpServerInterpreter().toRoute(booksListing)(bookListingLogic),
+      AkkaHttpServerInterpreter().toRoute(booksListingByGenre)(bookListingByGenreLogic)
     )
   }
 
@@ -152,7 +152,7 @@ object BooksExample extends App with StrictLogging {
     import sttp.client3._
     import sttp.tapir.client.sttp.SttpClientInterpreter
 
-    val client = SttpClientInterpreter.toQuickClient(booksListing, Some(uri"http://localhost:8080"))
+    val client = SttpClientInterpreter().toQuickClient(booksListing, Some(uri"http://localhost:8080"))
 
     val result: Either[String, Vector[Book]] = client(Some(3))
 

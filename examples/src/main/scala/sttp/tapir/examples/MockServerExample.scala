@@ -36,7 +36,7 @@ object MockServerExample extends App {
     println(s"Got expectation $expectation")
     sep("")
 
-    val result = SttpClientInterpreter
+    val result = SttpClientInterpreter()
       .toRequest(e, baseUri = Some(uri"http://localhost:1080"))
       .apply(in)
       .send(backend)

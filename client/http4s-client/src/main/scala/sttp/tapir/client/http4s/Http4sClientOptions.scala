@@ -7,5 +7,5 @@ import java.io.File
 case class Http4sClientOptions(createFile: () => File)
 
 object Http4sClientOptions {
-  implicit val default: Http4sClientOptions = Http4sClientOptions(Defaults.createTempFile)
+  val default: Http4sClientOptions = Http4sClientOptions(Defaults.createTempFile)
 }

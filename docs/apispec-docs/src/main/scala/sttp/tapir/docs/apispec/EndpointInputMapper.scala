@@ -1,6 +1,6 @@
 package sttp.tapir.docs.apispec
 
-import sttp.tapir.{EndpointIO, EndpointInput}
+import sttp.tapir.{EndpointIO, EndpointInput, Mapping}
 
 // ideally the parameters would be polymporphic functions returning EI[I] => EI[I]
 private[docs] class EndpointInputMapper[S](
@@ -23,7 +23,7 @@ private[docs] class EndpointInputMapper[S](
       case _ if inputMapping.isDefinedAt((ei, s)) => inputMapping((ei, s))
       case EndpointInput.MappedPair(wrapped, c) =>
         val (wrapped2, s2) = mapInput(wrapped, s)
-        (EndpointInput.MappedPair(wrapped2.asInstanceOf[EndpointInput.Pair[Any, Any, Any]], c), s2)
+        (EndpointInput.MappedPair(wrapped2.asInstanceOf[EndpointInput.Pair[Any, Any, Any]], c.asInstanceOf[Mapping[Any, Any]]), s2)
       case _ => (ei, s)
     }
 
@@ -42,7 +42,7 @@ private[docs] class EndpointInputMapper[S](
       case _ if ioMapping.isDefinedAt((ei, s)) => ioMapping((ei, s))
       case EndpointIO.MappedPair(wrapped, c) =>
         val (wrapped2, s2) = mapIO(wrapped, s)
-        (EndpointIO.MappedPair(wrapped2.asInstanceOf[EndpointIO.Pair[Any, Any, Any]], c), s2)
+        (EndpointIO.MappedPair(wrapped2.asInstanceOf[EndpointIO.Pair[Any, Any, Any]], c.asInstanceOf[Mapping[Any, Any]]), s2)
       case _ => (ei, s)
     }
 }

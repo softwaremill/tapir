@@ -59,6 +59,21 @@ implicit lazy val sParent: Schema[Parent] = Schema.derived
 Note that while schemas for regular types can be safely defined as `val`s, in case of recursive values, the schema
 values must be `lazy val`s.
 
+## Derivation for recursive types in Scala3
+
+In Scala3, any schemas for recursive types need to be provided as typed `implicit def` (not a `given`)!
+For example:
+
+```scala
+case class RecursiveTest(data: List[RecursiveTest])
+object RecursiveTest {
+  implicit def f1Schema: Schema[RecursiveTest] = Schema.derived[RecursiveTest]
+}
+```
+
+The implicit doesn't have to be defined in the companion object, just anywhere in scope. This applies to cases where
+the schema is looked up implicitly, e.g. for `jsonBody`.
+
 ## Configuring derivation
 
 It is possible to configure Magnolia's automatic derivation to use `snake_case`, `kebab-case` or a custom field naming

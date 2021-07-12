@@ -23,8 +23,8 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
         basicRequest.asInstanceOf[PartialAnyRequest]
       )
 
-    val req2: RequestT[Identity, Any, Any] =
-      req1.copy[Identity, Any, Any](method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method), uri = uri)
+    val req2: RequestT[Identity, _, _] =
+      req1.copy(method = sttp.model.Method(e.input.method.getOrElse(Method.GET).method): Identity[Method], uri = uri: Identity[Uri])
 
     val isWebSocket = bodyIsWebSocket(e.output)
 
@@ -46,7 +46,7 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
     req2.response(responseAs).asInstanceOf[Request[DecodeResult[Either[E, O]], R]]
   }
 
-  private type PartialAnyRequest = PartialRequest[Any, Any]
+  private type PartialAnyRequest = PartialRequest[_, _]
 
   @tailrec
   private def setInputParams[I](
@@ -103,8 +103,8 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
       case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, uri, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, uri, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, uri, req)
-      case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, uri, req)
-      case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, uri, req)
+      case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec, params, uri, req)
+      case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped, codec, params, uri, req)
     }
   }
 
@@ -122,13 +122,13 @@ private[sttp] class EndpointToSttpClient[R](clientOptions: SttpClientOptions, ws
   }
 
   private def handleMapped[II, T](
-      tuple: EndpointInput[II],
+      tuple: EndpointInput[_],
       codec: Mapping[T, II],
       params: Params,
       uri: Uri,
       req: PartialAnyRequest
   ): (Uri, PartialAnyRequest) = {
-    setInputParams(tuple.asInstanceOf[EndpointInput[Any]], ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), uri, req)
+    setInputParams(tuple, ParamsAsAny(codec.encode(params.asAny.asInstanceOf[II])), uri, req)
   }
 
   private def setBody[L, H, CF <: CodecFormat](

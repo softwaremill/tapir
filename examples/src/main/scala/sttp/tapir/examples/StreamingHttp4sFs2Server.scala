@@ -1,5 +1,6 @@
 package sttp.tapir.examples
 
+import java.nio.charset.StandardCharsets
 import cats.effect._
 import cats.syntax.all._
 import fs2._
@@ -31,7 +32,7 @@ object StreamingHttp4sFs2Server extends IOApp {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   // converting an endpoint to a route (providing server-side logic); extension method comes from imported packages
-  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter.toRoutes(streamingEndpoint) { _ =>
+  val streamingRoutes: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(streamingEndpoint) { _ =>
     val size = 100L
     Stream
       .emit(List[Char]('a', 'b', 'c', 'd'))

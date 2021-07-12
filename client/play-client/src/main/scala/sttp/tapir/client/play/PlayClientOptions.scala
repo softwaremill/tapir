@@ -7,5 +7,5 @@ import sttp.tapir.Defaults
 case class PlayClientOptions(createFile: () => File)
 
 object PlayClientOptions {
-  implicit val default: PlayClientOptions = PlayClientOptions(Defaults.createTempFile)
+  val default: PlayClientOptions = PlayClientOptions(Defaults.createTempFile)
 }

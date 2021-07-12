@@ -20,8 +20,8 @@ import scala.concurrent.ExecutionContext
   *           Usually the same as `F`.
   */
 case class Http4sServerOptions[F[_], G[_]](
-                                            createFile: ServerRequest => G[TapirFile],
-                                            deleteFile: TapirFile => G[Unit],
+    createFile: ServerRequest => G[TapirFile],
+    deleteFile: TapirFile => G[Unit],
     ioChunkSize: Int,
     interceptors: List[Interceptor[G, Http4sResponseBody[F]]]
 ) {
@@ -82,7 +82,7 @@ object Http4sServerOptions {
       DefaultServerLog[F[Unit]](
         doLogWhenHandled = debugLog[F],
         doLogAllDecodeFailures = debugLog[F],
-        doLogExceptions = (msg: String, ex: Throwable) => Sync[F].delay(Http4sServerInterpreter.log.error(ex)(msg)),
+        doLogExceptions = (msg: String, ex: Throwable) => Sync[F].delay(Http4sServerToHttpInterpreter.log.error(ex)(msg)),
         noLog = Applicative[F].unit
       )
 
@@ -91,11 +91,11 @@ object Http4sServerOptions {
 
     private def debugLog[F[_]: Sync](msg: String, exOpt: Option[Throwable]): F[Unit] =
       exOpt match {
-        case None     => Sync[F].delay(Http4sServerInterpreter.log.debug(msg))
-        case Some(ex) => Sync[F].delay(Http4sServerInterpreter.log.debug(ex)(msg))
+        case None     => Sync[F].delay(Http4sServerToHttpInterpreter.log.debug(msg))
+        case Some(ex) => Sync[F].delay(Http4sServerToHttpInterpreter.log.debug(ex)(msg))
       }
   }
 
-  implicit def default[F[_], G[_]: Sync]: Http4sServerOptions[F, G] =
+  def default[F[_], G[_]: Sync]: Http4sServerOptions[F, G] =
     customInterceptors(Some(DefaultExceptionHandler), Some(Log.defaultServerLog[G]))
 }

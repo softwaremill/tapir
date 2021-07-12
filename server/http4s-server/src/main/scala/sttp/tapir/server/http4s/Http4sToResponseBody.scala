@@ -8,6 +8,7 @@ import org.http4s
 import org.http4s.Header.ToRaw.rawToRaw
 import org.http4s._
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
+import org.http4s.Header.ToRaw.rawToRaw
 import org.typelevel.ci.CIString
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.{HasHeaders, HeaderNames, Part}

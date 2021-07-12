@@ -61,9 +61,9 @@ To customise error messages that are returned upon validation/decode failures by
 
 Validators for enumerations can be created using:
 
-* `Validator.derivedEnum`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
+* `Validator.derivedEnumeration`, which takes a type parameter. This should be an abstract, sealed base type, and using a 
   macro determines the possible values
-* `Validator.enum`, which takes the list of possible values
+* `Validator.enumeration`, which takes the list of possible values
 
 To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
 converts the enum value to a raw type (typically a string). This method is inferred *only* if the validator is directly 
@@ -83,7 +83,7 @@ implicit def plainCodecForColor: PlainCodec[Color] = {
       case "red"  => Red
       case "blue" => Blue
     })(_.toString.toLowerCase)
-    .validate(Validator.derivedEnum)
+    .validate(Validator.derivedEnumeration)
 }
 ```
 
@@ -91,7 +91,7 @@ If the enum is nested within an object, regardless of whether the codec for that
 we need to specify the encode function by hand:
 
 ```scala mdoc:silent
-implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnum.encode(_.toString.toLowerCase))
+implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnumeration.encode(_.toString.toLowerCase))
 ```
 
 Like other validators/schemas, enum schemas need to be added to a codec manually, or through an implicit value if the 

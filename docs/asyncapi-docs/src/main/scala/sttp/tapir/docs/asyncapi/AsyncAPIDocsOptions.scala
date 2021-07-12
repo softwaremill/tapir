@@ -1,14 +1,13 @@
 package sttp.tapir.docs.asyncapi
 
 import sttp.tapir.Endpoint
-import sttp.tapir.SchemaType.SObjectInfo
+import sttp.tapir.Schema.SName
 import sttp.tapir.docs.apispec.defaultSchemaName
 
 case class AsyncAPIDocsOptions(
     subscribeOperationId: (Vector[String], Endpoint[_, _, _, _]) => String,
     publishOperationId: (Vector[String], Endpoint[_, _, _, _]) => String,
-    schemaName: SObjectInfo => String = defaultSchemaName,
-    referenceEnums: SObjectInfo => Boolean = _ => false
+    schemaName: SName => String = defaultSchemaName
 )
 
 object AsyncAPIDocsOptions {
@@ -23,5 +22,5 @@ object AsyncAPIDocsOptions {
     (prefix +: components.map(_.toLowerCase.capitalize)).mkString
   }
 
-  implicit val default: AsyncAPIDocsOptions = AsyncAPIDocsOptions(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"))
+  val default: AsyncAPIDocsOptions = AsyncAPIDocsOptions(defaultOperationIdGenerator("on"), defaultOperationIdGenerator("send"))
 }

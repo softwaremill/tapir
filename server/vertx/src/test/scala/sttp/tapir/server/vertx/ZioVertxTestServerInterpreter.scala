@@ -12,13 +12,13 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
+import sttp.tapir.server.vertx.VertxZioServerInterpreter.RioFromVFuture
 import sttp.tapir.tests.Port
 import zio.{Runtime, Task}
 
 import scala.reflect.ClassTag
 
 class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Task, ZioStreams, Router => Route, RoutingContext => Unit] {
-  import VertxZioServerInterpreter._
   import ZioVertxTestServerInterpreter._
 
   private val taskFromVFuture = new RioFromVFuture[Any]
@@ -28,18 +28,18 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Task, RoutingContext => Unit]] = None
   ): Router => Route = {
-    implicit val options: VertxZioServerOptions[Task] =
+    val options: VertxZioServerOptions[Task] =
       VertxZioServerOptions.customInterceptors(
         metricsInterceptor = metricsInterceptor,
         decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
       )
-    VertxZioServerInterpreter.route(e)
+    VertxZioServerInterpreter(options).route(e)
   }
 
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Task[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route =
-    VertxZioServerInterpreter.routeRecoverErrors(e)(fn)
+    VertxZioServerInterpreter().routeRecoverErrors(e)(fn)
 
   override def server(routes: NonEmptyList[Router => Route]): Resource[IO, Port] = {
     val router = Router.router(vertx)

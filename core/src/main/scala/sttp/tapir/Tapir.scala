@@ -1,23 +1,23 @@
 package sttp.tapir
 
+import sttp.capabilities.Streams
+import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
+import sttp.model._
+import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
+import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.internal.{ModifyMacroSupport, _}
+import sttp.tapir.macros.TapirMacros
+import sttp.tapir.model.ServerRequest
+import sttp.tapir.typelevel.MatchType
+import sttp.ws.WebSocketFrame
+
 import java.io.InputStream
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
-import sttp.capabilities.Streams
-import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
-import sttp.model.{Header, HeaderNames, Part, QueryParams, StatusCode}
-import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
-import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.internal.{ModifyMacroSupport, OneOfMappingMacro}
-import sttp.tapir.model.ServerRequest
-import sttp.tapir.typelevel.MatchType
-import sttp.tapir.internal._
-import sttp.ws.WebSocketFrame
-
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport {
+trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport with TapirMacros {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -63,15 +63,19 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   def plainBody[T: Codec[String, *, TextPlain]](charset: Charset): EndpointIO.Body[String, T] =
     EndpointIO.Body(RawBodyType.StringBody(charset), implicitly, EndpointIO.Info.empty)
 
-  /** Json codecs are usually derived from json-library-specific implicits. That's why integrations with
+  @scala.deprecated(message = "Use customJsonBody", since = "0.18.0")
+  def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = customJsonBody[T]
+
+  /** Requires an implicit [[Codec.JsonCodec]] in scope. Such a codec can be created using [[Codec.json]].
+    *
+    * However, json codecs are usually derived from json-library-specific implicits. That's why integrations with
     * various json libraries define `jsonBody` methods, which directly require the library-specific implicits.
     *
-    * If you have a custom json codec, you should use this method instead.
+    * Unless you have defined a custom json codec, the `jsonBody` methods should be used.
     */
-  def anyJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
+  def customJsonBody[T: Codec.JsonCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Json]])
 
-  /** Implement your own xml codec using `Codec.xml()` before using this method.
-    */
+  /** Requires an implicit [[Codec.XmlCodec]] in scope. Such a codec can be created using [[Codec.xml]]. */
   def xmlBody[T: Codec.XmlCodec]: EndpointIO.Body[String, T] = anyFromUtf8StringBody(implicitly[Codec[String, T, Xml]])
 
   def rawBinaryBody[R: RawBodyType.Binary](implicit codec: Codec[R, R, OctetStream]): EndpointIO.Body[R, R] =
@@ -113,40 +117,17 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   )(format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
     StreamBodyIO(s, Codec.id(format, Schema.string), EndpointIO.Info.empty, charset)
 
-  /** Creates a stream body, with a schema corresponding to a list of `T` values. The schema will only be used for
-    * documentation, it will *not* be used to validate incoming data.
-    *
+  /** Creates a stream body with a text schema.
     * @param s A supported streams implementation.
     * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
     * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
     *               header.
     * @param charset An optional charset of the resulting stream's data, to be used in the content type.
     */
-  def streamListBody[S, T](
+  def streamBody[S, T](
       s: Streams[S]
-  )(schema: Schema[List[T]], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, schema.map[s.BinaryStream](_ => None)(_ => Nil)), EndpointIO.Info.empty, charset)
-
-  /** Creates a stream body, with a schema corresponding to iterable `C[T]` values. The schema will only be used for
-    * documentation, it will *not* be used to validate incoming data.
-    *
-    * @param s A supported streams implementation.
-    * @param schema Schema of the body. This should be a schema for the "deserialized" stream.
-    * @param emptyIterable A value corresponding to an empty iterable, used to map over the schema so that it skips
-    *                      validation.
-    * @param format The media type to use by default. Can be later overridden by providing a custom `Content-Type`
-    *               header.
-    * @param charset An optional charset of the resulting stream's data, to be used in the content type.
-    */
-  def streamIterableBody[S, C[X] <: Iterable[X], T](
-      s: Streams[S]
-  )(
-      schema: Schema[C[T]],
-      emptyIterable: C[T],
-      format: CodecFormat,
-      charset: Option[Charset] = None
-  ): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
-    StreamBodyIO(s, Codec.id(format, schema.map[s.BinaryStream](_ => None)(_ => emptyIterable)), EndpointIO.Info.empty, charset)
+  )(schema: Schema[T], format: CodecFormat, charset: Option[Charset] = None): StreamBodyIO[s.BinaryStream, s.BinaryStream, S] =
+    StreamBodyIO(s, Codec.id(format, schema.as[s.BinaryStream]), EndpointIO.Info.empty, charset)
 
   // the intermediate class is needed so that only two type parameters need to be given to webSocketBody[A, B],
   // while the third one (S) can be inferred.
@@ -233,22 +214,6 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
     EndpointOutput.OneOf[T, T](firstCase +: otherCases.toList, Mapping.id)
 
   /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
-    * as a server) matches the runtime class of `T`.
-    *
-    * This will fail at compile-time if the type erasure of `T` is different from `T`, as a runtime check in this
-    * situation would give invalid results. In such cases, use [[oneOfMappingClassMatcher]],
-    * [[oneOfMappingValueMatcher]] or [[oneOfMappingFromMatchType]] instead.
-    *
-    * Should be used in [[oneOf]] output descriptions.
-    */
-  def oneOfMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
-
-  @scala.deprecated("Use oneOfMapping", since = "0.18")
-  def statusMapping[T: ClassTag](statusCode: StatusCode, output: EndpointOutput[T]): OneOfMapping[T] =
-    macro OneOfMappingMacro.classMatcherIfErasedSameAsType[T]
-
-  /** Create a one-of-mapping which uses `statusCode` and `output` if the class of the provided value (when interpreting
     * as a server) matches the given `runtimeClass`. Note that this does not take into account type erasure.
     *
     * Should be used in [[oneOf]] output descriptions.
@@ -258,7 +223,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
       output: EndpointOutput[T],
       runtimeClass: Class[_]
   ): OneOfMapping[T] = {
-    OneOfMapping(Some(statusCode), output, { a: Any => runtimeClass.isInstance(a) })
+    OneOfMapping(Some(statusCode), output, { (a: Any) => runtimeClass.isInstance(a) })
   }
 
   @scala.deprecated("Use oneOfMappingClassMatcher", since = "0.18")
@@ -333,11 +298,11 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
 
   /** An empty output. Useful if one of `oneOf` branches should be mapped to the status code only.
     */
-  val emptyOutput: EndpointOutput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
+  val emptyOutput: EndpointIO.Empty[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 
   /** An empty output. Useful if one of the [[oneOf]] branches of a coproduct type is a case object that should be mapped to an empty body.
     */
-  def emptyOutputAs[T](value: T): EndpointOutput[T] = emptyOutput.map(_ => value)(_ => ())
+  def emptyOutputAs[T](value: T): EndpointOutput.Basic[T] = emptyOutput.map(_ => value)(_ => ())
 
   private[tapir] val emptyInput: EndpointInput[Unit] = EndpointIO.Empty(Codec.idPlain(), EndpointIO.Info.empty)
 

@@ -1,11 +1,9 @@
 package sttp.tapir.openapi
 
-import io.circe.generic.encoding.DerivedAsObjectEncoder
 import io.circe.generic.semiauto._
 import io.circe.parser._
 import io.circe.syntax._
 import io.circe.{Encoder, Json, JsonObject}
-import shapeless.Lazy
 import sttp.tapir.apispec.{
   Discriminator,
   ExampleMultipleValue,
@@ -36,25 +34,37 @@ trait TapirOpenAPICirceEncoders {
   }
 
   implicit val extensionValue: Encoder[ExtensionValue] = Encoder.instance(e => parse(e.value).getOrElse(Json.fromString(e.value)))
-  implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveWithExtensions[OAuthFlow]
-  implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveWithExtensions[OAuthFlows]
-  implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveWithExtensions[SecurityScheme]
-  implicit val encoderExampleValue: Encoder[ExampleValue] = {
-    case ExampleSingleValue(value)    => parse(value).getOrElse(Json.fromString(value))
-    case ExampleMultipleValue(values) => Json.arr(values.map(v => parse(v).getOrElse(Json.fromString(v))): _*)
+  implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveEncoder[OAuthFlow].mapJsonObject(expandExtensions)
+  implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveEncoder[OAuthFlows].mapJsonObject(expandExtensions)
+  implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveEncoder[SecurityScheme].mapJsonObject(expandExtensions)
+  implicit val encoderExampleSingleValue: Encoder[ExampleSingleValue] = {
+    case ExampleSingleValue(value: String)     => parse(value).getOrElse(Json.fromString(value))
+    case ExampleSingleValue(value: Int)        => Json.fromInt(value)
+    case ExampleSingleValue(value: Long)       => Json.fromLong(value)
+    case ExampleSingleValue(value: Float)      => Json.fromFloatOrString(value)
+    case ExampleSingleValue(value: Double)     => Json.fromDoubleOrString(value)
+    case ExampleSingleValue(value: Boolean)    => Json.fromBoolean(value)
+    case ExampleSingleValue(value: BigDecimal) => Json.fromBigDecimal(value)
+    case ExampleSingleValue(value: BigInt)     => Json.fromBigInt(value)
+    case ExampleSingleValue(null)              => Json.Null
+    case ExampleSingleValue(value)             => Json.fromString(value.toString)
   }
-  implicit val encoderSchemaType: Encoder[SchemaType.SchemaType] = Encoder.encodeEnumeration(SchemaType)
-  implicit val encoderSchema: Encoder[Schema] = deriveWithExtensions[Schema]
+  implicit val encoderExampleValue: Encoder[ExampleValue] = {
+    case e: ExampleSingleValue        => encoderExampleSingleValue(e)
+    case ExampleMultipleValue(values) => Json.arr(values.map(v => encoderExampleSingleValue(ExampleSingleValue(v))): _*)
+  }
+  implicit val encoderSchemaType: Encoder[SchemaType] = { e => Encoder.encodeString(e.value) }
+  implicit val encoderSchema: Encoder[Schema] = deriveEncoder[Schema].mapJsonObject(expandExtensions)
   implicit val encoderReference: Encoder[Reference] = deriveEncoder[Reference]
   implicit val encoderHeader: Encoder[Header] = deriveEncoder[Header]
-  implicit val encoderExample: Encoder[Example] = deriveWithExtensions[Example]
-  implicit val encoderResponse: Encoder[Response] = deriveWithExtensions[Response]
-  implicit val encoderEncoding: Encoder[Encoding] = deriveWithExtensions[Encoding]
-  implicit val encoderMediaType: Encoder[MediaType] = deriveWithExtensions[MediaType]
-  implicit val encoderRequestBody: Encoder[RequestBody] = deriveWithExtensions[RequestBody]
-  implicit val encoderParameterStyle: Encoder[ParameterStyle.ParameterStyle] = Encoder.encodeEnumeration(ParameterStyle)
-  implicit val encoderParameterIn: Encoder[ParameterIn.ParameterIn] = Encoder.encodeEnumeration(ParameterIn)
-  implicit val encoderParameter: Encoder[Parameter] = deriveWithExtensions[Parameter]
+  implicit val encoderExample: Encoder[Example] = deriveEncoder[Example].mapJsonObject(expandExtensions)
+  implicit val encoderResponse: Encoder[Response] = deriveEncoder[Response].mapJsonObject(expandExtensions)
+  implicit val encoderEncoding: Encoder[Encoding] = deriveEncoder[Encoding].mapJsonObject(expandExtensions)
+  implicit val encoderMediaType: Encoder[MediaType] = deriveEncoder[MediaType].mapJsonObject(expandExtensions)
+  implicit val encoderRequestBody: Encoder[RequestBody] = deriveEncoder[RequestBody].mapJsonObject(expandExtensions)
+  implicit val encoderParameterStyle: Encoder[ParameterStyle] = { e => Encoder.encodeString(e.value) }
+  implicit val encoderParameterIn: Encoder[ParameterIn] = { e => Encoder.encodeString(e.value) }
+  implicit val encoderParameter: Encoder[Parameter] = deriveEncoder[Parameter].mapJsonObject(expandExtensions)
   implicit val encoderResponseMap: Encoder[ListMap[ResponsesKey, ReferenceOr[Response]]] =
     (responses: ListMap[ResponsesKey, ReferenceOr[Response]]) => {
       val fields = responses.map {
@@ -73,23 +83,24 @@ trait TapirOpenAPICirceEncoders {
     // this is needed to override the encoding of `security: List[SecurityRequirement]`. An empty security requirement
     // should be represented as an empty object (`{}`), not `null`, which is the default encoding of `ListMap`s.
     implicit def encodeListMap[V: Encoder]: Encoder[ListMap[String, V]] = doEncodeListMap(nullWhenEmpty = false)
-    deriveWithExtensions[Operation]
+    deriveEncoder[Operation].mapJsonObject(expandExtensions)
   }
-  implicit val encoderPathItem: Encoder[PathItem] = deriveWithExtensions[PathItem]
+  implicit val encoderPathItem: Encoder[PathItem] = deriveEncoder[PathItem].mapJsonObject(expandExtensions)
   implicit val encoderPaths: Encoder[Paths] = Encoder.instance { paths =>
     val extensions = paths.extensions.asJsonObject
     val pathItems = paths.pathItems.asJson
     pathItems.asObject.map(_.deepMerge(extensions).asJson).getOrElse(pathItems)
   }
-  implicit val encoderComponents: Encoder[Components] = deriveWithExtensions[Components]
-  implicit val encoderServerVariable: Encoder[ServerVariable] = deriveWithExtensions[ServerVariable]
-  implicit val encoderServer: Encoder[Server] = deriveWithExtensions[Server]
-  implicit val encoderExternalDocumentation: Encoder[ExternalDocumentation] = deriveWithExtensions[ExternalDocumentation]
-  implicit val encoderTag: Encoder[Tag] = deriveWithExtensions[Tag]
-  implicit val encoderInfo: Encoder[Info] = deriveWithExtensions[Info]
-  implicit val encoderContact: Encoder[Contact] = deriveWithExtensions[Contact]
-  implicit val encoderLicense: Encoder[License] = deriveWithExtensions[License]
-  implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveWithExtensions[OpenAPI].mapJson(_.deepDropNullValues)
+  implicit val encoderComponents: Encoder[Components] = deriveEncoder[Components].mapJsonObject(expandExtensions)
+  implicit val encoderServerVariable: Encoder[ServerVariable] = deriveEncoder[ServerVariable].mapJsonObject(expandExtensions)
+  implicit val encoderServer: Encoder[Server] = deriveEncoder[Server].mapJsonObject(expandExtensions)
+  implicit val encoderExternalDocumentation: Encoder[ExternalDocumentation] =
+    deriveEncoder[ExternalDocumentation].mapJsonObject(expandExtensions)
+  implicit val encoderTag: Encoder[Tag] = deriveEncoder[Tag].mapJsonObject(expandExtensions)
+  implicit val encoderInfo: Encoder[Info] = deriveEncoder[Info].mapJsonObject(expandExtensions)
+  implicit val encoderContact: Encoder[Contact] = deriveEncoder[Contact].mapJsonObject(expandExtensions)
+  implicit val encoderLicense: Encoder[License] = deriveEncoder[License].mapJsonObject(expandExtensions)
+  implicit val encoderOpenAPI: Encoder[OpenAPI] = deriveEncoder[OpenAPI].mapJsonObject(expandExtensions).mapJson(_.deepDropNullValues)
   implicit val encoderDiscriminator: Encoder[Discriminator] = deriveEncoder[Discriminator]
   implicit def encodeList[T: Encoder]: Encoder[List[T]] = {
     case Nil        => Json.Null
@@ -138,9 +149,5 @@ trait TapirOpenAPICirceEncoders {
     val extensions = jsonObject("extensions")
     val jsonWithoutExt = jsonObject.filterKeys(_ != "extensions")
     extensions.flatMap(_.asObject).map(extObject => extObject.deepMerge(jsonWithoutExt)).getOrElse(jsonWithoutExt)
-  }
-
-  private def deriveWithExtensions[A](implicit encode: Lazy[DerivedAsObjectEncoder[A]]) = {
-    deriveEncoder[A].mapJsonObject(expandExtensions)
   }
 }

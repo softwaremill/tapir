@@ -12,7 +12,7 @@ library-specific implicits being in scope, and derives from them a json codec. T
 `Schema[T]` and `Validator[T]` instances, which should be automatically derived. For more details see documentation 
 on supporting [custom types](customtypes.md).
 
-If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `anyJsonBody[T]` method instead. 
+If you have a custom, implicit `Codec[String, T, Json]` instance, you should use the `customJsonBody[T]` method instead. 
 This description of endpoint input/output, instead of deriving a codec basing on other library-specific implicits, uses 
 the json codec that is in scope.
 

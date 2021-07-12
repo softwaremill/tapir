@@ -7,8 +7,9 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.EndpointInput.FixedMethod
 import sttp.tapir.RenderPathTemplate.{RenderPathParam, RenderQueryParam}
 import sttp.tapir.internal._
+import sttp.tapir.macros.{EndpointErrorOutputsMacros, EndpointInputsMacros, EndpointOutputsMacros}
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint, ServerEndpointInParts}
-import sttp.tapir.typelevel.{FnComponents, ParamConcat, ParamSubtract}
+import sttp.tapir.typelevel.{ParamConcat, ParamSubtract}
 
 import scala.collection.immutable.Nil
 import scala.reflect.ClassTag
@@ -38,7 +39,7 @@ case class Endpoint[I, E, O, -R](input: EndpointInput[I], errorOutput: EndpointO
   override protected def showType: String = "Endpoint"
 }
 
-trait EndpointInputsOps[I, E, O, -R] {
+trait EndpointInputsOps[I, E, O, -R] extends EndpointInputsMacros[I, E, O, R] {
   type EndpointType[_I, _E, _O, -_R]
   def input: EndpointInput[I]
   private[tapir] def withInput[I2, R2](input: EndpointInput[I2]): EndpointType[I2, E, O, R with R2]
@@ -75,18 +76,13 @@ trait EndpointInputsOps[I, E, O, -R] {
   def mapInDecode[II](f: I => DecodeResult[II])(g: II => I): EndpointType[II, E, O, R] =
     withInput(input.mapDecode(f)(g))
 
-  def mapInTo[COMPANION, CASE_CLASS <: Product](
-      c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, I, CASE_CLASS]): EndpointType[CASE_CLASS, E, O, R] =
-    withInput[CASE_CLASS, R](input = input.mapTo(c)(fc))
-
   def httpMethod: Option[Method] = {
     import sttp.tapir.internal._
     input.method
   }
 }
 
-trait EndpointErrorOutputsOps[I, E, O, -R] {
+trait EndpointErrorOutputsOps[I, E, O, -R] extends EndpointErrorOutputsMacros[I, E, O, R] {
   type EndpointType[_I, _E, _O, -_R]
   def errorOutput: EndpointOutput[E]
   private[tapir] def withErrorOutput[E2, R2](input: EndpointOutput[E2]): EndpointType[I, E2, O, R with R2]
@@ -105,14 +101,9 @@ trait EndpointErrorOutputsOps[I, E, O, -R] {
 
   def mapErrorOutDecode[EE](f: E => DecodeResult[EE])(g: EE => E): EndpointType[I, EE, O, R] =
     withErrorOutput(errorOutput.mapDecode(f)(g))
-
-  def mapErrorOutTo[COMPANION, CASE_CLASS <: Product](
-      c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, E, CASE_CLASS]): EndpointType[I, CASE_CLASS, O, R] =
-    withErrorOutput(errorOutput.mapTo(c)(fc))
 }
 
-trait EndpointOutputsOps[I, E, O, -R] {
+trait EndpointOutputsOps[I, E, O, -R] extends EndpointOutputsMacros[I, E, O, R] {
   type EndpointType[_I, _E, _O, -_R]
   def output: EndpointOutput[O]
   private[tapir] def withOutput[O2, R2](input: EndpointOutput[O2]): EndpointType[I, E, O2, R with R2]
@@ -145,11 +136,6 @@ trait EndpointOutputsOps[I, E, O, -R] {
 
   def mapOutDecode[OO](f: O => DecodeResult[OO])(g: OO => O): EndpointType[I, E, OO, R] =
     withOutput(output.mapDecode(f)(g))
-
-  def mapOutTo[COMPANION, CASE_CLASS <: Product](
-      c: COMPANION
-  )(implicit fc: FnComponents[COMPANION, O, CASE_CLASS]): EndpointType[I, E, CASE_CLASS, R] =
-    withOutput(output.mapTo(c)(fc))
 
   private def validated[OP](output: EndpointOutput[OP]): EndpointOutput[OP] = {
 

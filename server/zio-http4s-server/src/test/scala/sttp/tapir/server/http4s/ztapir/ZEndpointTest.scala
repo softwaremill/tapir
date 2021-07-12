@@ -22,7 +22,7 @@ class ZEndpointTest extends AnyFlatSpec with Matchers {
       endpoint.serverLogic(_ => ZIO.succeed(Right(())): ZIO[Service2, Nothing, Either[Unit, Unit]])
 
     type Env = Service1 with Service2
-    val routes: HttpRoutes[RIO[Env & Clock & Blocking, *]] =
-      ZHttp4sServerInterpreter.from(List(serverEndpoint1.widen[Env], serverEndpoint2.widen[Env])).toRoutes
+    val routes: HttpRoutes[RIO[Env with Clock, *]] =
+      ZHttp4sServerInterpreter().from(List(serverEndpoint1.widen[Env], serverEndpoint2.widen[Env])).toRoutes
   }
 }

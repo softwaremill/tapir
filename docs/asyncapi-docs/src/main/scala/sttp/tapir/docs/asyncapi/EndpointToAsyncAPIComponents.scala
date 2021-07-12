@@ -14,7 +14,7 @@ private[asyncapi] class EndpointToAsyncAPIComponents(
     securitySchemes: SecuritySchemes
 ) {
   def components: Option[Components] = {
-    if (keyToSchema.nonEmpty || securitySchemes.nonEmpty)
+    if (keyToSchema.nonEmpty || securitySchemes.nonEmpty || keyToMessage.nonEmpty)
       Some(
         Components(
           keyToSchema,

@@ -1,17 +1,21 @@
 package sttp.tapir
 
-import java.nio.charset.Charset
 import sttp.capabilities.Streams
 import sttp.model.{Header, Method}
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.CodecFormat.TextPlain
 import sttp.tapir.EndpointIO.{Example, Info}
+import sttp.tapir.EndpointInput.WWWAuthenticate
+import sttp.tapir.RawBodyType.StringBody
 import sttp.tapir.internal._
+import sttp.tapir.macros.{EndpointInputMacros, EndpointOutputMacros, EndpointTransputMacros}
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.typelevel.{FnComponents, ParamConcat}
+import sttp.tapir.typelevel.ParamConcat
 import sttp.ws.WebSocketFrame
 
-import scala.collection.immutable.{Seq, ListMap}
+import java.nio.charset.{Charset, StandardCharsets}
+import scala.annotation.StaticAnnotation
+import scala.collection.immutable.{ListMap, Seq}
 import scala.concurrent.duration.FiniteDuration
 
 /** A transput is EITHER an input, or an output (see: https://ell.stackexchange.com/questions/21405/hypernym-for-input-and-output).
@@ -25,15 +29,12 @@ import scala.concurrent.duration.FiniteDuration
   * `EndpointTransput` >---                            ---> `EndpointIO`
   *                        \---> `EndpointOutput` >---/
   */
-sealed trait EndpointTransput[T] {
+sealed trait EndpointTransput[T] extends EndpointTransputMacros[T] {
   private[tapir] type ThisType[X]
 
   def map[U](mapping: Mapping[T, U]): ThisType[U]
   def map[U](f: T => U)(g: U => T): ThisType[U] = map(Mapping.from(f)(g))
   def mapDecode[U](f: T => DecodeResult[U])(g: U => T): ThisType[U] = map(Mapping.fromDecode(f)(g))
-  def mapTo[COMPANION, CASE_CLASS <: Product](c: COMPANION)(implicit fc: FnComponents[COMPANION, T, CASE_CLASS]): ThisType[CASE_CLASS] = {
-    map[CASE_CLASS](fc.tupled(c).apply(_))(ProductToParams(_, fc.arity).asInstanceOf[T])
-  }
 
   def validate(v: Validator[T]): ThisType[T] = map(Mapping.id[T].validate(v))
 
@@ -95,7 +96,7 @@ sealed trait EndpointInput[T] extends EndpointTransput[T] {
   def /[U, TU](other: EndpointInput[U])(implicit concat: ParamConcat.Aux[T, U, TU]): EndpointInput[TU] = and(other)
 }
 
-object EndpointInput {
+object EndpointInput extends EndpointInputMacros {
   sealed trait Single[T] extends EndpointInput[T] {
     private[tapir] type ThisType[X] <: EndpointInput.Single[X]
   }
@@ -115,7 +116,7 @@ object EndpointInput {
     override private[tapir] type L = Unit
     override private[tapir] type CF = TextPlain
     override private[tapir] def copyWith[U](c: Codec[Unit, U, TextPlain], i: Info[U]): FixedPath[U] = copy(codec = c, info = i)
-    override def show = s"/$s"
+    override def show: String = s"/${UrlencodedData.encode(s)}"
   }
 
   case class PathCapture[T](name: Option[String], codec: Codec[String, T, TextPlain], info: Info[T]) extends Basic[T] {
@@ -208,7 +209,7 @@ object EndpointInput {
       override def securitySchemeName(name: String): Http[T] = copy(securitySchemeName = Some(name))
     }
     case class Oauth2[T](
-        authorizationUrl: String,
+        authorizationUrl: Option[String],
         tokenUrl: Option[String],
         scopes: ListMap[String, String],
         refreshUrl: Option[String],
@@ -268,7 +269,7 @@ sealed trait EndpointOutput[T] extends EndpointTransput[T] {
     EndpointOutput.Pair(this, other, mkCombine(concat), mkSplit(concat))
 }
 
-object EndpointOutput {
+object EndpointOutput extends EndpointOutputMacros {
   sealed trait Single[T] extends EndpointOutput[T]
   sealed trait Basic[T] extends Single[T] with EndpointTransput.Basic[T]
 
@@ -500,6 +501,47 @@ object EndpointIO {
   }
   object Info {
     def empty[T]: Info[T] = Info[T](None, Nil, deprecated = false, docsExtensions = Vector.empty)
+  }
+
+  /** Annotations which are used by [[EndpointInput.derived]] and [[EndpointOutput.derived]] to specify how a case class
+    * maps to an endpoint input/output.
+    */
+  object annotations {
+    sealed trait EndpointInputAnnotation extends StaticAnnotation
+    sealed trait EndpointOutputAnnotation extends StaticAnnotation
+
+    class path extends EndpointInputAnnotation
+    class query(val name: String = "") extends EndpointInputAnnotation
+    class params extends EndpointInputAnnotation
+    class header(val name: String = "") extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class headers extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class cookie(val name: String = "") extends EndpointInputAnnotation
+    class cookies extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class setCookie(val name: String = "") extends EndpointOutputAnnotation
+    class setCookies extends EndpointOutputAnnotation
+    class statusCode extends EndpointOutputAnnotation
+    class body[R, CF <: CodecFormat](val bodyType: RawBodyType[R], val cf: CF) extends EndpointInputAnnotation with EndpointOutputAnnotation
+    class jsonbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Json())
+    class xmlbody extends body(StringBody(StandardCharsets.UTF_8), CodecFormat.Xml())
+    class apikey(val challenge: WWWAuthenticate = WWWAuthenticate.apiKey()) extends StaticAnnotation
+    class basic(val challenge: WWWAuthenticate = WWWAuthenticate.basic()) extends StaticAnnotation
+    class bearer(val challenge: WWWAuthenticate = WWWAuthenticate.bearer()) extends StaticAnnotation
+    class securitySchemeName(val name: String) extends StaticAnnotation
+
+    /** A class-level annotation, specifies the path to the endpoint. To capture segments of the path, surround the
+      * segment's name with `{...}` (curly braces), and reference the name using [[annotations.path]].
+      */
+    class endpointInput(val path: String = "") extends EndpointInputAnnotation
+
+    /** Specifies the example value of the endpoint input/output. Note that this is distinct from
+      * [[Schema.annotations.encodedExample]], which sets the example on the schema associated with the input/output.
+      */
+    class example(val example: Any) extends EndpointInputAnnotation with EndpointOutputAnnotation
+
+    /** Specifies the description of the endpoint input/output. Note that this is distinct from
+      * [[Schema.annotations.description]], which sets the description on the schema associated with the input/output.
+      */
+    class description(val text: String) extends EndpointInputAnnotation with EndpointOutputAnnotation
   }
 }
 

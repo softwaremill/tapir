@@ -38,7 +38,7 @@ object Http4sClientExample extends IOApp with StrictLogging {
     val userId = 5
 
     // Interpret the endpoint as a request and a response parser.
-    val (userRequest, parseResponse) = Http4sClientInterpreter[IO].toRequest(userEndpoint, baseUri = None).apply(userId)
+    val (userRequest, parseResponse) = Http4sClientInterpreter[IO]().toRequest(userEndpoint, baseUri = None).apply(userId)
 
     logger.info("Welcome to the http4s client interpreter example!")
     logger.info(s"The following request was derived from the endpoint definition: $userRequest")

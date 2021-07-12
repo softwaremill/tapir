@@ -8,13 +8,14 @@ import cats.syntax.flatMap._
 import cats.syntax.option._
 import io.vertx.core.buffer.Buffer
 import org.scalatest.BeforeAndAfterAll
+import org.scalatest.Retries
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.tagobjects.Retryable
 import sttp.tapir.server.vertx.VertxCatsServerOptions
 
 import java.nio.ByteBuffer
 import scala.concurrent.duration._
-import scala.util.control.NonFatal
 
 class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
 
@@ -25,7 +26,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     super.afterAll()
   }
 
-  implicit val options: VertxCatsServerOptions[IO] = VertxCatsServerOptions.default(dispatcher).copy(maxQueueSizeForReadStream = 4)
+  val options: VertxCatsServerOptions[IO] = VertxCatsServerOptions.default(dispatcher).copy(maxQueueSizeForReadStream = 4)
 
   def intAsBuffer(int: Int): Chunk[Byte] = {
     val buffer = ByteBuffer.allocate(4)
@@ -70,7 +71,8 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     internal(0)
   }
 
-  "Fs2ReadStreamCompatible" should "convert fs2 stream to read stream" in {
+  // retryable due to https://github.com/softwaremill/tapir/issues/1169
+  "Fs2ReadStreamCompatible" should "convert fs2 stream to read stream" taggedAs (Retryable) in {
     val stream = Stream
       .unfoldChunkEval(0)({ num =>
         IO.delay(100.millis).as(((intAsBuffer(num), num + 1)).some)
@@ -79,7 +81,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     (for {
       ref <- Ref.of[IO, List[Int]](Nil)
       dfd <- Deferred[IO, Either[Throwable, Unit]]
-      readStream = fs2.fs2ReadStreamCompatible[IO].asReadStream(stream.interruptWhen(dfd))
+      readStream = fs2.fs2ReadStreamCompatible[IO](options).asReadStream(stream.interruptWhen(dfd))
       completed <- Ref[IO].of(false)
       _ <- IO.delay {
         readStream.handler { buffer =>
@@ -112,7 +114,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
         Temporal[IO].sleep(100.millis).as(((intAsBuffer(num), num + 1)).some)
       }
     }) //.interruptAfter(2.seconds)
-    val readStream = fs2.fs2ReadStreamCompatible[IO].asReadStream(stream)
+    val readStream = fs2.fs2ReadStreamCompatible[IO](options).asReadStream(stream)
     (for {
       ref <- Ref.of[IO, List[Int]](Nil)
       completedRef <- Ref[IO].of(false)
@@ -147,7 +149,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     val opts = options.copy(maxQueueSizeForReadStream = 128)
     val count = 100
     val readStream = new FakeStream()
-    val stream = fs2.fs2ReadStreamCompatible[IO](opts, implicitly).fromReadStream(readStream)
+    val stream = fs2.fs2ReadStreamCompatible[IO](opts)(implicitly).fromReadStream(readStream)
     (for {
       resultFiber <- stream
         .chunkN(4)
@@ -173,7 +175,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
   it should "drain read stream with small buffer" in {
     val count = 100
     val readStream = new FakeStream()
-    val stream = fs2.fs2ReadStreamCompatible[IO].fromReadStream(readStream)
+    val stream = fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream)
     (for {
       resultFiber <- stream
         .chunkN(4)
@@ -204,7 +206,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
     val ex = new Exception("!")
     val count = 50
     val readStream = new FakeStream()
-    val stream = fs2.fs2ReadStreamCompatible[IO].fromReadStream(readStream)
+    val stream = fs2.fs2ReadStreamCompatible[IO](options).fromReadStream(readStream)
     (for {
       resultFiber <- stream
         .chunkN(4)

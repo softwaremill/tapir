@@ -16,7 +16,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.file.Files
 
-class PlayToResponseBody extends ToResponseBody[HttpEntity, Nothing] {
+class PlayToResponseBody extends ToResponseBody[HttpEntity, NoStreams] {
   override val streams: NoStreams = NoStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity = {
@@ -81,7 +81,7 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, Nothing] {
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, Nothing]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
   ): HttpEntity = throw new UnsupportedOperationException
 
   private def rawPartsToFilePart[T](
