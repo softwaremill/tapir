@@ -1,6 +1,6 @@
 package sttp.tapir.serverless.aws.lambda.runtime
 
-import cats.effect.{ConcurrentEffect, ContextShift, Resource}
+import cats.effect.{Resource, Sync}
 import cats.syntax.either._
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.Printer
@@ -18,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 // loosely based on https://github.com/carpe/scalambda/blob/master/native/src/main/scala/io/carpe/scalambda/native/ScalambdaIO.scala
 object AwsLambdaRuntimeLogic extends StrictLogging {
 
-  def apply[F[_]: ContextShift: ConcurrentEffect](
+  def apply[F[_]: Sync](
       route: Route[F],
       awsRuntimeApi: String,
       backend: Resource[F, SttpBackend[F, Any]]
