@@ -9,7 +9,7 @@ import scala.sys.process.Process
 
 val scala2_12 = "2.12.14"
 val scala2_13 = "2.13.6"
-val scala3 = "3.0.1-RC2"
+val scala3 = "3.0.1"
 
 val scala2Versions = List(scala2_12, scala2_13)
 val scala2And3Versions = scala2Versions ++ List(scala3)
@@ -262,7 +262,8 @@ lazy val core: ProjectMatrix = (projectMatrix in file("core"))
           )
         case _ =>
           Seq(
-            "com.softwaremill.magnolia" %%% "magnolia-core" % "1.0.0-M4",
+            "com.propensive" %% "magnolia" % "0.17.0",
+            "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
             "com.47deg" %%% "scalacheck-toolbox-datetime" % "0.6.0" % Test
           )
       }
@@ -406,6 +407,7 @@ lazy val derevo: ProjectMatrix = (projectMatrix in file("integrations/derevo"))
     name := "tapir-derevo",
     libraryDependencies ++= Seq(
       "tf.tofu" %% "derevo-core" % Versions.derevo,
+      "org.scala-lang" % "scala-reflect" % scalaVersion.value % Provided,
       scalaTest.value % Test
     )
   )
@@ -533,8 +535,8 @@ lazy val jsoniterScala: ProjectMatrix = (projectMatrix in file("json/jsoniter"))
   .settings(
     name := "tapir-jsoniter-scala",
     libraryDependencies ++= Seq(
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.9.0",
-      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.9.0" % Test,
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-core" % "2.9.1",
+      "com.github.plokhotnyuk.jsoniter-scala" %%% "jsoniter-scala-macros" % "2.9.1" % Test,
       scalaTest.value % Test
     )
   )
@@ -954,8 +956,8 @@ lazy val awsLambdaTests: ProjectMatrix = (projectMatrix in file("serverless/aws/
     assembly / test := {}, // no tests before building jar
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "io.netty.versions.properties")                    => MergeStrategy.first
-      case PathList(ps@_*) if ps.last contains "FlowAdapters"                      => MergeStrategy.first
-      case _@("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class")  => MergeStrategy.first
+      case PathList(ps @ _*) if ps.last contains "FlowAdapters"                    => MergeStrategy.first
+      case _ @("scala/annotation/nowarn.class" | "scala/annotation/nowarn$.class") => MergeStrategy.first
       case x                                                                       => (assembly / assemblyMergeStrategy).value(x)
     },
     Test / test := {
