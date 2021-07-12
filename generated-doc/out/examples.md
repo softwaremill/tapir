@@ -4,6 +4,7 @@ The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/
 
 * [Hello world server, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldAkkaServer.scala)
 * [Hello world server, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldHttp4sServer.scala)
+* [Hello world server, using ZIO http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/HelloWorldZioHttpServer.scala)
 * [Separate error & success outputs, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ErrorOutputsAkkaServer.scala)
 * [Multiple endpoints, exposing OpenAPI/Swagger documentation, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipleEndpointsDocumentationAkkaServer.scala)
 * [Multiple endpoints, exposing OpenAPI/Swagger documentation, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MultipleEndpointsDocumentationHttp4sServer.scala)
@@ -15,6 +16,7 @@ The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/
 * [Partial server logic (authentication), using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/PartialServerLogicAkka.scala)
 * [Authorization using Github (OAuth2) with http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/OAuth2GithubHttp4sServer.scala)
 * [Books example](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExample.scala)
+* [Books example with semiauto derivation](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/BooksExampleSemiauto.scala)
 * [ZIO example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleHttp4sServer.scala)
 * [ZIO example with environment, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioEnvExampleHttp4sServer.scala)
 * [ZIO partial server logic example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioPartialServerLogicHttp4s.scala)
@@ -23,6 +25,10 @@ The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/
 * [Web sockets server, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/WebSocketAkkaServer.scala)
 * [Web sockets client, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/WebSocketAkkaClient.scala)
 * [Web sockets server, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/WebSocketHttp4sServer.scala)
+* [Client, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/Http4sClientExample.scala)
+* [mockserver integration](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/MockServerExample.scala)
+* [OpenAPI extensions](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/OpenapiExtensions.scala)
+* [Prometheus metrics](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/PrometheusMetricsExample.scala)
 
 ## Other examples
 

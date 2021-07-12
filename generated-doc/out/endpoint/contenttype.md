@@ -35,8 +35,8 @@ implicit val xmlCodecForOrganization: XmlCodec[Entity] = ???
 
 endpoint.out(
   oneOf(
-    oneOfMapping(StatusCode.Ok, anyJsonBody[Entity]),
-    oneOfMapping(StatusCode.Ok, xmlBody[Entity]),
+    oneOfMapping(StatusCode.Ok, customJsonBody[Entity]),
+    oneOfMapping(StatusCode.Ok, xmlBody[Entity])
   )
 )
 ```
