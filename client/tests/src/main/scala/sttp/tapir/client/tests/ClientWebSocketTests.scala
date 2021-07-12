@@ -26,7 +26,8 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
         .flatMap { r =>
           sendAndReceiveLimited(r.toOption.get, 2, List("test1", "test2"))
         }
-        .unsafeRunSync() shouldBe List("echo: test1", "echo: test2")
+        .map(_ shouldBe List("echo: test1", "echo: test2"))
+        .unsafeToFuture()
     }
 
     test("web sockets, json client-terminated echo") {
@@ -39,7 +40,8 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
         .flatMap { r =>
           sendAndReceiveLimited(r.toOption.get, 2, List(Fruit("apple"), Fruit("orange")))
         }
-        .unsafeRunSync() shouldBe List(Fruit("echo: apple"), Fruit("echo: orange"))
+        .map(_ shouldBe List(Fruit("echo: apple"), Fruit("echo: orange")))
+        .unsafeToFuture()
     }
 
     test("web sockets, client-terminated echo using fragmented frames") {
@@ -54,7 +56,8 @@ trait ClientWebSocketTests[S] { this: ClientTests[S with WebSockets] =>
         .flatMap { r =>
           sendAndReceiveLimited(r.toOption.get, 2, List("test"))
         }
-        .unsafeRunSync() shouldBe List(WebSocketFrame.Text("fragmented frame with echo: test", true, None))
+        .map(_ shouldBe List(WebSocketFrame.Text("fragmented frame with echo: test", true, None)))
+        .unsafeToFuture()
     }
 
     // TODO: tests for ping/pong (control frames handling)
