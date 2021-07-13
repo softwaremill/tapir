@@ -20,11 +20,10 @@ import java.time.Instant
 import scala.collection.immutable.ListMap
 import scala.concurrent.ExecutionContext
 
-object OAuth2GithubHttp4sServer extends App {
+object OAuth2GithubHttp4sServer extends IOApp {
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit val timer: Timer[IO] = IO.timer(ec)
+
   // github application details
   val clientId = "<put your client id here>"
   val clientSecret = "<put your client secret>"
@@ -67,7 +66,8 @@ object OAuth2GithubHttp4sServer extends App {
   // converting endpoints to routes
 
   // simply redirect to github auth service
-  val loginRoute: HttpRoutes[IO] = Http4sServerInterpreter[IO]().toRoutes(login)(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit]))
+  val loginRoute: HttpRoutes[IO] =
+    Http4sServerInterpreter[IO]().toRoutes(login)(_ => IO(s"$authorizationUrl?client_id=$clientId".asRight[Unit]))
 
   // after successful authorization github redirects you here
   def loginGithubRoute(backend: SttpBackend[IO, Any]): HttpRoutes[IO] =
@@ -107,20 +107,22 @@ object OAuth2GithubHttp4sServer extends App {
 
   val httpClient = AsyncHttpClientCatsBackend.resource[IO]()
 
-  // starting the server
-  httpClient
-    .use(backend =>
-      BlazeServerBuilder[IO](ec)
-        .bindHttp(8080, "localhost")
-        .withHttpApp(Router("/" -> (secretPlaceRoute <+> loginRoute <+> loginGithubRoute(backend))).orNotFound)
-        .resource
-        .use { _ =>
-          IO {
-            println("Go to: http://localhost:8080")
-            println("Press any key to exit ...")
-            scala.io.StdIn.readLine()
+  override def run(args: List[String]): IO[ExitCode] = {
+    // starting the server
+    httpClient
+      .use(backend =>
+        BlazeServerBuilder[IO](ec)
+          .bindHttp(8080, "localhost")
+          .withHttpApp(Router("/" -> (secretPlaceRoute <+> loginRoute <+> loginGithubRoute(backend))).orNotFound)
+          .resource
+          .use { _ =>
+            IO {
+              println("Go to: http://localhost:8080")
+              println("Press any key to exit ...")
+              scala.io.StdIn.readLine()
+            }
           }
-        }
-    )
-    .unsafeRunSync()
+      )
+      .as(ExitCode.Success)
+  }
 }

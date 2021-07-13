@@ -46,7 +46,7 @@ class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Fut
 
 object VertxTestServerInterpreter {
   def vertxFutureToIo[A](future: => VFuture[A]): IO[A] =
-    IO.async[A] { cb =>
+    IO.async_[A] { cb =>
       future
         .onFailure { cause => cb(Left(cause)) }
         .onSuccess { result => cb(Right(result)) }

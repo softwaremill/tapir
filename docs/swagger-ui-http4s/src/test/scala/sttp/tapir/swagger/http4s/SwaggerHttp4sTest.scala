@@ -1,6 +1,7 @@
 package sttp.tapir.swagger.http4s
 
-import cats.effect.{ContextShift, IO}
+import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import cats.instances.option._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
@@ -13,11 +14,8 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.ci.CIString
 
-import scala.concurrent.ExecutionContext
-
 class SwaggerHttp4sTest extends AnyFlatSpecLike with Matchers with OptionValues {
 
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
   val yaml: String = "I love chocolate"
 
   val contextPath = List("i", "love", "chocolate")
@@ -34,7 +32,8 @@ class SwaggerHttp4sTest extends AnyFlatSpecLike with Matchers with OptionValues 
     val uri = uri"/i/love/chocolate"
     val expectedLocationHeader = uri.addPath("index.html").withQueryParam("url", s"$uri/$yamlName")
 
-    val response = swaggerDocs.routes
+    val response = swaggerDocs
+      .routes[IO]
       .run(Request(GET, uri))
       .value
       .unsafeRunSync()
@@ -42,14 +41,13 @@ class SwaggerHttp4sTest extends AnyFlatSpecLike with Matchers with OptionValues 
 
     response.status shouldBe Status.PermanentRedirect
     response.headers.headers.find(_.name == CIString("Location")).map(_.value) shouldBe Some(expectedLocationHeader.toString)
-
   }
 
   it should "return the yaml" in {
-
     val uri = uri"/i/love/chocolate".addPath(yamlName)
 
-    val (response, body) = swaggerDocs.routes
+    val (response, body) = swaggerDocs
+      .routes[IO]
       .run(Request(GET, uri))
       .value
       .mproduct(_.traverse(_.as[String]))
@@ -59,7 +57,5 @@ class SwaggerHttp4sTest extends AnyFlatSpecLike with Matchers with OptionValues 
 
     response.status shouldBe Status.Ok
     body shouldBe yaml
-
   }
-
 }

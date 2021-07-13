@@ -3,6 +3,7 @@ package sttp.tapir.client.tests
 import java.io.InputStream
 
 import cats.effect._
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AsyncFunSuite

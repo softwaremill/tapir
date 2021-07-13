@@ -15,6 +15,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.tests._
+import cats.effect.unsafe.implicits.global
 
 trait CreateServerTest[F[_], +R, ROUTE, B] {
   def testServer[I, E, O](

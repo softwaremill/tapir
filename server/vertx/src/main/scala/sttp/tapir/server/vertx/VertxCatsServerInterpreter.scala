@@ -1,6 +1,7 @@
 package sttp.tapir.server.vertx
 
-import cats.effect.{Async, CancelToken, ConcurrentEffect, Effect, IO, Sync}
+import cats.effect.std.Dispatcher
+import cats.effect.{Async, Sync}
 import cats.syntax.all._
 import io.vertx.core.{Future, Handler}
 import io.vertx.ext.web.{Route, Router, RoutingContext}
@@ -23,17 +24,15 @@ import scala.reflect.ClassTag
 
 trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 
-  implicit def fs: Sync[F]
+  implicit def fa: Async[F]
 
-  def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F]
+  def vertxCatsServerOptions: VertxCatsServerOptions[F]
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
     * @param logic the logic to associate with the endpoint
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]])(implicit
-      effect: ConcurrentEffect[F]
-  ): Router => Route =
+  def route[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(logic: I => F[Either[E, O]]): Router => Route =
     route(e.serverLogic(logic))
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with custom error handling
@@ -43,7 +42,6 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
   def routeRecoverErrors[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F]])(
       logic: I => F[O]
   )(implicit
-      effect: ConcurrentEffect[F],
       eIsThrowable: E <:< Throwable,
       eClassTag: ClassTag[E]
   ): Router => Route =
@@ -54,16 +52,15 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     */
   def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[F], F]
-  )(implicit
-      effect: ConcurrentEffect[F]
   ): Router => Route = { router =>
     val readStreamCompatible = fs2ReadStreamCompatible(vertxCatsServerOptions)
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint)).handler(endpointHandler(e, readStreamCompatible))
   }
 
   private def endpointHandler[I, E, O, A, S <: Streams[S]](
-      e: ServerEndpoint[I, E, O, Fs2Streams[F], F], readStreamCompatible: ReadStreamCompatible[S]
-  )(implicit effect: Effect[F]): Handler[RoutingContext] = { rc =>
+      e: ServerEndpoint[I, E, O, Fs2Streams[F], F],
+      readStreamCompatible: ReadStreamCompatible[S]
+  ): Handler[RoutingContext] = { rc =>
     implicit val monad: MonadError[F] = monadError[F]
     implicit val bodyListener: BodyListener[F, RoutingContext => Unit] = new VertxBodyListener[F]
     val fFromVFuture = new CatsFFromVFuture[F]
@@ -85,18 +82,19 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
     // we obtain the cancel token only after the effect is run, so we need to pass it to the exception handler
     // via a mutable ref; however, before this is done, it's possible an exception has already been reported;
     // if so, we need to use this fact to cancel the operation nonetheless
-    val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken[IO]]]](None)
+    type CancelToken = () => scala.concurrent.Future[Unit]
+    val cancelRef = new AtomicReference[Option[Either[Throwable, CancelToken]]](None)
 
     rc.response.exceptionHandler { (t: Throwable) =>
       cancelRef.getAndSet(Some(Left(t))).collect { case Right(t) =>
-        t.unsafeRunSync()
+        t()
       }
       ()
     }
 
-    val cancelToken = effect.toIO(result).unsafeRunCancelable { _ => () }
+    val cancelToken = vertxCatsServerOptions.dispatcher.unsafeRunCancelable(result)
     cancelRef.getAndSet(Some(Right(cancelToken))).collect { case Left(_) =>
-      cancelToken.unsafeRunSync()
+      cancelToken()
     }
 
     ()
@@ -104,31 +102,30 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 }
 
 object VertxCatsServerInterpreter {
-  def apply[F[_]]()(implicit _fs: Sync[F]): VertxCatsServerInterpreter[F] = {
+  def apply[F[_]](dispatcher: Dispatcher[F])(implicit _fa: Async[F]): VertxCatsServerInterpreter[F] = {
     new VertxCatsServerInterpreter[F] {
-      override implicit def fs: Sync[F] = _fs
+      override implicit def fa: Async[F] = _fa
+      override def vertxCatsServerOptions: VertxCatsServerOptions[F] = VertxCatsServerOptions.default[F](dispatcher)(fa)
     }
   }
 
-  def apply[F[_]](serverOptions: VertxCatsServerOptions[F])(implicit _fs: Sync[F]): VertxCatsServerInterpreter[F] = {
+  def apply[F[_]](serverOptions: VertxCatsServerOptions[F])(implicit _fa: Async[F]): VertxCatsServerInterpreter[F] = {
     new VertxCatsServerInterpreter[F] {
-      override implicit def fs: Sync[F] = _fs
-
+      override implicit def fa: Async[F] = _fa
       override def vertxCatsServerOptions: VertxCatsServerOptions[F] = serverOptions
     }
   }
 
-  private[vertx] def monadError[F[_]](implicit F: Effect[F]): MonadError[F] = new MonadError[F] {
+  private[vertx] def monadError[F[_]](implicit F: Sync[F]): MonadError[F] = new MonadError[F] {
     override def unit[T](t: T): F[T] = F.pure(t)
     override def map[T, T2](fa: F[T])(f: T => T2): F[T2] = F.map(fa)(f)
     override def flatMap[T, T2](fa: F[T])(f: T => F[T2]): F[T2] = F.flatMap(fa)(f)
     override def error[T](t: Throwable): F[T] = F.raiseError(t)
-    override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] =
-      F.recoverWith(rt)(h)
+    override protected def handleWrappedError[T](rt: F[T])(h: PartialFunction[Throwable, F[T]]): F[T] = F.recoverWith(rt)(h)
     override def eval[T](t: => T): F[T] = F.delay(t)
     override def suspend[T](t: => F[T]): F[T] = F.defer(t)
     override def flatten[T](ffa: F[F[T]]): F[T] = F.flatten(ffa)
-    override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guarantee(f)(e)
+    override def ensure[T](f: F[T], e: => F[Unit]): F[T] = F.guaranteeCase(f)(_ => e)
   }
 
   private[vertx] class CatsFFromVFuture[F[_]: Async] extends FromVFuture[F] {
@@ -137,7 +134,7 @@ object VertxCatsServerInterpreter {
 
   implicit class VertxFutureToCatsF[A](f: => Future[A]) {
     def asF[F[_]: Async]: F[A] = {
-      Async[F].async { cb =>
+      Async[F].async_ { cb =>
         f.onComplete({ handler =>
           if (handler.succeeded()) {
             cb(Right(handler.result()))

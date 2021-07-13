@@ -1,6 +1,6 @@
 package sttp.tapir.client.sttp
 
-import cats.effect.{ContextShift, IO}
+import cats.effect.IO
 
 import scala.concurrent.Future
 import sttp.tapir.{DecodeResult, Endpoint}
@@ -8,7 +8,6 @@ import sttp.tapir.client.tests.ClientTests
 import sttp.client3._
 
 abstract class SttpClientTests[R >: Any] extends ClientTests[R] {
-  implicit val cs: ContextShift[IO] = IO.contextShift(executionContext)
   val backend: SttpBackend[Future, R] = FetchBackend()
   def wsToPipe: WebSocketToPipe[R]
 

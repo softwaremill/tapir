@@ -1,6 +1,6 @@
 package sttp.tapir.client.http4s
 
-import cats.effect.{Blocker, ContextShift, IO, Timer}
+import cats.effect.IO
 import org.http4s.blaze.client.BlazeClientBuilder
 import org.http4s.{Request, Response}
 import sttp.tapir.client.tests.ClientTests
@@ -9,10 +9,6 @@ import sttp.tapir.{DecodeResult, Endpoint}
 import scala.concurrent.ExecutionContext.global
 
 abstract class Http4sClientTests[R] extends ClientTests[R] {
-  implicit val cs: ContextShift[IO] = IO.contextShift(global)
-  implicit val timer: Timer[IO] = IO.timer(global)
-  implicit val blocker: Blocker = Blocker.liftExecutionContext(global)
-
   override def send[I, E, O](e: Endpoint[I, E, O, R], port: Port, args: I, scheme: String = "http"): IO[Either[E, O]] = {
     val (request, parseResponse) = Http4sClientInterpreter[IO]().toRequestUnsafe(e, Some(s"http://localhost:$port")).apply(args)
 

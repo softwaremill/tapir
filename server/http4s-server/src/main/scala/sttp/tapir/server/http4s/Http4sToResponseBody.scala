@@ -1,7 +1,8 @@
 package sttp.tapir.server.http4s
 
-import cats.effect.{Blocker, Concurrent, ContextShift, Timer}
+import cats.effect.Async
 import cats.syntax.all._
+import fs2.io.file.Files
 import fs2.{Chunk, Stream}
 import org.http4s
 import org.http4s._
@@ -15,7 +16,7 @@ import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.nio.charset.Charset
 
-private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift, G[_]](
+private[http4s] class Http4sToResponseBody[F[_]: Async, G[_]](
     serverOptions: Http4sServerOptions[F, G]
 ) extends ToResponseBody[Http4sResponseBody[F], Fs2Streams[F]] {
   override val streams: Fs2Streams[F] = Fs2Streams[F]
@@ -40,17 +41,16 @@ private[http4s] class Http4sToResponseBody[F[_]: Concurrent: Timer: ContextShift
     bodyType match {
       case RawBodyType.StringBody(charset) =>
         val bytes = r.toString.getBytes(charset)
-        fs2.Stream.chunk(Chunk.bytes(bytes))
-      case RawBodyType.ByteArrayBody  => fs2.Stream.chunk(Chunk.bytes(r))
+        fs2.Stream.chunk(Chunk.array(bytes))
+      case RawBodyType.ByteArrayBody  => fs2.Stream.chunk(Chunk.array(r))
       case RawBodyType.ByteBufferBody => fs2.Stream.chunk(Chunk.byteBuffer(r))
       case RawBodyType.InputStreamBody =>
         fs2.io.readInputStream(
           r.pure[F],
-          serverOptions.ioChunkSize,
-          Blocker.liftExecutionContext(serverOptions.blockingExecutionContext)
+          serverOptions.ioChunkSize
         )
       case RawBodyType.FileBody =>
-        fs2.io.file.readAll[F](r.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext), serverOptions.ioChunkSize)
+        Files[F].readAll(r.toPath, serverOptions.ioChunkSize)
       case m: RawBodyType.MultipartBody =>
         val parts = (r: Seq[RawPart]).flatMap(rawPartToBodyPart(m, _))
         val body = implicitly[EntityEncoder[F, multipart.Multipart[F]]].toEntity(multipart.Multipart(parts.toVector)).body

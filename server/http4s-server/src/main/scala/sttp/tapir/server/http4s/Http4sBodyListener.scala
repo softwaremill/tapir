@@ -1,6 +1,6 @@
 package sttp.tapir.server.http4s
 
-import cats.effect.ExitCase
+import cats.effect.kernel.Resource.ExitCase._
 import cats.{Applicative, ~>}
 import sttp.monad.MonadError
 import sttp.monad.syntax._
@@ -15,8 +15,8 @@ class Http4sBodyListener[F[_], G[_]](gToF: G ~> F)(implicit m: MonadError[G], a:
       case ws @ Left(_) => cb(Success(())).map(_ => ws)
       case Right(entity) =>
         m.unit(Right(entity.onFinalizeCase {
-          case ExitCase.Completed | ExitCase.Canceled => gToF(cb(Success(())))
-          case ExitCase.Error(ex)                     => gToF(cb(Failure(ex)))
+          case Succeeded | Canceled => gToF(cb(Success(())))
+          case Errored(ex)          => gToF(cb(Failure(ex)))
         }))
     }
   }

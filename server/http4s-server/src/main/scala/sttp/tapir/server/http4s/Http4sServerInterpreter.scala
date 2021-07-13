@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s
 
 import cats.arrow.FunctionK
-import cats.effect.{Concurrent, ContextShift, Sync, Timer}
+import cats.effect.{Async, Sync}
 import cats.~>
 import org.http4s._
 import sttp.capabilities.WebSockets
@@ -12,7 +12,6 @@ import sttp.tapir.server.ServerEndpoint
 import scala.reflect.ClassTag
 
 trait Http4sServerInterpreter[F[_]] extends Http4sServerToHttpInterpreter[F, F] {
-
   def toRoutes[I, E, O](e: Endpoint[I, E, O, Fs2Streams[F] with WebSockets])(
       logic: I => F[Either[E, O]]
   ): HttpRoutes[F] = toRoutes(
@@ -32,13 +31,10 @@ trait Http4sServerInterpreter[F[_]] extends Http4sServerToHttpInterpreter[F, F] 
 }
 
 object Http4sServerInterpreter {
-  def apply[F[_]]()(implicit _fs: Concurrent[F], _fcs: ContextShift[F], _timer: Timer[F]): Http4sServerInterpreter[F] = {
+  def apply[F[_]]()(implicit _fa: Async[F]): Http4sServerInterpreter[F] = {
     new Http4sServerInterpreter[F] {
-      override implicit def gs: Sync[F] = _fs
-      override implicit def gcs: ContextShift[F] = _fcs
-      override implicit def fs: Concurrent[F] = _fs
-      override implicit def fcs: ContextShift[F] = _fcs
-      override implicit def timer: Timer[F] = _timer
+      override implicit def gs: Sync[F] = _fa
+      override implicit def fa: Async[F] = _fa
       override def fToG: F ~> F = FunctionK.id[F]
       override def gToF: F ~> F = FunctionK.id[F]
     }
@@ -46,13 +42,10 @@ object Http4sServerInterpreter {
 
   def apply[F[_]](
       serverOptions: Http4sServerOptions[F, F]
-  )(implicit _fs: Concurrent[F], _fcs: ContextShift[F], _timer: Timer[F]): Http4sServerInterpreter[F] = {
+  )(implicit _fa: Async[F]): Http4sServerInterpreter[F] = {
     new Http4sServerInterpreter[F] {
-      override implicit def gs: Sync[F] = _fs
-      override implicit def gcs: ContextShift[F] = _fcs
-      override implicit def fs: Concurrent[F] = _fs
-      override implicit def fcs: ContextShift[F] = _fcs
-      override implicit def timer: Timer[F] = _timer
+      override implicit def gs: Sync[F] = _fa
+      override implicit def fa: Async[F] = _fa
       override def fToG: F ~> F = FunctionK.id[F]
       override def gToF: F ~> F = FunctionK.id[F]
       override def http4sServerOptions: Http4sServerOptions[F, F] = serverOptions

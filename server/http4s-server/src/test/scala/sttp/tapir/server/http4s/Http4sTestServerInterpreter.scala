@@ -1,7 +1,7 @@
 package sttp.tapir.server.http4s
 
 import cats.data.{Kleisli, NonEmptyList}
-import cats.effect.{ContextShift, IO, Resource, Timer}
+import cats.effect.{IO, Resource}
 import cats.syntax.all._
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
@@ -22,8 +22,6 @@ import scala.reflect.ClassTag
 class Http4sTestServerInterpreter
     extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO], Http4sResponseBody[IO]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit val timer: Timer[IO] = IO.timer(ec)
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],

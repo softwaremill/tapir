@@ -1,6 +1,7 @@
 package sttp.tapir.serverless.aws.lambda.tests
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import org.scalatest.Assertions
 import org.scalatest.compatible.Assertion
 import org.scalatest.funsuite.AnyFunSuite

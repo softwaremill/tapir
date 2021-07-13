@@ -2,6 +2,7 @@ package sttp.tapir.serverless.aws.lambda
 
 import cats.data.NonEmptyList
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import org.scalatest.Assertion
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
