@@ -4,6 +4,7 @@ import akka.stream.Materializer
 import play.api.http.{HeaderNames, HttpEntity}
 import play.api.mvc._
 import play.api.routing.Router.Routes
+import sttp.model.StatusCode
 import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.internal.NoStreams
@@ -68,9 +69,8 @@ trait PlayServerInterpreter {
           )
 
           interpreter(serverRequest, serverEndpoints).map {
-            case ServerInterpreterResult.Failure(decodeFailureContexts) =>
-              val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-              Result(header = ResponseHeader(statusCode.code), body = HttpEntity.NoEntity)
+            case ServerInterpreterResult.Failure(_) =>
+              Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity)
             case ServerInterpreterResult.Success(response) =>
               val headers: Map[String, String] = response.headers
                 .foldLeft(Map.empty[String, List[String]]) { (a, b) =>

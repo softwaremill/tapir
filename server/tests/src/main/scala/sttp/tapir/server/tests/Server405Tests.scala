@@ -23,6 +23,7 @@ class Server405Tests[F[_], ROUTE, B](
     },
     testServer(endpoint.get, "request a known endpoint with incorrect method")((_: Unit) => pureResult(().asRight[Unit])) {
       (backend, baseUri) =>
+        println("there***********************")
         basicRequest.post(baseUri).send(backend).map(_.code shouldBe StatusCode.MethodNotAllowed)
     },
     testServer(endpoint.get.in("path"), "request an unknown endpoint with incorrect method")((_: Unit) => pureResult(().asRight[Unit])) {
