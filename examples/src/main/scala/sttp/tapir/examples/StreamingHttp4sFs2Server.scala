@@ -1,6 +1,5 @@
 package sttp.tapir.examples
 
-import java.nio.charset.StandardCharsets
 import cats.effect._
 import cats.syntax.all._
 import fs2._
