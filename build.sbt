@@ -52,7 +52,6 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   ideSkipProject := (scalaVersion.value == scala2_12) || (scalaVersion.value == scala3) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
-  Test / fork := true,
   // remove false alarms about unused implicit definitions in macros
   scalacOptions += "-Ywarn-macros:after",
   evictionErrorLevel := Level.Info
@@ -72,7 +71,8 @@ val versioningSchemeSettings = Seq(
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
-  Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value)
+  Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
+  Test / fork := true // tests in js cannot be forked
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
