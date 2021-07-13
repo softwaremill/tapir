@@ -184,6 +184,8 @@ For Play, use `SwaggerPlay` or `RedocPlay` classes.
 
 For Vert.x, use `SwaggerVertx` class.
 
+For zio-http, use `SwaggerZioHttp` class.
+
 ### Using with sbt-assembly
 
 The `tapir-swagger-ui-*` modules rely on a file in the `META-INF` directory tree, to determine the version of the Swagger UI.
