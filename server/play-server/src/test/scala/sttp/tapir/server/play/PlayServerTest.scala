@@ -5,6 +5,7 @@ import cats.effect.{IO, Resource}
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
+  Server405Tests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
@@ -31,9 +32,10 @@ class PlayServerTest extends TestSuite {
         multipleValueHeaderSupport = false,
         inputStreamSupport = false
       ).tests() ++
-        new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests()
-      new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerMetricsTest(createServerTest).tests()
+        new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
+        new ServerAuthenticationTests(createServerTest).tests() ++
+        new ServerMetricsTest(createServerTest).tests() ++
+        new Server405Tests(createServerTest).tests()
     }
   }
 }
