@@ -796,7 +796,7 @@ lazy val swaggerUiZioHttp: ProjectMatrix = (projectMatrix in file("docs/swagger-
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
 
 // server
 
