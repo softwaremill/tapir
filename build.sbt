@@ -52,6 +52,7 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   ideSkipProject := (scalaVersion.value == scala2_12) || (scalaVersion.value == scala3) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
   Test / parallelExecution := false,
+  Test / fork := true,
   // remove false alarms about unused implicit definitions in macros
   scalacOptions += "-Ywarn-macros:after",
   evictionErrorLevel := Level.Info
