@@ -64,6 +64,7 @@ import org.http4s.HttpRoutes
 import sttp.tapir.ztapir._
 import sttp.tapir.server.http4s.ztapir.ZHttp4sServerInterpreter
 import zio.{Has, RIO, ZIO}
+import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.interop.catz._
 
