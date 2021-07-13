@@ -235,7 +235,7 @@ lazy val clientTestServer = (projectMatrix in file("client/testserver"))
     clientTestServerPort := 51823,
     startClientTestServer := reStart.toTask("").value
   )
-  .jvmPlatform(scalaVersions = List(scala2_13))
+  .jvmPlatform(scalaVersions = scala2And3Versions)
 
 lazy val clientTestServer2_13 = clientTestServer.jvm(scala2_13)
 
@@ -733,7 +733,7 @@ lazy val swaggerUiHttp4s: ProjectMatrix = (projectMatrix in file("docs/swagger-u
       scalaTest.value % Test
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
 
 lazy val redocHttp4s: ProjectMatrix = (projectMatrix in file("docs/redoc-http4s"))
   .settings(commonJvmSettings)
@@ -741,7 +741,7 @@ lazy val redocHttp4s: ProjectMatrix = (projectMatrix in file("docs/redoc-http4s"
     name := "tapir-redoc-http4s",
     libraryDependencies += "org.http4s" %% "http4s-dsl" % Versions.http4s
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
 
 lazy val swaggerUiFinatra: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-finatra"))
   .settings(commonJvmSettings)
@@ -1072,7 +1072,7 @@ lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-cli
       "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional
     )
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(core, clientTests % Test)
 
 lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"))

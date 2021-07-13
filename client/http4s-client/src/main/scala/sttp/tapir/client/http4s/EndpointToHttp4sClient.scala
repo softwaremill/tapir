@@ -108,8 +108,10 @@ private[http4s] class EndpointToHttp4sClient(blocker: Blocker, clientOptions: Ht
       case a: EndpointInput.Auth[_]                  => setInputParams(a.input, params, req)
       case EndpointInput.Pair(left, right, _, split) => handleInputPair(left, right, params, split, req)
       case EndpointIO.Pair(left, right, _, split)    => handleInputPair(left, right, params, split, req)
-      case EndpointInput.MappedPair(wrapped, codec)  => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
-      case EndpointIO.MappedPair(wrapped, codec)     => handleMapped(wrapped, codec.asInstanceOf[Mapping[Any, Any]], params, req)
+      case EndpointInput.MappedPair(wrapped, codec) =>
+        handleMapped(wrapped.asInstanceOf[EndpointInput.Pair[Any, Any, Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
+      case EndpointIO.MappedPair(wrapped, codec) =>
+        handleMapped(wrapped.asInstanceOf[EndpointIO.Pair[Any, Any, Any]], codec.asInstanceOf[Mapping[Any, Any]], params, req)
     }
   }
 
