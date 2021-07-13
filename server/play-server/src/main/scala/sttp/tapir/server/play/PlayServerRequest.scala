@@ -12,7 +12,7 @@ private[play] class PlayServerRequest(request: RequestHeader) extends ServerRequ
   override lazy val method: Method = Method(request.method.toUpperCase)
   override def protocol: String = request.version
   override lazy val uri: Uri = Uri.unsafeParse(request.uri)
-  override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, None)
+  override lazy val connectionInfo: ConnectionInfo = ConnectionInfo(None, None, Some(request.secure))
   override lazy val headers: Seq[Header] = request.headers.headers.map { case (k, v) => Header(k, v) }.toList
   override lazy val queryParameters: QueryParams = QueryParams.fromMultiMap(request.queryString)
   override lazy val pathSegments: List[String] =
