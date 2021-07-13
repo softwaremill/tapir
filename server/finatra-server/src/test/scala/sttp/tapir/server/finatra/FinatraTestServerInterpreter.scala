@@ -41,7 +41,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
 }
 
 object FinatraTestServerInterpreter {
-  def server(routes: NonEmptyList[FinatraRoute])(implicit ioTimer: Timer[IO]): Resource[IO, Port] = {
+  def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = {
     def waitUntilHealthy(s: EmbeddedHttpServer, count: Int): IO[EmbeddedHttpServer] =
       if (s.isHealthy) IO.pure(s)
       else if (count > 1000) IO.raiseError(new IllegalStateException("Server unhealthy"))
