@@ -5,7 +5,6 @@ import zio.Chunk
 import zio.blocking.Blocking
 import zio.stream.ZStream
 
-import java.nio.file.Paths
 import java.util.Properties
 
 class SwaggerZioHttp(
@@ -31,13 +30,14 @@ class SwaggerZioHttp(
           val location = s"/$contextPath/index.html?url=/$contextPath/$yamlName"
           Response.http(Status.MOVED_PERMANENTLY, List(Header.custom("Location", location)))
         } else Response.http(Status.NOT_FOUND)
-      case Method.GET -> Root / path / yamlName =>
+      case Method.GET -> Root / path / resource =>
         if (path.equals(contextPath)) {
-          if (yamlName.equals(yamlName)) {
+          if (resource.equals(yamlName)) {
             val body = HttpData.CompleteData(Chunk.fromArray(yaml.getBytes(HTTP_CHARSET)))
             Response.http[Blocking, Throwable](Status.OK, List(Header.custom("content-type", "text/yaml")), body)
           } else {
-            val content = HttpData.fromStream(ZStream.fromFile(Paths.get(s"$resourcePathPrefix/$yamlName")))
+            val staticResource = this.getClass.getClassLoader.getResourceAsStream(s"$resourcePathPrefix/$resource")
+            val content = HttpData.fromStream(ZStream.fromInputStream(staticResource))
             Response.http(content = content)
           }
         } else Response.http(Status.NOT_FOUND)
