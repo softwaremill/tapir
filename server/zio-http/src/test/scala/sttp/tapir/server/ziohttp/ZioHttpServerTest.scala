@@ -24,7 +24,7 @@ class ZioHttpServerTest extends TestSuite {
     implicit val r: Runtime[Any] = Runtime.default
     // creating the netty dependencies once, to speed up tests
     (EventLoopGroup.auto(0) ++ ServerChannelFactory.auto).build.toResource[IO].map {
-      nettyDeps: (EventLoopGroup with ServerChannelFactory) =>
+      (nettyDeps: EventLoopGroup with ServerChannelFactory) =>
         val interpreter = new ZioHttpTestServerInterpreter(nettyDeps)
         val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
