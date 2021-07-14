@@ -3,13 +3,13 @@ package sttp.tapir.server.vertx.streams
 import _root_.fs2.{Chunk, Stream}
 import cats.effect.std.Dispatcher
 import cats.effect.unsafe.implicits.global
-import cats.effect.{IO, Outcome, Ref, Temporal, Deferred}
+import cats.effect.{Deferred, IO, Outcome, Ref, Temporal}
 import cats.syntax.flatMap._
 import cats.syntax.option._
 import io.vertx.core.buffer.Buffer
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.Retries
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.flatspec.{AnyFlatSpec, AsyncFlatSpec}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.tagobjects.Retryable
 import sttp.tapir.server.vertx.VertxCatsServerOptions
@@ -17,7 +17,7 @@ import sttp.tapir.server.vertx.VertxCatsServerOptions
 import java.nio.ByteBuffer
 import scala.concurrent.duration._
 
-class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
+class Fs2StreamTest extends AsyncFlatSpec with Matchers with BeforeAndAfterAll {
 
   private val (dispatcher, shutdownDispatcher) = Dispatcher[IO].allocated.unsafeRunSync()
 
@@ -103,7 +103,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
       _ = shouldIncreaseMonotonously(snapshot3)
       _ <- dfd.complete(Right(()))
       _ <- eventually(completed.get)({ case true => () })
-    } yield ()).unsafeRunSync()
+    } yield succeed).unsafeToFuture()
   }
 
   it should "interrupt read stream after zio stream interruption" in {
@@ -142,7 +142,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
         interrupted <- interruptedRef.get
       } yield (completed, interrupted))({ case (false, Some(_)) =>
       })
-    } yield ()).unsafeRunSync()
+    } yield succeed).unsafeToFuture()
   }
 
   it should "drain read stream without pauses if buffer has enough space" in {
@@ -169,7 +169,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
       result should have size count.toLong
       readStream.pauseCount shouldBe 0
       // readStream.resumeCount should be <= 1
-    }).unsafeRunSync()
+    }).unsafeToFuture()
   }
 
   it should "drain read stream with small buffer" in {
@@ -199,7 +199,7 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
       result should have size count.toLong
       readStream.pauseCount should be > 0
       readStream.resumeCount should be > 0
-    }).unsafeRunSync()
+    }).unsafeToFuture()
   }
 
   it should "drain failed read stream" in {
@@ -227,6 +227,6 @@ class Fs2StreamTest extends AnyFlatSpec with Matchers with BeforeAndAfterAll {
       result <- resultFiber.join.attempt
     } yield {
       result shouldBe Right(Outcome.errored(ex))
-    }).unsafeRunSync()
+    }).unsafeToFuture()
   }
 }

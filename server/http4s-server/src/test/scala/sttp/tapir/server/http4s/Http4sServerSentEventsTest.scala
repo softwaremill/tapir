@@ -2,14 +2,14 @@ package sttp.tapir.server.http4s
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.funsuite.{AnyFunSuite, AsyncFunSuite}
 import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.sse.ServerSentEvent
 
 import java.nio.charset.Charset
 
-class Http4sServerSentEventsTest extends AnyFunSuite with Matchers {
+class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
 
   test("serialiseSSEToBytes should successfully serialise simple Server Sent Event to ByteString") {
     val sse: fs2.Stream[IO, ServerSentEvent] = fs2.Stream(ServerSentEvent(Some("data"), Some("event"), Some("id1"), Some(10)))
@@ -25,7 +25,7 @@ class Http4sServerSentEventsTest extends AnyFunSuite with Matchers {
              |
              |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList
       })
-      .unsafeRunSync()
+      .unsafeToFuture()
   }
 
   test("serialiseSSEToBytes should omit fields that are not set") {
@@ -40,7 +40,7 @@ class Http4sServerSentEventsTest extends AnyFunSuite with Matchers {
              |
              |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList
       })
-      .unsafeRunSync()
+      .unsafeToFuture()
   }
 
   test("serialiseSSEToBytes should successfully serialise multiline data event") {
@@ -65,7 +65,7 @@ class Http4sServerSentEventsTest extends AnyFunSuite with Matchers {
              |
              |""".stripMargin.getBytes(Charset.forName("UTF-8")).toList
       })
-      .unsafeRunSync()
+      .unsafeToFuture()
   }
 
   test("parseBytesToSSE should successfully parse SSE bytes to SSE structure") {
@@ -99,7 +99,7 @@ class Http4sServerSentEventsTest extends AnyFunSuite with Matchers {
           )
         )
       )
-      .unsafeRunSync()
+      .unsafeToFuture()
   }
 
 }

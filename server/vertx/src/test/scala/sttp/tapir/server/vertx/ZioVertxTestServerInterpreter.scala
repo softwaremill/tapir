@@ -1,7 +1,6 @@
 package sttp.tapir.server.vertx
 
 import cats.data.NonEmptyList
-import cats.effect.std.Dispatcher
 import cats.effect.{IO, Resource}
 import io.vertx.core.Vertx
 import io.vertx.core.http.HttpServerOptions
@@ -12,7 +11,6 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
-import sttp.tapir.server.vertx.VertxZioServerInterpreter.RioFromVFuture
 import sttp.tapir.tests.Port
 import zio.{Runtime, Task}
 
@@ -20,8 +18,6 @@ import scala.reflect.ClassTag
 
 class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Task, ZioStreams, Router => Route, RoutingContext => Unit] {
   import ZioVertxTestServerInterpreter._
-
-  private val taskFromVFuture = new RioFromVFuture[Any]
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, ZioStreams, Task],
@@ -45,9 +41,7 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
     val router = Router.router(vertx)
     val server = vertx.createHttpServer(new HttpServerOptions().setPort(0)).requestHandler(router)
     routes.toList.foreach(_.apply(router))
-    Dispatcher[IO].map { dispatcher =>
-      dispatcher.unsafeRunSync(VertxTestServerInterpreter.vertxFutureToIo(server.listen(0)).map(_.actualPort()))
-    }
+    Resource.eval(VertxTestServerInterpreter.vertxFutureToIo(server.listen(0)).map(_.actualPort()))
   }
 }
 
