@@ -52,7 +52,7 @@ class SwaggerHttp4s(
         Ok(yaml)
       case GET -> `rootPath` / swaggerResource =>
         StaticFile
-          .fromResource(s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$swaggerResource")
+          .fromResource[F](s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$swaggerResource")
           .getOrElseF(NotFound())
     }
   }
