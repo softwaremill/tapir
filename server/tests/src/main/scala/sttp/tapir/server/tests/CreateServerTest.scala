@@ -5,7 +5,6 @@ import cats.effect.{IO, Resource}
 import cats.implicits._
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.Assertion
-import org.slf4j.{Logger, LoggerFactory}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
