@@ -62,7 +62,7 @@ class AwsLambdaSamLocalHttpTest extends AnyFunSuite {
     basicRequest
       .get(uri"$baseUri/echo/query?a=1&b=2&x=3&y=4")
       .send(backend)
-      .map(_.headers.map(h => h.name.toLowerCase -> h.value).toSet should contain allOf ("A" -> "1", "B" -> "2", "X" -> "3", "Y" -> "4"))
+      .map(_.headers.map(h => h.name.toLowerCase -> h.value).toSet should contain allOf ("a" -> "1", "b" -> "2", "x" -> "3", "y" -> "4"))
   }
 
   private def testServer(t: ServerEndpoint[_, _, _, Any, IO], suffix: String = "")(
