@@ -13,14 +13,10 @@ import sttp.tapir.server.tests.{
   ServerStreamingTests,
   backendResource
 }
-import sttp.tapir.server.vertx.VertxZioServerInterpreter.RioFromVFuture
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.Task
-import zio.interop.catz._
 
 class ZioVertxServerTest extends TestSuite {
-  import ZioVertxTestServerInterpreter._
-
   def vertxResource: Resource[IO, Vertx] =
     Resource.make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
 

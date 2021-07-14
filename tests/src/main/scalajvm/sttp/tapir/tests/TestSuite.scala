@@ -5,9 +5,9 @@ import cats.effect.unsafe.implicits.global
 import cats.effect.{IO, Resource}
 import org.scalactic.source.Position
 import org.scalatest.BeforeAndAfterAll
-import org.scalatest.funsuite.AnyFunSuite
+import org.scalatest.funsuite.AsyncFunSuite
 
-trait TestSuite extends AnyFunSuite with BeforeAndAfterAll {
+trait TestSuite extends AsyncFunSuite with BeforeAndAfterAll {
   def tests: Resource[IO, List[Test]]
   def testNameFilter: Option[String] = None // define to run a single test (temporarily for debugging)
 

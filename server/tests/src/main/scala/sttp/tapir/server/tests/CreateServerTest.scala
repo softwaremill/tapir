@@ -77,7 +77,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
         .use { port =>
           runTest(backend, uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
         }
-        .unsafeRunSync()
+        .unsafeToFuture()
     )
   }
 }

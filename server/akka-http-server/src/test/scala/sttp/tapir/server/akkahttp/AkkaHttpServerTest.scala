@@ -18,7 +18,16 @@ import sttp.model.sse.ServerSentEvent
 import sttp.monad.FutureMonad
 import sttp.monad.syntax._
 import sttp.tapir._
-import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerMetricsTest, ServerStreamingTests, ServerWebSocketTests, backendResource}
+import sttp.tapir.server.tests.{
+  DefaultCreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMultipartTests,
+  ServerMetricsTest,
+  ServerStreamingTests,
+  ServerWebSocketTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 
 import java.util.UUID
@@ -49,7 +58,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
             .use { port =>
               basicRequest.get(uri"http://localhost:$port/api/test/directive").send(backend).map(_.body shouldBe Right("ok"))
             }
-            .unsafeRunSync()
+            .unsafeToFuture()
         },
         Test("Send and receive SSE") {
           implicit val ec = actorSystem.dispatcher
@@ -77,7 +86,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
                 )
               }
             }
-            .unsafeRunSync()
+            .unsafeToFuture()
         }
       )
 
