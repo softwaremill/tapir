@@ -72,7 +72,6 @@ val versioningSchemeSettings = Seq(
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
   Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
-  Test / fork := true, // tests in js cannot be forked
   Test / testOptions += Tests.Argument("-oD") // js has other options which conflict with timings
 )
 
