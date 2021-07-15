@@ -8,12 +8,12 @@ For an overview of how this works in more detail, see [this blog post](https://b
 
 ## Serverless interpreters
 
-To implement the Lambda function, a server interpreter is available, which takes tapir endpoints with associated server logic, and returns an `AwsRequest => F[AwsResponse]` function. This is used in the `AwsLambdaRuntime` to implement the Lambda loop of reading the next request, computing and sending the response.
+To implement the Lambda function, a server interpreter is available, which takes tapir endpoints with associated server logic, and returns an `AwsRequest => F[AwsResponse]` function. This is used in the `AwsLambdaIORuntime` to implement the Lambda loop of reading the next request, computing and sending the response.
 
 Currently, only an interpreter integrating with cats-effect is available (`AwsCatsEffectServerInterpreter`). To use, add the following dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "0.18.0"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-lambda" % "0.19.0-M1"
 ```
 
 To configure API Gateway and the Lambda function, you can use:
@@ -24,8 +24,8 @@ To configure API Gateway and the Lambda function, you can use:
 Add one of the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "0.18.0"
-"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "0.18.0"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-sam" % "0.19.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-aws-terraform" % "0.19.0-M1"
 ```
 
 ## Examples

@@ -4,7 +4,7 @@ To expose an endpoint as an [http4s](https://http4s.org) server, first add the f
 dependency:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.18.0"
+"com.softwaremill.sttp.tapir" %% "tapir-http4s-server" % "0.19.0-M1"
 ```
 
 and import the object:
@@ -28,13 +28,6 @@ import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import cats.effect.{ContextShift, Timer}
-
-// will probably come from somewhere else
-implicit val cs: ContextShift[IO] =
-  IO.contextShift(scala.concurrent.ExecutionContext.global)
-implicit val t: Timer[IO] =
-  IO.timer(scala.concurrent.ExecutionContext.global)
 
 def countCharacters(s: String): IO[Either[Unit, Int]] = 
   IO.pure(Right[Unit, Int](s.length))
@@ -53,13 +46,6 @@ import sttp.tapir._
 import sttp.tapir.server.http4s.Http4sServerInterpreter
 import cats.effect.IO
 import org.http4s.HttpRoutes
-import cats.effect.{ContextShift, Timer}
-
-// will probably come from somewhere else
-implicit val cs: ContextShift[IO] =
-  IO.contextShift(scala.concurrent.ExecutionContext.global)
-implicit val t: Timer[IO] =
-  IO.timer(scala.concurrent.ExecutionContext.global)
 
 def logic(s: String, i: Int): IO[Either[Unit, String]] = ???
 val anEndpoint: Endpoint[(String, Int), Unit, String, Any] = ???  
@@ -99,12 +85,7 @@ import sttp.model.sse.ServerSentEvent
 import sttp.tapir._
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, serverSentEventsBody}
 
-import cats.effect.{ContextShift, Timer}
-
 val sseEndpoint = endpoint.get.out(serverSentEventsBody[IO])
-
-implicit val cs: ContextShift[IO] = ???
-implicit val t: Timer[IO] = ???
 
 val routes = Http4sServerInterpreter[IO]().toRoutes(sseEndpoint)(_ =>
   IO(Right(fs2.Stream(ServerSentEvent(Some("data"), None, None, None))))
@@ -128,9 +109,6 @@ import cats.effect._
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
 import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
-
-implicit val cs: ContextShift[IO] = ???
-implicit val t: Timer[IO] = ???
 
 implicit val options: Http4sServerOptions[IO, IO] = Http4sServerOptions.customInterceptors[IO, IO](
   exceptionHandler = Some(DefaultExceptionHandler),
