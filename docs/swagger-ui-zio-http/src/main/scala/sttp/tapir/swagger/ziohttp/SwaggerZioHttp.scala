@@ -26,21 +26,15 @@ class SwaggerZioHttp(
 
   def route: Http[Blocking, Throwable, Request, Response[Blocking, Throwable]] = {
     Http.collect[Request] {
-      case Method.GET -> Root / path =>
-        if (path.equals(contextPath)) {
-          val location = s"/$contextPath/index.html?url=/$contextPath/$yamlName"
-          Response.http(Status.MOVED_PERMANENTLY, List(Header.custom("Location", location)))
-        } else Response.http(Status.NOT_FOUND)
-      case Method.GET -> Root / path / yamlName =>
-        if (path.equals(contextPath)) {
-          if (yamlName.equals(yamlName)) {
-            val body = HttpData.CompleteData(Chunk.fromArray(yaml.getBytes(HTTP_CHARSET)))
-            Response.http[Blocking, Throwable](Status.OK, List(Header.custom("content-type", "text/yaml")), body)
-          } else {
-            val content = HttpData.fromStream(ZStream.fromFile(Paths.get(s"$resourcePathPrefix/$yamlName")))
-            Response.http(content = content)
-          }
-        } else Response.http(Status.NOT_FOUND)
+      case Method.GET -> Root / `contextPath` =>
+        val location = s"/$contextPath/index.html?url=/$contextPath/$yamlName"
+        Response.http(Status.MOVED_PERMANENTLY, List(Header.custom("Location", location)))
+      case Method.GET -> Root / `contextPath` / `yamlName` =>
+        val body = HttpData.CompleteData(Chunk.fromArray(yaml.getBytes(HTTP_CHARSET)))
+        Response.http[Blocking, Throwable](Status.OK, List(Header.custom("content-type", "text/yaml")), body)
+      case Method.GET -> Root / `contextPath` / swaggerResource =>
+        val content = HttpData.fromStream(ZStream.fromFile(Paths.get(s"$resourcePathPrefix/$swaggerResource")))
+        Response.http(content = content)
     }
   }
 }
