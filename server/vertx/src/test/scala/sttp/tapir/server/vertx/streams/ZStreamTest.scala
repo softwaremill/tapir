@@ -2,7 +2,7 @@ package sttp.tapir.server.vertx.streams
 
 import java.nio.ByteBuffer
 import io.vertx.core.buffer.Buffer
-import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.flatspec.{AnyFlatSpec, AsyncFlatSpec}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.EitherValues._
 import _root_.zio._
@@ -14,7 +14,7 @@ import _root_.zio.internal.tracing.TracingConfig
 import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.vertx.VertxZioServerOptions
 
-class ZStreamTest extends AnyFlatSpec with Matchers {
+class ZStreamTest extends AsyncFlatSpec with Matchers {
 
   val runtime = Runtime.default.mapPlatform(_.withTracingConfig(TracingConfig.disabled))
 
@@ -60,7 +60,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
       .provideLayer(clock.Clock.live)
     val readStream = zio.zioReadStreamCompatible(options)(runtime).asReadStream(stream)
     runtime
-      .unsafeRunSync(for {
+      .unsafeRunToFuture(for {
         ref <- ZRef.make[List[Int]](Nil)
         completed <- ZRef.make[Boolean](false)
         _ <- Task.effect {
@@ -84,9 +84,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
         snapshot3 <- eventually(ref.get)({ case list => list.length should be > snapshot2.length })
         _ = shouldIncreaseMonotonously(snapshot3)
         _ <- eventually(completed.get)({ case true => () })
-      } yield ())
-      .toEither
-      .value
+      } yield succeed)
   }
 
   it should "interrupt read stream after zio stream interruption" in {
@@ -99,7 +97,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
       .provideLayer(clock.Clock.live) ++ ZStream.fail(new Exception("!"))
     val readStream = zio.zioReadStreamCompatible(options)(runtime).asReadStream(stream)
     runtime
-      .unsafeRunSync(for {
+      .unsafeRunToFuture(for {
         ref <- ZRef.make[List[Int]](Nil)
         completedRef <- ZRef.make[Boolean](false)
         interruptedRef <- ZRef.make[Option[Throwable]](None)
@@ -126,9 +124,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
         _ = shouldIncreaseMonotonously(snapshot)
         _ <- eventually(completedRef.get &&& interruptedRef.get)({ case (false, Some(_)) =>
         })
-      } yield ())
-      .toEither
-      .value
+      } yield succeed)
   }
 
   it should "drain read stream without pauses if buffer has enough space" in {
@@ -137,7 +133,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
     val readStream = new FakeStream()
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
-      .unsafeRunSync(for {
+      .unsafeRunToFuture(for {
         resultFiber <- stream
           .mapChunks((chunkAsInt _).andThen(Chunk.single))
           .toIterator
@@ -158,8 +154,6 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
         readStream.pauseCount shouldBe 0
         // readStream.resumeCount shouldBe 0
       })
-      .toEither
-      .value
   }
 
   it should "drain read stream with small buffer" in {
@@ -168,7 +162,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
     val readStream = new FakeStream()
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
-      .unsafeRunSync(for {
+      .unsafeRunToFuture(for {
         resultFiber <- stream
           .mapChunks((chunkAsInt _).andThen(Chunk.single))
           .mapM(i => ZIO.sleep(50.millis).as(i))
@@ -193,8 +187,6 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
         readStream.pauseCount should be > 0
         readStream.resumeCount should be > 0
       })
-      .toEither
-      .value
   }
 
   it should "drain failed read stream" in {
@@ -203,7 +195,7 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
     val readStream = new FakeStream()
     val stream = zio.zioReadStreamCompatible(opts)(runtime).fromReadStream(readStream)
     runtime
-      .unsafeRunSync(for {
+      .unsafeRunToFuture(for {
         resultFiber <- stream
           .mapChunks((chunkAsInt _).andThen(Chunk.single))
           .mapM(i => ZIO.sleep(50.millis).as(i))
@@ -229,7 +221,5 @@ class ZStreamTest extends AnyFlatSpec with Matchers {
         readStream.resumeCount should be > 0
         result.lastOption.collect { case Left(e) => e } should not be empty
       })
-      .toEither
-      .value
   }
 }

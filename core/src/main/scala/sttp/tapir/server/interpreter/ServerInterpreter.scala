@@ -19,7 +19,7 @@ class ServerInterpreter[R, F[_], B, S](
     apply(request, List(se))
 
   def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[B]]] =
-    callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request)
+    monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request))
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
   private def callInterceptors(

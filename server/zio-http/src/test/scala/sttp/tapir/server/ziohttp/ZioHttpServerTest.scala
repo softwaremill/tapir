@@ -13,26 +13,34 @@ import sttp.tapir.server.tests.{
 }
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import sttp.tapir.tests.{Test, TestSuite}
-import zio.Task
+import zhttp.service.{EventLoopGroup, ServerChannelFactory}
+import zhttp.service.server.ServerChannelFactory
+import zio.interop.catz._
+import zio.{Runtime, Task}
 
 class ZioHttpServerTest extends TestSuite {
 
-  override def tests: Resource[IO, List[Test]] = backendResource.map { backend =>
-    val interpreter = new ZioHttpTestServerInterpreter()
-    val createServerTest = new DefaultCreateServerTest(backend, interpreter)
+  override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
+    implicit val r: Runtime[Any] = Runtime.default
+    // creating the netty dependencies once, to speed up tests
+    (EventLoopGroup.auto(0) ++ ServerChannelFactory.auto).build.toResource[IO].map {
+      (nettyDeps: EventLoopGroup with ServerChannelFactory) =>
+        val interpreter = new ZioHttpTestServerInterpreter(nettyDeps)
+        val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-    implicit val m: MonadError[Task] = zioMonadError
+        implicit val m: MonadError[Task] = zioMonadError
 
-    new ServerBasicTests(
-      createServerTest,
-      interpreter,
-      multipleValueHeaderSupport = false,
-      inputStreamSupport = true,
-      supportsUrlEncodedPathSegments = false,
-      supportsMultipleSetCookieHeaders = false
-    ).tests() ++
-      new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
-      new ServerAuthenticationTests(createServerTest).tests() ++
-      new ServerMetricsTest(createServerTest).tests()
+        new ServerBasicTests(
+          createServerTest,
+          interpreter,
+          multipleValueHeaderSupport = false,
+          inputStreamSupport = true,
+          supportsUrlEncodedPathSegments = false,
+          supportsMultipleSetCookieHeaders = false
+        ).tests() ++
+          new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
+          new ServerAuthenticationTests(createServerTest).tests() ++
+          new ServerMetricsTest(createServerTest).tests()
+    }
   }
 }

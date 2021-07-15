@@ -1,22 +1,24 @@
 package sttp.tapir.serverless.aws.lambda.runtime
 
-import cats.effect.{Blocker, ConcurrentEffect, ContextShift}
+import cats.effect.unsafe.implicits.global
+import cats.effect.{Async, IO}
 import cats.syntax.all._
-import com.typesafe.scalalogging.StrictLogging
 import sttp.client3.httpclient.fs2.HttpClientFs2Backend
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.serverless.aws.lambda._
 
-import scala.concurrent.ExecutionContext
-
-abstract class AwsLambdaRuntime[F[_]: ContextShift: ConcurrentEffect] extends StrictLogging {
-  def endpoints: Iterable[ServerEndpoint[_, _, _, Any, F]]
-  implicit def executionContext: ExecutionContext = ExecutionContext.global
-  def serverOptions: AwsServerOptions[F] = AwsServerOptions.customInterceptors()
-
-  def main(args: Array[String]): Unit = {
-    val backend = HttpClientFs2Backend.resource(Blocker.liftExecutionContext(scala.concurrent.ExecutionContext.global))
+object AwsLambdaRuntime {
+  def apply[F[_]: Async](endpoints: Iterable[ServerEndpoint[_, _, _, Any, F]], serverOptions: AwsServerOptions[F]): F[Unit] = {
+    val backend = HttpClientFs2Backend.resource()
     val route: Route[F] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(endpoints.toList)
-    ConcurrentEffect[F].toIO(AwsLambdaRuntimeLogic(route, sys.env("AWS_LAMBDA_RUNTIME_API"), backend)).foreverM.unsafeRunSync()
+    AwsLambdaRuntimeInvocation.handleNext(route, sys.env("AWS_LAMBDA_RUNTIME_API"), backend).foreverM
   }
+}
+
+/** A runtime which uses the [[IO]] effect */
+abstract class AwsLambdaIORuntime {
+  def endpoints: Iterable[ServerEndpoint[_, _, _, Any, IO]]
+  def serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors()
+
+  def main(args: Array[String]): Unit = AwsLambdaRuntime(endpoints, serverOptions).unsafeRunSync()
 }

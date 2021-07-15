@@ -51,7 +51,10 @@ val commonSettings = commonSmlBuildSettings ++ ossPublishSettings ++ Seq(
   mimaPreviousArtifacts := Set.empty, // we only use MiMa for `core` for now, using versioningSchemeSettings
   ideSkipProject := (scalaVersion.value == scala2_12) || (scalaVersion.value == scala3) || thisProjectRef.value.project.contains("JS"),
   // slow down for CI
-  Test / parallelExecution := false
+  Test / parallelExecution := false,
+  // remove false alarms about unused implicit definitions in macros
+  scalacOptions += "-Ywarn-macros:after",
+  evictionErrorLevel := Level.Info
 )
 
 val versioningSchemeSettings = Seq(
@@ -68,7 +71,8 @@ val versioningSchemeSettings = Seq(
 
 val commonJvmSettings: Seq[Def.Setting[_]] = commonSettings ++ Seq(
   Compile / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Compile / sourceDirectory).value, scalaVersion.value),
-  Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value)
+  Test / unmanagedSourceDirectories ++= versionedScalaJvmSourceDirectories((Test / sourceDirectory).value, scalaVersion.value),
+  Test / testOptions += Tests.Argument("-oD") // js has other options which conflict with timings
 )
 
 // run JS tests inside Gecko, due to jsdom not supporting fetch and to avoid having to install node
@@ -792,7 +796,7 @@ lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
   .settings(
     name := "tapir-server-tests",
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2-ce2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp
     )
   )
   .dependsOn(tests)
@@ -818,7 +822,7 @@ lazy val http4sServer: ProjectMatrix = (projectMatrix in file("server/http4s-ser
     name := "tapir-http4s-server",
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-blaze-server" % Versions.http4s,
-      "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -876,11 +880,7 @@ lazy val finatraServerCats: ProjectMatrix =
     .settings(commonJvmSettings)
     .settings(
       name := "tapir-finatra-server-cats",
-      libraryDependencies ++= Seq(
-        "org.typelevel" %% "cats-effect" % Versions.catsEffect,
-        "io.catbird" %% "catbird-finagle" % Versions.catbird,
-        "io.catbird" %% "catbird-effect" % Versions.catbird
-      )
+      libraryDependencies ++= Seq("org.typelevel" %% "cats-effect" % Versions.catsEffect)
     )
     .jvmPlatform(scalaVersions = scala2Versions)
     .dependsOn(finatraServer % "compile->compile;test->test", serverTests % Test)
@@ -904,7 +904,7 @@ lazy val vertxServer: ProjectMatrix = (projectMatrix in file("server/vertx"))
     name := "tapir-vertx-server",
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
-      "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional,
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional,
       "com.softwaremill.sttp.shared" %% "zio" % Versions.sttpShared % Optional,
       "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats % Test
     )
@@ -938,7 +938,7 @@ lazy val awsLambda: ProjectMatrix = (projectMatrix in file("serverless/aws/lambd
     name := "tapir-aws-lambda",
     libraryDependencies ++= loggerDependencies,
     libraryDependencies ++= Seq(
-      "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2-ce2" % Versions.sttp
+      "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
@@ -1069,7 +1069,7 @@ lazy val http4sClient: ProjectMatrix = (projectMatrix in file("client/http4s-cli
     libraryDependencies ++= Seq(
       "org.http4s" %% "http4s-core" % Versions.http4s,
       "org.http4s" %% "http4s-blaze-client" % Versions.http4s % Test,
-      "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional
+      "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
@@ -1087,8 +1087,8 @@ lazy val sttpClient: ProjectMatrix = (projectMatrix in file("client/sttp-client"
     scalaVersions = scala2And3Versions,
     settings = commonJvmSettings ++ Seq(
       libraryDependencies ++= Seq(
-        "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2-ce2" % Versions.sttp % Test,
-        "com.softwaremill.sttp.shared" %% "fs2-ce2" % Versions.sttpShared % Optional
+        "com.softwaremill.sttp.client3" %% "httpclient-backend-fs2" % Versions.sttp % Test,
+        "com.softwaremill.sttp.shared" %% "fs2" % Versions.sttpShared % Optional
       ),
       libraryDependencies ++= {
         CrossVersion.partialVersion(scalaVersion.value) match {
@@ -1167,9 +1167,9 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
       "org.http4s" %% "http4s-dsl" % Versions.http4s,
       "org.http4s" %% "http4s-circe" % Versions.http4s,
       "com.softwaremill.sttp.client3" %% "akka-http-backend" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2-ce2" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-fs2" % Versions.sttp,
       "com.softwaremill.sttp.client3" %% "async-http-client-backend-zio" % Versions.sttp,
-      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats-ce2" % Versions.sttp,
+      "com.softwaremill.sttp.client3" %% "async-http-client-backend-cats" % Versions.sttp,
       "com.pauldijou" %% "jwt-circe" % Versions.jwtScala
     ),
     libraryDependencies ++= loggerDependencies,

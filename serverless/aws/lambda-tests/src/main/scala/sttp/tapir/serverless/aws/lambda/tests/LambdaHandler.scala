@@ -1,6 +1,7 @@
 package sttp.tapir.serverless.aws.lambda.tests
 
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import com.amazonaws.services.lambda.runtime.{Context, RequestStreamHandler}
 import io.circe.Printer
 import io.circe.generic.auto._

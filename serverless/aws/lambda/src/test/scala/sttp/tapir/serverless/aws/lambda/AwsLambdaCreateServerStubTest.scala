@@ -2,6 +2,7 @@ package sttp.tapir.serverless.aws.lambda
 
 import cats.data.NonEmptyList
 import cats.effect.IO
+import cats.effect.unsafe.implicits.global
 import org.scalatest.Assertion
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
@@ -34,7 +35,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
     val se: ServerEndpoint[I, E, O, Any, IO] = e.serverLogic(fn)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(se)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
-    Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
+    Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
   }
 
   override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, Any, IO], testNameSuffix: String)(
@@ -43,7 +44,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
     val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
-    Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeRunSync())
+    Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())
   }
 
   override def testServer(name: String, rs: => NonEmptyList[Route[IO]])(
@@ -56,7 +57,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
         }
         IO.pure(responses.find(_.code != StatusCode.NotFound).getOrElse(Response("", StatusCode.NotFound)))
       }
-    Test(name)(runTest(backend, uri"http://localhost:3000").unsafeRunSync())
+    Test(name)(runTest(backend, uri"http://localhost:3000").unsafeToFuture())
   }
 
   private def stubBackend(route: Route[IO]): SttpBackend[IO, Fs2Streams[IO] with WebSockets] =

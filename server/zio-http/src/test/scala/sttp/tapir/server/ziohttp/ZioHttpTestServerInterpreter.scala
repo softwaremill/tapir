@@ -10,8 +10,7 @@ import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import zhttp.http._
-import zhttp.service.server.ServerChannelFactory
-import zhttp.service.{EventLoopGroup, Server}
+import zhttp.service.{EventLoopGroup, Server, ServerChannelFactory}
 import zio._
 import zio.interop.catz._
 import zio.stream.Stream
@@ -19,7 +18,7 @@ import zio.stream.Stream
 import java.util.concurrent.atomic.AtomicInteger
 import scala.reflect.ClassTag
 
-class ZioHttpTestServerInterpreter
+class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelFactory)
     extends TestServerInterpreter[Task, ZioStreams, Http[Any, Throwable, Request, Response[Any, Throwable]], Stream[Throwable, Byte]] {
 
   override def route[I, E, O](
@@ -49,7 +48,7 @@ class ZioHttpTestServerInterpreter
       .flatMap(p =>
         Server
           .make(server ++ Server.port(p))
-          .provideLayer(EventLoopGroup.auto(0) ++ ServerChannelFactory.auto)
+          .provide(nettyDeps)
           .map(_ => p)
       )
       .toResource[IO]
