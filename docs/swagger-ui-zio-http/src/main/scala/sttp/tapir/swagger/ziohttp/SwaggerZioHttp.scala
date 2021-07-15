@@ -5,7 +5,6 @@ import zio.Chunk
 import zio.blocking.Blocking
 import zio.stream.ZStream
 
-import java.nio.file.Paths
 import java.util.Properties
 
 class SwaggerZioHttp(
@@ -33,7 +32,8 @@ class SwaggerZioHttp(
         val body = HttpData.CompleteData(Chunk.fromArray(yaml.getBytes(HTTP_CHARSET)))
         Response.http[Blocking, Throwable](Status.OK, List(Header.custom("content-type", "text/yaml")), body)
       case Method.GET -> Root / `contextPath` / swaggerResource =>
-        val content = HttpData.fromStream(ZStream.fromFile(Paths.get(s"$resourcePathPrefix/$swaggerResource")))
+        val staticResource = this.getClass.getClassLoader.getResourceAsStream(s"$resourcePathPrefix/$swaggerResource")
+        val content = HttpData.fromStream(ZStream.fromInputStream(staticResource))
         Response.http(content = content)
     }
   }
