@@ -125,6 +125,7 @@ lazy val allAggregates = core.projectRefs ++
   swaggerUiPlay.projectRefs ++
   redocPlay.projectRefs ++
   swaggerUiVertx.projectRefs ++
+  swaggerUiZioHttp.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
@@ -789,6 +790,18 @@ lazy val swaggerUiVertx: ProjectMatrix = (projectMatrix in file("docs/swagger-ui
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
 
+lazy val swaggerUiZioHttp: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-zio-http"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-swagger-ui-zio-http",
+    libraryDependencies ++= Seq(
+      "io.d11" %% "zhttp" % "1.0.0.0-RC17",
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi,
+      scalaTest.value % Test
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+
 // server
 
 lazy val serverTests: ProjectMatrix = (projectMatrix in file("server/tests"))
@@ -1188,6 +1201,7 @@ lazy val examples: ProjectMatrix = (projectMatrix in file("examples"))
     circeJson,
     swaggerUiAkka,
     swaggerUiHttp4s,
+    swaggerUiZioHttp,
     zioHttp4sServer,
     zioHttp,
     sttpStubServer,
@@ -1224,6 +1238,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     circeJson,
     swaggerUiAkka,
     swaggerUiHttp4s,
+    swaggerUiZioHttp,
     refined,
     cats,
     zioHttp4sServer,
