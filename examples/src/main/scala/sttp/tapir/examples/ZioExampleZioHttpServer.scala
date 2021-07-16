@@ -10,7 +10,7 @@ import zhttp.http.HttpApp
 import zhttp.service.Server
 import zio.{App, ExitCode, IO, UIO, URIO, ZIO}
 
-object ExampleZioHttpServer extends App {
+object ZioExampleZioHttpServer extends App {
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
