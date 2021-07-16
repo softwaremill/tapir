@@ -259,7 +259,7 @@ class ServerBasicTests[F[_], ROUTE, B](
     ) { (backend, baseUri) =>
       if (supportsMultipleSetCookieHeaders) {
         basicRequest.get(uri"$baseUri/api/echo/headers").cookies(("c1", "v1"), ("c2", "v2")).send(backend).map { r =>
-          r.unsafeCookies.map(c => (c.name, c.value)).toList shouldBe List(("c1", "1v"), ("c2", "2v"))
+          r.unsafeCookies.map(c => (c.name, c.value)).toSet shouldBe Set(("c1", "1v"), ("c2", "2v"))
         }
       } else {
         IO.pure(succeed)
