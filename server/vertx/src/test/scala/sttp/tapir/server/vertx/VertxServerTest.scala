@@ -5,7 +5,7 @@ import io.vertx.core.Vertx
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
-  Server405Tests,
+  ServerRejectTests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
@@ -34,7 +34,7 @@ class VertxServerTest extends TestSuite {
         ).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
         new ServerMetricsTest(createServerTest).tests() ++
-        new Server405Tests(createServerTest).tests()
+        new ServerRejectTests(createServerTest).tests()
     }
   }
 }

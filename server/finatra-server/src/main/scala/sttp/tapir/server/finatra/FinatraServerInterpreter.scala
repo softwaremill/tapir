@@ -38,9 +38,7 @@ trait FinatraServerInterpreter extends Logging {
       )(FutureMonadError, new FinatraBodyListener[Future]())
 
       serverInterpreter(serverRequest, se).map {
-        case RequestResult.Failure(decodeFailureContexts) =>
-          val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-          Response(Status.fromCode(statusCode.code))
+        case RequestResult.Failure(_) => Response(Status.NotFound)
         case RequestResult.Response(response) =>
           val status = Status(response.code.code)
           val responseWithContent = response.body match {

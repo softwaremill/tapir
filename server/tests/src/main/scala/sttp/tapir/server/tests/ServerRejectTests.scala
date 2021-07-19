@@ -8,7 +8,7 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.tests._
 
-class Server405Tests[F[_], ROUTE, B](
+class ServerRejectTests[F[_], ROUTE, B](
     createServerTest: CreateServerTest[F, Any, ROUTE, B]
 )(implicit
     m: MonadError[F]

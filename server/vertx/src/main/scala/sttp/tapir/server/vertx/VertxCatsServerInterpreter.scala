@@ -79,9 +79,7 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 
     val result = interpreter(serverRequest, e)
       .flatMap {
-        case RequestResult.Failure(decodeFailureContexts) =>
-          val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-          fFromVFuture(rc.response.setStatusCode(statusCode.code).end()).void
+        case RequestResult.Failure(_)         => fFromVFuture(rc.response.setStatusCode(404).end()).void
         case RequestResult.Response(response) => VertxOutputEncoders(response).apply(rc).pure
       }
       .handleError { e => rc.fail(e) }

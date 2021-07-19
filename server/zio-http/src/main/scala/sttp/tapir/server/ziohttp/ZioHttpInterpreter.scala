@@ -2,11 +2,11 @@ package sttp.tapir.server.ziohttp
 
 import io.netty.handler.codec.http.HttpResponseStatus
 import sttp.capabilities.zio.ZioStreams
-import sttp.model.{Header => SttpHeader, StatusCode}
+import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZioHttpHeader}
@@ -53,10 +53,7 @@ trait ZioHttpInterpreter[R] {
               content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
             )
           )
-        case RequestResult.Failure(decodeFailureContexts) =>
-          val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-          val httpError = if (statusCode == StatusCode.MethodNotAllowed) HttpError.MethodNotAllowed() else HttpError.NotFound(req.url.path)
-          ZIO.fail(httpError)
+        case RequestResult.Failure(_) => ZIO.fail(HttpError.NotFound(req.url.path))
       }
     }
 

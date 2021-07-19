@@ -1,12 +1,13 @@
 package sttp.tapir.serverless.aws.lambda
 
 import cats.effect.Sync
+import sttp.model.StatusCode
 import sttp.monad.syntax._
 import sttp.tapir.Endpoint
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.reflect.ClassTag
@@ -41,9 +42,8 @@ trait AwsCatsEffectServerInterpreter[F[_]] {
       )
 
       interpreter.apply(serverRequest, ses).map {
-        case RequestResult.Failure(decodeFailureContexts) =>
-          val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-          AwsResponse(Nil, isBase64Encoded = awsServerOptions.encodeResponseBody, statusCode.code, Map.empty, "")
+        case RequestResult.Failure(_) =>
+          AwsResponse(Nil, isBase64Encoded = awsServerOptions.encodeResponseBody, StatusCode.NotFound.code, Map.empty, "")
         case RequestResult.Response(res) =>
           val cookies = res.cookies.collect { case Right(cookie) => cookie.value }.toList
           val headers = res.headers.groupBy(_.name).map { case (n, v) => n -> v.map(_.value).mkString(",") }

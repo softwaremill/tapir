@@ -110,10 +110,8 @@ trait SttpStubServer {
         )
       val sRequest = new SttpRequest(req)
       stub.responseMonad.map(interpreter.apply(sRequest, endpoint)) {
-        case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
-        case RequestResult.Failure(decodeFailureContexts) =>
-          val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-          toResponse(sRequest, ServerResponse(statusCode, Nil, None))
+        case RequestResult.Response(sResponse)            => toResponse(sRequest, sResponse)
+        case RequestResult.Failure(decodeFailureContexts) => toResponse(sRequest, ServerResponse(StatusCode.NotFound, Nil, None))
       }
     }
 

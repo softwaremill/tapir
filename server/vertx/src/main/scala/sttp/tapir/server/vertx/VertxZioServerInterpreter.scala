@@ -60,10 +60,8 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
     val result = interpreter(serverRequest, e)
       .flatMap {
-        case RequestResult.Failure(decodeFailureContexts) =>
-          val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-          fromVFuture(rc.response.setStatusCode(statusCode.code).end())
-        case RequestResult.Response(response) => Task.succeed(VertxOutputEncoders(response).apply(rc))
+        case RequestResult.Failure(decodeFailureContexts) => fromVFuture(rc.response.setStatusCode(404).end())
+        case RequestResult.Response(response)             => Task.succeed(VertxOutputEncoders(response).apply(rc))
       }
       .catchAll { e =>
         RIO.effect(rc.fail(e))

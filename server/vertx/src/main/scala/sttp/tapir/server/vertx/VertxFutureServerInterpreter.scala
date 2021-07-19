@@ -97,9 +97,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
     interpreter(serverRequest, e)
       .flatMap {
-        case RequestResult.Failure(decodeFailureContexts) =>
-          val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
-          FutureFromVFuture(rc.response.setStatusCode(statusCode.code).end())
+        case RequestResult.Failure(_)         => FutureFromVFuture(rc.response.setStatusCode(404).end())
         case RequestResult.Response(response) => Future.successful(VertxOutputEncoders(response).apply(rc))
       }
       .failed

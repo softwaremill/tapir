@@ -17,7 +17,7 @@ import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
-  Server405Tests,
+  ServerRejectTests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
@@ -96,7 +96,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
         new ServerMetricsTest(createServerTest).tests() ++
-        new Server405Tests(createServerTest).tests() ++
+        new ServerRejectTests(createServerTest).tests() ++
         additionalTests()
     }
   }
