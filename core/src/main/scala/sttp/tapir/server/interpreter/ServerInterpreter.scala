@@ -15,17 +15,11 @@ class ServerInterpreter[R, F[_], B, S](
     interceptors: List[Interceptor[F, B]],
     deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
-  def apply[I, E, O](
-      request: ServerRequest,
-      se: ServerEndpoint[I, E, O, R, F]
-  ): F[RequestResult[B]] =
+  def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[RequestResult[B]] =
     apply(request, List(se))
 
-  def apply(
-      request: ServerRequest,
-      ses: List[ServerEndpoint[_, _, _, R, F]]
-  ): F[RequestResult[B]] =
-    callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request)
+  def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[RequestResult[B]] =
+    monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request))
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
   private def callInterceptors(
