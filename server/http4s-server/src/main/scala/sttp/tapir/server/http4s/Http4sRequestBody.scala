@@ -1,9 +1,10 @@
 package sttp.tapir.server.http4s
 
-import cats.effect.{Blocker, ContextShift, Sync}
+import cats.effect.{Async, Sync}
 import cats.syntax.all._
-import cats.~>
+import cats.{Monad, ~>}
 import fs2.Chunk
+import fs2.io.file.Files
 import org.http4s.headers.{`Content-Disposition`, `Content-Type`}
 import org.http4s.{Charset, EntityDecoder, Request, multipart}
 import sttp.capabilities.fs2.Fs2Streams
@@ -14,7 +15,7 @@ import sttp.tapir.{RawBodyType, RawPart, TapirFile}
 
 import java.io.ByteArrayInputStream
 
-private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( // TODO: constraints?
+private[http4s] class Http4sRequestBody[F[_]: Async, G[_]: Monad](
     request: Request[F],
     serverRequest: ServerRequest,
     serverOptions: Http4sServerOptions[F, G],
@@ -26,7 +27,7 @@ private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( /
 
   private def toRawFromStream[R](body: fs2.Stream[F, Byte], bodyType: RawBodyType[R], charset: Option[Charset]): G[RawValue[R]] = {
     def asChunk: G[Chunk[Byte]] = t(body.compile.to(Chunk))
-    def asByteArray: G[Array[Byte]] = t(body.compile.to(Chunk).map(_.toByteBuffer.array()))
+    def asByteArray: G[Array[Byte]] = t(body.compile.to(Chunk).map(_.toArray[Byte]))
 
     bodyType match {
       case RawBodyType.StringBody(defaultCharset) =>
@@ -36,7 +37,7 @@ private[http4s] class Http4sRequestBody[F[_]: Sync: ContextShift, G[_]: Sync]( /
       case RawBodyType.InputStreamBody => asByteArray.map(b => RawValue(new ByteArrayInputStream(b)))
       case RawBodyType.FileBody =>
         serverOptions.createFile(serverRequest).flatMap { file =>
-          val fileSink = fs2.io.file.writeAll[F](file.toPath, Blocker.liftExecutionContext(serverOptions.blockingExecutionContext))
+          val fileSink = Files[F].writeAll(file.toPath)
           t(body.through(fileSink).compile.drain.map(_ => RawValue(file, Seq(file))))
         }
       case m: RawBodyType.MultipartBody =>

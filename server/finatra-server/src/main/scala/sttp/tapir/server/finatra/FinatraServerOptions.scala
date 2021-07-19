@@ -74,7 +74,7 @@ object FinatraServerOptions extends Logging {
 
   def defaultDeleteFile(futurePool: FuturePool): TapirFile => Future[Unit] = file => { futurePool { Defaults.deleteFile()(file) } }
 
-  private lazy val futurePool = FuturePool.unboundedPool
+  private[finatra] lazy val futurePool = FuturePool.unboundedPool
 
   lazy val defaultServerLog: ServerLog[Unit] = DefaultServerLog(
     doLogWhenHandled = debugLog,

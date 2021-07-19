@@ -2,6 +2,8 @@ package sttp.tapir.server.vertx
 
 import cats.Applicative
 import cats.effect.Sync
+import cats.effect.kernel.Async
+import cats.effect.std.Dispatcher
 import cats.implicits.catsSyntaxOptionId
 import io.vertx.core.logging.LoggerFactory
 import io.vertx.ext.web.RoutingContext
@@ -17,6 +19,7 @@ import sttp.tapir.{Defaults, TapirFile}
 import java.io.File
 
 final case class VertxCatsServerOptions[F[_]](
+    dispatcher: Dispatcher[F],
     uploadDirectory: TapirFile,
     deleteFile: TapirFile => F[Unit],
     maxQueueSizeForReadStream: Int,
@@ -47,7 +50,8 @@ object VertxCatsServerOptions {
     *                                        header.
     * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
     */
-  def customInterceptors[F[_]: Sync](
+  def customInterceptors[F[_]: Async](
+      dispatcher: Dispatcher[F],
       metricsInterceptor: Option[MetricsRequestInterceptor[F, RoutingContext => Unit]] = None,
       rejectInterceptor: Option[RejectInterceptor[F, RoutingContext => Unit]] = Some(RejectInterceptor.default[F, RoutingContext => Unit]),
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
@@ -58,6 +62,7 @@ object VertxCatsServerOptions {
       decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
   ): VertxCatsServerOptions[F] = {
     VertxCatsServerOptions(
+      dispatcher,
       File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
       file => Sync[F].delay(Defaults.deleteFile()(file)),
       maxQueueSizeForReadStream = 16,
@@ -71,5 +76,5 @@ object VertxCatsServerOptions {
     )
   }
 
-  def default[F[_]: Sync]: VertxCatsServerOptions[F] = customInterceptors()
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): VertxCatsServerOptions[F] = customInterceptors(dispatcher)
 }

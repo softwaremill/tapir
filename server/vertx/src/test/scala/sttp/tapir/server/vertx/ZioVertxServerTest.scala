@@ -5,17 +5,20 @@ import io.vertx.core.Vertx
 import io.vertx.ext.web.{Route, Router, RoutingContext}
 import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
-import sttp.tapir.server.tests.{DefaultCreateServerTest, ServerAuthenticationTests, ServerBasicTests, ServerFileMultipartTests, ServerStreamingTests, backendResource}
-import sttp.tapir.server.vertx.VertxZioServerInterpreter.RioFromVFuture
+import sttp.tapir.server.tests.{
+  DefaultCreateServerTest,
+  ServerAuthenticationTests,
+  ServerBasicTests,
+  ServerFileMultipartTests,
+  ServerStreamingTests,
+  backendResource
+}
 import sttp.tapir.tests.{Test, TestSuite}
 import zio.Task
-import zio.interop.catz._
 
 class ZioVertxServerTest extends TestSuite {
-  import ZioVertxTestServerInterpreter._
-
   def vertxResource: Resource[IO, Vertx] =
-    Resource.make(Task.effect(Vertx.vertx()))(vertx => new RioFromVFuture[Any].apply(vertx.close).unit).mapK(zioToIo)
+    Resource.make(IO.delay(Vertx.vertx()))(vertx => IO.delay(vertx.close()).void)
 
   override def tests: Resource[IO, List[Test]] = backendResource.flatMap { backend =>
     vertxResource.map { implicit vertx =>

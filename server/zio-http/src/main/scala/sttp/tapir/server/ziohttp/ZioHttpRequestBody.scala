@@ -16,7 +16,7 @@ class ZioHttpRequestBody[R](request: Request, serverRequest: ServerRequest, serv
     extends RequestBody[RIO[R, *], ZioStreams] {
   override val streams: capabilities.Streams[ZioStreams] = ZioStreams
 
-  def asByteArray: Task[Array[Byte]] = request.content match {
+  private def asByteArray: Task[Array[Byte]] = request.content match {
     case HttpData.Empty              => Task.succeed(Array.emptyByteArray)
     case HttpData.CompleteData(data) => Task.succeed(data.toArray)
     case HttpData.StreamData(data)   => data.runCollect.map(_.toArray)
@@ -31,7 +31,7 @@ class ZioHttpRequestBody[R](request: Request, serverRequest: ServerRequest, serv
     case RawBodyType.MultipartBody(_, _)        => Task.never
   }
 
-  val stream: Stream[Throwable, Byte] = request.content match {
+  private def stream: Stream[Throwable, Byte] = request.content match {
     case HttpData.Empty              => ZStream.empty
     case HttpData.CompleteData(data) => ZStream.fromChunk(data)
     case HttpData.StreamData(stream) => stream

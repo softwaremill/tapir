@@ -1,7 +1,7 @@
 package sttp.tapir.server.finatra
 
 import cats.data.NonEmptyList
-import cats.effect.{ContextShift, IO, Resource, Timer}
+import cats.effect.{IO, Resource}
 import com.twitter.finatra.http.routing.HttpRouter
 import com.twitter.finatra.http.{Controller, EmbeddedHttpServer, HttpServer}
 import com.twitter.util.Future
@@ -10,6 +10,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.tests.Port
 
 import scala.concurrent.ExecutionContext
@@ -17,10 +18,6 @@ import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
 class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, FinatraRoute, FinatraContent] {
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit val timer: Timer[IO] = IO.timer(ec)
-
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
@@ -44,7 +41,7 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
 }
 
 object FinatraTestServerInterpreter {
-  def server(routes: NonEmptyList[FinatraRoute])(implicit ioTimer: Timer[IO]): Resource[IO, Port] = {
+  def server(routes: NonEmptyList[FinatraRoute]): Resource[IO, Port] = {
     def waitUntilHealthy(s: EmbeddedHttpServer, count: Int): IO[EmbeddedHttpServer] =
       if (s.isHealthy) IO.pure(s)
       else if (count > 1000) IO.raiseError(new IllegalStateException("Server unhealthy"))

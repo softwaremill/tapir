@@ -20,6 +20,7 @@ The [`examples`](https://github.com/softwaremill/tapir/tree/master/examples/src/
 * [ZIO example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleHttp4sServer.scala)
 * [ZIO example with environment, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioEnvExampleHttp4sServer.scala)
 * [ZIO partial server logic example, using http4s](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioPartialServerLogicHttp4s.scala)
+* [ZIO example using ZIO http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/ZioExampleZioHttpServer.scala)
 * [Streaming body, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/StreamingAkkaServer.scala)
 * [Streaming body, using http4s + fs2](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/StreamingHttp4sFs2Server.scala)
 * [Web sockets server, using akka-http](https://github.com/softwaremill/tapir/blob/master/examples/src/main/scala/sttp/tapir/examples/WebSocketAkkaServer.scala)

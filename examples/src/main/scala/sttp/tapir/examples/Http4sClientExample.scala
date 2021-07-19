@@ -1,6 +1,6 @@
 package sttp.tapir.examples
 
-import cats.effect.{Blocker, ExitCode, IO, IOApp}
+import cats.effect.{ExitCode, IO, IOApp}
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
 import sttp.tapir._
@@ -9,8 +9,6 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 
 object Http4sClientExample extends IOApp with StrictLogging {
-  // The interpreter needs a Blocker instance in order to evaluate certain types of request/response bodies.
-  private implicit val blocker: Blocker = Blocker.liftExecutionContext(super.executionContext)
 
   case class User(id: Int, name: String)
 

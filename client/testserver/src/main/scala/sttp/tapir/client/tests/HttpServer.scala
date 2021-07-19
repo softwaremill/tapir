@@ -1,7 +1,10 @@
 package sttp.tapir.client.tests
 
 import cats.effect._
+import cats.effect.std.Queue
+import cats.effect.unsafe.implicits.global
 import cats.implicits._
+import fs2.{Pipe, Stream}
 import org.http4s.dsl.io._
 import org.http4s.headers.{Accept, `Content-Type`}
 import org.http4s.server.Router
@@ -29,10 +32,6 @@ object HttpServer {
 class HttpServer(port: Port) {
 
   private val logger = org.log4s.getLogger
-
-  implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-  implicit private val contextShift: ContextShift[IO] = IO.contextShift(ec)
-  implicit private val timer: Timer[IO] = IO.timer(ec)
 
   private var stopServer: IO[Unit] = _
 
@@ -62,6 +61,7 @@ class HttpServer(port: Port) {
         case Some(c) => headers.filter(_.name == CIString("Cookie")) :+ Header.Raw(CIString("Set-Cookie"), c.value.reverse)
         case None    => headers
       }
+
       val filteredHeaders2: Header.ToRaw = filteredHeaders1.filterNot(_.name == CIString("Content-Length"))
       okOnlyHeaders(List(filteredHeaders2))
     case r @ GET -> Root / "api" / "echo" / "param-to-header" =>
@@ -119,11 +119,11 @@ class HttpServer(port: Port) {
           }
         }
 
-      fs2.concurrent.Queue
+      Queue
         .unbounded[IO, WebSocketFrame]
         .flatMap { q =>
-          val d = q.dequeue.through(echoReply)
-          val e = q.enqueue
+          val d = Stream.repeatEval(q.take).through(echoReply)
+          val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
           WebSocketBuilder[IO].build(d, e)
         }
 
@@ -139,11 +139,11 @@ class HttpServer(port: Port) {
           case f => throw new IllegalArgumentException(s"Unsupported frame: $f")
         }
 
-      fs2.concurrent.Queue
+      Queue
         .unbounded[IO, WebSocketFrame]
         .flatMap { q =>
-          val d = q.dequeue.through(echoReply)
-          val e = q.enqueue
+          val d = Stream.repeatEval(q.take).through(echoReply)
+          val e: Pipe[IO, WebSocketFrame, Unit] = s => s.evalMap(q.offer)
           WebSocketBuilder[IO].build(d, e)
         }
 
@@ -179,7 +179,7 @@ class HttpServer(port: Port) {
   //
 
   def start(): Unit = {
-    val (_, _stopServer) = BlazeServerBuilder[IO](ec)
+    val (_, _stopServer) = BlazeServerBuilder[IO](ExecutionContext.global)
       .bindHttp(port)
       .withHttpApp(app)
       .resource

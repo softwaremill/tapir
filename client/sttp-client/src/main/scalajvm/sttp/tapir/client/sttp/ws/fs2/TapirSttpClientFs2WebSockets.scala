@@ -1,7 +1,7 @@
 package sttp.tapir.client.sttp.ws.fs2
 
 import cats.effect.Concurrent
-import sttp.capabilities.{Effect, WebSockets}
+import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.client.sttp.WebSocketToPipe
 

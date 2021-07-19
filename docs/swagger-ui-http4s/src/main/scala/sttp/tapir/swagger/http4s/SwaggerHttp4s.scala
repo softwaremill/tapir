@@ -2,12 +2,10 @@ package sttp.tapir.swagger.http4s
 
 import java.util.Properties
 
-import cats.effect.{Blocker, ContextShift, Sync}
+import cats.effect.Sync
 import org.http4s.{HttpRoutes, StaticFile, Uri}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.headers.Location
-
-import scala.concurrent.ExecutionContext
 
 /** Usage: add `new SwaggerHttp4s(yaml).routes[F]` to your http4s router. For example:
   * `Router("/" -> new SwaggerHttp4s(yaml).routes[IO])`
@@ -36,7 +34,7 @@ class SwaggerHttp4s(
     p.getProperty("version")
   }
 
-  def routes[F[_]: ContextShift: Sync]: HttpRoutes[F] = {
+  def routes[F[_]: Sync]: HttpRoutes[F] = {
     val dsl = Http4sDsl[F]
     import dsl._
 
@@ -54,10 +52,7 @@ class SwaggerHttp4s(
         Ok(yaml)
       case GET -> `rootPath` / swaggerResource =>
         StaticFile
-          .fromResource[F](
-            s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$swaggerResource",
-            Blocker.liftExecutionContext(ExecutionContext.global)
-          )
+          .fromResource[F](s"/META-INF/resources/webjars/swagger-ui/$swaggerVersion/$swaggerResource")
           .getOrElseF(NotFound())
     }
   }

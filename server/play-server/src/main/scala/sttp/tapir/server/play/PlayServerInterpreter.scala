@@ -81,12 +81,11 @@ trait PlayServerInterpreter {
                   case (key, value) if key == HeaderNames.SET_COOKIE => (key, value.mkString(";;"))
                   case (key, value)                                  => (key, value.mkString(", "))
                 }
-              val status = response.code.code
+                .filterNot(allowToSetExplicitly)
 
+              val status = response.code.code
               response.body match {
-                case Some(entity) =>
-                  val result = Result(ResponseHeader(status, headers), entity)
-                  headers.find(_._1.toLowerCase == "content-type").map(ct => result.as(ct._2)).getOrElse(result)
+                case Some(entity) => Result(ResponseHeader(status, headers), entity)
                 case None => Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
               }
           }
@@ -94,6 +93,10 @@ trait PlayServerInterpreter {
       }
     }
   }
+
+  private def allowToSetExplicitly[O, E, I](header: (String, String)): Boolean =
+    List(HeaderNames.CONTENT_TYPE, HeaderNames.CONTENT_LENGTH, HeaderNames.TRANSFER_ENCODING).contains(header._1)
+
 }
 
 object PlayServerInterpreter {

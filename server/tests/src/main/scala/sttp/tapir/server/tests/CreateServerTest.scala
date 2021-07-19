@@ -5,7 +5,6 @@ import cats.effect.{IO, Resource}
 import cats.implicits._
 import com.typesafe.scalalogging.StrictLogging
 import org.scalatest.Assertion
-import org.slf4j.{Logger, LoggerFactory}
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
@@ -15,6 +14,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.tests._
+import cats.effect.unsafe.implicits.global
 
 trait CreateServerTest[F[_], +R, ROUTE, B] {
   def testServer[I, E, O](
@@ -77,7 +77,7 @@ class DefaultCreateServerTest[F[_], +R, ROUTE, B](
         .use { port =>
           runTest(backend, uri"http://localhost:$port").guarantee(IO(logger.info(s"Tests completed on port $port")))
         }
-        .unsafeRunSync()
+        .unsafeToFuture()
     )
   }
 }
