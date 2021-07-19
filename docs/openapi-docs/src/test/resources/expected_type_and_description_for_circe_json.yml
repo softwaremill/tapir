@@ -1,0 +1,31 @@
+openapi: 3.0.3
+info:
+  title: Circe Jason Option
+  version: '1.0'
+paths:
+  /:
+    post:
+      operationId: postRoot
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExampleMessageIn'
+        required: true
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: body'
+          content:
+            text/plain:
+              schema:
+                type: string
+components:
+  schemas:
+    ExampleMessageIn:
+      type: object
+      properties:
+        maybeJson:
+          type: object
+          description: Circe Json Option description

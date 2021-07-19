@@ -10,7 +10,7 @@ import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData2._
-import sttp.tapir.docs.openapi.dtos.Book
+import sttp.tapir.docs.openapi.dtos.{Book, ExampleMessageIn}
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
@@ -546,5 +546,20 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
     val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(ep, "title", "1.0").toYaml
     noIndentation(actualYaml) shouldBe expectedYaml
+  }
+
+  test("should contain description field for Option[Json] field") {
+    val expectedYaml = load("expected_type_and_description_for_circe_json.yml")
+
+    val myEndpoint = endpoint
+      .post
+      .in(jsonBody[ExampleMessageIn])
+
+    val actualYaml = OpenAPIDocsInterpreter()
+      .toOpenAPI(myEndpoint, Info("Circe Jason Option", "1.0")).toYaml
+
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
   }
 }
