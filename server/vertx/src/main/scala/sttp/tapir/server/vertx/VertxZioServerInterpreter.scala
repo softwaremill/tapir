@@ -6,7 +6,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, ServerInterpreterResult}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxZioServerInterpreter.{RioFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
@@ -60,10 +60,10 @@ trait VertxZioServerInterpreter[R] extends CommonServerInterpreter {
 
     val result = interpreter(serverRequest, e)
       .flatMap {
-        case ServerInterpreterResult.Failure(decodeFailureContexts) =>
+        case RequestResult.Failure(decodeFailureContexts) =>
           val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
           fromVFuture(rc.response.setStatusCode(statusCode.code).end())
-        case ServerInterpreterResult.Success(response) => Task.succeed(VertxOutputEncoders(response).apply(rc))
+        case RequestResult.Response(response) => Task.succeed(VertxOutputEncoders(response).apply(rc))
       }
       .catchAll { e =>
         RIO.effect(rc.fail(e))

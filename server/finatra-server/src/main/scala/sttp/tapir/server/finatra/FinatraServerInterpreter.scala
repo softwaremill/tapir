@@ -8,7 +8,7 @@ import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.internal._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
-import sttp.tapir.server.interceptor.{DecodeFailureContext, ServerInterpreterResult}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.{Endpoint, EndpointInput}
 
@@ -38,10 +38,10 @@ trait FinatraServerInterpreter extends Logging {
       )(FutureMonadError, new FinatraBodyListener[Future]())
 
       serverInterpreter(serverRequest, se).map {
-        case ServerInterpreterResult.Failure(decodeFailureContexts) =>
+        case RequestResult.Failure(decodeFailureContexts) =>
           val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
           Response(Status.fromCode(statusCode.code))
-        case ServerInterpreterResult.Success(response) =>
+        case RequestResult.Response(response) =>
           val status = Status(response.code.code)
           val responseWithContent = response.body match {
             case Some(fContent) =>

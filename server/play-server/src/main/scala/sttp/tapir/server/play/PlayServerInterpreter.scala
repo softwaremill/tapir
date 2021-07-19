@@ -9,7 +9,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, ServerInterpreterResult}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, DecodeBasicInputs, DecodeBasicInputsResult, ServerInterpreter}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
@@ -69,9 +69,9 @@ trait PlayServerInterpreter {
           )
 
           interpreter(serverRequest, serverEndpoints).map {
-            case ServerInterpreterResult.Failure(_) =>
+            case RequestResult.Failure(_) =>
               Result(header = ResponseHeader(StatusCode.NotFound.code), body = HttpEntity.NoEntity)
-            case ServerInterpreterResult.Success(response) =>
+            case RequestResult.Response(response) =>
               val headers: Map[String, String] = response.headers
                 .foldLeft(Map.empty[String, List[String]]) { (a, b) =>
                   if (a.contains(b.name)) a + (b.name -> (a(b.name) :+ b.value)) else a + (b.name -> List(b.value))

@@ -6,7 +6,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, ServerInterpreterResult}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter.FutureFromVFuture
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
@@ -97,10 +97,10 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
     interpreter(serverRequest, e)
       .flatMap {
-        case ServerInterpreterResult.Failure(decodeFailureContexts) =>
+        case RequestResult.Failure(decodeFailureContexts) =>
           val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
           FutureFromVFuture(rc.response.setStatusCode(statusCode.code).end())
-        case ServerInterpreterResult.Success(response) => Future.successful(VertxOutputEncoders(response).apply(rc))
+        case RequestResult.Response(response) => Future.successful(VertxOutputEncoders(response).apply(rc))
       }
       .failed
       .foreach { e =>

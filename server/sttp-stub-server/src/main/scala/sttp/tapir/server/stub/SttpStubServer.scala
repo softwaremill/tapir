@@ -6,7 +6,7 @@ import sttp.model._
 import sttp.tapir.internal.{NoStreams, ParamsAsAny}
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, Interceptor, ServerInterpreterResult}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, Interceptor, RequestResult}
 import sttp.tapir.server.interpreter.{RequestBody, _}
 import sttp.tapir.server.stub.SttpStubServer.{requestBody, toResponseBody}
 import sttp.tapir.{CodecFormat, DecodeResult, Endpoint, EndpointIO, EndpointOutput, RawBodyType, WebSocketBodyOutput}
@@ -110,8 +110,8 @@ trait SttpStubServer {
         )
       val sRequest = new SttpRequest(req)
       stub.responseMonad.map(interpreter.apply(sRequest, endpoint)) {
-        case ServerInterpreterResult.Success(sResponse) => toResponse(sRequest, sResponse)
-        case ServerInterpreterResult.Failure(decodeFailureContexts) =>
+        case RequestResult.Response(sResponse) => toResponse(sRequest, sResponse)
+        case RequestResult.Failure(decodeFailureContexts) =>
           val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
           toResponse(sRequest, ServerResponse(statusCode, Nil, None))
       }

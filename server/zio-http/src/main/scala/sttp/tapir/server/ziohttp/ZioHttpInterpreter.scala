@@ -6,7 +6,7 @@ import sttp.model.{Header => SttpHeader, StatusCode}
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, ServerInterpreterResult}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZioHttpHeader}
@@ -45,7 +45,7 @@ trait ZioHttpInterpreter[R] {
       )
 
       interpreter.apply(new ZioHttpServerRequest(req), se).flatMap {
-        case ServerInterpreterResult.Success(resp) =>
+        case RequestResult.Response(resp) =>
           ZIO.succeed(
             Response.HttpResponse(
               status = Status.fromJHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
@@ -53,7 +53,7 @@ trait ZioHttpInterpreter[R] {
               content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
             )
           )
-        case ServerInterpreterResult.Failure(decodeFailureContexts) =>
+        case RequestResult.Failure(decodeFailureContexts) =>
           val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
           val httpError = if (statusCode == StatusCode.MethodNotAllowed) HttpError.MethodNotAllowed() else HttpError.NotFound(req.url.path)
           ZIO.fail(httpError)

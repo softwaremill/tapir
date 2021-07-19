@@ -1,6 +1,6 @@
 package sttp.tapir.ztapir
 
-import sttp.tapir.server.interceptor.ServerInterpreterResult
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ServerInterpreter, ToResponseBody}
 import sttp.capabilities.Streams
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
@@ -63,9 +63,9 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
     }
   }
 
-  private def errorToResponse(error: Throwable): UIO[ServerInterpreterResult.Success[ResponseBodyType]] =
+  private def errorToResponse(error: Throwable): UIO[RequestResult.Response[ResponseBodyType]] =
     UIO(
-      ServerInterpreterResult.Success(
+      RequestResult.Response(
         ServerResponse(StatusCode.InternalServerError, scala.collection.immutable.Seq.empty[Header], Some(error.getMessage))
       )
     )
@@ -91,7 +91,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(
-          isSubtype[ServerInterpreterResult.Success[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
+          isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
         )
       }
   }
@@ -109,7 +109,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(
-          isSubtype[ServerInterpreterResult.Success[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
+          isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
         )
       }
   }
@@ -129,7 +129,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
       .catchAll(errorToResponse)
       .map { result =>
         assert(result)(
-          isSubtype[ServerInterpreterResult.Success[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
+          isSubtype[RequestResult.Response[String]](hasField("code", _.response.code, equalTo(StatusCode.InternalServerError)))
         )
       }
   }

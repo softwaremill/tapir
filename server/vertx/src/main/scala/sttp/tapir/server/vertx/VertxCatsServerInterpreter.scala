@@ -9,7 +9,7 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, ServerInterpreterResult}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxCatsServerInterpreter.{CatsFFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
@@ -79,10 +79,10 @@ trait VertxCatsServerInterpreter[F[_]] extends CommonServerInterpreter {
 
     val result = interpreter(serverRequest, e)
       .flatMap {
-        case ServerInterpreterResult.Failure(decodeFailureContexts) =>
+        case RequestResult.Failure(decodeFailureContexts) =>
           val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
           fFromVFuture(rc.response.setStatusCode(statusCode.code).end()).void
-        case ServerInterpreterResult.Success(response) => VertxOutputEncoders(response).apply(rc).pure
+        case RequestResult.Response(response) => VertxOutputEncoders(response).apply(rc).pure
       }
       .handleError { e => rc.fail(e) }
 

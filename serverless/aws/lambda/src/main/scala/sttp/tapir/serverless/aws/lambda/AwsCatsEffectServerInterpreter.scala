@@ -6,7 +6,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, ServerInterpreterResult}
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.reflect.ClassTag
@@ -41,10 +41,10 @@ trait AwsCatsEffectServerInterpreter[F[_]] {
       )
 
       interpreter.apply(serverRequest, ses).map {
-        case ServerInterpreterResult.Failure(decodeFailureContexts) =>
+        case RequestResult.Failure(decodeFailureContexts) =>
           val statusCode = DecodeFailureContext.listToStatusCode(decodeFailureContexts)
           AwsResponse(Nil, isBase64Encoded = awsServerOptions.encodeResponseBody, statusCode.code, Map.empty, "")
-        case ServerInterpreterResult.Success(res) =>
+        case RequestResult.Response(res) =>
           val cookies = res.cookies.collect { case Right(cookie) => cookie.value }.toList
           val headers = res.headers.groupBy(_.name).map { case (n, v) => n -> v.map(_.value).mkString(",") }
           AwsResponse(cookies, isBase64Encoded = awsServerOptions.encodeResponseBody, res.code.code, headers, res.body.getOrElse(""))
