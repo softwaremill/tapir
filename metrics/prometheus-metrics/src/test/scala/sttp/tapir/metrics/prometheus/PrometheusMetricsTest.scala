@@ -178,8 +178,8 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
           b shouldBe """# HELP tapir_responses_total Total HTTP responses
                      |# TYPE tapir_responses_total counter
                      |""".stripMargin
-        } getOrElse Assertions.fail()
-      case _ =>
+        } getOrElse fail()
+      case _ => fail()
     }
   }
 
