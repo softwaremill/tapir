@@ -3,8 +3,8 @@
 To use, add the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.19.0-M1"
-"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.19.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-docs" % "0.19.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-openapi-circe-yaml" % "0.19.0-M2"
 ```
 
 Tapir contains a case class-based model of the openapi data structures in the `openapi/openapi-model` subproject (the
@@ -133,29 +133,29 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 
 ```scala
 // Akka HTTP
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.19.0-M1"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.19.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.19.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-akka-http" % "0.19.0-M2"
 
 // Finatra
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-finatra" % "0.19.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-finatra" % "0.19.0-M2"
 
 // HTTP4S
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.19.0-M1"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.19.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-http4s" % "0.19.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-http4s" % "0.19.0-M2"
 
 // Play
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "0.19.0-M1"
-"com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "0.19.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "0.19.0-M2"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "0.19.0-M2"
 
 // Vert.x
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-vertx" % "0.19.0-M1"
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-vertx" % "0.19.0-M2"
 ```
 
 Note: `tapir-swagger-ui-akka-http` transitively pulls some Akka modules in version 2.6. If you want to force
 your own Akka version (for example 2.5), use sbt exclusion.  Mind the Scala version in artifact name:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.19.0-M1" exclude("com.typesafe.akka", "akka-stream_2.12")
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-akka-http" % "0.19.0-M2" exclude("com.typesafe.akka", "akka-stream_2.12")
 ```
 
 Usage example for akka-http:
@@ -179,6 +179,8 @@ For http4s, use the `SwaggerHttp4s` or `RedocHttp4s` classes.
 For Play, use `SwaggerPlay` or `RedocPlay` classes.
 
 For Vert.x, use `SwaggerVertx` class.
+
+For zio-http, use `SwaggerZioHttp` class.
 
 ### Using with sbt-assembly
 
