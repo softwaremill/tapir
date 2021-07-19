@@ -13,6 +13,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
@@ -30,6 +31,7 @@ class Http4sTestServerInterpreter
   ): HttpRoutes[IO] = {
     val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
       .customInterceptors(
+        rejectInterceptor = Some(RejectInterceptor.default),
         metricsInterceptor = metricsInterceptor,
         exceptionHandler = Some(DefaultExceptionHandler),
         serverLog = Some(Http4sServerOptions.Log.defaultServerLog),

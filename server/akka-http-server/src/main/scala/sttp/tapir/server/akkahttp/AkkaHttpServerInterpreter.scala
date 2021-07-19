@@ -19,6 +19,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.akkahttp.AkkaModel.parseHeadersOrThrowWithoutContentHeaders
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.concurrent.Future
@@ -32,7 +33,7 @@ trait AkkaHttpServerInterpreter {
     toRoute(e.serverLogic(logic))
 
   def toRouteRecoverErrors[I, E, O](
-    e: Endpoint[I, E, O, AkkaStreams with WebSockets]
+      e: Endpoint[I, E, O, AkkaStreams with WebSockets]
   )(logic: I => Future[O])(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route =
     toRoute(e.serverLogicRecoverErrors(logic))
 
@@ -53,8 +54,8 @@ trait AkkaHttpServerInterpreter {
           )
 
           onSuccess(interpreter(serverRequest, ses)) {
-            case None => reject
-            case Some(response) => serverResponseToAkka(response)
+            case RequestResult.Failure(_)         => reject
+            case RequestResult.Response(response) => serverResponseToAkka(response)
           }
         }
       }

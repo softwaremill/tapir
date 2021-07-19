@@ -9,6 +9,7 @@ import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, Decode
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.Future
@@ -24,16 +25,14 @@ case class AkkaHttpServerOptions(
 
 object AkkaHttpServerOptions {
 
-  /** Creates default [[AkkaHttpServerOptions]] with custom interceptors, sitting between two interceptor groups:
-    * 1. the optional exception interceptor and the optional logging interceptor (which should typically be first
-    *    when processing the request, and last when processing the response)),
-    * 2. the optional unsupported media type interceptor and the decode failure handling interceptor (which should
-    *    typically be last when processing the request).
+  /** Creates default [[AkkaHttpServerOptions]] with `additionalInterceptors`, sitting between two configurable
+    * interceptor groups. The order of the interceptors corresponds to the ordering of the parameters.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
     *
     * @param exceptionHandler Whether to respond to exceptions, or propagate them to akka http.
+    * @param rejectInterceptor How to respond when decoding fails for all interpreted endpoints.
     * @param serverLog The server log using which an interceptor will be created, if any.
     * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
     *                               responses.
@@ -44,6 +43,7 @@ object AkkaHttpServerOptions {
     */
   def customInterceptors(
       metricsInterceptor: Option[MetricsRequestInterceptor[Future, AkkaResponseBody]] = None,
+      rejectInterceptor: Option[RejectInterceptor[Future, AkkaResponseBody]] = Some(RejectInterceptor.default),
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[LoggingAdapter => Future[Unit]]] = Some(Log.defaultServerLog),
       additionalInterceptors: List[Interceptor[Future, AkkaResponseBody]] = Nil,
@@ -56,6 +56,7 @@ object AkkaHttpServerOptions {
       defaultCreateFile,
       defaultDeleteFile,
       metricsInterceptor.toList ++
+        rejectInterceptor.toList ++
         exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
         serverLog.map(Log.serverLogInterceptor).toList ++
         additionalInterceptors ++

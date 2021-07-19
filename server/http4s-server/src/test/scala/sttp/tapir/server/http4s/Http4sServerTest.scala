@@ -20,6 +20,7 @@ import sttp.tapir.server.tests.{
   ServerBasicTests,
   ServerFileMultipartTests,
   ServerMetricsTest,
+  ServerRejectTests,
   ServerStreamingTests,
   ServerWebSocketTests,
   backendResource
@@ -118,6 +119,8 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         override def functionToPipe[A, B](f: A => B): streams.Pipe[A, B] = in => in.map(f)
       }.tests() ++
       new ServerAuthenticationTests(createServerTest).tests() ++
-      new ServerMetricsTest(createServerTest).tests() ++ additionalTests()
+      new ServerMetricsTest(createServerTest).tests() ++
+      new ServerRejectTests(createServerTest).tests() ++
+      additionalTests()
   }
 }

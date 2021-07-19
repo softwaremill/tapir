@@ -81,8 +81,8 @@ object DecodeBasicInputs {
     // we're using null as a placeholder for the future values. All except the body (which is determined by
     // interpreter-specific code), should be filled by the end of this method.
     compose(
-      matchOthers(methodInputs, _, _),
       matchPath(pathInputs, _, _),
+      matchOthers(methodInputs, _, _),
       matchOthers(otherInputs, _, _)
     )(DecodeBasicInputsResult.Values(Vector.fill(basicInputs.size)(null), None), ctx)._1
   }

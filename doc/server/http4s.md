@@ -108,9 +108,11 @@ configuration:
 import cats.effect._
 import sttp.tapir.server.http4s.{Http4sServerInterpreter, Http4sServerOptions}
 import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
 
 implicit val options: Http4sServerOptions[IO, IO] = Http4sServerOptions.customInterceptors[IO, IO](
+  rejectInterceptor = Some(RejectInterceptor.default),
   exceptionHandler = Some(DefaultExceptionHandler),
   serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
   decodeFailureHandler = DefaultDecodeFailureHandler(

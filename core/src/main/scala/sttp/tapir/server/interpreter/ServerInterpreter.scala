@@ -15,10 +15,10 @@ class ServerInterpreter[R, F[_], B, S](
     interceptors: List[Interceptor[F, B]],
     deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
-  def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[Option[ServerResponse[B]]] =
+  def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[RequestResult[B]] =
     apply(request, List(se))
 
-  def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[Option[ServerResponse[B]]] =
+  def apply(request: ServerRequest, ses: List[ServerEndpoint[_, _, _, R, F]]): F[RequestResult[B]] =
     monad.suspend(callInterceptors(interceptors, Nil, responder(defaultSuccessStatusCode), ses).apply(request))
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
@@ -29,7 +29,7 @@ class ServerInterpreter[R, F[_], B, S](
       ses: List[ServerEndpoint[_, _, _, R, F]]
   ): RequestHandler[F, B] = {
     is match {
-      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse) }
+      case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
       case (i: RequestInterceptor[F, B]) :: tail =>
         i(
           responder,
@@ -43,14 +43,16 @@ class ServerInterpreter[R, F[_], B, S](
   private def firstNotNone(
       request: ServerRequest,
       ses: List[ServerEndpoint[_, _, _, R, F]],
-      endpointInterceptors: List[EndpointInterceptor[F, B]]
-  ): F[Option[ServerResponse[B]]] =
+      endpointInterceptors: List[EndpointInterceptor[F, B]],
+      accumulatedFailureContexts: List[DecodeFailureContext]
+  ): F[RequestResult[B]] =
     ses match {
-      case Nil => (None: Option[ServerResponse[B]]).unit
+      case Nil => (RequestResult.Failure(accumulatedFailureContexts.reverse): RequestResult[B]).unit
       case se :: tail =>
         tryServerEndpoint(request, se, endpointInterceptors).flatMap {
-          case None => firstNotNone(request, tail, endpointInterceptors)
-          case r    => r.unit
+          case RequestResult.Failure(failureContexts) =>
+            firstNotNone(request, tail, endpointInterceptors, failureContexts ++: accumulatedFailureContexts)
+          case r => r.unit
         }
     }
 
@@ -58,7 +60,7 @@ class ServerInterpreter[R, F[_], B, S](
       request: ServerRequest,
       se: ServerEndpoint[I, E, O, R, F],
       endpointInterceptors: List[EndpointInterceptor[F, B]]
-  ): F[Option[ServerResponse[B]]] = {
+  ): F[RequestResult[B]] = {
     val decodedBasicInputs = DecodeBasicInputs(se.endpoint.input, request)
 
     def endpointHandler(defaultStatusCode: StatusCode): EndpointHandler[F, B] = endpointInterceptors.foldRight(defaultEndpointHandler) {
@@ -71,12 +73,24 @@ class ServerInterpreter[R, F[_], B, S](
           case InputValueResult.Value(params, _) =>
             endpointHandler(defaultSuccessStatusCode)
               .onDecodeSuccess(interceptor.DecodeSuccessContext(se, params.asAny.asInstanceOf[I], request))
-              .map(Some(_))
+              .map(RequestResult.Response(_))
           case InputValueResult.Failure(input, failure) =>
-            endpointHandler(defaultErrorStatusCode).onDecodeFailure(interceptor.DecodeFailureContext(input, failure, se.endpoint, request))
+            endpointHandler(defaultErrorStatusCode)
+              .onDecodeFailure(interceptor.DecodeFailureContext(input, failure, se.endpoint, request))
+              .map {
+                case Some(response) => RequestResult.Response(response)
+                case None           => RequestResult.Failure(List())
+              }
         }
       case DecodeBasicInputsResult.Failure(input, failure) =>
-        endpointHandler(defaultErrorStatusCode).onDecodeFailure(interceptor.DecodeFailureContext(input, failure, se.endpoint, request))
+        val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, se.endpoint, request)
+
+        endpointHandler(defaultErrorStatusCode)
+          .onDecodeFailure(decodeFailureContext)
+          .map {
+            case Some(response) => RequestResult.Response(response)
+            case None           => RequestResult.Failure(List(decodeFailureContext))
+          }
     }
   }
 

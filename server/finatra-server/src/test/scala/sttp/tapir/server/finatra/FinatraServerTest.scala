@@ -5,6 +5,7 @@ import sttp.monad.MonadError
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
+  ServerRejectTests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
@@ -24,6 +25,7 @@ class FinatraServerTest extends TestSuite {
     new ServerBasicTests(createServerTest, interpreter).tests() ++
       new ServerFileMultipartTests(createServerTest).tests() ++
       new ServerAuthenticationTests(createServerTest).tests() ++
-      new ServerMetricsTest(createServerTest).tests()
+      new ServerMetricsTest(createServerTest).tests() ++
+      new ServerRejectTests(createServerTest).tests()
   }
 }

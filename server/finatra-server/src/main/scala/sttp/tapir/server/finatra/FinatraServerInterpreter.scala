@@ -3,12 +3,12 @@ package sttp.tapir.server.finatra
 import com.twitter.finagle.http._
 import com.twitter.util.Future
 import com.twitter.util.logging.Logging
-import sttp.model.Header
 import sttp.monad.MonadError
 import sttp.tapir.EndpointInput.{FixedMethod, PathCapture}
 import sttp.tapir.internal._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.finatra.FinatraServerInterpreter.FutureMonadError
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.{Endpoint, EndpointInput}
 
@@ -38,8 +38,8 @@ trait FinatraServerInterpreter extends Logging {
       )(FutureMonadError, new FinatraBodyListener[Future]())
 
       serverInterpreter(serverRequest, se).map {
-        case None => Response(Status.NotFound)
-        case Some(response) =>
+        case RequestResult.Failure(_) => Response(Status.NotFound)
+        case RequestResult.Response(response) =>
           val status = Status(response.code.code)
           val responseWithContent = response.body match {
             case Some(fContent) =>

@@ -16,6 +16,7 @@ import sttp.tapir.metrics.prometheus.PrometheusMetrics._
 import sttp.tapir.metrics.prometheus.PrometheusMetricsTest._
 import sttp.tapir.model.{ConnectionInfo, ServerRequest}
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interpreter.ServerInterpreter
@@ -171,15 +172,14 @@ class PrometheusMetricsTest extends AnyFlatSpec with Matchers {
       new ServerInterpreter[Any, Id, String, NoStreams](TestRequestBody, StringToResponseBody, List(metrics.metricsInterceptor()), _ => ())
 
     // when
-    for {
-      response <- interpreter.apply(getMetricsRequest, metrics.metricsEndpoint)
-    } yield {
-      // then
-      response.body.map { b =>
-        b shouldBe """# HELP tapir_responses_total Total HTTP responses
+    interpreter.apply(getMetricsRequest, metrics.metricsEndpoint) match {
+      case RequestResult.Response(response) =>
+        response.body.map { b =>
+          b shouldBe """# HELP tapir_responses_total Total HTTP responses
                      |# TYPE tapir_responses_total counter
                      |""".stripMargin
-      } getOrElse Assertions.fail()
+        } getOrElse fail()
+      case _ => fail()
     }
   }
 

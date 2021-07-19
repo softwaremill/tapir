@@ -10,8 +10,6 @@ import cats.implicits._
 import org.scalatest.EitherValues
 import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.akka.AkkaStreams
-import akka.http.scaladsl.server.Route
-import sttp.capabilities.{WebSockets, akka}
 import sttp.client3._
 import sttp.client3.akkahttp.AkkaHttpBackend
 import sttp.model.sse.ServerSentEvent
@@ -20,6 +18,7 @@ import sttp.monad.syntax._
 import sttp.tapir._
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
+  ServerRejectTests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
@@ -98,6 +97,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
         new ServerMetricsTest(createServerTest).tests() ++
+        new ServerRejectTests(createServerTest).tests() ++
         additionalTests()
     }
   }

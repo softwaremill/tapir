@@ -29,11 +29,8 @@ case class PlayServerOptions(
 
 object PlayServerOptions {
 
-  /** Creates default [[PlayServerOptions]] with custom interceptors, sitting between two interceptor groups:
-    * 1. the optional exception interceptor and the optional logging interceptor (which should typically be first
-    *    when processing the request, and last when processing the response)),
-    * 2. the optional unsupported media type interceptor and the decode failure handling interceptor (which should
-    *    typically be last when processing the request).
+  /** Creates default [[PlayServerOptions]] with `additionalInterceptors`, sitting between two configurable
+    * interceptor groups. The order of the interceptors corresponds to the ordering of the parameters.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.

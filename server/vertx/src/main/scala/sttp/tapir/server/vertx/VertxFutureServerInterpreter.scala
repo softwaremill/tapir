@@ -6,6 +6,7 @@ import sttp.monad.FutureMonad
 import sttp.tapir.Endpoint
 import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxFutureServerInterpreter.FutureFromVFuture
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}
@@ -44,7 +45,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return A function, that given a router, will attach this endpoint to it
     */
   def routeRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
-    logic: I => Future[O]
+      logic: I => Future[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
     route(e.serverLogicRecoverErrors(logic))
 
@@ -55,7 +56,7 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return A function, that given a router, will attach this endpoint to it
     */
   def blockingRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
-    logic: I => Future[O]
+      logic: I => Future[O]
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Router => Route =
     blockingRoute(e.serverLogicRecoverErrors(logic))
 
@@ -63,10 +64,9 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     *
     * @return A function, that given a router, will attach this endpoint to it
     */
-  def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]): Router => Route = {
-    router =>
-      mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
-        .handler(endpointHandler(e))
+  def route[I, E, O](e: ServerEndpoint[I, E, O, Any, Future]): Router => Route = { router =>
+    mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
+      .handler(endpointHandler(e))
   }
 
   /** Given a Router, creates and mounts a Route matching this endpoint, with default error handling
@@ -75,14 +75,14 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
     * @return A function, that given a router, will attach this endpoint to it
     */
   def blockingRoute[I, E, O](
-    e: ServerEndpoint[I, E, O, Any, Future]
+      e: ServerEndpoint[I, E, O, Any, Future]
   ): Router => Route = { router =>
     mountWithDefaultHandlers(e)(router, extractRouteDefinition(e.endpoint))
       .blockingHandler(endpointHandler(e))
   }
 
   private def endpointHandler[I, E, O, A](
-    e: ServerEndpoint[I, E, O, Any, Future]
+      e: ServerEndpoint[I, E, O, Any, Future]
   ): Handler[RoutingContext] = { rc =>
     implicit val ec: ExecutionContext = vertxFutureServerOptions.executionContextOrCurrentCtx(rc)
     implicit val monad: FutureMonad = new FutureMonad()
@@ -97,8 +97,8 @@ trait VertxFutureServerInterpreter extends CommonServerInterpreter {
 
     interpreter(serverRequest, e)
       .flatMap {
-        case None => FutureFromVFuture(rc.response.setStatusCode(404).end())
-        case Some(response) => Future.successful(VertxOutputEncoders(response).apply(rc))
+        case RequestResult.Failure(_)         => FutureFromVFuture(rc.response.setStatusCode(404).end())
+        case RequestResult.Response(response) => Future.successful(VertxOutputEncoders(response).apply(rc))
       }
       .failed
       .foreach { e =>

@@ -17,6 +17,7 @@ import sttp.tapir.Endpoint
 import sttp.tapir.integ.cats.CatsMonadError
 import sttp.tapir.model.ServerResponse
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 
 import scala.reflect.ClassTag
@@ -62,8 +63,8 @@ trait Http4sServerToHttpInterpreter[F[_], G[_]] {
       )
 
       OptionT(interpreter(serverRequest, serverEndpoints).flatMap {
-        case None           => none.pure[G]
-        case Some(response) => fToG(serverResponseToHttp4s(response)).map(_.some)
+        case _: RequestResult.Failure         => none.pure[G]
+        case RequestResult.Response(response) => fToG(serverResponseToHttp4s(response)).map(_.some)
       })
     }
   }

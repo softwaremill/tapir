@@ -10,6 +10,7 @@ import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.{Defaults, TapirFile}
 import zio.{RIO, Task}
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
+import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import zio.RIO
 
 import java.io.File
@@ -28,16 +29,14 @@ final case class VertxZioServerOptions[F[_]](
 
 object VertxZioServerOptions {
 
-  /** Creates default [[VertxZioServerOptions]] with custom interceptors, sitting between two interceptor groups:
-    * 1. the optional exception interceptor and the optional logging interceptor (which should typically be first
-    *    when processing the request, and last when processing the response)),
-    * 2. the optional unsupported media type interceptor and the decode failure handling interceptor (which should
-    *    typically be last when processing the request).
+  /** Creates default [[VertxZioServerOptions]] with `additionalInterceptors`, sitting between two configurable
+    * interceptor groups. The order of the interceptors corresponds to the ordering of the parameters.
     *
     * The options can be then further customised using copy constructors or the methods to append/prepend
     * interceptors.
     *
     * @param exceptionHandler Whether to respond to exceptions, or propagate them to vertx.
+    * @param rejectInterceptor How to respond when decoding fails for all interpreted endpoints.
     * @param serverLog The server log using which an interceptor will be created, if any. To keep the default, use
     *                  `VertxEndpointOptions.defaultServerLog`
     * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
@@ -49,6 +48,9 @@ object VertxZioServerOptions {
     */
   def customInterceptors[R](
       metricsInterceptor: Option[MetricsRequestInterceptor[RIO[R, *], RoutingContext => Unit]] = None,
+      rejectInterceptor: Option[RejectInterceptor[RIO[R, *], RoutingContext => Unit]] = Some(
+        RejectInterceptor.default[RIO[R, *], RoutingContext => Unit]
+      ),
       exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
       serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
       additionalInterceptors: List[Interceptor[RIO[R, *], RoutingContext => Unit]] = Nil,
@@ -62,6 +64,7 @@ object VertxZioServerOptions {
       file => Task[Unit](Defaults.deleteFile()(file)),
       maxQueueSizeForReadStream = 16,
       metricsInterceptor.toList ++
+        rejectInterceptor.toList ++
         exceptionHandler.map(new ExceptionInterceptor[RIO[R, *], RoutingContext => Unit](_)).toList ++
         serverLog.map(new ServerLogInterceptor[Unit, RIO[R, *], RoutingContext => Unit](_, (_, _) => RIO.unit)).toList ++
         additionalInterceptors ++

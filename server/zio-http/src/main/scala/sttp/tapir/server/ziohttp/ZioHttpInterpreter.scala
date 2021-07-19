@@ -6,6 +6,7 @@ import sttp.model.{Header => SttpHeader}
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.ServerInterpreter
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter.zioMonadError
 import zhttp.http.{Http, HttpData, HttpError, Request, Response, Status, Header => ZioHttpHeader}
@@ -44,7 +45,7 @@ trait ZioHttpInterpreter[R] {
       )
 
       interpreter.apply(new ZioHttpServerRequest(req), se).flatMap {
-        case Some(resp) =>
+        case RequestResult.Response(resp) =>
           ZIO.succeed(
             Response.HttpResponse(
               status = Status.fromJHttpResponseStatus(HttpResponseStatus.valueOf(resp.code.code)),
@@ -52,12 +53,13 @@ trait ZioHttpInterpreter[R] {
               content = resp.body.map(stream => HttpData.fromStream(stream)).getOrElse(HttpData.empty)
             )
           )
-        case None => ZIO.fail(HttpError.NotFound(req.url.path))
+        case RequestResult.Failure(_) => ZIO.fail(HttpError.NotFound(req.url.path))
       }
     }
 
   private def sttpToZioHttpHeader(hl: (String, Seq[SttpHeader])): ZioHttpHeader =
     ZioHttpHeader.custom(hl._1, hl._2.map(f => f.value).mkString(", "))
+
 }
 
 object ZioHttpInterpreter {
