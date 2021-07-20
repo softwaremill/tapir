@@ -8,9 +8,10 @@ import org.scalatest.matchers.should.Matchers
 import sttp.capabilities.Streams
 import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
+import sttp.tapir.Schema.annotations.description
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData._
 import sttp.tapir.docs.openapi.dtos.VerifyYamlTestData2._
-import sttp.tapir.docs.openapi.dtos.{Book, ExampleMessageIn}
+import sttp.tapir.docs.openapi.dtos.Book
 import sttp.tapir.docs.openapi.dtos.a.{Pet => APet}
 import sttp.tapir.docs.openapi.dtos.b.{Pet => BPet}
 import sttp.tapir.generic.Derived
@@ -550,6 +551,11 @@ class VerifyYamlTest extends AnyFunSuite with Matchers {
 
   test("should contain description field for Option[Json] field") {
     val expectedYaml = load("expected_type_and_description_for_circe_json.yml")
+
+    case class ExampleMessageIn(
+      @description("Circe Json Option description")
+      maybeJson: Option[Json] = Some(Json.fromString("test"))
+    )
 
     val myEndpoint = endpoint
       .post

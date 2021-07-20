@@ -12,7 +12,4 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Json'
-components:
-  schemas:
-    Json: {}
+                type: object

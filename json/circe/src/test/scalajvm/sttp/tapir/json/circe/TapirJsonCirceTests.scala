@@ -6,7 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
-import sttp.tapir.SchemaType.{SCoproduct, SProduct}
+import sttp.tapir.SchemaType.SProduct
 import sttp.tapir.generic.auto._
 import sttp.tapir.{DecodeResult, FieldName}
 
@@ -50,8 +50,8 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     error.underlying shouldBe a[DecodingFailure]
   }
 
-  it should "return a coproduct schema for a Json" in {
-    schemaForCirceJson.schemaType shouldBe a[SCoproduct[_]]
+  it should "return a product schema for a Json" in {
+    schemaForCirceJson.schemaType shouldBe a[SProduct[_]]
   }
 
   it should "return a product schema for a JsonObject" in {
