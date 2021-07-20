@@ -18,7 +18,7 @@ object Versions {
   val scalaCheck = "1.15.4"
   val scalaTest = "3.2.9"
   val scalaTestPlusScalaCheck = "3.2.9.0"
-  val refined = "0.9.26"
+  val refined = "0.9.27"
   val enumeratum = "1.7.0"
   val zio = "1.0.9"
   val zioInteropCats = "3.1.1.0"
