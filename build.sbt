@@ -121,6 +121,7 @@ lazy val allAggregates = core.projectRefs ++
   swaggerUiPlay.projectRefs ++
   redocPlay.projectRefs ++
   swaggerUiVertx.projectRefs ++
+  swaggerUiZioHttp.projectRefs ++
   serverTests.projectRefs ++
   akkaHttpServer.projectRefs ++
   http4sServer.projectRefs ++
@@ -781,6 +782,18 @@ lazy val swaggerUiVertx: ProjectMatrix = (projectMatrix in file("docs/swagger-ui
     libraryDependencies ++= Seq(
       "io.vertx" % "vertx-web" % Versions.vertx,
       "org.webjars" % "swagger-ui" % Versions.swaggerUi
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2And3Versions)
+
+lazy val swaggerUiZioHttp: ProjectMatrix = (projectMatrix in file("docs/swagger-ui-zio-http"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-swagger-ui-zio-http",
+    libraryDependencies ++= Seq(
+      "io.d11" %% "zhttp" % "1.0.0.0-RC17",
+      "org.webjars" % "swagger-ui" % Versions.swaggerUi,
+      scalaTest.value % Test
     )
   )
   .jvmPlatform(scalaVersions = scala2And3Versions)
