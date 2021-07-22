@@ -3,21 +3,22 @@ package sttp.tapir.server.play
 import akka.NotUsed
 import akka.stream.scaladsl.{FileIO, Source, StreamConverters}
 import akka.util.ByteString
-import play.api.http.{HeaderNames, HttpEntity}
+import play.api.http.{ContentTypes, HeaderNames, HttpEntity}
 import play.api.mvc.MultipartFormData.{DataPart, FilePart}
 import play.api.mvc.{Codec, MultipartFormData}
+import sttp.capabilities.akka.AkkaStreams
 import sttp.model.{HasHeaders, Part}
-import sttp.tapir.internal.NoStreams
 import sttp.tapir.server.interpreter.ToResponseBody
 import sttp.tapir.{CodecFormat, RawBodyType, RawPart, WebSocketBodyOutput}
 
 import java.io.{File, InputStream}
 import java.nio.ByteBuffer
-import java.nio.charset.Charset
+import java.nio.charset.{Charset, StandardCharsets}
 import java.nio.file.Files
 
-class PlayToResponseBody extends ToResponseBody[HttpEntity, NoStreams] {
-  override val streams: NoStreams = NoStreams
+class PlayToResponseBody extends ToResponseBody[HttpEntity, AkkaStreams] {
+
+  override val streams: AkkaStreams = AkkaStreams
 
   override def fromRawValue[R](v: R, headers: HasHeaders, format: CodecFormat, bodyType: RawBodyType[R]): HttpEntity = {
     fromRawValue(v, headers, bodyType)
@@ -76,12 +77,13 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, NoStreams] {
     }
   }
 
-  override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): HttpEntity =
-    throw new UnsupportedOperationException
+  override def fromStreamValue(v: streams.BinaryStream, headers: HasHeaders, format: CodecFormat, charset: Option[Charset]): HttpEntity = {
+    HttpEntity.Streamed(v, headers.contentLength, Option(formatToContentType(format, charset)))
+  }
 
   override def fromWebSocketPipe[REQ, RESP](
       pipe: streams.Pipe[REQ, RESP],
-      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, NoStreams]
+      o: WebSocketBodyOutput[streams.Pipe[REQ, RESP], REQ, RESP, _, AkkaStreams]
   ): HttpEntity = throw new UnsupportedOperationException
 
   private def rawPartsToFilePart[T](
@@ -114,6 +116,28 @@ class PlayToResponseBody extends ToResponseBody[HttpEntity, NoStreams] {
         }
 
       maybeData.map(MultipartFormData.DataPart(part.name, _))
+    }
+  }
+
+  private def formatToContentType(format: CodecFormat, charset: Option[Charset]): String = {
+    val actualCharset = charset
+      .map(_.name())
+      .orElse(format.mediaType.charset)
+      .getOrElse(StandardCharsets.UTF_8.name())
+
+    implicit val playCodec: Codec = Codec.javaSupported(actualCharset)
+
+    format match {
+      case CodecFormat.Json()               => ContentTypes.JSON
+      case CodecFormat.Xml()                => ContentTypes.XML
+      case CodecFormat.TextPlain()          => ContentTypes.TEXT
+      case CodecFormat.TextHtml()           => ContentTypes.HTML
+      case CodecFormat.OctetStream()        => ContentTypes.BINARY
+      case CodecFormat.Zip()                => ContentTypes.withCharset("application/zip")
+      case CodecFormat.XWwwFormUrlencoded() => ContentTypes.FORM
+      case CodecFormat.MultipartFormData()  => ContentTypes.withCharset("multipart/form-data")
+      case CodecFormat.TextEventStream()    => ContentTypes.EVENT_STREAM
+      case f                                => ContentTypes.withCharset(f.mediaType.mainType + "/" + f.mediaType.subType)
     }
   }
 
