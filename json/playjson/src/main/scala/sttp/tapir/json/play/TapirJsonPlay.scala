@@ -41,7 +41,7 @@ trait TapirJsonPlay {
   implicit val schemaForPlayJsValue: Schema[JsValue] =
     Schema(
       SCoproduct(Nil, None)(_ => None),
-      Some(SName("play.api.libs.json.JsValue"))
+      None
     )
 
   implicit val schemaForPlayJsObject: Schema[JsObject] =

@@ -27,5 +27,4 @@ components:
       type: object
       properties:
         maybeJson:
-          type: object
           description: Circe Json Option description

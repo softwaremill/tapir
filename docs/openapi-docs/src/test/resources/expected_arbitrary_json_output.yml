@@ -11,5 +11,4 @@ paths:
           description: ''
           content:
             application/json:
-              schema:
-                type: object
+              schema: {}

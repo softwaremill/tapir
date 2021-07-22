@@ -6,7 +6,7 @@ import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
 import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
-import sttp.tapir.SchemaType.SProduct
+import sttp.tapir.SchemaType.{SCoproduct, SProduct}
 import sttp.tapir.generic.auto._
 import sttp.tapir.{DecodeResult, FieldName}
 

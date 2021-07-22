@@ -30,7 +30,7 @@ trait TapirJsonSpray {
   implicit val schemaForSprayJsValue: Schema[JsValue] =
     Schema(
       SCoproduct(Nil, None)(_ => None),
-      Some(SName("spray.json.JsValue"))
+      None
     )
 
   implicit val schemaForSprayJsObject: Schema[JsObject] =
