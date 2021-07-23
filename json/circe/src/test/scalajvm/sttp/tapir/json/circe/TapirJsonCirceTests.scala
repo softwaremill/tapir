@@ -50,7 +50,7 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     error.underlying shouldBe a[DecodingFailure]
   }
 
-  it should "return a product schema for a Json" in {
+  it should "return a coproduct schema for a Json" in {
     schemaForCirceJson.schemaType shouldBe a[SCoproduct[_]]
   }
 
