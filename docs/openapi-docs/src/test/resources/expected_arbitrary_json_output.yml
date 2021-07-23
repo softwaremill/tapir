@@ -11,8 +11,4 @@ paths:
           description: ''
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Json'
-components:
-  schemas:
-    Json: {}
+              schema: {}

@@ -41,7 +41,7 @@ trait TapirJsonZio {
   implicit val schemaForZioJsonValue: Schema[Json] =
     Schema(
       SCoproduct(Nil, None)(_ => None),
-      Some(SName("zio.json.ast.Json"))
+      None
     )
 
   implicit val schemaForZioJsonObject: Schema[Obj] =

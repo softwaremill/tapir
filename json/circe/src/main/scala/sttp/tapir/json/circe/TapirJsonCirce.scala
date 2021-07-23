@@ -31,7 +31,7 @@ trait TapirJsonCirce {
   implicit val schemaForCirceJson: Schema[Json] =
     Schema(
       SCoproduct(Nil, None)(_ => None),
-      Some(SName("io.circe.Json"))
+      None
     )
 
   implicit val schemaForCirceJsonObject: Schema[JsonObject] = Schema(SProduct(Nil), Some(SName("io.circe.JsonObject")))

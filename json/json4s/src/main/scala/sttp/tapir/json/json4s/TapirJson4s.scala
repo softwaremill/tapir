@@ -26,9 +26,10 @@ trait TapirJson4s {
       serialization.write(t.asInstanceOf[AnyRef])
     }
 
+  // JValue is a coproduct with unknown implementations
   implicit val schemaForJson4s: Schema[JValue] =
     Schema(
       SCoproduct(Nil, None)(_ => None),
-      Some(SName("org.json4s.JValue"))
+      None
     )
 }
