@@ -30,10 +30,10 @@ trait ZioHttpInterpreter[R] {
   )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(List(e.serverLogicRecoverErrors(logic)))
 
-  def toHttp(se: ServerEndpoint[_, _, _, ZioStreams, RIO[R, *]]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp[I, E, O](se: ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]): Http[R, Throwable, Request, Response[R, Throwable]] =
     toHttp(List(se))
 
-  def toHttp[O, E, I](ses: List[ServerEndpoint[I, E, O, ZioStreams, RIO[R, *]]]): Http[R, Throwable, Request, Response[R, Throwable]] =
+  def toHttp(ses: List[ServerEndpoint[_, _, _, ZioStreams, RIO[R, *]]]): Http[R, Throwable, Request, Response[R, Throwable]] =
     Http.fromEffectFunction[Request] { req =>
       implicit val bodyListener: ZioHttpBodyListener[R] = new ZioHttpBodyListener[R]
       implicit val monadError: MonadError[RIO[R, *]] = zioMonadError[R]
