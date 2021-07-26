@@ -16,6 +16,7 @@ trait TestServerInterpreter[F[_], +R, ROUTE, B] {
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
       metricsInterceptor: Option[MetricsRequestInterceptor[F, B]] = None
   ): ROUTE
+  def route[I, E, O](es: List[ServerEndpoint[I, E, O, R, F]]): ROUTE
   def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, R], fn: I => F[O])(implicit eClassTag: ClassTag[E]): ROUTE
   def server(routes: NonEmptyList[ROUTE]): Resource[IO, Port]
 }
