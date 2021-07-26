@@ -33,6 +33,11 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
     ZioHttpInterpreter(serverOptions).toHttp(e)
   }
 
+  override def route[I, E, O](
+      es: List[ServerEndpoint[I, E, O, ZioStreams, Task]]
+  ): Http[Any, Throwable, Request, Response[Any, Throwable]] =
+    ZioHttpInterpreter().toHttp(es)
+
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Task[O])(implicit
       eClassTag: ClassTag[E]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] =

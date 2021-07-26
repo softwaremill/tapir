@@ -31,6 +31,8 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
     FinatraServerInterpreter(serverOptions).toRoute(e)
   }
 
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): FinatraRoute = ???
+
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): FinatraRoute = {

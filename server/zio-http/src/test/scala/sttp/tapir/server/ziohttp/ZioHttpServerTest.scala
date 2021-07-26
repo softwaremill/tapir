@@ -42,7 +42,7 @@ class ZioHttpServerTest extends TestSuite {
           new ServerStreamingTests(createServerTest, ZioStreams).tests() ++
           new ServerAuthenticationTests(createServerTest).tests() ++
           new ServerMetricsTest(createServerTest).tests() ++
-          new ServerRejectTests(createServerTest).tests()
+          new ServerRejectTests(createServerTest, interpreter).tests()
     }
   }
 }

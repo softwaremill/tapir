@@ -30,6 +30,8 @@ class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO]) extends TestS
     FinatraCatsServerInterpreter[IO](serverOptions).toRoute(e)
   }
 
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, IO]]): FinatraRoute = ???
+
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): FinatraRoute = FinatraCatsServerInterpreter[IO](dispatcher).toRouteRecoverErrors(e)(fn)

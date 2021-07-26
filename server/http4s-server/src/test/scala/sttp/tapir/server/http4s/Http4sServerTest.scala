@@ -120,7 +120,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
       }.tests() ++
       new ServerAuthenticationTests(createServerTest).tests() ++
       new ServerMetricsTest(createServerTest).tests() ++
-      new ServerRejectTests(createServerTest).tests() ++
+      new ServerRejectTests(createServerTest, interpreter).tests() ++
       additionalTests()
   }
 }
