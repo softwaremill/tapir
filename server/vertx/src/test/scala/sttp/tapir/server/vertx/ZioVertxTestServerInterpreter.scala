@@ -32,6 +32,8 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
     VertxZioServerInterpreter(options).route(e)
   }
 
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, ZioStreams, Task]]): Router => Route = ???
+
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, ZioStreams], fn: I => Task[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route =

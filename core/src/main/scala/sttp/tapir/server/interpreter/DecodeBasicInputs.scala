@@ -69,8 +69,8 @@ object DecodeBasicInputs {
 
   private def apply(input: EndpointInput[_], ctx: DecodeInputsContext): DecodeBasicInputsResult = {
     // The first decoding failure is returned.
-    // We decode in the following order: method, path, query, headers (incl. cookies), request, status, body
-    // An exact-path check is done after method & path matching
+    // We decode in the following order: path, method, query, headers (incl. cookies), request, status, body
+    // An exact-path check is done after path & method matching
 
     val basicInputs = input.asVectorOfBasicInputs().zipWithIndex.map { case (el, i) => IndexedBasicInput(el, i) }
 

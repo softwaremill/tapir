@@ -35,6 +35,8 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestS
     PlayServerInterpreter(serverOptions).toRoutes(e)
   }
 
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Any, Future]]): Routes = PlayServerInterpreter().toRoutes(es)
+
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Any], fn: I => Future[O])(implicit
       eClassTag: ClassTag[E]
   ): Routes = {

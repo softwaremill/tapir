@@ -97,7 +97,7 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         new ServerStreamingTests(createServerTest, AkkaStreams).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
         new ServerMetricsTest(createServerTest).tests() ++
-        new ServerRejectTests(createServerTest).tests() ++
+        new ServerRejectTests(createServerTest, interpreter).tests() ++
         additionalTests()
     }
   }

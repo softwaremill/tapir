@@ -36,6 +36,8 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
     VertxCatsServerInterpreter(options).route(e)
   }
 
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Fs2Streams[IO], IO]]): Router => Route = ???
+
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO]], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): Router => Route = {

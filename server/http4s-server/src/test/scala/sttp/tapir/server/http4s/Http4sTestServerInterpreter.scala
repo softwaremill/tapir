@@ -40,6 +40,10 @@ class Http4sTestServerInterpreter
     Http4sServerInterpreter(serverOptions).toRoutes(e)
   }
 
+  override def route[I, E, O](es: List[ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO]]): HttpRoutes[IO] = {
+    Http4sServerInterpreter[IO]().toRoutes(es)
+  }
+
   override def routeRecoverErrors[I, E <: Throwable, O](e: Endpoint[I, E, O, Fs2Streams[IO] with WebSockets], fn: I => IO[O])(implicit
       eClassTag: ClassTag[E]
   ): HttpRoutes[IO] = {
