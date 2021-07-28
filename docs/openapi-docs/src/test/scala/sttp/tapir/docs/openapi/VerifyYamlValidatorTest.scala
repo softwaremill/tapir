@@ -188,4 +188,17 @@ class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
     actualYamlNoIndent shouldBe expectedYaml
   }
 
+  test("should infer the encode-to-raw function if one isn't provided for primitive valued enumerations") {
+    val expectedYaml = load("validator/expected_validator_infer_encode_to_raw.yml")
+
+    val getEnums = endpoint.get
+      .in("enums")
+      .in(query[List[Int]]("ns").validateIterable(Validator.enumeration(List(1, 2))))
+      .out(stringBody)
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(getEnums), Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }
