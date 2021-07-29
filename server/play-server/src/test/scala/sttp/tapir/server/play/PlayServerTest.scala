@@ -5,7 +5,6 @@ import cats.effect.{IO, Resource}
 import sttp.monad.FutureMonad
 import sttp.tapir.server.tests.{
   DefaultCreateServerTest,
-  ServerRejectTests,
   ServerAuthenticationTests,
   ServerBasicTests,
   ServerFileMultipartTests,
@@ -26,15 +25,11 @@ class PlayServerTest extends TestSuite {
       val interpreter = new PlayTestServerInterpreter()(actorSystem)
       val createServerTest = new DefaultCreateServerTest(backend, interpreter)
 
-      new ServerBasicTests(
-        createServerTest,
-        interpreter,
-        multipleValueHeaderSupport = false,
-        inputStreamSupport = false
-      ).tests() ++
+      new ServerBasicTests(createServerTest, interpreter, multipleValueHeaderSupport = false, inputStreamSupport = false).tests() ++
         new ServerFileMultipartTests(createServerTest, multipartInlineHeaderSupport = false).tests() ++
         new ServerAuthenticationTests(createServerTest).tests() ++
-        new ServerMetricsTest(createServerTest).tests()
+        new ServerMetricsTest(createServerTest).tests() ++
+        new PlayServerWithContextTest(backend).tests()
     }
   }
 }
