@@ -201,4 +201,21 @@ class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
 
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("should add encode to a validator using the codec in scope") {
+    val expectedYaml = load("validator/expected_validator_encode_from_codec.yml")
+
+    case class A()
+    implicit val aPlainCodec: Codec.PlainCodec[A] = Codec.string.map(_ => A())(_ => "AA")
+
+    val getEnums = endpoint.get
+      .in("enums")
+      .in(query[List[A]]("as").validateIterable(Validator.enumeration(List(A())).encodeWithPlainCodec))
+      .out(stringBody)
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(getEnums), Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }

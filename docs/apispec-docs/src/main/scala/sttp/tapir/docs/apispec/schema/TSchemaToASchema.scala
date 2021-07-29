@@ -89,7 +89,7 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       wholeNumbers: Boolean
   ): ASchema = vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers))
 
-  private def addConstraints[T](aschema: ASchema, v: Validator.Primitive[T], wholeNumbers: Boolean): ASchema = {
+  private def addConstraints(aschema: ASchema, v: Validator.Primitive[_], wholeNumbers: Boolean): ASchema = {
     v match {
       case m @ Validator.Min(v, exclusive) =>
         aschema.copy(
@@ -101,35 +101,19 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
           maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
           exclusiveMaximum = Option(exclusive).filter(identity)
         )
-      case Validator.Pattern(value)   => aschema.copy(pattern = Some(value))
-      case Validator.MinLength(value) => aschema.copy(minLength = Some(value))
-      case Validator.MaxLength(value) => aschema.copy(maxLength = Some(value))
-      case Validator.MinSize(value)   => aschema.copy(minItems = Some(value))
-      case Validator.MaxSize(value)   => aschema.copy(maxItems = Some(value))
-      // we can infer the encode-to-raw function if all of the enumerated values or of a "basic" type, which the
-      // serializer should be able to serialize to a primitive
-      case Validator.Enumeration(v, None, _) if onlyBasicValues(v) => addEnumeration(aschema, v, (x: T) => Some(x))
-      case Validator.Enumeration(_, None, _)                       => aschema
-      case Validator.Enumeration(v, Some(encode), _)               => addEnumeration(aschema, v, encode)
+      case Validator.Pattern(value)                  => aschema.copy(pattern = Some(value))
+      case Validator.MinLength(value)                => aschema.copy(minLength = Some(value))
+      case Validator.MaxLength(value)                => aschema.copy(maxLength = Some(value))
+      case Validator.MinSize(value)                  => aschema.copy(minItems = Some(value))
+      case Validator.MaxSize(value)                  => aschema.copy(maxItems = Some(value))
+      case Validator.Enumeration(_, None, _)         => aschema
+      case Validator.Enumeration(v, Some(encode), _) => addEnumeration(aschema, v, encode)
     }
   }
 
   private def addEnumeration[T](aschema: ASchema, v: List[T], encode: EncodeToRaw[T]): ASchema = {
     val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
     aschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
-  }
-
-  private def onlyBasicValues[T](v: List[T]): Boolean = v.forall {
-    case _: String     => true
-    case _: Int        => true
-    case _: Long       => true
-    case _: Float      => true
-    case _: Double     => true
-    case _: Boolean    => true
-    case _: BigDecimal => true
-    case _: BigInt     => true
-    case null          => true
-    case _             => false
   }
 
   private def toBigDecimal[N](v: N, vIsNumeric: Numeric[N], wholeNumber: Boolean): BigDecimal = {
