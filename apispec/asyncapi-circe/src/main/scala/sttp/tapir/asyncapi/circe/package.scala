@@ -37,6 +37,7 @@ trait TapirAsyncAPICirceEncoders {
   implicit val encoderOAuthFlow: Encoder[OAuthFlow] = deriveEncoder[OAuthFlow].mapJsonObject(expandExtensions)
   implicit val encoderOAuthFlows: Encoder[OAuthFlows] = deriveEncoder[OAuthFlows].mapJsonObject(expandExtensions)
   implicit val encoderSecurityScheme: Encoder[SecurityScheme] = deriveEncoder[SecurityScheme].mapJsonObject(expandExtensions)
+  // should be synchronized with sttp.tapir.internal.isBasicValue
   implicit val encoderExampleSingleValue: Encoder[ExampleSingleValue] = {
     case ExampleSingleValue(value: String)     => parse(value).getOrElse(Json.fromString(value))
     case ExampleSingleValue(value: Int)        => Json.fromInt(value)

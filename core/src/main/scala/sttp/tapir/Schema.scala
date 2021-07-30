@@ -4,7 +4,7 @@ import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Derived
-import sttp.tapir.internal.ValidatorSyntax
+import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 
 import java.io.InputStream
@@ -93,7 +93,18 @@ case class Schema[T](
 
   def encodedExample(e: Any): Schema[T] = copy(encodedExample = Some(e))
 
-  def default(t: T, raw: Option[Any] = None): Schema[T] = copy(default = Some((t, raw)), isOptional = true)
+  /** Adds a default value, which is used by [[Codec]]s during decoding and for documentation.
+    *
+    * To represent the value in the documentation, an encoded form needs to be provided. The encoded form is inferred
+    * if missing and the given value is of a basic type (number, string, etc.).
+    */
+  def default(t: T, encoded: Option[Any] = None): Schema[T] = {
+    val raw2 = encoded match {
+      case None if isBasicValue(t) => Some(t)
+      case _                       => encoded
+    }
+    copy(default = Some((t, raw2)), isOptional = true)
+  }
 
   def format(f: String): Schema[T] = copy(format = Some(f))
 
