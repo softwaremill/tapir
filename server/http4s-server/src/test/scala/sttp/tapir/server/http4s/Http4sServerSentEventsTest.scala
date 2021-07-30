@@ -2,9 +2,8 @@ package sttp.tapir.server.http4s
 
 import cats.effect.IO
 import cats.effect.unsafe.implicits.global
-import org.scalatest.funsuite.{AnyFunSuite, AsyncFunSuite}
+import org.scalatest.funsuite.AsyncFunSuite
 import org.scalatest.matchers.should.Matchers
-import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.sse.ServerSentEvent
 
 import java.nio.charset.Charset
@@ -13,7 +12,7 @@ class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
 
   test("serialiseSSEToBytes should successfully serialise simple Server Sent Event to ByteString") {
     val sse: fs2.Stream[IO, ServerSentEvent] = fs2.Stream(ServerSentEvent(Some("data"), Some("event"), Some("id1"), Some(10)))
-    val serialised = Http4sServerSentEvents.serialiseSSEToBytes(Fs2Streams[IO])(sse)
+    val serialised = Http4sServerSentEvents.serialiseSSEToBytes[IO](sse)
     val futureEventsBytes = serialised.compile.toList
     futureEventsBytes
       .map(sseEvents => {
@@ -30,7 +29,7 @@ class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
 
   test("serialiseSSEToBytes should omit fields that are not set") {
     val sse = fs2.Stream(ServerSentEvent(Some("data"), None, Some("id1"), None))
-    val serialised = Http4sServerSentEvents.serialiseSSEToBytes(Fs2Streams[IO])(sse)
+    val serialised = Http4sServerSentEvents.serialiseSSEToBytes[IO](sse)
     val futureEvents = serialised.compile.toList
     futureEvents
       .map(sseEvents => {
@@ -54,7 +53,7 @@ class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
         None
       )
     )
-    val serialised = Http4sServerSentEvents.serialiseSSEToBytes(Fs2Streams[IO])(sse)
+    val serialised = Http4sServerSentEvents.serialiseSSEToBytes[IO](sse)
     val futureEvents = serialised.compile.toList
     futureEvents
       .map(sseEvents => {
@@ -83,7 +82,7 @@ class Http4sServerSentEventsTest extends AsyncFunSuite with Matchers {
           |
           |""".stripMargin.getBytes(Charset.forName("UTF-8"))
     )
-    val parsed = Http4sServerSentEvents.parseBytesToSSE(Fs2Streams[IO])(sseBytes)
+    val parsed = Http4sServerSentEvents.parseBytesToSSE[IO](sseBytes)
     val futureEvents = parsed.compile.toList
     futureEvents
       .map(events =>

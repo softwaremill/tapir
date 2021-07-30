@@ -6,7 +6,7 @@ import sttp.model.sse.ServerSentEvent
 
 object Http4sServerSentEvents {
 
-  def serialiseSSEToBytes[F[_]](streams: Fs2Streams[F]): Stream[F, ServerSentEvent] => streams.BinaryStream = sseStream => {
+  def serialiseSSEToBytes[F[_]]: Stream[F, ServerSentEvent] => Stream[F, Byte] = sseStream => {
     sseStream
       .map(sse => {
         s"${sse.toString()}\n\n"
@@ -14,7 +14,7 @@ object Http4sServerSentEvents {
       .through(text.utf8Encode)
   }
 
-  def parseBytesToSSE[F[_]](streams: Fs2Streams[F]): streams.BinaryStream => Stream[F, ServerSentEvent] = stream => {
+  def parseBytesToSSE[F[_]]: Stream[F, Byte] => Stream[F, ServerSentEvent] = stream => {
     stream
       .through(text.utf8Decode[F])
       .through(text.lines[F])

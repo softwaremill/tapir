@@ -101,7 +101,7 @@ class Http4sServerTest[R >: Fs2Streams[IO] with WebSockets] extends TestSuite wi
         basicRequest
           .response(asStream[IO, List[ServerSentEvent], Fs2Streams[IO]](Fs2Streams[IO]) { stream =>
             Http4sServerSentEvents
-              .parseBytesToSSE(Fs2Streams[IO])
+              .parseBytesToSSE[IO]
               .apply(stream)
               .compile
               .toList
