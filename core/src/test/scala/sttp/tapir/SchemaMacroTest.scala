@@ -17,7 +17,7 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
 
   it should "modify basic schema" in {
     implicitly[Schema[String]].modify(x => x)(_.description("test").default("f2")) shouldBe implicitly[Schema[String]]
-      .copy(description = Some("test"), default = Some(("f2", None)), isOptional = true)
+      .copy(description = Some("test"), default = Some(("f2", Some("f2"))), isOptional = true)
   }
 
   it should "modify product schema" in {
