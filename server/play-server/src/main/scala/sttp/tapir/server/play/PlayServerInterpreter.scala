@@ -57,10 +57,10 @@ trait PlayServerInterpreter {
         }
       }
 
-      override def apply(v1: RequestHeader): Handler = {
+      override def apply(header: RequestHeader): Handler = {
         playServerOptions.defaultActionBuilder.async(playServerOptions.playBodyParsers.raw) { request =>
           implicit val bodyListener: BodyListener[Future, HttpEntity] = new PlayBodyListener
-          val serverRequest = new PlayServerRequest(request)
+          val serverRequest = new PlayServerRequest(header)
           val interpreter = new ServerInterpreter[Any, Future, HttpEntity, NoStreams](
             new PlayRequestBody(request, playServerOptions),
             new PlayToResponseBody,
@@ -86,7 +86,7 @@ trait PlayServerInterpreter {
               val status = response.code.code
               response.body match {
                 case Some(entity) => Result(ResponseHeader(status, headers), entity)
-                case None => Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
+                case None         => Result(ResponseHeader(status, headers), HttpEntity.NoEntity)
               }
           }
         }
