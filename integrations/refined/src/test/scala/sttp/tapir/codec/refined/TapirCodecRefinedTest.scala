@@ -1,15 +1,16 @@
 package sttp.tapir.codec.refined
 
 import eu.timepit.refined.api.Refined
+import eu.timepit.refined.boolean.Or
 import eu.timepit.refined.collection.NonEmpty
-import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
+import eu.timepit.refined.numeric.{Greater, GreaterEqual, Interval, Less, LessEqual, Negative, NonNegative, NonPositive, Positive}
 import eu.timepit.refined.string.{IPv4, MatchesRegex}
 import eu.timepit.refined.types.string.NonEmptyString
 import eu.timepit.refined.{W, refineMV, refineV}
-import sttp.tapir.Codec.PlainCodec
-import sttp.tapir.{DecodeResult, Schema, ValidationError, Validator}
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
+import sttp.tapir.Codec.PlainCodec
+import sttp.tapir.{DecodeResult, Schema, ValidationError, Validator}
 
 class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRefined {
 
@@ -99,6 +100,68 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     }
   }
 
+  "Generated validator for Positive" should "use tapir Validator.min" in {
+    type IntConstraint = Positive
+    type LimitedInt = Int Refined IntConstraint
+
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Min(0, true), _) => }
+  }
+
+  "Generated validator for NonNegative" should "use tapir Validator.min" in {
+    type IntConstraint = NonNegative
+    type LimitedInt = Int Refined IntConstraint
+
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Min(0, false), _) => }
+  }
+
+  "Generated validator for NonPositive" should "use tapir Validator.max" in {
+    type IntConstraint = NonPositive
+    type LimitedInt = Int Refined IntConstraint
+
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Max(0, false), _) => }
+  }
+
+  "Generated validator for Negative" should "use tapir Validator.max" in {
+    type IntConstraint = Negative
+    type LimitedInt = Int Refined IntConstraint
+
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Max(0, true), _) => }
+  }
+
+  "Generated validator for Interval.Open" should "use tapir Validator.min and Validator.max" in {
+    type IntConstraint = Interval.Open[W.`1`.T, W.`3`.T]
+    type LimitedInt = Int Refined IntConstraint
+
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, true))), _) => }
+  }
+
+  "Generated validator for Interval.Close" should "use tapir Validator.min and Validator.max" in {
+    type IntConstraint = Interval.Closed[W.`1`.T, W.`3`.T]
+    type LimitedInt = Int Refined IntConstraint
+
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, false))), _) => }
+  }
+
+  "Generated validator for Interval.OpenClose" should "use tapir Validator.min and Validator.max" in {
+    type IntConstraint = Interval.OpenClosed[W.`1`.T, W.`3`.T]
+    type LimitedInt = Int Refined IntConstraint
+
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.All(List(Validator.Min(1, true), Validator.Max(3, false))), _) => }
+  }
+
+  "Generated validator for Interval.ClosedOpen" should "use tapir Validator.min and Validator.max" in {
+    type IntConstraint = Interval.ClosedOpen[W.`1`.T, W.`3`.T]
+    type LimitedInt = Int Refined IntConstraint
+
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.All(List(Validator.Min(1, false), Validator.Max(3, true))), _) => }
+  }
+
+  "Generate validator for Or" should "use tapir Validator.any" in {
+    type IntConstraint = Greater[W.`3`.T] Or Less[W.` -3`.T]
+    type LimitedInt = Int Refined IntConstraint
+    implicitly[Schema[LimitedInt]].validator should matchPattern { case Validator.Mapped(Validator.Any(List(Validator.Min(3, true), Validator.Max(-3, true))), _) => }
+  }
+
   "TapirCodecRefined" should "compile using implicit schema for refined types" in {
     import io.circe.refined._
     import sttp.tapir
@@ -122,7 +185,6 @@ class TapirCodecRefinedTest extends AnyFlatSpec with Matchers with TapirCodecRef
     // [error] scala.reflect.internal.Types$TypeRef.foldOver(Types.scala:2376)
     // [error] scala.reflect.internal.tpe.TypeMaps$IsRelatableCollector$.apply(TypeMaps.scala:1272)
     // [error] scala.reflect.internal.tpe.TypeMaps$IsRelatableCollector$.apply(TypeMaps.scala:1267)
-    import eu.timepit.refined.auto._
     import sttp.tapir._
     endpoint.in("x")
   }
