@@ -1,6 +1,6 @@
 package sttp.tapir.json.circe
 
-import io.circe.DecodingFailure
+import io.circe.{DecodingFailure, Encoder, Json}
 import io.circe.generic.auto._
 import org.scalatest.flatspec.AnyFlatSpecLike
 import org.scalatest.matchers.should.Matchers
@@ -58,4 +58,9 @@ class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
     schemaForCirceJsonObject.schemaType shouldBe a[SProduct[_]]
   }
 
+  it should "represent big decimals as numbers" in {
+    val n = BigDecimal(10)
+    implicitly[Encoder[BigDecimal]].apply(n) shouldBe Json.fromDoubleOrNull(10)
+    implicitly[Schema[BigDecimal]] shouldBe Schema(SchemaType.SNumber())
+  }
 }
