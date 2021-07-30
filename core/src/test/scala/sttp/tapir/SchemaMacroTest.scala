@@ -165,6 +165,39 @@ class SchemaMacroTest extends AnyFlatSpec with Matchers with TableDrivenProperty
     schema.modify(x => x)(_.description("test")) shouldBe schema.description("test")
   }
 
+  it should "create a map schema with string keys" in {
+    // given
+    case class V()
+
+    // when
+    val schema = Schema.schemaForMap[V]
+
+    // then
+    schema shouldBe Schema(
+      SOpenProduct(implicitly[Schema[V]])((_: Map[String, V]) => Map.empty),
+      name = Some(SName("Map", List("V")))
+    )
+
+    schema.schemaType.asInstanceOf[SOpenProduct[Map[String, V], V]].fieldValues(Map("k" -> V())) shouldBe Map("k" -> V())
+  }
+
+  it should "create a map schema with non-string keys" in {
+    // given
+    case class K()
+    case class V()
+
+    // when
+    val schema = Schema.schemaForMap[K, V](_ => "k")
+
+    // then
+    schema shouldBe Schema(
+      SOpenProduct(implicitly[Schema[V]])((_: Map[K, V]) => Map.empty),
+      name = Some(SName("Map", List("K", "V")))
+    )
+
+    schema.schemaType.asInstanceOf[SOpenProduct[Map[K, V], V]].fieldValues(Map(K() -> V())) shouldBe Map("k" -> V())
+  }
+
   it should "work with custom naming configuration" in {
     implicit val customConf: Configuration = Configuration.default.withKebabCaseMemberNames
     val actual = implicitly[Schema[D]].modify(_.someFieldName)(_.description("something"))
