@@ -8,7 +8,7 @@ import sttp.tapir.Codec.JsonCodec
 import sttp.tapir.DecodeResult.Error.{JsonDecodeException, JsonError}
 import sttp.tapir.SchemaType.{SCoproduct, SProduct}
 import sttp.tapir.generic.auto._
-import sttp.tapir.{DecodeResult, FieldName}
+import sttp.tapir.{DecodeResult, FieldName, Schema, SchemaType}
 
 class TapirJsonCirceTests extends AnyFlatSpecLike with Matchers {
 
