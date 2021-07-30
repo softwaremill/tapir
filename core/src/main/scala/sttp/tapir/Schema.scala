@@ -152,14 +152,16 @@ case class Schema[T](
         copy(schemaType = schemaType2)
     }
 
-  /** Add a validator to this schema. If the validator contains a named enum validator, the name is set as the
-    * schema's name.
+  /** Add a validator to this schema. If the validator contains a named enum validator:
+    * * the encode function is inferred if not yet defined, and the validators possible values are of a basic type
+    * * the name is set as the schema's name.
     */
   def validate(v: Validator[T]): Schema[T] = {
+    val v2 = v.inferEnumerationEncode
     // if there's an enum validator, propagating the name of the enumeration to the schema
-    v.asPrimitiveValidators.collectFirst { case Validator.Enumeration(_, _, Some(name)) => name } match {
-      case Some(name) => copy(name = Some(name), validator = validator.and(v))
-      case None       => copy(validator = validator.and(v))
+    v2.asPrimitiveValidators.collectFirst { case Validator.Enumeration(_, _, Some(name)) => name } match {
+      case Some(name) => copy(name = Some(name), validator = validator.and(v2))
+      case None       => copy(validator = validator.and(v2))
     }
   }
 

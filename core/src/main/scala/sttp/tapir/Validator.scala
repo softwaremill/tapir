@@ -43,10 +43,23 @@ object Validator extends ValidatorMacros {
   def custom[T](doValidate: T => List[ValidationError[_]], showMessage: Option[String] = None): Validator[T] =
     Custom(doValidate, showMessage)
 
+  /** Create an enumeration validator, with the given possible values.
+    *
+    * To represent the enumerated values in documentation, an encoding function needs to be provided. This can be
+    * done:
+    * * by using the overloaded [[enumeration]] method with an `encode` parameter
+    * * by adding an encode function on an [[Validator.Enumeration]] instance using one of the `.encode` functions
+    * * by adding the validator directly to a codec (see [[Mapping.addEncodeToEnumValidator]]
+    * * when the values possible values are of a basic type (numbers, strings), the encode function is inferred
+    *   if not present, when being added to the schema, see [[Schema.validate]]
+    */
   def enumeration[T](possibleValues: List[T]): Validator.Enumeration[T] = Enumeration(possibleValues, None, None)
 
-  /** @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
-    *               This will be automatically inferred if the validator is directly added to a codec.
+  /** Create an enumeration validator, with the given possible values, an optional encoding function (so that the
+    * enumerated values can be represented in documentation), and an optional name (to create a reusable documentation
+    * component).
+    *
+    * @param encode Specify how values of this type can be encoded to a raw value, which will be used for documentation.
     */
   def enumeration[T](possibleValues: List[T], encode: EncodeToRaw[T], name: Option[SName] = None): Validator.Enumeration[T] =
     Enumeration(possibleValues, Some(encode), name)
@@ -137,6 +150,16 @@ object Validator extends ValidatorMacros {
       * will be used when generating documentation.
       */
     def encode(e: T => scala.Any): Enumeration[T] = copy(encode = Some(v => Some(e(v))))
+
+    /** Specify that values of this type should be encoded to a raw value using an in-scope plain codec. This encoding
+      * will be used when generating documentation.
+      */
+    def encodeWithPlainCodec(implicit c: Codec.PlainCodec[T]): Enumeration[T] = copy(encode = Some(v => Some(c.encode(v))))
+
+    /** Specify that values of this type should be encoded to a raw value using an in-scope codec of the given format.
+      * This encoding will be used when generating documentation.
+      */
+    def encodeWithCodec[CF <: CodecFormat](implicit c: Codec[String, T, CF]): Enumeration[T] = copy(encode = Some(v => Some(c.encode(v))))
   }
 
   //

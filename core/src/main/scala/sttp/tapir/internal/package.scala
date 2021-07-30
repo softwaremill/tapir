@@ -304,8 +304,7 @@ package object internal {
     }
   }
 
-  implicit class ValidatorSyntax(v: Validator[_]) {
-
+  implicit class ValidatorSyntax[T](v: Validator[T]) {
     def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {
       def toPrimitives(v: Validator[_]): Seq[Validator.Primitive[_]] = {
         v match {
@@ -319,7 +318,31 @@ package object internal {
       toPrimitives(v)
     }
 
-    def traversePrimitives[T](handle: PartialFunction[Validator.Primitive[_], Vector[T]]): Vector[T] =
+    def traversePrimitives[U](handle: PartialFunction[Validator.Primitive[_], Vector[U]]): Vector[U] =
       asPrimitiveValidators.collect(handle).flatten.toVector
+
+    def inferEnumerationEncode: Validator[T] = {
+      v match {
+        case Validator.Enumeration(possibleValues, None, name) =>
+          if (onlyBasicValues(possibleValues)) Validator.Enumeration(possibleValues, Some((x: T) => Some(x)), name) else v
+        case Validator.Mapped(wrapped, g) => Validator.Mapped(wrapped.inferEnumerationEncode, g)
+        case Validator.All(validators)    => Validator.All(validators.map(_.inferEnumerationEncode))
+        case Validator.Any(validators)    => Validator.Any(validators.map(_.inferEnumerationEncode))
+        case _                            => v
+      }
+    }
+
+    private def onlyBasicValues(v: List[T]): Boolean = v.forall {
+      case _: String     => true
+      case _: Int        => true
+      case _: Long       => true
+      case _: Float      => true
+      case _: Double     => true
+      case _: Boolean    => true
+      case _: BigDecimal => true
+      case _: BigInt     => true
+      case null          => true
+      case _             => false
+    }
   }
 }

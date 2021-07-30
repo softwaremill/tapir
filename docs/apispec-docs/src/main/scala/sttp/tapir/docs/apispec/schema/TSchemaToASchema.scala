@@ -1,5 +1,6 @@
 package sttp.tapir.docs.apispec.schema
 
+import sttp.tapir.Validator.EncodeToRaw
 import sttp.tapir.apispec.{ReferenceOr, Schema => ASchema, _}
 import sttp.tapir.docs.apispec.exampleValue
 import sttp.tapir.internal.{IterableToListMap, _}
@@ -88,28 +89,31 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
       wholeNumbers: Boolean
   ): ASchema = vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers))
 
-  private def addConstraints(oschema: ASchema, v: Validator.Primitive[_], wholeNumbers: Boolean): ASchema = {
+  private def addConstraints(aschema: ASchema, v: Validator.Primitive[_], wholeNumbers: Boolean): ASchema = {
     v match {
       case m @ Validator.Min(v, exclusive) =>
-        oschema.copy(
+        aschema.copy(
           minimum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
           exclusiveMinimum = Option(exclusive).filter(identity)
         )
       case m @ Validator.Max(v, exclusive) =>
-        oschema.copy(
+        aschema.copy(
           maximum = Some(toBigDecimal(v, m.valueIsNumeric, wholeNumbers)),
           exclusiveMaximum = Option(exclusive).filter(identity)
         )
-      case Validator.Pattern(value)          => oschema.copy(pattern = Some(value))
-      case Validator.MinLength(value)        => oschema.copy(minLength = Some(value))
-      case Validator.MaxLength(value)        => oschema.copy(maxLength = Some(value))
-      case Validator.MinSize(value)          => oschema.copy(minItems = Some(value))
-      case Validator.MaxSize(value)          => oschema.copy(maxItems = Some(value))
-      case Validator.Enumeration(_, None, _) => oschema
-      case Validator.Enumeration(v, Some(encode), _) =>
-        val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
-        oschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
+      case Validator.Pattern(value)                  => aschema.copy(pattern = Some(value))
+      case Validator.MinLength(value)                => aschema.copy(minLength = Some(value))
+      case Validator.MaxLength(value)                => aschema.copy(maxLength = Some(value))
+      case Validator.MinSize(value)                  => aschema.copy(minItems = Some(value))
+      case Validator.MaxSize(value)                  => aschema.copy(maxItems = Some(value))
+      case Validator.Enumeration(_, None, _)         => aschema
+      case Validator.Enumeration(v, Some(encode), _) => addEnumeration(aschema, v, encode)
     }
+  }
+
+  private def addEnumeration[T](aschema: ASchema, v: List[T], encode: EncodeToRaw[T]): ASchema = {
+    val values = v.flatMap(x => encode(x).map(ExampleSingleValue))
+    aschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
   }
 
   private def toBigDecimal[N](v: N, vIsNumeric: Numeric[N], wholeNumber: Boolean): BigDecimal = {
