@@ -25,6 +25,7 @@ object ConvertStreams {
       se.logic
     )
 
+  // the occasional casts are needed as we know that we return the same input as originally, but the compiler doesn't
   private def forInput(input: EndpointInput[_]): EndpointInput[_] = {
     input match {
       // streaming inputs
@@ -34,9 +35,9 @@ object ConvertStreams {
       case EndpointIO.Pair(left, right, combine, split) =>
         EndpointIO.Pair(forInput(left).asInstanceOf[EndpointIO[_]], forInput(right).asInstanceOf[EndpointIO[_]], combine, split)
       case EndpointInput.MappedPair(wrapped, mapping) =>
-        EndpointInput.MappedPair(forInput(wrapped).asInstanceOf[EndpointInput.Pair[_, _, Any]], mapping)
+        EndpointInput.MappedPair(forInput(wrapped).asInstanceOf[EndpointInput.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointIO.MappedPair(wrapped, mapping) =>
-        EndpointIO.MappedPair(forInput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping)
+        EndpointIO.MappedPair(forInput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointInput.Auth.ApiKey(wrapped, challenge, securitySchemeName) =>
         EndpointInput.Auth.ApiKey(forInput(wrapped).asInstanceOf[EndpointInput.Single[_]], challenge, securitySchemeName)
       case EndpointInput.Auth.Http(scheme, wrapped, challenge, securitySchemeName) =>
@@ -68,9 +69,9 @@ object ConvertStreams {
       case EndpointIO.Pair(left, right, combine, split) =>
         EndpointIO.Pair(forOutput(left).asInstanceOf[EndpointIO[_]], forOutput(right).asInstanceOf[EndpointIO[_]], combine, split)
       case EndpointOutput.MappedPair(wrapped, mapping) =>
-        EndpointOutput.MappedPair(forOutput(wrapped).asInstanceOf[EndpointOutput.Pair[_, _, Any]], mapping)
+        EndpointOutput.MappedPair(forOutput(wrapped).asInstanceOf[EndpointOutput.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointIO.MappedPair(wrapped, mapping) =>
-        EndpointIO.MappedPair(forOutput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping)
+        EndpointIO.MappedPair(forOutput(wrapped).asInstanceOf[EndpointIO.Pair[_, _, Any]], mapping.asInstanceOf[Mapping[Any, Any]])
       case EndpointOutput.OneOf(mappings, mapping) =>
         EndpointOutput.OneOf[Any, Any](
           mappings.map(m => OneOfMapping(m.statusCode, forOutput(m.output), m.appliesTo)),
