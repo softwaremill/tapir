@@ -1,7 +1,6 @@
 package sttp.tapir.server.http4s
 
 import fs2.{Stream, text}
-import sttp.capabilities.fs2.Fs2Streams
 import sttp.model.sse.ServerSentEvent
 
 object Http4sServerSentEvents {

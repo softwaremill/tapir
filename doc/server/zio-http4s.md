@@ -102,6 +102,29 @@ The capability can be added to the classpath independently of the interpreter th
 The interpreter supports web sockets, with pipes of type `zio.stream.Stream[Throwable, REQ] => zio.stream.Stream[Throwable, RESP]`. 
 See [web sockets](../endpoint/websockets.md) for more details.
 
+## Server Sent Events
+
+The interpreter supports [SSE (Server Sent Events)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events).
+
+For example, to define an endpoint that returns event stream:
+
+```scala mdoc:compile-only
+import sttp.model.sse.ServerSentEvent
+import sttp.tapir.server.http4s.ztapir.{ZHttp4sServerInterpreter, serverSentEventsBody}
+import sttp.tapir.ztapir._
+import org.http4s.HttpRoutes
+import zio.{UIO, RIO}
+import zio.blocking.Blocking
+import zio.clock.Clock
+import zio.stream.Stream
+
+val sseEndpoint: ZEndpoint[Unit, Unit, Stream[Throwable, ServerSentEvent]] = endpoint.get.out(serverSentEventsBody)
+
+val routes: HttpRoutes[RIO[Clock with Blocking, *]] = ZHttp4sServerInterpreter()
+  .from(sseEndpoint.zServerLogic(_ => UIO(Stream(ServerSentEvent(Some("data"), None, None, None)))))
+  .toRoutes
+```
+
 ## Examples
 
 Three examples of using the ZIO integration are available. The first two showcase basic functionality, while the third shows how to use partial server logic methods:
