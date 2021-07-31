@@ -135,7 +135,6 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
    endpoint/streaming
    endpoint/websockets
    endpoint/integrations
-   endpoint/zio
 
 .. toctree::
    :maxdepth: 2
@@ -143,6 +142,7 @@ Development and maintenance of sttp tapir is sponsored by [SoftwareMill](https:/
 
    server/akkahttp
    server/http4s
+   server/zio-http4s
    server/finatra
    server/play
    server/vertx

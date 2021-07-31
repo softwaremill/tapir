@@ -18,9 +18,7 @@ trait ZHttp4sServerInterpreter[R] {
 
   def from[I, E, O](se: ZServerEndpoint[R, I, E, O]): ServerEndpointsToRoutes = from(List(se))
 
-  def from(
-      serverEndpoints: List[ZServerEndpoint[R, _, _, _]]
-  ): ServerEndpointsToRoutes =
+  def from(serverEndpoints: List[ZServerEndpoint[R, _, _, _]]): ServerEndpointsToRoutes =
     new ServerEndpointsToRoutes(serverEndpoints)
 
   // This is needed to avoid too eager type inference. Having ZHttp4sServerInterpreter.toRoutes would require users
@@ -30,7 +28,9 @@ trait ZHttp4sServerInterpreter[R] {
       serverEndpoints: List[ZServerEndpoint[R, _, _, _]]
   ) {
     def toRoutes: HttpRoutes[RIO[R with Clock with Blocking, *]] = {
-      Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(serverEndpoints.map(_.widen[R with Clock with Blocking]))
+      Http4sServerInterpreter(zHttp4sServerOptions).toRoutes(
+        serverEndpoints.map(se => ConvertStreams(se.widen[R with Clock with Blocking]))
+      )
     }
   }
 }
