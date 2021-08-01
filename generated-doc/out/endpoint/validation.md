@@ -66,8 +66,12 @@ Validators for enumerations can be created using:
 * `Validator.enumeration`, which takes the list of possible values
 
 To properly represent possible values in documentation, the enum validator additionally needs an `encode` method, which 
-converts the enum value to a raw type (typically a string). This method is inferred *only* if the validator is directly 
-added to a codec (without any mapping etc.), for example:
+converts the enum value to a raw type (typically a string). This can be specified by:
+
+* explicitly providing it using the overloaded `enumeration` method with an `encode` parameter
+* by using one of the `.encode` methods on the `Validator.Enumeration` instance
+* when the values possible values are of a basic type (numbers, strings), the encode function is inferred if not present
+* by adding the validator directly to a codec; for example:
 
 ```scala
 import sttp.tapir._
@@ -87,15 +91,12 @@ implicit def plainCodecForColor: PlainCodec[Color] = {
 }
 ```
 
-If the enum is nested within an object, regardless of whether the codec for that object is defined by hand or derived,
-we need to specify the encode function by hand:
+If the enum is nested within an object and its values aren't of a "basic" type (numbers, strings), regardless of whether 
+the codec for that object is defined by hand or derived, we need to specify the encode function by hand:
 
 ```scala
 implicit def colorSchema: Schema[Color] = Schema.string.validate(Validator.derivedEnumeration.encode(_.toString.toLowerCase))
 ```
-
-Like other validators/schemas, enum schemas need to be added to a codec manually, or through an implicit value if the 
-codec is automatically derived. 
 
 ## Next
 
