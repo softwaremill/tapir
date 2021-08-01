@@ -5,12 +5,20 @@ import sttp.tapir.Schema
 import scala.reflect.macros.blackbox
 
 object SchemaMapMacro {
-  /*
-    Extract name and generic type parameters of map value type for object info creation
-   */
-  def generateSchemaForMap[V: c.WeakTypeTag](
+  def generateSchemaForStringMap[V: c.WeakTypeTag](
       c: blackbox.Context
   )(schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[String, V]]] = {
+    import c.universe._
+    generateSchemaForMap[String, V](c)(c.Expr[String => String](q"""identity"""))(
+      c.Expr[Schema[String]](q"""implicitly[Schema[String]]"""),
+      schemaForV
+    )
+  }
+
+  /* Extract name and generic type parameters of map value type for object info creation */
+  def generateSchemaForMap[K: c.WeakTypeTag, V: c.WeakTypeTag](
+      c: blackbox.Context
+  )(keyToString: c.Expr[K => String])(schemaForK: c.Expr[Schema[K]], schemaForV: c.Expr[Schema[V]]): c.Expr[Schema[Map[K, V]]] = {
     import c.universe._
 
     def extractTypeArguments(weakType: c.Type): List[String] = {
@@ -19,16 +27,21 @@ object SchemaMapMacro {
     }
 
     val weakTypeV = weakTypeOf[V]
-    val genericTypeParametersM = List(weakTypeV.typeSymbol.name.decodedName.toString) ++ extractTypeArguments(weakTypeV)
+    val weakTypeK = weakTypeOf[K]
+
+    val keyTypeParameter = weakTypeK.typeSymbol.name.decodedName.toString
+
+    val genericTypeParameters = (if (keyTypeParameter == "String") Nil else List(keyTypeParameter)) ++ extractTypeArguments(weakTypeK) ++
+      List(weakTypeV.typeSymbol.name.decodedName.toString) ++ extractTypeArguments(weakTypeV)
     val schemaForMap =
       q"""{
           val s = $schemaForV
           _root_.sttp.tapir.Schema(
-            _root_.sttp.tapir.SchemaType.SOpenProduct(s)(identity),
-            Some(_root_.sttp.tapir.Schema.SName("Map", $genericTypeParametersM))
+            _root_.sttp.tapir.SchemaType.SOpenProduct(s)(_.map { case (k, v) => ($keyToString(k), v) }),
+            Some(_root_.sttp.tapir.Schema.SName("Map", $genericTypeParameters))
           )
          }"""
     Debug.logGeneratedCode(c)(weakTypeV.typeSymbol.fullName, schemaForMap)
-    c.Expr[Schema[Map[String, V]]](schemaForMap)
+    c.Expr[Schema[Map[K, V]]](schemaForMap)
   }
 }

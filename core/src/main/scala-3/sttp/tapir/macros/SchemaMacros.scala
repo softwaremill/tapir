@@ -70,23 +70,54 @@ object SchemaMacros {
 }
 
 trait SchemaCompanionMacros extends SchemaMagnoliaDerivation {
-  implicit inline def schemaForMap[V: Schema]: Schema[Map[String, V]] = ${ SchemaCompanionMacros.generateSchemaForMap[V]('{ summon[Schema[V]] }) }
+  implicit inline def schemaForMap[V: Schema]: Schema[Map[String, V]] = ${
+    SchemaCompanionMacros.generateSchemaForMap[String, V]('{ summon[Schema[String]] }, '{ summon[Schema[V]] }, 'identity)
+  }
 
-  inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] = 
-  ${ SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)}
+  /** Create a schema for a map with arbitrary keys. The schema for the keys (`Schema[K]`) should be a string (that is,
+    * the schema type should be [[sttp.tapir.SchemaType.SString]]), however this cannot be verified at compile-time
+    * and is not verified at run-time.
+    *
+    * The given `keyToString` conversion function is used during validation.
+    *
+    * If you'd like this schema to be available as an implicit for a given type of keys, create an custom implicit,
+    * e.g.:
+    *
+    * {{{
+    * case class MyKey(value: String) extends AnyVal
+    * implicit val schemaForMyMap = Schema.schemaForMap[MyKey, MyValue](_.value)
+    * }}}
+    */
+  inline def schemaForMap[K: Schema, V: Schema](keyToString: K => String): Schema[Map[K, V]] = ${
+    SchemaCompanionMacros.generateSchemaForMap[K, V]('{ summon[Schema[K]] }, '{ summon[Schema[V]] }, 'keyToString)
+  }
+
+  inline def oneOfUsingField[E, V](inline extractor: E => V, asString: V => String)(mapping: (V, Schema[_])*)(implicit conf: Configuration): Schema[E] = ${
+    SchemaCompanionMacros.generateOneOfUsingField[E, V]('extractor, 'asString)('mapping)('conf)
+  }
 }
 
 object SchemaCompanionMacros {
   import sttp.tapir.SchemaType.*
   import sttp.tapir.internal.SNameMacros
 
-  def generateSchemaForMap[V: Type](schemaForV: Expr[Schema[V]])(using q: Quotes): Expr[Schema[Map[String, V]]] = {
+  def generateSchemaForMap[K: Type, V: Type](schemaForK: Expr[Schema[K]], schemaForV: Expr[Schema[V]], keyToString: Expr[K => String])(
+    using q: Quotes): Expr[Schema[Map[K, V]]] = {
+
     import quotes.reflect.*
 
-    val tpe = TypeRepr.of[V]
-    val genericTypeParametersM = List(tpe.typeSymbol.name) ++ SNameMacros.extractTypeArguments(tpe)
+    val ktpe = TypeRepr.of[K]
+    val ktpeName = ktpe.typeSymbol.name
+    val vtpe = TypeRepr.of[V]
 
-    '{Schema(SOpenProduct[Map[String, V], V](${schemaForV})(identity), Some(Schema.SName("Map", ${Expr(genericTypeParametersM)})))}
+    val genericTypeParameters = (if (ktpeName == "String") Nil else List(ktpeName)) ++ SNameMacros.extractTypeArguments(ktpe) ++
+      List(vtpe.typeSymbol.name) ++ SNameMacros.extractTypeArguments(vtpe)
+
+    '{
+      Schema(
+        SOpenProduct[Map[K, V], V](${schemaForV})(_.map { case (k, v) => ($keyToString(k), v) }),
+        Some(Schema.SName("Map", ${Expr(genericTypeParameters)})))
+    }
   }
 
   def generateOneOfUsingField[E: Type, V: Type](extractor: Expr[E => V], asString: Expr[V => String])(
