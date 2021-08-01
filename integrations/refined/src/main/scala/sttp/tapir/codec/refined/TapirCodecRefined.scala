@@ -1,7 +1,9 @@
 package sttp.tapir.codec.refined
 
 import eu.timepit.refined.api.{Refined, Validate}
+import eu.timepit.refined.boolean.{And, Or}
 import eu.timepit.refined.collection.NonEmpty
+import eu.timepit.refined.internal.WitnessAs
 import eu.timepit.refined.numeric.{Greater, GreaterEqual, Less, LessEqual}
 import eu.timepit.refined.refineV
 import eu.timepit.refined.string.{MatchesRegex, Uuid}
@@ -43,29 +45,63 @@ trait TapirCodecRefined extends LowPriorityValidatorForPredicate {
   ): Schema[String Refined Uuid] =
     refinedTapirSchema[String, Uuid].format("uuid")
 
-  implicit val validatorForNonEmptyString: ValidatorForPredicate[String, NonEmpty] =
+  implicit val validatorForNonEmptyString: PrimitiveValidatorForPredicate[String, NonEmpty] =
     ValidatorForPredicate.fromPrimitiveValidator[String, NonEmpty](Validator.minLength(1))
 
   implicit def validatorForMatchesRegexp[S <: String](implicit
       ws: Witness.Aux[S]
-  ): ValidatorForPredicate[String, MatchesRegex[S]] =
+  ): PrimitiveValidatorForPredicate[String, MatchesRegex[S]] =
     ValidatorForPredicate.fromPrimitiveValidator(Validator.pattern(ws.value))
 
-  implicit def validatorForLess[N: Numeric, NM <: N](implicit ws: Witness.Aux[NM]): ValidatorForPredicate[N, Less[NM]] =
-    ValidatorForPredicate.fromPrimitiveValidator(Validator.max(ws.value, exclusive = true))
+  implicit def validatorForLess[N: Numeric, NM](implicit ws: WitnessAs[NM, N]): PrimitiveValidatorForPredicate[N, Less[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.max(ws.snd, exclusive = true))
 
-  implicit def validatorForLessEqual[N: Numeric, NM <: N](implicit
-      ws: Witness.Aux[NM]
-  ): ValidatorForPredicate[N, LessEqual[NM]] =
-    ValidatorForPredicate.fromPrimitiveValidator(Validator.max(ws.value))
+  implicit def validatorForLessEqual[N: Numeric, NM](implicit
+      ws: WitnessAs[NM, N]
+  ): PrimitiveValidatorForPredicate[N, LessEqual[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.max(ws.snd))
 
-  implicit def validatorForGreater[N: Numeric, NM <: N](implicit ws: Witness.Aux[NM]): ValidatorForPredicate[N, Greater[NM]] =
-    ValidatorForPredicate.fromPrimitiveValidator(Validator.min(ws.value, exclusive = true))
+  implicit def validatorForGreater[N: Numeric, NM](implicit ws: WitnessAs[NM, N]): PrimitiveValidatorForPredicate[N, Greater[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.min(ws.snd, exclusive = true))
 
-  implicit def validatorForGreaterEqual[N: Numeric, NM <: N](implicit
-      ws: Witness.Aux[NM]
-  ): ValidatorForPredicate[N, GreaterEqual[NM]] =
-    ValidatorForPredicate.fromPrimitiveValidator(Validator.min(ws.value))
+  implicit def validatorForGreaterEqual[N: Numeric, NM](implicit
+      ws: WitnessAs[NM, N]
+  ): PrimitiveValidatorForPredicate[N, GreaterEqual[NM]] =
+    ValidatorForPredicate.fromPrimitiveValidator(Validator.min(ws.snd))
+
+  implicit def validatorForAnd[N, LP, RP](implicit leftPredValidator: PrimitiveValidatorForPredicate[N, LP], rightPredValidator: PrimitiveValidatorForPredicate[N, RP], leftRefinedValidator: Validate[N, LP], rightRefinedValidator: Validate[N, RP]): ValidatorForPredicate[N, LP And RP] =
+    new ValidatorForPredicate[N, LP And RP] {
+      override def validator: Validator[N] = Validator.all(leftPredValidator.validator, rightPredValidator.validator)
+      override def validationErrors(value: N, refinedErrorMessage: String): List[ValidationError[_]] = {
+        val primitivesErrors = Seq[(Validate[N, _], Validator.Primitive[N])](leftRefinedValidator -> leftPredValidator.validator, rightRefinedValidator -> rightPredValidator.validator)
+          .filter{case (refinedValidator, _) => refinedValidator.notValid(value)}
+          .map{case (_, primitiveValidator) => ValidationError.Primitive[N](primitiveValidator, value)}.toList
+
+        if (primitivesErrors.isEmpty) {
+          //this should not happen
+          List(ValidationError.Custom(value, refinedErrorMessage, List()))
+        } else {
+          primitivesErrors
+        }
+      }
+    }
+
+  implicit def validatorForOr[N, LP, RP](implicit leftPredValidator: PrimitiveValidatorForPredicate[N, LP], rightPredValidator: PrimitiveValidatorForPredicate[N, RP], leftRefinedValidator: Validate[N, LP], rightRefinedValidator: Validate[N, RP]): ValidatorForPredicate[N, LP Or RP] =
+    new ValidatorForPredicate[N, LP Or RP] {
+      override def validator: Validator[N] = Validator.any(leftPredValidator.validator, rightPredValidator.validator)
+      override def validationErrors(value: N, refinedErrorMessage: String): List[ValidationError[_]] = {
+        val primitivesErrors = Seq[(Validate[N, _], Validator.Primitive[N])](leftRefinedValidator -> leftPredValidator.validator, rightRefinedValidator -> rightPredValidator.validator)
+          .filter{case (refinedValidator, _) => refinedValidator.notValid(value)}
+          .map{case (_, primitiveValidator) => ValidationError.Primitive[N](primitiveValidator, value)}.toList
+
+        if (primitivesErrors.isEmpty) {
+          //this should not happen
+          List(ValidationError.Custom(value, refinedErrorMessage, List()))
+        } else {
+          primitivesErrors
+        }
+      }
+    }
 }
 
 trait ValidatorForPredicate[V, P] {
@@ -73,12 +109,17 @@ trait ValidatorForPredicate[V, P] {
   def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]]
 }
 
+trait PrimitiveValidatorForPredicate[V, P] extends ValidatorForPredicate[V, P] {
+  def validator: Validator.Primitive[V]
+  def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]]
+}
+
 object ValidatorForPredicate {
-  def fromPrimitiveValidator[V, P](v: Validator.Primitive[V]): ValidatorForPredicate[V, P] =
-    new ValidatorForPredicate[V, P] {
-      override def validator: Validator[V] = v
+  def fromPrimitiveValidator[V, P](primitiveValidator: Validator.Primitive[V]): PrimitiveValidatorForPredicate[V, P] =
+    new PrimitiveValidatorForPredicate[V, P] {
+      override def validator: Validator.Primitive[V] = primitiveValidator
       override def validationErrors(value: V, refinedErrorMessage: String): List[ValidationError[_]] =
-        List(ValidationError.Primitive[V](v, value))
+        List(ValidationError.Primitive[V](primitiveValidator, value))
     }
 }
 
