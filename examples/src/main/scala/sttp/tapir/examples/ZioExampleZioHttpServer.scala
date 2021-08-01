@@ -1,20 +1,22 @@
 package sttp.tapir.examples
 
 import io.circe.generic.auto._
+import sttp.tapir.Endpoint
 import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
+import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.ziohttp.ZioHttpInterpreter
 import sttp.tapir.swagger.ziohttp.SwaggerZioHttp
 import sttp.tapir.ztapir._
 import zhttp.http.HttpApp
 import zhttp.service.Server
-import zio.{App, ExitCode, IO, UIO, URIO, ZIO}
+import zio.{App, ExitCode, IO, RIO, Task, UIO, URIO, ZIO}
 
 object ZioExampleZioHttpServer extends App {
   case class Pet(species: String, url: String)
 
   // Sample endpoint, with the logic implemented directly using .toRoutes
-  val petEndpoint: ZEndpoint[Int, String, Pet] =
+  val petEndpoint: Endpoint[Int, String, Pet, Any] =
     endpoint.get.in("pet" / path[Int]("petId")).errorOut(stringBody).out(jsonBody[Pet])
 
   val petRoutes: HttpApp[Any, Throwable] =
@@ -24,12 +26,13 @@ object ZioExampleZioHttpServer extends App {
     )
 
   // Same as above, but combining endpoint description with server logic:
-  val petServerEndpoint: ZServerEndpoint[Any, Int, String, Pet] = petEndpoint.zServerLogic { petId =>
-    if (petId == 35) {
-      UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
-    } else {
-      IO.fail("Unknown pet id")
-    }
+  // TODO: convert to zServerLogic once zio-http integration supports WebSockets
+  val petServerEndpoint: ServerEndpoint[Int, String, Pet, Any, Task] = petEndpoint.serverLogic { petId =>
+    (if (petId == 35) {
+       UIO(Pet("Tapirus terrestris", "https://en.wikipedia.org/wiki/Tapir"))
+     } else {
+       IO.fail("Unknown pet id")
+     }).either.resurrect
   }
   val petServerRoutes: HttpApp[Any, Throwable] = ZioHttpInterpreter().toHttp(List(petServerEndpoint))
 

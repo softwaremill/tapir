@@ -931,7 +931,7 @@ lazy val zioHttp4sServer: ProjectMatrix = (projectMatrix in file("server/zio-htt
     name := "tapir-zio-http4s-server",
     libraryDependencies += "dev.zio" %% "zio-interop-cats" % Versions.zioInteropCats
   )
-  .jvmPlatform(scalaVersions = scala2Versions)
+  .jvmPlatform(scalaVersions = scala2And3Versions)
   .dependsOn(zio, http4sServer, serverTests % Test)
 
 lazy val zioHttp: ProjectMatrix = (projectMatrix in file("server/zio-http"))

@@ -1,8 +1,9 @@
 package sttp.tapir.ztapir
 
+import sttp.capabilities.zio.ZioStreams
 import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, RawValue, RequestBody, ServerInterpreter, ToResponseBody}
-import sttp.capabilities.Streams
+import sttp.capabilities.{Streams, WebSockets}
 import sttp.model.{HasHeaders, Header, Method, QueryParams, StatusCode, Uri}
 import sttp.tapir.{CodecFormat, Endpoint, RawBodyType, WebSocketBodyOutput}
 import sttp.tapir.model.{ConnectionInfo, ServerRequest, ServerResponse}
@@ -74,7 +75,7 @@ object ZTapirTest extends DefaultRunnableSpec with ZTapir {
 
   private def failedAutLogic(userName: String): UIO[User] = ZIO(10 / 0).orDie.as(User(userName))
 
-  val interpreter = new ServerInterpreter[Any, TestEffect, ResponseBodyType, RequestBodyType](
+  val interpreter = new ServerInterpreter[ZioStreams with WebSockets, TestEffect, ResponseBodyType, RequestBodyType](
     exampleRequestBody,
     exampleToResponse,
     List.empty,

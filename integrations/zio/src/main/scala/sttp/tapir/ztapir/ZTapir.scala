@@ -1,5 +1,7 @@
 package sttp.tapir.ztapir
 
+import sttp.capabilities.WebSockets
+import sttp.capabilities.zio.ZioStreams
 import sttp.tapir._
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.typelevel.ParamSubtract
@@ -7,8 +9,8 @@ import zio.{RIO, ZIO}
 import sttp.tapir.internal._
 
 trait ZTapir {
-  type ZEndpoint[I, E, O] = Endpoint[I, E, O, Any]
-  type ZServerEndpoint[R, I, E, O] = ServerEndpoint[I, E, O, Any, RIO[R, *]]
+  type ZEndpoint[I, E, O] = Endpoint[I, E, O, ZioStreams with WebSockets]
+  type ZServerEndpoint[R, I, E, O] = ServerEndpoint[I, E, O, ZioStreams with WebSockets, RIO[R, *]]
 
   implicit class RichZEndpoint[I, E, O](e: ZEndpoint[I, E, O]) {
     def zServerLogic[R](logic: I => ZIO[R, E, O]): ZServerEndpoint[R, I, E, O] = ServerEndpoint(e, _ => logic(_).either.resurrect)
