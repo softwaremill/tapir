@@ -2,7 +2,6 @@ package sttp.tapir.examples
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.server.Directives.concat
 import akka.http.scaladsl.server.Route
 import com.typesafe.scalalogging.StrictLogging
 import io.circe.generic.auto._
@@ -12,7 +11,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
+import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions, AkkaResponseBody}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -36,17 +35,20 @@ object PrometheusMetricsExample extends App with StrictLogging {
     .withRequestsTotal()
     .withResponsesTotal()
 
-  implicit val serverOptions: AkkaHttpServerOptions =
-    AkkaHttpServerOptions.customInterceptors(
+  val serverOptions: AkkaHttpServerOptions =
+    AkkaHttpServerOptions.customInterceptors
       // Adds an interceptor which collects metrics by executing callbacks
-      metricsInterceptor = Some(prometheusMetrics.metricsInterceptor())
-    )
+      .metricsInterceptor(prometheusMetrics.metricsInterceptor[AkkaResponseBody]())
+      .options
 
-  val routes: Route = concat(
-    AkkaHttpServerInterpreter().toRoute(personEndpoint),
-    // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `CollectorRegistry` to plain text response
-    AkkaHttpServerInterpreter().toRoute(prometheusMetrics.metricsEndpoint)
-  )
+  val routes: Route =
+    AkkaHttpServerInterpreter(serverOptions).toRoute(
+      List(
+        personEndpoint,
+        // Exposes GET endpoint under `metrics` path for prometheus and serializes metrics from `CollectorRegistry` to plain text response
+        prometheusMetrics.metricsEndpoint
+      )
+    )
 
   implicit val actorSystem: ActorSystem = ActorSystem()
 

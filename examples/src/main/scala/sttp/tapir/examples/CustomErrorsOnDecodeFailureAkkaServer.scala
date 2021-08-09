@@ -19,8 +19,8 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
   // by default, decoding errors will be returned as a 400 response with body e.g. "Invalid value for: query parameter amount"
   // the defaults are defined in ServerDefaults
   // this can be customised by setting the appropriate option in the server options, passed implicitly to toRoute
-  implicit val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
-    decodeFailureHandler = ctx => {
+  implicit val customServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors
+    .decodeFailureHandler(ctx => {
       ctx.failingInput match {
         // when defining how a decode failure should be handled, we need to describe the output to be used, and
         // a value for this output
@@ -28,8 +28,8 @@ object CustomErrorsOnDecodeFailureAkkaServer extends App {
         // in other cases, using the default behavior
         case _ => DefaultDecodeFailureHandler.handler(ctx)
       }
-    }
-  )
+    })
+    .options
 
   val amountRoute: Route = AkkaHttpServerInterpreter().toRoute(amountEndpoint)(_ => Future.successful(Right(())))
 
