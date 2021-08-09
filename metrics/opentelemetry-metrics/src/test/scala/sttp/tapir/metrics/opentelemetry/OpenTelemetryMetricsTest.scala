@@ -1,6 +1,6 @@
 package sttp.tapir.metrics.opentelemetry
 
-import io.opentelemetry.api.metrics.common.Labels
+import io.opentelemetry.api.common.{AttributeKey, Attributes}
 import io.opentelemetry.sdk.metrics.SdkMeterProvider
 import io.opentelemetry.sdk.metrics.data.LongPointData
 import org.scalatest.concurrent.PatienceConfiguration.Timeout
@@ -37,7 +37,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     val point = longSumData(provider).head
-    point.getLabels shouldBe Labels.of("method", "GET", "path", "/person")
+    point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
     point.getValue shouldBe 3
   }
 
@@ -59,12 +59,12 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     val point = longSumData(provider).head
-    point.getLabels shouldBe Labels.of("method", "GET", "path", "/person")
+    point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
     point.getValue shouldBe 1
 
     ScalaFutures.whenReady(response, Timeout(Span(1, Second))) { _ =>
       val point = longSumData(provider).head
-      point.getLabels shouldBe Labels.of("method", "GET", "path", "/person")
+      point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("method"), "GET", AttributeKey.stringKey("path"), "/person")
       point.getValue shouldBe 0
     }
   }
@@ -90,9 +90,27 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     // then
     longSumData(provider)
       .count {
-        case dp if dp.getLabels == Labels.of("method", "GET", "path", "/person", "status", "2xx") && dp.getValue == 2 => true
-        case dp if dp.getLabels == Labels.of("method", "GET", "path", "/person", "status", "4xx") && dp.getValue == 2 => true
-        case _                                                                                                        => false
+        case dp
+            if dp.getAttributes == Attributes.of(
+              AttributeKey.stringKey("method"),
+              "GET",
+              AttributeKey.stringKey("path"),
+              "/person",
+              AttributeKey.stringKey("status"),
+              "2xx"
+            ) && dp.getValue == 2 =>
+          true
+        case dp
+            if dp.getAttributes == Attributes.of(
+              AttributeKey.stringKey("method"),
+              "GET",
+              AttributeKey.stringKey("path"),
+              "/person",
+              AttributeKey.stringKey("status"),
+              "4xx"
+            ) && dp.getValue == 2 =>
+          true
+        case _ => false
       } shouldBe 2
   }
 
@@ -116,7 +134,14 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     interpreter.apply(PersonsApi.request("Jacob"), waitServerEp(300))
 
     val point = provider.collectAllMetrics().asScala.head.getDoubleSummaryData.getPoints.asScala.head
-    point.getLabels shouldBe Labels.of("method", "GET", "path", "/person", "status", "2xx")
+    point.getAttributes shouldBe Attributes.of(
+      AttributeKey.stringKey("method"),
+      "GET",
+      AttributeKey.stringKey("path"),
+      "/person",
+      AttributeKey.stringKey("status"),
+      "2xx"
+    )
     point.getPercentileValues.size() shouldBe 2
   }
 
@@ -134,7 +159,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     val point = longSumData(provider).head
-    point.getLabels shouldBe Labels.of("key", "value")
+    point.getAttributes shouldBe Attributes.of(AttributeKey.stringKey("key"), "value")
   }
 
   "metrics" should "be collected on exception when response from exception handler" in {
@@ -153,7 +178,14 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
 
     // then
     val point = longSumData(provider).head
-    point.getLabels shouldBe Labels.of("method", "GET", "path", "/person", "status", "5xx")
+    point.getAttributes shouldBe Attributes.of(
+      AttributeKey.stringKey("method"),
+      "GET",
+      AttributeKey.stringKey("path"),
+      "/person",
+      AttributeKey.stringKey("status"),
+      "5xx"
+    )
     point.getValue shouldBe 1
   }
 
