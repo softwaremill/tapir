@@ -14,6 +14,8 @@ interpreted as:
   * [Http4s](https://tapir.softwaremill.com/en/latest/server/http4s.html) `HttpRoutes[F]`
   * [Finatra](https://tapir.softwaremill.com/en/latest/server/finatra.html) `FinatraRoute`
   * [Play](https://tapir.softwaremill.com/en/latest/server/play.html) `Route`
+  * [ZIO Http](server/ziohttp.md) `Http`
+  * [aws](server/aws.md) through Lambda/SAM/Terraform
 * a client, which is a function from input parameters to output parameters.
   Currently supported:
   * [sttp](https://tapir.softwaremill.com/en/latest/client/sttp.html).
