@@ -23,10 +23,10 @@ import sttp.tapir.server.interceptor.{
   * In other cases, not returning a response, assuming that the interpreter will return a "no match" to the server
   * implementation.
   */
-class RejectInterceptor[F[_], B](handler: RequestResult.Failure => Option[StatusCode]) extends RequestInterceptor[F, B] {
-  override def apply(
+class RejectInterceptor[F[_]](handler: RequestResult.Failure => Option[StatusCode]) extends RequestInterceptor[F] {
+  override def apply[B](
       responder: Responder[F, B],
-      requestHandler: EndpointInterceptor[F, B] => RequestHandler[F, B]
+      requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]
   ): RequestHandler[F, B] = {
     val next = requestHandler(EndpointInterceptor.noop)
     new RequestHandler[F, B] {
@@ -47,11 +47,11 @@ class RejectInterceptor[F[_], B](handler: RequestResult.Failure => Option[Status
 }
 
 object RejectInterceptor {
-  def default[F[_], B] = new RejectInterceptor[F, B](failure => {
+  def default[F[_]] = new RejectInterceptor[F](failure => {
     if (hasMethodMismatch(failure)) Some(StatusCode.MethodNotAllowed) else None
   })
 
-  def defaultOrNotFound[F[_], B] = new RejectInterceptor[F, B](failure => {
+  def defaultOrNotFound[F[_]] = new RejectInterceptor[F](failure => {
     if (hasMethodMismatch(failure)) Some(StatusCode.MethodNotAllowed) else Some(StatusCode.NotFound)
   })
 

@@ -1,40 +1,22 @@
 package sttp.tapir.serverless.aws.lambda
 
-import sttp.tapir.server.interceptor.Interceptor
-import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
-import sttp.tapir.server.interceptor.log.ServerLogInterceptor
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import cats.Monad
+import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 
-case class AwsServerOptions[F[_]](encodeResponseBody: Boolean = true, interceptors: List[Interceptor[F, String]]) {
-  def prependInterceptor(i: Interceptor[F, String]): AwsServerOptions[F] = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[F, String]): AwsServerOptions[F] = copy(interceptors = interceptors :+ i)
+case class AwsServerOptions[F[_]](encodeResponseBody: Boolean = true, interceptors: List[Interceptor[F]]) {
+  def prependInterceptor(i: Interceptor[F]): AwsServerOptions[F] = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[F]): AwsServerOptions[F] = copy(interceptors = interceptors :+ i)
 }
 
 object AwsServerOptions {
-  def customInterceptors[F[_], T](
-      encodeResponseBody: Boolean = true,
-      metricsInterceptor: Option[MetricsRequestInterceptor[F, String]] = None,
-      rejectInterceptor: Option[RejectInterceptor[F, String]] = Some(RejectInterceptor.default[F, String]),
-      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
-      serverLogInterceptor: Option[ServerLogInterceptor[T, F, String]] = None,
-      additionalInterceptors: List[Interceptor[F, String]] = Nil,
-      unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F, String]] = Some(
-        new UnsupportedMediaTypeInterceptor[F, String]()
-      ),
-      decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
-  ): AwsServerOptions[F] = AwsServerOptions(
-    encodeResponseBody,
-    interceptors = metricsInterceptor.toList ++
-      rejectInterceptor.toList ++
-      exceptionHandler.map(new ExceptionInterceptor[F, String](_)).toList ++
-      serverLogInterceptor.toList ++
-      additionalInterceptors ++
-      unsupportedMediaTypeInterceptor.toList ++
-      List(new DecodeFailureInterceptor[F, String](decodeFailureHandler))
-  )
 
-  def default[F[_]]: AwsServerOptions[F] = customInterceptors()
+  /** Allows customising the interceptors used by the server interpreter. */
+  def customInterceptors[F[_]: Monad]: CustomInterceptors[F, Unit, AwsServerOptions[F]] =
+    CustomInterceptors(
+      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, F](sl, (_, _) => Monad[F].unit),
+      createOptions = (ci: CustomInterceptors[F, Unit, AwsServerOptions[F]]) => AwsServerOptions(encodeResponseBody = true, ci.interceptors)
+    )
+
+  def default[F[_]: Monad]: AwsServerOptions[F] = customInterceptors.options
 }

@@ -15,13 +15,13 @@ import sttp.tapir.tests.Port
 import scala.concurrent.Future
 import scala.reflect.ClassTag
 
-class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route, RoutingContext => Unit] {
+class VertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Future, Any, Router => Route] {
   import VertxTestServerInterpreter._
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Any, Future],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future, RoutingContext => Unit]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Router => Route = {
     val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)

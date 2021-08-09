@@ -18,7 +18,7 @@ object AwsLambdaRuntime {
 /** A runtime which uses the [[IO]] effect */
 abstract class AwsLambdaIORuntime {
   def endpoints: Iterable[ServerEndpoint[_, _, _, Any, IO]]
-  def serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors()
+  def serverOptions: AwsServerOptions[IO] = AwsServerOptions.default
 
   def main(args: Array[String]): Unit = AwsLambdaRuntime(endpoints, serverOptions).unsafeRunSync()
 }

@@ -13,18 +13,17 @@ import zhttp.http._
 import zhttp.service.{EventLoopGroup, Server, ServerChannelFactory}
 import zio._
 import zio.interop.catz._
-import zio.stream.Stream
 
 import java.util.concurrent.atomic.AtomicInteger
 import scala.reflect.ClassTag
 
 class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelFactory)
-    extends TestServerInterpreter[Task, ZioStreams, Http[Any, Throwable, Request, Response[Any, Throwable]], Stream[Throwable, Byte]] {
+    extends TestServerInterpreter[Task, ZioStreams, Http[Any, Throwable, Request, Response[Any, Throwable]]] {
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[Task, Stream[Throwable, Byte]]]
+      metricsInterceptor: Option[MetricsRequestInterceptor[Task]]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] = {
     val serverOptions: ZioHttpServerOptions[Any] = ZioHttpServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)

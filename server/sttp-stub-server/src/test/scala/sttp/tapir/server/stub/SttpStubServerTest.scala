@@ -186,12 +186,17 @@ class SttpStubServerTest extends AnyFlatSpec with Matchers {
 
     var x = 0
 
-    val interceptor: RequestInterceptor[Identity, Any] =
-      (_: Responder[Identity, Any], requestHandler: EndpointInterceptor[Identity, Any] => RequestHandler[Identity, Any]) =>
-        RequestHandler.from { (request, _) =>
+    val interceptor: RequestInterceptor[Identity] = {
+      new RequestInterceptor[Identity] {
+        override def apply[B](
+            responder: Responder[Identity, B],
+            requestHandler: EndpointInterceptor[Identity] => RequestHandler[Identity, B]
+        ): RequestHandler[Identity, B] = RequestHandler.from { (request, _: MonadError[Identity]) =>
           x = 10
           requestHandler(EndpointInterceptor.noop).apply(request)
         }
+      }
+    }
 
     // when
     val backend: SttpBackendStub[Identity, Any] = SttpBackendStub(idMonad)

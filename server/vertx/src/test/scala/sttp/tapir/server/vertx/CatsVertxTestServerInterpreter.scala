@@ -18,18 +18,18 @@ import sttp.tapir.tests.Port
 import scala.reflect.ClassTag
 
 class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
-    extends TestServerInterpreter[IO, Fs2Streams[IO], Router => Route, RoutingContext => Unit] {
+    extends TestServerInterpreter[IO, Fs2Streams[IO], Router => Route] {
 
   private val ioFromVFuture = new CatsFFromVFuture[IO]
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO], IO],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[IO, RoutingContext => Unit]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): Router => Route = {
     val options: VertxCatsServerOptions[IO] =
       VertxCatsServerOptions
-        .customInterceptors(dispatcher)
+        .customInterceptors[IO](dispatcher)
         .metricsInterceptor(metricsInterceptor)
         .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
         .options

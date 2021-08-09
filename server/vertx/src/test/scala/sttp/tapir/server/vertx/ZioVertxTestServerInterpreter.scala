@@ -16,13 +16,13 @@ import zio.{Runtime, Task}
 
 import scala.reflect.ClassTag
 
-class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Task, ZioStreams, Router => Route, RoutingContext => Unit] {
+class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[Task, ZioStreams, Router => Route] {
   import ZioVertxTestServerInterpreter._
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, ZioStreams, Task],
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[Task, RoutingContext => Unit]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[Task]] = None
   ): Router => Route = {
     val options: VertxZioServerOptions[Task] =
       VertxZioServerOptions.customInterceptors

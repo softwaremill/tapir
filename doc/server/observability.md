@@ -63,7 +63,6 @@ import io.prometheus.client.CollectorRegistry
 import sttp.monad.FutureMonad
 import sttp.tapir.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
-import sttp.tapir.server.akkahttp.AkkaResponseBody
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -77,7 +76,7 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
 
 val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
   .customInterceptors
-  .metricsInterceptor(prometheusMetrics.metricsInterceptor[AkkaResponseBody]())
+  .metricsInterceptor(prometheusMetrics.metricsInterceptor())
   .options
 
 val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)

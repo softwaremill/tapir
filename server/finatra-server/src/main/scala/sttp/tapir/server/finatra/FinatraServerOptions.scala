@@ -11,17 +11,16 @@ import java.io.FileOutputStream
 case class FinatraServerOptions(
     createFile: Array[Byte] => Future[TapirFile],
     deleteFile: TapirFile => Future[Unit],
-    interceptors: List[Interceptor[Future, FinatraContent]]
+    interceptors: List[Interceptor[Future]]
 )
 
 object FinatraServerOptions extends Logging {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, FinatraContent, Unit, FinatraServerOptions] =
+  def customInterceptors: CustomInterceptors[Future, Unit, FinatraServerOptions] =
     CustomInterceptors(
-      createLogInterceptor =
-        (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future, FinatraContent](sl, (_: Unit, _) => Future.Done),
-      createOptions = (ci: CustomInterceptors[Future, FinatraContent, Unit, FinatraServerOptions]) =>
+      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_: Unit, _) => Future.Done),
+      createOptions = (ci: CustomInterceptors[Future, Unit, FinatraServerOptions]) =>
         FinatraServerOptions(defaultCreateFile(futurePool), defaultDeleteFile(futurePool), ci.interceptors)
     ).serverLog(defaultServerLog)
 

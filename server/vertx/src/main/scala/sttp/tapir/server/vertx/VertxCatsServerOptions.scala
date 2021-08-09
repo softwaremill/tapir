@@ -5,7 +5,6 @@ import cats.effect.Sync
 import cats.effect.kernel.Async
 import cats.effect.std.Dispatcher
 import io.vertx.core.logging.LoggerFactory
-import io.vertx.ext.web.RoutingContext
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
 import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
@@ -17,11 +16,11 @@ final case class VertxCatsServerOptions[F[_]](
     uploadDirectory: TapirFile,
     deleteFile: TapirFile => F[Unit],
     maxQueueSizeForReadStream: Int,
-    interceptors: List[Interceptor[F, RoutingContext => Unit]]
+    interceptors: List[Interceptor[F]]
 ) extends VertxServerOptions[F] {
-  def prependInterceptor(i: Interceptor[F, RoutingContext => Unit]): VertxCatsServerOptions[F] =
+  def prependInterceptor(i: Interceptor[F]): VertxCatsServerOptions[F] =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[F, RoutingContext => Unit]): VertxCatsServerOptions[F] =
+  def appendInterceptor(i: Interceptor[F]): VertxCatsServerOptions[F] =
     copy(interceptors = interceptors :+ i)
 }
 
@@ -30,11 +29,10 @@ object VertxCatsServerOptions {
   /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[F[_]: Async](
       dispatcher: Dispatcher[F]
-  ): CustomInterceptors[F, RoutingContext => Unit, Unit, VertxCatsServerOptions[F]] =
+  ): CustomInterceptors[F, Unit, VertxCatsServerOptions[F]] =
     CustomInterceptors(
-      createLogInterceptor =
-        (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, F, RoutingContext => Unit](sl, (_, _) => Applicative[F].unit),
-      createOptions = (ci: CustomInterceptors[F, RoutingContext => Unit, Unit, VertxCatsServerOptions[F]]) =>
+      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, F](sl, (_, _) => Applicative[F].unit),
+      createOptions = (ci: CustomInterceptors[F, Unit, VertxCatsServerOptions[F]]) =>
         VertxCatsServerOptions(
           dispatcher,
           File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,

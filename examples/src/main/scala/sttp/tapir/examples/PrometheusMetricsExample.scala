@@ -11,7 +11,7 @@ import sttp.tapir.generic.auto._
 import sttp.tapir.json.circe._
 import sttp.tapir.metrics.prometheus.PrometheusMetrics
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions, AkkaResponseBody}
+import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
@@ -38,7 +38,7 @@ object PrometheusMetricsExample extends App with StrictLogging {
   val serverOptions: AkkaHttpServerOptions =
     AkkaHttpServerOptions.customInterceptors
       // Adds an interceptor which collects metrics by executing callbacks
-      .metricsInterceptor(prometheusMetrics.metricsInterceptor[AkkaResponseBody]())
+      .metricsInterceptor(prometheusMetrics.metricsInterceptor())
       .options
 
   val routes: Route =

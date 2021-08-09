@@ -125,7 +125,7 @@ class AwsLambdaRuntimeInvocationTest extends AnyFunSuite with Matchers {
 }
 
 object AwsLambdaRuntimeInvocationTest {
-  val options: AwsServerOptions[IO] = AwsServerOptions.customInterceptors()
+  val options: AwsServerOptions[IO] = AwsServerOptions.default[IO]
 
   val awsRequest: String =
     """

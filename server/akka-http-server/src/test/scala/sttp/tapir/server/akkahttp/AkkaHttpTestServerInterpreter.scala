@@ -19,11 +19,11 @@ import scala.concurrent.Future
 import scala.reflect.ClassTag
 
 class AkkaHttpTestServerInterpreter(implicit actorSystem: ActorSystem)
-    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route, AkkaResponseBody] {
+    extends TestServerInterpreter[Future, AkkaStreams with WebSockets, Route] {
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, AkkaStreams with WebSockets, Future],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future, AkkaResponseBody]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[Future]] = None
   ): Route = {
     val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors
       .metricsInterceptor(metricsInterceptor)

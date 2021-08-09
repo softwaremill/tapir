@@ -14,21 +14,23 @@ import scala.reflect.ClassTag
 
 trait AwsCatsEffectServerInterpreter[F[_]] {
 
+  implicit def fa: Sync[F]
+
   def awsServerOptions: AwsServerOptions[F] = AwsServerOptions.default[F]
 
   def toRoute[I, E, O](e: Endpoint[I, E, O, Any])(
       logic: I => F[Either[E, O]]
   )(implicit sync: Sync[F]): Route[F] = toRoute(e.serverLogic(logic))
 
-  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, Any, F])(implicit sync: Sync[F]): Route[F] =
+  def toRoute[I, E, O](se: ServerEndpoint[I, E, O, Any, F]): Route[F] =
     toRoute(List(se))
 
   def toRouteRecoverErrors[I, E, O](e: Endpoint[I, E, O, Any])(
       logic: I => F[O]
-  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E], sync: Sync[F]): Route[F] =
+  )(implicit eIsThrowable: E <:< Throwable, eClassTag: ClassTag[E]): Route[F] =
     toRoute(e.serverLogicRecoverErrors(logic))
 
-  def toRoute(ses: List[ServerEndpoint[_, _, _, Any, F]])(implicit sync: Sync[F]): Route[F] = {
+  def toRoute(ses: List[ServerEndpoint[_, _, _, Any, F]]): Route[F] = {
     implicit val monad: CatsMonadError[F] = new CatsMonadError[F]
     implicit val bodyListener: BodyListener[F, String] = new AwsBodyListener[F]
 
@@ -55,9 +57,17 @@ trait AwsCatsEffectServerInterpreter[F[_]] {
 
 object AwsCatsEffectServerInterpreter {
 
-  def apply[F[_]](serverOptions: AwsServerOptions[F] = AwsServerOptions.default[F]): AwsCatsEffectServerInterpreter[F] = {
+  def apply[F[_]](serverOptions: AwsServerOptions[F])(implicit _fa: Sync[F]): AwsCatsEffectServerInterpreter[F] = {
     new AwsCatsEffectServerInterpreter[F] {
+      override implicit def fa: Sync[F] = _fa
       override def awsServerOptions: AwsServerOptions[F] = serverOptions
+    }
+  }
+
+  def apply[F[_]]()(implicit _fa: Sync[F]): AwsCatsEffectServerInterpreter[F] = {
+    new AwsCatsEffectServerInterpreter[F] {
+      override implicit def fa: Sync[F] = _fa
+      override def awsServerOptions: AwsServerOptions[F] = AwsServerOptions.default[F](fa)
     }
   }
 }

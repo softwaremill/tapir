@@ -28,11 +28,11 @@ trait SttpStubServer {
 
     def whenRequestMatchesEndpointThenLogic[I, E, O](
         endpoint: ServerEndpoint[I, E, O, R, F],
-        interceptors: List[Interceptor[F, Any]] = Nil
+        interceptors: List[Interceptor[F]] = Nil
     ): SttpBackendStub[F, R] =
       _whenRequestMatches(endpoint.endpoint).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
 
-    def whenInputMatchesThenLogic[I, E, O](endpoint: ServerEndpoint[I, E, O, R, F], interceptors: List[Interceptor[F, Any]] = Nil)(
+    def whenInputMatchesThenLogic[I, E, O](endpoint: ServerEndpoint[I, E, O, R, F], interceptors: List[Interceptor[F]] = Nil)(
         inputMatcher: I => Boolean
     ): SttpBackendStub[F, R] =
       _whenInputMatches(endpoint.endpoint)(inputMatcher).thenRespondF(req => interpretRequest(req, endpoint, interceptors))
@@ -88,7 +88,7 @@ trait SttpStubServer {
     private def interpretRequest[I, E, O](
         req: Request[_, _],
         endpoint: ServerEndpoint[I, E, O, R, F],
-        interceptors: List[Interceptor[F, Any]]
+        interceptors: List[Interceptor[F]]
     ): F[Response[_]] = {
       def toResponse(sRequest: ServerRequest, sResponse: ServerResponse[Any]): Response[Any] = {
         sttp.client3.Response(

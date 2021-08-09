@@ -17,21 +17,21 @@ case class Http4sServerOptions[F[_], G[_]](
     createFile: ServerRequest => G[TapirFile],
     deleteFile: TapirFile => G[Unit],
     ioChunkSize: Int,
-    interceptors: List[Interceptor[G, Http4sResponseBody[F]]]
+    interceptors: List[Interceptor[G]]
 ) {
-  def prependInterceptor(i: Interceptor[G, Http4sResponseBody[F]]): Http4sServerOptions[F, G] =
+  def prependInterceptor(i: Interceptor[G]): Http4sServerOptions[F, G] =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[G, Http4sResponseBody[F]]): Http4sServerOptions[F, G] =
+  def appendInterceptor(i: Interceptor[G]): Http4sServerOptions[F, G] =
     copy(interceptors = interceptors :+ i)
 }
 
 object Http4sServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors[F[_], G[_]: Sync]: CustomInterceptors[G, Http4sResponseBody[F], G[Unit], Http4sServerOptions[F, G]] = {
+  def customInterceptors[F[_], G[_]: Sync]: CustomInterceptors[G, G[Unit], Http4sServerOptions[F, G]] = {
     CustomInterceptors(
       createLogInterceptor = Log.serverLogInterceptor[F, G],
-      createOptions = (ci: CustomInterceptors[G, Http4sResponseBody[F], G[Unit], Http4sServerOptions[F, G]]) =>
+      createOptions = (ci: CustomInterceptors[G, G[Unit], Http4sServerOptions[F, G]]) =>
         Http4sServerOptions[F, G](defaultCreateFile[G], defaultDeleteFile[G], 8192, ci.interceptors)
     ).serverLog(Log.defaultServerLog[G])
   }
@@ -49,8 +49,8 @@ object Http4sServerOptions {
         noLog = Applicative[F].unit
       )
 
-    def serverLogInterceptor[F[_], G[_]](serverLog: ServerLog[G[Unit]]): ServerLogInterceptor[G[Unit], G, Http4sResponseBody[F]] =
-      new ServerLogInterceptor[G[Unit], G, Http4sResponseBody[F]](serverLog, (f, _) => f)
+    def serverLogInterceptor[F[_], G[_]](serverLog: ServerLog[G[Unit]]): ServerLogInterceptor[G[Unit], G] =
+      new ServerLogInterceptor[G[Unit], G](serverLog, (f, _) => f)
 
     private def debugLog[F[_]: Sync](msg: String, exOpt: Option[Throwable]): F[Unit] =
       exOpt match {

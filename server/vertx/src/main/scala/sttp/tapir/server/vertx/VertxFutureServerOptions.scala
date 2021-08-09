@@ -13,7 +13,7 @@ import scala.concurrent.{ExecutionContext, Future}
 final case class VertxFutureServerOptions(
     uploadDirectory: TapirFile,
     deleteFile: TapirFile => Future[Unit],
-    interceptors: List[Interceptor[Future, RoutingContext => Unit]],
+    interceptors: List[Interceptor[Future]],
     private val specificExecutionContext: Option[ExecutionContext]
 ) extends VertxServerOptions[Future] {
   def executionContextOr(default: ExecutionContext): ExecutionContext =
@@ -22,20 +22,19 @@ final case class VertxFutureServerOptions(
   private[vertx] def executionContextOrCurrentCtx(rc: RoutingContext) =
     executionContextOr(new VertxExecutionContext(rc.vertx, rc.vertx.getOrCreateContext))
 
-  def prependInterceptor(i: Interceptor[Future, RoutingContext => Unit]): VertxFutureServerOptions =
+  def prependInterceptor(i: Interceptor[Future]): VertxFutureServerOptions =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Future, RoutingContext => Unit]): VertxFutureServerOptions =
+  def appendInterceptor(i: Interceptor[Future]): VertxFutureServerOptions =
     copy(interceptors = interceptors :+ i)
 }
 
 object VertxFutureServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, RoutingContext => Unit, Unit, VertxFutureServerOptions] =
+  def customInterceptors: CustomInterceptors[Future, Unit, VertxFutureServerOptions] =
     CustomInterceptors(
-      createLogInterceptor =
-        (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future, RoutingContext => Unit](sl, (_, _) => Future.successful(())),
-      createOptions = (ci: CustomInterceptors[Future, RoutingContext => Unit, Unit, VertxFutureServerOptions]) =>
+      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Future.successful(())),
+      createOptions = (ci: CustomInterceptors[Future, Unit, VertxFutureServerOptions]) =>
         VertxFutureServerOptions(
           File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
           defaultDeleteFile,

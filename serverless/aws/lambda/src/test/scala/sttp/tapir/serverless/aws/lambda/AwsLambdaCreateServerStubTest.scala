@@ -19,19 +19,20 @@ import sttp.tapir.server.tests.CreateServerTest
 import sttp.tapir.serverless.aws.lambda.AwsLambdaCreateServerStubTest._
 import sttp.tapir.tests.Test
 
-class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO], String] {
+class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO]] {
 
   override def testServer[I, E, O](
       e: Endpoint[I, E, O, Any],
       testNameSuffix: String,
       decodeFailureHandler: Option[DecodeFailureHandler],
-      metricsInterceptor: Option[MetricsRequestInterceptor[IO, String]]
+      metricsInterceptor: Option[MetricsRequestInterceptor[IO]]
   )(fn: I => IO[Either[E, O]])(runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]): Test = {
-    val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(
-      encodeResponseBody = false,
-      metricsInterceptor = metricsInterceptor,
-      decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-    )
+    val serverOptions: AwsServerOptions[IO] = AwsServerOptions
+      .customInterceptors[IO]
+      .metricsInterceptor(metricsInterceptor)
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .options
+      .copy(encodeResponseBody = false)
     val se: ServerEndpoint[I, E, O, Any, IO] = e.serverLogic(fn)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(se)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
@@ -41,7 +42,7 @@ class AwsLambdaCreateServerStubTest extends CreateServerTest[IO, Any, Route[IO],
   override def testServerLogic[I, E, O](e: ServerEndpoint[I, E, O, Any, IO], testNameSuffix: String)(
       runTest: (SttpBackend[IO, Fs2Streams[IO] with WebSockets], Uri) => IO[Assertion]
   ): Test = {
-    val serverOptions: AwsServerOptions[IO] = AwsServerOptions.customInterceptors(encodeResponseBody = false)
+    val serverOptions: AwsServerOptions[IO] = AwsServerOptions.default[IO].copy(encodeResponseBody = false)
     val route: Route[IO] = AwsCatsEffectServerInterpreter(serverOptions).toRoute(e)
     val name = e.showDetail + (if (testNameSuffix == "") "" else " " + testNameSuffix)
     Test(name)(runTest(stubBackend(route), uri"http://localhost:3000").unsafeToFuture())

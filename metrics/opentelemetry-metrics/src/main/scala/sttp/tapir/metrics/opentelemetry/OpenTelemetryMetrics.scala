@@ -27,8 +27,8 @@ case class OpenTelemetryMetrics[F[_]](
     copy(metrics = metrics :+ responsesDuration(instrumentationName, instrumentationVersion, provider, labels))
   def withCustom(m: Metric[F, _]): OpenTelemetryMetrics[F] = copy(metrics = metrics :+ m)
 
-  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F, B] =
-    new MetricsRequestInterceptor[F, B](metrics, ignoreEndpoints)
+  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F] =
+    new MetricsRequestInterceptor[F](metrics, ignoreEndpoints)
 }
 
 object OpenTelemetryMetrics {

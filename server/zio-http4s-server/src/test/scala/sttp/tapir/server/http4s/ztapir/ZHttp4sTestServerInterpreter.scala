@@ -26,14 +26,13 @@ import scala.reflect.ClassTag
 class ZHttp4sTestServerInterpreter
     extends TestServerInterpreter[RIO[Clock with Blocking, *], ZioStreams with WebSockets, HttpRoutes[
       RIO[Clock with Blocking, *]
-    ], Http4sResponseBody[RIO[Clock with Blocking, *]]] {
+    ]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route[I, E, O](
       e: ZServerEndpoint[Clock with Blocking, I, E, O],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock with Blocking, *], Http4sResponseBody[RIO[Clock with Blocking, *]]]] =
-        None
+      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock with Blocking, *]]] = None
   ): HttpRoutes[RIO[Clock with Blocking, *]] = {
     val serverOptions: Http4sServerOptions[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]] = Http4sServerOptions
       .customInterceptors[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]

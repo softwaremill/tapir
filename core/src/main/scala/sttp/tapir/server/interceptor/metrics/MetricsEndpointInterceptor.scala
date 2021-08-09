@@ -11,10 +11,10 @@ import sttp.tapir.server.interpreter.BodyListener._
 
 import scala.util.{Failure, Success, Try}
 
-class MetricsRequestInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])
-    extends RequestInterceptor[F, B] {
+class MetricsRequestInterceptor[F[_]](metrics: List[Metric[F, _]], ignoreEndpoints: Seq[Endpoint[_, _, _, _]])
+    extends RequestInterceptor[F] {
 
-  override def apply(responder: Responder[F, B], requestHandler: EndpointInterceptor[F, B] => RequestHandler[F, B]): RequestHandler[F, B] =
+  override def apply[B](responder: Responder[F, B], requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]): RequestHandler[F, B] =
     RequestHandler.from { (request, monad) =>
       implicit val m: MonadError[F] = monad
       metrics
@@ -27,17 +27,17 @@ class MetricsRequestInterceptor[F[_], B](metrics: List[Metric[F, _]], ignoreEndp
           } yield endpointMetric :: metrics
         }
         .flatMap { endpointMetrics =>
-          requestHandler(new MetricsEndpointInterceptor[F, B](endpointMetrics.reverse, ignoreEndpoints)).apply(request)
+          requestHandler(new MetricsEndpointInterceptor[F](endpointMetrics.reverse, ignoreEndpoints)).apply(request)
         }
     }
 }
 
-private[metrics] class MetricsEndpointInterceptor[F[_], B](
+private[metrics] class MetricsEndpointInterceptor[F[_]](
     endpointMetrics: List[EndpointMetric[F]],
     ignoreEndpoints: Seq[Endpoint[_, _, _, _]]
-) extends EndpointInterceptor[F, B] {
+) extends EndpointInterceptor[F] {
 
-  override def apply(responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
+  override def apply[B](responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] =
     new EndpointHandler[F, B] {
       override def onDecodeSuccess[I](
           ctx: DecodeSuccessContext[F, I]
@@ -92,7 +92,7 @@ private[metrics] class MetricsEndpointInterceptor[F[_], B](
     sequence(endpointMetrics)
   }
 
-  private def withBodyOnComplete(endpoint: Endpoint[_, _, _, _], sr: ServerResponse[B])(implicit
+  private def withBodyOnComplete[B](endpoint: Endpoint[_, _, _, _], sr: ServerResponse[B])(implicit
       monad: MonadError[F],
       bodyListener: BodyListener[F, B]
   ): F[ServerResponse[B]] = {

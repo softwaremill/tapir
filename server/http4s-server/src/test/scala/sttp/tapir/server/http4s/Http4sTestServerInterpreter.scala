@@ -18,14 +18,13 @@ import sttp.tapir.tests.Port
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-class Http4sTestServerInterpreter
-    extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO], Http4sResponseBody[IO]] {
+class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[IO, Http4sResponseBody[IO]]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): HttpRoutes[IO] = {
     val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
       .customInterceptors[IO, IO]

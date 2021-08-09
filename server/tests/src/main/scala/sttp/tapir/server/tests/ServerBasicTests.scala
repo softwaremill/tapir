@@ -30,9 +30,9 @@ import java.nio.ByteBuffer
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class ServerBasicTests[F[_], ROUTE, B](
-    createServerTest: CreateServerTest[F, Any, ROUTE, B],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE, B],
+class ServerBasicTests[F[_], ROUTE](
+    createServerTest: CreateServerTest[F, Any, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, ROUTE],
     multipleValueHeaderSupport: Boolean = true,
     inputStreamSupport: Boolean = true,
     supportsUrlEncodedPathSegments: Boolean = true,

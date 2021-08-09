@@ -2,7 +2,6 @@ package sttp.tapir.server.play
 
 import akka.stream.Materializer
 import play.api.Logger
-import play.api.http.HttpEntity
 import play.api.libs.Files.{SingletonTemporaryFileCreator, TemporaryFileCreator}
 import play.api.mvc._
 import sttp.tapir.server.interceptor.decodefailure.DecodeFailureHandler
@@ -18,10 +17,10 @@ case class PlayServerOptions(
     defaultActionBuilder: ActionBuilder[Request, AnyContent],
     playBodyParsers: PlayBodyParsers,
     decodeFailureHandler: DecodeFailureHandler,
-    interceptors: List[Interceptor[Future, HttpEntity]]
+    interceptors: List[Interceptor[Future]]
 ) {
-  def prependInterceptor(i: Interceptor[Future, HttpEntity]): PlayServerOptions = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Future, HttpEntity]): PlayServerOptions = copy(interceptors = interceptors :+ i)
+  def prependInterceptor(i: Interceptor[Future]): PlayServerOptions = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Future]): PlayServerOptions = copy(interceptors = interceptors :+ i)
 }
 
 object PlayServerOptions {
@@ -30,11 +29,10 @@ object PlayServerOptions {
   def customInterceptors(implicit
       mat: Materializer,
       ec: ExecutionContext
-  ): CustomInterceptors[Future, HttpEntity, Unit, PlayServerOptions] =
+  ): CustomInterceptors[Future, Unit, PlayServerOptions] =
     CustomInterceptors(
-      createLogInterceptor =
-        (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future, HttpEntity](sl, (_, _) => Future.successful(())),
-      createOptions = (ci: CustomInterceptors[Future, HttpEntity, Unit, PlayServerOptions]) =>
+      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, Future](sl, (_, _) => Future.successful(())),
+      createOptions = (ci: CustomInterceptors[Future, Unit, PlayServerOptions]) =>
         PlayServerOptions(
           SingletonTemporaryFileCreator,
           defaultDeleteFile,

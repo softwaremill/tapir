@@ -12,19 +12,19 @@ import scala.concurrent.Future
 case class AkkaHttpServerOptions(
     createFile: ServerRequest => Future[TapirFile],
     deleteFile: TapirFile => Future[Unit],
-    interceptors: List[Interceptor[Future, AkkaResponseBody]]
+    interceptors: List[Interceptor[Future]]
 ) {
-  def prependInterceptor(i: Interceptor[Future, AkkaResponseBody]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[Future, AkkaResponseBody]): AkkaHttpServerOptions = copy(interceptors = interceptors :+ i)
+  def prependInterceptor(i: Interceptor[Future]): AkkaHttpServerOptions = copy(interceptors = i :: interceptors)
+  def appendInterceptor(i: Interceptor[Future]): AkkaHttpServerOptions = copy(interceptors = interceptors :+ i)
 }
 
 object AkkaHttpServerOptions {
 
   /** Allows customising the interceptors used by the server interpreter. */
-  def customInterceptors: CustomInterceptors[Future, AkkaResponseBody, LoggingAdapter => Future[Unit], AkkaHttpServerOptions] =
+  def customInterceptors: CustomInterceptors[Future, LoggingAdapter => Future[Unit], AkkaHttpServerOptions] =
     CustomInterceptors(
       createLogInterceptor = Log.serverLogInterceptor,
-      createOptions = (ci: CustomInterceptors[Future, AkkaResponseBody, LoggingAdapter => Future[Unit], AkkaHttpServerOptions]) =>
+      createOptions = (ci: CustomInterceptors[Future, LoggingAdapter => Future[Unit], AkkaHttpServerOptions]) =>
         AkkaHttpServerOptions(defaultCreateFile, defaultDeleteFile, ci.interceptors)
     ).serverLog(Log.defaultServerLog)
 
@@ -48,8 +48,8 @@ object AkkaHttpServerOptions {
 
     def serverLogInterceptor(
         serverLog: ServerLog[LoggingAdapter => Future[Unit]]
-    ): ServerLogInterceptor[LoggingAdapter => Future[Unit], Future, AkkaResponseBody] =
-      new ServerLogInterceptor[LoggingAdapter => Future[Unit], Future, AkkaResponseBody](
+    ): ServerLogInterceptor[LoggingAdapter => Future[Unit], Future] =
+      new ServerLogInterceptor[LoggingAdapter => Future[Unit], Future](
         serverLog,
         (f, request) => f(request.underlying.asInstanceOf[RequestContext].log)
       )
