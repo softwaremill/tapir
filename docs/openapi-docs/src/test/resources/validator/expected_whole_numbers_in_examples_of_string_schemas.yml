@@ -1,0 +1,24 @@
+openapi: 3.0.3
+info:
+  title: Fruits
+  version: '1.0'
+paths:
+  /positive:
+    get:
+      operationId: getPositive
+      parameters:
+        - name: x
+          in: query
+          required: true
+          schema:
+            type: string
+            minimum: 0
+      responses:
+        '200':
+          description: ''
+        '400':
+          description: 'Invalid value for: query parameter x'
+          content:
+            text/plain:
+              schema:
+                type: string

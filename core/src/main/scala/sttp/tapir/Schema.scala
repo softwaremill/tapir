@@ -8,7 +8,7 @@ import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
 
 import java.io.InputStream
-import java.math.{BigDecimal => JBigDecimal}
+import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 import java.nio.ByteBuffer
 import java.time._
 import java.util.{Date, UUID}
@@ -248,6 +248,8 @@ object Schema extends SchemaExtensions with LowPrioritySchema with SchemaCompani
   implicit val schemaForUUID: Schema[UUID] = Schema(SString[UUID]()).format("uuid")
   implicit val schemaForBigDecimal: Schema[BigDecimal] = Schema(SString())
   implicit val schemaForJBigDecimal: Schema[JBigDecimal] = Schema(SString())
+  implicit val schemaForBigInt: Schema[BigInt] = Schema(SString())
+  implicit val schemaForJBigInteger: Schema[JBigInteger] = Schema(SString())
 
   implicit def schemaForOption[T: Schema]: Schema[Option[T]] = implicitly[Schema[T]].asOption
   implicit def schemaForArray[T: Schema]: Schema[Array[T]] = implicitly[Schema[T]].asArray
