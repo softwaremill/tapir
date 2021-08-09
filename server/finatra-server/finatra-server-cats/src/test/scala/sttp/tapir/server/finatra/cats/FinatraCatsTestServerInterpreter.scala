@@ -23,10 +23,10 @@ class FinatraCatsTestServerInterpreter(dispatcher: Dispatcher[IO]) extends TestS
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, FinatraContent]] = None
   ): FinatraRoute = {
     val serverOptions: FinatraCatsServerOptions[IO] =
-      FinatraCatsServerOptions.customInterceptors(
-        dispatcher,
-        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-      )
+      FinatraCatsServerOptions
+        .customInterceptors(dispatcher)
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .options
     FinatraCatsServerInterpreter[IO](serverOptions).toRoute(e)
   }
 

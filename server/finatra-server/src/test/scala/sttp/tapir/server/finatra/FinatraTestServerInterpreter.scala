@@ -24,10 +24,10 @@ class FinatraTestServerInterpreter extends TestServerInterpreter[Future, Any, Fi
       metricsInterceptor: Option[MetricsRequestInterceptor[Future, FinatraContent]] = None
   ): FinatraRoute = {
     implicit val serverOptions: FinatraServerOptions =
-      FinatraServerOptions.customInterceptors(
-        metricsInterceptor = metricsInterceptor,
-        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-      )
+      FinatraServerOptions.customInterceptors
+        .metricsInterceptor(metricsInterceptor)
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .options
     FinatraServerInterpreter(serverOptions).toRoute(e)
   }
 

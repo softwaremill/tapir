@@ -28,10 +28,10 @@ class PlayTestServerInterpreter(implicit actorSystem: ActorSystem) extends TestS
       metricsInterceptor: Option[MetricsRequestInterceptor[Future, HttpEntity]] = None
   ): Routes = {
     val serverOptions: PlayServerOptions =
-      PlayServerOptions.customInterceptors(
-        metricsInterceptor = metricsInterceptor,
-        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-      )
+      PlayServerOptions.customInterceptors
+        .metricsInterceptor(metricsInterceptor)
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .options
     PlayServerInterpreter(serverOptions).toRoutes(e)
   }
 

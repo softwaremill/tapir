@@ -118,9 +118,10 @@ val myDecodeFailureHandler = DefaultDecodeFailureHandler.handler.copy(
   response = myFailureResponse
 )
 
-implicit val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
-  decodeFailureHandler = myDecodeFailureHandler
-)
+val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+  .customInterceptors
+  .decodeFailureHandler(myDecodeFailureHandler)
+  .options
 ```
 
 Note that when specifying that a response should be returned upon a failure, we need to provide the endpoint output 

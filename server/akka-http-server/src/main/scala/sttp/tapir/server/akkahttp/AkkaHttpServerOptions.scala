@@ -3,13 +3,8 @@ package sttp.tapir.server.akkahttp
 import akka.event.LoggingAdapter
 import akka.http.scaladsl.server.RequestContext
 import sttp.tapir.model.ServerRequest
-import sttp.tapir.server.interceptor.Interceptor
-import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 import scala.concurrent.Future
@@ -25,44 +20,13 @@ case class AkkaHttpServerOptions(
 
 object AkkaHttpServerOptions {
 
-  /** Creates default [[AkkaHttpServerOptions]] with `additionalInterceptors`, sitting between two configurable
-    * interceptor groups. The order of the interceptors corresponds to the ordering of the parameters.
-    *
-    * The options can be then further customised using copy constructors or the methods to append/prepend
-    * interceptors.
-    *
-    * @param exceptionHandler Whether to respond to exceptions, or propagate them to akka http.
-    * @param rejectInterceptor How to respond when decoding fails for all interpreted endpoints.
-    * @param serverLog The server log using which an interceptor will be created, if any.
-    * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
-    *                               responses.
-    * @param unsupportedMediaTypeInterceptor Whether to return 415 (unsupported media type) if there's no body in the
-    *                                        endpoint's outputs, which can satisfy the constraints from the `Accept`
-    *                                        header.
-    * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
-    */
-  def customInterceptors(
-      metricsInterceptor: Option[MetricsRequestInterceptor[Future, AkkaResponseBody]] = None,
-      rejectInterceptor: Option[RejectInterceptor[Future, AkkaResponseBody]] = Some(RejectInterceptor.default),
-      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
-      serverLog: Option[ServerLog[LoggingAdapter => Future[Unit]]] = Some(Log.defaultServerLog),
-      additionalInterceptors: List[Interceptor[Future, AkkaResponseBody]] = Nil,
-      unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[Future, AkkaResponseBody]] = Some(
-        new UnsupportedMediaTypeInterceptor()
-      ),
-      decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
-  ): AkkaHttpServerOptions =
-    AkkaHttpServerOptions(
-      defaultCreateFile,
-      defaultDeleteFile,
-      metricsInterceptor.toList ++
-        rejectInterceptor.toList ++
-        exceptionHandler.map(new ExceptionInterceptor[Future, AkkaResponseBody](_)).toList ++
-        serverLog.map(Log.serverLogInterceptor).toList ++
-        additionalInterceptors ++
-        unsupportedMediaTypeInterceptor.toList ++
-        List(new DecodeFailureInterceptor[Future, AkkaResponseBody](decodeFailureHandler))
-    )
+  /** Allows customising the interceptors used by the server interpreter. */
+  def customInterceptors: CustomInterceptors[Future, AkkaResponseBody, LoggingAdapter => Future[Unit], AkkaHttpServerOptions] =
+    CustomInterceptors(
+      createLogInterceptor = Log.serverLogInterceptor,
+      createOptions = (ci: CustomInterceptors[Future, AkkaResponseBody, LoggingAdapter => Future[Unit], AkkaHttpServerOptions]) =>
+        AkkaHttpServerOptions(defaultCreateFile, defaultDeleteFile, ci.interceptors)
+    ).serverLog(Log.defaultServerLog)
 
   val defaultCreateFile: ServerRequest => Future[TapirFile] = { _ =>
     import scala.concurrent.ExecutionContext.Implicits.global
@@ -99,5 +63,5 @@ object AkkaHttpServerOptions {
       }
   }
 
-  val default: AkkaHttpServerOptions = customInterceptors()
+  val default: AkkaHttpServerOptions = customInterceptors.options
 }

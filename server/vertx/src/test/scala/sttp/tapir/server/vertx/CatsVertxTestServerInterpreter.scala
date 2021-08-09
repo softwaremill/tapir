@@ -28,11 +28,11 @@ class CatsVertxTestServerInterpreter(vertx: Vertx, dispatcher: Dispatcher[IO])
       metricsInterceptor: Option[MetricsRequestInterceptor[IO, RoutingContext => Unit]] = None
   ): Router => Route = {
     val options: VertxCatsServerOptions[IO] =
-      VertxCatsServerOptions.customInterceptors(
-        dispatcher,
-        metricsInterceptor = metricsInterceptor,
-        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-      )
+      VertxCatsServerOptions
+        .customInterceptors(dispatcher)
+        .metricsInterceptor(metricsInterceptor)
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .options
     VertxCatsServerInterpreter(options).route(e)
   }
 

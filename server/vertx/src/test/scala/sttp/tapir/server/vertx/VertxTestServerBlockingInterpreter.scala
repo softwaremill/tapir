@@ -16,10 +16,10 @@ class VertxTestServerBlockingInterpreter(vertx: Vertx) extends VertxTestServerIn
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Future, RoutingContext => Unit]] = None
   ): Router => Route = {
-    val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors(
-      metricsInterceptor = metricsInterceptor,
-      decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-    )
+    val options: VertxFutureServerOptions = VertxFutureServerOptions.customInterceptors
+      .metricsInterceptor(metricsInterceptor)
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .options
     VertxFutureServerInterpreter(options).blockingRoute(e)
   }
 

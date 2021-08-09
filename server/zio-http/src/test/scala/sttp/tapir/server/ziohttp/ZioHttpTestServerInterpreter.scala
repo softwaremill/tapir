@@ -26,10 +26,10 @@ class ZioHttpTestServerInterpreter(nettyDeps: EventLoopGroup with ServerChannelF
       decodeFailureHandler: Option[DecodeFailureHandler],
       metricsInterceptor: Option[MetricsRequestInterceptor[Task, Stream[Throwable, Byte]]]
   ): Http[Any, Throwable, Request, Response[Any, Throwable]] = {
-    val serverOptions: ZioHttpServerOptions[Any] = ZioHttpServerOptions.customInterceptors(
-      metricsInterceptor = metricsInterceptor,
-      decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-    )
+    val serverOptions: ZioHttpServerOptions[Any] = ZioHttpServerOptions.customInterceptors
+      .metricsInterceptor(metricsInterceptor)
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .options
     ZioHttpInterpreter(serverOptions).toHttp(e)
   }
 

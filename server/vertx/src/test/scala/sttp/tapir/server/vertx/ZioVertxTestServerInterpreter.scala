@@ -25,10 +25,10 @@ class ZioVertxTestServerInterpreter(vertx: Vertx) extends TestServerInterpreter[
       metricsInterceptor: Option[MetricsRequestInterceptor[Task, RoutingContext => Unit]] = None
   ): Router => Route = {
     val options: VertxZioServerOptions[Task] =
-      VertxZioServerOptions.customInterceptors(
-        metricsInterceptor = metricsInterceptor,
-        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-      )
+      VertxZioServerOptions.customInterceptors
+        .metricsInterceptor(metricsInterceptor)
+        .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+        .options
     VertxZioServerInterpreter(options).route(e)
   }
 
