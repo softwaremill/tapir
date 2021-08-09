@@ -63,14 +63,14 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
     }
 
     val primitiveValidators = schema.validator.asPrimitiveValidators
-    val wholeNumbers = schema.schemaType match {
+    val schemaIsWholeNumber = schema.schemaType match {
       case TSchemaType.SInteger() => true
       case _                      => false
     }
 
     result
       .map(addMetadata(_, schema))
-      .map(addConstraints(_, primitiveValidators, wholeNumbers))
+      .map(addConstraints(_, primitiveValidators, schemaIsWholeNumber))
   }
 
   private def addMetadata(oschema: ASchema, tschema: TSchema[_]): ASchema = {
@@ -86,8 +86,8 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
   private def addConstraints(
       oschema: ASchema,
       vs: Seq[Validator.Primitive[_]],
-      wholeNumbers: Boolean
-  ): ASchema = vs.foldLeft(oschema)(addConstraints(_, _, wholeNumbers))
+      schemaIsWholeNumber: Boolean
+  ): ASchema = vs.foldLeft(oschema)(addConstraints(_, _, schemaIsWholeNumber))
 
   private def addConstraints(aschema: ASchema, v: Validator.Primitive[_], wholeNumbers: Boolean): ASchema = {
     v match {
@@ -116,8 +116,19 @@ private[schema] class TSchemaToASchema(nameToSchemaReference: NameToSchemaRefere
     aschema.copy(`enum` = if (values.nonEmpty) Some(values) else None)
   }
 
-  private def toBigDecimal[N](v: N, vIsNumeric: Numeric[N], wholeNumber: Boolean): BigDecimal = {
-    if (wholeNumber) BigDecimal(vIsNumeric.toLong(v)) else BigDecimal(vIsNumeric.toDouble(v))
+  private def toBigDecimal[N](v: N, vIsNumeric: Numeric[N], schemaIsWholeNumber: Boolean): BigDecimal = {
+    v match {
+      case x: Int                   => BigDecimal(x)
+      case x: Long                  => BigDecimal(x)
+      case x: Float                 => BigDecimal(x.toDouble)
+      case x: Double                => BigDecimal(x)
+      case x: BigInt                => BigDecimal(x)
+      case x: java.math.BigInteger  => BigDecimal(x)
+      case x: BigDecimal            => x
+      case x: java.math.BigDecimal  => BigDecimal(x)
+      case _ if schemaIsWholeNumber => BigDecimal(vIsNumeric.toLong(v))
+      case _                        => BigDecimal(vIsNumeric.toDouble(v))
+    }
   }
 
   private def tDiscriminatorToADiscriminator(discriminator: TSchemaType.SDiscriminator): Discriminator = {

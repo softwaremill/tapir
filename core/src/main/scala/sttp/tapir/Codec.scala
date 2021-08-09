@@ -1,7 +1,7 @@
 package sttp.tapir
 
 import java.io.InputStream
-import java.math.{BigDecimal => JBigDecimal}
+import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 import java.nio.ByteBuffer
 import java.nio.charset.{Charset, StandardCharsets}
 import java.time._
@@ -136,6 +136,9 @@ object Codec extends CodecExtensions with FormCodecMacros with LowPriorityCodec 
   implicit val bigDecimal: Codec[String, BigDecimal, TextPlain] = stringCodec[BigDecimal](BigDecimal(_)).schema(Schema.schemaForBigDecimal)
   implicit val javaBigDecimal: Codec[String, JBigDecimal, TextPlain] =
     stringCodec[JBigDecimal](new JBigDecimal(_)).schema(Schema.schemaForJBigDecimal)
+  implicit val bigInt: Codec[String, BigInt, TextPlain] = stringCodec[BigInt](BigInt(_)).schema(Schema.schemaForBigInt)
+  implicit val javaBigInteger: Codec[String, JBigInteger, TextPlain] =
+    stringCodec[JBigInteger](new JBigInteger(_)).schema(Schema.schemaForJBigInteger)
   implicit val localTime: Codec[String, LocalTime, TextPlain] =
     string.map(LocalTime.parse(_))(DateTimeFormatter.ISO_LOCAL_TIME.format).schema(Schema.schemaForLocalTime)
   implicit val localDate: Codec[String, LocalDate, TextPlain] =

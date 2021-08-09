@@ -218,4 +218,17 @@ class VerifyYamlValidatorTest extends AnyFunSuite with Matchers {
 
     actualYamlNoIndent shouldBe expectedYaml
   }
+
+  test("use whole numbers in examples of string-schema whole-number numeric types") {
+    val expectedYaml = load("validator/expected_whole_numbers_in_examples_of_string_schemas.yml")
+
+    val positive = endpoint.get
+      .in("positive")
+      .in(query[BigInt]("x").validate(Validator.min(0)))
+
+    val actualYaml = OpenAPIDocsInterpreter().toOpenAPI(List(positive), Info("Fruits", "1.0")).toYaml
+    val actualYamlNoIndent = noIndentation(actualYaml)
+
+    actualYamlNoIndent shouldBe expectedYaml
+  }
 }
