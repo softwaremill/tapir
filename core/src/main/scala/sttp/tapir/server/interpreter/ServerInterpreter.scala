@@ -7,7 +7,7 @@ import sttp.tapir.internal.ParamsAsAny
 import sttp.tapir.model.{ServerRequest, ServerResponse}
 import sttp.tapir.server.interceptor._
 import sttp.tapir.server.{interceptor, _}
-import sttp.tapir.{Codec, DecodeResult, EndpointIO, StreamBodyIO, TapirFile}
+import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO, TapirFile}
 
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
@@ -67,6 +67,16 @@ class ServerInterpreter[R, F[_], B, S](
       case (interceptor, handler) => interceptor(responder(defaultStatusCode), handler)
     }
 
+    def onDecodeFailure(input: EndpointInput[_], failure: DecodeResult.Failure): F[RequestResult[B]] = {
+      val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, se.endpoint, request)
+      endpointHandler(defaultErrorStatusCode)
+        .onDecodeFailure(decodeFailureContext)
+        .map {
+          case Some(response) => RequestResult.Response(response)
+          case None           => RequestResult.Failure(List(decodeFailureContext))
+        }
+    }
+
     decodeBody(decodedBasicInputs).flatMap {
       case values: DecodeBasicInputsResult.Values =>
         InputValue(se.endpoint.input, values) match {
@@ -74,23 +84,9 @@ class ServerInterpreter[R, F[_], B, S](
             endpointHandler(defaultSuccessStatusCode)
               .onDecodeSuccess(interceptor.DecodeSuccessContext(se, params.asAny.asInstanceOf[I], request))
               .map(RequestResult.Response(_))
-          case InputValueResult.Failure(input, failure) =>
-            endpointHandler(defaultErrorStatusCode)
-              .onDecodeFailure(interceptor.DecodeFailureContext(input, failure, se.endpoint, request))
-              .map {
-                case Some(response) => RequestResult.Response(response)
-                case None           => RequestResult.Failure(List())
-              }
+          case InputValueResult.Failure(input, failure) => onDecodeFailure(input, failure)
         }
-      case DecodeBasicInputsResult.Failure(input, failure) =>
-        val decodeFailureContext = interceptor.DecodeFailureContext(input, failure, se.endpoint, request)
-
-        endpointHandler(defaultErrorStatusCode)
-          .onDecodeFailure(decodeFailureContext)
-          .map {
-            case Some(response) => RequestResult.Response(response)
-            case None           => RequestResult.Failure(List(decodeFailureContext))
-          }
+      case DecodeBasicInputsResult.Failure(input, failure) => onDecodeFailure(input, failure)
     }
   }
 
