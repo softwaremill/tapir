@@ -7,8 +7,8 @@ exposing the endpoints using the [http4s](https://http4s.org) server.
 You'll need the following dependencies:
 
 ```scala
-"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.18.1"
-"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.18.1"
+"com.softwaremill.sttp.tapir" %% "tapir-zio" % "0.18.2"
+"com.softwaremill.sttp.tapir" %% "tapir-zio-http4s-server" % "0.18.2"
 ```
 
 Next, instead of the usual `import sttp.tapir._`, you should import (or extend the `ZTapir` trait, see [MyTapir](../mytapir.md)):
