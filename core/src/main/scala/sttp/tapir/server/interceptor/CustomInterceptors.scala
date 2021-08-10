@@ -1,11 +1,13 @@
 package sttp.tapir.server.interceptor
 
+import sttp.model.{Header, StatusCode}
 import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
 import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.ServerLog
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.{headers, statusCode}
 
 /** Allows customising the interceptors used by the server interpreter. Custom interceptors can be added via
   * `addInterceptor`, sitting between two configurable, default interceptor groups.
@@ -17,21 +19,23 @@ import sttp.tapir.server.interceptor.reject.RejectInterceptor
   *
   * @param metricsInterceptor Whether to collect metrics.
   * @param rejectInterceptor How to respond when decoding fails for all interpreted endpoints.
-  * @param exceptionHandler Whether to respond to exceptions, or propagate them to akka http.
+  * @param exceptionHandler Whether to respond to exceptions in the server logic, or propagate them to the
+  *                         server.
   * @param serverLog The server log using which an interceptor will be created, if any.
   * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
   *                               responses.
   * @param unsupportedMediaTypeInterceptor Whether to return 415 (unsupported media type) if there's no body in the
   *                                        endpoint's outputs, which can satisfy the constraints from the `Accept`
   *                                        header.
-  * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
+  * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created. Determines
+  *                             whether to respond when an input fails to decode.
   */
 case class CustomInterceptors[F[_], L, O](
     createLogInterceptor: ServerLog[L] => Interceptor[F],
     createOptions: CustomInterceptors[F, L, O] => O,
     metricsInterceptor: Option[MetricsRequestInterceptor[F]] = None,
     rejectInterceptor: Option[RejectInterceptor[F]] = Some(RejectInterceptor.default[F]),
-    exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
+    exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler.handler),
     serverLog: Option[ServerLog[L]] = None,
     additionalInterceptors: List[Interceptor[F]] = Nil,
     unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F]] = Some(
@@ -60,6 +64,17 @@ case class CustomInterceptors[F[_], L, O](
     copy(unsupportedMediaTypeInterceptor = u)
 
   def decodeFailureHandler(d: DecodeFailureHandler): CustomInterceptors[F, L, O] = copy(decodeFailureHandler = d)
+
+  /** Customise the way error messages are rendered in error responses, using the default exception and decode failure
+    * handlers.
+    */
+  def errorOutput(errorMessageOutput: String => ValuedEndpointOutput[_]): CustomInterceptors[F, L, O] = {
+    copy(
+      exceptionHandler = Some(DefaultExceptionHandler((s, m) => errorMessageOutput(m).prepend(statusCode, s))),
+      decodeFailureHandler =
+        DefaultDecodeFailureHandler.handler.copy(response = (s, h, m) => errorMessageOutput(m).prepend(statusCode.and(headers), (s, h)))
+    )
+  }
 
   //
 
