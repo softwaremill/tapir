@@ -12,7 +12,7 @@ import sttp.tapir.{Codec, DecodeResult, EndpointIO, EndpointInput, StreamBodyIO,
 class ServerInterpreter[R, F[_], B, S](
     requestBody: RequestBody[F, S],
     toResponseBody: ToResponseBody[B, S],
-    interceptors: List[Interceptor[F, B]],
+    interceptors: List[Interceptor[F]],
     deleteFile: TapirFile => F[Unit]
 )(implicit monad: MonadError[F], bodyListener: BodyListener[F, B]) {
   def apply[I, E, O](request: ServerRequest, se: ServerEndpoint[I, E, O, R, F]): F[RequestResult[B]] =
@@ -23,19 +23,19 @@ class ServerInterpreter[R, F[_], B, S](
 
   /** Accumulates endpoint interceptors and calls `next` with the potentially transformed request. */
   private def callInterceptors(
-      is: List[Interceptor[F, B]],
-      eisAcc: List[EndpointInterceptor[F, B]],
+      is: List[Interceptor[F]],
+      eisAcc: List[EndpointInterceptor[F]],
       responder: Responder[F, B],
       ses: List[ServerEndpoint[_, _, _, R, F]]
   ): RequestHandler[F, B] = {
     is match {
       case Nil => RequestHandler.from { (request, _) => firstNotNone(request, ses, eisAcc.reverse, Nil) }
-      case (i: RequestInterceptor[F, B]) :: tail =>
+      case (i: RequestInterceptor[F]) :: tail =>
         i(
           responder,
           { ei => RequestHandler.from { (request, _) => callInterceptors(tail, ei :: eisAcc, responder, ses).apply(request) } }
         )
-      case (ei: EndpointInterceptor[F, B]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, ses)
+      case (ei: EndpointInterceptor[F]) :: tail => callInterceptors(tail, ei :: eisAcc, responder, ses)
     }
   }
 
@@ -43,7 +43,7 @@ class ServerInterpreter[R, F[_], B, S](
   private def firstNotNone(
       request: ServerRequest,
       ses: List[ServerEndpoint[_, _, _, R, F]],
-      endpointInterceptors: List[EndpointInterceptor[F, B]],
+      endpointInterceptors: List[EndpointInterceptor[F]],
       accumulatedFailureContexts: List[DecodeFailureContext]
   ): F[RequestResult[B]] =
     ses match {
@@ -59,7 +59,7 @@ class ServerInterpreter[R, F[_], B, S](
   private def tryServerEndpoint[I, E, O](
       request: ServerRequest,
       se: ServerEndpoint[I, E, O, R, F],
-      endpointInterceptors: List[EndpointInterceptor[F, B]]
+      endpointInterceptors: List[EndpointInterceptor[F]]
   ): F[RequestResult[B]] = {
     val decodedBasicInputs = DecodeBasicInputs(se.endpoint.input, request)
 

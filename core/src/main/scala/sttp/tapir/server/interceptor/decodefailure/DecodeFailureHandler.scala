@@ -14,7 +14,7 @@ trait DecodeFailureHandler {
     * response to the request. `None` indicates that no action should be taken, and the request might be passed
     * for decoding to other endpoints.
     *
-    * Inputs are decoded in the following order: method, path, query, headers, body. Hence, if there's a decode failure
+    * Inputs are decoded in the following order: path, method, query, headers, body. Hence, if there's a decode failure
     * on a query parameter, any method & path inputs of the input must have matched and must have been decoded
     * successfully.
     */

@@ -169,7 +169,7 @@ class OpenTelemetryMetricsTest extends AnyFlatSpec with Matchers {
     val interpreter = new ServerInterpreter[Any, Id, String, NoStreams](
       TestRequestBody,
       StringToResponseBody,
-      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler)),
+      List(metrics.metricsInterceptor(), new ExceptionInterceptor(DefaultExceptionHandler.handler)),
       _ => ()
     )
 

@@ -6,7 +6,7 @@ import sttp.capabilities.zio.ZioStreams
 import sttp.monad.MonadError
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.interceptor.{DecodeFailureContext, RequestResult}
+import sttp.tapir.server.interceptor.RequestResult
 import sttp.tapir.server.interpreter.{BodyListener, ServerInterpreter}
 import sttp.tapir.server.vertx.VertxZioServerInterpreter.{RioFromVFuture, monadError}
 import sttp.tapir.server.vertx.decoders.{VertxRequestBody, VertxServerRequest}

@@ -9,9 +9,9 @@ import sttp.monad.MonadError
 import sttp.tapir._
 import sttp.tapir.tests._
 
-class ServerRejectTests[F[_], ROUTE, B](
-    createServerTest: CreateServerTest[F, Any, ROUTE, B],
-    serverInterpreter: TestServerInterpreter[F, Any, ROUTE, B]
+class ServerRejectTests[F[_], ROUTE](
+    createServerTest: CreateServerTest[F, Any, ROUTE],
+    serverInterpreter: TestServerInterpreter[F, Any, ROUTE]
 )(implicit
     m: MonadError[F]
 ) {

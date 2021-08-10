@@ -20,8 +20,8 @@ import java.io.File
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
 
-class ServerFileMultipartTests[F[_], ROUTE, B](
-    createServerTest: CreateServerTest[F, Any, ROUTE, B],
+class ServerFileMultipartTests[F[_], ROUTE](
+    createServerTest: CreateServerTest[F, Any, ROUTE],
     multipartInlineHeaderSupport: Boolean = true
 )(implicit m: MonadError[F]) {
   import createServerTest._

@@ -15,8 +15,8 @@ import sttp.tapir.server.tests.ServerMetricsTest._
 import sttp.tapir.tests.{Fruit, Test}
 import sttp.ws.{WebSocket, WebSocketFrame}
 
-abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
-    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE, B],
+abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE](
+    createServerTest: CreateServerTest[F, S with WebSockets, ROUTE],
     val streams: S
 )(implicit
     m: MonadError[F]
@@ -50,7 +50,7 @@ abstract class ServerWebSocketTests[F[_], S <: Streams[S], ROUTE, B](
 
       val reqCounter = newRequestCounter[F]
       val resCounter = newResponseCounter[F]
-      val metrics = new MetricsRequestInterceptor[F, B](List(reqCounter, resCounter), Seq.empty)
+      val metrics = new MetricsRequestInterceptor[F](List(reqCounter, resCounter), Seq.empty)
 
       testServer(endpoint.out(stringWs).name("metrics"), metricsInterceptor = metrics.some)((_: Unit) =>
         pureResult(stringEcho.asRight[Unit])

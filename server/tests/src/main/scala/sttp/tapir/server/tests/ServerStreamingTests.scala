@@ -8,7 +8,7 @@ import sttp.model.{Header, HeaderNames}
 import sttp.monad.MonadError
 import sttp.tapir.tests.{Test, in_stream_out_stream, in_stream_out_stream_with_content_length}
 
-class ServerStreamingTests[F[_], S, ROUTE, B](createServerTest: CreateServerTest[F, S, ROUTE, B], streams: Streams[S])(implicit
+class ServerStreamingTests[F[_], S, ROUTE](createServerTest: CreateServerTest[F, S, ROUTE], streams: Streams[S])(implicit
     m: MonadError[F]
 ) {
 

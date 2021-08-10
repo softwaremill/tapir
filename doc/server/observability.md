@@ -74,10 +74,12 @@ val prometheusMetrics = PrometheusMetrics[Future]("tapir", CollectorRegistry.def
   .withResponsesTotal()
   .withResponsesDuration()
 
-implicit val serverOptions: AkkaHttpServerOptions =
-  AkkaHttpServerOptions.customInterceptors(metricsInterceptor = Some(prometheusMetrics.metricsInterceptor()))
+val serverOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+  .customInterceptors
+  .metricsInterceptor(prometheusMetrics.metricsInterceptor())
+  .options
 
-val routes: Route = AkkaHttpServerInterpreter().toRoute(prometheusMetrics.metricsEndpoint)
+val routes: Route = AkkaHttpServerInterpreter(serverOptions).toRoute(prometheusMetrics.metricsEndpoint)
 ```
 
 ### Custom metrics

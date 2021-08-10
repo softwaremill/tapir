@@ -26,7 +26,7 @@ class ZioVertxServerTest extends TestSuite {
       val interpreter = new ZioVertxTestServerInterpreter(vertx)
       val createServerTest =
         new DefaultCreateServerTest(backend, interpreter)
-          .asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, Router => Route, RoutingContext => Unit]]
+          .asInstanceOf[DefaultCreateServerTest[Task, ZioStreams, Router => Route]]
 
       new ServerBasicTests(createServerTest, interpreter).tests() ++
         new ServerFileMultipartTests(

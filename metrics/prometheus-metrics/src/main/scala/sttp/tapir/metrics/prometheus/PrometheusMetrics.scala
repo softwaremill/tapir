@@ -11,7 +11,7 @@ import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
 
 import java.io.StringWriter
-import java.time.{Clock, Duration, Instant}
+import java.time.{Clock, Duration}
 
 case class PrometheusMetrics[F[_]](
     namespace: String,
@@ -35,8 +35,8 @@ case class PrometheusMetrics[F[_]](
     copy(metrics = metrics :+ responsesDuration(registry, namespace, labels, clock))
   def withCustom(m: Metric[F, _]): PrometheusMetrics[F] = copy(metrics = metrics :+ m)
 
-  def metricsInterceptor[B](ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F, B] =
-    new MetricsRequestInterceptor[F, B](metrics, ignoreEndpoints :+ metricsEndpoint.endpoint)
+  def metricsInterceptor(ignoreEndpoints: Seq[Endpoint[_, _, _, _]] = Seq.empty): MetricsRequestInterceptor[F] =
+    new MetricsRequestInterceptor[F](metrics, ignoreEndpoints :+ metricsEndpoint.endpoint)
 }
 
 object PrometheusMetrics {

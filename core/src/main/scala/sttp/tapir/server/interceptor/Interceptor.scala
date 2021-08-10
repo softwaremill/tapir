@@ -14,9 +14,8 @@ import sttp.tapir.model.{ServerRequest, ServerResponse}
   * To add an interceptors, modify the server options of the server interpreter.
   *
   * @tparam F The effect type constructor.
-  * @tparam B The interpreter-specific, low-level type of body.
   */
-sealed trait Interceptor[F[_], B]
+sealed trait Interceptor[F[_]]
 
 /** Allows intercepting the handling of `request`, before decoding using any of the endpoints is done. The request
   * can be modified, before invoking further behavior, passed through `requestHandler`. Ultimately, when all
@@ -32,10 +31,11 @@ sealed trait Interceptor[F[_], B]
   * [[EndpointInterceptor.noop]].
   *
   * @tparam F The effect type constructor.
-  * @tparam B The interpreter-specific, low-level type of body.
   */
-trait RequestInterceptor[F[_], B] extends Interceptor[F, B] {
-  def apply(responder: Responder[F, B], requestHandler: EndpointInterceptor[F, B] => RequestHandler[F, B]): RequestHandler[F, B]
+trait RequestInterceptor[F[_]] extends Interceptor[F] {
+
+  /** @tparam B The interpreter-specific, low-level type of body. */
+  def apply[B](responder: Responder[F, B], requestHandler: EndpointInterceptor[F] => RequestHandler[F, B]): RequestHandler[F, B]
 }
 
 /** Allows intercepting the handling of a request by an endpoint, when either the endpoint's inputs have been
@@ -43,15 +43,17 @@ trait RequestInterceptor[F[_], B] extends Interceptor[F, B] {
   * server logic will be run (in case of a decode success), or `None` will be returned (in case of decode failure).
   *
   * Instead of calling the nested behavior, alternative responses can be returned using the `responder`.
-  *
-  * @tparam B The interpreter-specific, low-level type of body.
   */
-trait EndpointInterceptor[F[_], B] extends Interceptor[F, B] {
-  def apply(responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B]
+trait EndpointInterceptor[F[_]] extends Interceptor[F] {
+
+  /** @tparam B The interpreter-specific, low-level type of body. */
+  def apply[B](responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B]
 }
 
 object EndpointInterceptor {
-  def noop[F[_], B]: EndpointInterceptor[F, B] = (_: Responder[F, B], decodeHandler: EndpointHandler[F, B]) => decodeHandler
+  def noop[F[_]]: EndpointInterceptor[F] = new EndpointInterceptor[F] {
+    override def apply[B](responder: Responder[F, B], endpointHandler: EndpointHandler[F, B]): EndpointHandler[F, B] = endpointHandler
+  }
 }
 
 trait Responder[F[_], B] {

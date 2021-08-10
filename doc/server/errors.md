@@ -3,7 +3,7 @@
 Error handling in tapir is divided into three areas:
 
 1. Error outputs: defined per-endpoint, used for errors handled by the business logic
-2. Failed effects: exceptions which are not handled by the business logic (corresponds to 5xx responses)    
+2. Failed effects: exceptions which are not handled by the server logic (corresponds to 5xx responses)    
 3. Decode failures: format errors, when the input values can't be decoded (corresponds to 4xx responses, or 
    trying another endpoint)
 
@@ -93,45 +93,39 @@ when invoking the logic of the endpoint.
 ### Default failure handler
 
 The default decode failure handler is a case class, consisting of functions which decide whether to respond with
-an error or return a "no match", create error messages and create the response. 
- 
-To reuse the existing default logic, parts of the default behavior can be swapped, e.g. to return responses in 
-a different format (other than textual):
-
-```scala mdoc:compile-only
-import sttp.tapir._
-import sttp.tapir.server._
-import sttp.tapir.server.interceptor.ValuedEndpointOutput
-import sttp.tapir.server.interceptor.decodefailure.DefaultDecodeFailureHandler
-import sttp.tapir.server.akkahttp.{AkkaHttpServerInterpreter, AkkaHttpServerOptions}
-import sttp.tapir.generic.auto._
-import sttp.tapir.json.circe._
-import sttp.model.{Header, StatusCode}
-import io.circe.generic.auto._
-
-implicit val ec = scala.concurrent.ExecutionContext.global
-case class MyFailure(msg: String)
-def myFailureResponse(c: StatusCode, hs: List[Header], m: String): ValuedEndpointOutput[_] =
-  ValuedEndpointOutput(statusCode.and(headers).and(jsonBody[MyFailure]), (c, hs, MyFailure(m)))
-  
-val myDecodeFailureHandler = DefaultDecodeFailureHandler.handler.copy(
-  response = myFailureResponse
-)
-
-implicit val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions.customInterceptors(
-  decodeFailureHandler = myDecodeFailureHandler
-)
-```
-
-Note that when specifying that a response should be returned upon a failure, we need to provide the endpoint output 
-which should be used to create the response, as well as a value for this output.
+an error or return a "no match", create error messages and create the response. Parts of the default behavior can be 
+swapped, e.g. to return responses in a different format (other than plain text), or customise the error messages.
 
 The default decode failure handler also has the option to return a `400 Bad Request`, instead of a no-match (ultimately
 leading to a `404 Not Found`), when the "shape" of the path matches (that is, the number of segments in the request
 and endpoint's paths are the same), but when decoding some part of the path ends in an error. See the
 `badRequestOnPathErrorIfPathShapeMatches` in `ServerDefaults`.
 
-Finally, you can provide custom error messages for validation errors (which optionally describe what failed) and 
-failure errors (which describe the source of the error).
+## Customising how error messages are rendered
 
-A completely custom implementation of the `DecodeFailureHandler` can also be used.
+To return error responses in a different format (other than plain text), you can customise both the exception & decode
+failure handlers individually, or use the `CustomInterceptors.errorOutput` method which customises the default ones
+for you. 
+
+We'll need to provide both the endpoint output which should be used for error messages, along with the output's value:
+
+```scala mdoc:compile-only
+import sttp.tapir._
+import sttp.tapir.server.interceptor.ValuedEndpointOutput
+import sttp.tapir.server.akkahttp.AkkaHttpServerOptions
+import sttp.tapir.generic.auto._
+import sttp.tapir.json.circe._
+import io.circe.generic.auto._
+
+case class MyFailure(msg: String)
+def myFailureResponse(m: String): ValuedEndpointOutput[_] =
+  ValuedEndpointOutput(jsonBody[MyFailure], MyFailure(m))
+
+val myServerOptions: AkkaHttpServerOptions = AkkaHttpServerOptions
+  .customInterceptors
+  .errorOutput(myFailureResponse)
+  .options
+```
+
+If you want to customise anything beyond the rendering of the error message, or use non-default implementations of the
+exception handler / decode failure handler, you'll still have to customise each by hand.

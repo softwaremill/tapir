@@ -11,32 +11,26 @@ import sttp.capabilities.fs2.Fs2Streams
 import sttp.tapir.Endpoint
 import sttp.tapir.server.ServerEndpoint
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 
 import scala.concurrent.ExecutionContext
 import scala.reflect.ClassTag
 
-class Http4sTestServerInterpreter
-    extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO], Http4sResponseBody[IO]] {
+class Http4sTestServerInterpreter extends TestServerInterpreter[IO, Fs2Streams[IO] with WebSockets, HttpRoutes[IO]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route[I, E, O](
       e: ServerEndpoint[I, E, O, Fs2Streams[IO] with WebSockets, IO],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[IO, Http4sResponseBody[IO]]] = None
+      metricsInterceptor: Option[MetricsRequestInterceptor[IO]] = None
   ): HttpRoutes[IO] = {
     val serverOptions: Http4sServerOptions[IO, IO] = Http4sServerOptions
-      .customInterceptors(
-        rejectInterceptor = Some(RejectInterceptor.default),
-        metricsInterceptor = metricsInterceptor,
-        exceptionHandler = Some(DefaultExceptionHandler),
-        serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
-        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-      )
+      .customInterceptors[IO, IO]
+      .metricsInterceptor(metricsInterceptor)
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .options
     Http4sServerInterpreter(serverOptions).toRoutes(e)
   }
 

@@ -9,7 +9,7 @@ import sttp.tapir.server.interceptor.log.{DefaultServerLog, ServerLog}
 trait VertxServerOptions[F[_]] {
   def uploadDirectory: TapirFile
   def deleteFile: TapirFile => F[Unit]
-  def interceptors: List[Interceptor[F, RoutingContext => Unit]]
+  def interceptors: List[Interceptor[F]]
 }
 
 object VertxServerOptions {

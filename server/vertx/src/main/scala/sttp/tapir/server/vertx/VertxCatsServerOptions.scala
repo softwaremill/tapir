@@ -4,16 +4,9 @@ import cats.Applicative
 import cats.effect.Sync
 import cats.effect.kernel.Async
 import cats.effect.std.Dispatcher
-import cats.implicits.catsSyntaxOptionId
 import io.vertx.core.logging.LoggerFactory
-import io.vertx.ext.web.RoutingContext
-import sttp.tapir.server.interceptor.Interceptor
-import sttp.tapir.server.interceptor.content.UnsupportedMediaTypeInterceptor
-import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DecodeFailureInterceptor, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.exception.{DefaultExceptionHandler, ExceptionHandler, ExceptionInterceptor}
 import sttp.tapir.server.interceptor.log.{ServerLog, ServerLogInterceptor}
-import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
+import sttp.tapir.server.interceptor.{CustomInterceptors, Interceptor}
 import sttp.tapir.{Defaults, TapirFile}
 
 import java.io.File
@@ -23,58 +16,31 @@ final case class VertxCatsServerOptions[F[_]](
     uploadDirectory: TapirFile,
     deleteFile: TapirFile => F[Unit],
     maxQueueSizeForReadStream: Int,
-    interceptors: List[Interceptor[F, RoutingContext => Unit]]
+    interceptors: List[Interceptor[F]]
 ) extends VertxServerOptions[F] {
-  def prependInterceptor(i: Interceptor[F, RoutingContext => Unit]): VertxCatsServerOptions[F] =
+  def prependInterceptor(i: Interceptor[F]): VertxCatsServerOptions[F] =
     copy(interceptors = i :: interceptors)
-  def appendInterceptor(i: Interceptor[F, RoutingContext => Unit]): VertxCatsServerOptions[F] =
+  def appendInterceptor(i: Interceptor[F]): VertxCatsServerOptions[F] =
     copy(interceptors = interceptors :+ i)
 }
 
 object VertxCatsServerOptions {
 
-  /** Creates default [[VertxCatsServerOptions]] with `additionalInterceptors`, sitting between two configurable
-    * interceptor groups. The order of the interceptors corresponds to the ordering of the parameters.
-    *
-    * The options can be then further customised using copy constructors or the methods to append/prepend
-    * interceptors.
-    *
-    * @param exceptionHandler Whether to respond to exceptions, or propagate them to vertx.
-    * @param rejectInterceptor How to respond when decoding fails for all interpreted endpoints.
-    * @param serverLog The server log using which an interceptor will be created, if any. To keep the default, use
-    *                  `VertxEndpointOptions.defaultServerLog`
-    * @param additionalInterceptors Additional interceptors, e.g. handling decode failures, or providing alternate
-    *                               responses.
-    * @param unsupportedMediaTypeInterceptor Whether to return 415 (unsupported media type) if there's no body in the
-    *                                        endpoint's outputs, which can satisfy the constraints from the `Accept`
-    *                                        header.
-    * @param decodeFailureHandler The decode failure handler, from which an interceptor will be created.
-    */
+  /** Allows customising the interceptors used by the server interpreter. */
   def customInterceptors[F[_]: Async](
-      dispatcher: Dispatcher[F],
-      metricsInterceptor: Option[MetricsRequestInterceptor[F, RoutingContext => Unit]] = None,
-      rejectInterceptor: Option[RejectInterceptor[F, RoutingContext => Unit]] = Some(RejectInterceptor.default[F, RoutingContext => Unit]),
-      exceptionHandler: Option[ExceptionHandler] = Some(DefaultExceptionHandler),
-      serverLog: Option[ServerLog[Unit]] = Some(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx"))),
-      additionalInterceptors: List[Interceptor[F, RoutingContext => Unit]] = Nil,
-      unsupportedMediaTypeInterceptor: Option[UnsupportedMediaTypeInterceptor[F, RoutingContext => Unit]] =
-        new UnsupportedMediaTypeInterceptor[F, RoutingContext => Unit]().some,
-      decodeFailureHandler: DecodeFailureHandler = DefaultDecodeFailureHandler.handler
-  ): VertxCatsServerOptions[F] = {
-    VertxCatsServerOptions(
-      dispatcher,
-      File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
-      file => Sync[F].delay(Defaults.deleteFile()(file)),
-      maxQueueSizeForReadStream = 16,
-      metricsInterceptor.toList ++
-        rejectInterceptor.toList ++
-        exceptionHandler.map(new ExceptionInterceptor[F, RoutingContext => Unit](_)).toList ++
-        serverLog.map(new ServerLogInterceptor[Unit, F, RoutingContext => Unit](_, (_, _) => Applicative[F].unit)).toList ++
-        additionalInterceptors ++
-        unsupportedMediaTypeInterceptor.toList ++
-        List(new DecodeFailureInterceptor[F, RoutingContext => Unit](decodeFailureHandler))
-    )
-  }
+      dispatcher: Dispatcher[F]
+  ): CustomInterceptors[F, Unit, VertxCatsServerOptions[F]] =
+    CustomInterceptors(
+      createLogInterceptor = (sl: ServerLog[Unit]) => new ServerLogInterceptor[Unit, F](sl, (_, _) => Applicative[F].unit),
+      createOptions = (ci: CustomInterceptors[F, Unit, VertxCatsServerOptions[F]]) =>
+        VertxCatsServerOptions(
+          dispatcher,
+          File.createTempFile("tapir", null).getParentFile.getAbsoluteFile: TapirFile,
+          file => Sync[F].delay(Defaults.deleteFile()(file)),
+          maxQueueSizeForReadStream = 16,
+          ci.interceptors
+        )
+    ).serverLog(VertxServerOptions.defaultServerLog(LoggerFactory.getLogger("tapir-vertx")))
 
-  def default[F[_]: Async](dispatcher: Dispatcher[F]): VertxCatsServerOptions[F] = customInterceptors(dispatcher)
+  def default[F[_]: Async](dispatcher: Dispatcher[F]): VertxCatsServerOptions[F] = customInterceptors(dispatcher).options
 }

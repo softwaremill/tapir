@@ -7,15 +7,10 @@ import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.syntax.kleisli._
 import org.http4s.{HttpRoutes, Request, Response}
 import sttp.capabilities.WebSockets
-import sttp.capabilities.fs2.Fs2Streams
 import sttp.capabilities.zio.ZioStreams
-import sttp.tapir.Endpoint
-import sttp.tapir.server.ServerEndpoint
-import sttp.tapir.server.http4s.{Http4sResponseBody, Http4sServerInterpreter, Http4sServerOptions}
+import sttp.tapir.server.http4s.{Http4sResponseBody, Http4sServerOptions}
 import sttp.tapir.server.interceptor.decodefailure.{DecodeFailureHandler, DefaultDecodeFailureHandler}
-import sttp.tapir.server.interceptor.exception.DefaultExceptionHandler
 import sttp.tapir.server.interceptor.metrics.MetricsRequestInterceptor
-import sttp.tapir.server.interceptor.reject.RejectInterceptor
 import sttp.tapir.server.tests.TestServerInterpreter
 import sttp.tapir.tests.Port
 import sttp.tapir.ztapir.{ZEndpoint, ZServerEndpoint}
@@ -31,23 +26,20 @@ import scala.reflect.ClassTag
 class ZHttp4sTestServerInterpreter
     extends TestServerInterpreter[RIO[Clock with Blocking, *], ZioStreams with WebSockets, HttpRoutes[
       RIO[Clock with Blocking, *]
-    ], Http4sResponseBody[RIO[Clock with Blocking, *]]] {
+    ]] {
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
   override def route[I, E, O](
       e: ZServerEndpoint[Clock with Blocking, I, E, O],
       decodeFailureHandler: Option[DecodeFailureHandler] = None,
-      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock with Blocking, *], Http4sResponseBody[RIO[Clock with Blocking, *]]]] =
-        None
+      metricsInterceptor: Option[MetricsRequestInterceptor[RIO[Clock with Blocking, *]]] = None
   ): HttpRoutes[RIO[Clock with Blocking, *]] = {
     val serverOptions: Http4sServerOptions[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]] = Http4sServerOptions
-      .customInterceptors(
-        rejectInterceptor = Some(RejectInterceptor.default),
-        metricsInterceptor = metricsInterceptor,
-        exceptionHandler = Some(DefaultExceptionHandler),
-        serverLog = Some(Http4sServerOptions.Log.defaultServerLog),
-        decodeFailureHandler = decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler)
-      )
+      .customInterceptors[RIO[Clock with Blocking, *], RIO[Clock with Blocking, *]]
+      .metricsInterceptor(metricsInterceptor)
+      .decodeFailureHandler(decodeFailureHandler.getOrElse(DefaultDecodeFailureHandler.handler))
+      .options
+
     ZHttp4sServerInterpreter(serverOptions).from(e).toRoutes
   }
 
