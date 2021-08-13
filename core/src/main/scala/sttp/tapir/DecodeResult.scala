@@ -16,6 +16,8 @@ object DecodeResult {
   }
   case object Missing extends Failure
   case class Multiple[R](vs: Seq[R]) extends Failure
+
+  /** Any error that occurred while decoding the `original` value. */
   case class Error(original: String, error: Throwable) extends Failure
   object Error {
     case class JsonDecodeException(errors: List[JsonError], underlying: Throwable)
@@ -31,6 +33,8 @@ object DecodeResult {
     }
   }
   case class Mismatch(expected: String, actual: String) extends Failure
+
+  /** A validation error that occurred when decoding the value, that is, when some `Validator` failed. */
   case class InvalidValue(errors: List[ValidationError[_]]) extends Failure
 
   def sequence[T](results: Seq[DecodeResult[T]]): DecodeResult[Seq[T]] = {

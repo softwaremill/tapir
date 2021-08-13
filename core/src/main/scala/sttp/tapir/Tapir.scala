@@ -5,6 +5,7 @@ import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model._
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfMapping
+import sttp.tapir.files.TapirFilesEndpoints
 import sttp.tapir.internal.{ModifyMacroSupport, _}
 import sttp.tapir.macros.TapirMacros
 import sttp.tapir.model.ServerRequest
@@ -17,7 +18,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupport with TapirMacros {
+trait Tapir extends TapirExtensions with TapirDerivedInputs with TapirFilesEndpoints with ModifyMacroSupport with TapirMacros {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -317,7 +318,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with ModifyMacroSupp
   val endpoint: Endpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
 }
 
-trait TapirDerivedInputs { this: Tapir =>
+trait TapirDerivedInputs { this: Tapir => // TODO rename
   def clientIp: EndpointInput[Option[String]] =
     extractFromRequest(request =>
       request
