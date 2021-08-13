@@ -182,7 +182,7 @@ class MultipartCodecDerivationTest extends AnyFlatSpec with MultipartCodecDeriva
     // when
     toPartData(codec.encode(Test1(10))) shouldBe List(("f1", "10"))
 
-    codec.decode(createStringParts(List(("f1", "0")))) shouldBe an[DecodeResult.InvalidValue]
+    codec.decode(createStringParts(List(("f1", "0")))) shouldBe an[DecodeResult.InvalidValue[Int]]
     codec.decode(createStringParts(List(("f1", "10")))) shouldBe DecodeResult.Value(Test1(10))
   }
 

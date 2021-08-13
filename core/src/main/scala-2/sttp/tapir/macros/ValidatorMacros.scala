@@ -3,6 +3,8 @@ package sttp.tapir.macros
 import sttp.tapir.Validator
 import sttp.tapir.generic.internal.ValidatorEnumerationMacro
 
+import scala.language.experimental.macros
+
 trait ValidatorMacros {
 
   /** Creates an enum validator where all subtypes of the sealed hierarchy `T` are `object`s. This enumeration will only be used for

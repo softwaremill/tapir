@@ -145,7 +145,7 @@ class FormCodecDerivationTest extends AnyFlatSpec with FormCodecDerivationTestEx
 
     // when
     codec.encode(Test1(10)) shouldBe "f1=10"
-    codec.decode("f1=0") shouldBe an[DecodeResult.InvalidValue]
+    codec.decode("f1=0") shouldBe an[DecodeResult.InvalidValue[Int]]
     codec.decode("f1=10") shouldBe DecodeResult.Value(Test1(10))
   }
 

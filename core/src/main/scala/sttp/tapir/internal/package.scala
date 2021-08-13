@@ -308,11 +308,11 @@ package object internal {
     def asPrimitiveValidators: Seq[Validator.Primitive[_]] = {
       def toPrimitives(v: Validator[_]): Seq[Validator.Primitive[_]] = {
         v match {
-          case Validator.Mapped(wrapped, _) => toPrimitives(wrapped)
-          case Validator.All(validators)    => validators.flatMap(toPrimitives)
-          case Validator.Any(validators)    => validators.flatMap(toPrimitives)
-          case Validator.Custom(_, _)       => Nil
-          case bv: Validator.Primitive[_]   => List(bv)
+          case v: Validator.Primitive[_] => List(v)
+          case _: Validator.Custom[_]    => Nil
+          case v: Validator.Mapped[_, _] => toPrimitives(v.wrapped)
+          case v: Validator.All[_]       => v.validators.flatMap(toPrimitives)
+          case v: Validator.Any[_]       => v.validators.flatMap(toPrimitives)
         }
       }
       toPrimitives(v)

@@ -7,11 +7,12 @@ import sttp.model.{Method, StatusCode}
 import sttp.tapir.Schema.SName
 import sttp.tapir.internal._
 import sttp.tapir.server.{PartialServerEndpoint, ServerEndpoint}
+import sttp.tapir.testing.ValidationResultMatchers
 
 import java.nio.charset.StandardCharsets
 import scala.concurrent.Future
 
-class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers {
+class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers with ValidationResultMatchers {
   "endpoint" should "compile inputs" in {
     endpoint.in(query[String]("q1")): Endpoint[String, Unit, Unit, Any]
     endpoint.in(query[String]("q1").and(query[Int]("q2"))): Endpoint[(String, Int), Unit, Unit, Any]
@@ -239,24 +240,24 @@ class EndpointTest extends AnyFlatSpec with EndpointTestExtensions with Matchers
 
   "validate" should "accumulate validators" in {
     val input = query[Int]("x").validate(Validator.min(1)).validate(Validator.max(3))
-    input.codec.schema.applyValidation(0) should not be empty
-    input.codec.schema.applyValidation(4) should not be empty
-    input.codec.schema.applyValidation(2) shouldBe empty
+    input.codec.schema.applyValidation(0) shouldBe invalid
+    input.codec.schema.applyValidation(4) shouldBe invalid
+    input.codec.schema.applyValidation(2) shouldBe valid
   }
 
   it should "add validator for an option" in {
     val input = query[Option[Int]]("x").validateOption(Validator.min(1))
-    input.codec.schema.applyValidation(Some(0)) should not be empty
-    input.codec.schema.applyValidation(Some(2)) shouldBe empty
-    input.codec.schema.applyValidation(None) shouldBe empty
+    input.codec.schema.applyValidation(Some(0)) shouldBe invalid
+    input.codec.schema.applyValidation(Some(2)) shouldBe valid
+    input.codec.schema.applyValidation(None) shouldBe valid
   }
 
   it should "add validator for an iterable" in {
     val input = query[List[Int]]("x").validateIterable(Validator.min(1))
-    input.codec.schema.applyValidation(List(0)) should not be empty
-    input.codec.schema.applyValidation(List(2, 0)) should not be empty
-    input.codec.schema.applyValidation(List(2, 2)) shouldBe empty
-    input.codec.schema.applyValidation(Nil) shouldBe empty
+    input.codec.schema.applyValidation(List(0)) shouldBe invalid
+    input.codec.schema.applyValidation(List(2, 0)) shouldBe invalid
+    input.codec.schema.applyValidation(List(2, 2)) shouldBe valid
+    input.codec.schema.applyValidation(Nil) shouldBe valid
   }
 
   it should "map input and output" in {

@@ -2,24 +2,27 @@ package sttp.tapir.integ.cats
 
 import cats.data.{Chain, NonEmptyChain, NonEmptyList, NonEmptySet}
 import sttp.tapir._
+import sttp.tapir.integ.cats.ValidatorCats.nonEmptyFoldable
+import sttp.tapir.Validator.nonEmpty
 
 import scala.collection.immutable.SortedSet
 
 trait TapirCodecCats {
 
-  private def nonEmpty[T, C[X] <: Iterable[X]]: Validator.Primitive[C[T]] = Validator.minSize[T, C](1)
-
   implicit def schemaForNel[T: Schema]: Schema[NonEmptyList[T]] =
-    Schema[NonEmptyList[T]](SchemaType.SArray(implicitly[Schema[T]])(_.toList)).validate(nonEmpty.contramap(_.toList))
+    Schema[NonEmptyList[T]](SchemaType.SArray(implicitly[Schema[T]])(_.toList))
+      .validate(nonEmptyFoldable)
 
   implicit def schemaForChain[T: Schema]: Schema[Chain[T]] =
     implicitly[Schema[List[T]]].map(l => Option(Chain.fromSeq(l)))(_.toList)
 
   implicit def schemaForNec[T: Schema]: Schema[NonEmptyChain[T]] =
-    Schema[NonEmptyChain[T]](SchemaType.SArray(implicitly[Schema[T]])(_.toChain.toList)).validate(nonEmpty.contramap(_.toChain.toList))
+    Schema[NonEmptyChain[T]](SchemaType.SArray(implicitly[Schema[T]])(_.toChain.toList))
+      .validate(nonEmptyFoldable[NonEmptyChain, T])
 
   implicit def schemaForNes[T: Schema]: Schema[NonEmptySet[T]] =
-    Schema[NonEmptySet[T]](SchemaType.SArray(implicitly[Schema[T]])(_.toSortedSet)).validate(nonEmpty.contramap(_.toSortedSet))
+    Schema[NonEmptySet[T]](SchemaType.SArray(implicitly[Schema[T]])(_.toSortedSet))
+      .validate(nonEmptyFoldable[NonEmptySet, T])
 
   implicit def codecForNonEmptyList[L, H, CF <: CodecFormat](implicit c: Codec[L, List[H], CF]): Codec[L, NonEmptyList[H], CF] =
     c.schema(_.copy(isOptional = false))

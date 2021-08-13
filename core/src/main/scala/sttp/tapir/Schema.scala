@@ -4,15 +4,16 @@ import sttp.model.Part
 import sttp.tapir.Schema.SName
 import sttp.tapir.SchemaType._
 import sttp.tapir.generic.Derived
-import sttp.tapir.internal.{ValidatorSyntax, isBasicValue}
+import sttp.tapir.internal.{isBasicValue, ValidatorSyntax}
 import sttp.tapir.macros.{SchemaCompanionMacros, SchemaMacros}
+import sttp.tapir.ValidationResult.{Invalid, Valid}
 
 import java.io.InputStream
 import java.math.{BigDecimal => JBigDecimal, BigInteger => JBigInteger}
 import java.nio.ByteBuffer
 import java.time._
 import java.util.{Date, UUID}
-import scala.annotation.{StaticAnnotation, implicitNotFound}
+import scala.annotation.{implicitNotFound, StaticAnnotation}
 
 /** Describes the type `T`: its low-level representation, meta-data and validation rules.
   * @param format
@@ -133,7 +134,7 @@ case class Schema[T](
         case _       => None
       }
 
-      (thisValidator.toList ++ childValidators.toList) match {
+      thisValidator.toList ++ childValidators.toList match {
         case Nil => None
         case l   => Some(l.mkString(","))
       }
@@ -176,30 +177,77 @@ case class Schema[T](
   }
 
   /** Apply defined validation rules to the given value. */
-  def applyValidation(t: T): List[ValidationError[_]] = applyValidation(t, Map())
+  def applyValidation(t: T): ValidationResult[T] = applyValidation(t, Map())
 
-  private def applyValidation(t: T, objects: Map[SName, Schema[_]]): List[ValidationError[_]] = {
+  private def applyValidation(t: T, objects: Map[SName, Schema[_]]): ValidationResult[T] = {
     val objects2 = name.fold(objects)(n => objects + (n -> this))
 
     // we avoid running validation for structures where there are no validation rules applied (recursively)
-    if (hasValidation) {
-      validator(t) ++ (schemaType match {
-        case s @ SOption(element) => s.toOption(t).toList.flatMap(element.applyValidation(_, objects2))
-        case s @ SArray(element)  => s.toIterable(t).flatMap(element.applyValidation(_, objects2))
+    if (!hasValidation) {
+      ValidationResult.Valid(t)
+    } else {
+
+      val schemaValidationResult: ValidationResult[_] = schemaType match {
+        case s @ SOption(element) =>
+          s
+            .toOption(t)
+            .map(element.applyValidation(_, objects2))
+            .getOrElse(ValidationResult.Valid(t))
+        case s @ SArray(element) =>
+          combineMultipleValidationResults(
+            value = t,
+            results = s.toIterable(t).toList.map(element.applyValidation(_, objects2))
+          )
         case s @ SProduct(_) =>
-          s.fieldsWithValidation.flatMap(f => f.get(t).map(f.schema.applyValidation(_, objects2)).getOrElse(Nil).map(_.prependPath(f.name)))
+          combineMultipleValidationResults(
+            value = t,
+            results = s.fieldsWithValidation.map(f =>
+              f.get(t)
+                .map(f.schema.applyValidation(_, objects2))
+                .getOrElse(ValidationResult.Valid[Any](t)) match {
+                case v: ValidationResult.Valid[Any]   => v
+                case i: ValidationResult.Invalid[Any] => i.copy(errors = i.errors.map(_.prependPath(f.name)))
+              }
+            )
+          )
         case s @ SOpenProduct(valueSchema) =>
-          s.fieldValues(t).flatMap { case (k, v) => valueSchema.applyValidation(v, objects2).map(_.prependPath(FieldName(k, k))) }
+          combineMultipleValidationResults(
+            value = t,
+            results = s
+              .fieldValues(t)
+              .toList
+              .map { case (k, v) =>
+                valueSchema.applyValidation(v, objects2) match {
+                  case v: ValidationResult.Valid[Any]   => v
+                  case i: ValidationResult.Invalid[Any] => i.copy(errors = i.errors.map(_.prependPath(FieldName(k, k))))
+                }
+              }
+          )
         case s @ SCoproduct(_, _) =>
-          s.subtypeSchema(t).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
-        case SRef(name) => objects.get(name).map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2)).getOrElse(Nil)
-        case _          => Nil
-      })
-    } else Nil
+          s.subtypeSchema(t)
+            .map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2))
+            .getOrElse(ValidationResult.Valid[T](t))
+
+        case SRef(name) =>
+          objects
+            .get(name)
+            .map(_.asInstanceOf[Schema[T]].applyValidation(t, objects2))
+            .getOrElse(ValidationResult.Valid[T](t))
+        case _ => ValidationResult.Valid(t)
+      }
+
+      combineMultipleValidationResults(t, List(validator(t), schemaValidationResult))
+    }
   }
 
+  private def combineMultipleValidationResults[V](value: V, results: List[ValidationResult[Any]]): ValidationResult[V] =
+    ValidationResult.partitionMap(results) match {
+      case (Nil, _)         => Valid[V](value)
+      case (invalidList, _) => Invalid[V](value, invalidList.flatMap(a => a.errors))
+    }
+
   private[tapir] def hasValidation: Boolean = {
-    (validator != Validator.pass) || (schemaType match {
+    (validator != Validator.pass[T]) || (schemaType match {
       case SOption(element)          => element.hasValidation
       case SArray(element)           => element.hasValidation
       case s: SProduct[T]            => s.fieldsWithValidation.nonEmpty

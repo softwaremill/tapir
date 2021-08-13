@@ -1,18 +1,18 @@
 package sttp.tapir.annotations
 
-import java.nio.charset.StandardCharsets
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
-import sttp.model.{Header => ModelHeader, QueryParams => ModelQueryParams}
 import sttp.model.headers.{CookieValueWithMeta, CookieWithMeta, Cookie => ModelCookie}
-import sttp.model.StatusCode
+import sttp.model.{StatusCode, Header => ModelHeader, QueryParams => ModelQueryParams}
 import sttp.tapir._
 import sttp.tapir.model.UsernamePassword
-import sttp.tapir.EndpointIO._
-import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.EndpointInput._
 import sttp.tapir.EndpointInput.Auth._
+import sttp.tapir.EndpointIO._
+import sttp.tapir.EndpointIO.annotations._
 import sttp.tapir.RawBodyType.StringBody
+
+import java.nio.charset.StandardCharsets
 
 object JsonCodecs {
   implicit val stringJsonCodec: JsonCodecMock[String] = new JsonCodecMock[String]
@@ -210,6 +210,9 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
   }
 
   it should "derive correct input with schema annotations" in {
+
+    import sttp.tapir.testing.ValidationResultMatchers._
+
     val expectedInput = query[Int]("field")
       .description("field-8-1")
       .example(9)
@@ -227,8 +230,8 @@ class DeriveEndpointIOTest extends AnyFlatSpec with Matchers with Tapir {
     derived.codec.schema.format shouldBe expectedInput.codec.schema.format
     derived.codec.schema.default shouldBe expectedInput.codec.schema.default
 
-    derived.codec.schema.applyValidation(TapirRequestTest8(-1)) should not be empty
-    derived.codec.schema.applyValidation(TapirRequestTest8(1)) shouldBe empty
+    derived.codec.schema.applyValidation(TapirRequestTest8(-1)) shouldBe invalid(TapirRequestTest8(-1))
+    derived.codec.schema.applyValidation(TapirRequestTest8(1)) shouldBe valid(TapirRequestTest8(1))
   }
 
   it should "not compile if there is field without annotation" in {
