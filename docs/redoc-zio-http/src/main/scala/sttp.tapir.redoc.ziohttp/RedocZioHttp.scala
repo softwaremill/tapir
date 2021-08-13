@@ -56,7 +56,7 @@ class RedocZioHttp(
   val endpoint: Http[Any, Nothing, Request, UResponse] = Http.collect[Request] {
     case Method.GET -> Root / `rootPath` =>
       Response.text(html)
-    case Method.GET -> Root / `rootPath` \ `yamlName` =>
+    case Method.GET -> Root / `rootPath` / `yamlName` =>
       Response.HttpResponse(OK, headers = yamlContentType, content = yamlData)
   }
 }
