@@ -8,7 +8,7 @@ import sttp.tapir.server.ServerEndpoint
 import java.io.{File, InputStream}
 import java.time.Instant
 
-class TapirFilesEndpoints {
+trait TapirFilesEndpoints {
   // we can't use oneOfMapping and mapTo since they are macros, defined in the same compilation unit
 
   private val pathsWithoutDots: EndpointInput[List[String]] =

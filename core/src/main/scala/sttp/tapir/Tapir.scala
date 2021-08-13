@@ -18,7 +18,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirExtensions with TapirDerivedInputs with TapirFilesEndpoints with ModifyMacroSupport with TapirMacros {
+trait Tapir extends TapirExtensions with TapirComputedInputs with TapirFilesEndpoints with ModifyMacroSupport with TapirMacros {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -318,7 +318,7 @@ trait Tapir extends TapirExtensions with TapirDerivedInputs with TapirFilesEndpo
   val endpoint: Endpoint[Unit, Unit, Unit, Any] = infallibleEndpoint.copy(errorOutput = emptyOutput)
 }
 
-trait TapirDerivedInputs { this: Tapir => // TODO rename
+trait TapirComputedInputs { this: Tapir =>
   def clientIp: EndpointInput[Option[String]] =
     extractFromRequest(request =>
       request
