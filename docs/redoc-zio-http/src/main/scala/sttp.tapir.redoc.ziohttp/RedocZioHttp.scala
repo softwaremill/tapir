@@ -12,16 +12,18 @@ import zio.Chunk
   *
   * @param title - The title of the HTML page
   * @param yaml - the yaml with the OpenAPI documentation
+  * @param htmlName - the name of the Redoc HTML, defaults to 'redoc.html'
   * @param yamlName - the name of the file throough which the yaml documentation will be served.  Defaults to 'docs.yaml'
   * @param redocVersion - the semver version of Redoc to use.  Defaults to `2.0.0-rc.23`
-  * @param rootPath - the base path for the documentation - defaults to '/doc'
+  * @param contextPath - the base path for the documentation - defaults to '/docs'
   */
 class RedocZioHttp(
     title: String,
     yaml: String,
+    htmlName: String = "redoc.html",
     yamlName: String = "docs.yaml",
     redocVersion: String = "2.0.0-rc.23",
-    rootPath: Path = Path("doc")
+    contextPath: String = "docs"
 ) {
   lazy val html: String =
     s"""
@@ -54,9 +56,12 @@ class RedocZioHttp(
   val yamlData: HttpData.CompleteData = HttpData.CompleteData(Chunk.fromArray(yaml.getBytes))
   val yamlContentType = List(Header.custom("Content-Type", "text/yaml"))
   val endpoint: Http[Any, Nothing, Request, UResponse] = Http.collect[Request] {
-    case Method.GET -> Root / `rootPath` =>
+    case Method.GET -> Root / `contextPath` =>
+      val location = s"/$contextPath/$htmlName"
+      Response.http(Status.MOVED_PERMANENTLY, List(Header.custom("Location", location)))
+    case Method.GET -> Root / `contextPath` / `htmlName` =>
       Response.text(html)
-    case Method.GET -> Root / `rootPath` / `yamlName` =>
+    case Method.GET -> Root / `contextPath` / `yamlName` =>
       Response.HttpResponse(OK, headers = yamlContentType, content = yamlData)
   }
 }

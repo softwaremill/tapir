@@ -124,6 +124,7 @@ lazy val allAggregates = core.projectRefs ++
   swaggerUiFinatra.projectRefs ++
   swaggerUiPlay.projectRefs ++
   redocPlay.projectRefs ++
+  redocZio.projectRefs ++
   swaggerUiVertx.projectRefs ++
   swaggerUiZioHttp.projectRefs ++
   serverTests.projectRefs ++
