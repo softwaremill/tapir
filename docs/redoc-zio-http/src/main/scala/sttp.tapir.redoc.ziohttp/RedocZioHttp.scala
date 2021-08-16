@@ -54,13 +54,15 @@ class RedocZioHttp(
        |""".stripMargin
 
   val yamlData: HttpData.CompleteData = HttpData.CompleteData(Chunk.fromArray(yaml.getBytes))
+  val htmlData: HttpData.CompleteData = HttpData.CompleteData(Chunk.fromArray(html.getBytes()))
   val yamlContentType = List(Header.custom("Content-Type", "text/yaml"))
+  val htmlContentType = List(Header.custom("Content-Type", "text/html"))
   val endpoint: Http[Any, Nothing, Request, UResponse] = Http.collect[Request] {
     case Method.GET -> Root / `contextPath` =>
       val location = s"/$contextPath/$htmlName"
       Response.http(Status.MOVED_PERMANENTLY, List(Header.custom("Location", location)))
     case Method.GET -> Root / `contextPath` / `htmlName` =>
-      Response.text(html)
+      Response.HttpResponse(OK, headers = htmlContentType, htmlData)
     case Method.GET -> Root / `contextPath` / `yamlName` =>
       Response.HttpResponse(OK, headers = yamlContentType, content = yamlData)
   }
