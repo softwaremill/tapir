@@ -7,7 +7,7 @@ import org.scalatest.matchers.should.Matchers._
 import sttp.capabilities.WebSockets
 import sttp.capabilities.fs2.Fs2Streams
 import sttp.client3._
-import sttp.model.StatusCode
+import sttp.model.{Header, HeaderNames, MediaType, StatusCode}
 import sttp.tapir._
 import sttp.tapir.tests._
 
@@ -53,6 +53,53 @@ class ServerStaticContentTests[F[_], ROUTE](
           }
           .unsafeToFuture()
       }
+    },
+    Test("return file metadata") {
+      withTestFilesDirectory { testDir =>
+        serverInterpreter
+          .server(NonEmptyList.of(serverInterpreter.route(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))))
+          .use { port =>
+            basicRequest
+              .get(uri"http://localhost:$port/img.gif")
+              .response(asStringAlways)
+              .send(backend)
+              .map { r =>
+                r.contentLength shouldBe Some(11)
+                r.contentType shouldBe Some(MediaType.ImageGif.toString())
+                r.header(HeaderNames.LastModified)
+                  .flatMap(t => Header.parseHttpDate(t).toOption)
+                  .map(_.toEpochMilli)
+                  .get should be > (System.currentTimeMillis() - 10000L)
+                r.header(HeaderNames.Etag).isDefined shouldBe true
+              }
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("if an etag is present, only return the file if it doesn't match the etag") {
+      withTestFilesDirectory { testDir =>
+        serverInterpreter
+          .server(NonEmptyList.of(serverInterpreter.route(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))))
+          .use { port =>
+            def get(etag: Option[String]) = basicRequest
+              .get(uri"http://localhost:$port/f1")
+              .header(HeaderNames.IfNoneMatch, etag)
+              .response(asStringAlways)
+              .send(backend)
+
+            get(None).flatMap { r1 =>
+              r1.code shouldBe StatusCode.Ok
+              val etag = r1.header(HeaderNames.Etag).get
+
+              get(Some(etag)).map { r2 =>
+                r2.code shouldBe StatusCode.NotModified
+              } >> get(Some(etag.replace("-", "-x"))).map { r2 =>
+                r2.code shouldBe StatusCode.Ok
+              }
+            }
+          }
+          .unsafeToFuture()
+      }
     }
   )
 
@@ -63,6 +110,7 @@ class ServerStaticContentTests[F[_], ROUTE](
 
     Files.write(parent.resolve("f1"), "f1 content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("f2"), "f2 content".getBytes, StandardOpenOption.CREATE_NEW)
+    Files.write(parent.resolve("img.gif"), "img content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/f3"), "f3 content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/d2/f4"), "f4 content".getBytes, StandardOpenOption.CREATE_NEW)
     parent.toFile.deleteOnExit()

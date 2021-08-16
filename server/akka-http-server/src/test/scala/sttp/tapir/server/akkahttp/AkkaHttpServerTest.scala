@@ -103,4 +103,6 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         additionalTests()
     }
   }
+
+  override def testNameFilter: Option[String] = Some("if an etag is present, only return the file if it doesn't match the etag")
 }

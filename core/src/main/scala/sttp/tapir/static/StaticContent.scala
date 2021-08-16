@@ -68,12 +68,9 @@ object StaticContent {
     }
   }
 
-  private def isModified(filesInput: StaticInput, etag: Option[ETag], lastModified: Long): Boolean =
-    isModifiedByEtag(filesInput, etag) || isModifiedByModifiedSince(filesInput, lastModified)
-
-  private def isModifiedByEtag(filesInput: StaticInput, etag: Option[ETag]): Boolean = {
+  private def isModified(filesInput: StaticInput, etag: Option[ETag], lastModified: Long): Boolean = {
     etag match {
-      case None => true
+      case None => isModifiedByModifiedSince(filesInput, lastModified)
       case Some(et) =>
         val ifNoneMatch = filesInput.ifNoneMatch.getOrElse(Nil)
         if (ifNoneMatch.nonEmpty) ifNoneMatch.forall(e => e.tag != et.tag)
