@@ -48,4 +48,8 @@ object DecodeResult {
   }
 
   def fromOption[T](o: Option[T]): DecodeResult[T] = o.map(Value(_)).getOrElse(Missing)
+  def fromEitherString[T](original: String, o: Either[String, T]): DecodeResult[T] = o match {
+    case Left(e)      => DecodeResult.Error(original, new RuntimeException(e))
+    case Right(value) => DecodeResult.Value(value)
+  }
 }

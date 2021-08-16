@@ -5,7 +5,7 @@ import sttp.model.headers.{Cookie, CookieValueWithMeta, CookieWithMeta}
 import sttp.model._
 import sttp.tapir.CodecFormat.{Json, OctetStream, TextPlain, Xml}
 import sttp.tapir.EndpointOutput.OneOfMapping
-import sttp.tapir.files.TapirFilesEndpoints
+import sttp.tapir.static.TapirStaticContentEndpoints
 import sttp.tapir.internal.{ModifyMacroSupport, _}
 import sttp.tapir.macros.TapirMacros
 import sttp.tapir.model.ServerRequest
@@ -18,7 +18,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 import scala.concurrent.duration.DurationInt
 import scala.reflect.ClassTag
 
-trait Tapir extends TapirExtensions with TapirComputedInputs with TapirFilesEndpoints with ModifyMacroSupport with TapirMacros {
+trait Tapir extends TapirExtensions with TapirComputedInputs with TapirStaticContentEndpoints with ModifyMacroSupport with TapirMacros {
   implicit def stringToPath(s: String): EndpointInput.FixedPath[Unit] = EndpointInput.FixedPath(s, Codec.idPlain(), EndpointIO.Info.empty)
 
   def path[T: Codec[String, *, TextPlain]]: EndpointInput.PathCapture[T] =
@@ -288,7 +288,7 @@ trait Tapir extends TapirExtensions with TapirComputedInputs with TapirFilesEndp
     oneOfMappingValueMatcher(statusCode, output)(implicitly[MatchType[T]].partial)
 
   /** Create a fallback mapping to be used in [[oneOf]] output descriptions. Multiple such mappings can be specified,
-    * with different body conten types.
+    * with different body content types.
     */
   def oneOfDefaultMapping[T](output: EndpointOutput[T]): OneOfMapping[T] = {
     OneOfMapping(None, output, _ => true)
