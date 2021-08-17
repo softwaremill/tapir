@@ -103,6 +103,4 @@ class AkkaHttpServerTest extends TestSuite with EitherValues {
         additionalTests()
     }
   }
-
-  override def testNameFilter: Option[String] = Some("serve resources")
 }

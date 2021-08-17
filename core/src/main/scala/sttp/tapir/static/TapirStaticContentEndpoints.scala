@@ -119,7 +119,7 @@ trait TapirStaticContentEndpoints {
     * Typically, the prefix is a path, but it can also contain other inputs. For example:
     *
     * {{{
-    * resourcesServerEndpoint("static" / "files")(classOf[App].getClassLoader, "/app")
+    * resourcesServerEndpoint("static" / "files")(classOf[App].getClassLoader, "app")
     * }}}
     *
     * A request to `/static/files/css/styles.css` will try to read the `/app/css/styles.css` resource.
