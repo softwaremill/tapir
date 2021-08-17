@@ -125,6 +125,7 @@ lazy val allAggregates = core.projectRefs ++
   swaggerUiFinatra.projectRefs ++
   swaggerUiPlay.projectRefs ++
   redocPlay.projectRefs ++
+  redocZio.projectRefs ++
   swaggerUiVertx.projectRefs ++
   swaggerUiZioHttp.projectRefs ++
   serverTests.projectRefs ++
@@ -734,6 +735,16 @@ lazy val redocAkka: ProjectMatrix = (projectMatrix in file("docs/redoc-akka-http
     libraryDependencies ++= Seq(
       "com.typesafe.akka" %% "akka-http" % Versions.akkaHttp,
       "com.typesafe.akka" %% "akka-stream" % Versions.akkaStreams
+    )
+  )
+  .jvmPlatform(scalaVersions = scala2Versions)
+
+lazy val redocZio: ProjectMatrix = (projectMatrix in file("docs/redoc-zio-http"))
+  .settings(commonJvmSettings)
+  .settings(
+    name := "tapir-redoc-zio-http",
+    libraryDependencies ++= Seq(
+      "io.d11" %% "zhttp" % "1.0.0.0-RC17"
     )
   )
   .jvmPlatform(scalaVersions = scala2Versions)
