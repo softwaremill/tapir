@@ -55,6 +55,19 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
+    Test("serve index.html when a directory is requested") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))
+          .use { port =>
+            basicRequest
+              .get(uri"http://localhost:$port/d1")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.body shouldBe "index content")
+          }
+          .unsafeToFuture()
+      }
+    },
     Test("return 404 when files are not found") {
       withTestFilesDirectory { testDir =>
         serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))
@@ -194,6 +207,7 @@ class ServerStaticContentTests[F[_], ROUTE](
     Files.write(parent.resolve("f2"), "f2 content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("img.gif"), "img content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/f3"), "f3 content".getBytes, StandardOpenOption.CREATE_NEW)
+    Files.write(parent.resolve("d1/index.html"), "index content".getBytes, StandardOpenOption.CREATE_NEW)
     Files.write(parent.resolve("d1/d2/f4"), "f4 content".getBytes, StandardOpenOption.CREATE_NEW)
     parent.toFile.deleteOnExit()
 

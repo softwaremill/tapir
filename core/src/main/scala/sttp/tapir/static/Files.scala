@@ -41,7 +41,9 @@ object Files {
         val realRequestedPath = resolved.toRealPath(LinkOption.NOFOLLOW_LINKS)
         if (!realRequestedPath.startsWith(realSystemPath))
           (Left(StaticErrorOutput.NotFound): Either[StaticErrorOutput, StaticOutput[File]]).unit
-        else fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
+        else if (realRequestedPath.toFile.isDirectory) {
+          files(realSystemPath, calculateETag)(filesInput.copy(path = filesInput.path :+ "index.html"))
+        } else fileOutput(filesInput, realRequestedPath, calculateETag).map(Right(_))
       }
     })
   }
