@@ -59,7 +59,7 @@ object Files {
     }
   } yield result
 
-  private def found[F[_]](file: Path, etag: Option[ETag], lastModified: Long)(implicit m: MonadError[F]): F[StaticOutput.Found[File]] = {
+  private def found[F[_]](file: Path, etag: Option[ETag], lastModified: Long)(implicit m: MonadError[F]): F[StaticOutput[File]] = {
     m.blocking(file.toFile.length()).map { contentLength =>
       val contentType = contentTypeFromName(file.toFile.getName)
       StaticOutput.Found(file.toFile, Some(Instant.ofEpochMilli(lastModified)), Some(contentLength), Some(contentType), etag)
