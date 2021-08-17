@@ -34,8 +34,24 @@ class ServerStaticContentTests[F[_], ROUTE](
 
             get("f1" :: Nil).map(_.body shouldBe "f1 content") >>
               get("f2" :: Nil).map(_.body shouldBe "f2 content") >>
-              get("d1/f3" :: Nil).map(_.body shouldBe "f3 content") >>
-              get("d1/d2/f4" :: Nil).map(_.body shouldBe "f4 content")
+              get("d1" :: "f3" :: Nil).map(_.body shouldBe "f3 content") >>
+              get("d1" :: "d2" :: "f4" :: Nil).map(_.body shouldBe "f4 content")
+          }
+          .unsafeToFuture()
+      }
+    },
+    Test("serve files from the given system path with a prefix") {
+      withTestFilesDirectory { testDir =>
+        serverInterpreter
+          .server(NonEmptyList.of(serverInterpreter.route(filesServerEndpoint[F]("static" / "content")(testDir.getAbsolutePath))))
+          .use { port =>
+            def get(path: List[String]) = basicRequest
+              .get(uri"http://localhost:$port/$path")
+              .response(asStringAlways)
+              .send(backend)
+
+            get("static" :: "content" :: "f1" :: Nil).map(_.body shouldBe "f1 content") >>
+              get("static" :: "content" :: "d1" :: "f3" :: Nil).map(_.body shouldBe "f3 content")
           }
           .unsafeToFuture()
       }
@@ -100,6 +116,28 @@ class ServerStaticContentTests[F[_], ROUTE](
           }
           .unsafeToFuture()
       }
+    },
+    Test("serve resources") {
+      serverInterpreter
+        .server(
+          NonEmptyList.of(
+            serverInterpreter.route(
+              resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test")
+            )
+          )
+        )
+        .use { port =>
+          def get(path: List[String]) = basicRequest
+            .get(uri"http://localhost:$port/$path")
+            .response(asStringAlways)
+            .send(backend)
+
+          get("r1.txt" :: Nil).map(_.body shouldBe "Resource 1") >>
+            get("r2.txt" :: Nil).map(_.body shouldBe "Resource 2") >>
+            get("d1/r3.txt" :: Nil).map(_.body shouldBe "Resource 3") >>
+            get("d1/d2/r4.txt" :: Nil).map(_.body shouldBe "Resource 4")
+        }
+        .unsafeToFuture()
     }
   )
 
