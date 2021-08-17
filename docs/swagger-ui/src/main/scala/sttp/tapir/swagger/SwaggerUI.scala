@@ -6,15 +6,7 @@ import sttp.tapir.server.ServerEndpoint
 
 import java.util.Properties
 
-/** Usage: pass `new SwaggerUI(yaml).endpoints[F]` to your server interpreter. Docs will be available using the `/docs`
-  * path.
-  *
-  * @param yaml     The yaml with the OpenAPI documentation.
-  * @param prefix   The path prefix from which the documentation will be served, as a list of path segments. Defaults
-  *                 to `List(docs)`, so the address of the docs will be `/docs`.
-  * @param yamlName The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
-  */
-class SwaggerUI(yaml: String, prefix: List[String] = List("docs"), yamlName: String = "docs.yaml") {
+object SwaggerUI {
   private val swaggerVersion = {
     val p = new Properties()
     val pomProperties = getClass.getResourceAsStream("/META-INF/maven/org.webjars/swagger-ui/pom.properties")
@@ -23,10 +15,22 @@ class SwaggerUI(yaml: String, prefix: List[String] = List("docs"), yamlName: Str
     p.getProperty("version")
   }
 
-  private val prefixInput: EndpointInput[Unit] = prefix.map[EndpointInput[Unit]](stringToPath).reduce(_.and(_))
-  private val prefixAsPath = prefix.mkString("/")
+  /** Usage: pass `SwaggerUI[F](yaml)` endpoints to your server interpreter. Docs will be available using the `/docs`
+    * path.
+    *
+    * @param yaml     The yaml with the OpenAPI documentation.
+    * @param prefix   The path prefix from which the documentation will be served, as a list of path segments. Defaults
+    *                 to `List(docs)`, so the address of the docs will be `/docs`.
+    * @param yamlName The name of the file, through which the yaml documentation will be served. Defaults to `docs.yaml`.
+    */
+  def apply[F[_]](
+      yaml: String,
+      prefix: List[String] = List("docs"),
+      yamlName: String = "docs.yaml"
+  ): List[ServerEndpoint[_, _, _, Any, F]] = {
+    val prefixInput: EndpointInput[Unit] = prefix.map[EndpointInput[Unit]](stringToPath).reduce(_.and(_))
+    val prefixAsPath = prefix.mkString("/")
 
-  def endpoints[F[_]]: List[ServerEndpoint[_, _, _, Any, F]] = {
     val yamlEndpoint = infallibleEndpoint
       .in(prefixInput)
       .in(yamlName)
@@ -55,7 +59,7 @@ class SwaggerUI(yaml: String, prefix: List[String] = List("docs"), yamlName: Str
       }
 
     val resourcesEndpoint = resourcesServerEndpoint[F](prefixInput)(
-      classOf[SwaggerUI].getClassLoader,
+      classOf[SwaggerUI.type].getClassLoader,
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
 

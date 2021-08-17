@@ -55,7 +55,7 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
   val openApiDocs: OpenAPI = OpenAPIDocsInterpreter().toOpenAPI(List(booksListing, addBook), "The tapir library", "1.0.0")
   val openApiYml: String = openApiDocs.toYaml
 
-  val swaggerUiRoute = AkkaHttpServerInterpreter().toRoute(new SwaggerUI(openApiYml).endpoints[Future])
+  val swaggerUIRoute = AkkaHttpServerInterpreter().toRoute(SwaggerUI[Future](openApiYml))
 
   // starting the server
   implicit val actorSystem: ActorSystem = ActorSystem()
@@ -63,7 +63,7 @@ object MultipleEndpointsDocumentationAkkaServer extends App {
 
   val routes = {
     import akka.http.scaladsl.server.Directives._
-    concat(booksListingRoute, addBookRoute, swaggerUiRoute)
+    concat(booksListingRoute, addBookRoute, swaggerUIRoute)
   }
 
   val bindAndCheck = Http().newServerAt("localhost", 8080).bindFlow(routes).map { _ =>
