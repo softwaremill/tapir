@@ -1,5 +1,6 @@
 package sttp.tapir.redoc.ziohttp
 
+import io.netty.handler.codec.http.{HttpHeaderNames, HttpHeaderValues}
 import zhttp.http.Status.OK
 import zhttp.http._
 import zio.Chunk
@@ -55,8 +56,8 @@ class RedocZioHttp(
 
   val yamlData: HttpData.CompleteData = HttpData.CompleteData(Chunk.fromArray(yaml.getBytes))
   val htmlData: HttpData.CompleteData = HttpData.CompleteData(Chunk.fromArray(html.getBytes()))
-  val yamlContentType = List(Header.custom("Content-Type", "text/yaml"))
-  val htmlContentType = List(Header.custom("Content-Type", "text/html"))
+  val yamlContentType = List(Header.custom(HttpHeaderNames.CONTENT_TYPE.toString, "text/yaml"))
+  val htmlContentType = List(Header.custom(HttpHeaderNames.CONTENT_TYPE.toString, HttpHeaderValues.TEXT_HTML))
   val endpoint: Http[Any, Nothing, Request, UResponse] = Http.collect[Request] {
     case Method.GET -> Root / `contextPath` =>
       val location = s"/$contextPath/$htmlName"
