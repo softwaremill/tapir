@@ -151,6 +151,10 @@ akka-http/http4s routes for exposing documentation using [Swagger UI](https://sw
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-play" % "@VERSION@"
 "com.softwaremill.sttp.tapir" %% "tapir-redoc-play" % "@VERSION@"
 
+// ZIO HTTP
+"com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-zio-http" % "@VERSION@"
+"com.softwaremill.sttp.tapir" %% "tapir-redoc-zio-http" % "@VERSION@"
+
 // Vert.x
 "com.softwaremill.sttp.tapir" %% "tapir-swagger-ui-vertx" % "@VERSION@"
 ```
