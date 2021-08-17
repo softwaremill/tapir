@@ -241,7 +241,7 @@ class ServerStaticContentTests[F[_], ROUTE](
       Files
         .walk(parent)
         .sorted(Comparator.reverseOrder())
-        .map(f => f.toFile)
+        .map[File](f => f.toFile)
         .forEach(f => { val _ = f.delete })
     )
 

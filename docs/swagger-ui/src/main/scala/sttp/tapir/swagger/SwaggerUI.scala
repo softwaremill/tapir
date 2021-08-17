@@ -28,7 +28,7 @@ object SwaggerUI {
       prefix: List[String] = List("docs"),
       yamlName: String = "docs.yaml"
   ): List[ServerEndpoint[_, _, _, Any, F]] = {
-    val prefixInput: EndpointInput[Unit] = prefix.map[EndpointInput[Unit]](stringToPath).reduce(_.and(_))
+    val prefixInput: EndpointInput[Unit] = prefix.map(stringToPath).reduce[EndpointInput[Unit]](_.and(_))
     val prefixAsPath = prefix.mkString("/")
 
     val yamlEndpoint = infallibleEndpoint
@@ -42,9 +42,9 @@ object SwaggerUI {
       .in(queryParams)
       .out(statusCode(StatusCode.PermanentRedirect))
       .out(header[String](HeaderNames.Location))
-      .serverLogicPure[F] { params: QueryParams =>
+      .serverLogicPure[F] { (params: QueryParams) =>
         val paramsWithUrl = params.param("url", s"/$prefixAsPath/$yamlName")
-        Right(s"/$prefixAsPath/index.html?${paramsWithUrl.toString()}")
+        Right(s"/$prefixAsPath/index.html?${paramsWithUrl.toString}")
       }
 
     val oauth2Endpoint = infallibleEndpoint
@@ -53,13 +53,13 @@ object SwaggerUI {
       .in(queryParams)
       .out(statusCode(StatusCode.PermanentRedirect))
       .out(header[String](HeaderNames.Location))
-      .serverLogicPure[F] { params: QueryParams =>
-        val queryString = if (params.toSeq.nonEmpty) s"?${params.toString()}" else ""
+      .serverLogicPure[F] { (params: QueryParams) =>
+        val queryString = if (params.toSeq.nonEmpty) s"?${params.toString}" else ""
         Right(s"/$prefixAsPath/oauth2-redirect.html$queryString")
       }
 
     val resourcesEndpoint = resourcesServerEndpoint[F](prefixInput)(
-      classOf[SwaggerUI.type].getClassLoader,
+      SwaggerUI.getClass.getClassLoader,
       s"META-INF/resources/webjars/swagger-ui/$swaggerVersion/"
     )
 

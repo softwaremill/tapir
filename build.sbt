@@ -1182,6 +1182,7 @@ lazy val playground: ProjectMatrix = (projectMatrix in file("playground"))
     circeJson,
     refined,
     cats,
+    swaggerUi,
     zioHttp4sServer,
     zioHttp
   )
