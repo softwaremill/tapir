@@ -81,6 +81,19 @@ class ServerStaticContentTests[F[_], ROUTE](
           .unsafeToFuture()
       }
     },
+    Test("not return a file outside of the system path") {
+      withTestFilesDirectory { testDir =>
+        serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath + "/d1"))
+          .use { port =>
+            basicRequest
+              .get(uri"http://localhost:$port/../f1")
+              .response(asStringAlways)
+              .send(backend)
+              .map(_.body should not be "f1 content")
+          }
+          .unsafeToFuture()
+      }
+    },
     Test("return file metadata") {
       withTestFilesDirectory { testDir =>
         serveRoute(filesServerEndpoint[F](emptyInput)(testDir.getAbsolutePath))
@@ -149,6 +162,17 @@ class ServerStaticContentTests[F[_], ROUTE](
             .response(asStringAlways)
             .send(backend)
             .map(_.code shouldBe StatusCode.NotFound)
+        }
+        .unsafeToFuture()
+    },
+    Test("not return a resource outside of the resource prefix directory") {
+      serveRoute(resourcesServerEndpoint[F](emptyInput)(classOf[ServerStaticContentTests[F, ROUTE]].getClassLoader, "test"))
+        .use { port =>
+          basicRequest
+            .get(uri"http://localhost:$port/../test2/r5.txt")
+            .response(asStringAlways)
+            .send(backend)
+            .map(_.body should not be "Resource 5")
         }
         .unsafeToFuture()
     },
